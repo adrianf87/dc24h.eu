@@ -1,0 +1,7 @@
+/build*/
+/webadmin/node_modules/
+/webadmin/dist/
+*.log
+.env
+.env.*
+!.env.example
