@@ -1,14 +1,18 @@
 # Architektura
 
-## Stan alpha-0.1.1
+## Core — alpha-0.1.1 / alpha-0.1.2
 
 `src/main.cpp` odpowiada za CLI, przygotowanie sygnałów, uruchomienie Core
 i wynik procesu. `dc24h_core` zawiera `core::Server`, `core::TerminationSignals`
-oraz prosty `logging::Logger`. Nagłówki publiczne są w `include/dc24h/`.
+oraz integrację z transportem. `dc24h_network` zawiera TCP,
+a `dc24h_logging` współdzielony logger. Nagłówki publiczne są w `include/dc24h/`.
 
 `Server::run()` jest blokujący i jednorazowy. Stan początkowy to `created`.
-Po uruchomieniu przechodzi w `running` i czeka na zmiennej warunkowej.
-`request_stop()` przełącza go w `stopping` i budzi oczekiwanie. `run()`
+Po uruchomieniu przechodzi w `running`; bez transportu czeka na zmiennej
+warunkowej, a z Network wykonuje jego blokującą pętlę `epoll`.
+Gotowość portów potwierdzają dopiero logi `Network listening on ...`.
+`request_stop()` przełącza go w `stopping` i budzi oczekiwanie Core
+oraz Network przez `eventfd`. `run()`
 kończy cykl w `stopped`. Żądanie stop przed `run()` jest zapamiętane:
 nie pojawia się wówczas stan `running`. Powtórne `run()` rzuca `logic_error`.
 Zatrzymany obiekt nie jest ponownie uruchamiany; restart wymaga nowego procesu.
@@ -28,7 +32,9 @@ wywoływałby mutex, logger lub alokację pamięci.
 Oczekiwanie na sygnał ma limit 100 ms, aby umożliwić zakończenie wątku także
 po programowym stop lub błędzie uruchomienia. Limit nie opóźnia odbioru
 oczekującego sygnału; dołączenie anulowanego wątku może potrwać około 100 ms
-plus opóźnienia planisty. Core czeka bez timeoutu na zmiennej warunkowej.
+plus opóźnienia planisty. Core bez Network czeka bez timeoutu na zmiennej
+warunkowej; Network używa
+`epoll_wait` z interwałem do 250 ms do kontroli timeoutów bezczynności.
 
 Maska sygnałów jest ustawieniem procesu programu `dc24h`, nie ogólną biblioteką
 RAII: celowo pozostaje aktywna aż do wyjścia procesu. Chroni końcowe sprzątanie
@@ -40,13 +46,30 @@ Dokumentacja użytych interfejsów systemowych:
 [pthread_sigmask(3)](https://man7.org/linux/man-pages/man3/pthread_sigmask.3.html)
 oraz [sigtimedwait(2)](https://man7.org/linux/man-pages/man2/sigtimedwait.2.html).
 
+## Network — alpha-0.1.2
+
+`main` tworzy Network i przekazuje do Core wskaźnik niewłaścicielski. Network
+żyje dłużej niż Core. Pętla transportu działa w wątku głównym; wątek sygnałów
+wywołuje tylko żądanie stop. Wszystkie operacje gniazd są wykonywane w pętli,
+a jedyną współdzieloną operacją I/O jest nieblokujący zapis do `eventfd`.
+Liczniki i flaga stop są atomowe. Jednorazowość `run()` wymusza atomowa flaga.
+
+RAII zarządza listenerami, klientami i `epoll`; destruktor Network zamyka
+`eventfd` po zakończeniu pętli i wątku sygnałów. Błąd startu zamyka również
+wcześniej otwarte listenery. Wyjątek Network ustawia stan Core na `stopped`
+i trafia do `main`, które zwraca 1. Zwykłe błędy peer zamykają tylko klienta.
+Tokeny zdarzeń klientów są monotoniczne i nie zależą od numerów fd, co pozwala
+odrzucać stare zdarzenia po ponownym użyciu deskryptora przez system.
+
+Szczegóły: [NETWORK.md](NETWORK.md), kontrakt: [API.md](API.md).
+
 ## Plan modułów
 
-Kolejne moduły będą oddzielane od Core: Network (TCP), ADC Protocol, ADCS/TLS,
+Kolejne moduły będą oddzielane od Core: ADC Protocol, ADCS/TLS,
 Users/Sessions, Chat, Search, Transfers, Security, Database, API, Configuration.
 WebAdmin pozostaje osobnym frontendem React/TypeScript/Vite, serwowanym przez
 Apache2. Logging obecnie zapewnia tylko współdzielony logger stderr.
 
-Przyszłe uruchamianie modułów wymaga zwijania częściowo rozpoczętego startu,
+Network już zwija częściowy start i zamyka gniazda. Rozszerzanie modułów wymaga
 zatrzymania przyjmowania połączeń, zakończenia sesji i zwalniania zasobów
 w odwrotnej kolejności startu. Nie ma jeszcze rejestru ani interfejsu modułów.

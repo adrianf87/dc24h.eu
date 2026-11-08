@@ -5,13 +5,16 @@
 
 namespace dc24h::logging { class Logger; }
 
+namespace dc24h::network { class TcpServer; }
+
 namespace dc24h::core {
 
 enum class State { created, running, stopping, stopped };
 
 class Server final {
 public:
-    explicit Server(logging::Logger& logger) noexcept;
+    // Optional transport and logger must outlive this Core.
+    explicit Server(logging::Logger& logger, network::TcpServer* network = nullptr) noexcept;
     Server(const Server&) = delete;
     Server& operator=(const Server&) = delete;
 
@@ -23,6 +26,7 @@ public:
 
 private:
     logging::Logger& logger_;
+    network::TcpServer* network_;
     mutable std::mutex mutex_;
     std::condition_variable wakeup_;
     State state_{State::created};
