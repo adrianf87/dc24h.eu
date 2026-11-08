@@ -1,6 +1,6 @@
 # Dokumentacja dc24h.eu
 
-Dokumenty rozróżniają działającą implementację alpha-0.1.1 od założeń
+Dokumenty rozróżniają działającą implementację alpha-0.1.2 od założeń
 przyszłych modułów. Sam opis modułu nie oznacza jego implementacji.
 
 | Dokument | Zawartość |

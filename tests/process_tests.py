@@ -19,7 +19,7 @@ class ProcessTests(unittest.TestCase):
     def test_version(self):
         result = self.cli("--version")
         self.assertEqual(result.returncode, 0)
-        self.assertEqual(result.stdout, "dc24h.eu alpha-0.1.1\n")
+        self.assertEqual(result.stdout, "dc24h.eu alpha-0.1.2\n")
         self.assertEqual(result.stderr, "")
 
     def test_help(self):
@@ -39,7 +39,7 @@ class ProcessTests(unittest.TestCase):
     def run_and_stop(self, signals, ready_marker=b"Core running"):
         # Unbuffered binary reads avoid readline blocking and text-buffer/select races.
         process = subprocess.Popen(
-            [BINARY], stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0
+            [BINARY, "--listen", "127.0.0.1:0"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0
         )
         self.addCleanup(self.cleanup_process, process)
         log = bytearray()

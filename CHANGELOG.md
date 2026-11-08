@@ -1,5 +1,25 @@
 # Historia zmian
 
+## alpha-0.1.2 — 2026-11-09
+
+Etap Network, rozwijający istniejący Core:
+
+- Osobne targety `dc24h_network` i `dc24h_logging`, C++20 bez zewnętrznych bibliotek.
+- Nieblokujący TCP IPv4/IPv6, do 16 listenerów, wiele klientów w pętli `epoll`.
+- RAII deskryptorów, tokeny zdarzeń niezależne od fd oraz close-on-exec.
+- Domyślnie `127.0.0.1:1511`; CLI `--listen`, `--max-connections`, `--idle-timeout`.
+- Limit 1024 klientów i timeout 120 sekund domyślnie; odrzucanie nadmiaru,
+  zwalnianie slotów po FIN/reset oraz ograniczone partie odczytu/przyjmowania.
+- Zatrzymanie przez Core i `eventfd`, zamykanie wszystkich gniazd przy stopie.
+- Izolowanie błędów klienta, ponawianie po braku zasobów, zwijanie częściowego
+  startu i kod 1 po błędzie listenera. Liczniki połączeń i odebranych bajtów.
+- Testy parsera/limitów, deskryptorów, 48 równoczesnych klientów, wielu portów,
+  IPv6, resetów, timeoutu, przeciążenia deskryptorów i stopu przy ciągłym ruchu.
+- Aktualizacja CI oraz dokumentacji modułów, konfiguracji i testowania.
+
+Dane TCP są odbierane i odrzucane. ADC, zapis odpowiedzi, TLS/ADCS,
+uwierzytelnianie, MariaDB, API i WebAdmin pozostają niezaimplementowane.
+
 ## alpha-0.1.1 — 2026-11-09
 
 Pierwszy etap Core:
