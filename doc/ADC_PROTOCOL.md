@@ -1,6 +1,6 @@
 # Protokół ADC
 
-Status alpha-0.1.1: parser i automat protokołu nie są zaimplementowane.
+Status alpha-0.1.2: parser i automat protokołu nie są zaimplementowane.
 Nie deklarujemy zgodności działającego huba z ADC.
 
 Następny etap protokołu obejmie oddzielny parser i serializer, typy wiadomości,

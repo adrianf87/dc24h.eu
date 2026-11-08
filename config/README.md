@@ -1,4 +1,4 @@
-# Konfiguracja — plan
+# Konfiguracja
 
-W alpha-0.1.1 nie ma parsera ani plików konfiguracyjnych.
-Aktualny interfejs opisuje [CONFIGURATION.md](../doc/CONFIGURATION.md).
+Alpha-0.1.2 udostępnia opcje CLI Network; parser plików jest planowany.
+Aktualny interfejs: [CONFIGURATION.md](../doc/CONFIGURATION.md).
