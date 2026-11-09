@@ -1,5 +1,7 @@
 # ADC Parser — alpha-0.2.2
 
+Od alpha-0.2.5 [ADC SID](ADC_SID.md) udostępnia wspólną pulę huba i SidSession z kontrolą własności ISID oraz automatycznym zwalnianiem rezerwacji. Parser/automat używają tego samego kodera SID; AAAA nadal jest poprawną składnią, ale pula rezerwuje go jako lokalną politykę. Pierwotne API niższego poziomu i historyczne fixture pozostają dostępne. Network nadal używa samego parsera.
+
 alpha-0.2.4 dodaje niezależną [semantykę SUP i adapter stanów](ADC_SUP.md). Parser działa bez zmian. Dotychczasowy test ncdc huba nadal obejmuje początkowy HSUP; nowy izolowany fixture SUP wymienia ISUP wygenerowany przez moduł i stały testowy SID z ncdc, kończąc w niezatwierdzonym IDENTIFY. To nie reaktor Network.
 
 Odniesienie: [ADC 1.0.4](https://adc.sourceforge.io/ADC.html), gramatyka linii i opisy komend BASE. Niezależna biblioteka C++20 `dc24h_adc` parsuje składnię; nie wykonuje komend ani nie realizuje sesji.

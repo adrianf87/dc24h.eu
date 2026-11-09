@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.2.4 LANGUAGES CXX)
+project(dc24h VERSION 0.2.5 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -28,7 +28,7 @@ set_target_properties(UTF8Proc::UTF8Proc PROPERTIES
     IMPORTED_LOCATION "${UTF8PROC_LIBRARY}"
     INTERFACE_INCLUDE_DIRECTORIES "${UTF8PROC_INCLUDE_DIR}")
 target_link_libraries(dc24h_logging PRIVATE UTF8Proc::UTF8Proc)
-add_library(dc24h_adc src/adc/parser.cpp src/adc/state.cpp src/adc/sup.cpp)
+add_library(dc24h_adc src/adc/parser.cpp src/adc/state.cpp src/adc/sup.cpp src/adc/sid.cpp src/adc/sid_session.cpp)
 target_compile_features(dc24h_adc PUBLIC cxx_std_20)
 set_target_properties(dc24h_adc PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_adc PUBLIC include)
@@ -163,6 +163,12 @@ if(BUILD_TESTING)
     set_target_properties(adc_sup_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME adc.sup COMMAND adc_sup_tests)
     set_tests_properties(adc.sup PROPERTIES TIMEOUT 15)
+    add_executable(adc_sid_tests tests/adc_sid_tests.cpp)
+    target_link_libraries(adc_sid_tests PRIVATE dc24h_adc)
+    target_compile_options(adc_sid_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(adc_sid_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME adc.sid COMMAND adc_sid_tests)
+    set_tests_properties(adc.sid PROPERTIES TIMEOUT 60)
     add_test(NAME adc.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/adc_process_tests.py" "$<TARGET_FILE:dc24h>")
     add_executable(adcs_unit_tests tests/adcs_unit_tests.cpp)
@@ -240,6 +246,10 @@ if(BUILD_TESTING)
     endif()
     find_program(NCDC_EXECUTABLE ncdc)
     if(NCDC_EXECUTABLE)
+        add_test(NAME adc.sid.ncdc COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_sup_test.py"
+            "$<TARGET_FILE:adc_sid_tests>" "${NCDC_EXECUTABLE}" --sid)
+        set_tests_properties(adc.sid.ncdc PROPERTIES TIMEOUT 30)
         add_test(NAME adc.sup.ncdc COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_sup_test.py"
             "$<TARGET_FILE:adc_sup_tests>" "${NCDC_EXECUTABLE}")

@@ -165,3 +165,7 @@ Od alpha-0.2.2 `Message::positional_count` określa układ argumentów BASE (nie
 ## API negocjacji SUP — alpha-0.2.4
 
 `dc24h/adc/sup.hpp` udostępnia SupportPolicy, SupportNegotiation, SessionHash, SupportError i ProtocolConnection. Adapter zwraca opcjonalny `variant<StateError, SupportError>`; odrzucenie zachowuje stan/funkcje. Udostępnia wyłącznie stałe metadane negocjacji i nie daje ręcznego zatwierdzenia protokołu. Odpowiedzi Message/string posiadają własne dane. Brak zmian tras HTTP i schematu/liczników. [ADC_SUP.md](ADC_SUP.md) opisuje czasy życia, limity, błędy i przyszłą integrację transportu.
+
+## API SID — alpha-0.2.5
+
+`adc/sid.hpp` udostępnia parsowanie/kodowanie wartości Sid, SidPool i przenoszalny SidLease. `adc/sid_session.hpp` łączy własność puli z funkcjami/stanem w SidSession; zwraca opcjonalny `variant<StateError, SupportError, SidError>`. Zatwierdzić można wyłącznie zarezerwowany SID. Przygotowanie/kodowanie nie zmienia fazy; obserwacja ukończonego wysłania tak. Liczniki puli należą do reaktora, nie telemetrii HTTP. Brak zmian tras/schematu HTTP. [ADC_SID.md](ADC_SID.md) opisuje czas życia, pojemność i kolejność zwalniania.

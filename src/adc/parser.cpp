@@ -1,4 +1,5 @@
 #include "dc24h/adc/parser.hpp"
+#include "dc24h/adc/sid.hpp"
 
 #include <utf8proc.h>
 
@@ -19,7 +20,7 @@ bool base32(std::string_view value) noexcept {
         return alpha(c) || (c >= '2' && c <= '7');
     });
 }
-bool sid(std::string_view value) noexcept { return value.size() == 4 && base32(value); }
+bool sid(std::string_view value) noexcept { return Sid::parse(value).has_value(); }
 bool feature(std::string_view value) noexcept {
     return value.size() == 4 && alpha(value[0]) &&
            std::all_of(value.begin() + 1, value.end(), alnum);

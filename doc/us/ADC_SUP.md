@@ -1,5 +1,7 @@
 # SUP — alpha-0.2.4
 
+Since alpha-0.2.5, [ADC SID](ADC_SID.md) supplies a shared hub pool and SidSession composition with checked ISID ownership and automatic reservation cleanup. Parser/state SID syntax uses the same codec; AAAA remains valid syntax but is reserved by the pool as local policy. The original lower-level APIs and historical fixtures remain available. Network still uses only the parser.
+
 ## Delivered scope
 
 `dc24h/adc/sup.hpp` adds `SupportNegotiation` and `ProtocolConnection` to `dc24h_adc`. The first maintains feature advertisements and selects a session hash. The second composes it with [ADC State](ADC_STATE.md), replacing manual protocol approval with a checked SUP exchange. No socket, logging, database, configuration-file or cryptographic dependency is added.

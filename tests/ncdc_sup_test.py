@@ -21,6 +21,9 @@ from tls_support import credentials
 
 PROBE, NCDC = sys.argv[1:3]
 del sys.argv[1:3]
+SID_MODE = '--sid' in sys.argv
+if SID_MODE:
+    sys.argv.remove('--sid')
 
 
 def frame(peer, pending):
@@ -33,6 +36,20 @@ def frame(peer, pending):
             raise AssertionError('fixture frame bound exceeded')
     line, pending = pending.split(b'\n', 1)
     return line + b'\n', pending
+
+
+def probe_reply(probe, lines):
+    reply = bytearray()
+    deadline = time.monotonic() + 5
+    while reply.count(b'\n') < lines:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0 or not select.select([probe.stdout], [], [], remaining)[0]:
+            raise AssertionError('C++ fixture reply timed out')
+        chunk = os.read(probe.stdout.fileno(), 1024)
+        if not chunk or len(reply) + len(chunk) > 1024:
+            raise AssertionError('C++ fixture reply missing or oversized')
+        reply.extend(chunk)
+    return bytes(reply)
 
 
 class SupNcdcTest(unittest.TestCase):
@@ -75,24 +92,28 @@ class SupNcdcTest(unittest.TestCase):
                         probe = subprocess.Popen([PROBE, '--ncdc-transcript'], stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
                         probe.stdin.write(initial)
-                        reply = bytearray()
-                        deadline = time.monotonic() + 5
-                        while reply.count(b'\n') < 2:
-                            remaining = deadline - time.monotonic()
-                            self.assertGreater(remaining, 0, 'C++ SUP reply timed out')
-                            self.assertTrue(select.select([probe.stdout], [], [], remaining)[0], 'No C++ reply')
-                            chunk = os.read(probe.stdout.fileno(), 1024)
-                            self.assertTrue(chunk, 'C++ probe exited before reply')
-                            reply.extend(chunk)
-                        self.assertEqual(bytes(reply), b'ISUP ADBASE ADTIGR\nISID ABCD\n')
-                        peer.sendall(reply + b'IINF CT32 NIdc24h-SUP-fixture\n')
+                        if SID_MODE:
+                            reply = probe_reply(probe, 1)
+                            self.assertEqual(reply, b'ISUP ADBASE ADTIGR\n')
+                            peer.sendall(reply)
+                            probe.stdin.write(b'SUP_SENT\n')
+                            sid_reply = probe_reply(probe, 1)
+                            self.assertRegex(sid_reply, rb'\AISID [A-Z2-7]{4}\n\Z')
+                            assigned = sid_reply[5:9]
+                            self.assertNotEqual(assigned, b'AAAA')
+                            peer.sendall(sid_reply + b'IINF CT32 NIdc24h-SID-fixture\n')
+                        else:
+                            reply = probe_reply(probe, 2)
+                            self.assertEqual(reply, b'ISUP ADBASE ADTIGR\nISID ABCD\n')
+                            assigned = b'ABCD'
+                            peer.sendall(reply + b'IINF CT32 NIdc24h-SUP-fixture\n')
                         inf, pending = frame(peer, pending)
-                        self.assertTrue(inf.startswith(b'BINF ABCD '), 'ncdc did not accept SUP/SID')
+                        self.assertTrue(inf.startswith(b'BINF ' + assigned + b' '), 'ncdc did not accept assigned SID')
                         self.assertIsNone(client.poll())
-                        probe.stdin.write(b'SENT\n')
+                        probe.stdin.write(b'SID_SENT\n' if SID_MODE else b'SENT\n')
                         stdout, stderr = probe.communicate(input=inf, timeout=5)
                         self.assertEqual(probe.returncode, 0, stderr.decode(errors='replace'))
-                        self.assertEqual(stdout, b'IDENTIFY TIGR 24\n')
+                        self.assertEqual(stdout, b'IDENTIFY SID_RELEASED\n' if SID_MODE else b'IDENTIFY TIGR 24\n')
                         self.assertEqual(stderr, b'')
             finally:
                 if probe is not None:

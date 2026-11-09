@@ -1,5 +1,7 @@
 # Architecture
 
+In alpha-0.2.5, dc24h_adc adds Sid, SidPool, SidLease and SidSession. One reactor-owned hub pool spans future ADC/ADCS sessions; bounded bitmaps replace per-session random collision guesses. A move-only reservation owns each active value and SidSession releases it on terminal events/destruction. Shared ownership keeps allocator state alive without coupling it to sockets, Core or Database. Parser and state syntax use the common codec. See [ADC_SID.md](ADC_SID.md); live transport attachment remains planned.
+
 In alpha-0.2.4, `dc24h_adc` adds `SupportNegotiation` for bounded peer/local capabilities and TIGR selection, plus `ProtocolConnection` composing support with the state machine. A valid initial HSUP supplies the protocol approval; the first completed ISUP must exactly match the generated local advertisement. Peer updates are transactional in NORMAL; the session hash is immutable. The receive-only Network remains unattached. See [ADC_SUP.md](ADC_SUP.md).
 
 In alpha-0.2.3, `dc24h_adc` also provides a hub-side `ConnectionStateMachine` with no socket, logger, database or Core dependencies. It stores only a four-character SID and fixed handshake flags. Network still uses the parser alone; [ADC_STATE.md](ADC_STATE.md) defines the explicit integration boundary and approval contract.
