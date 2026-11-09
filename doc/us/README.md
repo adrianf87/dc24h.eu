@@ -1,6 +1,6 @@
 # dc24h.eu documentation
 
-alpha-0.2.6: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.2.7: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
 - [AUDIT_ALPHA_0.1.md](AUDIT_ALPHA_0.1.md)
 - [ARCHITECTURE.md](ARCHITECTURE.md)
@@ -9,6 +9,7 @@ alpha-0.2.6: implemented behavior and clearly identified future modules. Default
 - [ADC_SUP.md](ADC_SUP.md)
 - [ADC_SID.md](ADC_SID.md)
 - [ADC_INF.md](ADC_INF.md)
+- [ADC_IDENTITY.md](ADC_IDENTITY.md)
 - [ADCS_TLS.md](ADCS_TLS.md)
 - [NETWORK.md](NETWORK.md)
 - [CONFIGURATION.md](CONFIGURATION.md)

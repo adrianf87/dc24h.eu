@@ -51,3 +51,7 @@ Branch from current main at `350a43f`. Use one shared SidPool for one hub and un
 ## INF — alpha-0.2.6
 
 Branch from main at `8552406` after the SID merge. Build with libgcrypt20-dev; extend known fields only with explicit type/domain/budget and cancellation tests. Preserve canonical base32/TIGER1 byte order, source/IP binding, immutable CID, no PD in retained/exported metadata and candidate-before-state commit. Use ClientSession for future attachment; lower-level state admission alone does not validate INF. Keep registry uniqueness/admission separate and never auto-grant NORMAL from a parsed INF. New cryptographic dependencies must be present in both CI jobs and installation guides. See [ADC_INF.md](ADC_INF.md).
+
+## CID/PID — alpha-0.2.7
+
+Branch from main at `9d3443a` after the INF merge. Use verify_tiger_identity for private PID input; do not duplicate string-encoded digest comparisons in field consumers. Extend public verified values without adding PID storage. Preserve exact TIGER1/canonical-tail semantics, direct failure clearing, cleanup on all exits and no fallback/global crypto changes. Linker fault wrappers are test-only. Tests must cover malformed encodings, mismatch, unavailable provider, recovery and actual ncdc pairs. See [ADC_IDENTITY.md](ADC_IDENTITY.md).

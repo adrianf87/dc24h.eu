@@ -132,3 +132,7 @@ Since alpha-0.2.2, `Message::positional_count` identifies known BASE argument la
 ## INF API — alpha-0.2.6
 
 `adc/identity_hash.hpp` supplies Tiger/192 and canonical 39-symbol base32 helpers. `adc/inf.hpp` supplies InfValidator, read-only ClientInfo and ClientSession composition. Snapshots expose optional borrowed field views, checked integer values and an owning public BINF Message without PD. `observe` returns optional `variant<StateError, SupportError, SidError, InfError>`; failed input preserves state/metadata/reservations. Identity approval additionally requires validated INF but still delegates registry/admission and account decisions. HTTP routes/schema/counters remain unchanged. See [ADC_INF.md](ADC_INF.md).
+
+## CID/PID API — alpha-0.2.7
+
+`adc/tiger_identity.hpp` exposes TigerCid::parse/text/bytes and verify_tiger_identity(cid, pid, hash), returning variant<VerifiedIdentity, IdentityError>. Only public CID is retained. `ClientInfo::identity()` returns an optional owning copy of that result. `decode_tiger_base32` and `tiger192_into` write a caller-owned 24-byte destination and clear it on failure; existing optional-return helpers remain compatible. The final comparison uses CRYPTO_memcmp. No HTTP route/schema or authentication API changes. See [ADC_IDENTITY.md](ADC_IDENTITY.md).

@@ -1,8 +1,6 @@
 #include "dc24h/adc/inf.hpp"
-#include "dc24h/adc/identity_hash.hpp"
 
 #include <arpa/inet.h>
-#include <openssl/crypto.h>
 #include <utf8proc.h>
 
 #include <algorithm>
@@ -67,10 +65,16 @@ bool valid_features(std::string_view text) {
     }
     return false;
 }
-struct PrivateDigest {
-    std::optional<TigerDigest> value;
-    ~PrivateDigest() { if (value) { OPENSSL_cleanse(value->data(), value->size()); } }
-};
+InfError inf_identity_error(IdentityError error) noexcept {
+    switch (error) {
+    case IdentityError::invalid_cid: return InfError::invalid_cid;
+    case IdentityError::invalid_pid: return InfError::invalid_pid;
+    case IdentityError::mismatch: return InfError::cid_mismatch;
+    case IdentityError::unsupported_hash: return InfError::unsupported_hash;
+    case IdentityError::crypto_unavailable: return InfError::crypto_unavailable;
+    }
+    return InfError::invalid_message;
+}
 } // namespace
 
 std::string_view inf_status_code(InfError error) noexcept {
@@ -146,7 +150,7 @@ std::variant<ClientInfo, InfError> InfValidator::validate(const Message& message
             continue;
         }
         if (name == "ID") {
-            if (!parse_tiger_base32(value)) { return InfError::invalid_cid; }
+            if (!TigerCid::parse(value)) { return InfError::invalid_cid; }
             if (previous && previous->field("ID") != value) { return InfError::immutable_identity; }
         } else if (numeric_field(name)) {
             if (!value.empty()) {
@@ -192,11 +196,9 @@ std::variant<ClientInfo, InfError> InfValidator::validate(const Message& message
     if (!candidate.field("ID") || !candidate.field("NI")) { return InfError::missing_identity; }
     if (!previous) {
         if (pid.empty()) { return InfError::missing_identity; }
-        PrivateDigest decoded{parse_tiger_base32(pid)};
-        if (!decoded.value) { return InfError::invalid_pid; }
-        const auto digest = tiger192(*decoded.value);
-        if (!digest) { return InfError::crypto_unavailable; }
-        if (tiger_base32(*digest) != *candidate.field("ID")) { return InfError::cid_mismatch; }
+        const auto identity = verify_tiger_identity(*candidate.field("ID"), pid, hash);
+        if (const auto* error = std::get_if<IdentityError>(&identity)) { return inf_identity_error(*error); }
+        candidate.identity_ = std::get<VerifiedIdentity>(identity);
     }
     return candidate;
 }

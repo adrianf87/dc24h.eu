@@ -1,5 +1,7 @@
 # INF — alpha-0.2.6
 
+Since alpha-0.2.7, [CID/PID verification](ADC_IDENTITY.md) is a dedicated shared module with TigerCid/VerifiedIdentity values, direct cleansed output buffers and a constant-time final digest comparison. INF snapshots retain only a public verified result. Basic verification introduced in alpha-0.2.6 remains compatible; live transport attachment and account/registry policy remain separate.
+
 ## Delivered scope
 
 `adc/inf.hpp` adds InfValidator, a read-only ClientInfo snapshot and ClientSession over [SidSession](ADC_SID.md). `adc/identity_hash.hpp` provides Tiger/192 and canonical base32 helpers. These are C++20 modules in dc24h_adc; no socket, logger, SQL or HTTP dependency is added. Production Network still invokes the parser alone, so this stage does not enable live login.

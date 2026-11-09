@@ -43,3 +43,7 @@ The [SUP/state adapter](ADC_SUP.md) completes feature/hash selection as a standa
 ## INF boundary — alpha-0.2.6
 
 [ClientSession](ADC_INF.md) now validates intrinsic client information in the independent stack. Future Network attachment must pass the actual kernel peer address (not an INF claim), serialize decoded public snapshots with escaping, and enforce global nickname/CID admission and update uniqueness before committing/announcing user information. The receive-only reactor remains unchanged. The new ncdc fixture validates real PID/CID over Python-owned TCP/TLS; existing actual C++ transport fixtures remain separate. Ordered bounded output, registry/lifecycle dispatch and login deadlines are still required.
+
+## CID/PID boundary — alpha-0.2.7
+
+ClientSession/INF now uses the dedicated [Tiger verifier](ADC_IDENTITY.md), but the actual reactor remains receive-only. The new ncdc identity fixture rejects a tampered canonical CID before accepting the real pair, retains only the public result and stays in IDENTIFY. Its sockets/TLS are Python-owned; existing C++ ADC/ADCS transport tests remain separate. Successful PID/CID verification must still be followed by registry uniqueness/admission, bounded output and whole-login lifecycle work before live attachment.

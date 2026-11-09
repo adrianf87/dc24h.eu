@@ -13,7 +13,7 @@ cmake --build build-release --parallel 2
 ctest --test-dir build-release --output-on-failure
 ```
 
-`-DBUILD_TESTING=OFF` wyłącza testy i wymaganie Pythona. `cmake --install build-release --prefix /usr/local` instaluje sam program (może wymagać sudo). Katalogi językowe są wkompilowane. Wersja pochodzi z CMake; `--version` zwraca alpha-0.2.6. Dokładną kompilację identyfikuje także `git rev-parse HEAD`. Nie edytuj plików generowanych. Wymagane są biblioteki Connector/C MariaDB; działający serwer SQL jest opcjonalny. Node.js i Apache2 nie są wymagane do budowania C++; frontend ma osobne wymagania.
+`-DBUILD_TESTING=OFF` wyłącza testy i wymaganie Pythona. `cmake --install build-release --prefix /usr/local` instaluje sam program (może wymagać sudo). Katalogi językowe są wkompilowane. Wersja pochodzi z CMake; `--version` zwraca alpha-0.2.7. Dokładną kompilację identyfikuje także `git rev-parse HEAD`. Nie edytuj plików generowanych. Wymagane są biblioteki Connector/C MariaDB; działający serwer SQL jest opcjonalny. Node.js i Apache2 nie są wymagane do budowania C++; frontend ma osobne wymagania.
 
 Pełne polecenia konfiguracji AddressSanitizer/UndefinedBehaviorSanitizer: [BUILD US](../us/BUILD.md). Osobne budowanie frontendu: [WEBADMIN.md](WEBADMIN.md).
 
@@ -28,3 +28,7 @@ Użyj wspieranego Node/npm, potem `npm --prefix webadmin ci` i `npm --prefix web
 ## Zależność INF — alpha-0.2.6
 
 Zainstalować `libgcrypt20-dev` obok dotychczasowych zależności C++. CMake wymaga gcrypt.h/libgcrypt dla dc24h_adc. Tożsamość INF używa GCRY_MD_TIGER1 (standardowy Tiger/192); brak algorytmu/kontekstu odrzuca walidację. Moduł nie zmienia FIPS/globalnych trybów. To nie szyfry TLS ani obliczanie drzew Tiger plików.
+
+## Testy awarii tożsamości — alpha-0.2.7
+
+Brak nowej zależności poza Libgcrypt/OpenSSL. Izolowany adc_identity_failure_tests wymaga linkera Linux zgodnego z GNU i --wrap; CMake stosuje flagi wyłącznie do tego testu. Program serwera nie zawiera wrapperów ani interfejsu wstrzykiwania kryptografii.

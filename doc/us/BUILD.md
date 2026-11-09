@@ -21,7 +21,7 @@ cmake --build build-runtime --parallel 2
 sudo cmake --install build-runtime --prefix /usr/local
 ```
 
-Language catalogs are compiled into the binary. CMake generates `dc24h/version.hpp` from project version 0.2.6; `--version` prints alpha-0.2.6. Identify an exact build with that version plus `git rev-parse HEAD`. Do not edit generated files. MariaDB Connector/C development/runtime libraries are required; a running SQL server is optional. Node.js and Apache2 are not required for the C++ build; the optional frontend has separate requirements.
+Language catalogs are compiled into the binary. CMake generates `dc24h/version.hpp` from project version 0.2.7; `--version` prints alpha-0.2.7. Identify an exact build with that version plus `git rev-parse HEAD`. Do not edit generated files. MariaDB Connector/C development/runtime libraries are required; a running SQL server is optional. Node.js and Apache2 are not required for the C++ build; the optional frontend has separate requirements.
 
 For sanitizers:
 
@@ -46,3 +46,7 @@ Use a supported Node/npm toolchain, then `npm --prefix webadmin ci` and `npm --p
 ## INF dependency — alpha-0.2.6
 
 Install `libgcrypt20-dev` in addition to existing C++ dependencies. CMake requires gcrypt.h/libgcrypt for dc24h_adc. INF identity validation uses GCRY_MD_TIGER1 (standard Tiger/192); runtime algorithm/context unavailability fails validation. The module does not switch FIPS/global modes. This is unrelated to TLS ciphers and does not implement Tiger tree file hashing.
+
+## Identity failure tests — alpha-0.2.7
+
+No new dependency is added beyond Libgcrypt/OpenSSL. The isolated adc_identity_failure_tests executable needs a GNU-compatible Linux linker supporting --wrap; CMake applies these flags only to that test target. Runtime/server targets contain no fault wrappers or injected crypto interface.

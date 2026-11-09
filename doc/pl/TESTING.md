@@ -1,5 +1,13 @@
 # Testowanie
 
+## Etap CID/PID — alpha-0.2.7
+
+Pełny zestaw rejestruje **33 pozycje CTest**, dodając `adc.identity`, `adc.identity.failure` i `adc.identity.ncdc`. Obejmują wektory/alias Tiger, kanoniczne CID/PID, wszystkie bajty spoza alfabetu w każdej pozycji, znaki końca, długości, czyszczenie błędnego wyjścia, 1000 par/mismatch, własność wyniku i zachowanie INF. Lokalne wrappery linkera wstrzykują awarie algorytmu/kontekstu/odczytu, sprawdzają brak zatwierdzenia, odzyskanie i sprzątanie. Prawdziwy ncdc odrzuca zmieniony CID przed prawdziwą parą w TCP i TLS Pythona, pozostając w niezatwierdzonym IDENTIFY. Testy rzeczywistego transportu C++ są osobne. Zobacz [ADC_IDENTITY.md](ADC_IDENTITY.md).
+
+Wynik lokalny: **33/33 zestawów CTest przeszło w Debug, Release i ASan/UBSan**, z deterministycznymi awariami dostawcy, rzeczywistym C++ ncdc ADC/ADCS, fixture tożsamości/INF/SID/SUP, tymczasową MariaDB i izolowanym Apache HTTPS. Przeszły typecheck/build WebAdmin, 3 testy Node, 3 testy Chromium i rzeczywista integracja C++ API/Vite/React. Chromium używał `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium`; wersje zależności są bez zmian. Wyniki lokalne nie dowodzą innych systemów/zdalnego CI ani audytu kanałów bocznych.
+
+Odtworzenie: `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug --parallel 4`, `ctest --test-dir build-debug --output-on-failure --parallel 3`; powtórzyć z Release. Nowy zakres: `ctest --test-dir build-debug -R '^adc.identity' --output-on-failure`. Awarie wymagają linkera zgodnego z GNU --wrap; produkcja nie używa wrapperów. Inicjalizacja wersji i dowolne błędy alokacji nie są wstrzykiwane. Historyczne wyniki zachowują swój zakres.
+
 ## Etap INF — alpha-0.2.6
 
 Pełny zestaw rejestruje teraz **30 pozycji CTest**, dodając `adc.inf` i `adc.inf.ncdc`. Zakres obejmuje wektory Tiger empty/abc i kolejność bajtów, kanoniczne base32/bity końca i 1000 rund, wymagane/duplikowane/prywatne/nieznane pola, granice liczb/tekstu/SU/pamięci, zgodność/normalizację IP, stały CID i aktualizacje, publiczne snapshoty oraz bramki dopuszczenia. Każdy podział na dwa fragmenty i bajtowy UTF-8 sprawdzają odzyskiwanie parsera i atomowe odrzucanie. Nowy fixture prawdziwego ncdc sprawdza PID/CID i eksportuje bez PD przez TCP loopback i TLS Pythona, pozostając w niezatwierdzonym IDENTIFY. Jest osobny od testów rzeczywistego transportu C++. Zobacz [ADC_INF.md](ADC_INF.md).

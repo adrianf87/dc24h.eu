@@ -19,6 +19,7 @@
 | alpha-0.2.4 SUP | Funkcje AD/RM, BASE/wspólny TIGR, limity i połączenie z automatem |
 | alpha-0.2.5 SID | Koder 20-bitowy, ograniczona wspólna pula, rezerwacje RAII i zarządzane sesje SID |
 | alpha-0.2.6 INF | Ograniczone metadane, Tiger tożsamości, kontrola IP i publiczne snapshoty bez PD |
+| alpha-0.2.7 CID/PID | Dedykowany weryfikator Tiger, wynik publiczny, czyszczenie buforów i testy awarii |
 
 ## Proponowane etapy alpha-0.2
 
@@ -50,3 +51,5 @@ alpha-0.2.4 powstaje z main w `1dd0b9f1a94626789d1ac9addad991a6eae78910`, po jaw
 alpha-0.2.5 powstaje z main w `350a43f69b5134bd049923739cd606f798f846ec` po scaleniu SUP. [SID](ADC_SID.md) realizuje własność alokatora/rezerwacji i połączenie modułów; wyjście/podłączenie sesji i tożsamość pozostają planowane. Gałąź nie scala się samoczynnie do main.
 
 alpha-0.2.6 powstaje z main w `85524067756ac5fcbd177bb47f5d2cfe33fad063`. [INF](ADC_INF.md) realizuje walidację pól/PID-CID i połączenie stosu. Globalny rejestr/dopuszczenie, hasła kont, wyjście i pełne logowanie pozostają planowane. Gałąź nie scala się automatycznie.
+
+alpha-0.2.7 powstaje z main w `9d3443a4d889e745b6490a139435a8f44297cfba`. [CID/PID](ADC_IDENTITY.md) wydziela i wzmacnia sprawdzanie rozpoczęte w INF; nie dodaje logowania, globalnej unikalności CID, uwierzytelniania kont ani drzew plików. Gałąź nie scala się automatycznie.

@@ -173,3 +173,7 @@ Od alpha-0.2.2 `Message::positional_count` określa układ argumentów BASE (nie
 ## API INF — alpha-0.2.6
 
 `adc/identity_hash.hpp` udostępnia Tiger/192 i kanoniczne base32 39-znakowe. `adc/inf.hpp` dodaje InfValidator, ClientInfo tylko do odczytu i ClientSession. Snapshot udostępnia opcjonalne pożyczone widoki pól, sprawdzone liczby i własny publiczny Message BINF bez PD. `observe` zwraca opcjonalny `variant<StateError, SupportError, SidError, InfError>`; błąd zachowuje stan/metadane/rezerwacje. Zatwierdzenie tożsamości wymaga poprawnego INF, ale nadal deleguje rejestr/dopuszczenie i decyzje kont. Trasy/schemat/liczniki HTTP są bez zmian. Zobacz [ADC_INF.md](ADC_INF.md).
+
+## API CID/PID — alpha-0.2.7
+
+`adc/tiger_identity.hpp` udostępnia TigerCid::parse/text/bytes i verify_tiger_identity(cid, pid, hash), zwracający variant<VerifiedIdentity, IdentityError>. Zachowany jest tylko publiczny CID. `ClientInfo::identity()` daje opcjonalną własną kopię wyniku. `decode_tiger_base32` i `tiger192_into` zapisują 24-bajtowy bufor właściciela i czyszczą go po błędzie; stare funkcje optional pozostają zgodne. Końcowe porównanie używa CRYPTO_memcmp. Brak zmian tras/schematu HTTP i API uwierzytelniania. Zobacz [ADC_IDENTITY.md](ADC_IDENTITY.md).
