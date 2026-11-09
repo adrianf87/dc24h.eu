@@ -11,6 +11,7 @@
 #include <cstdlib>
 #include <exception>
 #include <iostream>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -27,7 +28,8 @@ int main(int argc, char* argv[]) {
     auto language = dc24h::i18n::Language::us;
     for (int i = 1; i < argc; ++i) {
         const std::string_view key(argv[i]);
-        if (key == "--help" || key == "--version" || key == "--check-config") { continue; }
+        if (key == "--help" || key == "--version" || key == "--check-config" ||
+            key == "--check-database" || key == "--migrate-database") { continue; }
         if (i + 1 < argc) {
             const std::string_view value(argv[++i]);
             if (key == "--language" && (value == "us" || value == "pl")) {
@@ -69,6 +71,23 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    if (parsed.check_database || parsed.migrate_database) {
+        try {
+            dc24h::database::Connection database(parsed.settings.database);
+            database.ping();
+            if (parsed.migrate_database) {
+                const auto applied = dc24h::database::migrate(database);
+                std::cout << dc24h::i18n::translate("Database migrations applied=", language) << applied << '\n';
+            } else {
+                std::cout << dc24h::i18n::translate("Database connection OK\n", language);
+            }
+            return EXIT_SUCCESS;
+        } catch (const std::exception& error) {
+            std::cerr << dc24h::i18n::translate(error.what(), language) << '\n';
+            return EXIT_FAILURE;
+        }
+    }
+
     try {
         dc24h::logging::Logger logger(parsed.settings.logging);
         try {
@@ -85,6 +104,12 @@ int main(int argc, char* argv[]) {
                     " max_invalid_frames=" + std::to_string(parsed.settings.network.security.max_invalid_frames) +
                     " tls_handshake_timeout_seconds=" + std::to_string(parsed.settings.network.security.tls_handshake_timeout.count()) +
                     " partial_frame_timeout_seconds=" + std::to_string(parsed.settings.network.security.partial_frame_timeout.count()));
+            std::unique_ptr<dc24h::database::Connection> database;
+            if (parsed.settings.database.enabled) {
+                database = std::make_unique<dc24h::database::Connection>(parsed.settings.database);
+                database->ping();
+                logger.info("Database connected");
+            }
             dc24h::network::TcpServer network(logger, std::move(parsed.settings.network));
             dc24h::core::Server server(logger, &network);
             std::atomic<bool> signal_error{false};

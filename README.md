@@ -2,7 +2,7 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.1.7 (Security).**
+**Current development version: alpha-0.1.8 (Database).**
 
 Completed increments:
 
@@ -14,12 +14,14 @@ Completed increments:
 - **alpha-0.1.6 Logging**: startup summaries, WARN, opt-in connection events, bounded single-line UTF-8 records and rate budgets.
 - **alpha-0.1.7 Security**: bounded per-IP admissions, frame quotas and absolute TLS/unfinished-frame deadlines.
 
-A full ADC/ADCS hub is **not yet implemented**: no complete ADC handshake, user sessions, authentication, messaging, search, or transfer coordination. MariaDB and React WebAdmin remain future milestones.
+- **alpha-0.1.8 Database**: optional MariaDB connection, private password files, local Unix sockets, prepared queries and explicit migration metadata baseline.
+
+A full ADC/ADCS hub is **not yet implemented**: no complete ADC handshake, user sessions, authentication, messaging, search, or transfer coordination. Account persistence and React WebAdmin remain future milestones.
 
 ## Build
 
 ```sh
-sudo apt-get install build-essential cmake libutf8proc-dev libssl-dev openssl python3 ncdc
+sudo apt-get install build-essential cmake libutf8proc-dev libssl-dev openssl python3 ncdc libmariadb-dev
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel 2
 ctest --test-dir build --output-on-failure
@@ -61,3 +63,5 @@ Defaults, then explicit INI, then CLI. No file is loaded automatically. INI path
 Connection records are off by default; enable with `--log-connections on` or `[logging] connections=on` at INFO. Records use internal IDs and fixed events without client addresses or ADC payloads. See [logging](doc/us/LOGGING.md) for limits and suppression behavior.
 
 Security defaults: 128 active peers/IP, 256 admissions/IP/minute, 1024 decoder results/s/connection, 512 invalid frames/connection, and 10-second TLS/partial-frame deadlines. Frame bodies remain capped at 16 KiB with 128 parameters. Configure `[security]` or CLI; see [security](doc/us/SECURITY.md) for exact policies and limitations.
+
+MariaDB is disabled by default. Configure `[database]` to enable connection checks before listener startup. Use `--check-database` to connect/ping or `--migrate-database` to explicitly create/verify migration metadata; startup never migrates. Install `mariadb-server` to run disposable integration tests. See [database documentation](doc/us/DATABASE.md) for setup, privileges and limits.

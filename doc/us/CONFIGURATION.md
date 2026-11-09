@@ -1,4 +1,4 @@
-# Configuration — alpha-0.1.7
+# Configuration — alpha-0.1.8
 
 Settings are composed in this order: built-in defaults, one explicit `--config FILE`, then command-line overrides regardless of where `--config` appears. There is no automatic file search, environment substitution, include directive, reload or remote configuration.
 
@@ -73,3 +73,7 @@ Defaults apply even when the security section is omitted. All values are positiv
 | `partial_frame_timeout` | `--partial-frame-timeout` | 10 | 1..3600 | Absolute unfinished-frame deadline, seconds |
 
 All listeners share IP admission state. The frame rate is per connection, including keepalives and invalid decoder results. The invalid threshold is lifetime-based; its Nth invalid result closes the peer. TLS expiry is bounded by both its absolute configured deadline and idle timeout. Partial-frame deadlines do not slide with more data and restart only for a new frame after LF. See [SECURITY.md](SECURITY.md) for exact window, memory, counter and timeout semantics.
+
+## Database — alpha-0.1.8
+
+INI-only `[database]`: `enabled=off`, `socket=/run/mysqld/mysqld.sock`, `name=dc24h`, `user=dc24h`, `timeout=5`, optional `password_file` (required when enabled). Only local Unix sockets are supported. `--check-database` connects/pings; `--migrate-database` explicitly applies/verifies metadata. These actions and `--check-config` are mutually exclusive. Dry-run never reads SQL credentials or contacts MariaDB. Log destinations cannot alias the database password. See [DATABASE.md](DATABASE.md) for exact ranges, private-file rules and exit codes.

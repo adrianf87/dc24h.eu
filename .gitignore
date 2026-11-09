@@ -18,3 +18,6 @@ __pycache__/
 # Local configuration (the example remains tracked)
 /config/*.ini
 /*.ini
+
+# Local database service credentials
+*.password

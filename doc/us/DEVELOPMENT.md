@@ -13,3 +13,7 @@ alpha-0.1.5 starts from main after the explicit alpha-0.1.4 merge. The configura
 alpha-0.1.6 starts from main after alpha-0.1.5. The logging-specific commits in chatgpt-alpha-0.1.6 were reviewed and adapted; main's safer INI/file handling, TLS scheduling and US/PL support are retained. Use typed ConnectionEvent values and keep all payload/peer data out of operational logs.
 
 alpha-0.1.7 starts from main after the alpha-0.1.6 merge. The security sources/tests in chatgpt-alpha-0.1.7 were reviewed and adapted. Retain bounded admission state, canonical source identities, one release per slot and absolute per-frame deadlines; never log the source keys or payloads. Security is independent of the planned authentication module.
+
+## Database increment
+
+alpha-0.1.8 starts from main after alpha-0.1.7. Keep SQL handles and credentials out of Core/Network, use bound values, and keep applied SQL migrations immutable. Extend migration recovery before adding non-idempotent DDL. Disposable database tests must use their own data directory/socket and `--no-defaults`; never connect to a developer database.

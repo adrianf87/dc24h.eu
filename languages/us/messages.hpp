@@ -3,7 +3,7 @@
 #include <string_view>
 
 namespace dc24h::i18n::us {
-inline constexpr std::array<std::string_view, 84> messages{{
+inline constexpr std::array<std::string_view, 101> messages{{
     "Starting dc24h.eu ",
     "Core running",
     "Core stopping",
@@ -60,7 +60,7 @@ inline constexpr std::array<std::string_view, 84> messages{{
     "Invalid listener or connection limits",
     "ADCS requires listeners, a certificate and a private key",
     "Invalid log level",
-    "Log file cannot be the configuration, TLS certificate or private key",
+    "Log file cannot target configuration or credential files",
     "Cannot resolve configuration file path",
     "Invalid configuration line ",
     "Invalid section at line ",
@@ -87,9 +87,26 @@ inline constexpr std::array<std::string_view, 84> messages{{
     "Security stopped; rejected=",
     "Security per-IP admission quota reached; peer rejected",
     "Security frame quota reached; connection closed",
-    "Security partial frame timed out; connection closed"
+    "Security partial frame timed out; connection closed",
+    "Invalid database settings",
+    "Cannot read private database password file",
+    "Database is disabled",
+    "Database initialization failed",
+    "Database option setup failed",
+    "Database connection failed",
+    "Database character set setup failed",
+    "Database ping failed",
+    "Database statement failed",
+    "Database result shape invalid",
+    "Database migration failed",
+    "Database migration lock unavailable",
+    "Database migration history mismatch",
+    "Database actions and configuration check are mutually exclusive",
+    "Database migrations applied=",
+    "Database connection OK\n",
+    "Database connected"
 }};
-inline constexpr std::string_view help = R"HELP(Usage: dc24h [--config FILE] [--check-config]
+inline constexpr std::string_view help = R"HELP(Usage: dc24h [--config FILE] [--check-config | --check-database | --migrate-database]
              [--listen IPv4:port | [IPv6]:port | none] ...
              [--adcs-listen IPv4:port | [IPv6]:port | none] ...
              [--tls-cert CHAIN.pem --tls-key KEY.pem]
@@ -111,5 +128,8 @@ Run dc24h.eu in the foreground; stop with SIGINT (Ctrl+C) or SIGTERM.
 Security defaults: 128 peers/IP, 256 admissions/IP/minute, 1024 frames/s/peer,
 512 invalid frames/peer, 10 seconds for TLS and each unfinished frame.
 ADC syntax parsing only: no complete ADC login, routing or user sessions.
+Database settings use [database] in INI; disabled by default.
+--check-database connects/pings; --migrate-database explicitly applies metadata migrations.
+--check-config never connects to MariaDB or reads the password file.
 )HELP";
 } // namespace dc24h::i18n::us

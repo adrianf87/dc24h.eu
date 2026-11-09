@@ -1,4 +1,4 @@
-name: Build and test Core, Network, ADC, ADCS, Configuration, Logging and Security
+name: Build and test Core, Network, ADC, ADCS, Configuration, Logging, Security and Database
 on: [push, pull_request]
 permissions:
   contents: read
@@ -11,8 +11,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - name: Install Unicode library and test client
-        run: sudo apt-get update && sudo apt-get install -y libutf8proc-dev libssl-dev openssl ncdc
+      - name: Install server dependencies and integration-test tools
+        run: sudo apt-get update && sudo apt-get install -y libutf8proc-dev libssl-dev openssl ncdc libmariadb-dev mariadb-server
       - name: Configure C++20
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
       - name: Build

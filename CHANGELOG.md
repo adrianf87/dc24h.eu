@@ -1,5 +1,24 @@
 # Changelog
 
+## alpha-0.1.8 — 2026-11-09
+
+Database foundation, based on main after alpha-0.1.7; prior branches/history preserved:
+
+- Added independent C++20 `dc24h_database` using MariaDB Connector/C with noncopyable RAII connections/statements, utf8mb4, bounded connect/read/write timeouts and sanitized errors.
+- Added opt-in `[database]` settings. Disabled by default; enabled startup connects/pings before hub listeners. SQL stays outside Core and the Network reactor. No automatic reconnect, runtime query queue, pooling or persistence consumers.
+- Uses explicitly selected local Unix sockets only. Remote database TCP/TLS is deferred pending a portable strict hostname-verification adapter; ADCS remains unchanged.
+- Reads the service password from a bounded private regular file owned by the effective UID, without group/other access or extra links. Rejects final symlinks, FIFOs, controls, NUL and oversized/empty input; removes one terminal LF/CRLF and wipes temporary application buffers.
+- Extends log-path collision protection to database password aliases. Never logs raw connector errors, SQL, credentials or private paths. No password CLI/INI/environment option, LOCAL INFILE or multi-statement execution.
+- Added prepared execution/scalar queries with bound values and bounded scalar results; statement failures release resources and permit subsequent queries.
+- Added explicit `--check-database` and `--migrate-database`, mutually exclusive with dry-run. These actions do not open hub listeners or configured logs. `--check-config` never reads database passwords or connects to SQL.
+- Added immutable SQL baseline for `dc24h_schema_migrations`, embedded SQL/SHA-256, cooperative schema-specific GET_LOCK, idempotent initial application and version/name/checksum verification. Migration 1 creates metadata only; no accounts or authentication schema is claimed.
+- Added private-file unit tests and disposable real-MariaDB integration covering prepared values/Unicode, result bounds/recovery, migration lock contention/repetition/history tampering, startup/shutdown, INI/CLI, US/PL and diagnostics privacy. The fixture uses --no-defaults, its own data directory/socket and disabled TCP; it never touches the host database.
+- Updated matched US/PL documentation/catalogs, example INI, version checks, installable migration SQL and CI dependencies. CMake reports missing integration-test tools.
+
+Local validation: 18/18 CTest suites passed in Debug, Release and ASan/UBSan, including real ncdc ADC/ADCS and disposable MariaDB, on Debian 13 with MariaDB 11.8.6 / Connector/C 3.4.9. Staged installation, installed example/migration bytes, UTF-8 documentation/local links/language parity and Git whitespace checks passed. Remote CI and other target OS/database combinations are not claimed as verified.
+
+Limits: synchronous startup and per-operation timeouts, no live database health monitoring, no remote SQL transport, no automatic migrations/backups/downgrade or complete schema drift audit. DDL may implicitly commit; only the current metadata baseline is retryable. User accounts, Argon2id authentication, roles/bans, application persistence, full ADC login, HTTP API and WebAdmin remain future work. Main is not modified by this branch.
+
 ## alpha-0.1.7 — 2026-11-09
 
 Security/resource-policy milestone, based on main after alpha-0.1.6:

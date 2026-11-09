@@ -19,7 +19,7 @@ cmake --build build-runtime --parallel 2
 sudo cmake --install build-runtime --prefix /usr/local
 ```
 
-Language catalogs are compiled into the binary. CMake generates `dc24h/version.hpp` from project version 0.1.7; `--version` prints alpha-0.1.7. Identify an exact build with that version plus `git rev-parse HEAD`. Do not edit generated files. No MariaDB, Node.js or Apache2 dependency is needed yet.
+Language catalogs are compiled into the binary. CMake generates `dc24h/version.hpp` from project version 0.1.8; `--version` prints alpha-0.1.8. Identify an exact build with that version plus `git rev-parse HEAD`. Do not edit generated files. MariaDB Connector/C development/runtime libraries are required; a running SQL server is optional. Node.js and Apache2 are not needed yet.
 
 For sanitizers:
 
@@ -34,3 +34,5 @@ ctest --test-dir build-sanitize --output-on-failure
 GCC/Clang AddressSanitizer/UndefinedBehaviorSanitizer must be available. WebAdmin has no build pipeline yet.
 
 Installation includes the binary and `etc/dc24h/dc24h.ini.example` relative to the selected prefix; it never installs an active configuration or starts a service.
+
+Connector/C (`libmariadb-dev`) is required. Install `mariadb-server` for the optional `database.process` test; CMake reports missing tools. Installation also includes the immutable migration SQL under `share/dc24h/migrations`.
