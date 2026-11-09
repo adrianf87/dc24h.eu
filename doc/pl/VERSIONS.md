@@ -12,9 +12,10 @@
 | alpha-0.1.8 | alpha-0.1.8 | Połączenie MariaDB i rejestr migracji |
 | alpha-0.1.9 | alpha-0.1.9 | Lokalne API administracyjne HTTP/JSON tylko do odczytu |
 | alpha-0.1.10 | alpha-0.1.10 | Układ WebAdmin React/TypeScript/Vite i lokalny adapter tylko do odczytu |
+| alpha-0.1.11 | alpha-0.1.11 | Szablon HTTPS Apache2 i izolowane testy TLS/dostępu |
 
-CMake PROJECT_VERSION to 0.1.10; wersja programu to alpha-0.1.10. Dokładną kompilację identyfikuje wersja wraz z SHA commita. Budowanie nie zmienia plików źródłowych. Istotne zmiany trafiają do CHANGELOG.md. Alpha oznacza rozwój, nie pełną funkcjonalność huba. Tagi i wdrożenie nie powstają automatycznie.
+CMake PROJECT_VERSION to 0.1.11; wersja programu to alpha-0.1.11. Dokładną kompilację identyfikuje wersja wraz z SHA commita. Budowanie nie zmienia plików źródłowych. Istotne zmiany trafiają do CHANGELOG.md. Alpha oznacza rozwój, nie pełną funkcjonalność huba. Tagi i wdrożenie nie powstają automatycznie.
 
 Wcześniejsze gałęzie i historia commitów są zachowane. alpha-0.1.4 zachowuje przez merge historię referencyjnego TLS i zawiera poprawki.
 
-alpha-0.1.9 jest scalona z main. alpha-0.1.10 powstaje z tego main i nie zmienia go automatycznie.
+alpha-0.1.10 jest scalona z main. alpha-0.1.11 powstaje z tego main i nie zmienia go automatycznie.

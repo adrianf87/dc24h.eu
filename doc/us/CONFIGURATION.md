@@ -1,4 +1,4 @@
-# Configuration — alpha-0.1.10
+# Configuration — alpha-0.1.11
 
 Settings are composed in this order: built-in defaults, one explicit `--config FILE`, then command-line overrides regardless of where `--config` appears. There is no automatic file search, environment substitution, include directive, reload or remote configuration.
 
@@ -85,3 +85,7 @@ INI-only `[api]` options: `enabled=off`, no default `socket`/`token_file`, `max_
 ## WebAdmin development configuration
 
 Frontend settings are separate from INI: server-only `DC24H_API_SOCKET`/`DC24H_API_TOKEN_FILE` configure the optional same-UID local Vite adapter; both must be absolute, with the token outside WebAdmin. There is no new C++ runtime setting. The static production build contains neither adapter nor token. See [WEBADMIN.md](WEBADMIN.md).
+
+## Apache2 HTTPS template
+
+The new `apache2-webadmin-https.conf.example` is independent of the INI. Set the actual hostname, static asset directory and external certificate/key paths in the Apache copy. It contains no Listen directives, relying on distro ports.conf, and defaults to local static access/API denial. No native C++ runtime setting is added. See [APACHE2_HTTPS.md](APACHE2_HTTPS.md).

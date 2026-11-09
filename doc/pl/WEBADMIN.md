@@ -52,7 +52,7 @@ sudo cmake --install build-release --prefix /usr/local
 
 Instalowane są zasoby `share/dc24h/webadmin` i przykład `etc/dc24h/apache2-webadmin.conf.example`. Opcja domyślnie OFF; ON wymaga istniejącego `webadmin/dist/index.html`. Zawsze buduj frontend z tego samego checkoutu; CMake nie uruchamia npm i nie weryfikuje pochodzenia gotowych zasobów. Instalacja nie aktywuje konfiguracji i nie startuje usługi.
 
-[Przykład Apache2](../../config/apache2-webadmin.conf.example) to **statyczny lokalny podgląd** `127.0.0.1:8080`: dostęp lokalny, bez indeksowania katalogów, nagłówki CSP/no-sniff/frame/referrer i jawna blokada `/admin-api/`. Wymaga mod_headers oraz standardowych modułów katalogów/autoryzacji, z czytelnymi plikami zainstalowanego builda. Dostosuj ścieżki/porty i sprawdź `apache2ctl configtest` przed świadomym włączeniem. Przykład celowo nie przekazuje żądań do prywatnego API; panel statyczny nie otrzymuje wtedy danych. Produkcyjna brama, sesje/role WWW, HTTPS i wdrożenie pozostają planowane. Nie przekazuj tokena usługi do JavaScript ani nie udostępniaj prywatnego gniazda C++ innemu UID.
+[Przykład Apache2](../../config/apache2-webadmin.conf.example) to **statyczny lokalny podgląd** `127.0.0.1:8080`: dostęp lokalny, bez indeksowania katalogów, nagłówki CSP/no-sniff/frame/referrer i jawna blokada `/admin-api/`. Wymaga mod_headers oraz standardowych modułów katalogów/autoryzacji, z czytelnymi plikami zainstalowanego builda. Dostosuj ścieżki/porty i sprawdź `apache2ctl configtest` przed świadomym włączeniem. Przykład celowo nie przekazuje żądań do prywatnego API; panel statyczny nie otrzymuje wtedy danych. Produkcyjna brama, sesje/role WWW, wdrożenie pozostają planowane. Nie przekazuj tokena usługi do JavaScript ani nie udostępniaj prywatnego gniazda C++ innemu UID.
 
 ## Weryfikacja
 
@@ -68,3 +68,7 @@ npm run test:integration -- ../build/dc24h
 Przy zainstalowanym Chromium można ustawić `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium`. Testy używają tymczasowych sekretów/gniazd. Jednostkowe sprawdzają schemat/precyzję, normalizację, pliki prywatne, Origin/Host/metody/ścieżki, wstrzykiwanie tokena, przeciążenie, rozmiary/czas i błędy bez szczegółów. Przeglądarkowe obejmują brak/dostępność/błędne/utracone dane, nawigację, trwałość języka, eksport i szerokość mobilną. Harness integracyjny uruchamia rzeczywisty tymczasowy C++, osobne Vite i Chromium; sprawdza liczniki ADC, izolację tokena, desktop/mobile PL i sprząta procesy. CTest/ncdc/MariaDB pozostają osobnymi zestawami.
 
 Źródła: [Vite — uruchomienie](https://vite.dev/guide/), [ograniczenia serwera Vite](https://vite.dev/config/server-options), [React i TypeScript](https://react.dev/learn/typescript).
+
+## Przykład HTTPS — alpha-0.1.11
+
+Osobny szablon statycznej witryny HTTP→HTTPS/TLS 1.2+ jest dostępny i zawsze instalowany z przykładami konfiguracji C++. Zachowuje domyślny dostęp lokalny/blokadę API; nie jest produkcyjną bramą uwierzytelnioną. Ścieżki certyfikatów, dostosowanie, włączenie i testy: [APACHE2_HTTPS.md](APACHE2_HTTPS.md).

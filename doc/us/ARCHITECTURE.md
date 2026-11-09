@@ -33,3 +33,7 @@ The independent C++20 `dc24h_security` target implements validated limits and cl
 ## WebAdmin — alpha-0.1.10
 
 The frontend is independent of C++ build/runtime. Browser code validates the API schema and exposes monitoring views; its only persisted setting is language. The optional Vite development adapter holds credentials server-side, restricts requests to loopback/same-origin and forwards only two read-only routes over the same-UID Unix socket. A production build is static and contains no adapter or token. Apache can serve those assets; production authenticated gateway/session/role design remains separate. CMake optionally installs prebuilt assets with `DC24H_INSTALL_WEBADMIN=ON`, default OFF. See [WEBADMIN.md](WEBADMIN.md).
+
+## Apache2 HTTPS — alpha-0.1.11
+
+A separate installed configuration example serves prebuilt static WebAdmin through TLS 1.2/1.3 and redirects HTTP to a fixed canonical hostname. It retains local access and private-route denial, without proxying the Unix API or changing C++ transports. Disposable tests load the shipped policy under an independent ServerRoot; certificate provisioning and host service activation remain operator responsibilities. See [APACHE2_HTTPS.md](APACHE2_HTTPS.md).

@@ -1,7 +1,7 @@
 # Rozwój projektu
 
 Pracuj na gałęziach wydań, zachowując historię `main`. Aktualny etap:
-`alpha-0.1.10`. Każdy istotny etap otrzymuje opisowy commit. Nie dodawaj
+`alpha-0.1.11`. Każdy istotny etap otrzymuje opisowy commit. Nie dodawaj
 artefaktów kompilacji, sekretów ani zależności vendored bez uzasadnienia.
 
 | Katalog | Rola |
@@ -45,3 +45,7 @@ alpha-0.1.9 powstaje z main po scaleniu alpha-0.1.8. Zachowuj wąski kontrakt HT
 ## Etap WebAdmin
 
 alpha-0.1.10 powstaje z main po alpha-0.1.9. Oddzielaj schemat/formatowanie przeglądarki od serwerowego adaptera Vite, zachowuj parzystość EN/PL, nie dodawaj sekretów/node_modules/dist/wyników testów do Git i aktualizuj package-lock przy zależnościach. Sprawdzaj build, testy jednostkowe/przeglądarkowe/integrację z C++ i istniejące testy serwera. Zmiany administracyjne i produkcyjne logowanie WWW wymagają osobnego projektu.
+
+## Etap Apache2
+
+alpha-0.1.11 powstaje z main po alpha-0.1.10. Oddzielaj aktywację hosta, rzeczywiste certyfikaty i reload od tworzenia/testowania przykładu. Testuj dokładnie dostarczaną politykę TLS/dostępu/nagłówków z tymczasowymi ścieżkami/portami, bez konfiguracji hosta. Sukces apache2 -t nie dowodzi zgodności certyfikatu/klucza; sprawdzaj inicjalizację. Zachowuj oba języki dokumentacji i spójne wersje fixture.

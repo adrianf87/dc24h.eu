@@ -12,6 +12,7 @@
 | alpha-0.1.8 Database | Optional local MariaDB connection, prepared queries and explicit migration metadata |
 | alpha-0.1.9 API | Local authenticated HTTP/JSON status and health; read-only |
 | alpha-0.1.10 WebAdmin | React/TypeScript/Vite read-only layout, EN/PL, local development adapter, static Apache example |
+| alpha-0.1.11 Apache2 | Static HTTPS example, canonical redirect, TLS/security policy and disposable Apache tests |
 
 Next increments must define their version and acceptance tests before implementation:
 
@@ -21,7 +22,7 @@ Next increments must define their version and acceptance tests before implementa
 4. Public/private chat, search and client transfer coordination.
 5. Administrative API mutations/roles/audit, authenticated Apache2 gateway and production web sessions/roles.
 
-Versions beyond alpha-0.1.10 remain planned. Other branches do not establish release readiness.
+Versions beyond alpha-0.1.11 remain planned. Other branches do not establish release readiness.
 
 ## alpha-0.1.5
 

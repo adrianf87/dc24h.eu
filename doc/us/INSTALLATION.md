@@ -5,7 +5,7 @@ Targets: Debian 12/13 and Ubuntu 22.04/24.04/26.04 LTS. Only the locally tested 
 ```sh
 sudo apt-get update
 sudo apt-get install build-essential cmake git python3 libutf8proc-dev libssl-dev openssl ncdc libmariadb-dev
-git clone --branch alpha-0.1.10 https://github.com/adrianf87/dc24h.eu.git
+git clone --branch alpha-0.1.11 https://github.com/adrianf87/dc24h.eu.git
 cd dc24h.eu
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel 2
@@ -19,3 +19,5 @@ Run as an unprivileged account. The process stays in the foreground and stops wi
 For ADCS configure readable certificate/key paths with the correct service-user permissions; see [ADCS_TLS.md](ADCS_TLS.md). The executable does not obtain or renew certificates. Apache2 is optional for static WebAdmin assets; the authenticated production gateway remains planned; MariaDB connections are optional and disabled by default. See [DATABASE.md](DATABASE.md). See [CONFIGURATION.md](CONFIGURATION.md) for port and language options.
 
 For explicit file settings, copy the [example](../../config/dc24h.ini.example), adjust paths and run `./build/dc24h --config config/dc24h.ini --check-config` before normal startup with the same `--config`. Local INI files are ignored by Git.
+
+For the installed static HTTPS template, certificate paths, local access policy and explicit Apache activation, see [APACHE2_HTTPS.md](APACHE2_HTTPS.md). The example is always installed under `etc/dc24h`; no certificate/site/service is activated by CMake.

@@ -25,3 +25,7 @@ alpha-0.1.9 starts from main after the alpha-0.1.8 merge. Preserve the narrow bo
 ## WebAdmin increment
 
 alpha-0.1.10 starts from main after alpha-0.1.9. Keep browser-safe schema/formatting separate from the server-only Vite adapter, maintain EN/PL key parity, never include secrets or node_modules/dist/test results in Git, and update package-lock with dependency changes. Verify the frontend build, unit/browser/live C++ integration and existing server tests. Administrative mutations and production web authentication require a separate reviewed design.
+
+## Apache2 increment
+
+alpha-0.1.11 starts from main after alpha-0.1.10. Keep host activation, real certificates and service reloads separate from example authoring/testing. Test the exact shipped TLS/access/header policy with temporary paths/ports and no host config. A successful apache2 -t is insufficient to claim certificate/key correspondence; exercise real initialization. Keep both documentation languages and version-sensitive fixtures aligned.

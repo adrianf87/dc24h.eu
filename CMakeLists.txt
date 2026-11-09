@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.1.10 LANGUAGES CXX)
+project(dc24h VERSION 0.1.11 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -100,7 +100,7 @@ endforeach()
 
 include(GNUInstallDirs)
 install(TARGETS dc24h RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-install(FILES config/dc24h.ini.example DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/dc24h)
+install(FILES config/dc24h.ini.example config/apache2-webadmin-https.conf.example DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/dc24h)
 
 install(FILES database/migrations/0001_schema_migrations.sql DESTINATION ${CMAKE_INSTALL_DATADIR}/dc24h/migrations)
 
@@ -195,6 +195,17 @@ if(BUILD_TESTING)
     add_test(NAME api.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/api_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(api.unit api.process PROPERTIES TIMEOUT 45)
+    find_program(APACHE2_EXECUTABLE apache2 PATHS /usr/sbin)
+    find_path(APACHE2_MODULE_DIR NAMES mod_ssl.so PATHS /usr/lib/apache2/modules)
+    if(APACHE2_EXECUTABLE AND APACHE2_MODULE_DIR)
+        add_test(NAME apache2.https COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/apache_https_tests.py"
+            "${APACHE2_EXECUTABLE}" "${APACHE2_MODULE_DIR}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/config/apache2-webadmin-https.conf.example")
+        set_tests_properties(apache2.https PROPERTIES TIMEOUT 60)
+    else()
+        message(STATUS "Apache2/mod_ssl not found: apache2.https unavailable")
+    endif()
     find_program(NCDC_EXECUTABLE ncdc)
     if(NCDC_EXECUTABLE)
         add_test(NAME adc.ncdc COMMAND "${Python3_EXECUTABLE}"

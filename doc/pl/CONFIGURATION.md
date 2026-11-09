@@ -1,4 +1,4 @@
-# Konfiguracja — alpha-0.1.10
+# Konfiguracja — alpha-0.1.11
 
 Kolejność ustawień: wartości domyślne, jeden jawny `--config PLIK`, następnie nadpisania CLI niezależnie od miejsca `--config`. Brak automatycznego wyszukiwania pliku, zmiennych środowiskowych, include, reload i konfiguracji zdalnej.
 
@@ -79,3 +79,7 @@ Opcje wyłącznie INI `[api]`: `enabled=off`, brak domyślnych `socket`/`token_f
 ## Konfiguracja deweloperska WebAdmin
 
 Frontend jest niezależny od INI: serwerowe `DC24H_API_SOCKET`/`DC24H_API_TOKEN_FILE` ustawiają opcjonalny lokalny adapter Vite tego samego UID; ścieżki absolutne, token poza WebAdmin. Brak nowego ustawienia wykonawczego C++. Statyczny build nie zawiera adaptera/tokena. Zobacz [WEBADMIN.md](WEBADMIN.md).
+
+## Szablon HTTPS Apache2
+
+Nowy `apache2-webadmin-https.conf.example` jest niezależny od INI. Ustaw nazwę hosta, katalog zasobów i ścieżki certyfikatu/klucza w kopii Apache. Nie zawiera Listen, korzysta z ports.conf dystrybucji; domyślnie dostęp lokalny/statyczny z blokadą API. Brak nowego parametru wykonawczego C++. Zobacz [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
