@@ -14,13 +14,18 @@
 - Izolacja błędów peer, odzyskiwanie po braku zasobów i zwijanie błędnego startu.
 - Testy transportu, integracji z Core, CLI i dokumentacja.
 
-Transport odbiera i odrzuca dane. Nie ma jeszcze obsługi protokołu ani zapisu
-odpowiedzi do klienta. Pełny hub ADC/ADCS pozostaje celem projektu.
+## Ukończone: alpha-0.1.3 ADC — składnia
+
+- Oddzielny parser nagłówków, routingu, komend i parametrów.
+- Escaping, UTF-8/NFC, limity i odzyskiwanie po błędnych danych.
+- Strumieniowe ramkowanie i niezależny dekoder każdego klienta TCP.
+- Liczniki bez logowania treści, testy C++/TCP i początkowego HSUP z ncdc.
 
 ## Kolejne etapy — niewykonane
 
-1. ADC: parser/serializer i testy względem oficjalnej specyfikacji; potem
-   integracja z Network, ograniczone bufory wyjściowe i backpressure.
+1. ADC: serializer, semantyka komend i pól, automat handshake/sesji,
+   przydział SID, bezpieczne kierowanie wiadomości, ograniczone bufory
+   wyjściowe i backpressure; pełne logowanie ncdc.
 2. ADCS: infrastruktura TLS, certyfikaty i testy handshake.
 3. Configuration: walidowany format pliku i kontrola błędów konfiguracji.
 4. Users/Security/Database: sesje, konta, migracje i uwierzytelnianie.

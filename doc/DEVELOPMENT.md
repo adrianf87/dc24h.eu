@@ -1,13 +1,14 @@
 # Rozwój projektu
 
 Pracuj na gałęziach wydań, zachowując historię `main`. Aktualny etap:
-`alpha-0.1.2`. Każdy istotny etap otrzymuje opisowy commit. Nie dodawaj
+`alpha-0.1.3`. Każdy istotny etap otrzymuje opisowy commit. Nie dodawaj
 artefaktów kompilacji, sekretów ani zależności vendored bez uzasadnienia.
 
 | Katalog | Rola |
 | --- | --- |
 | `src/core`, `include/dc24h/core` | Core i adapter sygnałów |
 | `src/network`, `include/dc24h/network` | TCP, listenery, klienci i epoll |
+| `src/adc`, `include/dc24h/adc` | Parser składni i dekoder strumienia ADC |
 | `src/logging`, `include/dc24h/logging` | Logowanie |
 | `cmake/` | Generowana informacja o wersji |
 | `tests/` | Testy C++ i testy procesu w Pythonie |

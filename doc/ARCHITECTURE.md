@@ -63,9 +63,22 @@ odrzucać stare zdarzenia po ponownym użyciu deskryptora przez system.
 
 Szczegóły: [NETWORK.md](NETWORK.md), kontrakt: [API.md](API.md).
 
+## ADC — alpha-0.1.3
+
+`dc24h_adc` zawiera model wiadomości, parser pojedynczej treści oraz dekoder
+strumienia. Jego jedyną zależnością zewnętrzną jest utf8proc (UTF-8 i NFC).
+Network zależy od ADC; ADC nie zależy od Network ani Core.
+Każdy `Connection` ma własny dekoder, używany tylko w wątku pętli `epoll`.
+Wyniki są przetwarzane synchronicznie i zliczane, bez kolejki i dispatchu.
+Niepoprawna ramka nie rzuca wyjątku ani nie zatrzymuje innych klientów;
+brak pamięci i inne awarie infrastruktury nadal mogą zakończyć proces.
+Na zamknięciu klienta `finish()` raportuje nieukończoną ramkę. Stop najpierw
+zamyka listenery, potem klientów i wypisuje zbiorcze liczniki Network oraz ADC.
+Szczegóły kontraktu i limitów: [ADC_PROTOCOL.md](ADC_PROTOCOL.md).
+
 ## Plan modułów
 
-Kolejne moduły będą oddzielane od Core: ADC Protocol, ADCS/TLS,
+Kolejne moduły będą oddzielane od Core: automat sesji ADC, ADCS/TLS,
 Users/Sessions, Chat, Search, Transfers, Security, Database, API, Configuration.
 WebAdmin pozostaje osobnym frontendem React/TypeScript/Vite, serwowanym przez
 Apache2. Logging obecnie zapewnia tylko współdzielony logger stderr.

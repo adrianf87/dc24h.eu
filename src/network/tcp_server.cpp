@@ -1,5 +1,6 @@
 #include "dc24h/network/tcp_server.hpp"
 #include "dc24h/logging/logger.hpp"
+#include "dc24h/adc/parser.hpp"
 
 #include <arpa/inet.h>
 #include <sys/epoll.h>
@@ -96,6 +97,7 @@ void watch(int epoll_fd, int fd, std::uint64_t token, std::uint32_t flags) {
 struct Connection {
     Fd fd;
     Clock::time_point last_activity;
+    adc::StreamDecoder decoder;
 };
 } // namespace
 
@@ -148,7 +150,8 @@ void TcpServer::request_stop() noexcept {
 }
 
 Statistics TcpServer::statistics() const noexcept {
-    return {active_.load(), accepted_.load(), rejected_.load(), received_bytes_.load()};
+    return {active_.load(), accepted_.load(), rejected_.load(), received_bytes_.load(),
+            adc_frames_.load(), adc_unknown_.load(), adc_invalid_.load(), adc_keepalives_.load()};
 }
 
 void TcpServer::run() {
@@ -206,7 +209,20 @@ void TcpServer::run() {
         accepting = false;
         resume_accepting = Clock::now() + std::chrono::seconds(1);
     };
+    const adc::StreamDecoder::Sink record_frame = [&](adc::ParseResult result) {
+        if (const auto* message = std::get_if<adc::Message>(&result)) {
+            adc_frames_.fetch_add(1);
+            if (message->kind == adc::Command::unknown) { adc_unknown_.fetch_add(1); }
+        } else if (std::holds_alternative<adc::KeepAlive>(result)) {
+            adc_keepalives_.fetch_add(1);
+        } else {
+            adc_invalid_.fetch_add(1);
+        }
+        // Parsing milestone only: no dispatch, session state or responses yet.
+        // Never log untrusted parameters, private identifiers or password hashes.
+    };
     auto disconnect = [&](auto iterator) {
+        if (iterator->second.decoder.finish()) { adc_invalid_.fetch_add(1); }
         // DEL before close; event tokens are never reused even when the OS reuses an fd.
         ::epoll_ctl(epoll.get(), EPOLL_CTL_DEL, iterator->second.fd.get(), nullptr);
         connections.erase(iterator);
@@ -265,7 +281,7 @@ void TcpServer::run() {
                         pause_accepting();
                         break;
                     }
-                    connections.emplace(client_token, Connection{std::move(client), Clock::now()});
+                    connections.emplace(client_token, Connection{std::move(client), Clock::now(), {}});
                     active_.fetch_add(1);
                     accepted_.fetch_add(1);
                 }
@@ -279,7 +295,8 @@ void TcpServer::run() {
                 if (received > 0) {
                     received_bytes_.fetch_add(static_cast<std::uint64_t>(received));
                     found->second.last_activity = Clock::now();
-                    // Transport milestone only: consume without retaining or interpreting payload.
+                    found->second.decoder.feed(
+                        std::string_view(buffer.data(), static_cast<std::size_t>(received)), record_frame);
                 } else if (received == 0) {
                     closed = true;
                     break;
@@ -302,11 +319,15 @@ void TcpServer::run() {
     }
     // Close listeners first, then active clients, before reporting stopped.
     listeners.clear();
-    connections.clear();
+    while (!connections.empty()) { disconnect(connections.begin()); }
     active_.store(0);
     logger_.info("Network stopped; all TCP sockets closed; accepted=" + std::to_string(accepted_.load()) +
                  " rejected=" + std::to_string(rejected_.load()) +
                  " received_bytes=" + std::to_string(received_bytes_.load()));
+    logger_.info("ADC stopped; frames=" + std::to_string(adc_frames_.load()) +
+                 " unknown_commands=" + std::to_string(adc_unknown_.load()) +
+                 " invalid_frames=" + std::to_string(adc_invalid_.load()) +
+                 " keepalives=" + std::to_string(adc_keepalives_.load()));
 }
 
 } // namespace dc24h::network

@@ -1,6 +1,6 @@
 # Konfiguracja
 
-Alpha-0.1.2 konfiguruje Network przez CLI. Nie ma parsera plików, zmiennych
+Alpha-0.1.3 konfiguruje Network przez CLI. Nie ma parsera plików, zmiennych
 środowiskowych aplikacji ani dynamicznego przeładowania.
 
 | Opcja | Domyślnie | Znaczenie |
@@ -28,3 +28,11 @@ Treść danych sieciowych i niepoprawne wartości CLI nie są zapisywane w logac
 
 SIGHUP nie przeładowuje ustawień i zachowuje domyślną semantykę systemową.
 Szczegóły limitów i TCP: [NETWORK.md](NETWORK.md).
+
+Parser ADC ma obecnie stałe limity aplikacji: 16384 bajty treści (bez LF)
+i 128 parametrów (bez pól routingu). Nie ma opcji CLI do ich zmiany.
+Każdy klient ma osobny ograniczony bufor. Niepoprawna ramka jest ignorowana;
+przekroczenie rozmiaru przełącza dekoder w odrzucanie aż do LF.
+Na stopie dodatkowy log `ADC stopped` podaje liczniki ramek poprawnych
+składniowo, nieznanych komend, błędnych ramek i keepalive. Są to liczniki
+parsera, bez potwierdzenia wykonania komendy. Szczegóły: [ADC_PROTOCOL.md](ADC_PROTOCOL.md).

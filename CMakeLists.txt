@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.1.2 LANGUAGES CXX)
+project(dc24h VERSION 0.1.3 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -15,11 +15,23 @@ set_target_properties(dc24h_logging PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_logging PUBLIC include)
 target_link_libraries(dc24h_logging PUBLIC Threads::Threads)
 
+find_path(UTF8PROC_INCLUDE_DIR NAMES utf8proc.h REQUIRED)
+find_library(UTF8PROC_LIBRARY NAMES utf8proc REQUIRED)
+add_library(UTF8Proc::UTF8Proc UNKNOWN IMPORTED)
+set_target_properties(UTF8Proc::UTF8Proc PROPERTIES
+    IMPORTED_LOCATION "${UTF8PROC_LIBRARY}"
+    INTERFACE_INCLUDE_DIRECTORIES "${UTF8PROC_INCLUDE_DIR}")
+add_library(dc24h_adc src/adc/parser.cpp)
+target_compile_features(dc24h_adc PUBLIC cxx_std_20)
+set_target_properties(dc24h_adc PROPERTIES CXX_EXTENSIONS OFF)
+target_include_directories(dc24h_adc PUBLIC include)
+target_link_libraries(dc24h_adc PRIVATE UTF8Proc::UTF8Proc)
+
 add_library(dc24h_network src/network/tcp_server.cpp)
 target_compile_features(dc24h_network PUBLIC cxx_std_20)
 set_target_properties(dc24h_network PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_network PUBLIC include)
-target_link_libraries(dc24h_network PUBLIC dc24h_logging)
+target_link_libraries(dc24h_network PUBLIC dc24h_logging dc24h_adc)
 
 add_library(dc24h_core
     src/core/server.cpp
@@ -35,7 +47,7 @@ add_executable(dc24h src/main.cpp)
 target_link_libraries(dc24h PRIVATE dc24h_core)
 set_target_properties(dc24h PROPERTIES CXX_EXTENSIONS OFF)
 
-foreach(target dc24h_core dc24h_network dc24h_logging dc24h)
+foreach(target dc24h_core dc24h_network dc24h_logging dc24h_adc dc24h)
     target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 endforeach()
 
@@ -59,6 +71,23 @@ if(BUILD_TESTING)
     add_test(NAME network.unit COMMAND network_tests)
     add_test(NAME network.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/network_process_tests.py" "$<TARGET_FILE:dc24h>")
+    add_executable(adc_tests tests/adc_tests.cpp)
+    target_link_libraries(adc_tests PRIVATE dc24h_adc)
+    set_target_properties(adc_tests PROPERTIES CXX_EXTENSIONS OFF)
+    target_compile_options(adc_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    add_test(NAME adc.parser COMMAND adc_tests)
+    add_test(NAME adc.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/adc_process_tests.py" "$<TARGET_FILE:dc24h>")
+    find_program(NCDC_EXECUTABLE ncdc)
+    if(NCDC_EXECUTABLE)
+        add_test(NAME adc.ncdc COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_smoke_test.py"
+            "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}")
+        set_tests_properties(adc.ncdc PROPERTIES TIMEOUT 30)
+    else()
+        message(STATUS "ncdc not found: adc.ncdc smoke test is unavailable")
+    endif()
+    set_tests_properties(adc.parser adc.process PROPERTIES TIMEOUT 30)
     set_tests_properties(core.lifecycle core.process network.unit PROPERTIES TIMEOUT 30)
     set_tests_properties(network.process PROPERTIES TIMEOUT 45)
 endif()

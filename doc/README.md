@@ -1,12 +1,12 @@
 # Dokumentacja dc24h.eu
 
-Dokumenty rozróżniają działającą implementację alpha-0.1.2 od założeń
+Dokumenty rozróżniają działającą implementację alpha-0.1.3 od założeń
 przyszłych modułów. Sam opis modułu nie oznacza jego implementacji.
 
 | Dokument | Zawartość |
 | --- | --- |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Moduły, cykl życia Core, wątki i sygnały |
-| [ADC_PROTOCOL.md](ADC_PROTOCOL.md) | Zakres planowanej implementacji ADC |
+| [ADC_PROTOCOL.md](ADC_PROTOCOL.md) | Parser ADC, kontrakt, limity i zakres dalszych prac |
 | [ADCS_TLS.md](ADCS_TLS.md) | Plan szyfrowania i certyfikatów |
 | [NETWORK.md](NETWORK.md) | Sieć, porty i zakończenie procesu |
 | [CONFIGURATION.md](CONFIGURATION.md) | Aktualne opcje uruchomienia |

@@ -1,6 +1,6 @@
 # Sieć i proces
 
-## Alpha-0.1.2 — transport TCP
+## Transport TCP (alpha-0.1.2) i parser ADC (alpha-0.1.3)
 
 `network::TcpServer` obsługuje nieblokujące gniazda IPv4/IPv6 w pojedynczym
 wątku pętli `epoll` (level-triggered). Nie tworzy wątku na klienta.
@@ -20,9 +20,9 @@ po poprawnym uruchomieniu wszystkich listenerów. `Core running` oznacza start
 silnika, a nie gotowość portów. Nie są obsługiwane nazwy DNS ani adresy IPv6
 z identyfikatorem strefy. IPv6 używa `IPV6_V6ONLY`; IPv4 konfiguruje się osobno.
 
-**To jeszcze nie hub ADC.** Serwer odbiera i zlicza bajty, ale odrzuca ich treść.
-Nie odpowiada, nie wykonuje echo, nie parsuje komend, nie uwierzytelnia i nie
-przekazuje wiadomości. Nie ma TLS/ADCS ani buforów wyjściowych. Podłączenie
+Serwer odbiera bajty i przekazuje je do osobnego dekodera ADC każdego klienta.
+Parsuje i zlicza ramki, ale nie odpowiada, nie wykonuje echo, nie uwierzytelnia
+i nie przekazuje wiadomości. Szczegóły: [ADC_PROTOCOL.md](ADC_PROTOCOL.md). Nie ma TLS/ADCS ani buforów wyjściowych. Podłączenie
 klienta Direct Connect nie zakończy się logowaniem do huba.
 
 ## Połączenia, limity i błędy
@@ -39,7 +39,8 @@ Kontrola bezczynności następuje w pętli z oczekiwaniem do 250 ms, więc timeo
 może przekroczyć ustawioną wartość o ten interwał i opóźnienie planisty.
 
 Jedna partia przyjmowania obejmuje do 64 klientów, a odczyt jednego zdarzenia
-do 64 KiB. Stały bufor odczytu ma 8 KiB; dane nie są kumulowane w pamięci.
+do 64 KiB. Stały bufor odczytu ma 8 KiB. Każdy dekoder ADC przechowuje do 16 KiB
+nieukończonej treści. Po przekroczeniu limitu odrzuca dane aż do LF.
 Ograniczenie partii umożliwia obsługę pozostałych klientów oraz stopu przy ciągłym
 ruchu. Nie jest to ochrona przed DDoS ani limit przepustowości/per-IP.
 
@@ -57,7 +58,8 @@ Atomowa flaga jest zapamiętywana również przed startem, a zapis do `eventfd`
 budzi `epoll_wait` bez oczekiwania na timeout klienta. Gniazda są zamykane
 wyłącznie w wątku pętli. Stop nie oczekuje na peer i nie opróżnia wiadomości
 aplikacyjnych — takie kolejki jeszcze nie istnieją. Log zatrzymania zawiera
-liczniki przyjętych/odrzuconych połączeń i odebranych bajtów, bez treści danych.
+liczniki przyjętych/odrzuconych połączeń i odebranych bajtów. Oddzielny log
+ADC zawiera liczniki parsowania, bez treści danych.
 
 | Sygnał | Obsługa |
 | --- | --- |

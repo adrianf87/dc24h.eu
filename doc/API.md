@@ -1,6 +1,6 @@
 # API
 
-## Wewnętrzne C++ w alpha-0.1.2
+## Wewnętrzne C++ w alpha-0.1.3
 
 Nagłówek `dc24h/core/server.hpp`:
 
@@ -25,7 +25,8 @@ Nagłówek `dc24h/network/tcp_server.hpp`:
 - `request_stop() noexcept` — atomowa flaga i nieblokujące budzenie; bezpieczne
   współbieżnie, również przed `run()`.
 - `statistics()` — niezależnie odczytane atomowe liczniki `active`, `accepted`,
-  `rejected`, `received_bytes`. Nie stanowią wspólnego transakcyjnego snapshotu.
+  `rejected`, `received_bytes`, `adc_frames`, `adc_unknown`, `adc_invalid`,
+  `adc_keepalives`. Nie stanowią wspólnego transakcyjnego snapshotu.
 
 Właściciel dołącza wątek `run()` i wszystkich wywołujących `request_stop()` przed
 zniszczeniem obiektów. Destruktor nie zastępuje stop/join. Gniazda TCP należą
@@ -34,6 +35,15 @@ Transport nie udostępnia jeszcze callbacków wiadomości ani zapisu do klienta.
 
 `TerminationSignals` jest adapterem procesu dla Linux; ustawienie maski należy
 wykonać w głównym wątku przed utworzeniem innych wątków.
+
+## Parser ADC
+
+Nagłówek `dc24h/adc/parser.hpp` udostępnia `Message`, `MessageType`, `Command`,
+`FeatureSelector`, `ParseError`, wariant `ParseResult`, `parse_line`,
+`recognize_command` oraz `StreamDecoder` z `feed`, `finish` i `buffered_bytes`.
+Szczegółowy kontrakt, zasady własności, limity i semantyka błędów:
+[ADC_PROTOCOL.md](ADC_PROTOCOL.md). Dekoder jest jednowątkowy; niezależne
+instancje oraz `parse_line` można używać równolegle.
 
 ## Plan API WebAdmin
 

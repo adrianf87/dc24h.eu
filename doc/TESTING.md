@@ -15,7 +15,7 @@ Warunki testów działają również w Release (nie opierają się na `assert`).
 błędne argumenty, SIGINT, SIGTERM, sygnał w trakcie startu oraz seria sygnałów.
 Dwa ostatnie scenariusze wykonują po 10 uruchomień procesu. Sprawdza kod
 wyjścia 0, log odebranego sygnału i dokładnie jedną sekwencję zatrzymania.
-W alpha-0.1.2 używa portu 0, aby unikać konfliktów z innymi procesami.
+Od alpha-0.1.2 używa portu 0, aby unikać konfliktów z innymi procesami.
 
 `network.unit` sprawdza parser adresów, zakresy opcji, stop przed startem,
 odrzucenie ponownego run, stan Core po błędzie Network oraz 30 powtórzeń
@@ -40,12 +40,44 @@ czas suite do 30 sekund (Core/unit) lub 45 sekund (network.process).
 Testy nie wymagają zewnętrznego serwera ani pakietów Pythona spoza standardowej
 biblioteki. Test limitu deskryptorów ustawia limit wyłącznie procesu potomnego.
 
-Lokalna weryfikacja alpha-0.1.1 i alpha-0.1.2: Debian 13, GCC 14.2,
+Lokalna weryfikacja alpha-0.1.1, alpha-0.1.2 i alpha-0.1.3: Debian 13, GCC 14.2,
 CMake 3.31, konfiguracje Debug i Release. Definicja GitHub Actions obejmuje
 Ubuntu 22.04 i 24.04 w obu konfiguracjach; obecność workflow nie oznacza,
 że zdalne CI zakończyło się sukcesem. Debian 12 i Ubuntu 26.04 wymagają
 osobnej weryfikacji. Testy nie są benchmarkiem wydajności ani testem DDoS.
 
-Nie są jeszcze testowane moduły ADC/TLS, baza, API ani WebAdmin. Wyczerpanie
+Nie są jeszcze testowane handshake/sesje ADC, TLS, baza, API ani WebAdmin. Wyczerpanie
 limitu watch `epoll`/pamięci i błędy kernela wymagają osobnych testów wstrzykiwania
 błędów; test deskryptorów nie pokrywa wszystkich ścieżek braku zasobów.
+
+## ADC — alpha-0.1.3
+
+`adc.parser` w C++ sprawdza osiem typów nagłówków, pola SID/CID, selektory F,
+15 nazw komend BASE i nieznane komendy, escaping, polski tekst i czterobajtowe
+znaki Unicode. Odrzuca błędne UTF-8 (overlong, surrogates, out-of-range,
+nieukończone sekwencje), brak NFC, surowe control/DEL, błędne separatory,
+routing, escape i przekroczenia limitów. Sprawdza dokładną granicę 16 KiB,
+128 parametrów dla kilku typów nagłówków, każdy podział przykładowego strumienia
+między dwoma odczytami, wejście bajt po bajcie, odrzucenie 1 MiB bez LF,
+odzyskanie synchronizacji i idempotentny EOF. Deterministyczny korpus 4000
+losowych linii porównuje wyniki dla całego wejścia i losowych fragmentów.
+Nie zastępuje to długotrwałego fuzzingu ani audytu bezpieczeństwa.
+
+`adc.process` zawiera pięć testów na prawdziwych socketach: fragmentacja i wiele
+ramek, ignorowanie błędnych danych, niezależność buforów klientów i ucięcie,
+przekroczenie limitu z działającym drugim klientem oraz brak sekretów w logach.
+Połowiczne zamknięcie i EOF serwera potwierdzają przetworzenie całego wejścia
+przed odczytem liczników przy stopie.
+
+`adc.ncdc` uruchamia zainstalowany klient ncdc w nowym katalogu tymczasowym
+i pseudoterminalu. Nie korzysta z konfiguracji użytkownika, istniejących hubów
+ani udziałów. Lokalny relay rejestruje początkową ramkę klienta, sprawdza HSUP
+z BASE/TIGR i przekazuje ją do dc24h. Po EOF liczniki muszą wskazać jedną
+poprawną, rozpoznaną ramkę i brak błędów. Proces ncdc, katalog i sockety są
+sprzątane. CMake pomija test z komunikatem tylko wtedy, gdy brak ncdc.
+
+Lokalnie wykonano 7/7 zestawów CTest w Debug i Release, w tym rzeczywisty ncdc
+1.23.1. Parser przeszedł także AddressSanitizer i UndefinedBehaviorSanitizer.
+Zależność Unicode: utf8proc 2.9.0. Weryfikacja ncdc dotyczy początkowego HSUP,
+nie pełnego logowania ani komunikacji w stanie NORMAL. Workflow CI instaluje
+utf8proc i ncdc; zdalny wynik CI wymaga osobnego sprawdzenia.
