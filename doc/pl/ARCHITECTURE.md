@@ -108,3 +108,7 @@ Niezależny target C++20 `dc24h_security` implementuje walidację i limity IP/ra
 ## Lokalne API — alpha-0.1.9
 
 `dc24h_api` posiada ograniczony parser HTTP, weryfikację Bearer, nieblokujące gniazdo Unix i jeden wątek RAII. Zależy od Logging/Security, nie Core, Network i Database. Main przekazuje bezpieczny współbieżnie callback stanu i callback stopu po krytycznym błędzie infrastruktury. API startuje przed pętlą Core i jest zatrzymywane/dołączane przed zniszczeniem celów callbacków, także po błędzie startu Network. JSON zawiera tylko typowane liczniki/flagi; API nie wykonuje SQL ani zmian administracyjnych. Wspólny czytnik prywatnych plików przeniesiono do Security, zachowując błędy Database. Zobacz [API.md](API.md).
+
+## WebAdmin — alpha-0.1.10
+
+Frontend jest niezależny od budowania/działania C++. Kod przeglądarki sprawdza schemat API i oferuje widoki monitorowania; zapisuje wyłącznie język. Opcjonalny adapter Vite trzyma sekret po stronie serwera, wymaga loopback/same-origin i przekazuje dwie trasy odczytu przez gniazdo tego samego UID. Build produkcyjny jest statyczny, bez adaptera/tokena. Apache może serwować zasoby; projekt produkcyjnej bramy/sesji/ról pozostaje osobny. CMake opcjonalnie instaluje gotowe zasoby przez `DC24H_INSTALL_WEBADMIN=ON`, domyślnie OFF. Zobacz [WEBADMIN.md](WEBADMIN.md).

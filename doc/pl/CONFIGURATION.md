@@ -1,4 +1,4 @@
-# Konfiguracja — alpha-0.1.9
+# Konfiguracja — alpha-0.1.10
 
 Kolejność ustawień: wartości domyślne, jeden jawny `--config PLIK`, następnie nadpisania CLI niezależnie od miejsca `--config`. Brak automatycznego wyszukiwania pliku, zmiennych środowiskowych, include, reload i konfiguracji zdalnej.
 
@@ -75,3 +75,7 @@ Sekcja INI `[database]`: `enabled=off`, `socket=/run/mysqld/mysqld.sock`, `name=
 ## Lokalne API — alpha-0.1.9
 
 Opcje wyłącznie INI `[api]`: `enabled=off`, brak domyślnych `socket`/`token_file`, `max_connections=16` (1..128), `request_timeout=2` sekundy (1..30). Włączenie wymaga obu ścieżek; względne są rozwiązywane względem INI. Brak wartości tokena, zdalnych adresów i nadpisań CLI. `--check-config` sprawdza składnię/kolizje, ale nie czyta tokena, nie bada prywatnego katalogu wykonawczego i nie binduje; operacje utrzymania bazy nie uruchamiają API. Zwykły start wymaga prywatnego katalogu właściciela i prywatnego pliku tokena 64-hex. Kolizje logu/gniazda z konfiguracją/sekretami są odrzucane. Szczegóły: [API.md](API.md).
+
+## Konfiguracja deweloperska WebAdmin
+
+Frontend jest niezależny od INI: serwerowe `DC24H_API_SOCKET`/`DC24H_API_TOKEN_FILE` ustawiają opcjonalny lokalny adapter Vite tego samego UID; ścieżki absolutne, token poza WebAdmin. Brak nowego ustawienia wykonawczego C++. Statyczny build nie zawiera adaptera/tokena. Zobacz [WEBADMIN.md](WEBADMIN.md).

@@ -1,6 +1,6 @@
 # Lokalne API administracyjne — alpha-0.1.9
 
-Zaimplementowano opcjonalne API HTTP/1.1/JSON tylko do odczytu, dostępne przez lokalne gniazdo Unix w Linux. Jest niezależne od ADC/ADCS i nie otwiera portu TCP. To podstawa API, nie kompletny backend WebAdmin. Brak zarządzania użytkownikami, ról, operacji zmieniających stan, edycji konfiguracji, zapytań SQL, zdalnego HTTP/TLS i frontendu.
+Zaimplementowano opcjonalne API HTTP/1.1/JSON tylko do odczytu, dostępne przez lokalne gniazdo Unix w Linux. Jest niezależne od ADC/ADCS i nie otwiera portu TCP. To podstawa API, nie kompletny backend WebAdmin. Brak zarządzania użytkownikami, ról, operacji zmieniających stan, edycji konfiguracji, zapytań SQL, zdalnego HTTP/TLS i produkcyjnego logowania WWW.
 
 ## Dostęp i konfiguracja
 
@@ -151,3 +151,7 @@ Dalsze operacje administracyjne i integracja Apache wymagają kontroli ról oraz
 ## Security — alpha-0.1.7
 
 `network::Options::security` zawiera sześć pól `security::Limits`. `security::validate` odrzuca wartości poza zakresem. `PeerLimiter(Limits)` należy do reaktora: `admit(kanoniczny_klucz, czas_monotoniczny)` przyznaje aktywny slot/przyjęcie; po błędzie/zamknięciu wykonaj dokładnie jedno `release(key)` dla każdego sukcesu. Długość klucza i mapa są ograniczone; `tracked_peers()` zwraca liczbę wpisów. `FrameLimiter(maximum)::admit(czas)` daje okno sekundy na klienta. Czasy muszą być monotoniczne. `Statistics` dodaje niezależne atomowe security_rejected/security_closed. Brak współdzielenia stanu między instancjami/procesami. Szczegóły: [SECURITY.md](SECURITY.md).
+
+## Podstawa WebAdmin — alpha-0.1.10
+
+Panel React tylko do odczytu i opcjonalny lokalny adapter Vite tego samego UID są dostępne: [WEBADMIN.md](WEBADMIN.md). Kontrakt i uprawnienia prywatnego API C++ nie zmieniają się. Statyczny Apache nie zapewnia uwierzytelnionej bramy API.

@@ -2,7 +2,7 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.1.9 (API).**
+**Current development version: alpha-0.1.10 (WebAdmin).**
 
 Completed increments:
 
@@ -17,7 +17,9 @@ Completed increments:
 
 - **alpha-0.1.9 API**: optional local HTTP/JSON status and health routes, private Unix socket, same-UID access and Bearer authentication.
 
-A full ADC/ADCS hub is **not yet implemented**: no complete ADC handshake, user sessions, hub-user authentication, messaging, search, or transfer coordination. Account persistence and React WebAdmin remain future milestones.
+- **alpha-0.1.10 WebAdmin**: responsive React/TypeScript/Vite read-only panel, EN/PL, safe local development adapter, tests and an Apache2 static-preview example.
+
+A full ADC/ADCS hub is **not yet implemented**: no complete ADC handshake, user sessions, hub-user authentication, messaging, search, or transfer coordination. Account persistence and a production authenticated web gateway remain future milestones.
 
 ## Build
 
@@ -68,3 +70,14 @@ Security defaults: 128 active peers/IP, 256 admissions/IP/minute, 1024 decoder r
 MariaDB is disabled by default. Configure `[database]` to enable connection checks before listener startup. Use `--check-database` to connect/ping or `--migrate-database` to explicitly create/verify migration metadata; startup never migrates. Install `mariadb-server` to run disposable integration tests. See [database documentation](doc/us/DATABASE.md) for setup, privileges and limits.
 
 The administrative API is disabled by default. Enable `[api]` with a private Unix socket directory and a private 64-hex-character token file. Authenticated `GET /api/v1/health` and `GET /api/v1/status` are read-only. There is no remote API, administrative mutation or frontend yet. See [API setup and contract](doc/us/API.md).
+
+## WebAdmin
+
+```sh
+cd webadmin
+npm ci
+npm run build
+npm run dev
+```
+
+Requires Node.js `^20.19.0 || >=22.12.0`. Open the local URL printed by Vite. Without API configuration the panel shows unavailable values. For the optional real C++ connection, use the same service UID and server-only socket/token-file path variables; never paste a service token into the browser. See [WebAdmin US](doc/us/WEBADMIN.md) / [WebAdmin PL](doc/pl/WEBADMIN.md) for setup, Apache2 and optional CMake asset installation. Production browser authentication, roles, mutations and an authenticated Apache gateway remain planned.

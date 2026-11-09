@@ -11,6 +11,7 @@
 | alpha-0.1.7 Security | Bounded IP admission, frame quotas and absolute deadlines |
 | alpha-0.1.8 Database | Optional local MariaDB connection, prepared queries and explicit migration metadata |
 | alpha-0.1.9 API | Local authenticated HTTP/JSON status and health; read-only |
+| alpha-0.1.10 WebAdmin | React/TypeScript/Vite read-only layout, EN/PL, local development adapter, static Apache example |
 
 Next increments must define their version and acceptance tests before implementation:
 
@@ -18,9 +19,9 @@ Next increments must define their version and acceptance tests before implementa
 2. Graceful TLS close_notify, certificate reload, telemetry and asynchronous/rotating logs.
 3. Users, Argon2id authentication, roles/bans, application SQL migrations and verified remote database TLS.
 4. Public/private chat, search and client transfer coordination.
-5. Administrative API mutations/roles/audit, authenticated Apache2 gateway and real React/TypeScript/Vite WebAdmin.
+5. Administrative API mutations/roles/audit, authenticated Apache2 gateway and production web sessions/roles.
 
-Versions beyond alpha-0.1.9 remain planned. Other branches do not establish release readiness.
+Versions beyond alpha-0.1.10 remain planned. Other branches do not establish release readiness.
 
 ## alpha-0.1.5
 

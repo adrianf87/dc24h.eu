@@ -1,6 +1,6 @@
 # Local administrative API — alpha-0.1.9
 
-Implemented: an opt-in, read-only HTTP/1.1/JSON API on a Linux Unix-domain stream socket. It is independent of ADC/ADCS and does not expose a TCP port. This is an administrative API foundation, not a complete WebAdmin backend. No user management, role system, mutations, configuration updates, SQL queries, remote HTTP/TLS endpoint or frontend is implemented.
+Implemented: an opt-in, read-only HTTP/1.1/JSON API on a Linux Unix-domain stream socket. It is independent of ADC/ADCS and does not expose a TCP port. This is an administrative API foundation, not a complete WebAdmin backend. No user management, role system, mutations, configuration updates, SQL queries, remote HTTP/TLS endpoint or production browser authentication is implemented.
 
 ## Access and configuration
 
@@ -110,3 +110,7 @@ All owners must stop and join callers before destroying dependencies. `Logger(Op
 ## Security — alpha-0.1.7
 
 `network::Options::security` holds six validated `security::Limits` fields. `security::validate` rejects out-of-range values. `PeerLimiter(Limits)` is reactor-confined: `admit(canonical_key, steady_time)` grants an active slot and minute admission; call `release(key)` exactly once on every granted slot after failure/close. Key length and map size are bounded; `tracked_peers()` exposes the current map count. `FrameLimiter(maximum)::admit(steady_time)` provides a connection-local fixed second budget. Caller times must be monotonic. `Statistics` adds independent atomic security_rejected/security_closed counts. No limiter state is shared between server instances/processes. Details: [SECURITY.md](SECURITY.md).
+
+## WebAdmin foundation — alpha-0.1.10
+
+The read-only React panel and optional same-UID local Vite development adapter now exist; see [WEBADMIN.md](WEBADMIN.md). The private C++ API contract and permissions are unchanged. Static Apache serving does not provide an authenticated API gateway.

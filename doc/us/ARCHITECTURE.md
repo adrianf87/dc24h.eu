@@ -8,7 +8,7 @@ Before creating threads, main blocks SIGINT/SIGTERM with `pthread_sigmask`. A `s
 
 Network owns nonblocking sockets, epoll and eventfd using RAII. All client operations run on one reactor thread; only stop flags, counters and eventfd wakeups cross threads. Client event tokens never reuse socket descriptor numbers. TLS contexts outlive sessions, and sessions are destroyed before their sockets. Partial startup failures close resources before propagating to Core, which enters `stopped`. Readiness is advertised only after every listener starts.
 
-[Network](NETWORK.md), [ADC](ADC_PROTOCOL.md), [ADCS](ADCS_TLS.md) and [API](API.md) define module contracts. Users, Chat, Search, Transfers, Security/authentication and administrative mutation APIs remain planned. WebAdmin will be a separate React/TypeScript/Vite application.
+[Network](NETWORK.md), [ADC](ADC_PROTOCOL.md), [ADCS](ADCS_TLS.md) and [API](API.md) define module contracts. Users, Chat, Search, Transfers, Security/authentication and administrative mutation APIs remain planned. WebAdmin is a separate React/TypeScript/Vite application.
 
 ## Configuration and logging — alpha-0.1.5
 
@@ -29,3 +29,7 @@ The independent C++20 `dc24h_security` target implements validated limits and cl
 ## Local API — alpha-0.1.9
 
 `dc24h_api` owns strict bounded HTTP parsing, Bearer checks, a nonblocking Unix socket and one RAII worker. It depends on Logging/Security, not Core, Network or Database. Main supplies a thread-safe snapshot callback and an infrastructure-failure stop callback. API starts before Core run and is stopped/joined before its callback targets are destroyed, including on Network startup failure. JSON only reports typed counters/flags; the API does not run SQL or perform administrative mutations. The shared private-file reader moved into Security and preserves Database error contracts. See [API.md](API.md).
+
+## WebAdmin — alpha-0.1.10
+
+The frontend is independent of C++ build/runtime. Browser code validates the API schema and exposes monitoring views; its only persisted setting is language. The optional Vite development adapter holds credentials server-side, restricts requests to loopback/same-origin and forwards only two read-only routes over the same-UID Unix socket. A production build is static and contains no adapter or token. Apache can serve those assets; production authenticated gateway/session/role design remains separate. CMake optionally installs prebuilt assets with `DC24H_INSTALL_WEBADMIN=ON`, default OFF. See [WEBADMIN.md](WEBADMIN.md).

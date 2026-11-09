@@ -1,4 +1,4 @@
-# Configuration — alpha-0.1.9
+# Configuration — alpha-0.1.10
 
 Settings are composed in this order: built-in defaults, one explicit `--config FILE`, then command-line overrides regardless of where `--config` appears. There is no automatic file search, environment substitution, include directive, reload or remote configuration.
 
@@ -81,3 +81,7 @@ INI-only `[database]`: `enabled=off`, `socket=/run/mysqld/mysqld.sock`, `name=dc
 ## Local API — alpha-0.1.9
 
 INI-only `[api]` options: `enabled=off`, no default `socket`/`token_file`, `max_connections=16` (1..128), `request_timeout=2` seconds (1..30). Enabling requires both paths; relative paths use the INI directory. No token values, remote addresses or CLI overrides are supported. `--check-config` checks syntax/collisions but does not read the token, inspect private runtime directories or bind the socket; database maintenance actions never start API. Normal startup requires a private owner-controlled directory and 64-hex-character private token file. Log/socket collisions with configuration/credentials are rejected. Complete setup and behavior: [API.md](API.md).
+
+## WebAdmin development configuration
+
+Frontend settings are separate from INI: server-only `DC24H_API_SOCKET`/`DC24H_API_TOKEN_FILE` configure the optional same-UID local Vite adapter; both must be absolute, with the token outside WebAdmin. There is no new C++ runtime setting. The static production build contains neither adapter nor token. See [WEBADMIN.md](WEBADMIN.md).
