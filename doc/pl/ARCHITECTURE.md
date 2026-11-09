@@ -1,5 +1,7 @@
 # Architektura
 
+W alpha-0.2.6 dc24h_adc dodaje publiczny snapshot ClientInfo, InfValidator, funkcje Tiger/base32 i ClientSession nad SidSession. Walidacja buduje ograniczonego kandydata przed zmianą stanu, sprawdza PID/CID przez Libgcrypt TIGER1, wiąże deklarowany IP z zaufanym numerycznym adresem klienta i odrzuca PD z wyniku. Dopuszczenie/unikalność pozostają zewnętrznymi decyzjami. Brak zależności od gniazd, SQL, logowania i HTTP; Network nadal używa samego parsera. Zobacz [ADC_INF.md](ADC_INF.md).
+
 W alpha-0.2.5 dc24h_adc dodaje Sid, SidPool, SidLease i SidSession. Jedna pula huba należąca do reaktora obejmuje przyszłe sesje ADC/ADCS; ograniczona bitmapa zastępuje losowe próby unikania kolizji. Przenoszalna rezerwacja posiada aktywną wartość, a SidSession zwalnia ją po zdarzeniu terminalnym/zniszczeniu. Współdzielona własność utrzymuje stan alokatora bez zależności od gniazd, Core i Database. Parser i automat używają wspólnego kodera. Zobacz [ADC_SID.md](ADC_SID.md); podłączenie transportu pozostaje planowane.
 
 W alpha-0.2.4 `dc24h_adc` dodaje `SupportNegotiation` dla ograniczonych funkcji klienta/huba i wyboru TIGR oraz `ProtocolConnection` łączący negocjację z automatem. Poprawny pierwszy HSUP zatwierdza protokół; pierwszy ukończony ISUP musi dokładnie odpowiadać wygenerowanym funkcjom lokalnym. Aktualizacje klienta są transakcyjne w NORMAL; hash sesji jest stały. Odbiorczy Network pozostaje niepodłączony. Zobacz [ADC_SUP.md](ADC_SUP.md).

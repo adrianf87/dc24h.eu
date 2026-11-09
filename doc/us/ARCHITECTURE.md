@@ -1,5 +1,7 @@
 # Architecture
 
+In alpha-0.2.6, dc24h_adc adds an immutable public ClientInfo snapshot, InfValidator, Tiger/base32 helpers and ClientSession composition over SidSession. Validation builds a bounded candidate before changing state, verifies PID/CID with Libgcrypt TIGER1, binds declared IP to trusted numeric peer context and discards PD. Admission/uniqueness remain external decisions. No socket, SQL, logging or HTTP coupling is added; Network still uses only the parser. See [ADC_INF.md](ADC_INF.md).
+
 In alpha-0.2.5, dc24h_adc adds Sid, SidPool, SidLease and SidSession. One reactor-owned hub pool spans future ADC/ADCS sessions; bounded bitmaps replace per-session random collision guesses. A move-only reservation owns each active value and SidSession releases it on terminal events/destruction. Shared ownership keeps allocator state alive without coupling it to sockets, Core or Database. Parser and state syntax use the common codec. See [ADC_SID.md](ADC_SID.md); live transport attachment remains planned.
 
 In alpha-0.2.4, `dc24h_adc` adds `SupportNegotiation` for bounded peer/local capabilities and TIGR selection, plus `ProtocolConnection` composing support with the state machine. A valid initial HSUP supplies the protocol approval; the first completed ISUP must exactly match the generated local advertisement. Peer updates are transactional in NORMAL; the session hash is immutable. The receive-only Network remains unattached. See [ADC_SUP.md](ADC_SUP.md).

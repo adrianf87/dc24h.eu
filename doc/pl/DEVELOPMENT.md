@@ -3,7 +3,7 @@
 Podstawę alpha-0.2 i priorytety odbioru opisuje [audyt alpha-0.1](AUDIT_ALPHA_0.1.md). Numerowane gałęzie nadal powstają z aktualnego main. `alpha-0.2` oznacza sprawdzony commit audytu. Pełna weryfikacja używa `DC24H_REQUIRE_INTEGRATION_TESTS=ON`; zachować spójność project.metadata, npm lock, wersji programu/panelu i obu języków dokumentacji.
 
 Pracuj na gałęziach wydań, zachowując historię `main`. Aktualny etap:
-`alpha-0.2.5`. Każdy istotny etap otrzymuje opisowy commit. Nie dodawaj
+`alpha-0.2.6`. Każdy istotny etap otrzymuje opisowy commit. Nie dodawaj
 artefaktów kompilacji, sekretów ani zależności vendored bez uzasadnienia.
 
 | Katalog | Rola |
@@ -67,3 +67,7 @@ Gałąź z main w `1dd0b9f` po scaleniu ADC State. Oddzielać semantykę SUP, ko
 ## SID — alpha-0.2.5
 
 Gałąź z aktualnego main w `350a43f`. Używać jednej wspólnej SidPool na hub i unikalnych przenoszalnych uchwytów; nie dodawać zwalniania przez sam SID ani kopiowalnej własności. Zachować przydział/zwalnianie bez alokacji, koder 20-bitowy, test pełnej przestrzeni i granic słów oraz jednowątkowy czas życia. SidSession zastępuje dowolny ISID wywołującego przy przyszłej integracji transportu. Sprawdzać sprzątanie przed bind, terminalne odpowiedzi, destrukcję i ponowne użycie; nie obserwować ukończenia po samym zakolejkowaniu. Własność SID nie potwierdza tożsamości osoby. Zobacz [ADC_SID.md](ADC_SID.md).
+
+## INF — alpha-0.2.6
+
+Gałąź z main w `8552406` po scaleniu SID. Budować z libgcrypt20-dev; nowe znane pola wymagają jawnego typu/zakresu/budżetu i testów anulowania. Zachować kanoniczne base32/kolejność bajtów TIGER1, powiązanie SID/IP, stały CID, brak PD w zachowaniu/eksporcie i kandydata przed zatwierdzeniem stanu. Przyszła integracja powinna używać ClientSession; samo zatwierdzenie niższego automatu nie waliduje INF. Oddzielać rejestr/dopuszczenie i nie przyznawać NORMAL na podstawie samego parsowania INF. Nowa zależność kryptograficzna musi być w obu zadaniach CI i instalacji. Zobacz [ADC_INF.md](ADC_INF.md).

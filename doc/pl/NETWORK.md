@@ -100,3 +100,7 @@ Nowa [biblioteka ADC State](ADC_STATE.md) jest niezależna od transportu i nie j
 ## Granica SID — alpha-0.2.5
 
 [SidSession](ADC_SID.md) dodaje własność ISID opartą na alokatorze w niezależnym stosie protokołu. Jedna współdzielona SidPool musi obejmować wszystkie listenery huba na wątku reaktora. Obecny Network Client jeszcze nie posiada SidSession; ścieżka sieciowa nadal jest odbiorcza. Integracja musi zatwierdzić ISUP, zarezerwować SID, wysłać/zatwierdzić ISID, anulować/opróżnić wyjście starej sesji i usunąć referencje rejestru przed zwolnieniem wartości. SID może być ponownie użyty; deskryptory gniazd i skopiowane wartości SID nie są tokenami własności. Ograniczone wyjście, rejestr/kolejność QUIT, tożsamość i terminy pozostają przyszłym etapem.
+
+## Granica INF — alpha-0.2.6
+
+[ClientSession](ADC_INF.md) sprawdza teraz wewnętrzną poprawność informacji klienta w niezależnym stosie. Przyszłe podłączenie Network musi przekazywać rzeczywisty adres z kernela (nie deklarację INF), serializować odkodowane publiczne snapshoty z escape i wymuszać globalną unikalność nicku/CID przed zatwierdzeniem/ogłoszeniem informacji. Odbiorczy reaktor pozostaje bez zmian. Nowy fixture ncdc sprawdza rzeczywisty PID/CID przez TCP/TLS Pythona; dotychczasowe testy transportu C++ są osobne. Nadal wymagane są uporządkowane ograniczone wyjście, rejestr/cykl życia i terminy logowania.

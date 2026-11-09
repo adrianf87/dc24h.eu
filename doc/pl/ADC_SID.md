@@ -1,5 +1,7 @@
 # SID — alpha-0.2.5
 
+Od alpha-0.2.6 [ADC INF](ADC_INF.md) udostępnia ClientSession, łączący niższe warstwy z walidacją INF i weryfikacją Tiger PID/CID. Wymaga poprawnych metadanych przed zewnętrzną decyzją dopuszczenia i nie zachowuje/eksportuje PD. Unikalność w rejestrze i podłączenie Network pozostają planowane; wcześniejsze API/fixture zachowują swój zakres.
+
 ## Zakres i wartości protokołu
 
 `adc/sid.hpp` udostępnia Sid, SidPool i SidLease. `adc/sid_session.hpp` dodaje SidSession, łączący wspólną pulę huba z [SUP](ADC_SUP.md) i [ADC State](ADC_STATE.md). To niezależne komponenty C++20 w dc24h_adc, bez gniazd, logowania, bazy, Core i nowych zależności. Produkcyjny Network nadal używa samego parsera; etap nie uruchamia rzeczywistego handshake.

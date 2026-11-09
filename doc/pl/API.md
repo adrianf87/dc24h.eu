@@ -169,3 +169,7 @@ Od alpha-0.2.2 `Message::positional_count` określa układ argumentów BASE (nie
 ## API SID — alpha-0.2.5
 
 `adc/sid.hpp` udostępnia parsowanie/kodowanie wartości Sid, SidPool i przenoszalny SidLease. `adc/sid_session.hpp` łączy własność puli z funkcjami/stanem w SidSession; zwraca opcjonalny `variant<StateError, SupportError, SidError>`. Zatwierdzić można wyłącznie zarezerwowany SID. Przygotowanie/kodowanie nie zmienia fazy; obserwacja ukończonego wysłania tak. Liczniki puli należą do reaktora, nie telemetrii HTTP. Brak zmian tras/schematu HTTP. [ADC_SID.md](ADC_SID.md) opisuje czas życia, pojemność i kolejność zwalniania.
+
+## API INF — alpha-0.2.6
+
+`adc/identity_hash.hpp` udostępnia Tiger/192 i kanoniczne base32 39-znakowe. `adc/inf.hpp` dodaje InfValidator, ClientInfo tylko do odczytu i ClientSession. Snapshot udostępnia opcjonalne pożyczone widoki pól, sprawdzone liczby i własny publiczny Message BINF bez PD. `observe` zwraca opcjonalny `variant<StateError, SupportError, SidError, InfError>`; błąd zachowuje stan/metadane/rezerwacje. Zatwierdzenie tożsamości wymaga poprawnego INF, ale nadal deleguje rejestr/dopuszczenie i decyzje kont. Trasy/schemat/liczniki HTTP są bez zmian. Zobacz [ADC_INF.md](ADC_INF.md).

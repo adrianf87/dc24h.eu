@@ -1,5 +1,13 @@
 # Testing
 
+## INF increment — alpha-0.2.6
+
+The strict suite now registers **30 CTest entries**, adding `adc.inf` and `adc.inf.ncdc`. Coverage includes Tiger empty/abc reference vectors and byte order, canonical base32/tail bits and 1000 round trips, required/duplicate/private/unknown fields, numeric/text/SU/storage boundaries, peer-IP checks/canonicalization, immutable CID and updates, public snapshots and composition/admission gates. Every two-chunk split and bytewise UTF-8 input exercise parser recovery and atomic semantic rejection. The new real ncdc fixture validates PID/CID and exports no PD over loopback TCP and Python-owned TLS, remaining in unapproved IDENTIFY. It is separate from actual C++ transport tests. See [ADC_INF.md](ADC_INF.md).
+
+Local result: **30/30 CTest suites passed in Debug, Release and ASan/UBSan** with strict integration tools, real C++ ncdc ADC/ADCS, module ncdc fixtures, disposable MariaDB and isolated Apache HTTPS. Additional exact nickname/SU/cumulative-storage INF boundary checks and the INF ncdc fixture passed in all three configurations. WebAdmin production build/typecheck, 3 Node tests, 3 Chromium browser tests and real C++ API/Vite/React integration passed. Chromium used `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium`. Libgcrypt 1.11.0 was installed; npm dependency versions are unchanged. These local results do not establish other OS/remote CI results.
+
+Build with libgcrypt20-dev installed: `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug --parallel 4`, `ctest --test-dir build-debug --output-on-failure --parallel 3`; repeat with Release. Focused checks: `ctest --test-dir build-debug -R '^adc.inf' --output-on-failure`. Sanitizer/Chromium commands below remain applicable. Algorithm-unavailable and out-of-memory branches are handled but not fault-injected by these tests. Historical results retain their original stage scope.
+
 ## SID increment — alpha-0.2.5
 
 The complete strict suite registers **28 CTest entries**, including new `adc.sid` and `adc.sid.ncdc`. SID checks cover every 20-bit codec value, the entire client pool namespace and exhaustion, 64-bit bitmap boundaries/wrap, reuse/churn, move-only ownership and surviving allocator destruction, rejected/repeated ISID, pending-send rollback, shared sessions and terminal cleanup. The ncdc fixture uses an allocated SID and reports separate SUP/SID send completions on TCP and Python-owned TLS; it stops at unapproved IDENTIFY. Existing actual C++ Network/OpenSSL tests remain separate. See [ADC_SID.md](ADC_SID.md).

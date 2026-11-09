@@ -1,5 +1,7 @@
 # ADC State — alpha-0.2.3
 
+Since alpha-0.2.6, [ADC INF](ADC_INF.md) supplies ClientSession, combining this lower-level stack with intrinsic INF validation and Tiger PID/CID verification. It requires validated metadata before external identity admission and never retains/exports PD. Registry uniqueness and actual Network attachment remain planned; older APIs/fixtures retain their original scope.
+
 Since alpha-0.2.5, [ADC SID](ADC_SID.md) supplies a shared hub pool and SidSession composition with checked ISID ownership and automatic reservation cleanup. Parser/state SID syntax uses the same codec; AAAA remains valid syntax but is reserved by the pool as local policy. The original lower-level APIs and historical fixtures remain available. Network still uses only the parser.
 
 Since alpha-0.2.4, [ADC SUP](ADC_SUP.md) supplies `ProtocolConnection`, composing this low-level machine with feature/hash negotiation and automatic protocol approval only after valid SUP. Identity/password decisions remain external. This document describes the original standalone state API; Network attachment still requires ordered output.

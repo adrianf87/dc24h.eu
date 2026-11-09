@@ -1,5 +1,7 @@
 # SID — alpha-0.2.5
 
+Since alpha-0.2.6, [ADC INF](ADC_INF.md) supplies ClientSession, combining this lower-level stack with intrinsic INF validation and Tiger PID/CID verification. It requires validated metadata before external identity admission and never retains/exports PD. Registry uniqueness and actual Network attachment remain planned; older APIs/fixtures retain their original scope.
+
 ## Scope and protocol values
 
 `adc/sid.hpp` supplies Sid, SidPool and SidLease. `adc/sid_session.hpp` supplies SidSession, composing a shared hub pool with [SUP](ADC_SUP.md) and [ADC State](ADC_STATE.md). These are independent C++20 components in dc24h_adc, without sockets, logging, database, Core or new dependencies. Production Network still uses only the parser; this stage does not enable a live handshake.

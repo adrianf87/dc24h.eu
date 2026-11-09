@@ -47,3 +47,7 @@ Branch from main at `1dd0b9f` after the ADC State merge. Keep support parsing, p
 ## SID — alpha-0.2.5
 
 Branch from current main at `350a43f`. Use one shared SidPool for one hub and unique move-only leases; never add release-by-SID or copyable ownership. Preserve allocation-free acquire/release, the 20-bit codec, full namespace and word-boundary tests, and one-thread lifetime rules. SidSession supersedes arbitrary caller-assigned ISID for future transport integration. Test cleanup before bind, terminal responses, destruction and reuse; do not call completed-send observation for queue insertion. Do not infer user identity from SID ownership. See [ADC_SID.md](ADC_SID.md).
+
+## INF — alpha-0.2.6
+
+Branch from main at `8552406` after the SID merge. Build with libgcrypt20-dev; extend known fields only with explicit type/domain/budget and cancellation tests. Preserve canonical base32/TIGER1 byte order, source/IP binding, immutable CID, no PD in retained/exported metadata and candidate-before-state commit. Use ClientSession for future attachment; lower-level state admission alone does not validate INF. Keep registry uniqueness/admission separate and never auto-grant NORMAL from a parsed INF. New cryptographic dependencies must be present in both CI jobs and installation guides. See [ADC_INF.md](ADC_INF.md).

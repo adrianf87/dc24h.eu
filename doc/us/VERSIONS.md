@@ -18,11 +18,12 @@
 | alpha-0.2.3 | alpha-0.2.3 | ADC State: independent hub connection state machine |
 | alpha-0.2.4 | alpha-0.2.4 | SUP: feature/hash negotiation and state integration |
 | alpha-0.2.5 | alpha-0.2.5 | SID: generation, RAII reservations and session binding |
+| alpha-0.2.6 | alpha-0.2.6 | INF: client information and Tiger identity validation |
 
 Identify an individual build with its version and Git commit SHA; compiling does not modify tracked source. Each significant change updates CHANGELOG.md. Alpha denotes development status, not complete hub functionality. Tags and production deployment are not created automatically.
 
 Historical stage branches and commit history are preserved. alpha-0.1.4 retains the reference TLS branch through a merge and includes follow-up fixes.
 
-## Current version — alpha-0.2.5
+## Current version — alpha-0.2.6
 
-CMake PROJECT_VERSION and npm package/lock root versions are **0.2.5**; runtime/WebAdmin identify **alpha-0.2.5**. Metadata checks enforce consistency. The branch starts from main at `350a43f` after the SUP merge and adds [SID ownership](ADC_SID.md). Production Network remains receive-only; complete login and identity validation remain planned. Main and historical branches are preserved.
+CMake PROJECT_VERSION and npm package/lock root versions are **0.2.6**; runtime/WebAdmin identify **alpha-0.2.6**. Metadata checks enforce consistency. The branch starts from main at `8552406` after the SID merge and adds [INF validation](ADC_INF.md), requiring Libgcrypt development files. Production Network remains receive-only; global registry/admission and complete login remain planned. Main and historical branches are preserved.

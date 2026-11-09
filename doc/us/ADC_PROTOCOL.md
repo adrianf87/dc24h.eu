@@ -1,5 +1,7 @@
 # ADC Parser — alpha-0.2.2
 
+Since alpha-0.2.6, [ADC INF](ADC_INF.md) supplies ClientSession, combining this lower-level stack with intrinsic INF validation and Tiger PID/CID verification. It requires validated metadata before external identity admission and never retains/exports PD. Registry uniqueness and actual Network attachment remain planned; older APIs/fixtures retain their original scope.
+
 Since alpha-0.2.5, [ADC SID](ADC_SID.md) supplies a shared hub pool and SidSession composition with checked ISID ownership and automatic reservation cleanup. Parser/state SID syntax uses the same codec; AAAA remains valid syntax but is reserved by the pool as local policy. The original lower-level APIs and historical fixtures remain available. Network still uses only the parser.
 
 alpha-0.2.4 adds the independent [SUP semantics and state adapter](ADC_SUP.md). Parser behavior is unchanged. Existing hub ncdc tests still cover initial HSUP; a new isolated SUP fixture exchanges module-generated ISUP and a fixed test SID with ncdc, stopping at unapproved IDENTIFY. It is not the live Network reactor.
