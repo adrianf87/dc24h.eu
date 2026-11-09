@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.2.6 (INF).**
+**Current development version: alpha-0.2.7 (CID/PID).**
 
 Completed increments:
+
+- **alpha-0.2.7 CID/PID**: dedicated Tiger identity verifier, typed public CID/verified result, direct cleansed buffers, constant-time digest comparison and deterministic provider-failure tests. INF uses the shared verifier; Network attachment remains planned.
 
 - **alpha-0.2.6 INF**: bounded client metadata, Tiger PID/CID verification, peer-address and field validation, transactional updates and public snapshots without PD. Composed ClientSession is tested with real ncdc; live transport attachment remains planned.
 

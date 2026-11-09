@@ -28,6 +28,10 @@ INF_MODE = '--inf' in sys.argv
 if INF_MODE:
     sys.argv.remove('--inf')
     SID_MODE = True
+IDENTITY_MODE = '--identity' in sys.argv
+if IDENTITY_MODE:
+    sys.argv.remove('--identity')
+    SID_MODE = True
 
 
 def frame(peer, pending):
@@ -117,8 +121,9 @@ class SupNcdcTest(unittest.TestCase):
                         probe.stdin.write(b'SID_SENT\n' if SID_MODE else b'SENT\n')
                         stdout, stderr = probe.communicate(input=inf, timeout=5)
                         self.assertEqual(probe.returncode, 0, stderr.decode(errors='replace'))
-                        expected = b'IDENTIFY INF_VALIDATED PD_REMOVED\n' if INF_MODE else (
-                            b'IDENTIFY SID_RELEASED\n' if SID_MODE else b'IDENTIFY TIGR 24\n')
+                        expected = b'IDENTIFY TIGER_VERIFIED PID_DISCARDED\n' if IDENTITY_MODE else (
+                            b'IDENTIFY INF_VALIDATED PD_REMOVED\n' if INF_MODE else (
+                                b'IDENTIFY SID_RELEASED\n' if SID_MODE else b'IDENTIFY TIGR 24\n'))
                         self.assertEqual(stdout, expected)
                         self.assertEqual(stderr, b'')
             finally:

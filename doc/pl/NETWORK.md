@@ -104,3 +104,7 @@ Nowa [biblioteka ADC State](ADC_STATE.md) jest niezależna od transportu i nie j
 ## Granica INF — alpha-0.2.6
 
 [ClientSession](ADC_INF.md) sprawdza teraz wewnętrzną poprawność informacji klienta w niezależnym stosie. Przyszłe podłączenie Network musi przekazywać rzeczywisty adres z kernela (nie deklarację INF), serializować odkodowane publiczne snapshoty z escape i wymuszać globalną unikalność nicku/CID przed zatwierdzeniem/ogłoszeniem informacji. Odbiorczy reaktor pozostaje bez zmian. Nowy fixture ncdc sprawdza rzeczywisty PID/CID przez TCP/TLS Pythona; dotychczasowe testy transportu C++ są osobne. Nadal wymagane są uporządkowane ograniczone wyjście, rejestr/cykl życia i terminy logowania.
+
+## Granica CID/PID — alpha-0.2.7
+
+ClientSession/INF używa teraz dedykowanego [weryfikatora Tiger](ADC_IDENTITY.md), ale rzeczywisty reaktor nadal jest odbiorczy. Nowy fixture ncdc odrzuca zmieniony kanoniczny CID przed przyjęciem prawdziwej pary, zachowuje tylko wynik publiczny i pozostaje w IDENTIFY. Gniazda/TLS należą do Pythona; testy transportu C++ ADC/ADCS są osobne. Po poprawnym PID/CID nadal potrzebne są unikalność/dopuszczenie, ograniczone wyjście i cykl całego logowania przed podłączeniem.

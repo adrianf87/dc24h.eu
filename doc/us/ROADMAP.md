@@ -19,6 +19,7 @@
 | alpha-0.2.4 SUP | Feature AD/RM, BASE/common TIGR, bounded support and state composition |
 | alpha-0.2.5 SID | 20-bit codec, bounded shared pool, RAII leases and managed SID sessions |
 | alpha-0.2.6 INF | Bounded metadata, Tiger identity verification, peer-IP checks and public PD-free snapshots |
+| alpha-0.2.7 CID/PID | Dedicated Tiger verifier, public identity result, cleansed buffers and provider-failure coverage |
 
 ## Proposed alpha-0.2 increments
 
@@ -50,3 +51,5 @@ alpha-0.2.4 starts from main at `1dd0b9f1a94626789d1ac9addad991a6eae78910`, afte
 alpha-0.2.5 starts from main at `350a43f69b5134bd049923739cd606f798f846ec` after the SUP merge. [SID](ADC_SID.md) completes allocator/lease ownership and composition; live output/session attachment and user identity remain planned. This branch does not merge itself into main.
 
 alpha-0.2.6 starts from main at `85524067756ac5fcbd177bb47f5d2cfe33fad063`. [INF](ADC_INF.md) completes intrinsic field/PID-CID validation and stack composition. Global registry/admission, registered-user passwords, live output and complete login remain planned. This branch does not merge automatically.
+
+alpha-0.2.7 starts from main at `9d3443a4d889e745b6490a139435a8f44297cfba`. [CID/PID](ADC_IDENTITY.md) extracts and hardens the basic check introduced in INF; it does not add live login, global CID uniqueness, account authentication or file-tree hashing. This branch is not merged automatically.

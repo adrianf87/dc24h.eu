@@ -1,5 +1,13 @@
 # Testing
 
+## CID/PID increment — alpha-0.2.7
+
+The strict suite registers **33 CTest entries**, adding `adc.identity`, `adc.identity.failure` and `adc.identity.ncdc`. They cover direct Tiger vectors/aliasing, canonical CID/PID values, all nonalphabet byte substitutions at every position, all tail symbols, wrong lengths, failed-output clearing, 1000 valid/mismatched pairs, public result ownership and INF preservation. Executable-local linker wrappers inject algorithm/context/read failures and verify no commit plus recovery/cleanup. The real ncdc fixture rejects a tampered canonical CID before accepting the actual pair on TCP and Python-owned TLS, stopping at unapproved IDENTIFY. Existing actual C++ transport tests remain separate. See [ADC_IDENTITY.md](ADC_IDENTITY.md).
+
+Local result: **33/33 CTest suites passed in Debug, Release and ASan/UBSan**, including deterministic provider faults, actual C++ ncdc ADC/ADCS, identity/INF/SID/SUP fixtures, disposable MariaDB and isolated Apache HTTPS. WebAdmin typecheck/production build, 3 Node tests, 3 Chromium browser tests and real C++ API/Vite/React integration passed. Chromium used `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium`; dependency versions are unchanged. These local results do not establish other OS/remote CI results or a side-channel audit.
+
+Reproduce with `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug --parallel 4`, `ctest --test-dir build-debug --output-on-failure --parallel 3`; repeat for Release. Focused scope: `ctest --test-dir build-debug -R '^adc.identity' --output-on-failure`. Fault tests need a GNU-compatible --wrap linker; production targets do not use wrappers. Version-initialization and arbitrary allocation failures are not injected. Historical stage results below keep their original scope.
+
 ## INF increment — alpha-0.2.6
 
 The strict suite now registers **30 CTest entries**, adding `adc.inf` and `adc.inf.ncdc`. Coverage includes Tiger empty/abc reference vectors and byte order, canonical base32/tail bits and 1000 round trips, required/duplicate/private/unknown fields, numeric/text/SU/storage boundaries, peer-IP checks/canonicalization, immutable CID and updates, public snapshots and composition/admission gates. Every two-chunk split and bytewise UTF-8 input exercise parser recovery and atomic semantic rejection. The new real ncdc fixture validates PID/CID and exports no PD over loopback TCP and Python-owned TLS, remaining in unapproved IDENTIFY. It is separate from actual C++ transport tests. See [ADC_INF.md](ADC_INF.md).

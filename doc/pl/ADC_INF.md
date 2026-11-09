@@ -1,5 +1,7 @@
 # INF — alpha-0.2.6
 
+Od alpha-0.2.7 [weryfikacja CID/PID](ADC_IDENTITY.md) jest osobnym wspólnym modułem z TigerCid/VerifiedIdentity, bezpośrednimi czyszczonymi buforami i stałoczasowym końcowym porównaniem skrótu. Snapshot INF zachowuje wyłącznie publiczny wynik weryfikacji. Podstawowa obsługa z alpha-0.2.6 pozostaje zgodna; transport i polityka kont/rejestru są osobne.
+
 ## Zakres etapu
 
 `adc/inf.hpp` dodaje InfValidator, snapshot ClientInfo tylko do odczytu i ClientSession nad [SidSession](ADC_SID.md). `adc/identity_hash.hpp` udostępnia Tiger/192 i kanoniczne base32. To moduły C++20 w dc24h_adc, bez nowych zależności od gniazd, logowania, SQL i HTTP. Produkcyjny Network nadal używa samego parsera, więc etap nie włącza logowania w sieci.

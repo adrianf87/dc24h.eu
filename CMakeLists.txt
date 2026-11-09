@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.2.6 LANGUAGES CXX)
+project(dc24h VERSION 0.2.7 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -35,7 +35,7 @@ set_target_properties(Gcrypt::Gcrypt PROPERTIES
     IMPORTED_LOCATION "${GCRYPT_LIBRARY}"
     INTERFACE_INCLUDE_DIRECTORIES "${GCRYPT_INCLUDE_DIR}")
 add_library(dc24h_adc src/adc/parser.cpp src/adc/state.cpp src/adc/sup.cpp src/adc/sid.cpp src/adc/sid_session.cpp
-    src/adc/identity_hash.cpp src/adc/inf.cpp)
+    src/adc/identity_hash.cpp src/adc/tiger_identity.cpp src/adc/inf.cpp)
 target_compile_features(dc24h_adc PUBLIC cxx_std_20)
 set_target_properties(dc24h_adc PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_adc PUBLIC include)
@@ -182,6 +182,19 @@ if(BUILD_TESTING)
     set_target_properties(adc_inf_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME adc.inf COMMAND adc_inf_tests)
     set_tests_properties(adc.inf PROPERTIES TIMEOUT 30)
+    add_executable(adc_identity_tests tests/adc_identity_tests.cpp)
+    target_link_libraries(adc_identity_tests PRIVATE dc24h_adc)
+    target_compile_options(adc_identity_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(adc_identity_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME adc.identity COMMAND adc_identity_tests)
+    add_executable(adc_identity_failure_tests tests/adc_identity_failure_tests.cpp)
+    target_link_libraries(adc_identity_failure_tests PRIVATE dc24h_adc Gcrypt::Gcrypt)
+    target_compile_options(adc_identity_failure_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    target_link_options(adc_identity_failure_tests PRIVATE -Wl,--wrap=gcry_md_algo_info
+        -Wl,--wrap=gcry_md_open -Wl,--wrap=gcry_md_read)
+    set_target_properties(adc_identity_failure_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME adc.identity.failure COMMAND adc_identity_failure_tests)
+    set_tests_properties(adc.identity adc.identity.failure PROPERTIES TIMEOUT 30)
     add_test(NAME adc.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/adc_process_tests.py" "$<TARGET_FILE:dc24h>")
     add_executable(adcs_unit_tests tests/adcs_unit_tests.cpp)
@@ -259,6 +272,10 @@ if(BUILD_TESTING)
     endif()
     find_program(NCDC_EXECUTABLE ncdc)
     if(NCDC_EXECUTABLE)
+        add_test(NAME adc.identity.ncdc COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_sup_test.py"
+            "$<TARGET_FILE:adc_identity_tests>" "${NCDC_EXECUTABLE}" --identity)
+        set_tests_properties(adc.identity.ncdc PROPERTIES TIMEOUT 30)
         add_test(NAME adc.inf.ncdc COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_sup_test.py"
             "$<TARGET_FILE:adc_inf_tests>" "${NCDC_EXECUTABLE}" --inf)

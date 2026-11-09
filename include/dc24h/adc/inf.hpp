@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dc24h/adc/sid_session.hpp"
+#include "dc24h/adc/tiger_identity.hpp"
 
 #include <array>
 #include <cstddef>
@@ -27,6 +28,7 @@ public:
     ~ClientInfo() = default;
     [[nodiscard]] std::optional<std::string_view> field(std::string_view name) const noexcept;
     [[nodiscard]] std::optional<std::int64_t> integer(std::string_view name) const noexcept;
+    [[nodiscard]] std::optional<VerifiedIdentity> identity() const noexcept { return identity_; }
     [[nodiscard]] Message public_message(Sid source) const;
     [[nodiscard]] std::size_t bytes() const noexcept;
     friend bool operator==(const ClientInfo&, const ClientInfo&) = default;
@@ -34,6 +36,7 @@ private:
     friend class InfValidator;
     ClientInfo() = default;
     std::map<std::string, std::string, std::less<>> fields_;
+    std::optional<VerifiedIdentity> identity_;
 };
 
 // Trusted kernel peer address is numeric, without port/zone; constructor rejects
