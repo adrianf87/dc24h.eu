@@ -84,3 +84,7 @@ Opcjonalne logi INFO przyjęcia/gotowości TLS/zamknięcia mają wyłącznie wew
 ## Security — alpha-0.1.7
 
 Opcje Network zawierają `security::Limits`. Jeden ograniczony `PeerLimiter` obejmuje wszystkie porty TCP/TLS, z kanonicznymi IP kernela przechowywanymi tylko w RAM. Sprawdzenie poprzedza TLS/watch; slot jest zwalniany po błędzie inicjalizacji i zamknięciu. Każdy klient ma osobne tempo ramek, liczbę błędów i terminy TLS/częściowej ramki. Kontrola działa przed/po I/O i przed segmentami, poza przeglądem okresowym. INFO i `statistics()` dodają security_rejected/security_closed, zachowując wcześniejsze liczniki. [SECURITY.md](SECURITY.md) podaje wartości, okna i ograniczenia.
+
+## Gniazdo administracyjne — alpha-0.1.9
+
+Opcjonalne lokalne HTTP API ma osobne prywatne gniazdo Unix i wątek, niezależne od listenerów ADC/ADCS. Limity klientów/czasu API są niezależne od liczników bezpieczeństwa TCP/TLS. Nie jest otwierany port HTTP; Apache2 nie bierze udziału w testach transportu. Zobacz [API.md](API.md).

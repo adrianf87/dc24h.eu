@@ -2,6 +2,7 @@
 
 #include "dc24h/logging/logger.hpp"
 #include "dc24h/database/database.hpp"
+#include "dc24h/api/server.hpp"
 #include "dc24h/network/tcp_server.hpp"
 
 #include <string>
@@ -12,6 +13,7 @@ struct Settings {
     network::Options network;
     logging::Options logging;
     database::Options database;
+    api::Options api;
     // Parsing provenance, used to preserve TLS-only CLI defaults and protect the INI.
     bool implicit_plain_listener{true};
     std::string source_file;

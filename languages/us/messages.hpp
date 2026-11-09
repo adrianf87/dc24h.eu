@@ -3,7 +3,7 @@
 #include <string_view>
 
 namespace dc24h::i18n::us {
-inline constexpr std::array<std::string_view, 101> messages{{
+inline constexpr std::array<std::string_view, 114> messages{{
     "Starting dc24h.eu ",
     "Core running",
     "Core stopping",
@@ -104,7 +104,20 @@ inline constexpr std::array<std::string_view, 101> messages{{
     "Database actions and configuration check are mutually exclusive",
     "Database migrations applied=",
     "Database connection OK\n",
-    "Database connected"
+    "Database connected",
+    "Invalid local API settings",
+    "Cannot read private API token file",
+    "API token must contain 64 hexadecimal characters",
+    "API socket requires a private owner-controlled directory",
+    "API socket path already exists or is inaccessible",
+    "Cannot create local API socket",
+    "Cannot bind local API socket",
+    "Cannot inspect local API socket",
+    "Cannot listen on local API socket",
+    "Local API worker failed",
+    "Local API listening",
+    "Local API start may only be called once",
+    "API socket cannot target configuration or credential files"
 }};
 inline constexpr std::string_view help = R"HELP(Usage: dc24h [--config FILE] [--check-config | --check-database | --migrate-database]
              [--listen IPv4:port | [IPv6]:port | none] ...
@@ -131,5 +144,7 @@ ADC syntax parsing only: no complete ADC login, routing or user sessions.
 Database settings use [database] in INI; disabled by default.
 --check-database connects/pings; --migrate-database explicitly applies metadata migrations.
 --check-config never connects to MariaDB or reads the password file.
+Local API: INI [api], disabled by default; Unix socket and private Bearer token.
+GET /api/v1/health and /api/v1/status only. No administrative mutations.
 )HELP";
 } // namespace dc24h::i18n::us

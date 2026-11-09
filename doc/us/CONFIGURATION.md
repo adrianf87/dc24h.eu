@@ -1,4 +1,4 @@
-# Configuration — alpha-0.1.8
+# Configuration — alpha-0.1.9
 
 Settings are composed in this order: built-in defaults, one explicit `--config FILE`, then command-line overrides regardless of where `--config` appears. There is no automatic file search, environment substitution, include directive, reload or remote configuration.
 
@@ -77,3 +77,7 @@ All listeners share IP admission state. The frame rate is per connection, includ
 ## Database — alpha-0.1.8
 
 INI-only `[database]`: `enabled=off`, `socket=/run/mysqld/mysqld.sock`, `name=dc24h`, `user=dc24h`, `timeout=5`, optional `password_file` (required when enabled). Only local Unix sockets are supported. `--check-database` connects/pings; `--migrate-database` explicitly applies/verifies metadata. These actions and `--check-config` are mutually exclusive. Dry-run never reads SQL credentials or contacts MariaDB. Log destinations cannot alias the database password. See [DATABASE.md](DATABASE.md) for exact ranges, private-file rules and exit codes.
+
+## Local API — alpha-0.1.9
+
+INI-only `[api]` options: `enabled=off`, no default `socket`/`token_file`, `max_connections=16` (1..128), `request_timeout=2` seconds (1..30). Enabling requires both paths; relative paths use the INI directory. No token values, remote addresses or CLI overrides are supported. `--check-config` checks syntax/collisions but does not read the token, inspect private runtime directories or bind the socket; database maintenance actions never start API. Normal startup requires a private owner-controlled directory and 64-hex-character private token file. Log/socket collisions with configuration/credentials are rejected. Complete setup and behavior: [API.md](API.md).

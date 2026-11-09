@@ -2,7 +2,7 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.1.8 (Database).**
+**Current development version: alpha-0.1.9 (API).**
 
 Completed increments:
 
@@ -13,10 +13,11 @@ Completed increments:
 - **alpha-0.1.5 Configuration**: bounded UTF-8 INI, CLI overrides, port/limit/path checks and append-file logging.
 - **alpha-0.1.6 Logging**: startup summaries, WARN, opt-in connection events, bounded single-line UTF-8 records and rate budgets.
 - **alpha-0.1.7 Security**: bounded per-IP admissions, frame quotas and absolute TLS/unfinished-frame deadlines.
-
 - **alpha-0.1.8 Database**: optional MariaDB connection, private password files, local Unix sockets, prepared queries and explicit migration metadata baseline.
 
-A full ADC/ADCS hub is **not yet implemented**: no complete ADC handshake, user sessions, authentication, messaging, search, or transfer coordination. Account persistence and React WebAdmin remain future milestones.
+- **alpha-0.1.9 API**: optional local HTTP/JSON status and health routes, private Unix socket, same-UID access and Bearer authentication.
+
+A full ADC/ADCS hub is **not yet implemented**: no complete ADC handshake, user sessions, hub-user authentication, messaging, search, or transfer coordination. Account persistence and React WebAdmin remain future milestones.
 
 ## Build
 
@@ -65,3 +66,5 @@ Connection records are off by default; enable with `--log-connections on` or `[l
 Security defaults: 128 active peers/IP, 256 admissions/IP/minute, 1024 decoder results/s/connection, 512 invalid frames/connection, and 10-second TLS/partial-frame deadlines. Frame bodies remain capped at 16 KiB with 128 parameters. Configure `[security]` or CLI; see [security](doc/us/SECURITY.md) for exact policies and limitations.
 
 MariaDB is disabled by default. Configure `[database]` to enable connection checks before listener startup. Use `--check-database` to connect/ping or `--migrate-database` to explicitly create/verify migration metadata; startup never migrates. Install `mariadb-server` to run disposable integration tests. See [database documentation](doc/us/DATABASE.md) for setup, privileges and limits.
+
+The administrative API is disabled by default. Enable `[api]` with a private Unix socket directory and a private 64-hex-character token file. Authenticated `GET /api/v1/health` and `GET /api/v1/status` are read-only. There is no remote API, administrative mutation or frontend yet. See [API setup and contract](doc/us/API.md).

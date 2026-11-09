@@ -1,4 +1,91 @@
-# API
+# Lokalne API administracyjne — alpha-0.1.9
+
+Zaimplementowano opcjonalne API HTTP/1.1/JSON tylko do odczytu, dostępne przez lokalne gniazdo Unix w Linux. Jest niezależne od ADC/ADCS i nie otwiera portu TCP. To podstawa API, nie kompletny backend WebAdmin. Brak zarządzania użytkownikami, ról, operacji zmieniających stan, edycji konfiguracji, zapytań SQL, zdalnego HTTP/TLS i frontendu.
+
+## Dostęp i konfiguracja
+
+Każde żądanie wymaga połączenia z efektywnego UID procesu (`SO_PEERCRED`) oraz `Authorization: Bearer TOKEN`. Token to dokładnie 64 znaki szesnastkowe (32 losowe bajty), odczytane raz przy starcie z prywatnego pliku. Jest to sekret usługi, nie hasło użytkownika huba ani rola. Porównanie tokenów tej samej długości używa `CRYPTO_memcmp`. Zmiana pliku wymaga restartu; brak przeładowania/unieważniania tokenów. Nie umieszczaj tokena w kodzie, wartościach INI, URL i logach. Serwer nie przyjmuje tokena przez CLI ani środowisko.
+
+| Klucz INI `[api]` | Wartość domyślna / zasada |
+| --- | --- |
+| `enabled` | `off`; włączenie wymaga `socket` i `token_file` |
+| `socket` | brak; ścieżka do 107 bajtów, ostatni element do 64 bajtów |
+| `token_file` | brak; ścieżka względem katalogu INI |
+| `max_connections` | 16; zakres 1..128 klientów API, niezależnie od ADC |
+| `request_timeout` | 2; zakres 1..30 sekund, bezwzględny termin od przyjęcia do zakończenia |
+
+Ścieżka gniazda po rozwiązaniu względem INI musi być absolutna. Bezpośredni katalog nadrzędny musi istnieć, należeć do efektywnego UID i nie mieć praw grupy/innych (zwykle 0700). Jego ostatni element nie może być symlinkiem. Katalogi nadrzędne muszą pozostać zaufane. Tworzenie jest zakotwiczone przez `/proc/self/fd` w sprawdzonym katalogu, bez zmiany umask/katalogu roboczego procesu. Gniazdo otrzymuje 0600 przed nasłuchem. Brak dostępu grupowego i bramy między UID, w tym dostępu workerów Apache działających jako inny użytkownik. Nie osłabiaj uprawnień dla Apache; osobno zaprojektowana uwierzytelniona brama jest przyszłym etapem.
+
+Plik tokena korzysta ze wspólnego `security::read_private_secret`: właściciel to efektywny UID, zwykły plik, bez praw grupy/innych, jedno dowiązanie twarde, brak końcowego symlinku, 1..4096 bajtów przed walidacją tokena. Usuwane jest jedno końcowe LF/CRLF. Katalogi/FIFO, NUL/znaki sterujące, puste/zbyt duże pliki i błędny token zatrzymują start. Tymczasowy bufor i token aplikacji są zerowane przy zwalnianiu; nie deklarujemy całkowitego usuwania kopii żądań, sterowników i systemu. Hasło MariaDB zachowuje dotychczasowe zasady przez ten sam czytnik.
+
+Tryb wyłączony nie otwiera zasobów API ani nie czyta tokena. `--check-config` sprawdza ustawienia/kolizje ścieżek, ale nie czyta tokena, nie bada praw katalogu wykonawczego i nie tworzy gniazd. Sprawdzenie/migracja bazy również nie uruchamiają API. Błąd startu API daje kod 1 przed otwarciem portów ADC; błędna składnia/kolizje dają 2. Log nie może wskazywać tokena ani gniazda, także przez istniejące aliasy. Gniazdo nie może wskazywać konfiguracji, plików TLS, hasła/gniazda bazy, tokena i logu.
+
+## Przykład lokalny
+
+Wykonaj jako to samo dedykowane konto, które uruchamia dc24h, w zaufanym zapisywalnym katalogu. Polecenia tworzą/zastępują sekret; używaj ich przy pierwszym przygotowaniu lub świadomej rotacji.
+
+```sh
+install -d -m 0700 .runtime
+install -m 0600 /dev/null .runtime/admin.token
+openssl rand -hex 32 > .runtime/admin.token
+```
+
+W `config/dc24h.ini` zastąp istniejącą sekcję `[api]`, nie powtarzaj kluczy:
+
+```ini
+[api]
+enabled = on
+socket = ../.runtime/admin.sock
+token_file = ../.runtime/admin.token
+max_connections = 16
+request_timeout = 2
+```
+
+Uruchom `./build/dc24h --config config/dc24h.ini`. Przekaż nagłówek curl przez stdin, aby token nie trafił do argumentów procesu:
+
+```sh
+{ printf 'Authorization: Bearer '; cat .runtime/admin.token; } |
+  curl --silent --show-error --fail --unix-socket .runtime/admin.sock \
+    --header @- http://localhost/api/v1/status
+```
+
+To HTTP przez gniazdo Unix; `localhost` jest wartością Host, nie połączeniem TCP. Token nie trafia do usługi zewnętrznej. Curl służy do ręcznej obsługi i nie jest zależnością kompilacji.
+
+## Wersjonowane endpointy
+
+Obie trasy wymagają uwierzytelnienia. Klucze JSON i błędy protokołu pozostają EN/US niezależnie od języka operatora.
+
+| Metoda / ścieżka | Wynik |
+| --- | --- |
+| `GET /api/v1/health` | 200 `{"status":"ok"}`: wątek API obsługuje żądanie; nie jest to test bazy ani pełnej gotowości ADC |
+| `GET /api/v1/status` | 200: ograniczony zestaw danych poniżej |
+
+```json
+{
+  "api_version": "v1",
+  "server": {"name": "dc24h.eu", "version": "alpha-0.1.9", "core_running": true, "uptime_seconds": 3},
+  "network": {"active_connections": 0, "accepted_connections": 1, "adc_frames": 1, "adcs_handshakes": 0, "security_rejected": 0, "security_closed": 0},
+  "database": {"enabled": false}
+}
+```
+
+Liczniki są niezależnymi odczytami atomowymi, nie jedną transakcją. `core_running` podaje tylko stan Core, nie pełne logowanie/gotowość ADC. Uptime pochodzi z zegara monotonicznego od przygotowania transportu/API po opcjonalnym połączeniu bazy; nie jest wiekiem procesu według zegara ściennego. `database.enabled` oznacza obecność skonfigurowanego połączenia startowego, nie bieżącą dostępność SQL. Żądania nie wykonują SQL. API nie zwraca adresów klientów, nicków, ramek, ścieżek, sekretów ani ustawień administracyjnych. Nieznane ścieżki (również query string) dają 404 po autoryzacji; inne metody dają 405 i `Allow: GET`. HEAD jest nieobsługiwane (405), bez treści odpowiedzi.
+
+Brak/błędne uwierzytelnienie daje 401 i `WWW-Authenticate: Bearer realm="dc24h-admin"` przed sprawdzeniem trasy/metody. Błędy to stały JSON: `{"error":"unauthorized"}`, `not_found`, `method_not_allowed`, `bad_request`, `headers_too_large`; bez danych wejściowych i treści wyjątków. Długość/format tokena nie są tajne; nie deklarujemy ochrony przed brute force ze strony procesów już działających jako UID usługi.
+
+## Podzbiór HTTP i ograniczenia zasobów
+
+Parser wymaga HTTP/1.1, ścieżek origin-form, CRLF, jednego niepustego Host i nagłówków ASCII. Wielkość liter nazw nagłówków jest ignorowana; powtórzenia, spacje przed dwukropkiem, składane wiersze, znaki sterujące i bajty spoza ASCII są odrzucane. Limity: 8192 bajty żądania, 32 nagłówki, 1024 bajty pierwszego wiersza. Przekroczenie nagłówków daje 431; błędne żądanie 400. Kompletne nagłówki dokładnie na granicy są dozwolone. Content-Length może nie istnieć lub mieć dokładnie `0`; odrzucane są Transfer-Encoding, Expect, Upgrade, niezerowa/niejednoznaczna długość oraz już odebrane bajty treści/kolejnych żądań. Jeżeli dodatkowe bajty dotrą po obsłużeniu pierwszego żądania, połączenie jest zamykane bez uruchomienia kolejnego. Brak keep-alive, parsera body, kompresji, CORS i upgrade. Jedno połączenie obsługuje najwyżej jedno żądanie.
+
+Odpowiedzi mają Content-Length, JSON UTF-8, Date, `Connection: close`, `Cache-Control: no-store` i `X-Content-Type-Options: nosniff`. Bufory są ograniczone, dane użytkownika nie są odbijane. Wątek używa nieblokujących gniazd i ograniczonej pętli poll. Na klienta przypada jedna próba odczytu/zapisu na obrót, a przyjmowanie ma limit 16 prób na obrót. Nadmiarowi klienci i inne UID są zamykani bez odpowiedzi HTTP. Bezwzględny termin obejmuje żądanie/odpowiedź i nie przesuwa się po nadejściu danych. Wygaśnięcie zamyka klienta. Brak limitu tempa przyjęć API i deklaracji ochrony DDoS. Zaufane callbacki i synchroniczny logger nie powinny blokować bez końca.
+
+## Własność, zatrzymywanie i błędy
+
+`api::Server` posiada wątek i gniazda; `start()` jest jednorazowe. Konstruktor odczytuje token, ale nie binduje. Destruktor zatrzymuje/dołącza wątek, zamyka klientów/listener i usuwa tylko zapamiętany inode gniazda przez zachowany fd katalogu. Nie usuwa pliku/symlinku/gniazda podmienionego pod tą samą nazwą. Istniejące ścieżki, także stare gniazda, nie są nadpisywane/usuwane przy starcie: zatrzymaj wcześniejszy proces i ręcznie usuń sprawdzone stare gniazdo. SIGKILL nie uruchamia sprzątania.
+
+Main tworzy API po przygotowaniu Core/Network, z bezpiecznymi współbieżnie callbackami stanu/błędu. Wątek nie posiada Core ani nie wykonuje operacji zmieniających jego stan na żądanie HTTP. SIGINT/SIGTERM i błąd startu Network zatrzymują/dołączają API przed zniszczeniem zależności. Krytyczny wyjątek infrastruktury/callbacku daje wyłącznie log `Local API worker failed`, żąda stop przez callback właściciela i kończy proces błędem. Błędne dane, timeouty i błędy I/O klienta zamykają tylko jego połączenie. Logi startu/błędów nie zawierają żądań, nagłówków, tokena i ścieżek. Brak rejestru audytowego żądań.
+
+Źródła: [RFC 9112 — ramkowanie HTTP/1.1](https://www.rfc-editor.org/rfc/rfc9112.html), [RFC 9110 — semantyka HTTP](https://www.rfc-editor.org/rfc/rfc9110.html), [gniazda Unix i poświadczenia procesów w Linux](https://man7.org/linux/man-pages/man7/unix.7.html).
 
 ## Wewnętrzne C++ w alpha-0.1.5
 
@@ -45,12 +132,9 @@ Szczegółowy kontrakt, zasady własności, limity i semantyka błędów:
 [ADC_PROTOCOL.md](ADC_PROTOCOL.md). Dekoder jest jednowątkowy; niezależne
 instancje oraz `parse_line` można używać równolegle.
 
-## Plan API WebAdmin
+## Plan WebAdmin
 
-Nie istnieją jeszcze endpointy HTTP, uwierzytelnianie API ani kontrakt JSON.
-Docelowo API C++ będzie dostępne przez zabezpieczony reverse proxy Apache2,
-z uwierzytelnianiem, kontrolą ról, walidacją danych i rejestrem operacji
-administracyjnych.
+Dalsze operacje administracyjne i integracja Apache wymagają kontroli ról oraz rejestru audytowego.
 
 ## ADCS i języki
 
@@ -58,7 +142,7 @@ administracyjnych.
 
 ## Konfiguracja i logger
 
-`configuration::Settings` zawiera opcje sieci/loggera i pochodzenie (`source_file`, `implicit_plain_listener`). `load_file` parsuje składnię i pojedyncze pola; zależności sprawdza osobne `validate(Settings)` po nadpisaniach. `parse_arguments(argc, argv)` wczytuje plik, stosuje CLI i waliduje; `CommandLine` dodaje flagi check/help/version. `logging::Options` ma level, file_path (puste = stderr), language i connections. `Logger(Options = {})` otwiera plik w konstruktorze; pozostaje też `Logger(Language)`. Obiekt jest niekopiowalny i musi żyć dłużej niż wywołujący. Brak API zmiany ustawień/reload.
+`configuration::Settings` zawiera opcje sieci/loggera/bazy/API i pochodzenie (`source_file`, `implicit_plain_listener`). `load_file` parsuje składnię i pojedyncze pola; zależności sprawdza osobne `validate(Settings)` po nadpisaniach. `parse_arguments(argc, argv)` wczytuje plik, stosuje CLI i waliduje; `CommandLine` dodaje flagi check/help/version. `logging::Options` ma level, file_path (puste = stderr), language i connections. `Logger(Options = {})` otwiera plik w konstruktorze; pozostaje też `Logger(Language)`. Obiekt jest niekopiowalny i musi żyć dłużej niż wywołujący. Brak API zmiany ustawień/reload.
 
 ## Logger — alpha-0.1.6
 

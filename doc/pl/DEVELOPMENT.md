@@ -1,7 +1,7 @@
 # Rozwój projektu
 
 Pracuj na gałęziach wydań, zachowując historię `main`. Aktualny etap:
-`alpha-0.1.8`. Każdy istotny etap otrzymuje opisowy commit. Nie dodawaj
+`alpha-0.1.9`. Każdy istotny etap otrzymuje opisowy commit. Nie dodawaj
 artefaktów kompilacji, sekretów ani zależności vendored bez uzasadnienia.
 
 | Katalog | Rola |
@@ -37,3 +37,7 @@ alpha-0.1.7 powstaje z main po scaleniu alpha-0.1.6. Sprawdzono i dostosowano ko
 ## Etap Database
 
 alpha-0.1.8 powstaje z main po alpha-0.1.7. Nie przenoś SQL i haseł do Core/Network, wiąż wartości zapytań i nie edytuj zastosowanych migracji. Przed nieidempotentnym DDL dodaj obsługę częściowej awarii. Testy bazy muszą mieć własny katalog danych/socket i `--no-defaults`; nie korzystaj z bazy dewelopera.
+
+## Etap API
+
+alpha-0.1.9 powstaje z main po scaleniu alpha-0.1.8. Zachowuj wąski kontrakt HTTP bez body i lokalne zabezpieczenia. Zmiany stanu, parser body, udostępnienie Apache i token w przeglądarce wymagają projektu uprawnień/ról/audytu. Callbacki muszą być bezpieczne współbieżnie, ograniczone czasowo i żyć dłużej niż API. Testy mają używać tymczasowych prywatnych gniazd/tokenów oraz weryfikować liczniki ncdc i stan MariaDB przez rzeczywiste API.

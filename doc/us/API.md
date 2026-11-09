@@ -1,6 +1,93 @@
-# API
+# Local administrative API — alpha-0.1.9
 
-There is no HTTP/JSON/WebAdmin API yet.
+Implemented: an opt-in, read-only HTTP/1.1/JSON API on a Linux Unix-domain stream socket. It is independent of ADC/ADCS and does not expose a TCP port. This is an administrative API foundation, not a complete WebAdmin backend. No user management, role system, mutations, configuration updates, SQL queries, remote HTTP/TLS endpoint or frontend is implemented.
+
+## Access and configuration
+
+Every request requires both a connection from the process effective UID (`SO_PEERCRED`) and `Authorization: Bearer TOKEN`. The token is exactly 64 hexadecimal characters (generate 32 random bytes), read once at startup from a private regular file. It is an opaque service credential, not a hub user password or role. Token comparison uses `CRYPTO_memcmp` for equal-length credentials. Changing the file requires a restart; there is no token reload/revocation service. Never put the token in source, INI values, URLs or logs. The server has no token CLI/environment option.
+
+| INI key under `[api]` | Default / contract |
+| --- | --- |
+| `enabled` | `off`; enabling requires `socket` and `token_file` |
+| `socket` | absent; pathname only, up to 107 bytes, final component up to 64 bytes |
+| `token_file` | absent; file path, relative to the INI directory |
+| `max_connections` | 16; range 1..128 active API clients, independent of ADC limits |
+| `request_timeout` | 2; range 1..30 seconds, absolute accept-to-completion deadline |
+
+INI socket paths resolve against the INI directory and must then be absolute. The socket's immediate parent must already exist, be owned by the effective UID and have no group/other permissions (normally 0700). Its final directory component cannot be a symlink. Parent directories must remain trusted. Socket creation is anchored through `/proc/self/fd` to the checked directory without changing process umask/current directory. The socket is set to 0600 before listening. No group access or cross-UID gateway is supported yet, including Apache workers running as a different user. Do not weaken permissions to connect Apache; a separately designed authenticated gateway is future work.
+
+The token file follows the shared `security::read_private_secret` contract: effective-UID owner, regular file, no group/other permission bits, exactly one hard link, no final symlink, 1..4096 bytes before token-format validation. A single terminal LF/CRLF is removed. Directories/FIFOs, NUL/control characters, empty/oversized files and malformed tokens fail startup. Temporary read buffers and the stored application token are wiped when released; request/connector/OS copies are not claimed to be fully erased. Database password behavior is preserved through the same shared reader.
+
+Disabled mode opens no API resources and does not read the token. `--check-config` checks settings and path collisions, but does not read API tokens, inspect runtime directory permissions or create sockets. Database check/migration modes also never start the API. Normal API startup failure returns code 1 before ADC listeners are opened; syntax/path collisions return code 2. Logs cannot target the token or API socket, including existing hard-link and symlink aliases. The socket cannot target the configuration, TLS credentials, database password/socket, token or configured log.
+
+## Local example
+
+Run these commands as the same dedicated account that will run dc24h; provision writable trusted directories first. The token commands create/replace a credential, so run them during initial setup or a deliberate rotation.
+
+```sh
+install -d -m 0700 .runtime
+install -m 0600 /dev/null .runtime/admin.token
+openssl rand -hex 32 > .runtime/admin.token
+```
+
+Add to `config/dc24h.ini` (replace an existing `[api]` section, do not duplicate keys):
+
+```ini
+[api]
+enabled = on
+socket = ../.runtime/admin.sock
+token_file = ../.runtime/admin.token
+max_connections = 16
+request_timeout = 2
+```
+
+Then start with `./build/dc24h --config config/dc24h.ini`. Use curl's header input from stdin to avoid putting the credential in its command-line arguments:
+
+```sh
+{ printf 'Authorization: Bearer '; cat .runtime/admin.token; } |
+  curl --silent --show-error --fail --unix-socket .runtime/admin.sock \
+    --header @- http://localhost/api/v1/status
+```
+
+This is HTTP over a local Unix socket; `localhost` is the HTTP Host value, not a TCP connection. No token is sent to an external service. Curl is optional for manual use, not a build dependency.
+
+## Versioned endpoints
+
+Both routes require authentication. JSON keys/protocol errors remain EN/US regardless of operator language.
+
+| Method / path | Result |
+| --- | --- |
+| `GET /api/v1/health` | 200 `{"status":"ok"}`: the API worker can process this request; not a database or full ADC readiness probe |
+| `GET /api/v1/status` | 200: bounded snapshot below |
+
+```json
+{
+  "api_version": "v1",
+  "server": {"name": "dc24h.eu", "version": "alpha-0.1.9", "core_running": true, "uptime_seconds": 3},
+  "network": {"active_connections": 0, "accepted_connections": 1, "adc_frames": 1, "adcs_handshakes": 0, "security_rejected": 0, "security_closed": 0},
+  "database": {"enabled": false}
+}
+```
+
+Counters are independently sampled atomics, not one transactional snapshot. `core_running` reports the Core lifecycle only, not complete ADC login/readiness. Uptime uses a steady clock from transport/API composition after optional database setup; it is not wall-clock process age. `database.enabled` reports configured startup connection presence, not ongoing SQL availability. No request runs SQL. Peer addresses, nicknames, frames, file paths, secrets and administrative settings are never returned. Unknown paths (including query strings) give 404 after authentication; other methods give 405 with `Allow: GET`. HEAD is unsupported (405), with no response body.
+
+Missing/incorrect authentication gives 401 and `WWW-Authenticate: Bearer realm="dc24h-admin"` before route/method lookup. Error bodies are fixed JSON such as `{"error":"unauthorized"}`, `not_found`, `method_not_allowed`, `bad_request` and `headers_too_large`; no input or exception text is echoed. The token's length/format is not secret, and no remote brute-force resistance is claimed for processes already running as the service UID.
+
+## HTTP subset and resource limits
+
+The parser requires HTTP/1.1, origin-form paths, CRLF endings, one nonempty Host and ASCII header syntax. Header names are case-insensitive; duplicate names, whitespace before a colon, folded lines, controls and non-ASCII bytes are rejected. There are at most 8192 request bytes, 32 headers and 1024 bytes in the request line. Oversized headers give 431; malformed requests give 400. The maximum-size complete header remains valid. Content-Length is absent or exactly `0`; every Transfer-Encoding, Expect, Upgrade, nonzero/ambiguous length or already received trailing body/pipelined data is rejected. If extra bytes arrive after the first request was dispatched, the connection is closed without dispatching another request. There is no keep-alive, body parser, compression, CORS or HTTP upgrade. One connection serves at most one request and always closes.
+
+Responses carry Content-Length, JSON UTF-8 content type, Date, `Connection: close`, `Cache-Control: no-store` and `X-Content-Type-Options: nosniff`. Header/body buffering is bounded; no user-controlled strings are reflected. The worker uses nonblocking sockets and one bounded poll loop. Each peer gets at most one read/write attempt per pass; accept processing is limited to 16 attempts per pass. Excess clients or different-UID peers are closed without an HTTP response. The absolute request/response deadline never slides when more bytes arrive; expiry closes the peer. There is no API admission rate limiter or DDoS claim. Trusted callbacks and synchronous logs must not block indefinitely.
+
+## Ownership, shutdown and failures
+
+`api::Server` owns one worker thread and socket resources; `start()` is single-use. Constructor reads the token but does not bind. Destructor requests worker stop, joins it, closes peers/listener and removes only the recorded socket inode through the retained directory fd. It will not remove a replacement file/symlink/socket. Existing endpoints, including stale sockets, are never overwritten or unlinked at startup: stop any existing process and remove a verified stale socket manually. SIGKILL cannot run cleanup.
+
+Main constructs API after Core/Network composition, with thread-safe status and failure callbacks. The API worker never owns Core or invokes a lifecycle mutation from HTTP. SIGINT/SIGTERM and Network-start failures stop/join the API before dependencies are destroyed. A fatal API infrastructure/provider exception logs only `Local API worker failed`, invokes the owner stop callback and makes process exit fail. Per-client malformed input, deadlines and I/O failures only close that peer. Startup/worker logs omit requests, headers, token and paths; there is no request audit log yet.
+
+References: [RFC 9112 HTTP/1.1 framing](https://www.rfc-editor.org/rfc/rfc9112.html), [RFC 9110 HTTP semantics](https://www.rfc-editor.org/rfc/rfc9110.html), [Linux Unix sockets and peer credentials](https://man7.org/linux/man-pages/man7/unix.7.html).
+
+## Internal C++ interfaces
 
 `core::Server(Logger&, TcpServer* = nullptr)` uses non-owning dependencies. `run()` is blocking and single-use; `request_stop()` is thread safe and idempotent, including before startup; `state()` returns the mutex-protected lifecycle state. Network exceptions enter `stopped` before propagating.
 
@@ -10,11 +97,11 @@ There is no HTTP/JSON/WebAdmin API yet.
 
 `adcs::Context` owns the credential-bearing TLS context. `adcs::Connection` owns a session referencing that context and a non-owning fd. Both dependencies must outlive the connection. `handshake()` and `receive()` return `IoResult {status, bytes}` with complete/want_read/want_write/closed/error; `pending()` reports buffered decrypted bytes. Socket readiness and SIGPIPE disposition are the caller's responsibility. No send API exists yet.
 
-All owners must stop and join callers before destroying dependencies. `Logger(Options = {})` and `i18n::parse_language/translate/help` provide built-in messages. Future HTTP endpoints need authentication, role checks, input validation and administrative audit records behind Apache2.
+All owners must stop and join callers before destroying dependencies. `Logger(Options = {})` and `i18n::parse_language/translate/help` provide built-in messages. Future administrative mutations and Apache integration need role checks and audit records beyond the local read-only foundation.
 
 ## Configuration and Logger
 
-`configuration::Settings` contains network/logging options and parsing provenance (`source_file`, `implicit_plain_listener`). `load_file` parses syntax and individual fields, but does not validate all cross-field requirements. Call `validate(Settings)` on composed settings. `parse_arguments(argc, argv)` loads the explicit file, applies CLI and validates; `CommandLine` adds check/help/version flags. `logging::Options` contains level, file_path (empty = stderr), language and connections. `Logger(Options = {})` opens a file at construction; `Logger(Language)` remains available. The logger is noncopyable and must outlive callers. There is no mutation/reload API.
+`configuration::Settings` contains network/logging/database/API options and parsing provenance (`source_file`, `implicit_plain_listener`). `load_file` parses syntax and individual fields, but does not validate all cross-field requirements. Call `validate(Settings)` on composed settings. `parse_arguments(argc, argv)` loads the explicit file, applies CLI and validates; `CommandLine` adds check/help/version flags. `logging::Options` contains level, file_path (empty = stderr), language and connections. `Logger(Options = {})` opens a file at construction; `Logger(Language)` remains available. The logger is noncopyable and must outlive callers. There is no mutation/reload API.
 
 ## Logger — alpha-0.1.6
 

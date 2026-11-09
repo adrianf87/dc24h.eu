@@ -1,4 +1,4 @@
-# Konfiguracja — alpha-0.1.8
+# Konfiguracja — alpha-0.1.9
 
 Kolejność ustawień: wartości domyślne, jeden jawny `--config PLIK`, następnie nadpisania CLI niezależnie od miejsca `--config`. Brak automatycznego wyszukiwania pliku, zmiennych środowiskowych, include, reload i konfiguracji zdalnej.
 
@@ -71,3 +71,7 @@ Porty współdzielą stan przyjęć IP. Tempo jest na połączenie, także keepa
 ## Database — alpha-0.1.8
 
 Sekcja INI `[database]`: `enabled=off`, `socket=/run/mysqld/mysqld.sock`, `name=dc24h`, `user=dc24h`, `timeout=5`, opcjonalny `password_file` (wymagany po włączeniu). Obsługiwane jest lokalne gniazdo Unix. `--check-database` łączy i wykonuje ping; `--migrate-database` jawnie stosuje/sprawdza metadane migracji. Te operacje i `--check-config` wzajemnie się wykluczają. Dry-run nie odczytuje hasła i nie łączy z MariaDB. Log nie może wskazywać hasła ani jego aliasów. Zakresy, wymagania pliku i kody zakończenia: [DATABASE.md](DATABASE.md).
+
+## Lokalne API — alpha-0.1.9
+
+Opcje wyłącznie INI `[api]`: `enabled=off`, brak domyślnych `socket`/`token_file`, `max_connections=16` (1..128), `request_timeout=2` sekundy (1..30). Włączenie wymaga obu ścieżek; względne są rozwiązywane względem INI. Brak wartości tokena, zdalnych adresów i nadpisań CLI. `--check-config` sprawdza składnię/kolizje, ale nie czyta tokena, nie bada prywatnego katalogu wykonawczego i nie binduje; operacje utrzymania bazy nie uruchamiają API. Zwykły start wymaga prywatnego katalogu właściciela i prywatnego pliku tokena 64-hex. Kolizje logu/gniazda z konfiguracją/sekretami są odrzucane. Szczegóły: [API.md](API.md).

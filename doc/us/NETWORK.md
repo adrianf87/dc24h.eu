@@ -23,3 +23,7 @@ With opt-in INFO logging, accepted/TLS-ready/close events include only an intern
 ## Security — alpha-0.1.7
 
 The Network options include `security::Limits`. A single bounded `PeerLimiter` spans every plaintext/TLS listener, using canonical kernel source addresses kept only in memory. Admission is checked before TLS allocation/watch registration, and active slots are rolled back/released on setup failure or disconnect. Every client has independent frame-rate, invalid-count and absolute partial/TLS timing state. Deadlines are checked before/after I/O and per decoded segment, in addition to periodic expiry scans. INFO shutdown and `statistics()` add security_rejected/security_closed without changing existing counters. See [SECURITY.md](SECURITY.md) for defaults, fixed windows, counter meaning and limitations.
+
+## Administrative socket — alpha-0.1.9
+
+The optional local HTTP API uses a separate private Unix-domain stream socket and worker, not an ADC/ADCS listener. Its active-client/deadline policies are independent of TCP/TLS security counters. No HTTP port is opened and Apache2 is not involved in transport tests. See [API.md](API.md).

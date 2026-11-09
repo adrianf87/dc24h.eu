@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.1.8 LANGUAGES CXX)
+project(dc24h VERSION 0.1.9 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -40,10 +40,11 @@ set_target_properties(dc24h_adcs PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_adcs PUBLIC include)
 target_link_libraries(dc24h_adcs PUBLIC OpenSSL::SSL OpenSSL::Crypto)
 
-add_library(dc24h_security src/security/limits.cpp)
+add_library(dc24h_security src/security/limits.cpp src/security/secret_file.cpp)
 target_compile_features(dc24h_security PUBLIC cxx_std_20)
 set_target_properties(dc24h_security PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_security PUBLIC include)
+target_link_libraries(dc24h_security PRIVATE OpenSSL::Crypto)
 
 add_library(dc24h_network src/network/tcp_server.cpp)
 target_compile_features(dc24h_network PUBLIC cxx_std_20)
@@ -65,13 +66,19 @@ add_library(dc24h_database src/database/database.cpp)
 target_compile_features(dc24h_database PUBLIC cxx_std_20)
 set_target_properties(dc24h_database PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_database PUBLIC include PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
-target_link_libraries(dc24h_database PRIVATE MariaDB::ConnectorC OpenSSL::Crypto)
+target_link_libraries(dc24h_database PRIVATE MariaDB::ConnectorC OpenSSL::Crypto dc24h_security)
+
+add_library(dc24h_api src/api/http.cpp src/api/server.cpp)
+target_compile_features(dc24h_api PUBLIC cxx_std_20)
+set_target_properties(dc24h_api PROPERTIES CXX_EXTENSIONS OFF)
+target_include_directories(dc24h_api PUBLIC include PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+target_link_libraries(dc24h_api PUBLIC dc24h_logging PRIVATE Threads::Threads OpenSSL::Crypto dc24h_security)
 
 add_library(dc24h_configuration src/configuration/configuration.cpp)
 target_compile_features(dc24h_configuration PUBLIC cxx_std_20)
 set_target_properties(dc24h_configuration PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_configuration PUBLIC include)
-target_link_libraries(dc24h_configuration PUBLIC dc24h_network dc24h_logging dc24h_database PRIVATE UTF8Proc::UTF8Proc)
+target_link_libraries(dc24h_configuration PUBLIC dc24h_network dc24h_logging dc24h_database dc24h_api PRIVATE UTF8Proc::UTF8Proc)
 
 add_library(dc24h_core
     src/core/server.cpp
@@ -87,7 +94,7 @@ add_executable(dc24h src/main.cpp)
 target_link_libraries(dc24h PRIVATE dc24h_core dc24h_configuration)
 set_target_properties(dc24h PROPERTIES CXX_EXTENSIONS OFF)
 
-foreach(target dc24h_i18n dc24h_core dc24h_network dc24h_logging dc24h_adc dc24h_adcs dc24h_security dc24h_configuration dc24h_database dc24h)
+foreach(target dc24h_i18n dc24h_core dc24h_network dc24h_logging dc24h_adc dc24h_adcs dc24h_security dc24h_configuration dc24h_database dc24h_api dc24h)
     target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 endforeach()
 
@@ -172,6 +179,13 @@ if(BUILD_TESTING)
     else()
         message(STATUS "MariaDB server/client tools missing: database.process unavailable")
     endif()
+    add_executable(api_tests tests/api_tests.cpp)
+    target_link_libraries(api_tests PRIVATE dc24h_api)
+    target_compile_options(api_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    add_test(NAME api.unit COMMAND api_tests)
+    add_test(NAME api.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/api_process_tests.py" "$<TARGET_FILE:dc24h>")
+    set_tests_properties(api.unit api.process PROPERTIES TIMEOUT 45)
     find_program(NCDC_EXECUTABLE ncdc)
     if(NCDC_EXECUTABLE)
         add_test(NAME adc.ncdc COMMAND "${Python3_EXECUTABLE}"

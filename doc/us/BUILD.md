@@ -19,7 +19,7 @@ cmake --build build-runtime --parallel 2
 sudo cmake --install build-runtime --prefix /usr/local
 ```
 
-Language catalogs are compiled into the binary. CMake generates `dc24h/version.hpp` from project version 0.1.8; `--version` prints alpha-0.1.8. Identify an exact build with that version plus `git rev-parse HEAD`. Do not edit generated files. MariaDB Connector/C development/runtime libraries are required; a running SQL server is optional. Node.js and Apache2 are not needed yet.
+Language catalogs are compiled into the binary. CMake generates `dc24h/version.hpp` from project version 0.1.9; `--version` prints alpha-0.1.9. Identify an exact build with that version plus `git rev-parse HEAD`. Do not edit generated files. MariaDB Connector/C development/runtime libraries are required; a running SQL server is optional. Node.js and Apache2 are not needed yet.
 
 For sanitizers:
 

@@ -17,3 +17,7 @@ alpha-0.1.7 starts from main after the alpha-0.1.6 merge. The security sources/t
 ## Database increment
 
 alpha-0.1.8 starts from main after alpha-0.1.7. Keep SQL handles and credentials out of Core/Network, use bound values, and keep applied SQL migrations immutable. Extend migration recovery before adding non-idempotent DDL. Disposable database tests must use their own data directory/socket and `--no-defaults`; never connect to a developer database.
+
+## API increment
+
+alpha-0.1.9 starts from main after the alpha-0.1.8 merge. Preserve the narrow bodyless HTTP contract and local-only access controls. Do not add mutations, body parsers, Apache exposure or browser token storage without explicit authorization/role/audit design. Providers must be thread safe, bounded and outlive API destruction. Use disposable private Unix sockets/tokens in tests, and verify both ncdc counters and MariaDB status through the real API.

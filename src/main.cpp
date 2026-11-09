@@ -7,6 +7,7 @@
 #include "dc24h/version.hpp"
 
 #include <atomic>
+#include <chrono>
 #include <csignal>
 #include <cstdlib>
 #include <exception>
@@ -113,6 +114,21 @@ int main(int argc, char* argv[]) {
             dc24h::network::TcpServer network(logger, std::move(parsed.settings.network));
             dc24h::core::Server server(logger, &network);
             std::atomic<bool> signal_error{false};
+            const auto started = std::chrono::steady_clock::now();
+            std::unique_ptr<dc24h::api::Server> api;
+            if (parsed.settings.api.enabled) {
+                api = std::make_unique<dc24h::api::Server>(logger, parsed.settings.api, [&] {
+                    const auto stats = network.statistics();
+                    return dc24h::api::Snapshot{
+                        server.state() == dc24h::core::State::running,
+                        static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::seconds>(
+                            std::chrono::steady_clock::now() - started).count()),
+                        stats.active, stats.accepted, stats.adc_frames, stats.adcs_handshakes,
+                        stats.security_rejected, stats.security_closed, database != nullptr};
+                }, [&] { signal_error.store(true); server.request_stop(); });
+                api->start();
+            }
+
 
             std::jthread signal_thread([&](std::stop_token stop) {
                 try {
@@ -131,6 +147,7 @@ int main(int argc, char* argv[]) {
             server.run();
             signal_thread.request_stop();
             signal_thread.join();
+            api.reset(); // Stop/join callbacks before Core, Network and database destruction.
             return signal_error.load() ? EXIT_FAILURE : EXIT_SUCCESS;
         } catch (const std::exception& error) {
             logger.error(error.what());

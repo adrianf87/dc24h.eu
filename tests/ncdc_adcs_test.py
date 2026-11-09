@@ -15,6 +15,7 @@ import time
 import unittest
 
 from network_process_tests import Hub
+from api_support import enable_api, fetch_status
 from adc_process_tests import counters
 from tls_support import credentials, TLS_READY
 
@@ -30,6 +31,7 @@ class NcdcAdcsTest(unittest.TestCase):
                            '[tls]\ncertificate=certificate.pem\nprivate_key=private.pem\n'
                            '[security]\nmax_connections_per_ip=4\nmax_frames_per_second=8\n'
                            'tls_handshake_timeout=2\npartial_frame_timeout=2\n', encoding='utf-8')
+            api_path, api_token = enable_api(ini, directory)
             hub = Hub(self, '--config', str(ini), '--idle-timeout', '2', '--log-connections', 'on', ready_pattern=TLS_READY)
             wire = bytearray()
             errors = []
@@ -88,7 +90,12 @@ class NcdcAdcsTest(unittest.TestCase):
                 self.assertEqual(errors, [])
                 self.assertTrue(wire.startswith(b'\x16\x03'), repr(wire[:10]))
                 self.assertNotIn(b'HSUP', wire, 'ADC command leaked outside TLS')
+                snapshot = fetch_status(api_path, api_token)
+                self.assertTrue(snapshot['server']['core_running'])
+                self.assertEqual(snapshot['network']['adc_frames'], 1)
+                self.assertEqual(snapshot['network']['adcs_handshakes'], 1)
                 hub.stop()
+                self.assertFalse(api_path.exists())
                 self.assertIn(b"Security stopped; rejected=0 closed=0", hub.log)
                 self.assertIn(b"transport=ADCS event=accepted", hub.log)
                 self.assertIn(b"transport=ADCS event=tls_ready", hub.log)
