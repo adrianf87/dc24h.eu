@@ -1,4 +1,4 @@
-name: Build and test Core, Network and ADC
+name: Build and test Core, Network, ADC and ADCS
 on: [push, pull_request]
 permissions:
   contents: read
@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Unicode library and test client
-        run: sudo apt-get update && sudo apt-get install -y libutf8proc-dev ncdc
+        run: sudo apt-get update && sudo apt-get install -y libutf8proc-dev libssl-dev openssl ncdc
       - name: Configure C++20
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
       - name: Build

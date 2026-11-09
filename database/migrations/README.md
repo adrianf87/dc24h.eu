@@ -1,4 +1,3 @@
-# Migracje MariaDB — plan
+# Database migrations (planned)
 
-Brak wykonywalnych migracji w alpha-0.1.1. Zasady i plan danych:
-[DATABASE.md](../../doc/DATABASE.md). Nie uruchamiaj tego katalogu jako SQL.
+Reserved for versioned MariaDB schema migrations. No SQL driver, schema or executable migrations are implemented in alpha-0.1.4. See [database design](../../doc/us/DATABASE.md).

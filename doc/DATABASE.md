@@ -1,14 +1,3 @@
-# MariaDB
+# DATABASE
 
-Status alpha-0.1.3: brak połączeń SQL, sterownika i migracji wykonywalnych.
-Katalog `database/migrations/` rezerwuje miejsce dla kolejnego etapu.
-
-Plan schematu obejmuje konta i hashe haseł, role/uprawnienia, konfigurację,
-bany/blokady, wybrane zdarzenia i dane administracyjne. Migracje będą
-numerowane i wersjonowane; migracji zastosowanych nie należy zmieniać.
-Należy uwzględnić właściwości transakcyjne konkretnych operacji DDL MariaDB
-oraz kopię zapasową przed migracją produkcyjną.
-
-Przyszły adapter wymaga RAII dla połączeń, parametryzacji zapytań, minimalnych
-uprawnień konta bazy i bezpiecznego hashowania haseł. Core nie zależy obecnie
-od dostępności MariaDB. Dane dostępowe nie mogą trafić do kodu ani logów.
+Current alpha-0.1.4 documentation: [English (US)](us/DATABASE.md) | [Polski](pl/DATABASE.md).

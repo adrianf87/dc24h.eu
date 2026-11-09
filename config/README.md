@@ -1,4 +1,3 @@
-# Konfiguracja
+# Configuration
 
-Alpha-0.1.2 udostępnia opcje CLI Network; parser plików jest planowany.
-Aktualny interfejs: [CONFIGURATION.md](../doc/CONFIGURATION.md).
+alpha-0.1.4 uses CLI options; no file loader is implemented. See [configuration](../doc/us/CONFIGURATION.md) and [Polski](../doc/pl/CONFIGURATION.md). Keep TLS keys outside the repository.

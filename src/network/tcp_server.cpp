@@ -1,6 +1,7 @@
 #include "dc24h/network/tcp_server.hpp"
 #include "dc24h/logging/logger.hpp"
 #include "dc24h/adc/parser.hpp"
+#include "dc24h/adcs/tls.hpp"
 
 #include <arpa/inet.h>
 #include <sys/epoll.h>
@@ -8,9 +9,11 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <array>
 #include <cerrno>
 #include <charconv>
+#include <memory>
 #include <stdexcept>
 #include <system_error>
 #include <unordered_map>
@@ -94,10 +97,22 @@ void watch(int epoll_fd, int fd, std::uint64_t token, std::uint32_t flags) {
     }
 }
 
+void update_client_interest(int epoll_fd, int fd, std::uint64_t token, bool want_write) {
+    epoll_event event{};
+    event.events = (want_write ? EPOLLOUT : EPOLLIN) | EPOLLRDHUP;
+    event.data.u64 = token;
+    if (::epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event) == -1) {
+        system_failure("epoll_ctl MOD");
+    }
+}
+
 struct Connection {
     Fd fd;
     Clock::time_point last_activity;
     adc::StreamDecoder decoder;
+    std::unique_ptr<adcs::Connection> tls;
+    bool tls_ready{true};
+    bool want_write{false};
 };
 } // namespace
 
@@ -126,13 +141,23 @@ Endpoint parse_endpoint(std::string_view text) {
 
 TcpServer::TcpServer(logging::Logger& logger, Options options)
     : logger_(logger), options_(std::move(options)) {
-    if (options_.listeners.empty() || options_.listeners.size() > 16 ||
+    if ((options_.listeners.empty() && options_.tls_listeners.empty()) ||
+        options_.listeners.size() + options_.tls_listeners.size() > 16 ||
         options_.max_connections == 0 || options_.max_connections > 65535 ||
         options_.idle_timeout < std::chrono::seconds(1) ||
         options_.idle_timeout > std::chrono::hours(24)) {
         throw std::invalid_argument("Invalid TCP limits (listeners 1..16, connections 1..65535, idle 1..86400s)");
     }
+    if (options_.tls_listeners.empty() ?
+        (!options_.tls_certificate.empty() || !options_.tls_private_key.empty()) :
+        (options_.tls_certificate.empty() || options_.tls_private_key.empty())) {
+        throw std::invalid_argument("ADCS needs both TLS certificate and private key with a TLS listener");
+    }
     for (const auto& endpoint : options_.listeners) {
+        socklen_t size{};
+        (void)socket_address(endpoint, size);
+    }
+    for (const auto& endpoint : options_.tls_listeners) {
         socklen_t size{};
         (void)socket_address(endpoint, size);
     }
@@ -151,7 +176,8 @@ void TcpServer::request_stop() noexcept {
 
 Statistics TcpServer::statistics() const noexcept {
     return {active_.load(), accepted_.load(), rejected_.load(), received_bytes_.load(),
-            adc_frames_.load(), adc_unknown_.load(), adc_invalid_.load(), adc_keepalives_.load()};
+            adc_frames_.load(), adc_unknown_.load(), adc_invalid_.load(), adc_keepalives_.load(),
+            adcs_handshakes_.load(), adcs_incomplete_.load()};
 }
 
 void TcpServer::run() {
@@ -166,9 +192,14 @@ void TcpServer::run() {
     Fd epoll(::epoll_create1(EPOLL_CLOEXEC));
     if (epoll.get() == -1) { system_failure("epoll_create1"); }
     watch(epoll.get(), wake_fd_, 0, EPOLLIN);
+    std::unique_ptr<adcs::Context> tls_context;
+    if (!options_.tls_listeners.empty()) {
+        tls_context = std::make_unique<adcs::Context>(options_.tls_certificate, options_.tls_private_key);
+    }
     std::vector<Fd> listeners;
+    std::vector<bool> secure_listeners;
     std::vector<std::string> addresses;
-    for (const auto& endpoint : options_.listeners) {
+    auto add_listener = [&](const Endpoint& endpoint, bool secure) {
         if (stop_.load()) { return; }
         socklen_t size{};
         const auto storage = socket_address(endpoint, size);
@@ -188,11 +219,15 @@ void TcpServer::run() {
         }
         if (::listen(listener.get(), SOMAXCONN) == -1) { system_failure("listen"); }
         watch(epoll.get(), listener.get(), listeners.size() + 1, EPOLLIN);
-        addresses.push_back(bound_address(listener.get()));
+        addresses.push_back(std::string(secure ? "ADCS" : "Network") +
+                            " listening on " + bound_address(listener.get()));
         listeners.push_back(std::move(listener));
-    }
+        secure_listeners.push_back(secure);
+    };
+    for (const auto& endpoint : options_.listeners) { add_listener(endpoint, false); }
+    for (const auto& endpoint : options_.tls_listeners) { add_listener(endpoint, true); }
     // Log readiness only after every configured listener has started successfully.
-    for (const auto& address : addresses) { logger_.info("Network listening on " + address); }
+    for (const auto& address : addresses) { logger_.info(address); }
     std::unordered_map<std::uint64_t, Connection> connections;
     std::uint64_t next_token = listeners.size() + 1;
     std::array<epoll_event, 64> events{};
@@ -222,6 +257,9 @@ void TcpServer::run() {
         // Never log untrusted parameters, private identifiers or password hashes.
     };
     auto disconnect = [&](auto iterator) {
+        if (iterator->second.tls && !iterator->second.tls_ready) {
+            adcs_incomplete_.fetch_add(1);
+        }
         if (iterator->second.decoder.finish()) { adc_invalid_.fetch_add(1); }
         // DEL before close; event tokens are never reused even when the OS reuses an fd.
         ::epoll_ctl(epoll.get(), EPOLL_CTL_DEL, iterator->second.fd.get(), nullptr);
@@ -235,13 +273,34 @@ void TcpServer::run() {
             }
             accepting = true;
         }
-        const int count = ::epoll_wait(epoll.get(), events.data(), static_cast<int>(events.size()), 250);
+        // SSL_pending bytes have no corresponding kernel readiness event. Schedule
+        // them explicitly while retaining the bounded per-client read budget.
+        std::vector<epoll_event> buffered;
+        for (const auto& [client_token, connection] : connections) {
+            if (connection.tls && connection.tls_ready && !connection.want_write &&
+                connection.tls->pending()) {
+                epoll_event ready{};
+                ready.events = EPOLLIN;
+                ready.data.u64 = client_token;
+                buffered.push_back(ready);
+            }
+        }
+        const int count = ::epoll_wait(epoll.get(), events.data(), static_cast<int>(events.size()),
+                                       buffered.empty() ? 250 : 0);
         if (count == -1) {
             if (errno == EINTR) { continue; }
             system_failure("epoll_wait");
         }
-        for (int i = 0; i < count && !stop_.load(); ++i) {
-            const auto& event = events[static_cast<std::size_t>(i)];
+        std::vector<epoll_event> ready(events.begin(), events.begin() + count);
+        for (const auto& pending : buffered) {
+            if (std::none_of(ready.begin(), ready.begin() + count, [&](const auto& event) {
+                    return event.data.u64 == pending.data.u64;
+                })) {
+                ready.push_back(pending);
+            }
+        }
+        for (const auto& event : ready) {
+            if (stop_.load()) { break; }
             const auto token = event.data.u64;
             if (token == 0) { continue; } // stop_ is authoritative; eventfd is not drained.
             if (token <= listeners.size()) {
@@ -272,6 +331,16 @@ void TcpServer::run() {
                         continue; // RAII closes this excess client, without per-client log flooding.
                     }
                     const auto client_token = next_token++;
+                    const bool secure = secure_listeners[static_cast<std::size_t>(token - 1)];
+                    std::unique_ptr<adcs::Connection> tls;
+                    if (secure) {
+                        try {
+                            tls = std::make_unique<adcs::Connection>(*tls_context, client.get());
+                        } catch (const std::exception&) {
+                            rejected_.fetch_add(1);
+                            continue; // A failed peer session must not stop the listener.
+                        }
+                    }
                     try {
                         watch(epoll.get(), client.get(), client_token, EPOLLIN | EPOLLRDHUP);
                     } catch (const std::system_error& error) {
@@ -281,7 +350,8 @@ void TcpServer::run() {
                         pause_accepting();
                         break;
                     }
-                    connections.emplace(client_token, Connection{std::move(client), Clock::now(), {}});
+                    connections.emplace(client_token, Connection{std::move(client), Clock::now(), {},
+                                                                 std::move(tls), !secure, false});
                     active_.fetch_add(1);
                     accepted_.fetch_add(1);
                 }
@@ -290,28 +360,73 @@ void TcpServer::run() {
             const auto found = connections.find(token);
             if (found == connections.end()) { continue; } // stale event from a closed connection
             bool closed = false;
-            for (int batch = 0; batch < 8 && !stop_.load(); ++batch) {
-                const auto received = ::recv(found->second.fd.get(), buffer.data(), buffer.size(), 0);
-                if (received > 0) {
-                    received_bytes_.fetch_add(static_cast<std::uint64_t>(received));
+            auto change_interest = [&](bool write) {
+                if (found->second.want_write != write) {
+                    update_client_interest(epoll.get(), found->second.fd.get(), token, write);
+                    found->second.want_write = write;
+                }
+            };
+            if (found->second.tls && !found->second.tls_ready) {
+                const auto result = found->second.tls->handshake();
+                if (result.status == adcs::IoStatus::complete) {
+                    found->second.tls_ready = true;
                     found->second.last_activity = Clock::now();
-                    found->second.decoder.feed(
-                        std::string_view(buffer.data(), static_cast<std::size_t>(received)), record_frame);
-                } else if (received == 0) {
+                    adcs_handshakes_.fetch_add(1);
+                    change_interest(false);
+                } else if (result.status == adcs::IoStatus::want_write) {
+                    change_interest(true);
+                } else if (result.status == adcs::IoStatus::want_read) {
+                    change_interest(false);
+                } else {
                     closed = true;
-                    break;
-                } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                    break;
-                } else if (errno != EINTR) {
-                    closed = true; // isolated peer failure, including reset
-                    break;
+                }
+            }
+            if (!closed && found->second.tls_ready) {
+                for (int batch = 0; batch < 8 && !stop_.load(); ++batch) {
+                    std::size_t size = 0;
+                    if (found->second.tls) {
+                        const auto result = found->second.tls->receive(buffer.data(), buffer.size());
+                        if (result.status == adcs::IoStatus::complete) {
+                            size = result.bytes;
+                            change_interest(false);
+                        } else if (result.status == adcs::IoStatus::want_read ||
+                                   result.status == adcs::IoStatus::want_write) {
+                            change_interest(result.status == adcs::IoStatus::want_write);
+                            break;
+                        } else {
+                            closed = true;
+                            break;
+                        }
+                    } else {
+                        const auto received = ::recv(found->second.fd.get(), buffer.data(), buffer.size(), 0);
+                        if (received > 0) {
+                            size = static_cast<std::size_t>(received);
+                        } else if (received == 0) {
+                            closed = true;
+                            break;
+                        } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                            break;
+                        } else if (errno != EINTR) {
+                            closed = true;
+                            break;
+                        } else {
+                            continue;
+                        }
+                    }
+                    if (size == 0) { break; }
+                    received_bytes_.fetch_add(static_cast<std::uint64_t>(size));
+                    found->second.last_activity = Clock::now();
+                    found->second.decoder.feed(std::string_view(buffer.data(), size), record_frame);
                 }
             }
             if (closed || (event.events & (EPOLLERR | EPOLLHUP)) != 0) { disconnect(found); }
         }
         const auto now = Clock::now();
         for (auto it = connections.begin(); it != connections.end();) {
-            if (now - it->second.last_activity >= options_.idle_timeout) {
+            const auto timeout = (it->second.tls && !it->second.tls_ready)
+                ? std::min(options_.idle_timeout, std::chrono::seconds(10))
+                : options_.idle_timeout;
+            if (now - it->second.last_activity >= timeout) {
                 auto expired = it++;
                 disconnect(expired);
             } else { ++it; }
@@ -328,6 +443,10 @@ void TcpServer::run() {
                  " unknown_commands=" + std::to_string(adc_unknown_.load()) +
                  " invalid_frames=" + std::to_string(adc_invalid_.load()) +
                  " keepalives=" + std::to_string(adc_keepalives_.load()));
+    if (tls_context) {
+        logger_.info("ADCS stopped; handshakes=" + std::to_string(adcs_handshakes_.load()) +
+                     " incomplete=" + std::to_string(adcs_incomplete_.load()));
+    }
 }
 
 } // namespace dc24h::network

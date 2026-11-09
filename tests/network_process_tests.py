@@ -17,7 +17,7 @@ READY = re.compile(rb"Network listening on (\[[^\]]+\]|[^ :]+):([0-9]+)")
 
 
 class Hub:
-    def __init__(self, case, *options, listeners=1, fd_limit=None):
+    def __init__(self, case, *options, listeners=1, fd_limit=None, ready_pattern=READY):
         self.case = case
         self.log = bytearray()
         self.sockets = []
@@ -31,9 +31,9 @@ class Hub:
         case.addCleanup(self.cleanup)
         self.selector = selectors.DefaultSelector()
         self.selector.register(self.process.stderr, selectors.EVENT_READ)
-        self.wait_for(lambda: len(READY.findall(self.log)) == listeners)
+        self.wait_for(lambda: len(ready_pattern.findall(self.log)) == listeners)
         self.endpoints = [
-            (host.decode().strip("[]"), int(port)) for host, port in READY.findall(self.log)
+            (host.decode().strip("[]"), int(port)) for host, port in ready_pattern.findall(self.log)
         ]
 
     def wait_for(self, condition, timeout=5):

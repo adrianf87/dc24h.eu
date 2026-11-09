@@ -19,7 +19,7 @@ class ProcessTests(unittest.TestCase):
     def test_version(self):
         result = self.cli("--version")
         self.assertEqual(result.returncode, 0)
-        self.assertEqual(result.stdout, "dc24h.eu alpha-0.1.3\n")
+        self.assertEqual(result.stdout, "dc24h.eu alpha-0.1.4\n")
         self.assertEqual(result.stderr, "")
 
     def test_help(self):
@@ -27,6 +27,38 @@ class ProcessTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertIn("SIGTERM", result.stdout)
         self.assertEqual(result.stderr, "")
+
+    def test_language_help_validation_and_lifecycle(self):
+        result = self.cli('--language', 'pl', '--help')
+        self.assertEqual(result.returncode, 0)
+        self.assertIn('Użycie:', result.stdout)
+        self.assertIn('Usage:', self.cli('--language', 'us', '--help').stdout)
+        self.assertEqual(self.cli('--help', '--language', 'pl').stdout, result.stdout)
+        for args in [('--language',), ('--language', 'de'), ('--language', 'pl', '--listen')]:
+            with self.subTest(args=args):
+                self.assertEqual(self.cli(*args).returncode, 2)
+        self.assertIn('Nieprawidłowe argumenty', self.cli('--language', 'pl', '--unknown').stderr)
+        process = subprocess.Popen([BINARY, '--language', 'pl', '--listen', '127.0.0.1:0'],
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
+        self.addCleanup(self.cleanup_process, process)
+        log = bytearray()
+        with selectors.DefaultSelector() as selector:
+            selector.register(process.stderr, selectors.EVENT_READ)
+            deadline = time.monotonic() + 5
+            while 'Sieć nasłuchuje na'.encode() not in log:
+                remaining = deadline - time.monotonic()
+                self.assertGreater(remaining, 0, repr(log))
+                self.assertTrue(selector.select(remaining))
+                chunk = os.read(process.stderr.fileno(), 4096)
+                self.assertTrue(chunk, repr(log))
+                log.extend(chunk)
+        process.send_signal(signal.SIGTERM)
+        stdout, stderr = process.communicate(timeout=3)
+        log.extend(stderr)
+        self.assertEqual(process.returncode, 0, log.decode())
+        self.assertEqual(stdout, b'')
+        self.assertIn('Core zatrzymany', log.decode())
+        self.assertNotIn('Core stopped', log.decode())
 
     def test_invalid_arguments(self):
         for args in [("--unknown",), ("--help", "extra"), ("--version", "extra")]:
