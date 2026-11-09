@@ -52,3 +52,7 @@ Use a dedicated local SQL account with minimal privileges. Passwords come only f
 ## Local administrative API — alpha-0.1.9
 
 Same-effective-UID peer credentials, a private 0700 directory/0600 socket and a private random 64-hex-character Bearer token gate every read-only request. Token comparison is constant-time for equal lengths. No TCP listener, mutations, browser CORS or anonymous health route exists. A strict bodyless HTTP subset rejects duplicate/framing ambiguity; clients, headers, buffers and absolute request/response time are bounded. Request data/secrets are never logged or reflected. Cleanup checks inode identity and never deletes an existing endpoint at startup. Private directories and service-UID processes remain trusted; root/same-UID compromise, API rate limiting, web sessions, roles, gateway and request auditing are not solved here. See [API.md](API.md).
+
+## WebAdmin foundation — alpha-0.1.10
+
+Never put the API token in browser storage, JavaScript, URLs, VITE-prefixed variables or HTML. The optional development adapter validates private owner-controlled credential files outside the served root, blocks untrusted origin/host/site/method/path/body combinations, injects its own credential and normalizes bounded responses. It is loopback development tooling, not production browser authentication. The Apache2 sample serves only static local assets and denies API routes. No new server mutation surface, remote API exposure, web sessions or roles are introduced. See [WEBADMIN.md](WEBADMIN.md).

@@ -1,5 +1,22 @@
 # Changelog
 
+## alpha-0.1.10 — 2026-11-09
+
+WebAdmin foundation, based on main after the alpha-0.1.9 merge:
+
+- Added a separate locked React 19 / TypeScript / Vite project under webadmin/, without adding Node/npm requirements to default C++ builds.
+- Added a responsive read-only panel with overview, connection, security and database views, EN/US and PL catalogs, language preference, keyboard/mobile navigation, refresh controls, bounded in-session observations and safe JSON export. Future configuration/log controls remain explicitly disabled.
+- Uses actual validated API data only, with clear connecting/unconfigured/offline states, unavailable-value dashes, cleared stale data and no fabricated statistics. Database presence remains a startup flag, not a live health claim.
+- Added an optional same-UID local Vite development adapter. Private socket/token-file path variables remain server-only; credentials are rejected inside the served root and never sent to browser JavaScript/storage/URLs. Only two read-only routes are forwarded, with own-token injection, loopback/host/origin/site/method/path/body checks and bounded concurrency/deadlines/responses.
+- Added strict status normalization and safe-integer checks on both adapter and client, dropping unknown fields. Added private-file/file-serving protections, generic errors and production-bundle separation. Static previews intentionally disable the adapter.
+- Added default-OFF DC24H_INSTALL_WEBADMIN for already built frontend assets plus an Apache2 loopback static-preview example with CSP and explicit API denial. No service/configuration is activated automatically; production authenticated gateway, web sessions, roles, writes and HTTPS deployment remain planned.
+- Added frontend unit/browser tests and an isolated real C++ + Unix API + Vite + Chromium harness covering counters, token isolation, desktop/mobile PL and cleanup. Existing ncdc/MariaDB/server tests remain intact. Added a Node 22 CI job and complete matched US/PL build/configuration/security/installation/development documentation.
+- Updated project/runtime version and version-sensitive tests while retaining main and all historical stage branches.
+
+Local validation: **20/20 CTest suites passed in Debug, Release and ASan/UBSan**; frontend production build/typecheck, **3 Node unit tests, 3 Playwright browser tests and 1 real C++ integration** passed. Apache2 syntax/isolated serving/CSP/API denial and optional staged installation/example/asset equality passed. Browser and bundle checks found no service credential exposure. Runtime npm dependency audit reported no vulnerabilities at execution time. Documentation UTF-8/local links/language parity and Git whitespace checks passed. Environment: Debian 13, Node 20.19.2, npm 9.2, React 19.3.1, TypeScript 7.0.2, Vite 8.3.6, Chromium 156, Apache 2.4.69. Remote CI and remaining OS/browser targets are not claimed as verified.
+
+Limits: monitoring scaffold only; no production web authentication/roles, authenticated Apache gateway, mutations, persistent metrics, full ADC login or SQL application persistence. The local Vite adapter trusts local machine access and is not a production service. Counter precision outside JavaScript's safe-integer range is rejected. Prebuilt-asset provenance remains the installer's responsibility; CMake does not run npm or start services. This is not a security audit.
+
 ## alpha-0.1.9 — 2026-11-09
 
 Local administrative API foundation, based on main after the alpha-0.1.8 merge:

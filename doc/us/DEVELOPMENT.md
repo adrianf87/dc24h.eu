@@ -21,3 +21,7 @@ alpha-0.1.8 starts from main after alpha-0.1.7. Keep SQL handles and credentials
 ## API increment
 
 alpha-0.1.9 starts from main after the alpha-0.1.8 merge. Preserve the narrow bodyless HTTP contract and local-only access controls. Do not add mutations, body parsers, Apache exposure or browser token storage without explicit authorization/role/audit design. Providers must be thread safe, bounded and outlive API destruction. Use disposable private Unix sockets/tokens in tests, and verify both ncdc counters and MariaDB status through the real API.
+
+## WebAdmin increment
+
+alpha-0.1.10 starts from main after alpha-0.1.9. Keep browser-safe schema/formatting separate from the server-only Vite adapter, maintain EN/PL key parity, never include secrets or node_modules/dist/test results in Git, and update package-lock with dependency changes. Verify the frontend build, unit/browser/live C++ integration and existing server tests. Administrative mutations and production web authentication require a separate reviewed design.

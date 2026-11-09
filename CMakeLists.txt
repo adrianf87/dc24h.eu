@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.1.9 LANGUAGES CXX)
+project(dc24h VERSION 0.1.10 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -103,6 +103,15 @@ install(TARGETS dc24h RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES config/dc24h.ini.example DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/dc24h)
 
 install(FILES database/migrations/0001_schema_migrations.sql DESTINATION ${CMAKE_INSTALL_DATADIR}/dc24h/migrations)
+
+option(DC24H_INSTALL_WEBADMIN "Install prebuilt WebAdmin assets (run npm ci and npm run build first)" OFF)
+if(DC24H_INSTALL_WEBADMIN)
+    if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/webadmin/dist/index.html")
+        message(FATAL_ERROR "Build webadmin/dist with npm run build before enabling DC24H_INSTALL_WEBADMIN")
+    endif()
+    install(DIRECTORY webadmin/dist/ DESTINATION ${CMAKE_INSTALL_DATADIR}/dc24h/webadmin)
+    install(FILES config/apache2-webadmin.conf.example DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/dc24h)
+endif()
 
 include(CTest)
 if(BUILD_TESTING)

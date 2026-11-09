@@ -1,0 +1,97 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { parseSnapshot } from "./status";
+import type { HubSnapshot } from "./status";
+export type Connection = "connecting" | "live" | "unconfigured" | "offline";
+export interface Sample {
+  time: number;
+  active: number;
+}
+export function useHub(autoRefresh: boolean) {
+  const [connection, setConnection] = useState<Connection>("connecting");
+  const [snapshot, setSnapshot] = useState<HubSnapshot | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [checked, setChecked] = useState<number | null>(null);
+  const [samples, setSamples] = useState<Sample[]>([]);
+  const active = useRef<AbortController | null>(null);
+  const previousUptime = useRef(0);
+  const refresh = useCallback(async () => {
+    active.current?.abort();
+    const controller = new AbortController();
+    active.current = controller;
+    const timer = setTimeout(() => controller.abort("timeout"), 4000);
+    setRefreshing(true);
+    try {
+      const response = await fetch("./admin-api/v1/status", {
+        signal: controller.signal,
+        cache: "no-store",
+        credentials: "same-origin",
+        redirect: "error",
+      });
+      if (!response.ok) {
+        setConnection(response.status === 503 ? "unconfigured" : "offline");
+        setSnapshot(null);
+        setSamples([]);
+        return;
+      }
+      if (!response.headers.get("content-type")?.startsWith("application/json"))
+        throw new Error("Invalid content type");
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("Missing body");
+      const decoder = new TextDecoder();
+      let text = "",
+        size = 0;
+      try {
+        while (true) {
+          const chunk = await reader.read();
+          if (chunk.done) break;
+          size += chunk.value.length;
+          if (size > 16384) throw new Error("Response too large");
+          text += decoder.decode(chunk.value, { stream: true });
+        }
+        text += decoder.decode();
+      } finally {
+        await reader.cancel();
+      }
+      const value = parseSnapshot(JSON.parse(text));
+      if (controller.signal.aborted) return;
+      const now = Date.now();
+      const restarted = value.server.uptime_seconds < previousUptime.current;
+      previousUptime.current = value.server.uptime_seconds;
+      setSnapshot(value);
+      setConnection("live");
+      setChecked(now);
+      setSamples((previous) =>
+        [
+          ...(restarted ? [] : previous),
+          { time: now, active: value.network.active_connections },
+        ].slice(-30),
+      );
+    } catch {
+      if (
+        active.current === controller &&
+        controller.signal.reason !== undefined &&
+        controller.signal.reason !== "timeout"
+      )
+        return;
+      if (active.current === controller) {
+        setConnection("offline");
+        setSnapshot(null);
+        setSamples([]);
+      }
+    } finally {
+      clearTimeout(timer);
+      if (active.current === controller) setRefreshing(false);
+    }
+  }, []);
+  useEffect(() => {
+    void refresh();
+    const timer = autoRefresh
+      ? setInterval(() => void refresh(), 5000)
+      : undefined;
+    return () => {
+      clearInterval(timer);
+      active.current?.abort();
+    };
+  }, [autoRefresh, refresh]);
+  return { connection, snapshot, refreshing, checked, samples, refresh };
+}

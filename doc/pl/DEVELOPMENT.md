@@ -1,7 +1,7 @@
 # Rozwój projektu
 
 Pracuj na gałęziach wydań, zachowując historię `main`. Aktualny etap:
-`alpha-0.1.9`. Każdy istotny etap otrzymuje opisowy commit. Nie dodawaj
+`alpha-0.1.10`. Każdy istotny etap otrzymuje opisowy commit. Nie dodawaj
 artefaktów kompilacji, sekretów ani zależności vendored bez uzasadnienia.
 
 | Katalog | Rola |
@@ -15,7 +15,7 @@ artefaktów kompilacji, sekretów ani zależności vendored bez uzasadnienia.
 | `config/` | Przykładowy INI i lokalne ustawienia |
 | `src/database`, `include/dc24h/database` | Adapter połączenia MariaDB i zapytań |
 | `database/migrations/` | Niezmienna migracja rejestru wersji MariaDB |
-| `webadmin/` | Miejsce na przyszły frontend |
+| `webadmin/` | Frontend React/TypeScript/Vite i lokalny adapter |
 | `doc/` | Dokumentacja techniczna |
 | `.github/workflows/` | Automatyzacja budowania/testów |
 
@@ -41,3 +41,7 @@ alpha-0.1.8 powstaje z main po alpha-0.1.7. Nie przenoś SQL i haseł do Core/Ne
 ## Etap API
 
 alpha-0.1.9 powstaje z main po scaleniu alpha-0.1.8. Zachowuj wąski kontrakt HTTP bez body i lokalne zabezpieczenia. Zmiany stanu, parser body, udostępnienie Apache i token w przeglądarce wymagają projektu uprawnień/ról/audytu. Callbacki muszą być bezpieczne współbieżnie, ograniczone czasowo i żyć dłużej niż API. Testy mają używać tymczasowych prywatnych gniazd/tokenów oraz weryfikować liczniki ncdc i stan MariaDB przez rzeczywiste API.
+
+## Etap WebAdmin
+
+alpha-0.1.10 powstaje z main po alpha-0.1.9. Oddzielaj schemat/formatowanie przeglądarki od serwerowego adaptera Vite, zachowuj parzystość EN/PL, nie dodawaj sekretów/node_modules/dist/wyników testów do Git i aktualizuj package-lock przy zależnościach. Sprawdzaj build, testy jednostkowe/przeglądarkowe/integrację z C++ i istniejące testy serwera. Zmiany administracyjne i produkcyjne logowanie WWW wymagają osobnego projektu.

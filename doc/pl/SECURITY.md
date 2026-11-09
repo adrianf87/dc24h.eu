@@ -52,3 +52,7 @@ Używaj dedykowanego lokalnego konta SQL z minimalnymi uprawnieniami. Hasło poc
 ## Lokalne API administracyjne — alpha-0.1.9
 
 Każde żądanie tylko do odczytu wymaga tego samego efektywnego UID, prywatnego katalogu 0700/gniazda 0600 i prywatnego losowego tokena Bearer 64-hex. Porównanie tej samej długości jest stałoczasowe. Brak TCP, zmian stanu, CORS i anonimowego health. Ścisły podzbiór HTTP bez body odrzuca duplikaty/niejednoznaczne ramkowanie; klienci, nagłówki, bufory i bezwzględny czas żądania/odpowiedzi są ograniczone. Dane żądań/sekrety nie trafiają do logów ani odpowiedzi. Sprzątanie sprawdza inode i nie usuwa istniejącego endpointu przy starcie. Katalogi i procesy UID usługi są zaufane; przejęcie root/tego samego UID, limity tempa API, sesje WWW, role, brama i audyt żądań pozostają poza etapem. Zobacz [API.md](API.md).
+
+## Podstawa WebAdmin — alpha-0.1.10
+
+Nie umieszczaj tokena w pamięci przeglądarki, JavaScript, URL, zmiennych VITE ani HTML. Adapter deweloperski sprawdza prywatny plik właściciela poza serwowanym katalogiem, blokuje obcy origin/host/site/metody/ścieżki/body, dodaje własny sekret i normalizuje ograniczone odpowiedzi. To lokalne narzędzie, nie produkcyjne logowanie WWW. Przykład Apache2 serwuje statyczne zasoby lokalnie i blokuje API. Etap nie dodaje operacji zmieniających stan, zdalnego API, sesji WWW ani ról. Zobacz [WEBADMIN.md](WEBADMIN.md).

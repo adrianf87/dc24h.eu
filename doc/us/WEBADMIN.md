@@ -1,7 +1,70 @@
-# WebAdmin (planned)
+# WebAdmin — alpha-0.1.10
 
-The final stack is React + TypeScript + Vite, served by Apache2 with reverse proxy requests to a secured C++ API. alpha-0.1.9 reserves `webadmin/` but includes no frontend application, npm dependencies, build output or administrative mutation endpoints. Apache2 is not needed to compile or test the current transport milestones.
+Implemented: a React 19 / TypeScript / Vite project in `webadmin/`, with a responsive read-only panel, EN/US and Polish catalogs, four hash-based views (overview, connections, security, database), manual/5-second refresh, bounded in-session observations and JSON snapshot export. Configuration and event-log controls are explicitly disabled as future work. No account/login/role UI, mutations, persistent metrics or fabricated dashboard values are included.
 
-Implement the UI after defining real API contracts for authentication, roles and administrative actions. It must display actual server state and enforce authorization on the server. Database credentials must never be shipped to the frontend. HTTP TLS/reverse proxy configuration is distinct from the native ADCS listener; Apache2 is not used to terminate the tested ADC/ADCS sockets.
+The default panel shows disconnected/loading/error states and dashes for unavailable counters. Only a validated API response creates live values; failed refreshes clear the displayed snapshot and chart. The last-received timestamp identifies the most recent successful sample. A database flag reports startup configuration, not live SQL health. Network counters are independent snapshots; observations are limited to the last 30 successful samples in browser memory and reset after detected server uptime decrease. Full ADC login is still not implemented.
 
-The local read-only API foundation is now implemented; see [API.md](API.md). It intentionally requires a private directory and the same effective UID, so an Apache worker with a different UID cannot connect. Apache gateway, web authentication, roles and frontend remain future work. Do not expose the shared token to browser JavaScript.
+## Requirements and build
+
+Use Node.js `^20.19.0 || >=22.12.0` and npm with package-lock v3 support. The checked-in lock pins dependencies; `npm ci` is the reproducible install. Default C++ builds do not require Node, npm or browser packages. Files are UTF-8; language catalogs are under `webadmin/src/languages/us` and `pl`. English is the default; the language preference alone is saved in localStorage (with a safe fallback if storage is blocked).
+
+```sh
+cd webadmin
+npm ci
+npm run build
+npm run dev
+```
+
+Vite binds `127.0.0.1:5173` with a strict port, CORS disabled and restricted file serving. Without adapter configuration, the panel opens with unavailable values. It never asks the operator to paste an API token into the browser. `npm run preview` binds `127.0.0.1:4173` and serves the production assets, with the adapter intentionally disabled. Stop preview/dev with Ctrl+C; these commands are local development tools, not a production service.
+
+## Optional local development adapter
+
+Browsers cannot connect to Unix sockets. The Vite development plugin can broker a small, read-only API allowlist through Node's HTTP Unix-socket client. Start the C++ hub with its private API enabled as documented in [API.md](API.md), then run Vite as the **same effective UID**. Keep the socket directory private and owned by that UID, and use the existing private 64-hex-character token file. Both paths must be absolute; the token must be outside the WebAdmin root and cannot be a final-component symlink.
+
+```sh
+cd webadmin
+DC24H_API_SOCKET=/absolute/private/runtime/admin.sock \
+DC24H_API_TOKEN_FILE=/absolute/private/runtime/admin.token \
+  npm run dev
+```
+
+These server-only variables carry paths, never token values. Do not use a `VITE_*` variable for any secret. The adapter reads the private token server-side at startup, validates ownership/permissions/link count/format and rejects token files inside the served root. Restart Vite after rotation. The browser uses relative `./admin-api/v1/status`, with no authorization token in requests, JavaScript, URLs or browser storage. Vite file-serving rules also deny token/password/key/certificate files and `.env`/Git metadata.
+
+Only GET `/admin-api/v1/status` and `/admin-api/v1/health` are forwarded to the corresponding C++ `/api/v1/` endpoints. Other methods/paths, request bodies, non-loopback peers, unapproved Host values, foreign Origin and cross-site Fetch Metadata are rejected. Incoming Authorization is never trusted or forwarded; the server injects its own Bearer header. The adapter caps active upstream requests at 8, enforces a 2-second absolute deadline and a 16-KiB response cap, and returns fixed sanitized errors. It validates and normalizes upstream status JSON, dropping unknown fields. The browser independently validates the schema and safe nonnegative JavaScript integer counters, with a 4-second deadline and the same response cap. Very large counters beyond `Number.MAX_SAFE_INTEGER` are rejected rather than rounded silently.
+
+The plugin is a **local development adapter**, not production web authentication. Local machine access remains trusted; it does not provide browser sessions, user identities, roles, CSRF protection for future writes, TLS termination, request audit or a cross-UID Apache gateway. Do not expose Vite to a network or disable its host/file restrictions. No C++ socket permission weakening is needed.
+
+## Layout and behavior
+
+The graphite sidebar, light workspace and blue controls form a small reusable layout. Icons are bundled from Lucide; no remote scripts/fonts/images are fetched. The panel has responsive navigation, visible keyboard focus, a skip link, semantic tables/status, named controls and reduced-motion handling. EN/PL changes labels and document language; protocol identifiers remain unchanged. Export is enabled only for a current validated snapshot and contains the allowlisted fields plus `observed_at`, never credentials or settings. Documentation links follow the selected language.
+
+## Apache2 and optional installation
+
+`npm run build` emits static assets in `webadmin/dist`, using relative asset paths and hash navigation. No Node server, token or development plugin is bundled into production assets. To include the prebuilt assets in a CMake installation:
+
+```sh
+npm --prefix webadmin ci
+npm --prefix webadmin run build
+cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DDC24H_INSTALL_WEBADMIN=ON
+cmake --build build-release --parallel 2
+sudo cmake --install build-release --prefix /usr/local
+```
+
+This installs assets under `share/dc24h/webadmin` and a sample `etc/dc24h/apache2-webadmin.conf.example`. The option defaults OFF; ON requires an existing `webadmin/dist/index.html`. Always rebuild the frontend from the same checkout before installation; CMake does not execute npm or verify the provenance of prebuilt assets. Installation never activates a configuration or starts a service.
+
+The [Apache2 example](../../config/apache2-webadmin.conf.example) is a **static loopback preview** at `127.0.0.1:8080`, with local-only access, disabled directory indexes, CSP/no-sniff/frame/referrer headers and explicit denial of `/admin-api/`. It requires mod_headers plus ordinary directory/authorization modules and a readable installed asset directory. Adjust paths/ports for your own installation and validate with `apache2ctl configtest` before explicitly enabling it. It deliberately does not forward the private API. The static panel therefore has no live data in that example. A production authenticated gateway, web sessions/roles, HTTPS and deployment remain future work; never ship the service token to browser JavaScript or expose the C++ private socket to another UID.
+
+## Verification
+
+```sh
+cd webadmin
+npm run build
+npm test
+npx playwright install --with-deps chromium
+npm run test:e2e
+npm run test:integration -- ../build/dc24h
+```
+
+On a workstation with Chromium already installed, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium` for browser/integration checks. Tests use disposable credentials/sockets. Unit tests cover schema/precision, normalization, private credentials, origin/host/method/path restrictions, token injection, overload, size/time bounds and sanitized failures. Browser tests cover missing/live/malformed/lost data, navigation, locale persistence, export and mobile overflow. The integration harness starts a disposable real C++ hub plus a separate Vite process and Chromium, verifies actual ADC counters and token isolation, checks desktop/mobile PL and cleans up all processes. Existing CTest/ncdc/MariaDB suites remain separate.
+
+References: [Vite setup](https://vite.dev/guide/), [Vite server restrictions](https://vite.dev/config/server-options), [React with TypeScript](https://react.dev/learn/typescript).

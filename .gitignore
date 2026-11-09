@@ -25,3 +25,7 @@ __pycache__/
 # Private local API tokens and runtime sockets
 *.token
 *.sock
+
+# WebAdmin test artifacts
+/webadmin/test-results/
+/webadmin/playwright-report/
