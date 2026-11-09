@@ -1,14 +1,19 @@
 # ADCS / TLS — alpha-0.1.4
 
-Serwer używa OpenSSL, oddzielnego kontekstu TLS oraz sesji dla każdego połączenia. Handshake i odbiór są nieblokujące, zintegrowane z `epoll`. Można uruchomić jednocześnie port zwykłego ADC i oddzielny port ADCS. Odszyfrowane ramki przechodzą przez dotychczasowy parser ADC.
+ADCS szyfruje strumień ADC przez TLS, bez zmiany składni i bez STARTTLS. Źródła: [rozszerzenie ADCS](https://dc-protocols.github.io/ADC-EXT.html), [błędy I/O OpenSSL](https://docs.openssl.org/3.5/man3/SSL_get_error/) i [SSL_accept](https://docs.openssl.org/3.5/man3/SSL_accept/).
 
-Minimalna wersja to TLS 1.2; TLS 1.3 działa, jeśli obsługuje ją OpenSSL. Kompresja TLS i renegocjacja są wyłączone. Certyfikat serwera powinien być prawidłowy i sprawdzany przez klienta. Serwer na tym etapie nie wymaga certyfikatu klienta i nie obsługuje logowania użytkowników.
+`adcs::Context` wczytuje pełny łańcuch PEM i zgodny, nieszyfrowany klucz prywatny PEM przed otwarciem portów. Brak plików, błędne dane, niezgodny lub zaszyfrowany hasłem klucz powodują kod 1 bez ogłoszenia gotowości i bez pytania o hasło. Kontrola dotyczy wczytania i zgodności klucza; zaufanie, nazwę hosta i ważność certyfikatu sprawdza klient. Brak wzajemnego TLS i uwierzytelniania kont.
+
+Minimum to TLS 1.2. Kompresja i renegocjacja są wyłączone, podobnie jak pamięciowy cache sesji. Szyfry wynikają z polityki zainstalowanego OpenSSL; TLS 1.3 może stosować bezstanowe bilety sesji.
 
 ```sh
-./build/dc24h --listen 127.0.0.1:1511 \\
-  --adcs-listen 0.0.0.0:1512 \\
-  --tls-cert /etc/dc24h/tls/fullchain.pem \\
+./build/dc24h --adcs-listen 127.0.0.1:1512 \
+  --tls-cert /etc/dc24h/tls/fullchain.pem \
   --tls-key /etc/dc24h/tls/privkey.pem
 ```
 
-Klucz prywatny musi znajdować się poza GitHub i być chroniony uprawnieniami systemowymi. Certyfikat i klucz muszą pasować do siebie, inaczej start zakończy się błędem. Serwer nie przeładowuje jeszcze certyfikatów bez restartu. Niepoprawny klient TLS nie zatrzymuje serwera. Limit handshake'u to maksymalnie 10 sekund. Brak odpowiedzi aplikacyjnych ADC, SID, sesji, routingu i zamknięcia `close_notify` po stronie serwera. To wydanie rozwojowe, nieprodukcyjne.
+Samo `--adcs-listen` uruchamia wyłącznie TLS. Dodaj jawne `--listen`, aby włączyć również zwykły TCP. Wszystkie porty współdzielą limit klientów. Nieblokujące SSL_accept/SSL_read_ex obsługują WANT_READ/WANT_WRITE. Kolejka błędów OpenSSL jest czyszczona przed operacją, a odszyfrowane dane buforowane są obsługiwane także bez nowego zdarzenia gniazda. Błąd klienta zamyka tylko jego sesję. Program ignoruje SIGPIPE.
+
+Negocjacja ma termin `min(idle_timeout, 10 sekund)` od przyjęcia; częściowe dane nie przedłużają go. Po negocjacji odczyty danych odnawiają zwykły timeout. `received_bytes` obejmuje tylko odszyfrowane dane ADC. `handshakes` liczy udane negocjacje, `incomplete` sesje zamknięte przed ich ukończeniem, także przez timeout i stop. Nie oznacza to logowania ADC.
+
+Klucze przechowuj poza Git, dostępne tylko użytkownikowi usługi. Przykład generowania jednorazowego certyfikatu testowego znajduje się w [wersji US](../us/ADCS_TLS.md). Po odnowieniu certyfikatu zrestartuj proces. Brak reload, kolejek wyjściowych, wysyłania close_notify przy stopie oraz pełnej sesji ADC. [Testy](TESTING.md) obejmują rzeczywiste ncdc przez ADCS.

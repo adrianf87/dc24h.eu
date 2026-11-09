@@ -15,6 +15,7 @@
 #include <string_view>
 #include <thread>
 #include <utility>
+#include <vector>
 
 namespace {
 unsigned int number(std::string_view text, unsigned int maximum) {
@@ -42,6 +43,8 @@ dc24h::network::Options parse_options(int argc, char* argv[]) {
             if (options.listeners.size() == 16) { throw std::invalid_argument("At most 16 listeners"); }
             options.listeners.push_back(dc24h::network::parse_endpoint(value));
         } else if (key == "--adcs-listen") {
+            if (!custom_listeners) { options.listeners.clear(); custom_listeners = true; }
+            if (options.tls_listeners.size() == 16) { throw std::invalid_argument("At most 16 listeners"); }
             options.tls_listeners.push_back(dc24h::network::parse_endpoint(value));
         } else if (key == "--tls-cert") {
             options.tls_certificate = value;
@@ -70,34 +73,41 @@ int main(int argc, char* argv[]) {
         std::cerr << "Cannot configure SIGPIPE handling\n";
         return EXIT_FAILURE;
     }
-    if (argc == 2 && std::string_view(argv[1]) == "--version") {
-        std::cout << "dc24h.eu " << dc24h::version << '\n';
-        return EXIT_SUCCESS;
-    }
-    if (argc == 2 && std::string_view(argv[1]) == "--help") {
-        std::cout << "Usage: dc24h [--listen IPv4:port | [IPv6]:port] ...\n"
-                     "             [--adcs-listen IPv4:port | [IPv6]:port] ...\n"
-                     "             [--tls-cert CHAIN.pem --tls-key KEY.pem]\n"
-                     "             [--max-connections N] [--idle-timeout SECONDS]\n"
-                     "       dc24h --help | --version\n"
-                     "Run dc24h.eu in the foreground. Stop with SIGINT (Ctrl+C) or SIGTERM.\n"
-                     "Defaults: --listen 127.0.0.1:1511 --max-connections 1024 --idle-timeout 120\n"
-                     "Repeat --listen or --adcs-listen for up to 16 total ports; port 0 is ephemeral.\n"
-                     "ADCS requires a readable PEM chain and matching PEM private key. TLS >= 1.2.\n"
-                     "Limits: connections 1..65535; idle timeout 1..86400 seconds.\n"
-                     "ADC syntax parsing only: no ADC session handshake, routing or login.\n";
-        return EXIT_SUCCESS;
-    }
+    auto language = dc24h::i18n::Language::us;
     dc24h::network::Options options;
     try {
-        options = parse_options(argc, argv);
+        // Consume only option keys: a value equal to --language stays a value.
+        std::vector<char*> arguments{argv[0]};
+        for (int i = 1; i < argc; ++i) {
+            const std::string_view key(argv[i]);
+            if (key == "--language") {
+                if (++i == argc) { throw std::invalid_argument("Missing option value"); }
+                language = dc24h::i18n::parse_language(argv[i]);
+            } else {
+                arguments.push_back(argv[i]);
+                if (key != "--help" && key != "--version" && i + 1 < argc) {
+                    arguments.push_back(argv[++i]);
+                }
+            }
+        }
+        if (arguments.size() == 2 && std::string_view(arguments[1]) == "--version") {
+            std::cout << "dc24h.eu " << dc24h::version << '\n';
+            return EXIT_SUCCESS;
+        }
+        if (arguments.size() == 2 && std::string_view(arguments[1]) == "--help") {
+            std::cout << dc24h::i18n::help(language);
+            return EXIT_SUCCESS;
+        }
+        options = parse_options(static_cast<int>(arguments.size()), arguments.data());
     } catch (const std::invalid_argument& error) {
         // Never include untrusted option values in logs or terminal diagnostics.
-        std::cerr << "Invalid arguments: " << error.what() << ". Use dc24h --help.\n";
+        std::cerr << dc24h::i18n::translate("Invalid arguments: ", language)
+                  << dc24h::i18n::translate(error.what(), language)
+                  << dc24h::i18n::translate(". Use dc24h --help.\n", language);
         return 2;
     }
 
-    dc24h::logging::Logger logger;
+    dc24h::logging::Logger logger(language);
     try {
         const dc24h::core::TerminationSignals signals;
         dc24h::network::TcpServer network(logger, std::move(options));

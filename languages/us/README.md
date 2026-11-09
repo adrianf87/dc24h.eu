@@ -1,3 +1,3 @@
-# Server locale: English (US, UTF-8)
+# English (US)
 
-English (US) is the default language for server source messages, logs and CLI. This directory reserves a namespace for future translation catalogs. Runtime locale switching is not yet implemented.
+Built-in UTF-8 catalog; select with `--language us` (default). Keep the message order aligned with `pl/messages.hpp`. System errors fall back to English; protocol data is never translated.

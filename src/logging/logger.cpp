@@ -18,8 +18,9 @@ void Logger::write(const char* level, std::string_view message) noexcept {
         if (::gmtime_r(&now, &utc) != nullptr) {
             std::strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%SZ", &utc);
         }
+        const auto localized = i18n::translate(message, language_);
         std::fprintf(stderr, "%s [%s] ", timestamp, level);
-        std::fwrite(message.data(), 1, message.size(), stderr);
+        std::fwrite(localized.data(), 1, localized.size(), stderr);
         std::fputc('\n', stderr);
         std::fflush(stderr);
     } catch (...) {

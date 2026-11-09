@@ -5,6 +5,7 @@ Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 **Current development version: alpha-0.1.4 (ADCS/TLS transport).**
 
 Completed increments:
+
 - **alpha-0.1.1 Core**: lifecycle, signal handling, graceful shutdown.
 - **alpha-0.1.2 Network**: multiple nonblocking IPv4/IPv6 TCP listeners/clients.
 - **alpha-0.1.3 ADC**: bounded stream parser, commands, UTF-8/NFC validation.
@@ -28,12 +29,14 @@ ctest --test-dir build --output-on-failure
 # Plain ADC parser on loopback:
 ./build/dc24h --listen 127.0.0.1:1511
 
-# Plaintext loopback plus TLS listener (replace credentials with your own):
-./build/dc24h --listen 127.0.0.1:1511 \\
-  --adcs-listen 0.0.0.0:1512 \\
-  --tls-cert /etc/dc24h/tls/fullchain.pem \\
+# TLS only (replace credentials with your own):
+./build/dc24h --adcs-listen 127.0.0.1:1512 \
+  --tls-cert /etc/dc24h/tls/fullchain.pem \
   --tls-key /etc/dc24h/tls/privkey.pem
 ```
+
+Use `--language pl` for Polish help and operator messages; `us` is the default.
+Add explicit `--listen` options to enable mixed plaintext/TLS service.
 
 Stop with Ctrl+C or SIGTERM. The key must not be committed to Git.
 CMake 3.22+, C++20, OpenSSL and utf8proc development packages are required.

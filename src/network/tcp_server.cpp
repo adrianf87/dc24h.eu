@@ -99,7 +99,7 @@ void watch(int epoll_fd, int fd, std::uint64_t token, std::uint32_t flags) {
 
 void update_client_interest(int epoll_fd, int fd, std::uint64_t token, bool want_write) {
     epoll_event event{};
-    event.events = EPOLLIN | EPOLLRDHUP | (want_write ? EPOLLOUT : 0U);
+    event.events = (want_write ? EPOLLOUT : EPOLLIN) | EPOLLRDHUP;
     event.data.u64 = token;
     if (::epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event) == -1) {
         system_failure("epoll_ctl MOD");
@@ -141,7 +141,8 @@ Endpoint parse_endpoint(std::string_view text) {
 
 TcpServer::TcpServer(logging::Logger& logger, Options options)
     : logger_(logger), options_(std::move(options)) {
-    if (options_.listeners.empty() || options_.listeners.size() + options_.tls_listeners.size() > 16 ||
+    if ((options_.listeners.empty() && options_.tls_listeners.empty()) ||
+        options_.listeners.size() + options_.tls_listeners.size() > 16 ||
         options_.max_connections == 0 || options_.max_connections > 65535 ||
         options_.idle_timeout < std::chrono::seconds(1) ||
         options_.idle_timeout > std::chrono::hours(24)) {
@@ -272,13 +273,34 @@ void TcpServer::run() {
             }
             accepting = true;
         }
-        const int count = ::epoll_wait(epoll.get(), events.data(), static_cast<int>(events.size()), 250);
+        // SSL_pending bytes have no corresponding kernel readiness event. Schedule
+        // them explicitly while retaining the bounded per-client read budget.
+        std::vector<epoll_event> buffered;
+        for (const auto& [client_token, connection] : connections) {
+            if (connection.tls && connection.tls_ready && !connection.want_write &&
+                connection.tls->pending()) {
+                epoll_event ready{};
+                ready.events = EPOLLIN;
+                ready.data.u64 = client_token;
+                buffered.push_back(ready);
+            }
+        }
+        const int count = ::epoll_wait(epoll.get(), events.data(), static_cast<int>(events.size()),
+                                       buffered.empty() ? 250 : 0);
         if (count == -1) {
             if (errno == EINTR) { continue; }
             system_failure("epoll_wait");
         }
-        for (int i = 0; i < count && !stop_.load(); ++i) {
-            const auto& event = events[static_cast<std::size_t>(i)];
+        std::vector<epoll_event> ready(events.begin(), events.begin() + count);
+        for (const auto& pending : buffered) {
+            if (std::none_of(ready.begin(), ready.begin() + count, [&](const auto& event) {
+                    return event.data.u64 == pending.data.u64;
+                })) {
+                ready.push_back(pending);
+            }
+        }
+        for (const auto& event : ready) {
+            if (stop_.load()) { break; }
             const auto token = event.data.u64;
             if (token == 0) { continue; } // stop_ is authoritative; eventfd is not drained.
             if (token <= listeners.size()) {

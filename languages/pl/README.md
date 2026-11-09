@@ -1,3 +1,3 @@
-# Język serwera: polski (PL, UTF-8)
+# Polski
 
-Ten katalog jest przeznaczony na przyszłe tłumaczenia komunikatów serwera. Aktualnie wszystkie komunikaty aplikacji pozostają po angielsku (EN/US). Przełączanie języka w czasie działania nie zostało zaimplementowane.
+Wbudowany katalog UTF-8; wybierz przez `--language pl`. Zachowuj kolejność zgodną z `us/messages.hpp`. Błędy systemowe pozostają angielskie; dane protokołu nie są tłumaczone.

@@ -38,6 +38,8 @@ public:
     // Each call makes one nonblocking OpenSSL operation. The event loop must
     // resume it only when the requested readiness (READ/WRITE) is available.
     [[nodiscard]] IoResult handshake() noexcept;
+    // Decrypted data can remain buffered after the socket stops being readable.
+    [[nodiscard]] bool pending() const noexcept;
     [[nodiscard]] IoResult receive(char* buffer, std::size_t capacity) noexcept;
 
 private:

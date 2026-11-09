@@ -1,28 +1,31 @@
-# ADCS transport: alpha-0.1.4
+# ADCS / TLS — alpha-0.1.4
 
-## Implementation
+ADCS wraps the ADC byte stream in TLS; it does not add a second ADC dialect or STARTTLS upgrade. References: [ADC extensions / ADCS](https://dc-protocols.github.io/ADC-EXT.html), [OpenSSL nonblocking I/O](https://docs.openssl.org/3.5/man3/SSL_get_error/) and [SSL_accept](https://docs.openssl.org/3.5/man3/SSL_accept/).
 
-The C++20 `dc24h_adcs` library uses OpenSSL's TLS server API, with a separate context loaded at startup and a per-client TLS connection. The existing Linux `epoll` loop drives nonblocking `SSL_accept` and `SSL_read_ex`, enabling concurrent encrypted and plaintext listeners. Both listener types feed the same bounded ADC stream parser. TLS connections cannot downgrade to plaintext. At this stage the server does not generate ADC responses, assign SIDs, authenticate clients or complete the ADC handshake.
+`adcs::Context` owns an OpenSSL server context. It loads a PEM full certificate chain and matching unencrypted PEM private key before opening ports. Invalid, missing, mismatched or password-encrypted keys fail startup without readiness logs or interactive password prompts. This checks loadability and key correspondence; clients are responsible for certificate trust, hostname and validity verification. No mutual TLS is requested.
 
-TLS 1.2 is the minimum negotiated protocol; TLS 1.3 is supported when provided by OpenSSL. OpenSSL default cipher and security-level policies apply. TLS compression and renegotiation are disabled. Session caching is disabled. Clients must validate the server's certificate against their configured trust store and expected hostname. The server does not request client certificates, and it does not authenticate user accounts. A TLS handshake is not proof of an authorized ADC session.
-
-## Credentials and ports
-
-Use a PEM certificate chain and matching PEM private key. The key must be readable by the hub process, protected by OS access controls and stored outside the repository. The private key must be available without interactive passphrase prompts at daemon startup. Missing or mismatched credentials cause startup failure before any listeners are announced ready. No secret contents are written to logs.
-
-Example (replace paths and port with your deployment settings):
+The transport requires TLS 1.2 or newer, disables compression and renegotiation, and disables the server's in-memory session cache. Cipher selection follows the installed OpenSSL security policy. It does not provide application identity or password authentication. TLS 1.3 may use stateless session tickets.
 
 ```sh
-./build/dc24h --listen 127.0.0.1:1511 \\
-  --adcs-listen 0.0.0.0:1512 \\
-  --tls-cert /etc/dc24h/tls/fullchain.pem \\
+# TLS only; no plaintext listener is implicitly retained.
+./build/dc24h --adcs-listen 127.0.0.1:1512 \
+  --tls-cert /etc/dc24h/tls/fullchain.pem \
   --tls-key /etc/dc24h/tls/privkey.pem
 ```
 
-`--adcs-listen` is repeatable. A maximum of 16 TCP and ADCS listeners combined is supported. The default plaintext listener remains loopback-only; deploying ADCS does not enable plaintext access on external interfaces automatically. For public service, use a CA-signed certificate issued for the hub DNS name. Provision renewal and restart/reload procedures externally; live certificate rotation has not yet been implemented. Use permissions such as owner-only read access on private keys, not committed test credentials.
+Add explicit `--listen` options for mixed ADC/ADCS service. All listeners share the connection limit. Each session advances `SSL_accept`/`SSL_read_ex` on epoll readiness, including WANT_WRITE from a read. The OpenSSL error queue is cleared before operations. Buffered decrypted bytes are scheduled even without new kernel readiness; per-client read budgets remain bounded. Failed peers close independently and SIGPIPE cannot terminate the executable.
 
-## Failure isolation and limitations
+A handshake deadline is `min(idle_timeout, 10 seconds)` from acceptance; partial handshakes do not refresh it. Successful handshake/data reads refresh the normal idle timer. Decrypted ADC bytes alone contribute to `received_bytes`. `handshakes` counts successful negotiations; `incomplete` counts accepted TLS sessions closed before negotiation, including timeout and stop. Neither counter proves ADC login.
 
-Handshake failures and encrypted peer I/O failures close only the corresponding client, not the listener. The process ignores SIGPIPE so failed TLS socket writes are reported as I/O errors instead of terminating the hub. Incomplete TLS handshakes expire after at most 10 seconds or the configured shorter idle timeout. Regular encrypted sessions follow the existing idle timeout. Memory/connection limits apply across both listener types. The server does not implement TLS close_notify on local shutdown, outbound ADC messages, rate limiting per IP, mTLS, OCSP stapling or certificate hot reload. `ADCS stopped` logs aggregate successful and incomplete handshakes without storing client payloads.
+For a disposable local test certificate (never use the generated key as a production credential):
 
-TLS counters and cipher policy must be verified in each deployment. The release is experimental and is not production-ready.
+```sh
+umask 077
+openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
+  -subj /CN=localhost -addext 'subjectAltName=DNS:localhost,IP:127.0.0.1' \
+  -addext 'keyUsage=digitalSignature,keyEncipherment' \
+  -addext 'extendedKeyUsage=serverAuth' \
+  -keyout /tmp/dc24h-test-key.pem -out /tmp/dc24h-test-cert.pem
+```
+
+Keep private keys outside Git with permissions restricted to the service user. Restart after renewal: hot reload is not implemented. Stop closes sockets immediately without a TLS close_notify exchange. Bounded outgoing queues, graceful TLS shutdown, certificate reload, full ADC handshake and hub operation remain future work. [Tests](TESTING.md) include real ncdc ADCS negotiation.

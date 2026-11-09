@@ -1,8 +1,21 @@
-# Dokumentacja dc24h.eu (PL)
+# Dokumentacja dc24h.eu
 
-- [ADCS_TLS.md](ADCS_TLS.md) — szyfrowanie, certyfikaty i ograniczenia.
-- [TESTING.md](TESTING.md) — testowanie modułu TLS.
+alpha-0.1.4: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
-Wydania alpha-0.1.1 (Core), alpha-0.1.2 (TCP) i alpha-0.1.3 (parser ADC) znajdują się już w historii repozytorium. Alpha-0.1.4 dodaje bezpieczny transport TLS, ale nie implementuje jeszcze uwierzytelniania ani pełnej sesji klienta ADC.
+- [ARCHITECTURE.md](ARCHITECTURE.md)
+- [ADC_PROTOCOL.md](ADC_PROTOCOL.md)
+- [ADCS_TLS.md](ADCS_TLS.md)
+- [NETWORK.md](NETWORK.md)
+- [CONFIGURATION.md](CONFIGURATION.md)
+- [DATABASE.md](DATABASE.md)
+- [WEBADMIN.md](WEBADMIN.md)
+- [API.md](API.md)
+- [SECURITY.md](SECURITY.md)
+- [BUILD.md](BUILD.md)
+- [INSTALLATION.md](INSTALLATION.md)
+- [TESTING.md](TESTING.md)
+- [DEVELOPMENT.md](DEVELOPMENT.md)
+- [ROADMAP.md](ROADMAP.md)
+- [VERSIONS.md](VERSIONS.md)
 
-Angielska dokumentacja techniczna jest w [../us/README.md](../us/README.md). W katalogu nadrzędnym znajdują się starsze opisy modułów.
+[English (US)](../us/README.md) | [Project](../../README.md) | [Changelog](../../CHANGELOG.md)

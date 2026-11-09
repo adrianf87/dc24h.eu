@@ -1,6 +1,7 @@
 #include "dc24h/adcs/tls.hpp"
 
 #include <openssl/ssl.h>
+#include <openssl/err.h>
 
 #include <climits>
 #include <stdexcept>
@@ -18,9 +19,12 @@ namespace {
 } // namespace
 
 Context::Context(const std::string& certificate_chain, const std::string& private_key) {
-    if (certificate_chain.empty() || private_key.empty()) {
+    if (certificate_chain.empty() || private_key.empty() ||
+        certificate_chain.find('\0') != std::string::npos ||
+        private_key.find('\0') != std::string::npos) {
         throw std::invalid_argument("ADCS needs both --tls-cert and --tls-key");
     }
+    ERR_clear_error();
     context_ = SSL_CTX_new(TLS_server_method());
     if (context_ == nullptr) { throw std::runtime_error("Cannot initialize TLS context"); }
     try {
@@ -28,6 +32,8 @@ Context::Context(const std::string& certificate_chain, const std::string& privat
             throw std::runtime_error("Cannot set minimum TLS version");
         }
         SSL_CTX_set_options(context_, SSL_OP_NO_COMPRESSION | SSL_OP_NO_RENEGOTIATION);
+        // Never let unattended startup prompt on a terminal for a PEM password.
+        SSL_CTX_set_default_passwd_cb(context_, [](char*, int, int, void*) { return 0; });
         SSL_CTX_set_session_cache_mode(context_, SSL_SESS_CACHE_OFF);
         if (SSL_CTX_use_certificate_chain_file(context_, certificate_chain.c_str()) != 1) {
             throw std::runtime_error("Cannot load TLS certificate chain");
@@ -48,6 +54,7 @@ Context::Context(const std::string& certificate_chain, const std::string& privat
 Context::~Context() { SSL_CTX_free(context_); }
 
 Connection::Connection(const Context& context, int fd) {
+    ERR_clear_error();
     ssl_ = SSL_new(context.context_);
     if (ssl_ == nullptr) { throw std::runtime_error("Cannot initialize TLS connection"); }
     if (SSL_set_fd(ssl_, fd) != 1) {
@@ -61,6 +68,7 @@ Connection::Connection(const Context& context, int fd) {
 Connection::~Connection() { SSL_free(ssl_); }
 
 IoResult Connection::handshake() noexcept {
+    ERR_clear_error();
     const int result = SSL_accept(ssl_);
     return result == 1 ? IoResult{IoStatus::complete} : classify(ssl_, result);
 }
@@ -70,8 +78,11 @@ IoResult Connection::receive(char* buffer, std::size_t capacity) noexcept {
         return {IoStatus::error};
     }
     std::size_t bytes = 0;
+    ERR_clear_error();
     const int result = SSL_read_ex(ssl_, buffer, capacity, &bytes);
     return result == 1 ? IoResult{IoStatus::complete, bytes} : classify(ssl_, result);
 }
+
+bool Connection::pending() const noexcept { return SSL_pending(ssl_) > 0; }
 
 } // namespace dc24h::adcs
