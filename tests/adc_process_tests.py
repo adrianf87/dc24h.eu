@@ -46,6 +46,15 @@ class AdcProcessTests(unittest.TestCase):
         hub.stop()
         self.assertEqual(counters(self, hub), (1, 0, 3, 0))
 
+    def test_base_argument_syntax_and_extension_recovery(self):
+        hub = self.hub()
+        self.send_and_finish(hub, b"HSUP\nBINF ABC2 lowerPRIVATEFIELD\nCGET file /a 1e3 -1\n"
+                             b"HSUP ADBASE\nBINF ABC2 NIJoanna DE NI\n"
+                             b"DMSG ABC2 XYZ7 NIpositional PMABC2\nHZ99 lower a 1Xfuture\n\n")
+        hub.stop()
+        self.assertEqual(counters(self, hub), (4, 1, 3, 1))
+        self.assertNotIn(b"PRIVATEFIELD", hub.log)
+
     def test_independent_client_buffers_and_partial_eof(self):
         hub = self.hub()
         first, second = hub.connect(), hub.connect()

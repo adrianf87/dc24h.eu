@@ -31,3 +31,7 @@ alpha-0.1.10 starts from main after alpha-0.1.9. Keep browser-safe schema/format
 ## Apache2 increment
 
 alpha-0.1.11 starts from main after alpha-0.1.10. Keep host activation, real certificates and service reloads separate from example authoring/testing. Test the exact shipped TLS/access/header policy with temporary paths/ports and no host config. A successful apache2 -t is insufficient to claim certificate/key correspondence; exercise real initialization. Keep both documentation languages and version-sensitive fixtures aligned.
+
+## ADC Parser increment
+
+alpha-0.2.2 starts from main after the explicit alpha-0.2/alpha-0.2.1 merge. Keep BASE argument syntax separate from authorization, identity checks and execution. Preserve opaque extension layouts, field order and duplicates. NamedParameterView borrows a decoded token; never retain it after mutation/destruction. Add release-active syntax fixtures and full-result stream comparisons for new grammar rules, then verify TCP, TLS and both ncdc transports.

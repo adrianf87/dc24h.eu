@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <charconv>
 #include <cstdlib>
 #include <memory>
 #include <new>
@@ -59,7 +60,65 @@ std::optional<std::string> unescape(std::string_view value) {
     }
     return result;
 }
+
+std::optional<ParseError> validate_arguments(Message& message) {
+    const auto& values = message.parameters;
+    std::size_t positional = 0;
+    switch (message.kind) {
+    case Command::unknown: return std::nullopt; // Extension layout cannot be inferred.
+    case Command::sup:
+        if (values.empty()) { return ParseError::missing_parameters; }
+        for (const auto& value : values) {
+            const auto token = std::string_view(value);
+            if (token.size() != 6 || (token.substr(0, 2) != "AD" && token.substr(0, 2) != "RM") ||
+                !feature(token.substr(2))) { return ParseError::invalid_support; }
+        }
+        message.positional_count = values.size();
+        return std::nullopt;
+    case Command::sta: case Command::rcm: case Command::gfi: positional = 2; break;
+    case Command::sid: case Command::msg: case Command::gpa:
+    case Command::pas: case Command::qui: positional = 1; break;
+    case Command::ctm: positional = 3; break;
+    case Command::get: case Command::snd: positional = 4; break;
+    case Command::inf: case Command::sch: case Command::res: break;
+    }
+    if (values.size() < positional) { return ParseError::missing_parameters; }
+    if ((message.kind == Command::sid || message.kind == Command::qui) && !sid(values[0])) {
+        return ParseError::invalid_sid;
+    }
+    if (message.kind == Command::sta && (values[0].size() != 3 ||
+        !std::all_of(values[0].begin(), values[0].end(), [](char c) { return c >= '0' && c <= '9'; }))) {
+        return ParseError::invalid_status_code;
+    }
+    if (message.kind == Command::ctm && !parse_integer(values[1])) { return ParseError::invalid_integer; }
+    if (message.kind == Command::get || message.kind == Command::gfi || message.kind == Command::snd) {
+        if (values[0].empty() || !std::all_of(values[0].begin(), values[0].end(), [](char c) {
+            return alnum(c) || (c >= 'a' && c <= 'z');
+        })) { return ParseError::invalid_transfer_type; }
+        if (message.kind != Command::gfi && (!parse_integer(values[2]) || !parse_integer(values[3]))) {
+            return ParseError::invalid_integer;
+        }
+    }
+    for (std::size_t i = positional; i < values.size(); ++i) {
+        if (!parse_named_parameter(values[i])) { return ParseError::invalid_named_parameter; }
+    }
+    message.positional_count = positional;
+    return std::nullopt;
+}
 } // namespace
+
+std::optional<NamedParameterView> parse_named_parameter(std::string_view token) noexcept {
+    if (token.size() < 2 || !alpha(token[0]) || !alnum(token[1])) { return std::nullopt; }
+    return NamedParameterView{token.substr(0, 2), token.substr(2)};
+}
+
+std::optional<std::int64_t> parse_integer(std::string_view token) noexcept {
+    if (token.empty()) { return std::nullopt; }
+    std::int64_t value{};
+    const auto [end, error] = std::from_chars(token.data(), token.data() + token.size(), value, 10);
+    if (error != std::errc{} || end != token.data() + token.size()) { return std::nullopt; }
+    return value;
+}
 
 Command recognize_command(std::string_view name) noexcept {
     constexpr std::array names{
@@ -103,7 +162,7 @@ ParseResult parse_line(std::string_view body) {
     }
 
     Message result{static_cast<MessageType>(body[0]), std::string(body.substr(1, 3)),
-                   recognize_command(body.substr(1, 3)), {}, {}, {}, {}};
+                   recognize_command(body.substr(1, 3)), {}, {}, {}, {}, std::nullopt};
     std::size_t index = 0;
     if (result.type == MessageType::broadcast || result.type == MessageType::direct ||
         result.type == MessageType::echo || result.type == MessageType::feature) {
@@ -122,6 +181,7 @@ ParseResult parse_line(std::string_view body) {
         if (index == tokens.size()) { return ParseError::invalid_features; }
         const auto selectors = tokens[index++];
         if (selectors.size() % 5 != 0) { return ParseError::invalid_features; }
+        if (selectors.size() / 5 > max_feature_selectors) { return ParseError::too_many_features; }
         for (std::size_t i = 0; i < selectors.size(); i += 5) {
             if ((selectors[i] != '+' && selectors[i] != '-') || !feature(selectors.substr(i + 1, 4))) {
                 return ParseError::invalid_features;
@@ -136,6 +196,7 @@ ParseResult parse_line(std::string_view body) {
         if (!value) { return ParseError::invalid_escape; }
         result.parameters.push_back(std::move(*value));
     }
+    if (const auto error = validate_arguments(result)) { return *error; }
     return result;
 }
 

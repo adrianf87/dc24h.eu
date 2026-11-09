@@ -114,3 +114,5 @@ All owners must stop and join callers before destroying dependencies. `Logger(Op
 ## WebAdmin foundation — alpha-0.1.10
 
 The read-only React panel and optional same-UID local Vite development adapter now exist; see [WEBADMIN.md](WEBADMIN.md). The private C++ API contract and permissions are unchanged. Static Apache serving does not provide an authenticated API gateway.
+
+Since alpha-0.2.2, `Message::positional_count` identifies known BASE argument layouts (unknown commands remain opaque). `parse_named_parameter` returns borrowed name/value views; `parse_integer` returns optional signed 64-bit values. The same parse_line/StreamDecoder now reject malformed BASE argument syntax; see the complete [parser contract](ADC_PROTOCOL.md).

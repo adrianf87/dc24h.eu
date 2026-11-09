@@ -1,5 +1,20 @@
 # Changelog
 
+## alpha-0.2.2 — 2026-11-09
+
+ADC Parser increment, based on main at `ca464e02e714c1e81ed4c37279496168a6c47e23` after the alpha-0.2 / alpha-0.2.1 audit merge:
+
+- Extended parse_line/StreamDecoder from generic frame tokens to BASE argument syntax for all 15 recognized commands: required positional counts, trailing two-character named fields, SUP AD/RM feature updates, positional SID/QUI and status-code shapes, transfer namespace and bounded numeric argument syntax.
+- Added owning-result `Message::positional_count`, preserving all decoded parameter values and order in the existing vector. SUP is variadic; unknown extension commands retain an opaque layout. Bare fields, unknown names, repeated names/search terms and positional text resembling fields are preserved without inferred field semantics or deduplication.
+- Added allocation-free `parse_named_parameter` for borrowed name/value views and `parse_integer` for complete signed 64-bit decimal parsing with overflow rejection. Numeric domains, field/hash values, status meaning, command/type/state permissions and identity checks remain separate future consumers.
+- Added a local 128-selector F-header budget before selector allocation, independent of the existing 16 KiB / 128-parameter limits. Appended precise argument error categories without renumbering previous errors. Existing sanitized warnings, invalid-frame quotas, recovery and API v1 counter shape remain in use.
+- Added release-active `adc.syntax` coverage for BASE layouts, malformed arguments, bare/repeated/unknown fields, scalar/selector/routing budgets, ownership, opaque extensions and full decoded-result equality across every two-chunk split and bytewise Unicode/escape input. Extended real TCP and TLS process regressions for argument errors, recovery/counters and omitted sensitive payloads. Kept both real ncdc transport regressions.
+- Rewrote matching US/PL parser contracts and updated API/development/build/version/roadmap/testing guides. The requested parser stage supersedes the earlier alpha-0.2.2 serializer proposal; output/session work remains explicitly planned. Updated runtime/WebAdmin/package-lock metadata and fixtures to alpha-0.2.2 without dependency updates.
+
+Local validation: **23/23 CTest suites passed in Debug, Release and ASan/UBSan**, including real ncdc ADC/ADCS, isolated MariaDB, Apache HTTPS and metadata checks. Sanitizer flags included `-fno-pie` / `-no-pie`. Frontend production build/typecheck, **3 Node tests, 3 Chromium browser tests and real C++ API → Vite → React integration** passed. Staged installs with/without WebAdmin verified alpha-0.2.2, accepted INI and byte-identical configurations/migration/assets. Documentation UTF-8, local links, US/PL file parity and Git whitespace checks passed. Environment: Debian 13, GCC 14.2, OpenSSL 3.5.7, ncdc 1.23.1, MariaDB 11.8.6, Apache 2.4.69, Node 20.19.2 and Chromium 156. Other OS/remote CI results require their own evidence.
+
+Limits: syntax parsing only. No serializer, server replies, sessions/full ncdc login, authentication, dispatch or transfer DATA mode. Known malformed BASE arguments previously accepted as generic tokens are now rejected; unknown extension parameter layouts remain accepted and opaque. Main, the alpha-0.2 audit marker, historical branches and immutable migration bytes are preserved.
+
 ## alpha-0.2.1 — 2026-11-09
 
 Project audit of alpha-0.1 and preparation of alpha-0.2, based on main at `8277bc14ea3a722fdfc72f600be3e9cb5f2d9158`:
