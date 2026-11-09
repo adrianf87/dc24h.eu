@@ -17,6 +17,7 @@ import time
 import unittest
 
 from network_process_tests import Hub
+from api_support import enable_api, fetch_status
 from adc_process_tests import counters
 
 NCDC = sys.argv.pop(1)
@@ -29,6 +30,7 @@ class NcdcSmokeTest(unittest.TestCase):
         ini = pathlib.Path(configuration.name) / "hub.ini"
         ini.write_text("[network]\nlisten=127.0.0.1:0\nmax_connections=8\n"
                        "[security]\nmax_connections_per_ip=4\nmax_frames_per_second=8\n", encoding="utf-8")
+        api_path, api_token = enable_api(ini, configuration.name)
         hub = Hub(self, "--config", str(ini), "--max-connections", "4", "--log-connections", "on")
         with tempfile.TemporaryDirectory(prefix="dc24h-ncdc-") as session, socket.socket() as relay:
             relay.bind(("127.0.0.1", 0))
@@ -90,7 +92,11 @@ class NcdcSmokeTest(unittest.TestCase):
                             break
                 process.wait(timeout=2)
                 self.assertEqual(process.returncode, 0)
+                snapshot = fetch_status(api_path, api_token)
+                self.assertTrue(snapshot['server']['core_running'])
+                self.assertEqual(snapshot['network']['adc_frames'], 1)
                 hub.stop()
+                self.assertFalse(api_path.exists())
                 self.assertIn(b"Security stopped; rejected=0 closed=0", hub.log)
                 self.assertIn(b"transport=ADC event=accepted", hub.log)
                 self.assertIn(b"transport=ADC event=peer_closed", hub.log)

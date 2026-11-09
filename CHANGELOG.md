@@ -1,5 +1,24 @@
 # Changelog
 
+## alpha-0.1.9 — 2026-11-09
+
+Local administrative API foundation, based on main after the alpha-0.1.8 merge:
+
+- Added independent C++20 `dc24h_api`: strict bodyless HTTP/1.1 parsing, bounded JSON responses, a private Unix-domain socket and one nonblocking RAII worker. No new external dependency.
+- Added authenticated read-only `GET /api/v1/health` and `/api/v1/status` with API version v1, server version/Core-running/steady uptime, independently sampled network counters and configured database presence. No request executes SQL or mutates server state.
+- Requires a private owner-controlled socket directory, 0600 socket, same-effective-UID `SO_PEERCRED` and a private 64-hex-character Bearer token file. Equal-length token checks use `CRYPTO_memcmp`; tokens and request input never appear in logs or JSON errors.
+- Extracted the existing bounded private credential reader into Security for both MariaDB and API, retaining Database diagnostics and password policy. Added token/socket ignore rules and configuration/log/credential collision protections.
+- Added opt-in `[api]` settings (disabled by default), 1..128 active clients, 1..30-second non-sliding accept-to-response deadline, 8192-byte headers, 32 fields and 1024-byte request line. Rejects duplicate/ambiguous framing, bodies, folded headers, Transfer-Encoding/Expect/Upgrade, and already received trailing/pipelined data. Every connection serves at most one request.
+- Added fixed 400/401/404/405/431 JSON errors, authentication before routing/method decisions, HEAD without a body, exact Content-Length, Date, close/no-store/nosniff headers, and no CORS/HTTP upgrade support.
+- Anchors socket creation/cleanup to the checked directory fd, never overwrites existing/stale endpoints, and removes only the recorded inode. Worker stop/join precedes dependency destruction on normal signals and Network startup errors. Fatal infrastructure/provider exceptions request owner shutdown with a sanitized error.
+- Added API unit/process suites for framing/authentication boundaries, deterministic malformed bytes, private file/socket policy, simultaneous clients, absolute deadlines, slot reuse, rollback, replacements, callback failure containment, same-UID policy, dry-run/disabled behavior and US/PL operator messages.
+- Both real ncdc ADC/ADCS smoke tests now read actual counters through the authenticated API before shutdown; the disposable MariaDB integration verifies enabled database presence through the same API. Full ADC login is still not claimed.
+- Updated version, INI example, CI title, module/build/install/roadmap documentation and matched US/PL API/operator catalogs. WebAdmin, cross-UID Apache gateway, web sessions/roles/audit, remote API/TLS and administrative writes remain future work.
+
+Local validation: **20/20 CTest suites passed in Debug, Release and ASan/UBSan** on Debian 13 (GCC 14.2, OpenSSL 3.5.7, MariaDB 11.8.6 / Connector/C 3.4.9, ncdc 1.23.1). Staged installation, installed example/migration bytes, installed-binary curl over Unix socket with stdin authorization, relative API paths, shutdown cleanup, UTF-8/local links/language parity and Git whitespace checks passed. Remote CI and other target OS versions are not claimed as verified.
+
+Limits: local same-UID read-only API only; health means API responsiveness, Core-running is not complete ADC readiness, and database.enabled is not a live SQL health check. No API admission-rate limiter, token reload, request audit, remote listener, roles or frontend. Trusted callbacks/synchronous logging can block their caller; SIGKILL cannot clean up a socket. Main and historical release branches are preserved.
+
 ## alpha-0.1.8 — 2026-11-09
 
 Database foundation, based on main after alpha-0.1.7; prior branches/history preserved:

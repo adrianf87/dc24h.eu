@@ -3,7 +3,7 @@
 #include <string_view>
 
 namespace dc24h::i18n::pl {
-inline constexpr std::array<std::string_view, 101> messages{{
+inline constexpr std::array<std::string_view, 114> messages{{
     "Uruchamianie dc24h.eu ",
     "Core działa",
     "Zatrzymywanie Core",
@@ -104,7 +104,20 @@ inline constexpr std::array<std::string_view, 101> messages{{
     "Operacje bazy i sprawdzenie konfiguracji wykluczają się",
     "Zastosowane migracje bazy danych=",
     "Połączenie z bazą danych poprawne\n",
-    "Połączono z bazą danych"
+    "Połączono z bazą danych",
+    "Nieprawidłowe ustawienia lokalnego API",
+    "Nie można odczytać prywatnego pliku tokena API",
+    "Token API musi zawierać 64 znaki szesnastkowe",
+    "Gniazdo API wymaga prywatnego katalogu właściciela",
+    "Ścieżka gniazda API już istnieje lub jest niedostępna",
+    "Nie można utworzyć lokalnego gniazda API",
+    "Nie można przypisać lokalnego gniazda API",
+    "Nie można sprawdzić lokalnego gniazda API",
+    "Nie można nasłuchiwać na lokalnym gnieździe API",
+    "Błąd wątku lokalnego API",
+    "Lokalne API nasłuchuje",
+    "Lokalne API można uruchomić tylko raz",
+    "Gniazdo API nie może wskazywać plików konfiguracji ani danych dostępowych"
 }};
 inline constexpr std::string_view help = R"HELP(Użycie: dc24h [--config PLIK] [--check-config | --check-database | --migrate-database]
               [--listen IPv4:port | [IPv6]:port | none] ...
@@ -131,5 +144,7 @@ Tylko parser ADC: brak pełnego logowania ADC, routingu i sesji użytkowników.
 Ustawienia bazy w sekcji INI [database]; domyślnie wyłączona.
 --check-database sprawdza połączenie; --migrate-database jawnie stosuje migracje metadanych.
 --check-config nie łączy z MariaDB ani nie odczytuje pliku hasła.
+Lokalne API: INI [api], domyślnie wyłączone; gniazdo Unix i prywatny token Bearer.
+Tylko GET /api/v1/health i /api/v1/status. Brak operacji zmieniających stan.
 )HELP";
 } // namespace dc24h::i18n::pl

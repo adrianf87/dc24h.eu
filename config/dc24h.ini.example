@@ -1,4 +1,4 @@
-# dc24h.eu alpha-0.1.8 configuration (UTF-8, no secrets committed)
+# dc24h.eu alpha-0.1.9 configuration (UTF-8, no secrets committed)
 # Section names and keys are case-sensitive; duplicate singular keys are errors.
 [general]
 language = us
@@ -40,3 +40,13 @@ timeout = 5
 # Password: private regular file, current effective UID, mode 0600 or 0400.
 # password_file = /etc/dc24h/database.password
 # alpha-0.1.8 supports local Unix sockets only; TCP database transport is deferred.
+
+[api]
+# Local read-only HTTP API. No TCP listener; disabled by default.
+enabled = off
+max_connections = 16
+request_timeout = 2
+# Requires an existing private directory (0700), owned by the process UID.
+# socket = /run/dc24h/admin.sock
+# token_file = /etc/dc24h/admin.token
+# Token: openssl rand -hex 32; private file with mode 0600 or 0400.

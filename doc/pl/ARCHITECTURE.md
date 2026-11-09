@@ -81,7 +81,7 @@ Szczegóły kontraktu i limitów: [ADC_PROTOCOL.md](ADC_PROTOCOL.md).
 ## Plan modułów
 
 Kolejne moduły będą oddzielane od Core: automat sesji ADC,
-Users/Sessions, Chat, Search, Transfers, uwierzytelnianie i API.
+Users/Sessions, Chat, Search, Transfers, uwierzytelnianie i operacje API zmieniające stan.
 WebAdmin pozostaje osobnym frontendem React/TypeScript/Vite, serwowanym przez
 Apache2. Logging obsługuje współdzielony logger stderr lub append do pliku.
 
@@ -104,3 +104,7 @@ Niezależny target C++20 `dc24h_security` implementuje walidację i limity IP/ra
 ## Database — alpha-0.1.8
 
 `dc24h_database` ukrywa uchwyty Connector/C za niekopiowalnym połączeniem RAII. Configuration zawiera opcje; main opcjonalnie łączy przed startem Network i niszczy bazę po zakończeniu Core/Network. SQL nie trafia do reaktora ani Core. Jawne sprawdzenie/migracja nie tworzą loggera i transportu. Brak automatycznych migracji i reconnect. Zobacz [DATABASE.md](DATABASE.md).
+
+## Lokalne API — alpha-0.1.9
+
+`dc24h_api` posiada ograniczony parser HTTP, weryfikację Bearer, nieblokujące gniazdo Unix i jeden wątek RAII. Zależy od Logging/Security, nie Core, Network i Database. Main przekazuje bezpieczny współbieżnie callback stanu i callback stopu po krytycznym błędzie infrastruktury. API startuje przed pętlą Core i jest zatrzymywane/dołączane przed zniszczeniem celów callbacków, także po błędzie startu Network. JSON zawiera tylko typowane liczniki/flagi; API nie wykonuje SQL ani zmian administracyjnych. Wspólny czytnik prywatnych plików przeniesiono do Security, zachowując błędy Database. Zobacz [API.md](API.md).

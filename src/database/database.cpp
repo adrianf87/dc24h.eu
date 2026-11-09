@@ -1,16 +1,13 @@
 #include "dc24h/database/database.hpp"
 #include "dc24h/database/migration.hpp"
+#include "dc24h/security/secret_file.hpp"
 
 #include <mysql.h>
 #include <openssl/crypto.h>
 #include <openssl/sha.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 #include <algorithm>
 #include <array>
-#include <cerrno>
 #include <stdexcept>
 
 namespace dc24h::database {
@@ -75,29 +72,8 @@ void validate(const Options& options) {
 }
 
 std::string read_password(const std::string& filename) {
-    const int fd = ::open(filename.c_str(), O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK | O_NOCTTY);
-    if (fd < 0) { throw std::runtime_error("Cannot read private database password file"); }
-    struct Close { int fd; ~Close() { ::close(fd); } } close{fd};
-    struct stat state{};
-    if (::fstat(fd, &state) != 0 || !S_ISREG(state.st_mode) || state.st_uid != ::geteuid() ||
-        (state.st_mode & 0077) != 0 || state.st_nlink != 1 || state.st_size < 1 || state.st_size > 4096) {
-        throw std::runtime_error("Cannot read private database password file");
-    }
-    std::array<char, 4097> buffer{};
-    struct Erase { std::array<char, 4097>& value; ~Erase() { OPENSSL_cleanse(value.data(), value.size()); } } erase{buffer};
-    std::size_t size = 0;
-    for (;;) {
-        const auto count = ::read(fd, buffer.data() + size, buffer.size() - size);
-        if (count < 0 && errno == EINTR) { continue; }
-        if (count < 0) { throw std::runtime_error("Cannot read private database password file"); }
-        if (count == 0) { break; }
-        size += static_cast<std::size_t>(count);
-        if (size > 4096) { throw std::runtime_error("Cannot read private database password file"); }
-    }
-    if (size > 0 && buffer[size - 1] == '\n') { --size; if (size > 0 && buffer[size - 1] == '\r') { --size; } }
-    const std::string_view password(buffer.data(), size);
-    if (!clean(password, 4096)) { throw std::runtime_error("Cannot read private database password file"); }
-    return std::string(password);
+    try { return security::read_private_secret(filename); }
+    catch (const std::exception&) { throw std::runtime_error("Cannot read private database password file"); }
 }
 
 struct Connection::Impl {

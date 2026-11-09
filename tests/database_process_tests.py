@@ -10,6 +10,8 @@ import sys
 import tempfile
 import time
 
+from api_support import enable_api, fetch_status
+
 BINARY, TEST = map(os.path.abspath, sys.argv[1:3])
 
 
@@ -105,6 +107,7 @@ def main():
             result = cli(path, '--migrate-database')
             require(result.returncode == 1, 'Migration accepted without DDL privileges'); no_secrets(result)
             config()
+            api_path, api_token = enable_api(path, folder)
             # Enabled database startup and graceful shutdown.
             hub = subprocess.Popen([BINARY, '--config', str(path)], stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, bufsize=0)
@@ -119,11 +122,13 @@ def main():
                     require(chunk, 'Hub startup failed: ' + repr(log))
                     log.extend(chunk)
             require(b'Database connected' in log, 'Database not connected before network startup')
+            require(fetch_status(api_path, api_token)['database']['enabled'], 'API database status is incorrect')
             hub.send_signal(signal.SIGTERM)
             out, err = hub.communicate(timeout=5)
             require(hub.returncode == 0, 'Enabled database shutdown failed')
             require(secret.encode() not in log + err + out, 'Startup leaked database password')
             hub = None
+            require(not api_path.exists(), 'API socket leaked after database shutdown')
             # Database actions do not create the configured log.
             for action in ['--check-database', '--migrate-database']:
                 result = run([BINARY, '--config', str(path), '--log-file', str(folder / 'unused.log'), action])

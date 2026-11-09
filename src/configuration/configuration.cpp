@@ -155,6 +155,7 @@ std::string read_file(const std::string& filename) {
 
 void validate(const Settings& settings) {
     database::validate(settings.database);
+    api::validate(settings.api);
     const auto& net = settings.network;
     security::validate(net.security);
     const auto count = net.listeners.size() + net.tls_listeners.size();
@@ -172,6 +173,14 @@ void validate(const Settings& settings) {
     validate_endpoints(net.tls_listeners, endpoints);
     if (tls) { path_text(net.tls_certificate); path_text(net.tls_private_key); }
     if (!settings.source_file.empty()) { path_text(settings.source_file); }
+    if (!settings.api.socket_path.empty()) {
+        for (const auto& protected_path : {settings.source_file, net.tls_certificate, net.tls_private_key,
+                settings.database.password_file, settings.database.socket, settings.api.token_file, settings.logging.file_path}) {
+            if (!protected_path.empty() && same_file(settings.api.socket_path, protected_path)) {
+                throw std::invalid_argument("API socket cannot target configuration or credential files");
+            }
+        }
+    }
     const auto& log = settings.logging;
     if (log.level != logging::Level::info && log.level != logging::Level::warning && log.level != logging::Level::error && log.level != logging::Level::off) {
         throw std::invalid_argument("Invalid log level");
@@ -181,7 +190,7 @@ void validate(const Settings& settings) {
     }
     if (!log.file_path.empty()) {
         path_text(log.file_path);
-        for (const auto& protected_path : {settings.source_file, net.tls_certificate, net.tls_private_key, settings.database.password_file}) {
+        for (const auto& protected_path : {settings.source_file, net.tls_certificate, net.tls_private_key, settings.database.password_file, settings.api.token_file, settings.api.socket_path}) {
             if (!protected_path.empty() && same_file(log.file_path, protected_path)) {
                 throw std::invalid_argument("Log file cannot target configuration or credential files");
             }
@@ -219,7 +228,7 @@ Settings load_file(const std::string& filename) {
                 throw std::invalid_argument("Invalid section at line " + std::to_string(line_number));
             }
             section = trim(std::string_view(text).substr(1, text.size() - 2));
-            if (section != "network" && section != "tls" && section != "logging" && section != "general" && section != "security" && section != "database") {
+            if (section != "network" && section != "tls" && section != "logging" && section != "general" && section != "security" && section != "database" && section != "api") {
                 throw std::invalid_argument("Unknown configuration section at line " + std::to_string(line_number));
             }
             continue;
@@ -265,6 +274,16 @@ Settings load_file(const std::string& filename) {
                 settings.logging.file_path = value == "stderr" ? "" : resolve_path(value, path.parent_path());
             } else if (section == "logging" && key == "connections") {
                 settings.logging.connections = connection_logging(value);
+            } else if (section == "api" && key == "enabled") {
+                settings.api.enabled = connection_logging(value);
+            } else if (section == "api" && key == "socket") {
+                settings.api.socket_path = resolve_path(value, path.parent_path());
+            } else if (section == "api" && key == "token_file") {
+                settings.api.token_file = resolve_path(value, path.parent_path());
+            } else if (section == "api" && key == "max_connections") {
+                settings.api.max_connections = positive_number(value, 128);
+            } else if (section == "api" && key == "request_timeout") {
+                settings.api.request_timeout = positive_number(value, 30);
             } else if (section == "database" && key == "enabled") {
                 settings.database.enabled = connection_logging(value);
             } else if (section == "database" && key == "socket") {
