@@ -46,7 +46,7 @@ Lokalna polityka, nie maksima protokołu:
 
 Każde połączenie TCP/TLS automatycznie używa pełniejszego parsera. Liczniki Network zliczają zaakceptowaną składnię; nieznane komendy nadal stanowią jej podzbiór. Błędne argumenty korzystają z dotychczasowych limitów błędów/wyników, ogólnego oczyszczonego ostrzeżenia i odzyskiwania strumienia. Parametry, PID i PAS nie trafiają do logów. Security może zamknąć połączenie po przekroczeniu limitów. Zobacz [SECURITY.md](SECURITY.md) i [ADCS_TLS.md](ADCS_TLS.md).
 
-Brak serializera, kolejek wyjściowych, macierzy dozwolonych komend/typów, alokatora SID, automatu PROTOCOL/IDENTIFY/VERIFY/NORMAL, walidacji tożsamości/hash, logowania użytkowników, routingu, wykonania chatu/wyszukiwania/transferu i nasłuchu UDP. Zakresy portów, sens offset/liczby bajtów, wartości pól i wymagane tożsamości INF/RES należą do przyszłych konsumentów. Parsowanie GET/SND nie włącza DATA ani nie odbiera danych binarnych. Prawdziwy ncdc nadal sprawdza początkowy HSUP; brak odpowiedzi ISUP/ISID i pełnego logowania.
+Niezależny [moduł ADC State](ADC_STATE.md) implementuje już kontrolę komend/typów/stanów, ale Network jeszcze go nie wywołuje. Brak serializera, kolejek wyjściowych, alokatora SID, walidacji tożsamości/hash, logowania użytkowników, routingu, wykonania chatu/wyszukiwania/transferu i nasłuchu UDP. Zakresy portów, sens offset/liczby bajtów, wartości pól i wymagane tożsamości INF/RES należą do przyszłych konsumentów. Parsowanie GET/SND nie włącza DATA ani nie odbiera danych binarnych. Prawdziwy ncdc nadal sprawdza początkowy HSUP; brak odpowiedzi ISUP/ISID i pełnego logowania.
 
 ## Weryfikacja
 

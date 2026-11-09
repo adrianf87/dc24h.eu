@@ -1,5 +1,13 @@
 # Testing
 
+## Current state module — alpha-0.2.3
+
+The complete suite now has **24 CTest entries**, including `adc.state`. All passed locally in Debug, Release and ASan/UBSan with strict integration-tool detection. State coverage includes guest/password paths, all BASE command/state/direction cases, explicit approval gates, replay/ordering rejection, spoofed source SIDs, per-instance isolation, fatal/local/other-user termination and parser-to-state pipelining/fragmentation. No live transport state enforcement or full login is claimed. Both real ncdc transports, disposable MariaDB and isolated Apache HTTPS remain covered separately. See [ADC_STATE.md](ADC_STATE.md).
+
+Frontend typecheck/production build, 3 Node tests, 3 Chromium browser tests and the real C++ API/Vite/React integration passed. Browser runs used `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium` because the default Playwright browser cache was absent. Dependency versions are unchanged from alpha-0.2.2.
+
+Reproduce with `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug --parallel 4` and `ctest --test-dir build-debug --output-on-failure --parallel 3`; repeat with Release. Sanitizer configuration used `-DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie"` and `-DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined -no-pie"`. Historical results below retain their original stage scope.
+
 ## Current parser stage — alpha-0.2.2
 
 The complete suite now has **23 CTest entries**. Local Debug, Release and ASan/UBSan passed all entries, including the new `adc.syntax`, expanded TCP/TLS syntax recovery and both real ncdc transports. `adc.syntax` exercises all 15 BASE argument layouts, required counts, named fields/cancellations/duplicates, opaque extension layouts, bounded integer/selector/parameter cases and owned results. Every split and bytewise stream comparisons verify all header fields, decoded values, layouts and errors, rather than only command counts.

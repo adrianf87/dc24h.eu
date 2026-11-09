@@ -60,3 +60,7 @@ Never put the API token in browser storage, JavaScript, URLs, VITE-prefixed vari
 ## Apache2 HTTPS example — alpha-0.1.11
 
 TLS and browser authentication are separate controls. The template selects TLS 1.2/1.3 with AEAD ciphers, fixes the HTTP redirect hostname, retains Require local, denies private/hidden/secret paths and disables directory indexes/symlinks. HTTPS-only HSTS is short and host-scoped; CSP/no-sniff/referrer/frame headers apply to errors too. Certificate trust/name/key matching must be verified before use; syntax checks alone do not prove matching keys. The template never exposes the service token or activates a production gateway. See [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
+
+## ADC state boundary — alpha-0.2.3
+
+The independent state module rejects premature commands, repeated login steps, inbound hub-only types and spoofed source SIDs. Explicit approvals require a pending request; parsing INF/PAS alone never grants NORMAL. It stores no PID, PAS, nickname or payload and performs no logging. This is protocol sequencing, not authentication or a deployed security boundary: the receive-only Network does not invoke it. Future dispatch must validate feature/hash compatibility, PID/CID, required fields, IP and nickname/CID uniqueness and passwords before approval, remove PD before forwarding, apply budgets/timeouts, and close on rejection. See [ADC_STATE.md](ADC_STATE.md).

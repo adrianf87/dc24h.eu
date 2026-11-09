@@ -1,5 +1,13 @@
 # Testowanie
 
+## Aktualny moduł stanów — alpha-0.2.3
+
+Pełny zestaw obejmuje teraz **24 pozycje CTest**, w tym `adc.state`. Wszystkie przeszły lokalnie w Debug, Release i ASan/UBSan z obowiązkowym wykrywaniem narzędzi integracyjnych. Zakres stanów: gość/hasło, macierz komenda/stan/kierunek wszystkich komend BASE, jawne zatwierdzanie, powtórzenia/kolejność, podszyte SID, izolacja instancji, fatalne/lokalne/obce rozłączenia i pipeline/fragmentacja parser → automat. Nie oznacza to egzekwowania stanów w transporcie ani pełnego logowania. Oba transporty prawdziwego ncdc, tymczasowa MariaDB i izolowany Apache HTTPS pozostają osobno testowane. Zobacz [ADC_STATE.md](ADC_STATE.md).
+
+Przeszły typecheck/build frontendu, 3 testy Node, 3 testy przeglądarkowe Chromium i rzeczywista integracja C++ API/Vite/React. Przeglądarka używała `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium`, ponieważ domyślna pamięć przeglądarki Playwright była niedostępna. Wersje zależności są takie jak w alpha-0.2.2.
+
+Odtworzenie: `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug --parallel 4` i `ctest --test-dir build-debug --output-on-failure --parallel 3`; powtórzyć z Release. Sanitizery używały `-DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie"` i `-DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined -no-pie"`. Wyniki historyczne poniżej zachowują zakres swoich etapów.
+
 ## Aktualny etap parsera — alpha-0.2.2
 
 Pełny zestaw ma teraz **23 pozycje CTest**. Lokalnie wszystkie przeszły w Debug, Release i ASan/UBSan, w tym nowe `adc.syntax`, rozszerzone odzyskiwanie składni TCP/TLS i oba transporty prawdziwego ncdc. `adc.syntax` sprawdza 15 układów BASE, wymagane liczby argumentów, pola/anulowania/powtórzenia, nieinterpretowane rozszerzenia, granice liczb/selektorów/parametrów i własność wyników. Każdy podział oraz strumień bajtowy porównują wszystkie pola nagłówków, odkodowane wartości, układy i błędy zamiast samych liczników komend.

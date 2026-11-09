@@ -88,3 +88,7 @@ Opcje Network zawierają `security::Limits`. Jeden ograniczony `PeerLimiter` obe
 ## Gniazdo administracyjne — alpha-0.1.9
 
 Opcjonalne lokalne HTTP API ma osobne prywatne gniazdo Unix i wątek, niezależne od listenerów ADC/ADCS. Limity klientów/czasu API są niezależne od liczników bezpieczeństwa TCP/TLS. Nie jest otwierany port HTTP; Apache2 nie bierze udziału w testach transportu. Zobacz [API.md](API.md).
+
+## Granica integracji stanów — alpha-0.2.3
+
+Nowa [biblioteka ADC State](ADC_STATE.md) jest niezależna od transportu i nie jest jeszcze dołączona do obiektów Client. Zachowanie ADC/ADCS i liczniki składni pozostają dotychczasowe. Podłączenie wymaga ograniczonego uporządkowanego wyjścia, zdarzeń ukończenia wysyłki, walidacji protokołu/tożsamości i alokatora unikalnych SID; automat wyłącznie odbiorczy odrzucałby poprawnych klientów bez możliwości odpowiedzi. Terminy ramek/TLS pozostają w Network; przyszły termin sesji musi ograniczać całe logowanie niezależnie od keepalive.

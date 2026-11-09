@@ -35,3 +35,7 @@ alpha-0.1.11 starts from main after alpha-0.1.10. Keep host activation, real cer
 ## ADC Parser increment
 
 alpha-0.2.2 starts from main after the explicit alpha-0.2/alpha-0.2.1 merge. Keep BASE argument syntax separate from authorization, identity checks and execution. Preserve opaque extension layouts, field order and duplicates. NamedParameterView borrows a decoded token; never retain it after mutation/destruction. Add release-active syntax fixtures and full-result stream comparisons for new grammar rules, then verify TCP, TLS and both ncdc transports.
+
+## ADC State — alpha-0.2.3
+
+This branch starts from main at `4c98e10` after the parser merge. Maintain the [state contract](ADC_STATE.md), one noncopyable instance per future connection, explicit semantic approvals, unchanged-state rejection and terminal disconnect. Keep state tests active in Release; update the command/state and direction/source matrices with every new command. Never infer authentication from a parsed frame or advance on an enqueued response. Transport integration/output, validation and unique SID allocation remain separate acceptance work.

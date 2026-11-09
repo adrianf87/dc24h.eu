@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.2.2 LANGUAGES CXX)
+project(dc24h VERSION 0.2.3 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -28,7 +28,7 @@ set_target_properties(UTF8Proc::UTF8Proc PROPERTIES
     IMPORTED_LOCATION "${UTF8PROC_LIBRARY}"
     INTERFACE_INCLUDE_DIRECTORIES "${UTF8PROC_INCLUDE_DIR}")
 target_link_libraries(dc24h_logging PRIVATE UTF8Proc::UTF8Proc)
-add_library(dc24h_adc src/adc/parser.cpp)
+add_library(dc24h_adc src/adc/parser.cpp src/adc/state.cpp)
 target_compile_features(dc24h_adc PUBLIC cxx_std_20)
 set_target_properties(dc24h_adc PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_adc PUBLIC include)
@@ -151,6 +151,12 @@ if(BUILD_TESTING)
     target_compile_options(adc_syntax_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
     set_target_properties(adc_syntax_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME adc.syntax COMMAND adc_syntax_tests)
+    add_executable(adc_state_tests tests/adc_state_tests.cpp)
+    target_link_libraries(adc_state_tests PRIVATE dc24h_adc)
+    target_compile_options(adc_state_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(adc_state_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME adc.state COMMAND adc_state_tests)
+    set_tests_properties(adc.state PROPERTIES TIMEOUT 15)
     add_test(NAME adc.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/adc_process_tests.py" "$<TARGET_FILE:dc24h>")
     add_executable(adcs_unit_tests tests/adcs_unit_tests.cpp)

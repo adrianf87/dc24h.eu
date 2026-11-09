@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.2.2 (ADC Parser).**
+**Current development version: alpha-0.2.3 (ADC State).**
 
 Completed increments:
+
+- **alpha-0.2.3 ADC State**: independent hub connection state machine, explicit validation gates, command/direction checks and source-SID binding. Transport wiring and full login remain planned.
 
 - **alpha-0.2.2 ADC Parser**: BASE argument layouts, named-field syntax, bounded decimal integers, feature budgets and TCP/TLS recovery tests.
 
@@ -25,7 +27,7 @@ Completed increments:
 
 - **alpha-0.1.11 Apache2**: customizable static WebAdmin HTTPS example, HTTP→HTTPS redirect, TLS 1.2/1.3, certificate paths and isolated HTTPS tests.
 
-A full ADC/ADCS hub is **not yet implemented**: no complete ADC handshake, user sessions, hub-user authentication, messaging, search, or transfer coordination. Account persistence and a production authenticated web gateway remain future milestones.
+A full ADC/ADCS hub is **not yet implemented**: no complete ADC handshake or live user sessions, hub-user authentication, messaging, search, or transfer coordination. Account persistence and a production authenticated web gateway remain future milestones.
 
 ## Build
 

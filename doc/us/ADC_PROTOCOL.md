@@ -46,7 +46,7 @@ Application policy limits, not protocol maxima:
 
 Every TCP/TLS connection uses the same stricter parser automatically. Network counters count accepted syntax; unknown commands remain an accepted subset. Invalid argument frames use the existing invalid/result quotas, generic sanitized warning and recovery path. No payload, PID or PAS value enters logs. Security can close a peer after quota breaches. See [SECURITY.md](SECURITY.md) and [ADCS_TLS.md](ADCS_TLS.md).
 
-No serializer, outbound queue, command/type permission matrix, SID allocator, PROTOCOL/IDENTIFY/VERIFY/NORMAL state machine, identity/hash validation, authentication, routing, chat/search/transfer execution or UDP listener exists. Port domains, transfer offset/count meaning, field value semantics and mandatory INF/RES identity fields belong to future consumers. Parsing GET/SND does not enter DATA mode or consume binary data. Real ncdc tests still cover initial HSUP only; no ISUP/ISID response or full login is claimed.
+The independent [ADC State module](ADC_STATE.md) now implements command/type/state gates, but Network does not invoke it yet. No serializer, outbound queue, SID allocator, identity/hash validation, authentication, routing, chat/search/transfer execution or UDP listener exists. Port domains, transfer offset/count meaning, field value semantics and mandatory INF/RES identity fields belong to future consumers. Parsing GET/SND does not enter DATA mode or consume binary data. Real ncdc tests still cover initial HSUP only; no ISUP/ISID response or full login is claimed.
 
 ## Verification
 

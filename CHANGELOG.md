@@ -1,5 +1,19 @@
 # Changelog
 
+## alpha-0.2.3 — 2026-11-09
+
+ADC State increment, based on main at `4c98e1048b02c35448638fa6d7bacd98a677c5bf` after the alpha-0.2.2 parser merge:
+
+- Added a standalone hub-side C++20 `ConnectionStateMachine` in dc24h_adc: PROTOCOL → IDENTIFY → VERIFY/NORMAL and terminal DISCONNECTED. BASE hub connections do not enter client-to-client DATA mode. The module is single-owner, noncopyable/nonmovable and stores only the assigned four-character SID and fixed flags, without peer payloads, PID, PAS, logging, sockets or database dependencies.
+- Added explicit protocol, identity and password approval gates, ordered HSUP/ISUP/ISID and BINF/GPA/PAS sequencing, replay rejection, direction/type/state checks and source-SID binding for incoming B/D/E/F messages. Parsed INF/PAS or successful STA alone never grant NORMAL. Approvals are trusted caller decisions, not feature/hash, identity or password validation implementations.
+- Added terminal/idempotent disconnect, fatal peer/hub status and own-SID QUI handling, other-user/routed-status isolation and keepalives without promotion. Rejected events leave stored state unchanged. Unknown extensions and GET/GFI/SND remain unsupported by the state profile while their existing parser syntax is preserved.
+- Added release-active adc.state tests: all 15 BASE commands plus unknown extensions across command/state/direction cases, guest and password paths, early/repeated transitions, pending validation gates, B/D/E/F source spoofing, per-connection isolation, terminal events and parser-to-state pipelining/bytewise Unicode fragmentation.
+- Added matched US/PL ADC_STATE.md contracts and updated architecture, API, security, network, development, roadmap, build, version and test documentation. Synchronized CMake/runtime/WebAdmin/package-lock metadata and version-sensitive fixtures to alpha-0.2.3 without dependency changes. Existing languages/us and languages/pl operator catalogs remain in use; no new operator strings are introduced.
+
+Local validation: **24/24 CTest suites passed in Debug, Release and ASan/UBSan**, with DC24H_REQUIRE_INTEGRATION_TESTS=ON, real ncdc ADC/ADCS, disposable MariaDB and isolated Apache HTTPS. Sanitizers used -fno-pie / -no-pie. WebAdmin typecheck/production build, **3 Node unit tests, 3 Chromium browser tests and real C++ API → Vite → React integration** passed. Browser checks used the installed /usr/bin/chromium through PLAYWRIGHT_CHROMIUM_EXECUTABLE after the default Playwright browser was unavailable. Dependencies were reused from the unchanged alpha-0.2.2 dependency set. Metadata, UTF-8/local links/language parity and Git whitespace checks passed. Other OS targets and remote CI are not established by local results.
+
+Limits: the state machine is an independently tested module; the receive-only TCP/TLS reactor still uses only the parser. No live state enforcement, serializer/output queue, output preflight API, unique SID allocator, feature/hash/identity/password validation, authentication, dispatch, full ncdc login or binary transfer extension is claimed. to_client events describe completed ordered sends for future integration, never mere queue insertion. Main, prior branches, local unrelated changes and immutable migrations are preserved.
+
 ## alpha-0.2.2 — 2026-11-09
 
 ADC Parser increment, based on main at `ca464e02e714c1e81ed4c37279496168a6c47e23` after the alpha-0.2 / alpha-0.2.1 audit merge:
