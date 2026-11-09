@@ -1,21 +1,56 @@
-# Configuration
+# Configuration — alpha-0.1.5
 
-alpha-0.1.4 accepts CLI configuration only. No configuration file or environment-variable loader is implemented.
+Settings are composed in this order: built-in defaults, one explicit `--config FILE`, then command-line overrides regardless of where `--config` appears. There is no automatic file search, environment substitution, include directive, reload or remote configuration.
 
-| Option | Default | Meaning |
-| --- | --- | --- |
-| `--listen IPv4:port` / `--listen [IPv6]:port` | `127.0.0.1:1511` | Plaintext TCP listener; repeatable |
-| `--adcs-listen ADDRESS:port` | None | TLS listener; repeatable |
-| `--tls-cert PATH` | None | PEM certificate chain; required with ADCS |
-| `--tls-key PATH` | None | Matching unencrypted PEM private key; required with ADCS |
-| `--max-connections N` | 1024 | Shared active connection limit, 1..65535 |
-| `--idle-timeout SECONDS` | 120 | 1..86400; handshake deadline is capped at 10 seconds |
-| `--language us\|pl` | `us` | Built-in UTF-8 help and lifecycle/transport messages |
-| `--help` | — | Help without starting Core |
-| `--version` | — | Project name and alpha version |
+```sh
+cp config/dc24h.ini.example config/dc24h.ini
+./build/dc24h --config config/dc24h.ini --check-config
+./build/dc24h --config config/dc24h.ini --max-connections 512
+```
 
-The first explicit TCP or TLS listener removes the implicit default. Up to 16 total listeners are accepted. Port 0 selects an ephemeral port. Wildcards are never added implicitly. Repeated scalar options use the last value. TLS paths require at least one ADCS listener; each ADCS configuration requires both paths. Password-encrypted private keys are unsupported and fail without prompting.
+## INI format
 
-Help/version may be combined with `--language` but not operational options. Exit codes: 0 for normal stop/help/version, 2 for invalid arguments, 1 for runtime/startup failure. Untrusted option values are not echoed in errors. Built-in catalogs reside in `languages/us` and `languages/pl`; system/library diagnostic text without a translation falls back to English. Protocol commands, counters and client data are not translated.
+UTF-8, optional BOM, LF or CRLF, maximum 65536 bytes in the actual bounded read and maximum 4096 bytes per physical line (including an optional CR). The final LF is optional. The opened file must be regular; a final-component symlink, FIFO or device is rejected. The parser validates UTF-8, rejects NUL/control characters (except line endings/tab) and reports line numbers without echoing values. Section/key names are case-sensitive. Full-line `#`/`;` comments and blank lines are ignored. ASCII spaces/tabs around keys/values are trimmed; inline comments, quoting and escape expansion are not supported. Paths may contain spaces and `#`/`;` literally. Unknown keys/sections and duplicate singular keys are errors. Only listener keys are repeatable.
 
-Logs use UTC `YYYY-MM-DDTHH:MM:SSZ [INFO|ERROR] message` on stderr with synchronized best-effort writes. There is no file sink or rotation. Frame length (16384 bytes) and parameter count (128) are fixed parser policies. No per-frame parameters or password material are logged. SIGHUP does not reload settings or certificates.
+| Section | Key | Default | Meaning |
+| --- | --- | --- | --- |
+| `general` | `language` | `us` | `us` or `pl` operator messages |
+| `network` | `listen` | `127.0.0.1:1511` | Numeric IPv4:port / [IPv6]:port, or `none` |
+| `network` | `adcs_listen` | None | TLS endpoint or `none` |
+| `network` | `max_connections` | 1024 | Shared limit 1..65535 |
+| `network` | `idle_timeout` | 120 | 1..86400 seconds |
+| `tls` | `certificate` | None | Full PEM chain |
+| `tls` | `private_key` | None | Matching unencrypted PEM key |
+| `logging` | `level` | `info` | `info`, `error`, `off` |
+| `logging` | `file` | `stderr` | `stderr` or append-file path |
+
+The first explicit listener removes implicit plaintext. Thus an INI containing only `adcs_listen` enables TLS only. Repeated addresses build that transport's list; `none` must be its only entry. At least one total listener is required, at most 16 across both transports. Equivalent numeric IPv6 duplicates are rejected; repeated port 0 requests independent ephemeral sockets. Wildcards must be explicit. Wildcard/specific-address bind conflicts are detected at actual startup, not by the syntax check.
+
+INI paths resolve against the configuration file's resolved directory; CLI paths remain relative to the process working directory. No directories are created automatically. Certificate/key paths require ADCS listeners, and ADCS requires both paths. To disable TLS, remove its listener and credential settings together; disabling only a listener while retaining credentials is an error. Scalar syntax/ranges must be valid in the file even if overridden; cross-field requirements are validated after CLI overrides, so the file may omit a TLS key later supplied by CLI.
+
+## Command line
+
+| Option | Meaning |
+| --- | --- |
+| `--config FILE` | Read one explicit INI file |
+| `--check-config` | Validate merged settings and load/check TLS credentials; exit without binding ports, starting Core or opening/creating a log |
+| `--listen ENDPOINT/none` | Replace the plaintext list on first occurrence; append subsequent entries |
+| `--adcs-listen ENDPOINT/none` | Replace the TLS list on first occurrence; append subsequent entries |
+| `--tls-cert PATH`, `--tls-key PATH` | Override TLS paths |
+| `--max-connections N`, `--idle-timeout SECONDS` | Override connection limits |
+| `--log-level info/error/off` | Set verbosity threshold |
+| `--log-file PATH/-` | Append to PATH or use stderr with `-` |
+| `--language us/pl` | Override file language |
+| `--help`, `--version` | May combine only with language selection |
+
+CLI listener overrides preserve the other explicitly configured transport. Only implicit default plaintext is removed when the first explicit listener is configured. Repeated CLI scalars use their last value. `--check-config` does not test port availability, log writability or directory existence: these are checked when resources open at actual startup. It does check path collisions and TLS loadability/key correspondence; it does not validate certificate trust/name/expiry for clients.
+
+Exit codes: 0 successful check/help/version/normal stop, 2 bad CLI/file/settings or failed check, 1 runtime/startup failure (including log open or TLS errors during normal startup). Diagnostics use sanitized internal messages; unknown system text falls back to English. A CLI `--language` also selects parse-error language; errors encountered before file settings load fall back to US. Data/protocol command names and counter keys are never translated.
+
+## Logging and paths
+
+`info` emits INFO and ERROR; `error` emits only ERROR; `off` suppresses both, but a configured file is still opened and validated. UTC lines use `YYYY-MM-DDTHH:MM:SSZ [INFO|ERROR] message`. Threads share a mutex; append mode preserves previous records. New files request mode 0600 (umask can restrict further); existing permissions are preserved. Log paths must have a regular final component with exactly one hard link; final symlinks, FIFOs and devices are rejected. Opening uses O_APPEND/O_CLOEXEC/O_NOFOLLOW/O_NONBLOCK. Configured path comparisons reject the active INI, TLS certificate or key, including existing hard-link and parent-symlink aliases.
+
+Keep configuration/log directories trusted and service-user controlled: this is not a general defense against concurrent administrative path replacement. Regular-file writes are synchronous on the calling thread and can block on storage; runtime sink failures are best effort and never throw from logging. There is no rotation, reopen, asynchronous logging or SIGHUP reload. File growth must be managed operationally (restart/reopen support is future work). Do not store secrets or client frame contents in logs.
+
+See [ADCS/TLS](ADCS_TLS.md), [security](SECURITY.md), and the tracked [INI example](../../config/dc24h.ini.example).

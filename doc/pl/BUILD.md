@@ -11,6 +11,8 @@ cmake --build build-release --parallel 2
 ctest --test-dir build-release --output-on-failure
 ```
 
-`-DBUILD_TESTING=OFF` wyłącza testy i wymaganie Pythona. `cmake --install build-release --prefix /usr/local` instaluje sam program (może wymagać sudo). Katalogi językowe są wkompilowane. Wersja pochodzi z CMake; `--version` zwraca alpha-0.1.4. Dokładną kompilację identyfikuje także `git rev-parse HEAD`. Nie edytuj plików generowanych. MariaDB, Node.js i Apache2 nie są potrzebne na tym etapie.
+`-DBUILD_TESTING=OFF` wyłącza testy i wymaganie Pythona. `cmake --install build-release --prefix /usr/local` instaluje sam program (może wymagać sudo). Katalogi językowe są wkompilowane. Wersja pochodzi z CMake; `--version` zwraca alpha-0.1.5. Dokładną kompilację identyfikuje także `git rev-parse HEAD`. Nie edytuj plików generowanych. MariaDB, Node.js i Apache2 nie są potrzebne na tym etapie.
 
 Pełne polecenia konfiguracji AddressSanitizer/UndefinedBehaviorSanitizer: [BUILD US](../us/BUILD.md). WebAdmin nie ma jeszcze procesu budowania.
+
+Instalacja obejmuje program i `etc/dc24h/dc24h.ini.example` względem wybranego prefiksu; nie instaluje aktywnej konfiguracji ani nie uruchamia usługi.

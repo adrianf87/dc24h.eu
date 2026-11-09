@@ -12,9 +12,15 @@ Run `ctest --test-dir build --output-on-failure` and the equivalent for `build-r
 | `adc.process` | Real stream integration, recovery, per-client state and no sensitive logging |
 | `adcs.crypto` | OpenSSL nonblocking negotiation/decryption with disposable credentials and preexisting error queue entries |
 | `adcs.process` | Verified certificate/name, explicit TLS 1.2 and 1.3, TLS-only/mixed listeners, fragmentation, legacy rejection, handshake timeout, key mismatch/encryption/missing file, resets during TLS writes, simultaneous peers and large streams, active shutdown |
+| `configuration.unit` | INI/CLI composition, paths, bounds and logger concurrency |
+| `configuration.process` | Actual limits, TLS configuration, dry-run side effects and file safety |
 | `adc.ncdc` | Real ncdc initial HSUP through plaintext recording relay |
 | `adcs.ncdc` | Real ncdc negotiates TLS directly with C++ through transparent raw relay; one decrypted HSUP, no visible HSUP on wire |
 
 ncdc tests run in disposable PTY sessions. The ADCS relay forwards bytes unchanged, so TLS terminates in C++, not Python. The server's idle close synchronizes the counter check. TLS socket tests trust only the generated local test certificate and verify the hostname. Tests account for missing server close_notify, which is not implemented. ncdc smoke tests validate transport/initial parsing, not full login or NORMAL state.
 
-Local result: 10/10 CTest suites passed in Debug, Release and ASan/UBSan on Debian 13 with GCC 14.2, CMake 3.31.6, OpenSSL 3.5.7 and ncdc 1.23.1. Details are recorded in the [changelog](../../CHANGELOG.md). The CI definition targets Ubuntu 22.04/24.04 in Debug/Release; its existence does not establish a successful remote run. Debian 12 and Ubuntu 26.04 require separate verification. These tests are not a performance benchmark, long-running fuzz campaign, DDoS test or security audit. Kernel/watch allocation failures and all out-of-memory paths are not covered by fault injection.
+Local result: 12/12 CTest suites passed in Debug, Release and ASan/UBSan on Debian 13 with GCC 14.2, CMake 3.31.6, OpenSSL 3.5.7 and ncdc 1.23.1. Details are recorded in the [changelog](../../CHANGELOG.md). The CI definition targets Ubuntu 22.04/24.04 in Debug/Release; its existence does not establish a successful remote run. Debian 12 and Ubuntu 26.04 require separate verification. These tests are not a performance benchmark, long-running fuzz campaign, DDoS test or security audit. Kernel/watch allocation failures and all out-of-memory paths are not covered by fault injection.
+
+## Configuration — alpha-0.1.5
+
+`configuration.unit` covers defaults, merged precedence, relative paths, BOM/CRLF, UTF-8/control/size bounds, equivalent IPv6 duplicates, TLS-only defaults, incomplete file + CLI credentials, file append, level filtering and concurrent log lines. `configuration.process` covers real limits/timeout overrides, dry-run without port/log side effects, TLS file paths and checks, protected-path/hard-link/parent-symlink aliases, FIFO/symlink/directory failures, sanitized errors and Polish selection. Both real ncdc smoke tests now start the C++ hub through INI plus CLI overrides.

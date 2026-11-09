@@ -72,3 +72,7 @@ ADC zawiera liczniki parsowania, bez treści danych.
 Interfejsy systemowe: [epoll(7)](https://man7.org/linux/man-pages/man7/epoll.7.html),
 [accept(2)/accept4](https://man7.org/linux/man-pages/man2/accept.2.html),
 [eventfd(2)](https://man7.org/linux/man-pages/man2/eventfd.2.html).
+
+## Źródło ustawień
+
+Od alpha-0.1.5 adresy i limity pochodzą z INI oraz CLI. Lista CLI zastępuje dany transport i zachowuje drugi jawny transport. Szczegóły: [konfiguracja](CONFIGURATION.md). Domyślne wartości i semantyka stopu pozostają zachowane.

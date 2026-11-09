@@ -1,6 +1,6 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.1.4: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.1.5: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
 - [ARCHITECTURE.md](ARCHITECTURE.md)
 - [ADC_PROTOCOL.md](ADC_PROTOCOL.md)

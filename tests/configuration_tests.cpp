@@ -1,0 +1,210 @@
+#include "dc24h/configuration/configuration.hpp"
+#include "dc24h/logging/logger.hpp"
+
+#include <unistd.h>
+#include <sys/stat.h>
+
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <stdexcept>
+#include <string>
+#include <vector>
+#include <thread>
+
+namespace {
+namespace fs = std::filesystem;
+void require(bool value, const char* name) {
+    if (!value) { throw std::runtime_error(name); }
+}
+template<class F> void invalid(F function) {
+    bool rejected = false;
+    try { function(); }
+    catch (const std::invalid_argument&) { rejected = true; }
+    require(rejected, "invalid configuration was accepted");
+}
+struct Fixture {
+    fs::path dir;
+    Fixture() {
+        char buffer[] = "/tmp/dc24h-conf-XXXXXX";
+        const char* path = ::mkdtemp(buffer);
+        require(path != nullptr, "mkdtemp failed");
+        dir = path;
+    }
+    ~Fixture() { std::error_code ec; fs::remove_all(dir, ec); }
+    fs::path write(std::string_view content, std::string_view name = "hub.ini") {
+        const auto target = dir / std::string(name);
+        std::ofstream stream(target, std::ios::binary);
+        stream << content;
+        require(static_cast<bool>(stream), "Cannot write fixture");
+        return target;
+    }
+};
+void load_and_override() {
+    Fixture fx;
+    const auto path = fx.write(
+        "[network]\nlisten = 127.0.0.1:411\nlisten = [::1]:0\n"
+        "adcs_listen = 127.0.0.1:1512\nmax_connections = 42\nidle_timeout = 6\n"
+        "[tls]\ncertificate = certs/chain.pem\nprivate_key = certs/secret.key\n"
+        "[logging]\nlevel = error\nfile = logs/hub.log\n");
+    const auto loaded = dc24h::configuration::load_file(path.string());
+    require(loaded.network.listeners.size() == 2, "Plain listeners missing");
+    require(loaded.network.tls_listeners.size() == 1, "TLS listener missing");
+    require(loaded.network.listeners[0].port == 411, "Listen port invalid");
+    require(loaded.network.max_connections == 42, "Connection limit invalid");
+    require(loaded.network.idle_timeout.count() == 6, "Timeout invalid");
+    require(loaded.network.tls_certificate == (fx.dir / "certs/chain.pem").string(),
+            "Relative certificate path not resolved against INI directory");
+    require(loaded.logging.level == dc24h::logging::Level::error, "Log level invalid");
+    require(loaded.logging.file_path == (fx.dir / "logs/hub.log").string(),
+            "Relative log path not resolved against INI directory");
+
+    auto str = path.string();
+    std::vector<std::string> options{"dc24h", "--max-connections", "19", "--config", str,
+                                      "--listen", "127.0.0.1:0", "--log-file", "-",
+                                      "--log-level", "info"};
+    std::vector<char*> argv;
+    for (auto& item : options) { argv.push_back(item.data()); }
+    const auto parsed = dc24h::configuration::parse_arguments(
+        static_cast<int>(argv.size()), argv.data());
+    require(parsed.settings.network.listeners.size() == 1, "CLI listeners did not replace file listeners");
+    require(parsed.settings.network.listeners.front().port == 0, "CLI listener port invalid");
+    require(parsed.settings.network.max_connections == 19, "CLI does not win over configuration");
+    require(parsed.settings.logging.file_path.empty(), "CLI stderr override failed");
+    require(parsed.settings.logging.level == dc24h::logging::Level::info, "CLI log level override failed");
+}
+
+void invalid_configs() {
+    Fixture fx;
+    for (const auto& content : {
+        "[network]\nlisten = localhost:411\n",
+        "[network]\nlisten = 127.0.0.1:2\nlisten = 127.0.0.1:2\n",
+        "[network]\nmax_connections = 0\n",
+        "[network]\nidle_timeout = 86401\n",
+        "[logging]\nlevel = debug\n",
+        "[logging]\nlevel = info\nlevel = error\n",
+        "[unknown]\nkey = value\n",
+        "[tls]\nunknown = value\n",
+        "[network]\nlisten = none\n",
+        "[network]\nlisten = none\nlisten = 127.0.0.1:1\n",
+        "[network]\nlisten = 127.0.0.1:1\nlisten = none\n",
+        "[network]\nlisten = 127.0.0.1:1\nadcs_listen = 127.0.0.1:1\n",
+        "[network]\nadcs_listen = 127.0.0.1:1\n",
+    }) {
+        const auto path = fx.write(content);
+        // load_file deliberately parses fields; merged validity is checked separately.
+        invalid([&] {
+            const auto parsed = dc24h::configuration::load_file(path.string());
+            dc24h::configuration::validate(parsed);
+        });
+    }
+    const auto oversized = fx.write(std::string(65537, 'x'));
+    invalid([&] { (void)dc24h::configuration::load_file(oversized.string()); });
+    const auto good = fx.write("[network]\nlisten = 127.0.0.1:0\n");
+    const auto symlink = fx.dir / "linked.ini";
+    fs::create_symlink(good, symlink);
+    invalid([&] { (void)dc24h::configuration::load_file(symlink.string()); });
+}
+
+dc24h::configuration::CommandLine parse(std::vector<std::string> options) {
+    std::vector<char*> argv;
+    for (auto& option : options) { argv.push_back(option.data()); }
+    return dc24h::configuration::parse_arguments(static_cast<int>(argv.size()), argv.data());
+}
+
+void boundaries_and_precedence() {
+    Fixture fx;
+    const auto bom = fx.write("\xEF\xBB\xBF[general]\r\nlanguage=pl\r\n[network]\r\nlisten=127.0.0.1:0");
+    auto settings = dc24h::configuration::load_file(bom.string());
+    dc24h::configuration::validate(settings);
+    require(settings.logging.language == dc24h::i18n::Language::pl, "File language missing");
+    auto parsed = parse({"dc24h", "--language", "us", "--config", bom.string(), "--check-config"});
+    require(parsed.settings.logging.language == dc24h::i18n::Language::us, "CLI language lost to file");
+    std::string maximum;
+    for (int i = 0; i < 16; ++i) { maximum += "#" + std::string(4094, 'x') + "\n"; }
+    require(maximum.size() == 65536, "Invalid boundary fixture");
+    (void)dc24h::configuration::load_file(fx.write(maximum).string());
+    (void)dc24h::configuration::load_file(fx.write("#" + std::string(4095, 'x')).string());
+    for (const auto& content : {std::string("#") + std::string(4096, 'x'), std::string("#\xff"),
+                                std::string("#x\0y", 4), std::string("#a\rb\n")}) {
+        invalid([&] { (void)dc24h::configuration::load_file(fx.write(content).string()); });
+    }
+    invalid([&] { (void)parse({"dc24h", "--config", bom.string(), "--config", bom.string()}); });
+    const auto incomplete = fx.write("[network]\nadcs_listen=127.0.0.1:0\n[tls]\ncertificate=chain.pem\n");
+    parsed = parse({"dc24h", "--config", incomplete.string(), "--tls-key", "key.pem"});
+    require(parsed.settings.network.listeners.empty(), "TLS-only file exposed plaintext");
+    require(parsed.settings.network.tls_private_key == "key.pem", "CLI path must stay relative to cwd");
+    parsed = parse({"dc24h", "--adcs-listen", "127.0.0.1:0", "--tls-cert", "cert.pem", "--tls-key", "key.pem"});
+    require(parsed.settings.network.listeners.empty(), "TLS-only CLI exposed plaintext");
+    const auto duplicate = fx.write("[network]\nlisten=[::1]:411\nlisten=[0:0:0:0:0:0:0:1]:411\n");
+    invalid([&] { (void)parse({"dc24h", "--config", duplicate.string()}); });
+    invalid([&] { (void)parse({"dc24h", "--listen", "none", "--check-config"}); });
+    std::vector<std::string> too_many{"dc24h"};
+    for (int i = 0; i < 17; ++i) { too_many.insert(too_many.end(), {"--listen", "127.0.0.1:0"}); }
+    invalid([&] { (void)parse(too_many); });
+}
+
+void logger_file() {
+    Fixture fx;
+    const auto path = fx.dir / "events.log";
+    {
+        dc24h::logging::Logger log({dc24h::logging::Level::error, path.string()});
+        log.info("NEVER_EMIT");
+        log.error("SAMPLE_ERROR");
+    }
+    struct stat s{};
+    require(::stat(path.c_str(), &s) == 0, "log does not exist");
+    require((s.st_mode & 0777) == 0600, "new log file must be private");
+    {
+        std::ifstream input(path);
+        std::string value((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+        require(value.find("SAMPLE_ERROR") != std::string::npos, "log severity not emitted");
+        require(value.find("NEVER_EMIT") == std::string::npos, "filtered INFO was emitted");
+    }
+    {
+        dc24h::logging::Logger log({dc24h::logging::Level::off, path.string()});
+        log.info("OFF_INFO"); log.error("OFF_ERROR");
+    }
+    {
+        dc24h::logging::Logger log({dc24h::logging::Level::info, path.string()});
+        std::vector<std::jthread> writers;
+        for (int writer = 0; writer < 4; ++writer) {
+            writers.emplace_back([&log, writer] {
+                for (int i = 0; i < 20; ++i) { log.info("THREAD_" + std::to_string(writer) + "_" + std::to_string(i)); }
+            });
+        }
+    }
+    {
+        std::ifstream input(path);
+        std::string line;
+        int lines = 0;
+        while (std::getline(input, line)) {
+            require(line.find("OFF_") == std::string::npos, "Off logger emitted a message");
+            require(line.find("[ERROR] SAMPLE_ERROR") != std::string::npos ||
+                    line.find("[INFO] THREAD_") != std::string::npos, "Log lines interleaved");
+            ++lines;
+        }
+        require(lines == 81, "Append/concurrent logging lost records");
+    }
+    const auto symlink = fx.dir / "linked.log";
+    fs::create_symlink(path, symlink);
+    bool blocked = false;
+    try { dc24h::logging::Logger log({dc24h::logging::Level::info, symlink.string()}); }
+    catch (const std::exception&) { blocked = true; }
+    require(blocked, "symlink output must be rejected");
+}
+} // namespace
+
+int main() {
+    try {
+        load_and_override();
+        invalid_configs();
+        boundaries_and_precedence();
+        logger_file();
+        std::cout << "Configuration parsing, CLI overrides, limits and safe logging OK\n";
+    } catch (const std::exception& e) {
+        std::cerr << "FAIL: " << e.what() << '\n';
+        return 1;
+    }
+}

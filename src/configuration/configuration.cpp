@@ -1,0 +1,309 @@
+#include "dc24h/configuration/configuration.hpp"
+
+#include <arpa/inet.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <utf8proc.h>
+
+#include <array>
+#include <cerrno>
+#include <charconv>
+#include <filesystem>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <unordered_set>
+
+namespace dc24h::configuration {
+namespace {
+namespace fs = std::filesystem;
+constexpr std::size_t max_file_bytes = 65536;
+
+std::string trim(std::string_view value) {
+    // INI whitespace is deliberately ASCII and independent of the process locale.
+    while (!value.empty() && (value.front() == ' ' || value.front() == '\t')) { value.remove_prefix(1); }
+    while (!value.empty() && (value.back() == ' ' || value.back() == '\t')) { value.remove_suffix(1); }
+    return std::string(value);
+}
+
+unsigned int positive_number(std::string_view value, unsigned int maximum) {
+    unsigned int parsed{};
+    const auto [end, error] = std::from_chars(value.data(), value.data() + value.size(), parsed);
+    if (error != std::errc{} || end != value.data() + value.size() || parsed == 0 || parsed > maximum) {
+        throw std::invalid_argument("Invalid numeric configuration value");
+    }
+    return parsed;
+}
+
+logging::Level level(std::string_view value) {
+    if (value == "info") { return logging::Level::info; }
+    if (value == "error") { return logging::Level::error; }
+    if (value == "off") { return logging::Level::off; }
+    throw std::invalid_argument("Log level must be info, error or off");
+}
+
+void path_text(std::string_view value) {
+    if (value.empty()) { throw std::invalid_argument("Empty configuration path"); }
+    for (const unsigned char c : value) {
+        if (c < 32 || c == 127) { throw std::invalid_argument("Invalid control character in path"); }
+    }
+}
+
+std::string resolve_path(std::string_view value, const fs::path& base) {
+    path_text(value);
+    const fs::path path(value);
+    // Do not lexically collapse symlink/.. before filesystem resolution.
+    return (path.is_absolute() ? path : base / path).string();
+}
+
+bool same_file(const fs::path& a, const fs::path& b) {
+    std::error_code ec;
+    if (fs::equivalent(a, b, ec) && !ec) { return true; }
+    ec.clear();
+    const auto first = fs::weakly_canonical(a, ec);
+    if (ec) { throw std::invalid_argument("Cannot resolve configured path"); }
+    const auto second = fs::weakly_canonical(b, ec);
+    if (ec) { throw std::invalid_argument("Cannot resolve configured path"); }
+    return first == second;
+}
+
+struct ListenerList {
+    bool seen{false};
+    bool disabled{false};
+    void add(Settings& settings, std::vector<network::Endpoint>& listeners, std::string_view value) {
+        if (settings.implicit_plain_listener) {
+            settings.network.listeners.clear();
+            settings.implicit_plain_listener = false;
+        }
+        if (!seen) { listeners.clear(); seen = true; }
+        if (value == "none") {
+            if (!listeners.empty() || disabled) {
+                throw std::invalid_argument("none cannot be combined with listener addresses");
+            }
+            disabled = true;
+        } else {
+            if (disabled || listeners.size() == 16) { throw std::invalid_argument("Invalid listener list"); }
+            listeners.push_back(network::parse_endpoint(value));
+        }
+    }
+};
+
+void validate_endpoints(const std::vector<network::Endpoint>& list, std::unordered_set<std::string>& seen) {
+    for (const auto& endpoint : list) {
+        const bool ipv6 = endpoint.address.find(':') != std::string::npos;
+        (void)network::parse_endpoint((ipv6 ? "[" + endpoint.address + "]" : endpoint.address)
+                                     + ":" + std::to_string(endpoint.port));
+        std::array<unsigned char, 16> address{};
+        std::array<char, INET6_ADDRSTRLEN> normalized{};
+        const int family = ipv6 ? AF_INET6 : AF_INET;
+        if (::inet_pton(family, endpoint.address.c_str(), address.data()) != 1 ||
+            ::inet_ntop(family, address.data(), normalized.data(), normalized.size()) == nullptr) {
+            throw std::invalid_argument("Invalid listener address");
+        }
+        const auto key = std::string(normalized.data()) + ":" + std::to_string(endpoint.port);
+        // Port zero requests independent ephemeral sockets, so it may be repeated.
+        if (endpoint.port != 0 && !seen.insert(key).second) {
+            throw std::invalid_argument("Duplicate listener endpoint");
+        }
+    }
+}
+
+std::string read_file(const std::string& filename) {
+    path_text(filename);
+    const int fd = ::open(filename.c_str(), O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK | O_NOCTTY);
+    if (fd < 0) { throw std::invalid_argument("Cannot open configuration file (regular file required, no symlink)"); }
+    struct Close { int fd; ~Close() { ::close(fd); } } close{fd};
+    struct stat state{};
+    if (::fstat(fd, &state) != 0 || !S_ISREG(state.st_mode) || state.st_size < 0 ||
+        static_cast<std::uintmax_t>(state.st_size) > max_file_bytes) {
+        throw std::invalid_argument("Configuration must be a regular file of at most 64 KiB");
+    }
+    std::array<char, 4096> buffer{};
+    std::string data;
+    for (;;) {
+        const auto count = ::read(fd, buffer.data(), buffer.size());
+        if (count < 0 && errno == EINTR) { continue; }
+        if (count < 0) { throw std::invalid_argument("Configuration read failure"); }
+        if (count == 0) { break; }
+        if (data.size() + static_cast<std::size_t>(count) > max_file_bytes) {
+            throw std::invalid_argument("Configuration file exceeds 64 KiB");
+        }
+        data.append(buffer.data(), static_cast<std::size_t>(count));
+    }
+    for (std::size_t i = 0; i < data.size();) {
+        utf8proc_int32_t codepoint{};
+        const auto count = utf8proc_iterate(reinterpret_cast<const utf8proc_uint8_t*>(data.data() + i),
+                                            static_cast<utf8proc_ssize_t>(data.size() - i), &codepoint);
+        if (count <= 0 || (codepoint < 32 && codepoint != '\t' && codepoint != '\n' && codepoint != '\r') ||
+            codepoint == 127) {
+            throw std::invalid_argument("Configuration must be UTF-8 without control characters");
+        }
+        i += static_cast<std::size_t>(count);
+    }
+    return data;
+}
+} // namespace
+
+void validate(const Settings& settings) {
+    const auto& net = settings.network;
+    const auto count = net.listeners.size() + net.tls_listeners.size();
+    if (count == 0 || count > 16 || net.max_connections == 0 || net.max_connections > 65535 ||
+        net.idle_timeout.count() < 1 || net.idle_timeout.count() > 86400) {
+        throw std::invalid_argument("Invalid listener or connection limits");
+    }
+    const bool tls = !net.tls_listeners.empty();
+    if (tls != (!net.tls_certificate.empty() && !net.tls_private_key.empty()) ||
+        (!tls && (!net.tls_certificate.empty() || !net.tls_private_key.empty()))) {
+        throw std::invalid_argument("ADCS requires listeners, a certificate and a private key");
+    }
+    std::unordered_set<std::string> endpoints;
+    validate_endpoints(net.listeners, endpoints);
+    validate_endpoints(net.tls_listeners, endpoints);
+    if (tls) { path_text(net.tls_certificate); path_text(net.tls_private_key); }
+    if (!settings.source_file.empty()) { path_text(settings.source_file); }
+    const auto& log = settings.logging;
+    if (log.level != logging::Level::info && log.level != logging::Level::error && log.level != logging::Level::off) {
+        throw std::invalid_argument("Invalid log level");
+    }
+    if (log.language != i18n::Language::us && log.language != i18n::Language::pl) {
+        throw std::invalid_argument("Unknown language (use us or pl)");
+    }
+    if (!log.file_path.empty()) {
+        path_text(log.file_path);
+        for (const auto& protected_path : {settings.source_file, net.tls_certificate, net.tls_private_key}) {
+            if (!protected_path.empty() && same_file(log.file_path, protected_path)) {
+                throw std::invalid_argument("Log file cannot be the configuration, TLS certificate or private key");
+            }
+        }
+    }
+}
+
+Settings load_file(const std::string& filename) {
+    const auto data = read_file(filename);
+    std::error_code ec;
+    const auto path = fs::canonical(filename, ec);
+    if (ec) { throw std::invalid_argument("Cannot resolve configuration file path"); }
+    Settings settings;
+    settings.source_file = path.string();
+    std::istringstream input(data);
+    std::string section;
+    std::unordered_set<std::string> singletons;
+    ListenerList plain, tls;
+    std::string line;
+    std::size_t line_number = 0;
+    while (std::getline(input, line)) {
+        ++line_number;
+        if (line.size() > 4096) {
+            throw std::invalid_argument("Invalid configuration line " + std::to_string(line_number));
+        }
+        if (!line.empty() && line.back() == '\r') { line.pop_back(); }
+        if (line.find('\r') != std::string::npos) {
+            throw std::invalid_argument("Invalid configuration line " + std::to_string(line_number));
+        }
+        if (line_number == 1 && line.starts_with("\xEF\xBB\xBF")) { line.erase(0, 3); }
+        const auto text = trim(line);
+        if (text.empty() || text.front() == '#' || text.front() == ';') { continue; }
+        if (text.front() == '[') {
+            if (text.back() != ']' || text.size() < 3) {
+                throw std::invalid_argument("Invalid section at line " + std::to_string(line_number));
+            }
+            section = trim(std::string_view(text).substr(1, text.size() - 2));
+            if (section != "network" && section != "tls" && section != "logging" && section != "general") {
+                throw std::invalid_argument("Unknown configuration section at line " + std::to_string(line_number));
+            }
+            continue;
+        }
+        const auto equal = text.find('=');
+        if (equal == std::string::npos || section.empty()) {
+            throw std::invalid_argument("Expected section and key=value at line " + std::to_string(line_number));
+        }
+        const auto key = trim(std::string_view(text).substr(0, equal));
+        const auto value = trim(std::string_view(text).substr(equal + 1));
+        if (!(section == "network" && (key == "listen" || key == "adcs_listen")) &&
+            !singletons.insert(section + "." + key).second) {
+            throw std::invalid_argument("Duplicate configuration key at line " + std::to_string(line_number));
+        }
+        try {
+            if (section == "network" && key == "listen") {
+                plain.add(settings, settings.network.listeners, value);
+            } else if (section == "network" && key == "adcs_listen") {
+                tls.add(settings, settings.network.tls_listeners, value);
+            } else if (section == "network" && key == "max_connections") {
+                settings.network.max_connections = positive_number(value, 65535);
+            } else if (section == "network" && key == "idle_timeout") {
+                settings.network.idle_timeout = std::chrono::seconds(positive_number(value, 86400));
+            } else if (section == "tls" && key == "certificate") {
+                settings.network.tls_certificate = resolve_path(value, path.parent_path());
+            } else if (section == "tls" && key == "private_key") {
+                settings.network.tls_private_key = resolve_path(value, path.parent_path());
+            } else if (section == "logging" && key == "level") {
+                settings.logging.level = level(value);
+            } else if (section == "logging" && key == "file") {
+                settings.logging.file_path = value == "stderr" ? "" : resolve_path(value, path.parent_path());
+            } else if (section == "general" && key == "language") {
+                settings.logging.language = i18n::parse_language(value);
+            } else { throw std::invalid_argument("Unknown configuration key"); }
+        } catch (const std::invalid_argument&) {
+            throw std::invalid_argument("Invalid or unknown configuration key/value at line " + std::to_string(line_number));
+        }
+    }
+    return settings; // Cross-field validation follows CLI overrides.
+}
+
+CommandLine parse_arguments(int argc, char* const argv[]) {
+    CommandLine result;
+    std::string filename;
+    bool has_config = false;
+    bool operational = false;
+    for (int i = 1; i < argc; ++i) {
+        const std::string_view key(argv[i]);
+        if (key == "--help") { result.show_help = true; continue; }
+        if (key == "--version") { result.show_version = true; continue; }
+        if (key == "--check-config") { operational = true; continue; }
+        if (key == "--config") {
+            if (has_config || i + 1 == argc) {
+                throw std::invalid_argument("Provide --config only once with a file");
+            }
+            filename = argv[++i]; has_config = true; operational = true; continue;
+        }
+        if (key == "--listen" || key == "--adcs-listen" || key == "--tls-cert" || key == "--tls-key" ||
+            key == "--max-connections" || key == "--idle-timeout" || key == "--log-file" ||
+            key == "--log-level" || key == "--language") {
+            if (i + 1 == argc) { throw std::invalid_argument("Missing option value"); }
+            if (key != "--language") { operational = true; }
+            ++i; continue;
+        }
+        throw std::invalid_argument("Unknown option");
+    }
+    if ((result.show_help || result.show_version) && (operational || (result.show_help && result.show_version))) {
+        throw std::invalid_argument("Help/version cannot be combined with operational options");
+    }
+    if (has_config) { result.settings = load_file(filename); }
+    ListenerList plain, tls;
+    for (int i = 1; i < argc; ++i) {
+        const std::string_view key(argv[i]);
+        if (key == "--config") { ++i; continue; }
+        if (key == "--check-config") { result.check_only = true; continue; }
+        if (key == "--help" || key == "--version") { continue; }
+        const std::string_view value(argv[++i]);
+        if (key == "--listen") { plain.add(result.settings, result.settings.network.listeners, value); }
+        else if (key == "--adcs-listen") { tls.add(result.settings, result.settings.network.tls_listeners, value); }
+        else if (key == "--tls-cert") {
+            path_text(value); result.settings.network.tls_certificate = value;
+        } else if (key == "--tls-key") {
+            path_text(value); result.settings.network.tls_private_key = value;
+        } else if (key == "--max-connections") {
+            result.settings.network.max_connections = positive_number(value, 65535);
+        } else if (key == "--idle-timeout") {
+            result.settings.network.idle_timeout = std::chrono::seconds(positive_number(value, 86400));
+        } else if (key == "--log-level") { result.settings.logging.level = level(value); }
+        else if (key == "--log-file") {
+            path_text(value); result.settings.logging.file_path = value == "-" ? "" : std::string(value);
+        } else if (key == "--language") { result.settings.logging.language = i18n::parse_language(value); }
+    }
+    validate(result.settings);
+    return result;
+}
+} // namespace dc24h::configuration

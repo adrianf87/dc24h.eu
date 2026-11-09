@@ -3,7 +3,7 @@
 #include <string_view>
 
 namespace dc24h::i18n::us {
-inline constexpr std::array<std::string_view, 36> messages{{
+inline constexpr std::array<std::string_view, 68> messages{{
     "Starting dc24h.eu ",
     "Core running",
     "Core stopping",
@@ -39,19 +39,55 @@ inline constexpr std::array<std::string_view, 36> messages{{
     "Expected IPv4:port or [IPv6]:port",
     "Listener port must be an integer from 0 to 65535",
     "Listener address must be a numeric IPv4 or IPv6 address",
-    "Use brackets only for IPv6 listeners"
+    "Use brackets only for IPv6 listeners",
+    "Configuration OK (network ports not bound; log file not opened)\n",
+    "Configuration check failed: ",
+    "Startup failure: ",
+    "Invalid numeric configuration value",
+    "Log level must be info, error or off",
+    "Empty configuration path",
+    "Invalid control character in path",
+    "Cannot resolve configured path",
+    "none cannot be combined with listener addresses",
+    "Invalid listener list",
+    "Invalid listener address",
+    "Duplicate listener endpoint",
+    "Cannot open configuration file (regular file required, no symlink)",
+    "Configuration must be a regular file of at most 64 KiB",
+    "Configuration read failure",
+    "Configuration file exceeds 64 KiB",
+    "Configuration must be UTF-8 without control characters",
+    "Invalid listener or connection limits",
+    "ADCS requires listeners, a certificate and a private key",
+    "Invalid log level",
+    "Log file cannot be the configuration, TLS certificate or private key",
+    "Cannot resolve configuration file path",
+    "Invalid configuration line ",
+    "Invalid section at line ",
+    "Unknown configuration section at line ",
+    "Expected section and key=value at line ",
+    "Duplicate configuration key at line ",
+    "Invalid or unknown configuration key/value at line ",
+    "Provide --config only once with a file",
+    "Help/version cannot be combined with operational options",
+    "Cannot open configured log file",
+    "Configured log destination must be a regular file with one link"
 }};
-inline constexpr std::string_view help = R"HELP(Usage: dc24h [--listen IPv4:port | [IPv6]:port] ...
-             [--adcs-listen IPv4:port | [IPv6]:port] ...
+inline constexpr std::string_view help = R"HELP(Usage: dc24h [--config FILE] [--check-config]
+             [--listen IPv4:port | [IPv6]:port | none] ...
+             [--adcs-listen IPv4:port | [IPv6]:port | none] ...
              [--tls-cert CHAIN.pem --tls-key KEY.pem]
-             [--max-connections N] [--idle-timeout SECONDS] [--language us|pl]
+             [--max-connections N] [--idle-timeout SECONDS]
+             [--log-level info|error|off] [--log-file PATH|-] [--language us|pl]
        dc24h [--language us|pl] --help | --version
-Run dc24h.eu in the foreground. Stop with SIGINT (Ctrl+C) or SIGTERM.
-Defaults: --listen 127.0.0.1:1511 --max-connections 1024 --idle-timeout 120
-Repeat --listen or --adcs-listen for up to 16 total ports; port 0 is ephemeral.
-Explicit listeners replace the default; --adcs-listen alone enables TLS only.
-ADCS requires a readable PEM chain and matching PEM private key. TLS >= 1.2.
-Limits: connections 1..65535; idle timeout 1..86400 seconds. Default language: us.
-ADC syntax parsing only: no ADC session handshake, routing or login.
+Configuration order: built-in defaults, optional INI file, then CLI overrides.
+Paths inside INI are relative to its directory; CLI paths use the working directory.
+First explicit listener removes implicit plaintext; CLI lists replace their transport.
+ADCS requires a matching PEM chain and key; TLS >= 1.2. At most 16 total listeners.
+--check-config validates settings/TLS without binding ports or creating a log file.
+Defaults: 127.0.0.1:1511, 1024 connections, 120 seconds idle, info to stderr, us.
+Limits: connections 1..65535; idle timeout 1..86400 seconds.
+Run dc24h.eu in the foreground; stop with SIGINT (Ctrl+C) or SIGTERM.
+ADC syntax parsing only: no complete ADC login, routing or user sessions.
 )HELP";
 } // namespace dc24h::i18n::us

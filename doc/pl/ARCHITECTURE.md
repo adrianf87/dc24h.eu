@@ -81,10 +81,14 @@ Szczegóły kontraktu i limitów: [ADC_PROTOCOL.md](ADC_PROTOCOL.md).
 ## Plan modułów
 
 Kolejne moduły będą oddzielane od Core: automat sesji ADC,
-Users/Sessions, Chat, Search, Transfers, Security, Database, API, Configuration.
+Users/Sessions, Chat, Search, Transfers, Security, Database i API.
 WebAdmin pozostaje osobnym frontendem React/TypeScript/Vite, serwowanym przez
-Apache2. Logging obecnie zapewnia tylko współdzielony logger stderr.
+Apache2. Logging obsługuje współdzielony logger stderr lub append do pliku.
 
 Network już zwija częściowy start i zamyka gniazda. Rozszerzanie modułów wymaga
 zatrzymania przyjmowania połączeń, zakończenia sesji i zwalniania zasobów
 w odwrotnej kolejności startu. Nie ma jeszcze rejestru ani interfejsu modułów.
+
+## Konfiguracja i logowanie — alpha-0.1.5
+
+`dc24h_configuration` zawiera Settings, ograniczony parser INI, składanie CLI i walidację zależności pól. main najpierw sprawdza ustawienia, potem tworzy logger, sygnały, transport i Core. Błąd otwarcia logu daje kod 1; działający logger pozostaje best effort. Zobacz [CONFIGURATION.md](CONFIGURATION.md).
