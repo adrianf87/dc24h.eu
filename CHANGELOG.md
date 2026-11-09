@@ -1,4 +1,16 @@
-# Historia zmian
+# Changelog
+
+## alpha-0.1.4 — 2026-11-09 (ADCS transport; development)
+
+- Added `dc24h_adcs`, using OpenSSL TLS contexts and per-client nonblocking TLS sessions.
+- Introduced `--adcs-listen`, `--tls-cert`, and `--tls-key`; TCP and ADCS listeners can coexist.
+- Enforced TLS 1.2 or later, disabled TLS compression, renegotiation and session caching.
+- Verified readable PEM certificate chain and matching private key at startup; failed configuration never advertises ready listeners.
+- Routed decrypted bytes into the existing ADC stream decoder; isolated failed TLS peers and bounded handshake lifetime.
+- Added TLS counters, transport unit and integration test sources, and EN/US and Polish documentation.
+- Preserved the existing alpha-0.1.1 to alpha-0.1.3 implementation and commit history.
+
+Scope: secure inbound transport and parsing only. No ADC login, outbound messages, TLS close_notify on server shutdown, credential reload, database, API or WebAdmin. The OpenSSL transport unit was exercised locally; complete CTest and ncdc ADCS end-to-end tests require a matching development/test environment.
 
 ## alpha-0.1.3 — 2026-11-09
 

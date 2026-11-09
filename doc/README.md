@@ -1,4 +1,9 @@
-# Dokumentacja dc24h.eu
+# dc24h.eu documentation
+
+- [English (US)](us/README.md) — new development documentation, including [ADCS/TLS](us/ADCS_TLS.md) and [testing](us/TESTING.md).
+- [Polski](pl/README.md) — Polish translations for the current ADCS stage.
+
+The existing module documents below are retained for project history and reference. Most were authored for alpha-0.1.3 and should be read together with the alpha-0.1.4 additions in `us/` and `pl/`.
 
 Dokumenty rozróżniają działającą implementację alpha-0.1.3 od założeń
 przyszłych modułów. Sam opis modułu nie oznacza jego implementacji.
