@@ -1,4 +1,4 @@
-# Configuration — alpha-0.1.5
+# Configuration — alpha-0.1.6
 
 Settings are composed in this order: built-in defaults, one explicit `--config FILE`, then command-line overrides regardless of where `--config` appears. There is no automatic file search, environment substitution, include directive, reload or remote configuration.
 
@@ -21,7 +21,8 @@ UTF-8, optional BOM, LF or CRLF, maximum 65536 bytes in the actual bounded read 
 | `network` | `idle_timeout` | 120 | 1..86400 seconds |
 | `tls` | `certificate` | None | Full PEM chain |
 | `tls` | `private_key` | None | Matching unencrypted PEM key |
-| `logging` | `level` | `info` | `info`, `error`, `off` |
+| `logging` | `level` | `info` | `info`, `warning`, `error`, `off` |
+| `logging` | `connections` | `off` | `on` or `off`; per-peer INFO events |
 | `logging` | `file` | `stderr` | `stderr` or append-file path |
 
 The first explicit listener removes implicit plaintext. Thus an INI containing only `adcs_listen` enables TLS only. Repeated addresses build that transport's list; `none` must be its only entry. At least one total listener is required, at most 16 across both transports. Equivalent numeric IPv6 duplicates are rejected; repeated port 0 requests independent ephemeral sockets. Wildcards must be explicit. Wildcard/specific-address bind conflicts are detected at actual startup, not by the syntax check.
@@ -38,7 +39,8 @@ INI paths resolve against the configuration file's resolved directory; CLI paths
 | `--adcs-listen ENDPOINT/none` | Replace the TLS list on first occurrence; append subsequent entries |
 | `--tls-cert PATH`, `--tls-key PATH` | Override TLS paths |
 | `--max-connections N`, `--idle-timeout SECONDS` | Override connection limits |
-| `--log-level info/error/off` | Set verbosity threshold |
+| `--log-level info/warning/error/off` | Set verbosity threshold |
+| `--log-connections on/off` | Opt into lifecycle records at INFO |
 | `--log-file PATH/-` | Append to PATH or use stderr with `-` |
 | `--language us/pl` | Override file language |
 | `--help`, `--version` | May combine only with language selection |
@@ -49,8 +51,10 @@ Exit codes: 0 successful check/help/version/normal stop, 2 bad CLI/file/settings
 
 ## Logging and paths
 
-`info` emits INFO and ERROR; `error` emits only ERROR; `off` suppresses both, but a configured file is still opened and validated. UTC lines use `YYYY-MM-DDTHH:MM:SSZ [INFO|ERROR] message`. Threads share a mutex; append mode preserves previous records. New files request mode 0600 (umask can restrict further); existing permissions are preserved. Log paths must have a regular final component with exactly one hard link; final symlinks, FIFOs and devices are rejected. Opening uses O_APPEND/O_CLOEXEC/O_NOFOLLOW/O_NONBLOCK. Configured path comparisons reject the active INI, TLS certificate or key, including existing hard-link and parent-symlink aliases.
+`info` emits INFO, WARN and ERROR; `warning` emits WARN and ERROR; `error` emits only ERROR; `off` suppresses both, but a configured file is still opened and validated. UTC lines use `YYYY-MM-DDTHH:MM:SSZ [INFO|WARN|ERROR] message`. Threads share a mutex; append mode preserves previous records. New files request mode 0600 (umask can restrict further); existing permissions are preserved. Log paths must have a regular final component with exactly one hard link; final symlinks, FIFOs and devices are rejected. Opening uses O_APPEND/O_CLOEXEC/O_NOFOLLOW/O_NONBLOCK. Configured path comparisons reject the active INI, TLS certificate or key, including existing hard-link and parent-symlink aliases.
 
 Keep configuration/log directories trusted and service-user controlled: this is not a general defense against concurrent administrative path replacement. Regular-file writes are synchronous on the calling thread and can block on storage; runtime sink failures are best effort and never throw from logging. There is no rotation, reopen, asynchronous logging or SIGHUP reload. File growth must be managed operationally (restart/reopen support is future work). Do not store secrets or client frame contents in logs.
 
 See [ADCS/TLS](ADCS_TLS.md), [security](SECURITY.md), and the tracked [INI example](../../config/dc24h.ini.example).
+
+Logging now adds bounded single-line UTF-8 messages, opt-in typed connection events and independent warning budgets. See [LOGGING.md](LOGGING.md) for event names, privacy boundaries, suppression summaries and the synchronous I/O limit.

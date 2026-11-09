@@ -13,3 +13,7 @@ Future requirements include bounded response queues/backpressure, flood controls
 ## Configuration files and log sinks
 
 INI reads are bounded and validate the descriptor type before reading. Final symlinks/devices/FIFOs are rejected. Log paths are checked against the active INI and TLS credentials, including existing aliases; regular append files must have one hard link. Opening a FIFO cannot block startup. Runtime writes are synchronous and best effort, without rotation. Trusted directories and unprivileged execution remain necessary. See [configuration](CONFIGURATION.md) and [Linux open(2)](https://man7.org/linux/man-pages/man2/open.2.html).
+
+## Logging boundaries
+
+Typed peer events omit addresses, nicknames, identifiers and password hashes. Generic message bodies are capped at 1024 bytes, made valid UTF-8 and stripped of record/terminal controls. This prevents additional log records from embedded CR/LF/Unicode separators but is not secret redaction. Per-peer logging is opt-in and rate bounded; synchronous I/O remains a storage-latency risk. See [LOGGING.md](LOGGING.md).

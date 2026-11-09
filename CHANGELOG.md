@@ -1,5 +1,25 @@
 # Changelog
 
+## alpha-0.1.6 — 2026-11-09
+
+Logging milestone, based on main after the alpha-0.1.5 merge:
+
+- Reviewed and adapted the logging changes from chatgpt-alpha-0.1.6 while preserving main's bounded INI reads, file/path protections, TLS scheduling and US/PL support.
+- Added WARN severity and `warning` configuration level; INFO/WARN/ERROR thresholds and off are available through INI/CLI.
+- Added `connections=on|off` / `--log-connections on|off`, default off. Per-peer INFO events use a typed ConnectionEvent API with internal token, transport and fixed event only.
+- Logs accepted/closed TCP clients, TLS readiness/failure/close, I/O failures, ordinary idle timeout, handshake timeout and shutdown without peer addresses, identifiers, nicknames or ADC payloads.
+- Added startup settings summaries with listener counts and connection/idle limits, without file/key paths.
+- Limited connection records to 64 per logger per one-second steady-clock window, with saturating dropped counters and WARN summaries on next-window activity or destruction.
+- Added independent five-second warning budgets for invalid/truncated ADC input, connection limits, idle expiry, TLS failure, handshake deadline and peer I/O. Existing accept/watch resource cooldown remains intact.
+- Bounded message bodies to 1024 bytes including truncation marker, with valid UTF-8 codepoint boundaries. Invalid encoding and Unicode controls/format/line/paragraph separators are replaced with question marks; large input is clipped before translation.
+- Added logger unit and process suites for severity, privacy, injection/Unicode bounds, concurrent budgets, rollover summaries, warning-category independence, real TLS failures/timeouts and startup error files.
+- Both real ncdc tests now require lifecycle events for ADC/ADCS while starting through INI and CLI overrides.
+- Added matched doc/us/LOGGING.md and doc/pl/LOGGING.md, updated module/configuration/test documentation, operator catalogs, tracked INI example and CI title. Redundant language/root module copies remain absent.
+
+Local validation: **14/14 CTest suites passed in Debug, Release and ASan/UBSan** on Debian 13, GCC 14.2, CMake 3.31.6, OpenSSL 3.5.7 and ncdc 1.23.1. Real ncdc ADC and ADCS smoke tests passed. UTF-8 documentation/link/language parity, staged install/example and Git whitespace checks passed. Remote CI and remaining target OS versions are not claimed as verified.
+
+Limits: logs remain synchronous and best effort; a blocked sink can still delay its caller. There is no rotation, async queue, reopen or runtime reload. Rate budgets can omit connection events and are not an audit log or network/DDoS protection. Generic callers must keep secrets out of messages; sanitization is not redaction. Full ADC login, accounts, MariaDB, HTTP API and WebAdmin remain future work. Main and prior stage history are preserved.
+
 ## alpha-0.1.5 — 2026-11-09
 
 Configuration milestone, based on main after the alpha-0.1.4 merge:

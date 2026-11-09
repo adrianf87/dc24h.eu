@@ -1,4 +1,4 @@
-# dc24h.eu alpha-0.1.5 configuration (UTF-8, no secrets committed)
+# dc24h.eu alpha-0.1.6 configuration (UTF-8, no secrets committed)
 # Section names and keys are case-sensitive; duplicate singular keys are errors.
 [general]
 language = us
@@ -17,5 +17,7 @@ idle_timeout = 120
 
 [logging]
 level = info
+# Levels: info, warning, error, off. Per-client lifecycle records are opt-in.
+connections = off
 file = stderr
 # file = /var/log/dc24h/hub.log

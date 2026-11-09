@@ -2,7 +2,7 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.1.5 (Configuration).**
+**Current development version: alpha-0.1.6 (Logging).**
 
 Completed increments:
 
@@ -11,6 +11,7 @@ Completed increments:
 - **alpha-0.1.3 ADC**: bounded stream parser, commands, UTF-8/NFC validation.
 - **alpha-0.1.4 ADCS**: optional nonblocking TLS 1.2+ listeners using OpenSSL.
 - **alpha-0.1.5 Configuration**: bounded UTF-8 INI, CLI overrides, port/limit/path checks and append-file logging.
+- **alpha-0.1.6 Logging**: startup summaries, WARN, opt-in connection events, bounded single-line UTF-8 records and rate budgets.
 
 A full ADC/ADCS hub is **not yet implemented**: no complete ADC handshake, user sessions, authentication, messaging, search, or transfer coordination. MariaDB and React WebAdmin remain future milestones.
 
@@ -54,4 +55,6 @@ cp config/dc24h.ini.example config/dc24h.ini
 ./build/dc24h --config config/dc24h.ini --max-connections 512
 ```
 
-Defaults, then explicit INI, then CLI. No file is loaded automatically. INI paths use its directory; CLI paths use the working directory. Use `--log-level info|error|off` and `--log-file PATH` (or `-` for stderr). See [configuration](doc/us/CONFIGURATION.md) for complete precedence, format, limits and logging constraints.
+Defaults, then explicit INI, then CLI. No file is loaded automatically. INI paths use its directory; CLI paths use the working directory. Use `--log-level info|warning|error|off` and `--log-file PATH` (or `-` for stderr). See [configuration](doc/us/CONFIGURATION.md) for complete precedence, format, limits and logging constraints.
+
+Connection records are off by default; enable with `--log-connections on` or `[logging] connections=on` at INFO. Records use internal IDs and fixed events without client addresses or ADC payloads. See [logging](doc/us/LOGGING.md) for limits and suppression behavior.

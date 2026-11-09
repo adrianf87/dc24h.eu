@@ -15,3 +15,7 @@ SIGINT/SIGTERM request idempotent graceful process cleanup and exit 0. SIGPIPE i
 ## Configuration source
 
 Since alpha-0.1.5, listener/limit settings can come from INI and CLI. A CLI list replaces its transport while preserving the other explicit list. See [configuration](CONFIGURATION.md). Transport defaults and shutdown behavior are unchanged.
+
+## Logging integration
+
+With opt-in INFO logging, accepted/TLS-ready/close events include only an internal token and transport. Ordinary idle expiry and unfinished TLS handshake expiry have distinct events/categories. Invalid frames, limits, TLS failure and peer I/O warnings use independent five-second budgets; no frame contents or peer addresses enter logs. Existing counters remain unchanged. See [LOGGING.md](LOGGING.md).

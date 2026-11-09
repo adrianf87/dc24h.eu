@@ -5,7 +5,7 @@ Targets: Debian 12/13 and Ubuntu 22.04/24.04/26.04 LTS. Only the locally tested 
 ```sh
 sudo apt-get update
 sudo apt-get install build-essential cmake git python3 libutf8proc-dev libssl-dev openssl ncdc
-git clone --branch alpha-0.1.5 https://github.com/adrianf87/dc24h.eu.git
+git clone --branch alpha-0.1.6 https://github.com/adrianf87/dc24h.eu.git
 cd dc24h.eu
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel 2

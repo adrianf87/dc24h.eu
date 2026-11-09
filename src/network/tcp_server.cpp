@@ -14,6 +14,7 @@
 #include <cerrno>
 #include <charconv>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <system_error>
 #include <unordered_map>
@@ -22,6 +23,7 @@
 namespace dc24h::network {
 namespace {
 using Clock = std::chrono::steady_clock;
+using Event = logging::ConnectionEvent;
 
 class Fd final {
 public:
@@ -235,6 +237,17 @@ void TcpServer::run() {
     bool accepting = true;
     Clock::time_point resume_accepting{};
 
+    enum class Warning { invalid_frame, connection_limit, idle, tls_failure, handshake_timeout, peer_io, count };
+    std::array<std::optional<Clock::time_point>, static_cast<std::size_t>(Warning::count)> last_warnings{};
+    auto warn_once = [&](Warning category, std::string_view message) {
+        const auto now = Clock::now();
+        auto& last = last_warnings[static_cast<std::size_t>(category)];
+        if (!last || now - *last >= std::chrono::seconds(5)) {
+            last = now;
+            logger_.warning(message);
+        }
+    };
+
     auto pause_accepting = [&] {
         for (const auto& listener : listeners) {
             if (::epoll_ctl(epoll.get(), EPOLL_CTL_DEL, listener.get(), nullptr) == -1) {
@@ -252,15 +265,20 @@ void TcpServer::run() {
             adc_keepalives_.fetch_add(1);
         } else {
             adc_invalid_.fetch_add(1);
+            warn_once(Warning::invalid_frame, "ADC invalid frame rejected; payload omitted");
         }
         // Parsing milestone only: no dispatch, session state or responses yet.
         // Never log untrusted parameters, private identifiers or password hashes.
     };
-    auto disconnect = [&](auto iterator) {
+    auto disconnect = [&](auto iterator, Event reason) {
+        logger_.connection(reason, iterator->first, static_cast<bool>(iterator->second.tls));
         if (iterator->second.tls && !iterator->second.tls_ready) {
             adcs_incomplete_.fetch_add(1);
         }
-        if (iterator->second.decoder.finish()) { adc_invalid_.fetch_add(1); }
+        if (iterator->second.decoder.finish()) {
+            adc_invalid_.fetch_add(1);
+            warn_once(Warning::invalid_frame, "ADC invalid frame rejected; payload omitted");
+        }
         // DEL before close; event tokens are never reused even when the OS reuses an fd.
         ::epoll_ctl(epoll.get(), EPOLL_CTL_DEL, iterator->second.fd.get(), nullptr);
         connections.erase(iterator);
@@ -328,6 +346,7 @@ void TcpServer::run() {
                     }
                     if (connections.size() >= options_.max_connections) {
                         rejected_.fetch_add(1);
+                        warn_once(Warning::connection_limit, "Network connection limit reached; excess peer rejected");
                         continue; // RAII closes this excess client, without per-client log flooding.
                     }
                     const auto client_token = next_token++;
@@ -338,6 +357,7 @@ void TcpServer::run() {
                             tls = std::make_unique<adcs::Connection>(*tls_context, client.get());
                         } catch (const std::exception&) {
                             rejected_.fetch_add(1);
+                            warn_once(Warning::tls_failure, "ADCS session initialization failed; peer rejected");
                             continue; // A failed peer session must not stop the listener.
                         }
                     }
@@ -354,12 +374,14 @@ void TcpServer::run() {
                                                                  std::move(tls), !secure, false});
                     active_.fetch_add(1);
                     accepted_.fetch_add(1);
+                    logger_.connection(Event::accepted, client_token, secure);
                 }
                 continue;
             }
             const auto found = connections.find(token);
             if (found == connections.end()) { continue; } // stale event from a closed connection
             bool closed = false;
+            auto close_reason = Event::peer_closed;
             auto change_interest = [&](bool write) {
                 if (found->second.want_write != write) {
                     update_client_interest(epoll.get(), found->second.fd.get(), token, write);
@@ -372,6 +394,7 @@ void TcpServer::run() {
                     found->second.tls_ready = true;
                     found->second.last_activity = Clock::now();
                     adcs_handshakes_.fetch_add(1);
+                    logger_.connection(Event::tls_ready, token, true);
                     change_interest(false);
                 } else if (result.status == adcs::IoStatus::want_write) {
                     change_interest(true);
@@ -379,6 +402,8 @@ void TcpServer::run() {
                     change_interest(false);
                 } else {
                     closed = true;
+                    close_reason = Event::tls_handshake_failed;
+                    warn_once(Warning::tls_failure, "ADCS handshake failed; connection closed");
                 }
             }
             if (!closed && found->second.tls_ready) {
@@ -395,6 +420,11 @@ void TcpServer::run() {
                             break;
                         } else {
                             closed = true;
+                            close_reason = result.status == adcs::IoStatus::closed
+                                ? Event::tls_closed : Event::tls_read_error;
+                            if (result.status != adcs::IoStatus::closed) {
+                                warn_once(Warning::peer_io, "Network peer I/O failed; connection closed");
+                            }
                             break;
                         }
                     } else {
@@ -408,6 +438,8 @@ void TcpServer::run() {
                             break;
                         } else if (errno != EINTR) {
                             closed = true;
+                            close_reason = Event::tcp_read_error;
+                            warn_once(Warning::peer_io, "Network peer I/O failed; connection closed");
                             break;
                         } else {
                             continue;
@@ -419,7 +451,10 @@ void TcpServer::run() {
                     found->second.decoder.feed(std::string_view(buffer.data(), size), record_frame);
                 }
             }
-            if (closed || (event.events & (EPOLLERR | EPOLLHUP)) != 0) { disconnect(found); }
+            if (closed || (event.events & (EPOLLERR | EPOLLHUP)) != 0) {
+                if (!closed) { warn_once(Warning::peer_io, "Network peer I/O failed; connection closed"); }
+                disconnect(found, closed ? close_reason : Event::socket_error);
+            }
         }
         const auto now = Clock::now();
         for (auto it = connections.begin(); it != connections.end();) {
@@ -428,13 +463,16 @@ void TcpServer::run() {
                 : options_.idle_timeout;
             if (now - it->second.last_activity >= timeout) {
                 auto expired = it++;
-                disconnect(expired);
+                const bool handshake = expired->second.tls && !expired->second.tls_ready;
+                warn_once(handshake ? Warning::handshake_timeout : Warning::idle,
+                          handshake ? "ADCS handshake timed out; connection closed" : "Network idle connection closed");
+                disconnect(expired, handshake ? Event::handshake_timeout : Event::idle_timeout);
             } else { ++it; }
         }
     }
     // Close listeners first, then active clients, before reporting stopped.
     listeners.clear();
-    while (!connections.empty()) { disconnect(connections.begin()); }
+    while (!connections.empty()) { disconnect(connections.begin(), Event::shutdown); }
     active_.store(0);
     logger_.info("Network stopped; all TCP sockets closed; accepted=" + std::to_string(accepted_.load()) +
                  " rejected=" + std::to_string(rejected_.load()) +

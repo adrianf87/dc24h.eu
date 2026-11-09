@@ -39,9 +39,16 @@ unsigned int positive_number(std::string_view value, unsigned int maximum) {
 
 logging::Level level(std::string_view value) {
     if (value == "info") { return logging::Level::info; }
+    if (value == "warning") { return logging::Level::warning; }
     if (value == "error") { return logging::Level::error; }
     if (value == "off") { return logging::Level::off; }
-    throw std::invalid_argument("Log level must be info, error or off");
+    throw std::invalid_argument("Log level must be info, warning, error or off");
+}
+
+bool connection_logging(std::string_view value) {
+    if (value == "on") { return true; }
+    if (value == "off") { return false; }
+    throw std::invalid_argument("Connection logging must be on or off");
 }
 
 void path_text(std::string_view value) {
@@ -164,7 +171,7 @@ void validate(const Settings& settings) {
     if (tls) { path_text(net.tls_certificate); path_text(net.tls_private_key); }
     if (!settings.source_file.empty()) { path_text(settings.source_file); }
     const auto& log = settings.logging;
-    if (log.level != logging::Level::info && log.level != logging::Level::error && log.level != logging::Level::off) {
+    if (log.level != logging::Level::info && log.level != logging::Level::warning && log.level != logging::Level::error && log.level != logging::Level::off) {
         throw std::invalid_argument("Invalid log level");
     }
     if (log.language != i18n::Language::us && log.language != i18n::Language::pl) {
@@ -242,6 +249,8 @@ Settings load_file(const std::string& filename) {
                 settings.logging.level = level(value);
             } else if (section == "logging" && key == "file") {
                 settings.logging.file_path = value == "stderr" ? "" : resolve_path(value, path.parent_path());
+            } else if (section == "logging" && key == "connections") {
+                settings.logging.connections = connection_logging(value);
             } else if (section == "general" && key == "language") {
                 settings.logging.language = i18n::parse_language(value);
             } else { throw std::invalid_argument("Unknown configuration key"); }
@@ -270,7 +279,7 @@ CommandLine parse_arguments(int argc, char* const argv[]) {
         }
         if (key == "--listen" || key == "--adcs-listen" || key == "--tls-cert" || key == "--tls-key" ||
             key == "--max-connections" || key == "--idle-timeout" || key == "--log-file" ||
-            key == "--log-level" || key == "--language") {
+            key == "--log-level" || key == "--log-connections" || key == "--language") {
             if (i + 1 == argc) { throw std::invalid_argument("Missing option value"); }
             if (key != "--language") { operational = true; }
             ++i; continue;
@@ -299,6 +308,7 @@ CommandLine parse_arguments(int argc, char* const argv[]) {
         } else if (key == "--idle-timeout") {
             result.settings.network.idle_timeout = std::chrono::seconds(positive_number(value, 86400));
         } else if (key == "--log-level") { result.settings.logging.level = level(value); }
+        else if (key == "--log-connections") { result.settings.logging.connections = connection_logging(value); }
         else if (key == "--log-file") {
             path_text(value); result.settings.logging.file_path = value == "-" ? "" : std::string(value);
         } else if (key == "--language") { result.settings.logging.language = i18n::parse_language(value); }

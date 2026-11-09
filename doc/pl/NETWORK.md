@@ -76,3 +76,7 @@ Interfejsy systemowe: [epoll(7)](https://man7.org/linux/man-pages/man7/epoll.7.h
 ## Źródło ustawień
 
 Od alpha-0.1.5 adresy i limity pochodzą z INI oraz CLI. Lista CLI zastępuje dany transport i zachowuje drugi jawny transport. Szczegóły: [konfiguracja](CONFIGURATION.md). Domyślne wartości i semantyka stopu pozostają zachowane.
+
+## Integracja logów
+
+Opcjonalne logi INFO przyjęcia/gotowości TLS/zamknięcia mają wyłącznie wewnętrzny token i transport. Zwykła bezczynność i termin nieukończonego TLS mają osobne zdarzenia/kategorie. Błędne ramki, limity, TLS i I/O mają niezależne budżety ostrzeżeń na pięć sekund, bez treści ramek i adresów klientów. Liczniki pozostają zachowane. Zobacz [LOGGING.md](LOGGING.md).

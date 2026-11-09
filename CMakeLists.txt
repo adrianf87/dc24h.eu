@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.1.5 LANGUAGES CXX)
+project(dc24h VERSION 0.1.6 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -27,6 +27,7 @@ add_library(UTF8Proc::UTF8Proc UNKNOWN IMPORTED)
 set_target_properties(UTF8Proc::UTF8Proc PROPERTIES
     IMPORTED_LOCATION "${UTF8PROC_LIBRARY}"
     INTERFACE_INCLUDE_DIRECTORIES "${UTF8PROC_INCLUDE_DIR}")
+target_link_libraries(dc24h_logging PRIVATE UTF8Proc::UTF8Proc)
 add_library(dc24h_adc src/adc/parser.cpp)
 target_compile_features(dc24h_adc PUBLIC cxx_std_20)
 set_target_properties(dc24h_adc PROPERTIES CXX_EXTENSIONS OFF)
@@ -114,6 +115,14 @@ if(BUILD_TESTING)
     add_test(NAME configuration.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/configuration_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(configuration.unit configuration.process PROPERTIES TIMEOUT 45)
+    add_executable(logging_tests tests/logging_tests.cpp)
+    target_link_libraries(logging_tests PRIVATE dc24h_logging UTF8Proc::UTF8Proc)
+    set_target_properties(logging_tests PROPERTIES CXX_EXTENSIONS OFF)
+    target_compile_options(logging_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    add_test(NAME logging.unit COMMAND logging_tests)
+    add_test(NAME logging.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/logging_process_tests.py" "$<TARGET_FILE:dc24h>")
+    set_tests_properties(logging.unit logging.process PROPERTIES TIMEOUT 45)
     find_program(NCDC_EXECUTABLE ncdc)
     if(NCDC_EXECUTABLE)
         add_test(NAME adc.ncdc COMMAND "${Python3_EXECUTABLE}"

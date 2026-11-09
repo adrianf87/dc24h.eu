@@ -3,7 +3,7 @@
 #include <string_view>
 
 namespace dc24h::i18n::us {
-inline constexpr std::array<std::string_view, 68> messages{{
+inline constexpr std::array<std::string_view, 79> messages{{
     "Starting dc24h.eu ",
     "Core running",
     "Core stopping",
@@ -44,7 +44,7 @@ inline constexpr std::array<std::string_view, 68> messages{{
     "Configuration check failed: ",
     "Startup failure: ",
     "Invalid numeric configuration value",
-    "Log level must be info, error or off",
+    "Log level must be info, warning, error or off",
     "Empty configuration path",
     "Invalid control character in path",
     "Cannot resolve configured path",
@@ -71,14 +71,26 @@ inline constexpr std::array<std::string_view, 68> messages{{
     "Provide --config only once with a file",
     "Help/version cannot be combined with operational options",
     "Cannot open configured log file",
-    "Configured log destination must be a regular file with one link"
+    "Configured log destination must be a regular file with one link",
+    "Startup settings: adc_listeners=",
+    "Connection id=",
+    "Connection log events suppressed=",
+    "ADC invalid frame rejected; payload omitted",
+    "Network connection limit reached; excess peer rejected",
+    "ADCS session initialization failed; peer rejected",
+    "ADCS handshake failed; connection closed",
+    "Network peer I/O failed; connection closed",
+    "ADCS handshake timed out; connection closed",
+    "Network idle connection closed",
+    "Connection logging must be on or off"
 }};
 inline constexpr std::string_view help = R"HELP(Usage: dc24h [--config FILE] [--check-config]
              [--listen IPv4:port | [IPv6]:port | none] ...
              [--adcs-listen IPv4:port | [IPv6]:port | none] ...
              [--tls-cert CHAIN.pem --tls-key KEY.pem]
              [--max-connections N] [--idle-timeout SECONDS]
-             [--log-level info|error|off] [--log-file PATH|-] [--language us|pl]
+             [--log-level info|warning|error|off] [--log-file PATH|-] [--language us|pl]
+             [--log-connections on|off]
        dc24h [--language us|pl] --help | --version
 Configuration order: built-in defaults, optional INI file, then CLI overrides.
 Paths inside INI are relative to its directory; CLI paths use the working directory.
