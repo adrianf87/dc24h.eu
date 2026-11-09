@@ -9,10 +9,9 @@ import tempfile
 import time
 import unittest
 
-from network_process_tests import Hub
+from network_process_tests import BINARY, Hub
 from adc_process_tests import counters
 
-BINARY = sys.argv.pop(1)
 
 class AdcsProcessTests(unittest.TestCase):
     def setUp(self):
