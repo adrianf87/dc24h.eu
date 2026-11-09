@@ -112,3 +112,7 @@ Niezależny target C++20 `dc24h_security` implementuje walidację i limity IP/ra
 ## WebAdmin — alpha-0.1.10
 
 Frontend jest niezależny od budowania/działania C++. Kod przeglądarki sprawdza schemat API i oferuje widoki monitorowania; zapisuje wyłącznie język. Opcjonalny adapter Vite trzyma sekret po stronie serwera, wymaga loopback/same-origin i przekazuje dwie trasy odczytu przez gniazdo tego samego UID. Build produkcyjny jest statyczny, bez adaptera/tokena. Apache może serwować zasoby; projekt produkcyjnej bramy/sesji/ról pozostaje osobny. CMake opcjonalnie instaluje gotowe zasoby przez `DC24H_INSTALL_WEBADMIN=ON`, domyślnie OFF. Zobacz [WEBADMIN.md](WEBADMIN.md).
+
+## Apache2 HTTPS — alpha-0.1.11
+
+Osobny instalowany przykład serwuje gotowe zasoby WebAdmin przez TLS 1.2/1.3 i przekierowuje HTTP na stałą nazwę kanoniczną. Zachowuje lokalny dostęp i blokadę prywatnych tras, bez proxy Unix API i zmian transportów C++. Testy ładują tę politykę pod niezależnym ServerRoot; certyfikaty i aktywacja usługi hosta należą do operatora. Zobacz [APACHE2_HTTPS.md](APACHE2_HTTPS.md).

@@ -12,6 +12,7 @@
 | alpha-0.1.8 Database | Opcjonalne połączenie lokalne MariaDB, prepared statements i jawny rejestr migracji |
 | alpha-0.1.9 API | Lokalne uwierzytelnione HTTP/JSON: stan i health, tylko odczyt |
 | alpha-0.1.10 WebAdmin | Układ React/TypeScript/Vite tylko do odczytu, EN/PL, lokalny adapter i statyczny przykład Apache |
+| alpha-0.1.11 Apache2 | Przykład statycznego HTTPS, przekierowanie, TLS/nagłówki i testy tymczasowego Apache |
 
 Kolejne wersje wymagają osobnego zakresu i kryteriów testowych:
 
@@ -21,7 +22,7 @@ Kolejne wersje wymagają osobnego zakresu i kryteriów testowych:
 4. Chat publiczny/prywatny, wyszukiwanie i koordynacja transferów.
 5. Operacje API zmieniające stan/role/audyt, uwierzytelniona brama Apache2 oraz produkcyjne sesje/role WWW.
 
-Wersje późniejsze niż alpha-0.1.10 pozostają planowane. Inne gałęzie nie potwierdzają gotowości wydania.
+Wersje późniejsze niż alpha-0.1.11 pozostają planowane. Inne gałęzie nie potwierdzają gotowości wydania.
 
 ## alpha-0.1.5
 

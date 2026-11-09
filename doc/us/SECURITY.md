@@ -56,3 +56,7 @@ Same-effective-UID peer credentials, a private 0700 directory/0600 socket and a 
 ## WebAdmin foundation — alpha-0.1.10
 
 Never put the API token in browser storage, JavaScript, URLs, VITE-prefixed variables or HTML. The optional development adapter validates private owner-controlled credential files outside the served root, blocks untrusted origin/host/site/method/path/body combinations, injects its own credential and normalizes bounded responses. It is loopback development tooling, not production browser authentication. The Apache2 sample serves only static local assets and denies API routes. No new server mutation surface, remote API exposure, web sessions or roles are introduced. See [WEBADMIN.md](WEBADMIN.md).
+
+## Apache2 HTTPS example — alpha-0.1.11
+
+TLS and browser authentication are separate controls. The template selects TLS 1.2/1.3 with AEAD ciphers, fixes the HTTP redirect hostname, retains Require local, denies private/hidden/secret paths and disables directory indexes/symlinks. HTTPS-only HSTS is short and host-scoped; CSP/no-sniff/referrer/frame headers apply to errors too. Certificate trust/name/key matching must be verified before use; syntax checks alone do not prove matching keys. The template never exposes the service token or activates a production gateway. See [APACHE2_HTTPS.md](APACHE2_HTTPS.md).

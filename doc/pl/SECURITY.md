@@ -56,3 +56,7 @@ Każde żądanie tylko do odczytu wymaga tego samego efektywnego UID, prywatnego
 ## Podstawa WebAdmin — alpha-0.1.10
 
 Nie umieszczaj tokena w pamięci przeglądarki, JavaScript, URL, zmiennych VITE ani HTML. Adapter deweloperski sprawdza prywatny plik właściciela poza serwowanym katalogiem, blokuje obcy origin/host/site/metody/ścieżki/body, dodaje własny sekret i normalizuje ograniczone odpowiedzi. To lokalne narzędzie, nie produkcyjne logowanie WWW. Przykład Apache2 serwuje statyczne zasoby lokalnie i blokuje API. Etap nie dodaje operacji zmieniających stan, zdalnego API, sesji WWW ani ról. Zobacz [WEBADMIN.md](WEBADMIN.md).
+
+## Przykład HTTPS Apache2 — alpha-0.1.11
+
+TLS i logowanie WWW są osobnymi mechanizmami. Szablon wybiera TLS 1.2/1.3 z AEAD, ustala host przekierowania, zachowuje Require local, blokuje prywatne/ukryte/sekretne ścieżki i wyłącza indeksy/symlinki. HSTS jest krótki, tylko dla hosta i HTTPS; CSP/no-sniff/referrer/frame obejmują błędy. Przed użyciem zweryfikuj zaufanie/nazwę/zgodność klucza; sama składnia nie dowodzi zgodności. Szablon nie ujawnia tokena i nie aktywuje bramy produkcyjnej. Zobacz [APACHE2_HTTPS.md](APACHE2_HTTPS.md).

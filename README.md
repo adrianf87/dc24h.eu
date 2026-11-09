@@ -2,7 +2,7 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.1.10 (WebAdmin).**
+**Current development version: alpha-0.1.11 (Apache2 HTTPS).**
 
 Completed increments:
 
@@ -18,6 +18,8 @@ Completed increments:
 - **alpha-0.1.9 API**: optional local HTTP/JSON status and health routes, private Unix socket, same-UID access and Bearer authentication.
 
 - **alpha-0.1.10 WebAdmin**: responsive React/TypeScript/Vite read-only panel, EN/PL, safe local development adapter, tests and an Apache2 static-preview example.
+
+- **alpha-0.1.11 Apache2**: customizable static WebAdmin HTTPS example, HTTP→HTTPS redirect, TLS 1.2/1.3, certificate paths and isolated HTTPS tests.
 
 A full ADC/ADCS hub is **not yet implemented**: no complete ADC handshake, user sessions, hub-user authentication, messaging, search, or transfer coordination. Account persistence and a production authenticated web gateway remain future milestones.
 
@@ -81,3 +83,5 @@ npm run dev
 ```
 
 Requires Node.js `^20.19.0 || >=22.12.0`. Open the local URL printed by Vite. Without API configuration the panel shows unavailable values. For the optional real C++ connection, use the same service UID and server-only socket/token-file path variables; never paste a service token into the browser. See [WebAdmin US](doc/us/WEBADMIN.md) / [WebAdmin PL](doc/pl/WEBADMIN.md) for setup, Apache2 and optional CMake asset installation. Production browser authentication, roles, mutations and an authenticated Apache gateway remain planned.
+
+An Apache2 HTTPS template is included at [config/apache2-webadmin-https.conf.example](config/apache2-webadmin-https.conf.example) and installed with the configuration examples. Customize domain/certificate/asset paths before enabling it; default access is local and API routes remain denied. Setup: [HTTPS US](doc/us/APACHE2_HTTPS.md) / [HTTPS PL](doc/pl/APACHE2_HTTPS.md). No host site or certificate is activated automatically.

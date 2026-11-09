@@ -1,5 +1,20 @@
 # Changelog
 
+## alpha-0.1.11 — 2026-11-09
+
+Apache2 HTTPS configuration milestone, based on main after alpha-0.1.10:
+
+- Added a standalone customizable static-WebAdmin HTTPS template with fixed-host HTTP→HTTPS 301 redirection, separate port 80/443 virtual hosts, TLS 1.2/1.3 AEAD suites, external certificate/key paths and SSL compression/session-ticket settings. Listen directives stay in distro ports.conf.
+- Retained local-only static access, denied private API and hidden/credential/config/log/SQL paths, disabled indexes/symlinks, and added HTTPS-only short host-scoped HSTS plus CSP/no-sniff/referrer/frame headers on success and error responses.
+- Always installs the HTTPS example alongside the INI, independent of the optional prebuilt WebAdmin asset install. No active site, production credential, CA client/renewal job, firewall/DNS or host service is configured or reloaded.
+- Added an optional `apache2.https` CTest suite with seven isolated real-Apache cases. Only paths/ports change from the shipped template; TLS/access/header policy is tested unchanged under a disposable ServerRoot/certificate/cache/PID/log setup on loopback ephemeral ports, with dropped-privilege workers.
+- Tests verify trusted TLS 1.2/1.3/static content, legacy rejection, canonical redirect/path/query/Host behavior, HTTPS-only HSTS/security headers, private/hidden/secret/index/symlink denial, trust/name errors, missing credential checks and real startup failure for a mismatched certificate/key. Apache -t alone is explicitly not claimed to verify correspondence.
+- Added matched US/PL Apache HTTPS documentation, updated build/install/architecture/configuration/security/roadmap/version guides and CI Apache dependencies. Updated runtime/WebAdmin release metadata and version-sensitive fixtures to alpha-0.1.11 without changing the private API contract or frontend behavior.
+
+Local validation: **21/21 CTest suites passed in Debug, Release and ASan/UBSan**, including Apache HTTPS, real ncdc ADC/ADCS and isolated MariaDB. Frontend production build/typecheck, **3 Node tests, 3 browser tests and real C++/Vite/Chromium integration** passed. Staged installation with/without WebAdmin verified exact example bytes and accepted the installed INI. UTF-8/local links/language parity and Git whitespace checks passed. Environment: Debian 13, Apache 2.4.69, OpenSSL 3.5.7, Node 20.19.2 and Chromium 156. Remote CI and remaining target OS versions are not claimed as verified.
+
+Limits: configuration example only, local access by default, static frontend without a production authenticated gateway/web sessions/roles or mutations. Certificate issuance/renewal, DNS, deployment and actual host-service activation remain operator responsibilities. ADCS and the private Unix API remain independent. This is not a production security audit. Main and historical branches are preserved.
+
 ## alpha-0.1.10 — 2026-11-09
 
 WebAdmin foundation, based on main after the alpha-0.1.9 merge:
