@@ -3,7 +3,7 @@
 Podstawę alpha-0.2 i priorytety odbioru opisuje [audyt alpha-0.1](AUDIT_ALPHA_0.1.md). Numerowane gałęzie nadal powstają z aktualnego main. `alpha-0.2` oznacza sprawdzony commit audytu. Pełna weryfikacja używa `DC24H_REQUIRE_INTEGRATION_TESTS=ON`; zachować spójność project.metadata, npm lock, wersji programu/panelu i obu języków dokumentacji.
 
 Pracuj na gałęziach wydań, zachowując historię `main`. Aktualny etap:
-`alpha-0.2.3`. Każdy istotny etap otrzymuje opisowy commit. Nie dodawaj
+`alpha-0.2.4`. Każdy istotny etap otrzymuje opisowy commit. Nie dodawaj
 artefaktów kompilacji, sekretów ani zależności vendored bez uzasadnienia.
 
 | Katalog | Rola |
@@ -59,3 +59,7 @@ alpha-0.2.2 powstaje z main po jawnym scaleniu alpha-0.2/alpha-0.2.1. Oddzielać
 ## ADC State — alpha-0.2.3
 
 Gałąź powstaje z main w `4c98e10` po scaleniu parsera. Zachować [kontrakt stanów](ADC_STATE.md), jedną niekopiowalną instancję na przyszłe połączenie, jawne zatwierdzanie semantyczne, brak zmian po odrzuceniu i terminalne rozłączenie. Testy muszą działać w Release; każda nowa komenda wymaga aktualizacji macierzy stanów, kierunków i SID. Nie wnioskować o uwierzytelnieniu z ramki ani nie awansować stanu po samym dodaniu odpowiedzi do kolejki. Integracja transportu/wyjścia, walidacja i unikalne SID wymagają osobnego odbioru.
+
+## SUP — alpha-0.2.4
+
+Gałąź z main w `1dd0b9f` po scaleniu ADC State. Oddzielać semantykę SUP, kolejność protokołu i obliczanie tożsamości/hash. Przy przyszłej integracji transportu preferować ProtocolConnection względem ręcznego zatwierdzania protokołu w automacie niskiego poziomu. Nowy hash wymaga jawnego rejestru/metadanych i testów wyboru/kolejności odpowiedzi; nie rozpoznawać hash po nieznanej nazwie. Zachować transakcyjność, stały hash sesji, ograniczony łączny zbiór funkcji i deterministyczną odpowiedź lokalną. Sukces fixture ncdc nie oznacza logowania w hubie. Zobacz [ADC_SUP.md](ADC_SUP.md).

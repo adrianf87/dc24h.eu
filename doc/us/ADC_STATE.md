@@ -1,5 +1,7 @@
 # ADC State — alpha-0.2.3
 
+Since alpha-0.2.4, [ADC SUP](ADC_SUP.md) supplies `ProtocolConnection`, composing this low-level machine with feature/hash negotiation and automatic protocol approval only after valid SUP. Identity/password decisions remain external. This document describes the original standalone state API; Network attachment still requires ordered output.
+
 ## Scope and ownership
 
 `dc24h/adc/state.hpp` adds an independent hub-side `ConnectionStateMachine` to `dc24h_adc`. It consumes parsed messages and explicit application decisions. It does not send bytes, allocate global SIDs, negotiate hashes, validate identities or authenticate passwords. Network still invokes only the parser: no live login or new wire behavior is delivered by this stage. Existing real ncdc ADC/ADCS tests remain initial-HSUP transport checks.

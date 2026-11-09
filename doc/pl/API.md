@@ -161,3 +161,7 @@ Od alpha-0.2.2 `Message::positional_count` określa układ argumentów BASE (nie
 ## API stanów ADC — alpha-0.2.3
 
 `dc24h/adc/state.hpp` udostępnia `ConnectionStateMachine`, `ConnectionState`, `Direction`, `IdentityMode`, `StateError` i `StateResult`. Metody `observe`, `keepalive`, `approve_protocol`, `approve_identity`, `approve_password` i terminalne `disconnect` opisuje [ADC_STATE.md](ADC_STATE.md). Wyniki zawierają stałe kategorie błędów, bez danych klienta. To API modułu C++; brak nowych tras/liczników HTTP i egzekwowania sesji w transporcie.
+
+## API negocjacji SUP — alpha-0.2.4
+
+`dc24h/adc/sup.hpp` udostępnia SupportPolicy, SupportNegotiation, SessionHash, SupportError i ProtocolConnection. Adapter zwraca opcjonalny `variant<StateError, SupportError>`; odrzucenie zachowuje stan/funkcje. Udostępnia wyłącznie stałe metadane negocjacji i nie daje ręcznego zatwierdzenia protokołu. Odpowiedzi Message/string posiadają własne dane. Brak zmian tras HTTP i schematu/liczników. [ADC_SUP.md](ADC_SUP.md) opisuje czasy życia, limity, błędy i przyszłą integrację transportu.

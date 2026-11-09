@@ -64,3 +64,7 @@ TLS i logowanie WWW są osobnymi mechanizmami. Szablon wybiera TLS 1.2/1.3 z AEA
 ## Granica ADC State — alpha-0.2.3
 
 Niezależny moduł stanów odrzuca przedwczesne komendy, powtórzone kroki logowania, przychodzące typy zarezerwowane dla huba i podszyty źródłowy SID. Jawne zatwierdzenie wymaga oczekującego żądania; samo parsowanie INF/PAS nie przyznaje NORMAL. Moduł nie zachowuje PID, PAS, nicku ani parametrów i nie loguje. To kontrola kolejności, nie uwierzytelnianie ani wdrożona granica bezpieczeństwa: odbiorczy Network go nie wywołuje. Przyszły dispatcher musi sprawdzić zgodność funkcji/hash, PID/CID, wymagane pola, IP, unikalność nicku/CID i hasło przed zatwierdzeniem, usunąć PD przed przekazaniem, zastosować limity/terminy i zamknąć po odrzuceniu. Zobacz [ADC_STATE.md](ADC_STATE.md).
+
+## Polityka SUP — alpha-0.2.4
+
+Połączony moduł SUP/stanów sprawdza początkowy BASE/wspólny TIGR, rozdziela funkcje lokalne i klienta, ogranicza tokeny/pamięć i wycofuje błędne aktualizacje. Wybranego hash nie można usunąć ani zmienić. Nieznane funkcje klienta są biernymi metadanymi i nie są odbijane do odpowiedzi huba. Dodatkowe funkcje lokalne wymagają implementacji wywołującego; domyślnie reklamowane są tylko BASE/TIGR. Wybór nie oznacza obliczania Tiger, walidacji PID/CID, hasła ani konfiguracji TLS. Transport produkcyjny jeszcze nie wywołuje modułu. Błędy/logi nie zawierają tekstu klienta ani sekretów. Zobacz [ADC_SUP.md](ADC_SUP.md).

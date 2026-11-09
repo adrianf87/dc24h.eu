@@ -92,3 +92,7 @@ Opcjonalne lokalne HTTP API ma osobne prywatne gniazdo Unix i wątek, niezależn
 ## Granica integracji stanów — alpha-0.2.3
 
 Nowa [biblioteka ADC State](ADC_STATE.md) jest niezależna od transportu i nie jest jeszcze dołączona do obiektów Client. Zachowanie ADC/ADCS i liczniki składni pozostają dotychczasowe. Podłączenie wymaga ograniczonego uporządkowanego wyjścia, zdarzeń ukończenia wysyłki, walidacji protokołu/tożsamości i alokatora unikalnych SID; automat wyłącznie odbiorczy odrzucałby poprawnych klientów bez możliwości odpowiedzi. Terminy ramek/TLS pozostają w Network; przyszły termin sesji musi ograniczać całe logowanie niezależnie od keepalive.
+
+## Adapter SUP — alpha-0.2.4
+
+[Adapter SUP/stanów](ADC_SUP.md) realizuje wybór funkcji/hash jako samodzielny moduł C++. Network nadal używa samego parsera i nie wysyła odpowiedzi SUP. Nowy fixture SUP łączy prawdziwy ncdc z tymczasowymi gniazdami/TLS Pythona i sterownikiem modułu C++; dotychczasowe testy ADC/ADCS nadal obejmują rzeczywisty reaktor C++. Testy potwierdzają różne granice integracji. Podłączyć ProtocolConnection dopiero z ograniczonym wyjściem, zdarzeniami ukończenia wysyłek, unikalnymi SID, obliczaniem/walidacją tożsamości/hash i terminami logowania.

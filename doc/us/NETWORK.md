@@ -31,3 +31,7 @@ The optional local HTTP API uses a separate private Unix-domain stream socket an
 ## State integration boundary — alpha-0.2.3
 
 The new [ADC State library](ADC_STATE.md) is transport-independent and not yet attached to Client objects. ADC/ADCS wire behavior and syntax counters are unchanged. Attachment requires bounded ordered output, committed-send events, protocol/identity validation and a unique SID allocator; otherwise an inbound-only handshake would reject valid clients while being unable to reply. Existing frame/TLS deadlines remain in Network; a future session deadline must bound complete login independently of keepalives.
+
+## SUP adapter — alpha-0.2.4
+
+The [SUP/state adapter](ADC_SUP.md) completes feature/hash selection as a standalone C++ module. Network still uses the parser alone and sends no SUP response. The new ncdc SUP fixture connects real ncdc to Python-owned temporary sockets/TLS and the C++ module driver; existing ADC/ADCS tests continue to cover the actual C++ reactor. These tests demonstrate different integration boundaries. Attach ProtocolConnection only with bounded output, completed-send events, unique SID allocation, identity/hash computation and login deadlines.

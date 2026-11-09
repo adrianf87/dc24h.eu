@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.2.3 (ADC State).**
+**Current development version: alpha-0.2.4 (SUP).**
 
 Completed increments:
+
+- **alpha-0.2.4 SUP**: bounded feature AD/RM sets, BASE checks, TIGR session-hash selection, deterministic ISUP and composition with ADC State. Tested with real ncdc in an isolated fixture; Network attachment remains planned.
 
 - **alpha-0.2.3 ADC State**: independent hub connection state machine, explicit validation gates, command/direction checks and source-SID binding. Transport wiring and full login remain planned.
 

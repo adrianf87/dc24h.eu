@@ -64,3 +64,7 @@ TLS and browser authentication are separate controls. The template selects TLS 1
 ## ADC state boundary — alpha-0.2.3
 
 The independent state module rejects premature commands, repeated login steps, inbound hub-only types and spoofed source SIDs. Explicit approvals require a pending request; parsing INF/PAS alone never grants NORMAL. It stores no PID, PAS, nickname or payload and performs no logging. This is protocol sequencing, not authentication or a deployed security boundary: the receive-only Network does not invoke it. Future dispatch must validate feature/hash compatibility, PID/CID, required fields, IP and nickname/CID uniqueness and passwords before approval, remove PD before forwarding, apply budgets/timeouts, and close on rejection. See [ADC_STATE.md](ADC_STATE.md).
+
+## SUP policy — alpha-0.2.4
+
+The composed SUP/state module now checks initial BASE/common TIGR, keeps local and peer advertisements separate, bounds feature/token storage and rolls back failed updates. The selected hash cannot be removed or changed. Unknown peer features are inert metadata and are never reflected into the hub response. Additional local features require caller implementations; the default advertisement is BASE/TIGR only. Selection is not Tiger computation, PID/CID validation, password verification or TLS configuration. Production transport does not invoke the module yet. No peer text or credentials enter errors/logs. See [ADC_SUP.md](ADC_SUP.md).

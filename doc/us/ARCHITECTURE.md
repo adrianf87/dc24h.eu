@@ -1,5 +1,7 @@
 # Architecture
 
+In alpha-0.2.4, `dc24h_adc` adds `SupportNegotiation` for bounded peer/local capabilities and TIGR selection, plus `ProtocolConnection` composing support with the state machine. A valid initial HSUP supplies the protocol approval; the first completed ISUP must exactly match the generated local advertisement. Peer updates are transactional in NORMAL; the session hash is immutable. The receive-only Network remains unattached. See [ADC_SUP.md](ADC_SUP.md).
+
 In alpha-0.2.3, `dc24h_adc` also provides a hub-side `ConnectionStateMachine` with no socket, logger, database or Core dependencies. It stores only a four-character SID and fixed handshake flags. Network still uses the parser alone; [ADC_STATE.md](ADC_STATE.md) defines the explicit integration boundary and approval contract.
 
 In alpha-0.2.2, the independent ADC library also validates BASE argument layouts and exposes named-field/integer helpers. Network uses this stricter syntax through the existing decoder; no Core/database/frontend dependency or dispatch/output path is added. See [ADC_PROTOCOL.md](ADC_PROTOCOL.md).
