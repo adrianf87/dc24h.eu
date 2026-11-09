@@ -1,20 +1,12 @@
-# Wersjonowanie
+# Versions
 
-Pierwsze wydanie: `alpha-0.1.1`, gałąź `alpha-0.1.1` utworzona z aktualnego
-`main`. Historia i istniejąca licencja pozostają zachowane. Nie tworzono
-automatycznie tagu ani GitHub Release.
+| Version | Branch | Status |
+| --- | --- | --- |
+| alpha-0.1.1 | alpha-0.1.1 | Core implemented |
+| alpha-0.1.2 | alpha-0.1.2 | TCP implemented |
+| alpha-0.1.3 | alpha-0.1.3 | ADC parser implemented |
+| alpha-0.1.4 | chatgpt-alpha-0.1.4 | ADCS inbound TLS development |
 
-Drugie wydanie: `alpha-0.1.2`, gałąź `alpha-0.1.2` utworzona z `main`
-po scaleniu Core (`fa00f31`). Gałąź i historia alpha-0.1.1 pozostają zachowane.
+`PROJECT_VERSION` in CMake is `0.1.4`; `DC24H_VERSION` prepends `alpha-`. Builds print the version using `dc24h --version`. Each significant code change must update `CHANGELOG.md`. A build number is a source version plus its Git commit SHA; building does not mutate source files. No release tag is created automatically.
 
-Trzecie wydanie: `alpha-0.1.3`, gałąź `alpha-0.1.3` utworzona z aktualnego
-`main` (`9199ae6`) po scaleniu Network. Istniejące gałęzie i historia zachowane.
-
-W CMake `PROJECT_VERSION` zawiera `0.1.3`, a `DC24H_VERSION` dodaje `alpha-`.
-Generowany nagłówek zapewnia tę samą wersję w logu startowym i `--version`.
-Każdy build jest identyfikowany numerem wersji oraz SHA źródłowego commita Git.
-Budowanie lokalne nie zmienia samoczynnie plików wersji ani historii zmian.
-
-Nowe wydanie/iteracja wymaga świadomej aktualizacji numeru, wpisu
-w `CHANGELOG.md`, dokumentacji oraz testów sprawdzających wersję.
-Alpha oznacza etap rozwojowy, bez deklaracji stabilności produkcyjnej.
+Existing Git history and the main branch are preserved. The TLS development branch starts from the main branch after merging alpha-0.1.3.

@@ -6,6 +6,7 @@
 
 #include <atomic>
 #include <charconv>
+#include <csignal>
 #include <cstdlib>
 #include <exception>
 #include <iostream>
@@ -30,7 +31,8 @@ dc24h::network::Options parse_options(int argc, char* argv[]) {
     bool custom_listeners = false;
     for (int i = 1; i < argc; ++i) {
         const std::string_view key(argv[i]);
-        if (key != "--listen" && key != "--max-connections" && key != "--idle-timeout") {
+        if (key != "--listen" && key != "--adcs-listen" && key != "--tls-cert" &&
+            key != "--tls-key" && key != "--max-connections" && key != "--idle-timeout") {
             throw std::invalid_argument("Unknown option");
         }
         if (++i == argc) { throw std::invalid_argument("Missing option value"); }
@@ -39,30 +41,51 @@ dc24h::network::Options parse_options(int argc, char* argv[]) {
             if (!custom_listeners) { options.listeners.clear(); custom_listeners = true; }
             if (options.listeners.size() == 16) { throw std::invalid_argument("At most 16 listeners"); }
             options.listeners.push_back(dc24h::network::parse_endpoint(value));
+        } else if (key == "--adcs-listen") {
+            options.tls_listeners.push_back(dc24h::network::parse_endpoint(value));
+        } else if (key == "--tls-cert") {
+            options.tls_certificate = value;
+        } else if (key == "--tls-key") {
+            options.tls_private_key = value;
         } else if (key == "--max-connections") {
             options.max_connections = number(value, 65535);
         } else {
             options.idle_timeout = std::chrono::seconds(number(value, 86400));
         }
     }
+    if (options.listeners.size() + options.tls_listeners.size() > 16 ||
+        (options.tls_listeners.empty() && (!options.tls_certificate.empty() || !options.tls_private_key.empty())) ||
+        (!options.tls_listeners.empty() &&
+         (options.tls_certificate.empty() || options.tls_private_key.empty()))) {
+        throw std::invalid_argument("ADCS listeners require both a TLS certificate and private key; maximum 16 listeners in total");
+    }
     return options;
 }
 } // namespace
 
 int main(int argc, char* argv[]) {
+    // TLS handshakes can write to sockets after a peer aborts. A broken pipe
+    // must become a per-connection I/O error, never terminate the hub process.
+    if (std::signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
+        std::cerr << "Cannot configure SIGPIPE handling\n";
+        return EXIT_FAILURE;
+    }
     if (argc == 2 && std::string_view(argv[1]) == "--version") {
         std::cout << "dc24h.eu " << dc24h::version << '\n';
         return EXIT_SUCCESS;
     }
     if (argc == 2 && std::string_view(argv[1]) == "--help") {
         std::cout << "Usage: dc24h [--listen IPv4:port | [IPv6]:port] ...\n"
+                     "             [--adcs-listen IPv4:port | [IPv6]:port] ...\n"
+                     "             [--tls-cert CHAIN.pem --tls-key KEY.pem]\n"
                      "             [--max-connections N] [--idle-timeout SECONDS]\n"
                      "       dc24h --help | --version\n"
                      "Run dc24h.eu in the foreground. Stop with SIGINT (Ctrl+C) or SIGTERM.\n"
                      "Defaults: --listen 127.0.0.1:1511 --max-connections 1024 --idle-timeout 120\n"
-                     "Repeat --listen for up to 16 ports; port 0 selects an ephemeral port.\n"
+                     "Repeat --listen or --adcs-listen for up to 16 total ports; port 0 is ephemeral.\n"
+                     "ADCS requires a readable PEM chain and matching PEM private key. TLS >= 1.2.\n"
                      "Limits: connections 1..65535; idle timeout 1..86400 seconds.\n"
-                     "ADC syntax parsing only: no handshake, routing, login or ADCS/TLS yet.\n";
+                     "ADC syntax parsing only: no ADC session handshake, routing or login.\n";
         return EXIT_SUCCESS;
     }
     dc24h::network::Options options;

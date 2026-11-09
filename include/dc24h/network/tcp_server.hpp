@@ -22,6 +22,9 @@ struct Endpoint {
 
 struct Options {
     std::vector<Endpoint> listeners{{"127.0.0.1", 1511}};
+    std::vector<Endpoint> tls_listeners{};
+    std::string tls_certificate;
+    std::string tls_private_key;
     std::size_t max_connections{1024};
     std::chrono::seconds idle_timeout{120};
 };
@@ -35,6 +38,8 @@ struct Statistics {
     std::uint64_t adc_unknown;
     std::uint64_t adc_invalid;
     std::uint64_t adc_keepalives;
+    std::uint64_t adcs_handshakes;
+    std::uint64_t adcs_incomplete;
 };
 
 class TcpServer final {
@@ -66,6 +71,8 @@ private:
     std::atomic<std::uint64_t> adc_unknown_{0};
     std::atomic<std::uint64_t> adc_invalid_{0};
     std::atomic<std::uint64_t> adc_keepalives_{0};
+    std::atomic<std::uint64_t> adcs_handshakes_{0};
+    std::atomic<std::uint64_t> adcs_incomplete_{0};
 };
 
 } // namespace dc24h::network
