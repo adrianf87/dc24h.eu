@@ -1,4 +1,4 @@
-# Configuration — alpha-0.1.6
+# Configuration — alpha-0.1.7
 
 Settings are composed in this order: built-in defaults, one explicit `--config FILE`, then command-line overrides regardless of where `--config` appears. There is no automatic file search, environment substitution, include directive, reload or remote configuration.
 
@@ -58,3 +58,18 @@ Keep configuration/log directories trusted and service-user controlled: this is 
 See [ADCS/TLS](ADCS_TLS.md), [security](SECURITY.md), and the tracked [INI example](../../config/dc24h.ini.example).
 
 Logging now adds bounded single-line UTF-8 messages, opt-in typed connection events and independent warning budgets. See [LOGGING.md](LOGGING.md) for event names, privacy boundaries, suppression summaries and the synchronous I/O limit.
+
+## Security — alpha-0.1.7
+
+Defaults apply even when the security section is omitted. All values are positive integers; zero does not disable a limit. INI syntax/ranges must be valid before CLI overrides, and merged values are checked by `security::validate`.
+
+| INI key in `[security]` | CLI override | Default | Range | Meaning |
+| --- | --- | --- | --- | --- |
+| `max_connections_per_ip` | `--max-per-ip` | 128 | 1..65535 | Concurrent active peers per IP |
+| `max_accepts_per_minute` | `--accepts-per-minute` | 256 | 1..100000 | Admissions/IP/fixed minute |
+| `max_frames_per_second` | `--frames-per-second` | 1024 | 1..100000 | Decoder results/peer/fixed second |
+| `max_invalid_frames` | `--max-invalid-frames` | 512 | 1..65535 | Invalid results/connection lifetime |
+| `tls_handshake_timeout` | `--tls-handshake-timeout` | 10 | 1..3600 | Absolute TLS deadline, seconds |
+| `partial_frame_timeout` | `--partial-frame-timeout` | 10 | 1..3600 | Absolute unfinished-frame deadline, seconds |
+
+All listeners share IP admission state. The frame rate is per connection, including keepalives and invalid decoder results. The invalid threshold is lifetime-based; its Nth invalid result closes the peer. TLS expiry is bounded by both its absolute configured deadline and idle timeout. Partial-frame deadlines do not slide with more data and restart only for a new frame after LF. See [SECURITY.md](SECURITY.md) for exact window, memory, counter and timeout semantics.

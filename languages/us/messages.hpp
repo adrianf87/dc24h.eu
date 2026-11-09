@@ -3,7 +3,7 @@
 #include <string_view>
 
 namespace dc24h::i18n::us {
-inline constexpr std::array<std::string_view, 79> messages{{
+inline constexpr std::array<std::string_view, 84> messages{{
     "Starting dc24h.eu ",
     "Core running",
     "Core stopping",
@@ -82,7 +82,12 @@ inline constexpr std::array<std::string_view, 79> messages{{
     "Network peer I/O failed; connection closed",
     "ADCS handshake timed out; connection closed",
     "Network idle connection closed",
-    "Connection logging must be on or off"
+    "Connection logging must be on or off",
+    "Invalid security limits",
+    "Security stopped; rejected=",
+    "Security per-IP admission quota reached; peer rejected",
+    "Security frame quota reached; connection closed",
+    "Security partial frame timed out; connection closed"
 }};
 inline constexpr std::string_view help = R"HELP(Usage: dc24h [--config FILE] [--check-config]
              [--listen IPv4:port | [IPv6]:port | none] ...
@@ -91,6 +96,9 @@ inline constexpr std::string_view help = R"HELP(Usage: dc24h [--config FILE] [--
              [--max-connections N] [--idle-timeout SECONDS]
              [--log-level info|warning|error|off] [--log-file PATH|-] [--language us|pl]
              [--log-connections on|off]
+             [--max-per-ip N] [--accepts-per-minute N]
+             [--frames-per-second N] [--max-invalid-frames N]
+             [--tls-handshake-timeout SECONDS] [--partial-frame-timeout SECONDS]
        dc24h [--language us|pl] --help | --version
 Configuration order: built-in defaults, optional INI file, then CLI overrides.
 Paths inside INI are relative to its directory; CLI paths use the working directory.
@@ -100,6 +108,8 @@ ADCS requires a matching PEM chain and key; TLS >= 1.2. At most 16 total listene
 Defaults: 127.0.0.1:1511, 1024 connections, 120 seconds idle, info to stderr, us.
 Limits: connections 1..65535; idle timeout 1..86400 seconds.
 Run dc24h.eu in the foreground; stop with SIGINT (Ctrl+C) or SIGTERM.
+Security defaults: 128 peers/IP, 256 admissions/IP/minute, 1024 frames/s/peer,
+512 invalid frames/peer, 10 seconds for TLS and each unfinished frame.
 ADC syntax parsing only: no complete ADC login, routing or user sessions.
 )HELP";
 } // namespace dc24h::i18n::us

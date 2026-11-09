@@ -3,7 +3,7 @@
 #include <string_view>
 
 namespace dc24h::i18n::pl {
-inline constexpr std::array<std::string_view, 79> messages{{
+inline constexpr std::array<std::string_view, 84> messages{{
     "Uruchamianie dc24h.eu ",
     "Core działa",
     "Zatrzymywanie Core",
@@ -82,7 +82,12 @@ inline constexpr std::array<std::string_view, 79> messages{{
     "Błąd komunikacji z klientem; połączenie zamknięte",
     "Przekroczono czas negocjacji ADCS; połączenie zamknięte",
     "Zamknięto bezczynne połączenie",
-    "Logowanie połączeń musi być on lub off"
+    "Logowanie połączeń musi być on lub off",
+    "Nieprawidłowe limity bezpieczeństwa",
+    "Security zatrzymany; rejected=",
+    "Osiągnięto limit przyjęć dla IP; klient odrzucony",
+    "Osiągnięto limit ramek; połączenie zamknięte",
+    "Przekroczono czas niedokończonej ramki; połączenie zamknięte"
 }};
 inline constexpr std::string_view help = R"HELP(Użycie: dc24h [--config PLIK] [--check-config]
               [--listen IPv4:port | [IPv6]:port | none] ...
@@ -91,6 +96,9 @@ inline constexpr std::string_view help = R"HELP(Użycie: dc24h [--config PLIK] [
               [--max-connections N] [--idle-timeout SEKUNDY]
               [--log-level info|warning|error|off] [--log-file ŚCIEŻKA|-] [--language us|pl]
               [--log-connections on|off]
+             [--max-per-ip N] [--accepts-per-minute N]
+             [--frames-per-second N] [--max-invalid-frames N]
+             [--tls-handshake-timeout SECONDS] [--partial-frame-timeout SECONDS]
         dc24h [--language us|pl] --help | --version
 Kolejność: ustawienia domyślne, opcjonalny plik INI, nadpisania z CLI.
 Ścieżki INI są względne do katalogu pliku; ścieżki CLI do katalogu roboczego.
@@ -100,6 +108,8 @@ ADCS wymaga zgodnego łańcucha PEM i klucza; TLS >=1.2. Łącznie do 16 nasłuc
 Domyślnie: 127.0.0.1:1511, 1024 połączenia, 120 sekund bezczynności, info na stderr, us.
 Limity: 1..65535 połączeń; 1..86400 sekund bezczynności.
 Program działa na pierwszym planie; stop przez SIGINT (Ctrl+C) lub SIGTERM.
+Domyślne limity: 128 klientów/IP, 256 przyjęć/IP/minutę, 1024 ramki/s/klienta,
+512 błędnych ramek/klienta, 10 sekund dla TLS i niedokończonej ramki.
 Tylko parser ADC: brak pełnego logowania ADC, routingu i sesji użytkowników.
 )HELP";
 } // namespace dc24h::i18n::pl

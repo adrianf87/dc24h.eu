@@ -1,6 +1,6 @@
 # MariaDB (planned)
 
-No SQL driver, database connection or executable migration is included in alpha-0.1.6. `database/migrations/` reserves the migration location. Core startup does not depend on MariaDB.
+No SQL driver, database connection or executable migration is included in alpha-0.1.7. `database/migrations/` reserves the migration location. Core startup does not depend on MariaDB.
 
 The planned schema covers user accounts/password hashes, roles and permissions, server configuration, bans/blocks, selected event logs and administrative records. Migration versions will be ordered and recorded; applied migrations must remain immutable. Backups and MariaDB DDL transaction behavior must be considered before applying schema changes.
 

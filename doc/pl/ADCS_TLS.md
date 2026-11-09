@@ -14,8 +14,10 @@ Minimum to TLS 1.2. Kompresja i renegocjacja są wyłączone, podobnie jak pami�
 
 Samo `--adcs-listen` uruchamia wyłącznie TLS. Dodaj jawne `--listen`, aby włączyć również zwykły TCP. Wszystkie porty współdzielą limit klientów. Nieblokujące SSL_accept/SSL_read_ex obsługują WANT_READ/WANT_WRITE. Kolejka błędów OpenSSL jest czyszczona przed operacją, a odszyfrowane dane buforowane są obsługiwane także bez nowego zdarzenia gniazda. Błąd klienta zamyka tylko jego sesję. Program ignoruje SIGPIPE.
 
-Negocjacja ma termin `min(idle_timeout, 10 sekund)` od przyjęcia; częściowe dane nie przedłużają go. Po negocjacji odczyty danych odnawiają zwykły timeout. `received_bytes` obejmuje tylko odszyfrowane dane ADC. `handshakes` liczy udane negocjacje, `incomplete` sesje zamknięte przed ich ukończeniem, także przez timeout i stop. Nie oznacza to logowania ADC.
+Negocjacja ma termin `min(idle_timeout, tls_handshake_timeout)` (domyślny termin TLS: 10 sekund) od przyjęcia; częściowe dane nie przedłużają go. Po negocjacji odczyty danych odnawiają zwykły timeout. `received_bytes` obejmuje tylko odszyfrowane dane ADC. `handshakes` liczy udane negocjacje, `incomplete` sesje zamknięte przed ich ukończeniem, także przez timeout i stop. Nie oznacza to logowania ADC.
 
 Klucze przechowuj poza Git, dostępne tylko użytkownikowi usługi. Przykład generowania jednorazowego certyfikatu testowego znajduje się w [wersji US](../us/ADCS_TLS.md). Po odnowieniu certyfikatu zrestartuj proces. Brak reload, kolejek wyjściowych, wysyłania close_notify przy stopie oraz pełnej sesji ADC. [Testy](TESTING.md) obejmują rzeczywiste ncdc przez ADCS.
 
 Ścieżki TLS można teraz podać w INI; względne odnoszą się do jego katalogu. `--check-config` wczytuje certyfikat i klucz bez otwierania portów/logu. Zobacz [konfigurację](CONFIGURATION.md).
+
+Od alpha-0.1.7 wspólne limity IP działają przed alokacją sesji TLS. Termin bezwzględny sprawdzany jest przed uznaniem negocjacji za ukończoną. Zobacz [SECURITY.md](SECURITY.md).

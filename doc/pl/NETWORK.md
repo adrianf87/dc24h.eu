@@ -42,7 +42,7 @@ Jedna partia przyjmowania obejmuje do 64 klientów, a odczyt jednego zdarzenia
 do 64 KiB. Stały bufor odczytu ma 8 KiB. Każdy dekoder ADC przechowuje do 16 KiB
 nieukończonej treści. Po przekroczeniu limitu odrzuca dane aż do LF.
 Ograniczenie partii umożliwia obsługę pozostałych klientów oraz stopu przy ciągłym
-ruchu. Nie jest to ochrona przed DDoS ani limit przepustowości/per-IP.
+ruchu. Nie jest to ochrona przed DDoS ani limit przepustowości; limity IP dodaje Security opisane poniżej.
 
 Przejściowe błędy `accept4` są ponawiane. Po wyczerpaniu deskryptorów/pamięci
 lub limitu watch `epoll` nasłuchy są wyłączane z `epoll` na sekundę, aby uniknąć
@@ -80,3 +80,7 @@ Od alpha-0.1.5 adresy i limity pochodzą z INI oraz CLI. Lista CLI zastępuje da
 ## Integracja logów
 
 Opcjonalne logi INFO przyjęcia/gotowości TLS/zamknięcia mają wyłącznie wewnętrzny token i transport. Zwykła bezczynność i termin nieukończonego TLS mają osobne zdarzenia/kategorie. Błędne ramki, limity, TLS i I/O mają niezależne budżety ostrzeżeń na pięć sekund, bez treści ramek i adresów klientów. Liczniki pozostają zachowane. Zobacz [LOGGING.md](LOGGING.md).
+
+## Security — alpha-0.1.7
+
+Opcje Network zawierają `security::Limits`. Jeden ograniczony `PeerLimiter` obejmuje wszystkie porty TCP/TLS, z kanonicznymi IP kernela przechowywanymi tylko w RAM. Sprawdzenie poprzedza TLS/watch; slot jest zwalniany po błędzie inicjalizacji i zamknięciu. Każdy klient ma osobne tempo ramek, liczbę błędów i terminy TLS/częściowej ramki. Kontrola działa przed/po I/O i przed segmentami, poza przeglądem okresowym. INFO i `statistics()` dodają security_rejected/security_closed, zachowując wcześniejsze liczniki. [SECURITY.md](SECURITY.md) podaje wartości, okna i ograniczenia.

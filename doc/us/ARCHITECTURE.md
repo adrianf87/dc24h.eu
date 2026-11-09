@@ -1,6 +1,6 @@
 # Architecture
 
-The executable composes independent C++20 libraries: `dc24h_core`, `dc24h_network`, `dc24h_adc`, `dc24h_adcs`, `dc24h_logging`, `dc24h_i18n` and `dc24h_configuration`. Public headers live in `include/dc24h/`; implementations live under the corresponding `src/` directory. Network depends on ADC and ADCS. The parser has no dependency on Core or sockets. OpenSSL handles remain inside ADCS.
+The executable composes independent C++20 libraries: `dc24h_core`, `dc24h_network`, `dc24h_adc`, `dc24h_adcs`, `dc24h_logging`, `dc24h_i18n`, `dc24h_configuration` and `dc24h_security`. Public headers live in `include/dc24h/`; implementations live under the corresponding `src/` directory. Network depends on ADC and ADCS. The parser has no dependency on Core or sockets. OpenSSL handles remain inside ADCS.
 
 Core has a single-use `created → running → stopping → stopped` lifecycle. Without transport, `run()` waits on a condition variable. With transport, it runs the blocking reactor on the calling thread. `request_stop()` is thread safe, idempotent and retained before startup. Calling `run()` again throws. The owner must join all callers before destruction; the logger and transport must outlive Core.
 
@@ -17,3 +17,7 @@ Network owns nonblocking sockets, epoll and eventfd using RAII. All client opera
 ## Logging — alpha-0.1.6
 
 Startup now reports only non-secret listener counts/limits before moving Network options into the transport. The reactor supplies fixed warning categories and typed connection events. Logger records are mutex-serialized and bounded UTF-8; there is no extra logging thread or unbounded queue. See [LOGGING.md](LOGGING.md).
+
+## Security — alpha-0.1.7
+
+The independent C++20 `dc24h_security` target implements validated limits and clock-driven peer/frame quotas without logging, sockets or Core dependencies. Network owns one peer limiter and each connection owns its frame/timing state. Stop and rollback release active admissions in the reactor thread; telemetry exposes counts, not addresses. This module is resource policy, not user authentication. See [SECURITY.md](SECURITY.md).

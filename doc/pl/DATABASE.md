@@ -1,6 +1,6 @@
 # MariaDB
 
-Status alpha-0.1.6: brak połączeń SQL, sterownika i migracji wykonywalnych.
+Status alpha-0.1.7: brak połączeń SQL, sterownika i migracji wykonywalnych.
 Katalog `database/migrations/` rezerwuje miejsce dla kolejnego etapu.
 
 Plan schematu obejmuje konta i hashe haseł, role/uprawnienia, konfigurację,

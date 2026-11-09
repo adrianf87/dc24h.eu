@@ -59,6 +59,8 @@ public:
     void feed(std::string_view bytes, const Sink& sink);
     // Call on EOF: reports a partial frame once, resets and permits reuse.
     [[nodiscard]] std::optional<ParseError> finish() noexcept;
+    // Includes oversized frames being discarded through their next LF.
+    [[nodiscard]] bool in_progress() const noexcept { return discarding_ || !buffer_.empty(); }
     [[nodiscard]] std::size_t buffered_bytes() const noexcept { return buffer_.size(); }
 private:
     std::string buffer_;

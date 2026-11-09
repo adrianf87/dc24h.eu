@@ -166,7 +166,8 @@ class AdcsProcessTests(unittest.TestCase):
         self.assertEqual(counters(self, hub), (1, 0, 0, 0))
 
     def test_simultaneous_large_tls_streams_and_shutdown(self):
-        hub = self.hub()
+        # Transport throughput regression with an explicitly higher security budget.
+        hub = self.hub('--frames-per-second', '100000')
         peers = [self.connect_tls(hub) for _ in range(12)]
         payload = b'HSUP ADBASE\n' * 20000
         for peer in peers:

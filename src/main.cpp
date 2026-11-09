@@ -78,7 +78,13 @@ int main(int argc, char* argv[]) {
                     " adcs_listeners=" + std::to_string(parsed.settings.network.tls_listeners.size()) +
                     " max_connections=" + std::to_string(parsed.settings.network.max_connections) +
                     " idle_timeout_seconds=" + std::to_string(parsed.settings.network.idle_timeout.count()) +
-                    " connection_logging=" + (parsed.settings.logging.connections ? "on" : "off"));
+                    " connection_logging=" + (parsed.settings.logging.connections ? "on" : "off") +
+                    " max_per_ip=" + std::to_string(parsed.settings.network.security.max_connections_per_ip) +
+                    " accepts_per_minute=" + std::to_string(parsed.settings.network.security.max_accepts_per_minute) +
+                    " frames_per_second=" + std::to_string(parsed.settings.network.security.max_frames_per_second) +
+                    " max_invalid_frames=" + std::to_string(parsed.settings.network.security.max_invalid_frames) +
+                    " tls_handshake_timeout_seconds=" + std::to_string(parsed.settings.network.security.tls_handshake_timeout.count()) +
+                    " partial_frame_timeout_seconds=" + std::to_string(parsed.settings.network.security.partial_frame_timeout.count()));
             dc24h::network::TcpServer network(logger, std::move(parsed.settings.network));
             dc24h::core::Server server(logger, &network);
             std::atomic<bool> signal_error{false};

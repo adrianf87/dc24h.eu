@@ -86,3 +86,7 @@ przez bibliotekę; serwer nie otwiera gniazda UDP.
 Test ncdc obejmuje wysłany przez rzeczywisty klient początkowy HSUP. Serwer
 nie odpowiada ISUP/ISID, więc logowanie klienta nie dochodzi do NORMAL.
 Szczegóły testów: [TESTING.md](TESTING.md).
+
+## Security integration — alpha-0.1.7
+
+Biblioteka zachowuje limity 16 KiB/128 parametrów i kontrakt resynchronizacji. `StreamDecoder::in_progress()` zgłasza częściowy bufor oraz odrzucanie za długość, potrzebne do terminu bezwzględnego. Serwer dodaje budżet tempa wyników i błędów w czasie życia; może zamknąć nadużywającego klienta. Podaje segmenty do LF i przerywa resztę odczytu po przekroczeniu limitu. Wynik ponad tempo nie trafia do statystyk ADC; received_bytes może obejmować nieparsowaną resztę już odczytaną z gniazda. Końcowe ucięcie EOF jest liczone raz przy zamknięciu. Zobacz [SECURITY.md](SECURITY.md).

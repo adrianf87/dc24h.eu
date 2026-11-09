@@ -15,7 +15,7 @@ The transport requires TLS 1.2 or newer, disables compression and renegotiation,
 
 Add explicit `--listen` options for mixed ADC/ADCS service. All listeners share the connection limit. Each session advances `SSL_accept`/`SSL_read_ex` on epoll readiness, including WANT_WRITE from a read. The OpenSSL error queue is cleared before operations. Buffered decrypted bytes are scheduled even without new kernel readiness; per-client read budgets remain bounded. Failed peers close independently and SIGPIPE cannot terminate the executable.
 
-A handshake deadline is `min(idle_timeout, 10 seconds)` from acceptance; partial handshakes do not refresh it. Successful handshake/data reads refresh the normal idle timer. Decrypted ADC bytes alone contribute to `received_bytes`. `handshakes` counts successful negotiations; `incomplete` counts accepted TLS sessions closed before negotiation, including timeout and stop. Neither counter proves ADC login.
+A handshake deadline is `min(idle_timeout, tls_handshake_timeout)` (TLS setting defaults to 10 seconds) from acceptance; partial handshakes do not refresh it. Successful handshake/data reads refresh the normal idle timer. Decrypted ADC bytes alone contribute to `received_bytes`. `handshakes` counts successful negotiations; `incomplete` counts accepted TLS sessions closed before negotiation, including timeout and stop. Neither counter proves ADC login.
 
 For a disposable local test certificate (never use the generated key as a production credential):
 
@@ -31,3 +31,5 @@ openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
 Keep private keys outside Git with permissions restricted to the service user. Restart after renewal: hot reload is not implemented. Stop closes sockets immediately without a TLS close_notify exchange. Bounded outgoing queues, graceful TLS shutdown, certificate reload, full ADC handshake and hub operation remain future work. [Tests](TESTING.md) include real ncdc ADCS negotiation.
 
 TLS paths can now be configured in INI; relative paths use the INI directory. `--check-config` loads credentials without opening ports or a log. See [configuration](CONFIGURATION.md).
+
+Since alpha-0.1.7, shared per-IP quotas apply before TLS-session allocation. Absolute deadlines are checked before a handshake may complete. See [SECURITY.md](SECURITY.md).

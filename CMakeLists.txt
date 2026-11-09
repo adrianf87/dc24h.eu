@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.1.6 LANGUAGES CXX)
+project(dc24h VERSION 0.1.7 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -40,11 +40,16 @@ set_target_properties(dc24h_adcs PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_adcs PUBLIC include)
 target_link_libraries(dc24h_adcs PUBLIC OpenSSL::SSL OpenSSL::Crypto)
 
+add_library(dc24h_security src/security/limits.cpp)
+target_compile_features(dc24h_security PUBLIC cxx_std_20)
+set_target_properties(dc24h_security PROPERTIES CXX_EXTENSIONS OFF)
+target_include_directories(dc24h_security PUBLIC include)
+
 add_library(dc24h_network src/network/tcp_server.cpp)
 target_compile_features(dc24h_network PUBLIC cxx_std_20)
 set_target_properties(dc24h_network PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_network PUBLIC include)
-target_link_libraries(dc24h_network PUBLIC dc24h_logging dc24h_adc dc24h_adcs)
+target_link_libraries(dc24h_network PUBLIC dc24h_logging dc24h_adc dc24h_adcs dc24h_security)
 
 add_library(dc24h_configuration src/configuration/configuration.cpp)
 target_compile_features(dc24h_configuration PUBLIC cxx_std_20)
@@ -66,7 +71,7 @@ add_executable(dc24h src/main.cpp)
 target_link_libraries(dc24h PRIVATE dc24h_core dc24h_configuration)
 set_target_properties(dc24h PROPERTIES CXX_EXTENSIONS OFF)
 
-foreach(target dc24h_i18n dc24h_core dc24h_network dc24h_logging dc24h_adc dc24h_adcs dc24h_configuration dc24h)
+foreach(target dc24h_i18n dc24h_core dc24h_network dc24h_logging dc24h_adc dc24h_adcs dc24h_security dc24h_configuration dc24h)
     target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 endforeach()
 
@@ -123,6 +128,14 @@ if(BUILD_TESTING)
     add_test(NAME logging.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/logging_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(logging.unit logging.process PROPERTIES TIMEOUT 45)
+    add_executable(security_tests tests/security_tests.cpp)
+    target_link_libraries(security_tests PRIVATE dc24h_security)
+    set_target_properties(security_tests PROPERTIES CXX_EXTENSIONS OFF)
+    target_compile_options(security_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    add_test(NAME security.unit COMMAND security_tests)
+    add_test(NAME security.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/security_process_tests.py" "$<TARGET_FILE:dc24h>")
+    set_tests_properties(security.unit security.process PROPERTIES TIMEOUT 45)
     find_program(NCDC_EXECUTABLE ncdc)
     if(NCDC_EXECUTABLE)
         add_test(NAME adc.ncdc COMMAND "${Python3_EXECUTABLE}"

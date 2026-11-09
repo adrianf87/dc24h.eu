@@ -8,6 +8,7 @@
 | alpha-0.1.4 ADCS | Certyfikaty, nieblokujący TLS, testy, dokumentacja i komunikaty US/PL |
 | alpha-0.1.5 Configuration | INI, nadpisania CLI, walidacja ścieżek/limitów i logowanie append |
 | alpha-0.1.6 Logging | Podsumowania startu, WARN, zdarzenia połączeń, ograniczone UTF-8 i budżety |
+| alpha-0.1.7 Security | Ograniczone przyjęcia IP, ramki i terminy bezwzględne |
 
 Kolejne wersje wymagają osobnego zakresu i kryteriów testowych:
 
@@ -17,7 +18,7 @@ Kolejne wersje wymagają osobnego zakresu i kryteriów testowych:
 4. Chat publiczny/prywatny, wyszukiwanie i koordynacja transferów.
 5. Zabezpieczone HTTP API oraz React/TypeScript/Vite WebAdmin przez Apache2.
 
-W ramach tego zadania nie importowano wersji późniejszych niż alpha-0.1.6. Istnienie innych gałęzi zdalnych nie potwierdza gotowości ich kodu.
+W ramach tego zadania nie importowano wersji późniejszych niż alpha-0.1.7. Istnienie innych gałęzi zdalnych nie potwierdza gotowości ich kodu.
 
 ## alpha-0.1.5
 

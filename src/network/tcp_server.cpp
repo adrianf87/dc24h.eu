@@ -108,6 +108,22 @@ void update_client_interest(int epoll_fd, int fd, std::uint64_t token, bool want
     }
 }
 
+// Canonical identities are used only by the in-memory admission limiter.
+std::string peer_identity(const sockaddr_storage& address) {
+    std::array<char, INET6_ADDRSTRLEN> text{};
+    int family = address.ss_family;
+    const void* bytes = nullptr;
+    if (family == AF_INET) {
+        bytes = &reinterpret_cast<const sockaddr_in*>(&address)->sin_addr;
+    } else if (family == AF_INET6) {
+        const auto& ipv6 = reinterpret_cast<const sockaddr_in6*>(&address)->sin6_addr;
+        if (IN6_IS_ADDR_V4MAPPED(&ipv6)) { family = AF_INET; bytes = &ipv6.s6_addr[12]; }
+        else { bytes = &ipv6; }
+    } else { throw std::runtime_error("Unsupported peer address family"); }
+    if (::inet_ntop(family, bytes, text.data(), text.size()) == nullptr) { system_failure("inet_ntop peer"); }
+    return std::string(family == AF_INET ? "4:" : "6:") + text.data();
+}
+
 struct Connection {
     Fd fd;
     Clock::time_point last_activity;
@@ -115,6 +131,12 @@ struct Connection {
     std::unique_ptr<adcs::Connection> tls;
     bool tls_ready{true};
     bool want_write{false};
+    std::string peer_key;
+    Clock::time_point connected_at;
+    std::optional<Clock::time_point> partial_started;
+    std::size_t invalid_frames{0};
+    security::FrameLimiter frame_budget{1024};
+    bool security_violation{false};
 };
 } // namespace
 
@@ -155,6 +177,7 @@ TcpServer::TcpServer(logging::Logger& logger, Options options)
         (options_.tls_certificate.empty() || options_.tls_private_key.empty())) {
         throw std::invalid_argument("ADCS needs both TLS certificate and private key with a TLS listener");
     }
+    security::validate(options_.security);
     for (const auto& endpoint : options_.listeners) {
         socklen_t size{};
         (void)socket_address(endpoint, size);
@@ -179,7 +202,8 @@ void TcpServer::request_stop() noexcept {
 Statistics TcpServer::statistics() const noexcept {
     return {active_.load(), accepted_.load(), rejected_.load(), received_bytes_.load(),
             adc_frames_.load(), adc_unknown_.load(), adc_invalid_.load(), adc_keepalives_.load(),
-            adcs_handshakes_.load(), adcs_incomplete_.load()};
+            adcs_handshakes_.load(), adcs_incomplete_.load(),
+            security_rejected_.load(), security_closed_.load()};
 }
 
 void TcpServer::run() {
@@ -231,13 +255,14 @@ void TcpServer::run() {
     // Log readiness only after every configured listener has started successfully.
     for (const auto& address : addresses) { logger_.info(address); }
     std::unordered_map<std::uint64_t, Connection> connections;
+    security::PeerLimiter peer_limiter(options_.security);
     std::uint64_t next_token = listeners.size() + 1;
     std::array<epoll_event, 64> events{};
     std::array<char, 8192> buffer{};
     bool accepting = true;
     Clock::time_point resume_accepting{};
 
-    enum class Warning { invalid_frame, connection_limit, idle, tls_failure, handshake_timeout, peer_io, count };
+    enum class Warning { invalid_frame, connection_limit, idle, tls_failure, handshake_timeout, peer_io, admission_quota, frame_quota, partial_frame, count };
     std::array<std::optional<Clock::time_point>, static_cast<std::size_t>(Warning::count)> last_warnings{};
     auto warn_once = [&](Warning category, std::string_view message) {
         const auto now = Clock::now();
@@ -257,19 +282,6 @@ void TcpServer::run() {
         accepting = false;
         resume_accepting = Clock::now() + std::chrono::seconds(1);
     };
-    const adc::StreamDecoder::Sink record_frame = [&](adc::ParseResult result) {
-        if (const auto* message = std::get_if<adc::Message>(&result)) {
-            adc_frames_.fetch_add(1);
-            if (message->kind == adc::Command::unknown) { adc_unknown_.fetch_add(1); }
-        } else if (std::holds_alternative<adc::KeepAlive>(result)) {
-            adc_keepalives_.fetch_add(1);
-        } else {
-            adc_invalid_.fetch_add(1);
-            warn_once(Warning::invalid_frame, "ADC invalid frame rejected; payload omitted");
-        }
-        // Parsing milestone only: no dispatch, session state or responses yet.
-        // Never log untrusted parameters, private identifiers or password hashes.
-    };
     auto disconnect = [&](auto iterator, Event reason) {
         logger_.connection(reason, iterator->first, static_cast<bool>(iterator->second.tls));
         if (iterator->second.tls && !iterator->second.tls_ready) {
@@ -281,8 +293,32 @@ void TcpServer::run() {
         }
         // DEL before close; event tokens are never reused even when the OS reuses an fd.
         ::epoll_ctl(epoll.get(), EPOLL_CTL_DEL, iterator->second.fd.get(), nullptr);
+        peer_limiter.release(iterator->second.peer_key);
         connections.erase(iterator);
         active_.fetch_sub(1);
+    };
+    auto expire = [&](auto iterator, Clock::time_point now) {
+        const auto& connection = iterator->second;
+        const bool handshake = connection.tls && !connection.tls_ready;
+        const bool handshake_expired = handshake &&
+            now - connection.connected_at >= options_.security.tls_handshake_timeout;
+        const bool partial_expired = connection.partial_started &&
+            now - *connection.partial_started >= options_.security.partial_frame_timeout;
+        const bool idle_expired = now - connection.last_activity >= options_.idle_timeout;
+        if (!handshake_expired && !partial_expired && !idle_expired) { return false; }
+        if (handshake_expired || (handshake && idle_expired)) {
+            security_closed_.fetch_add(1);
+            warn_once(Warning::handshake_timeout, "ADCS handshake timed out; connection closed");
+            disconnect(iterator, Event::handshake_timeout);
+        } else if (partial_expired) {
+            security_closed_.fetch_add(1);
+            warn_once(Warning::partial_frame, "Security partial frame timed out; connection closed");
+            disconnect(iterator, Event::partial_frame_timeout);
+        } else {
+            warn_once(Warning::idle, "Network idle connection closed");
+            disconnect(iterator, Event::idle_timeout);
+        }
+        return true;
     };
     while (!stop_.load()) {
         if (!accepting && Clock::now() >= resume_accepting) {
@@ -328,8 +364,11 @@ void TcpServer::run() {
                 }
                 // Bounded batches keep a connection flood from starving shutdown/read events.
                 for (int batch = 0; batch < 64 && !stop_.load(); ++batch) {
+                    sockaddr_storage remote{};
+                    socklen_t remote_size = sizeof(remote);
                     Fd client(::accept4(listeners[static_cast<std::size_t>(token - 1)].get(),
-                                        nullptr, nullptr, SOCK_NONBLOCK | SOCK_CLOEXEC));
+                                        reinterpret_cast<sockaddr*>(&remote), &remote_size,
+                                        SOCK_NONBLOCK | SOCK_CLOEXEC));
                     if (client.get() == -1) {
                         const int error = errno;
                         if (error == EAGAIN || error == EWOULDBLOCK) { break; }
@@ -349,6 +388,14 @@ void TcpServer::run() {
                         warn_once(Warning::connection_limit, "Network connection limit reached; excess peer rejected");
                         continue; // RAII closes this excess client, without per-client log flooding.
                     }
+                    const auto admitted_at = Clock::now();
+                    const auto key = peer_identity(remote);
+                    if (!peer_limiter.admit(key, admitted_at)) {
+                        rejected_.fetch_add(1);
+                        security_rejected_.fetch_add(1);
+                        warn_once(Warning::admission_quota, "Security per-IP admission quota reached; peer rejected");
+                        continue;
+                    }
                     const auto client_token = next_token++;
                     const bool secure = secure_listeners[static_cast<std::size_t>(token - 1)];
                     std::unique_ptr<adcs::Connection> tls;
@@ -356,6 +403,7 @@ void TcpServer::run() {
                         try {
                             tls = std::make_unique<adcs::Connection>(*tls_context, client.get());
                         } catch (const std::exception&) {
+                            peer_limiter.release(key);
                             rejected_.fetch_add(1);
                             warn_once(Warning::tls_failure, "ADCS session initialization failed; peer rejected");
                             continue; // A failed peer session must not stop the listener.
@@ -364,14 +412,17 @@ void TcpServer::run() {
                     try {
                         watch(epoll.get(), client.get(), client_token, EPOLLIN | EPOLLRDHUP);
                     } catch (const std::system_error& error) {
+                        peer_limiter.release(key);
                         if (error.code().value() != ENOMEM && error.code().value() != ENOSPC) { throw; }
                         rejected_.fetch_add(1);
                         logger_.error("TCP epoll watch resource limit; retrying in one second");
                         pause_accepting();
                         break;
                     }
-                    connections.emplace(client_token, Connection{std::move(client), Clock::now(), {},
-                                                                 std::move(tls), !secure, false});
+                    connections.emplace(client_token, Connection{
+                        std::move(client), admitted_at, {}, std::move(tls), !secure, false,
+                        key, admitted_at, std::nullopt, 0,
+                        security::FrameLimiter(options_.security.max_frames_per_second), false});
                     active_.fetch_add(1);
                     accepted_.fetch_add(1);
                     logger_.connection(Event::accepted, client_token, secure);
@@ -380,6 +431,30 @@ void TcpServer::run() {
             }
             const auto found = connections.find(token);
             if (found == connections.end()) { continue; } // stale event from a closed connection
+            // Check absolute deadlines before allowing newly readable bytes to
+            // complete a frame or restart an idle timer.
+            if (expire(found, Clock::now())) { continue; }
+            const adc::StreamDecoder::Sink record_frame = [&](adc::ParseResult result) {
+                auto& connection = found->second;
+                if (!connection.frame_budget.admit(Clock::now())) {
+                    connection.security_violation = true;
+                    return;
+                }
+                if (const auto* message = std::get_if<adc::Message>(&result)) {
+                    adc_frames_.fetch_add(1);
+                    if (message->kind == adc::Command::unknown) { adc_unknown_.fetch_add(1); }
+                } else if (std::holds_alternative<adc::KeepAlive>(result)) {
+                    adc_keepalives_.fetch_add(1);
+                } else {
+                    adc_invalid_.fetch_add(1);
+                    ++connection.invalid_frames;
+                    warn_once(Warning::invalid_frame, "ADC invalid frame rejected; payload omitted");
+                    if (connection.invalid_frames >= options_.security.max_invalid_frames) {
+                        connection.security_violation = true;
+                    }
+                }
+            };
+            bool removed = false;
             bool closed = false;
             auto close_reason = Event::peer_closed;
             auto change_interest = [&](bool write) {
@@ -390,6 +465,7 @@ void TcpServer::run() {
             };
             if (found->second.tls && !found->second.tls_ready) {
                 const auto result = found->second.tls->handshake();
+                if (expire(found, Clock::now())) { continue; }
                 if (result.status == adcs::IoStatus::complete) {
                     found->second.tls_ready = true;
                     found->second.last_activity = Clock::now();
@@ -408,6 +484,7 @@ void TcpServer::run() {
             }
             if (!closed && found->second.tls_ready) {
                 for (int batch = 0; batch < 8 && !stop_.load(); ++batch) {
+                    if (expire(found, Clock::now())) { removed = true; break; }
                     std::size_t size = 0;
                     if (found->second.tls) {
                         const auto result = found->second.tls->receive(buffer.data(), buffer.size());
@@ -446,11 +523,33 @@ void TcpServer::run() {
                         }
                     }
                     if (size == 0) { break; }
+                    if (expire(found, Clock::now())) { removed = true; break; }
                     received_bytes_.fetch_add(static_cast<std::uint64_t>(size));
                     found->second.last_activity = Clock::now();
-                    found->second.decoder.feed(std::string_view(buffer.data(), size), record_frame);
+                    // At most one decoder result per segment. Stop immediately
+                    // after a quota breach rather than parsing the remainder.
+                    auto input = std::string_view(buffer.data(), size);
+                    while (!input.empty() && !found->second.security_violation) {
+                        if (expire(found, Clock::now())) { removed = true; break; }
+                        const auto lf = input.find('\n');
+                        const auto length = lf == std::string_view::npos ? input.size() : lf + 1;
+                        auto& connection = found->second;
+                        if (!connection.partial_started) { connection.partial_started = Clock::now(); }
+                        connection.decoder.feed(input.substr(0, length), record_frame);
+                        if (!connection.decoder.in_progress()) { connection.partial_started.reset(); }
+                        input.remove_prefix(length);
+                    }
+                    if (removed) { break; }
+                    if (found->second.security_violation) {
+                        security_closed_.fetch_add(1);
+                        warn_once(Warning::frame_quota, "Security frame quota reached; connection closed");
+                        closed = true;
+                        close_reason = Event::security_quota;
+                        break;
+                    }
                 }
             }
+            if (removed) { continue; }
             if (closed || (event.events & (EPOLLERR | EPOLLHUP)) != 0) {
                 if (!closed) { warn_once(Warning::peer_io, "Network peer I/O failed; connection closed"); }
                 disconnect(found, closed ? close_reason : Event::socket_error);
@@ -458,16 +557,8 @@ void TcpServer::run() {
         }
         const auto now = Clock::now();
         for (auto it = connections.begin(); it != connections.end();) {
-            const auto timeout = (it->second.tls && !it->second.tls_ready)
-                ? std::min(options_.idle_timeout, std::chrono::seconds(10))
-                : options_.idle_timeout;
-            if (now - it->second.last_activity >= timeout) {
-                auto expired = it++;
-                const bool handshake = expired->second.tls && !expired->second.tls_ready;
-                warn_once(handshake ? Warning::handshake_timeout : Warning::idle,
-                          handshake ? "ADCS handshake timed out; connection closed" : "Network idle connection closed");
-                disconnect(expired, handshake ? Event::handshake_timeout : Event::idle_timeout);
-            } else { ++it; }
+            auto current = it++;
+            (void)expire(current, now);
         }
     }
     // Close listeners first, then active clients, before reporting stopped.
@@ -477,6 +568,8 @@ void TcpServer::run() {
     logger_.info("Network stopped; all TCP sockets closed; accepted=" + std::to_string(accepted_.load()) +
                  " rejected=" + std::to_string(rejected_.load()) +
                  " received_bytes=" + std::to_string(received_bytes_.load()));
+    logger_.info("Security stopped; rejected=" + std::to_string(security_rejected_.load()) +
+                 " closed=" + std::to_string(security_closed_.load()));
     logger_.info("ADC stopped; frames=" + std::to_string(adc_frames_.load()) +
                  " unknown_commands=" + std::to_string(adc_unknown_.load()) +
                  " invalid_frames=" + std::to_string(adc_invalid_.load()) +

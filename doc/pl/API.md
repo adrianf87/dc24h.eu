@@ -63,3 +63,7 @@ administracyjnych.
 ## Logger — alpha-0.1.6
 
 `Level` ma info/warning/error/off. `info`, `warning`, `error` przyjmują niesekretny tekst wewnętrzny i nie rzucają. `connection(ConnectionEvent, uint64_t id, bool secure)` dopuszcza tylko enum zdarzeń, bez dowolnej treści. `connection_enabled()` sprawdza niezmienną flagę i próg INFO. Mutex chroni wspólny limit 64 wpisów/okno sekundy i raport pominięć w destruktorze/przy odnowieniu. Kolejność Options: level, file_path, language, connections; wcześniejsze inicjalizacje pozostają zgodne. Szczegóły: [LOGGING.md](LOGGING.md).
+
+## Security — alpha-0.1.7
+
+`network::Options::security` zawiera sześć pól `security::Limits`. `security::validate` odrzuca wartości poza zakresem. `PeerLimiter(Limits)` należy do reaktora: `admit(kanoniczny_klucz, czas_monotoniczny)` przyznaje aktywny slot/przyjęcie; po błędzie/zamknięciu wykonaj dokładnie jedno `release(key)` dla każdego sukcesu. Długość klucza i mapa są ograniczone; `tracked_peers()` zwraca liczbę wpisów. `FrameLimiter(maximum)::admit(czas)` daje okno sekundy na klienta. Czasy muszą być monotoniczne. `Statistics` dodaje niezależne atomowe security_rejected/security_closed. Brak współdzielenia stanu między instancjami/procesami. Szczegóły: [SECURITY.md](SECURITY.md).

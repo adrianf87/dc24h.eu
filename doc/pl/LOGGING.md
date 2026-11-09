@@ -35,7 +35,7 @@ Wpisy INFO dla klientów wymagają `connections=on` lub `--log-connections on` o
 2026-11-09T00:00:00Z [INFO] Połączenie id=2 transport=ADCS event=tls_ready
 ```
 
-Enum `ConnectionEvent` dopuszcza accepted, peer_closed, tls_ready, tls_handshake_failed, tls_closed, tls_read_error, tcp_read_error, socket_error, idle_timeout, handshake_timeout i shutdown. API przyjmuje enum, liczbowe ID i flagę TLS, bez dowolnego tekstu zdarzenia. ID jest tymczasowe i lokalne dla procesu, nie oznacza uwierzytelnionego konta. Negocjacja TLS nie oznacza logowania ADC. Odebrany close_notify ma inne zdarzenie niż błąd odczytu; wysyłanie close_notify serwera pozostaje planem.
+Enum `ConnectionEvent` dopuszcza accepted, peer_closed, tls_ready, tls_handshake_failed, tls_closed, tls_read_error, tcp_read_error, socket_error, idle_timeout, handshake_timeout, shutdown, security_quota i partial_frame_timeout. API przyjmuje enum, liczbowe ID i flagę TLS, bez dowolnego tekstu zdarzenia. ID jest tymczasowe i lokalne dla procesu, nie oznacza uwierzytelnionego konta. Negocjacja TLS nie oznacza logowania ADC. Odebrany close_notify ma inne zdarzenie niż błąd odczytu; wysyłanie close_notify serwera pozostaje planem.
 
 Rekordy nie otrzymują adresów/portów klientów, nicków, CID/PID, hashy PAS ani treści ramek. Gotowość nasłuchu nadal podaje jawny lokalny adres bind. Podsumowanie startu zawiera liczby nasłuchów, limity, timeout i stan logowania połączeń, bez ścieżek INI/logu/klucza. Wywołujący ogólne info/warning/error także musi pomijać sekrety: oczyszczanie nie usuwa dowolnych poufnych tekstów.
 
@@ -50,3 +50,7 @@ Treść rekordu ma do 1024 bajtów razem ze znacznikiem `...[truncated]`, poza p
 ## Ograniczenia operacyjne
 
 Zapis jest synchroniczny. Dysk i zablokowany potok stderr mogą opóźnić reaktor; limity ograniczają ilość wpisów, nie czas nośnika. Obsługiwane są częściowe zapisy i EINTR, błędy działającego wyjścia są best effort, wyjątki nie wychodzą z loggera. Błąd otwarcia pliku przerywa start. Brak kolejki async, rotacji, reopen, dynamicznego poziomu, reload przez SIGHUP i zdalnego kolektora. Kontroluj wzrost pliku i używaj zaufanych katalogów. Mechanizmy nie zastępują limitów sieci, uwierzytelniania i ochrony DDoS. Testy opisuje [TESTING.md](TESTING.md).
+
+## Security — alpha-0.1.7
+
+Limity przyjęć, ramek i termin częściowej ramki mają własne kategorie ostrzeżeń na pięć sekund. Bezczynność i termin TLS pozostają niezależne. Nowe typowane zamknięcia to security_quota i partial_frame_timeout; TLS zachowuje handshake_timeout. Stop dodaje Security stopped; rejected=N closed=N; znaczenia podaje [SECURITY.md](SECURITY.md). IP klientów nadal nie są logowane, mimo ich użycia w pamięci limitera.

@@ -15,7 +15,7 @@ enum class Level { info, warning, error, off };
 // Fixed internal lifecycle values only: no payloads, nicknames or peer addresses.
 enum class ConnectionEvent {
     accepted, peer_closed, tls_ready, tls_handshake_failed, tls_closed,
-    tls_read_error, tcp_read_error, socket_error, idle_timeout, handshake_timeout, shutdown
+    tls_read_error, tcp_read_error, socket_error, idle_timeout, handshake_timeout, shutdown, security_quota, partial_frame_timeout
 };
 struct Options {
     Level level{Level::info};
