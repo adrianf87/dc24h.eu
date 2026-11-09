@@ -1,6 +1,6 @@
 # API
 
-## Wewnętrzne C++ w alpha-0.1.4
+## Wewnętrzne C++ w alpha-0.1.5
 
 Nagłówek `dc24h/core/server.hpp`:
 
@@ -55,3 +55,7 @@ administracyjnych.
 ## ADCS i języki
 
 `adcs::Context` posiada kontekst TLS. `adcs::Connection` wymaga, by fd i kontekst żyły dłużej niż sesja. `handshake()` i `receive()` zwracają complete/want_read/want_write/closed/error wraz z liczbą bajtów. `pending()` zgłasza odszyfrowane dane w buforze. Pętla odpowiada za gotowość gniazda i obsługę SIGPIPE. Brak API zapisu. `Logger(Language = us)` i `i18n::parse_language/translate/help` dostarczają komunikaty US/PL.
+
+## Konfiguracja i logger
+
+`configuration::Settings` zawiera opcje sieci/loggera i pochodzenie (`source_file`, `implicit_plain_listener`). `load_file` parsuje składnię i pojedyncze pola; zależności sprawdza osobne `validate(Settings)` po nadpisaniach. `parse_arguments(argc, argv)` wczytuje plik, stosuje CLI i waliduje; `CommandLine` dodaje flagi check/help/version. `logging::Options` ma level, file_path (puste = stderr) i language. `Logger(Options = {})` otwiera plik w konstruktorze; pozostaje też `Logger(Language)`. Obiekt jest niekopiowalny i musi żyć dłużej niż wywołujący. Brak API zmiany ustawień/reload.

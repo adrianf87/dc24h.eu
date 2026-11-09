@@ -1,0 +1,21 @@
+# dc24h.eu alpha-0.1.5 configuration (UTF-8, no secrets committed)
+# Section names and keys are case-sensitive; duplicate singular keys are errors.
+[general]
+language = us
+
+[network]
+listen = 127.0.0.1:1511
+# To enable TLS, uncomment adcs_listen and both [tls] paths below.
+# For TLS only, replace listen above with: listen = none
+# adcs_listen = 127.0.0.1:1512
+max_connections = 1024
+idle_timeout = 120
+
+[tls]
+# certificate = /etc/dc24h/tls/fullchain.pem
+# private_key = /etc/dc24h/tls/privkey.pem
+
+[logging]
+level = info
+file = stderr
+# file = /var/log/dc24h/hub.log

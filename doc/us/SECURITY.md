@@ -9,3 +9,7 @@ TLS requires loadable matching credentials and version >=1.2. Clients must valid
 SIGINT/SIGTERM are consumed synchronously, avoiding unsafe work in asynchronous handlers. SIGPIPE is ignored by main. Socket/event descriptors use close-on-exec. SIGHUP retains default system behavior. Network peer failures close the affected socket; infrastructure exhaustion or fatal reactor errors can still stop the process.
 
 Future requirements include bounded response queues/backpressure, flood controls, session validation, authenticated roles, audited password hashing (planned Argon2id), parameterized SQL and secured API operations. Do not present planned controls as implemented.
+
+## Configuration files and log sinks
+
+INI reads are bounded and validate the descriptor type before reading. Final symlinks/devices/FIFOs are rejected. Log paths are checked against the active INI and TLS credentials, including existing aliases; regular append files must have one hard link. Opening a FIFO cannot block startup. Runtime writes are synchronous and best effort, without rotation. Trusted directories and unprivileged execution remain necessary. See [configuration](CONFIGURATION.md) and [Linux open(2)](https://man7.org/linux/man-pages/man2/open.2.html).

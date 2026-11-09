@@ -29,3 +29,5 @@ openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
 ```
 
 Keep private keys outside Git with permissions restricted to the service user. Restart after renewal: hot reload is not implemented. Stop closes sockets immediately without a TLS close_notify exchange. Bounded outgoing queues, graceful TLS shutdown, certificate reload, full ADC handshake and hub operation remain future work. [Tests](TESTING.md) include real ncdc ADCS negotiation.
+
+TLS paths can now be configured in INI; relative paths use the INI directory. `--check-config` loads credentials without opening ports or a log. See [configuration](CONFIGURATION.md).

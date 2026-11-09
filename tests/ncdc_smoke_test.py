@@ -4,6 +4,7 @@ Only initial HSUP parsing is in scope. The server sends no handshake response.
 """
 import fcntl
 import os
+import pathlib
 import pty
 import select
 import socket
@@ -23,7 +24,11 @@ NCDC = sys.argv.pop(1)
 
 class NcdcSmokeTest(unittest.TestCase):
     def test_initial_sup_is_received_and_parsed(self):
-        hub = Hub(self, "--listen", "127.0.0.1:0")
+        configuration = tempfile.TemporaryDirectory(prefix="dc24h-ncdc-config-")
+        self.addCleanup(configuration.cleanup)
+        ini = pathlib.Path(configuration.name) / "hub.ini"
+        ini.write_text("[network]\nlisten=127.0.0.1:0\nmax_connections=8\n", encoding="utf-8")
+        hub = Hub(self, "--config", str(ini), "--max-connections", "4")
         with tempfile.TemporaryDirectory(prefix="dc24h-ncdc-") as session, socket.socket() as relay:
             relay.bind(("127.0.0.1", 0))
             relay.listen(1)

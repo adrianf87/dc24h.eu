@@ -1,20 +1,50 @@
-# Konfiguracja
+# Konfiguracja — alpha-0.1.5
 
-alpha-0.1.4 obsługuje tylko CLI; brak pliku konfiguracji i loadera zmiennych środowiskowych.
+Kolejność ustawień: wartości domyślne, jeden jawny `--config PLIK`, następnie nadpisania CLI niezależnie od miejsca `--config`. Brak automatycznego wyszukiwania pliku, zmiennych środowiskowych, include, reload i konfiguracji zdalnej.
 
-| Opcja | Domyślnie | Znaczenie |
-| --- | --- | --- |
-| `--listen IPv4:port` / `--listen [IPv6]:port` | `127.0.0.1:1511` | Zwykły TCP, opcja powtarzalna |
-| `--adcs-listen ADRES:port` | Brak | TLS, opcja powtarzalna |
-| `--tls-cert ŚCIEŻKA` | Brak | Łańcuch certyfikatów PEM |
-| `--tls-key ŚCIEŻKA` | Brak | Pasujący nieszyfrowany klucz PEM |
-| `--max-connections N` | 1024 | Wspólny limit 1..65535 |
-| `--idle-timeout SEKUNDY` | 120 | Zakres 1..86400; negocjacja TLS do 10 s |
-| `--language us\|pl` | `us` | Język pomocy i komunikatów |
-| `--help` / `--version` | — | Pomoc / wersja, bez startu Core |
+```sh
+cp config/dc24h.ini.example config/dc24h.ini
+./build/dc24h --config config/dc24h.ini --check-config
+./build/dc24h --config config/dc24h.ini --max-connections 512 --language pl
+```
 
-Pierwszy jawny nasłuch TCP lub TLS zastępuje domyślny. Samo ADCS nie otwiera zwykłego TCP. Łącznie do 16 nasłuchów; port 0 wybiera system. Wildcard wymaga jawnego adresu. Ostatnia wartość powtórzonej opcji skalarnej obowiązuje. ADCS wymaga obu ścieżek TLS; ścieżki bez ADCS są błędem. Zaszyfrowany klucz nie wywołuje pytania o hasło, lecz błąd startu.
+## Format INI
 
-Pomoc/wersję można łączyć z `--language`, ale nie z opcjami operacyjnymi. Kody wyjścia: 0 poprawny stop/pomoc/wersja; 2 błędne argumenty; 1 błąd wykonania. Błędne wartości wejściowe nie są wypisywane. Katalogi UTF-8: `languages/us` i `languages/pl`. Błędy systemowe bez tłumaczenia pozostają angielskie. Dane protokołu, nazwy komend i pól liczników nie są tłumaczone.
+UTF-8, opcjonalny BOM, LF lub CRLF. Faktyczny odczyt ograniczono do 65536 bajtów, wiersz do 4096 bajtów (razem z ewentualnym CR); ostatni LF jest opcjonalny. Otwarty plik musi być zwykłym plikiem. Końcowe dowiązanie symboliczne, FIFO i urządzenie są odrzucane. Parser sprawdza UTF-8, odrzuca NUL i znaki sterujące poza tab/końcami wierszy, podaje numer wiersza bez ujawniania wartości. Nazwy są rozróżniane wielkością liter. Puste wiersze i całe komentarze `#`/`;` są pomijane. Spacje/tab wokół kluczy i wartości są usuwane. Brak komentarzy po wartości, cytowania i escape; w ścieżce spacja, `#` i `;` są dosłowne. Nieznane klucze/sekcje i powtórzenia kluczy skalarnych są błędami. Powtarzalne są tylko listy nasłuchu.
 
-Logi UTC `YYYY-MM-DDTHH:MM:SSZ [INFO|ERROR] komunikat` trafiają na stderr; logger synchronizuje wątki i nie przerywa sprzątania po błędzie wyjścia. Brak rotacji i plików logów. Parser ma stałe limity 16384 bajtów treści i 128 parametrów. Nie loguje parametrów ani haseł. SIGHUP nie przeładowuje ustawień ani certyfikatów.
+| Sekcja | Klucz | Domyślnie | Znaczenie |
+| --- | --- | --- | --- |
+| `general` | `language` | `us` | Język `us` lub `pl` |
+| `network` | `listen` | `127.0.0.1:1511` | IPv4:port / [IPv6]:port lub `none` |
+| `network` | `adcs_listen` | Brak | Endpoint TLS lub `none` |
+| `network` | `max_connections` | 1024 | Wspólny limit 1..65535 |
+| `network` | `idle_timeout` | 120 | 1..86400 sekund |
+| `tls` | `certificate` | Brak | Pełny łańcuch PEM |
+| `tls` | `private_key` | Brak | Zgodny nieszyfrowany klucz PEM |
+| `logging` | `level` | `info` | `info`, `error`, `off` |
+| `logging` | `file` | `stderr` | `stderr` lub ścieżka pliku append |
+
+Pierwszy jawny nasłuch usuwa domyślny TCP; samo `adcs_listen` włącza wyłącznie TLS. Kolejne wpisy tworzą listę danego transportu. `none` musi być jedynym wpisem. Łącznie wymagany jest co najmniej 1 i najwyżej 16 nasłuchów. Równoważne zapisy IPv6 nie mogą powtarzać portu; port 0 wolno powtarzać dla niezależnych portów systemowych. Wildcard jest jawny. Konflikt wildcard/adres na tym samym porcie może ujawnić się dopiero podczas bind.
+
+Ścieżki INI są względne do rozwiązanego katalogu pliku; ścieżki CLI do katalogu roboczego procesu. Program nie tworzy katalogów. ADCS wymaga obu ścieżek TLS, a ścieżki wymagają nasłuchu ADCS. Wyłączenie TLS wymaga usunięcia nasłuchu i ustawień certyfikatu/klucza razem. Składnia i zakres pól pliku muszą być prawidłowe nawet po nadpisaniu CLI. Zależności między polami są sprawdzane po CLI, więc brakujący klucz TLS można dostarczyć argumentem.
+
+## CLI i sprawdzanie
+
+- `--config PLIK` wybiera jeden plik.
+- `--check-config` sprawdza ustawienia po nadpisaniach i wczytuje parę TLS, bez bind, startu Core i tworzenia/otwierania logu.
+- `--listen ENDPOINT/none` i `--adcs-listen ENDPOINT/none` zastępują listę danego transportu przy pierwszym użyciu; kolejne dodają wpisy.
+- `--tls-cert`, `--tls-key`, `--max-connections`, `--idle-timeout` nadpisują odpowiednie pola.
+- `--log-level info/error/off`, `--log-file ŚCIEŻKA/-` i `--language us/pl` nadpisują logowanie/język. `-` oznacza stderr.
+- `--help` i `--version` wolno łączyć tylko z wyborem języka.
+
+Nadpisanie listy zachowuje drugi jawnie skonfigurowany transport. Pierwszy jawny nasłuch usuwa jedynie domyślny niejawny TCP. Ostatnia powtórzona opcja skalarna CLI obowiązuje. Sprawdzanie nie bada dostępności portu, prawa zapisu logu ani istnienia jego katalogu; zasoby są otwierane podczas startu. Sprawdza kolizje ścieżek i wczytywalność/zgodność TLS, lecz zaufanie, nazwę i ważność certyfikatu weryfikuje klient.
+
+Kody: 0 sukces sprawdzenia/pomocy/wersji/stopu; 2 błędne argumenty, INI lub nieudane sprawdzenie; 1 błąd uruchomienia/wykonania. Diagnostyka nie ujawnia wartości wejściowych. CLI `--language` wybiera też język błędów parsera; przed wczytaniem języka z pliku używany jest US. Brakujące tłumaczenia systemowe pozostają angielskie. Dane protokołu i klucze liczników nie są tłumaczone.
+
+## Logowanie i ścieżki
+
+`info` emituje INFO/ERROR, `error` tylko ERROR, `off` wyłącza oba poziomy, ale wskazany plik nadal jest otwierany i sprawdzany. Format UTC: `YYYY-MM-DDTHH:MM:SSZ [INFO|ERROR] komunikat`. Mutex chroni kompletne wiersze między wątkami. Append zachowuje stare dane. Nowy plik żąda praw 0600 (umask może je ograniczyć); istniejące prawa nie są zmieniane. Wymagany jest zwykły plik z jednym dowiązaniem. Końcowe symlinki, FIFO i urządzenia są odrzucane; używane są O_APPEND/O_CLOEXEC/O_NOFOLLOW/O_NONBLOCK. Log nie może wskazywać używanego INI, certyfikatu ani klucza, także przez istniejące hardlinki i alias katalogu symlink.
+
+Katalogi muszą być zaufane i kontrolowane przez użytkownika usługi; mechanizm nie zastępuje ochrony przed równoczesną podmianą ścieżek przez administratora. Zapis do zwykłego pliku jest synchroniczny i może czekać na dysk. Błędy działającego wyjścia są best effort, bez wyjątków z loggera. Brak rotacji, reopen, asynchronicznego loggera i reload przez SIGHUP. Wzrost logu wymaga obsługi operacyjnej. Nie loguj sekretów ani ramek klientów.
+
+Zobacz [TLS](ADCS_TLS.md), [bezpieczeństwo](SECURITY.md) i [przykład INI](../../config/dc24h.ini.example).

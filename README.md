@@ -2,7 +2,7 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.1.4 (ADCS/TLS transport).**
+**Current development version: alpha-0.1.5 (Configuration).**
 
 Completed increments:
 
@@ -10,6 +10,7 @@ Completed increments:
 - **alpha-0.1.2 Network**: multiple nonblocking IPv4/IPv6 TCP listeners/clients.
 - **alpha-0.1.3 ADC**: bounded stream parser, commands, UTF-8/NFC validation.
 - **alpha-0.1.4 ADCS**: optional nonblocking TLS 1.2+ listeners using OpenSSL.
+- **alpha-0.1.5 Configuration**: bounded UTF-8 INI, CLI overrides, port/limit/path checks and append-file logging.
 
 A full ADC/ADCS hub is **not yet implemented**: no complete ADC handshake, user sessions, authentication, messaging, search, or transfer coordination. MariaDB and React WebAdmin remain future milestones.
 
@@ -44,3 +45,13 @@ CMake 3.22+, C++20, OpenSSL and utf8proc development packages are required.
 Documentation: [English (US)](doc/us/README.md) | [Polski](doc/pl/README.md) | [Module documentation index](doc/README.md) | [CHANGELOG.md](CHANGELOG.md).
 
 License: [GPL-3.0](LICENSE).
+
+## Configuration
+
+```sh
+cp config/dc24h.ini.example config/dc24h.ini
+./build/dc24h --config config/dc24h.ini --check-config
+./build/dc24h --config config/dc24h.ini --max-connections 512
+```
+
+Defaults, then explicit INI, then CLI. No file is loaded automatically. INI paths use its directory; CLI paths use the working directory. Use `--log-level info|error|off` and `--log-file PATH` (or `-` for stderr). See [configuration](doc/us/CONFIGURATION.md) for complete precedence, format, limits and logging constraints.

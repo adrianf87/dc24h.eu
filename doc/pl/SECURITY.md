@@ -9,3 +9,7 @@ TLS >=1.2 wymaga wczytywalnego certyfikatu i zgodnego klucza; klient sprawdza za
 Sygnały stopu są odbierane synchronicznie, SIGPIPE jest ignorowany przez program. Deskryptory mają close-on-exec. SIGHUP zachowuje semantykę systemową. Błędy klienta zamykają jego gniazdo; krytyczny błąd pętli może zatrzymać proces.
 
 Plan obejmuje kolejki wyjściowe, backpressure, limity wiadomości, walidację sesji, role, Argon2id, parametryzowane SQL i zabezpieczone API. Te funkcje nie są jeszcze zaimplementowane.
+
+## Konfiguracja i logi
+
+Odczyt INI jest ograniczony, a typ otwartego deskryptora sprawdzany przed czytaniem. Końcowe symlinki/urządzenia/FIFO są odrzucane. Log jest porównywany z aktywnym INI i plikami TLS, także aliasami; zwykły plik append musi mieć jedno dowiązanie. FIFO nie blokuje startu. Zapis logu jest synchroniczny, best effort, bez rotacji. Wymagane są zaufane katalogi i zwykły użytkownik. Zobacz [konfigurację](CONFIGURATION.md) i [open(2)](https://man7.org/linux/man-pages/man2/open.2.html).

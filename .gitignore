@@ -14,3 +14,7 @@ __pycache__/
 *.pem
 *.p12
 *.pfx
+
+# Local configuration (the example remains tracked)
+/config/*.ini
+/*.ini

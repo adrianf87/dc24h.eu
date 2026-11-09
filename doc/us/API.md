@@ -11,3 +11,7 @@ There is no HTTP/JSON/WebAdmin API yet.
 `adcs::Context` owns the credential-bearing TLS context. `adcs::Connection` owns a session referencing that context and a non-owning fd. Both dependencies must outlive the connection. `handshake()` and `receive()` return `IoResult {status, bytes}` with complete/want_read/want_write/closed/error; `pending()` reports buffered decrypted bytes. Socket readiness and SIGPIPE disposition are the caller's responsibility. No send API exists yet.
 
 All owners must stop and join callers before destroying dependencies. `Logger(Language = us)` and `i18n::parse_language/translate/help` provide built-in messages. Future HTTP endpoints need authentication, role checks, input validation and administrative audit records behind Apache2.
+
+## Configuration and Logger
+
+`configuration::Settings` contains network/logging options and parsing provenance (`source_file`, `implicit_plain_listener`). `load_file` parses syntax and individual fields, but does not validate all cross-field requirements. Call `validate(Settings)` on composed settings. `parse_arguments(argc, argv)` loads the explicit file, applies CLI and validates; `CommandLine` adds check/help/version flags. `logging::Options` contains level, file_path (empty = stderr) and language. `Logger(Options = {})` opens a file at construction; `Logger(Language)` remains available. The logger is noncopyable and must outlive callers. There is no mutation/reload API.

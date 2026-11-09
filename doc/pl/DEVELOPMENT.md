@@ -1,7 +1,7 @@
 # Rozwój projektu
 
 Pracuj na gałęziach wydań, zachowując historię `main`. Aktualny etap:
-`alpha-0.1.4`. Każdy istotny etap otrzymuje opisowy commit. Nie dodawaj
+`alpha-0.1.5`. Każdy istotny etap otrzymuje opisowy commit. Nie dodawaj
 artefaktów kompilacji, sekretów ani zależności vendored bez uzasadnienia.
 
 | Katalog | Rola |
@@ -12,7 +12,7 @@ artefaktów kompilacji, sekretów ani zależności vendored bez uzasadnienia.
 | `src/logging`, `include/dc24h/logging` | Logowanie |
 | `cmake/` | Generowana informacja o wersji |
 | `tests/` | Testy C++ i testy procesu w Pythonie |
-| `config/` | Miejsce na przyszłą konfigurację |
+| `config/` | Przykładowy INI i lokalne ustawienia |
 | `database/migrations/` | Miejsce na przyszłe migracje MariaDB |
 | `webadmin/` | Miejsce na przyszły frontend |
 | `doc/` | Dokumentacja techniczna |
@@ -26,3 +26,5 @@ Przed commitem wykonaj budowanie i CTest; aktualizuj `doc/` i `CHANGELOG.md`.
 Wszystkie deklaracje ukończenia funkcji muszą odpowiadać kodowi i testom.
 
 Nowe gałęzie twórz z aktualnego `main`. Gałąź alpha-0.1.4 zachowuje przez merge historię referencyjnej chatgpt-alpha-0.1.4. Kod i domyślne komunikaty: EN/US UTF-8; dokumentacja: `doc/us` i `doc/pl`, katalogi komunikatów: `languages/us` i `languages/pl`. Kolejność wpisów katalogu musi być zgodna. Nie tłumacz danych protokołu.
+
+alpha-0.1.5 powstaje z main po jawnym scaleniu alpha-0.1.4. Kod konfiguracji/loggera i testy chatgpt-alpha-0.1.5 sprawdzono i dostosowano, zachowując poprawki TLS i języków z main. Nie importowano dodatkowego katalogu en/. Usunięto zbędne indeksy modułów w korzeniu doc/.

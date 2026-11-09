@@ -1,6 +1,7 @@
 """Real ncdc negotiates TLS with the C++ hub through a byte-transparent relay."""
 import fcntl
 import os
+import pathlib
 import pty
 import select
 import socket
@@ -24,8 +25,10 @@ class NcdcAdcsTest(unittest.TestCase):
     def test_encrypted_initial_sup(self):
         with tempfile.TemporaryDirectory(prefix='dc24h-ncdc-adcs-') as directory:
             cert, key = credentials(directory)
-            hub = Hub(self, '--adcs-listen', '127.0.0.1:0', '--tls-cert', cert,
-                      '--tls-key', key, '--idle-timeout', '2', ready_pattern=TLS_READY)
+            ini = pathlib.Path(directory) / 'hub.ini'
+            ini.write_text('[network]\nadcs_listen=127.0.0.1:0\nidle_timeout=30\n'
+                           '[tls]\ncertificate=certificate.pem\nprivate_key=private.pem\n', encoding='utf-8')
+            hub = Hub(self, '--config', str(ini), '--idle-timeout', '2', ready_pattern=TLS_READY)
             wire = bytearray()
             errors = []
             finished = threading.Event()
