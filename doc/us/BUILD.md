@@ -1,5 +1,7 @@
 # Build
 
+For the complete integration suite, configure `-DDC24H_REQUIRE_INTEGRATION_TESTS=ON` with BUILD_TESTING enabled. This requires openssl, ncdc, MariaDB server/client tools and Apache2/mod_ssl; CI uses this mode. Missing tools fail configuration. The default OFF mode keeps existing optional-test behavior for developer machines. `project.metadata` uses Python only and checks release/documentation consistency. See [audit](AUDIT_ALPHA_0.1.md).
+
 Requirements: Linux, CMake >=3.22, a C++20 toolchain (GCC >=11), pthreads, utf8proc 2.x development files and OpenSSL >=1.1.1 development files. Python >=3.8 and the `openssl` executable support tests. ncdc adds two real-client smoke tests when available; CI installs it. Missing ncdc is reported explicitly by CMake. Dependencies are located locally; configuration does not download them.
 
 ```sh
@@ -19,7 +21,7 @@ cmake --build build-runtime --parallel 2
 sudo cmake --install build-runtime --prefix /usr/local
 ```
 
-Language catalogs are compiled into the binary. CMake generates `dc24h/version.hpp` from project version 0.1.11; `--version` prints alpha-0.1.11. Identify an exact build with that version plus `git rev-parse HEAD`. Do not edit generated files. MariaDB Connector/C development/runtime libraries are required; a running SQL server is optional. Node.js and Apache2 are not required for the C++ build; the optional frontend has separate requirements.
+Language catalogs are compiled into the binary. CMake generates `dc24h/version.hpp` from project version 0.2.1; `--version` prints alpha-0.2.1. Identify an exact build with that version plus `git rev-parse HEAD`. Do not edit generated files. MariaDB Connector/C development/runtime libraries are required; a running SQL server is optional. Node.js and Apache2 are not required for the C++ build; the optional frontend has separate requirements.
 
 For sanitizers:
 

@@ -313,7 +313,7 @@ export default function App() {
   );
   const number = (value: number | undefined) =>
     value === undefined ? "—" : formatter.format(value);
-  const documentation = `https://github.com/adrianf87/dc24h.eu/blob/alpha-0.1.10/doc/${language}/WEBADMIN.md`;
+  const documentation = `https://github.com/adrianf87/dc24h.eu/blob/${WEBADMIN_VERSION}/doc/${language}/WEBADMIN.md`;
   useEffect(() => {
     document.documentElement.lang = language === "pl" ? "pl" : "en-US";
     try {

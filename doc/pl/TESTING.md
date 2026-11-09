@@ -1,5 +1,11 @@
 # Testowanie
 
+## Aktualny audyt — alpha-0.2.1
+
+Pełny bieżący zestaw ma **22 pozycje CTest**, w tym `project.metadata`. Wszystkie przeszły lokalnie w Debug, Release i ASan/UBSan; przeszły też build frontendu, 3 testy Node, 3 przeglądarkowe i rzeczywista integracja API C++. CI używa `-DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, odrzucając brak openssl/ncdc/MariaDB/Apache. Domyślny tryb opcjonalny może rejestrować mniej testów. Kontrola metadanych potrzebuje wyłącznie Pythona, bez Node i Git. Osobno sprawdzono negatywne przypadki konfiguracji i metadanych.
+
+[Audyt](AUDIT_ALPHA_0.1.md) zapisuje dokładny SHA podstawy, zaobserwowany historyczny sukces CI main, środowisko, ustalenia i polecenia odtworzenia. Starsze wyniki poniżej opisują wskazane etapy historyczne. Początkowy HSUP ncdc nadal sprawdza transport, nie pełne logowanie huba. Debian 12, Ubuntu 26.04, długotrwałe obciążenie i fuzzing pozostają osobnymi zadaniami odbioru.
+
 Uruchom `ctest --test-dir build --output-on-failure` i analogicznie dla `build-release`. Testy korzystają wyłącznie z loopback, portów 0 i danych tymczasowych, bez konfiguracji i udziałów użytkownika ncdc. Oczekiwania mają timeout i sprzątanie.
 
 | Zestaw CTest | Zakres |

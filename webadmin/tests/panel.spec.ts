@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
+import { WEBADMIN_VERSION } from "../src/lib/status";
 const data = {
   api_version: "v1",
   server: {
     name: "dc24h.eu",
-    version: "alpha-0.1.11",
+    version: "alpha-0.2.1",
     core_running: true,
     uptime_seconds: 3661,
   },
@@ -21,6 +22,10 @@ test("unconfigured panel stays honest, readable and bilingual with working navig
   page,
 }) => {
   await page.goto("/");
+  await expect(page.locator("a.documentation")).toHaveAttribute(
+    "href",
+    `https://github.com/adrianf87/dc24h.eu/blob/${WEBADMIN_VERSION}/doc/us/WEBADMIN.md`,
+  );
   await expect(
     page.getByRole("heading", { name: "Your hub, in one place." }),
   ).toBeVisible();
@@ -36,6 +41,10 @@ test("unconfigured panel stays honest, readable and bilingual with working navig
   await page.getByRole("switch").click();
   await expect(page.getByRole("switch")).not.toBeChecked();
   await page.getByRole("combobox").selectOption("pl");
+  await expect(page.locator("a.documentation")).toHaveAttribute(
+    "href",
+    `https://github.com/adrianf87/dc24h.eu/blob/${WEBADMIN_VERSION}/doc/pl/WEBADMIN.md`,
+  );
   await expect(
     page.getByRole("heading", { name: "Przegląd huba" }),
   ).toBeVisible();

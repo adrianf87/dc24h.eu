@@ -13,9 +13,12 @@
 | alpha-0.1.9 | alpha-0.1.9 | Local read-only administrative HTTP/JSON API |
 | alpha-0.1.10 | alpha-0.1.10 | React/TypeScript/Vite WebAdmin layout and local read-only adapter |
 | alpha-0.1.11 | alpha-0.1.11 | Apache2 static HTTPS template and isolated TLS/access tests |
+| alpha-0.2.1 | alpha-0.2.1 | Project: alpha-0.1 audit and alpha-0.2 preparation |
 
-CMake PROJECT_VERSION is 0.1.11 and the generated runtime version is alpha-0.1.11. Identify an individual build with the version plus its Git commit SHA; compiling does not modify tracked source. Each significant change updates CHANGELOG.md. Alpha denotes development status, not complete hub functionality. Tags and production deployment are not created automatically.
+Identify an individual build with its version and Git commit SHA; compiling does not modify tracked source. Each significant change updates CHANGELOG.md. Alpha denotes development status, not complete hub functionality. Tags and production deployment are not created automatically.
 
 Historical stage branches and commit history are preserved. alpha-0.1.4 retains the reference TLS branch through a merge and includes follow-up fixes.
 
-alpha-0.1.10 is merged into main. alpha-0.1.11 starts from that main and does not change it automatically.
+## alpha-0.2.1 Project
+
+CMake PROJECT_VERSION is **0.2.1**, runtime and WebAdmin release are **alpha-0.2.1**, and both npm package/lock root versions are **0.2.1**. `project.metadata` enforces consistency. alpha-0.1.11 is merged into main; alpha-0.2.1 starts from that main. alpha-0.2 is a line marker at the same audit commit. Neither new branch changes main automatically. Proposed later alpha-0.2 versions in ROADMAP remain unimplemented. See [audit](AUDIT_ALPHA_0.1.md).

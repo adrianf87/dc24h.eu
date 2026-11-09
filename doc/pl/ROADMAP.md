@@ -14,16 +14,23 @@
 | alpha-0.1.10 WebAdmin | Układ React/TypeScript/Vite tylko do odczytu, EN/PL, lokalny adapter i statyczny przykład Apache |
 | alpha-0.1.11 Apache2 | Przykład statycznego HTTPS, przekierowanie, TLS/nagłówki i testy tymczasowego Apache |
 
-Kolejne wersje wymagają osobnego zakresu i kryteriów testowych:
+| alpha-0.2.1 Project | Audyt alpha-0.1, poprawki spójności, wymagane integracje w CI i podstawa alpha-0.2 |
 
-1. Serializer ADC, ograniczone kolejki wyjściowe, backpressure, SID i automat sesji; pełne logowanie ncdc.
-2. close_notify, przeładowanie certyfikatów, telemetria i asynchroniczne/rotowane logi.
-3. Użytkownicy, Argon2id, role/bany, migracje tabel aplikacji i zweryfikowany zdalny TLS bazy.
-4. Chat publiczny/prywatny, wyszukiwanie i koordynacja transferów.
-5. Operacje API zmieniające stan/role/audyt, uwierzytelniona brama Apache2 oraz produkcyjne sesje/role WWW.
+## Proponowane etapy alpha-0.2
 
-Wersje późniejsze niż alpha-0.1.11 pozostają planowane. Inne gałęzie nie potwierdzają gotowości wydania.
+To plan kryteriów odbioru, nie zaimplementowane funkcje. Ostateczny zakres należy ustalić przed rozpoczęciem każdego numerowanego etapu.
 
-## alpha-0.1.5
+| Proponowany etap | Zakres | Kryterium odbioru |
+| --- | --- | --- |
+| alpha-0.2.2 ADC output | Serializer, escape, walidacja nagłówków i limity zakodowanych bajtów | Dokładne bajty zgodne z gramatyką; parse/serialize, Unicode, granice i błędy; jeszcze bez zapisu do sieci |
+| alpha-0.2.3 Network output | Ograniczone kolejki klienta i łączne, częściowy zapis TCP/TLS, WANT_READ/WANT_WRITE i polityka wolnego odbiorcy | Fragmentowany zapis TCP/ADCS, limity kolejek, sprawiedliwa obsługa przy zatrzymanym odbiorcy, błędy klienta i ograniczony stop; bez nieograniczonych alokacji |
+| alpha-0.2.4 Sessions | Negocjacja SUP/hash, SID, automat handshake i walidacja INF/tożsamości | Dozwolone/niedozwolone przejścia, unikalność/zwalnianie SID, odrzucanie podszytego źródła i duplikatów; bez wycieku PID |
+| alpha-0.2.5 Client integration | Pełne logowanie gościa przez ADC i ADCS, rozłączenia i znaczenie gotowości | Prawdziwy ncdc osiąga normalny stan zalogowania na obu transportach; reconnect, wielu użytkowników, błędna negocjacja i dotychczasowe regresje przechodzą |
 
-Zaimplementowano: jawny INI, nadpisania CLI, walidację nasłuchów/limitów/ścieżek, tryb sprawdzania i logowanie append z wyborem poziomu. Późniejsze wersje z innych gałęzi pozostają poza zakresem zadania.
+Pełny chat, wyszukiwanie i koordynacja transferów pozostają osobnymi etapami po poprawności sesji. Konta wymagają przeglądu uwierzytelniania/uprawnień/haseł oraz migracji aplikacji. Produkcyjna administracja WWW wymaga uwierzytelnionej bramy Apache, sesji/ról przeglądarki, CSRF i audytu przed udostępnieniem. Izolacja/rotacja logów, close_notify/reload TLS, pomiary obciążenia/fuzzing/fault injection i pozostałe systemy to jawne dalsze zadania.
+
+## Gałęzie i ukończenie
+
+alpha-0.2.1 powstaje z main po scaleniu alpha-0.1.11. alpha-0.2 wskazuje ten sam commit audytu jako znacznik linii; nie zastępuje wymaganych numerowanych gałęzi z main. Scalanie sprawdzonego etapu do main wymaga osobnego polecenia. Zachować historię gałęzi i niezmienne migracje SQL.
+
+Każdy etap wymaga CTest z obowiązkowymi integracjami, testów frontendu gdy zmieniany, kontroli metadanych/dokumentacji i changeloga. Zielony ncdc z początkowym HSUP potwierdza transport, dopóki pełne logowanie nie zostanie zaimplementowane. Zobacz [audyt i priorytety](AUDIT_ALPHA_0.1.md).

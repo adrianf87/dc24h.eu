@@ -1,5 +1,7 @@
 # Budowanie
 
+Pełny zestaw integracji wymaga `-DDC24H_REQUIRE_INTEGRATION_TESTS=ON` przy włączonym BUILD_TESTING. Potrzebne są openssl, ncdc, narzędzia serwera/klienta MariaDB i Apache2/mod_ssl; CI używa tego trybu. Brak narzędzi przerywa konfigurację. Domyślne OFF zachowuje opcjonalność testów dla deweloperów. `project.metadata` potrzebuje tylko Pythona i sprawdza spójność wersji/dokumentacji. Zobacz [audyt](AUDIT_ALPHA_0.1.md).
+
 Wymagane: Linux, CMake >=3.22, kompilator C++20 (GCC >=11), pthreads, utf8proc 2.x i pliki deweloperskie OpenSSL >=1.1.1. Testy używają Pythona >=3.8 i programu openssl. ncdc dodaje dwa testy rzeczywistego klienta; bez niego CMake jawnie informuje o pominięciu. Zależności nie są pobierane podczas konfiguracji.
 
 ```sh
@@ -11,7 +13,7 @@ cmake --build build-release --parallel 2
 ctest --test-dir build-release --output-on-failure
 ```
 
-`-DBUILD_TESTING=OFF` wyłącza testy i wymaganie Pythona. `cmake --install build-release --prefix /usr/local` instaluje sam program (może wymagać sudo). Katalogi językowe są wkompilowane. Wersja pochodzi z CMake; `--version` zwraca alpha-0.1.11. Dokładną kompilację identyfikuje także `git rev-parse HEAD`. Nie edytuj plików generowanych. Wymagane są biblioteki Connector/C MariaDB; działający serwer SQL jest opcjonalny. Node.js i Apache2 nie są wymagane do budowania C++; frontend ma osobne wymagania.
+`-DBUILD_TESTING=OFF` wyłącza testy i wymaganie Pythona. `cmake --install build-release --prefix /usr/local` instaluje sam program (może wymagać sudo). Katalogi językowe są wkompilowane. Wersja pochodzi z CMake; `--version` zwraca alpha-0.2.1. Dokładną kompilację identyfikuje także `git rev-parse HEAD`. Nie edytuj plików generowanych. Wymagane są biblioteki Connector/C MariaDB; działający serwer SQL jest opcjonalny. Node.js i Apache2 nie są wymagane do budowania C++; frontend ma osobne wymagania.
 
 Pełne polecenia konfiguracji AddressSanitizer/UndefinedBehaviorSanitizer: [BUILD US](../us/BUILD.md). Osobne budowanie frontendu: [WEBADMIN.md](WEBADMIN.md).
 
