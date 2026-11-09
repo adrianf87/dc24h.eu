@@ -6,6 +6,7 @@
 
 #include <atomic>
 #include <charconv>
+#include <csignal>
 #include <cstdlib>
 #include <exception>
 #include <iostream>
@@ -63,6 +64,12 @@ dc24h::network::Options parse_options(int argc, char* argv[]) {
 } // namespace
 
 int main(int argc, char* argv[]) {
+    // TLS handshakes can write to sockets after a peer aborts. A broken pipe
+    // must become a per-connection I/O error, never terminate the hub process.
+    if (std::signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
+        std::cerr << "Cannot configure SIGPIPE handling\n";
+        return EXIT_FAILURE;
+    }
     if (argc == 2 && std::string_view(argv[1]) == "--version") {
         std::cout << "dc24h.eu " << dc24h::version << '\n';
         return EXIT_SUCCESS;

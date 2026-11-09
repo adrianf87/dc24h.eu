@@ -23,6 +23,6 @@ Example (replace paths and port with your deployment settings):
 
 ## Failure isolation and limitations
 
-Handshake failures and encrypted peer I/O failures close only the corresponding client, not the listener. Incomplete TLS handshakes expire after at most 10 seconds or the configured shorter idle timeout. Regular encrypted sessions follow the existing idle timeout. Memory/connection limits apply across both listener types. The server does not implement TLS close_notify on local shutdown, outbound ADC messages, rate limiting per IP, mTLS, OCSP stapling or certificate hot reload. `ADCS stopped` logs aggregate successful and incomplete handshakes without storing client payloads.
+Handshake failures and encrypted peer I/O failures close only the corresponding client, not the listener. The process ignores SIGPIPE so failed TLS socket writes are reported as I/O errors instead of terminating the hub. Incomplete TLS handshakes expire after at most 10 seconds or the configured shorter idle timeout. Regular encrypted sessions follow the existing idle timeout. Memory/connection limits apply across both listener types. The server does not implement TLS close_notify on local shutdown, outbound ADC messages, rate limiting per IP, mTLS, OCSP stapling or certificate hot reload. `ADCS stopped` logs aggregate successful and incomplete handshakes without storing client payloads.
 
 TLS counters and cipher policy must be verified in each deployment. The release is experimental and is not production-ready.
