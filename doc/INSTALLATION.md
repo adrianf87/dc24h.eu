@@ -6,8 +6,8 @@ opisuje [TESTING.md](TESTING.md).
 
 ```sh
 sudo apt-get update
-sudo apt-get install build-essential cmake git python3
-git clone --branch alpha-0.1.2 https://github.com/adrianf87/dc24h.eu.git
+sudo apt-get install build-essential cmake git python3 libutf8proc-dev ncdc
+git clone --branch alpha-0.1.3 https://github.com/adrianf87/dc24h.eu.git
 cd dc24h.eu
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel 2

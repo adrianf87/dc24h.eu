@@ -1,5 +1,28 @@
 # Historia zmian
 
+## alpha-0.1.3 — 2026-11-09
+
+Etap ADC — parser bez automatu sesji i obsługi poleceń:
+
+- Osobna biblioteka `dc24h_adc`, niezależna od deskryptorów, Core i loggera.
+- `parse_line` i `StreamDecoder`: LF, keepalive, fragmentacja TCP, wiele ramek
+  w odczycie, częściowa ramka przy zamknięciu i odzyskiwanie po błędzie.
+- Nagłówki B/C/D/E/F/H/I/U, SID, CID o długości zależnej od hasha i selektory cech.
+- Rozpoznawanie 15 komend BASE; zachowanie nazw nieznanych komend rozszerzeń.
+- Dekodowanie escape, ścisłe UTF-8 i NFC przez nową zależność utf8proc.
+- Limity 16 KiB treści ramki i 128 parametrów; odrzucanie zbyt długiej ramki
+  do LF, bez nieograniczonego buforowania. Lokalna polityka odrzuca surowe
+  ASCII control/DEL, w tym CR i NUL; nie przyjmuje CRLF jako LF.
+- Oddzielny dekoder każdego klienta TCP i zagregowane liczniki ADC na stopie,
+  bez logowania parametrów, prywatnych identyfikatorów ani hashy haseł.
+- Testy składni, Unicode, granic, losowego korpusu i integracji TCP. Smoke test
+  prawdziwego ncdc w izolowanej sesji/PTY sprawdza początkowy HSUP.
+- Debug/Release i parser z AddressSanitizer/UndefinedBehaviorSanitizer;
+  aktualizacja CI, zależności i dokumentacji w `doc/`.
+
+Walidacja jest składniowa. Brak walidacji semantyki komend, sesji, autoryzacji,
+serializera, routingu i odpowiedzi. Pełne logowanie ncdc nie jest obsługiwane.
+
 ## alpha-0.1.2 — 2026-11-09
 
 Etap Network, rozwijający istniejący Core:

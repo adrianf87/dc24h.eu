@@ -89,7 +89,7 @@ class NetworkProcessTests(unittest.TestCase):
         payload = b"BMSG invalid-transport-test\n" * 256
         with ThreadPoolExecutor(max_workers=8) as pool:
             list(pool.map(lambda peer: peer.sendall(payload), peers))
-        # No protocol response or echo at this transport milestone.
+        # Syntax parsing does not send a protocol response or echo.
         for peer in peers[:3]:
             peer.settimeout(0.05)
             with self.assertRaises(socket.timeout):

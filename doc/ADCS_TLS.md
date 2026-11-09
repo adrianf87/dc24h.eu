@@ -1,6 +1,6 @@
 # ADCS i TLS
 
-Status alpha-0.1.2: nie ma TLS, certyfikatów ani listenera ADCS.
+Status alpha-0.1.3: nie ma TLS, certyfikatów ani listenera ADCS.
 Program nie linkuje obecnie biblioteki kryptograficznej.
 
 Plan: TLS w module Network/ADCS z utrzymywaną biblioteką, walidacją konfiguracji

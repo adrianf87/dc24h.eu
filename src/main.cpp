@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
                      "Defaults: --listen 127.0.0.1:1511 --max-connections 1024 --idle-timeout 120\n"
                      "Repeat --listen for up to 16 ports; port 0 selects an ephemeral port.\n"
                      "Limits: connections 1..65535; idle timeout 1..86400 seconds.\n"
-                     "TCP transport only: incoming bytes are discarded; ADC/ADCS is not implemented.\n";
+                     "ADC syntax parsing only: no handshake, routing, login or ADCS/TLS yet.\n";
         return EXIT_SUCCESS;
     }
     dc24h::network::Options options;

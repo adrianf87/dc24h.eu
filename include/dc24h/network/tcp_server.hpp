@@ -31,6 +31,10 @@ struct Statistics {
     std::uint64_t accepted;
     std::uint64_t rejected;
     std::uint64_t received_bytes;
+    std::uint64_t adc_frames;
+    std::uint64_t adc_unknown;
+    std::uint64_t adc_invalid;
+    std::uint64_t adc_keepalives;
 };
 
 class TcpServer final {
@@ -58,6 +62,10 @@ private:
     std::atomic<std::uint64_t> accepted_{0};
     std::atomic<std::uint64_t> rejected_{0};
     std::atomic<std::uint64_t> received_bytes_{0};
+    std::atomic<std::uint64_t> adc_frames_{0};
+    std::atomic<std::uint64_t> adc_unknown_{0};
+    std::atomic<std::uint64_t> adc_invalid_{0};
+    std::atomic<std::uint64_t> adc_keepalives_{0};
 };
 
 } // namespace dc24h::network
