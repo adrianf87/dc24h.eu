@@ -1,15 +1,23 @@
-# dc24h.eu alpha-0.1.6 configuration (UTF-8, no secrets committed)
+# dc24h.eu alpha-0.1.7 configuration (UTF-8, no secrets committed)
 # Section names and keys are case-sensitive; duplicate singular keys are errors.
 [general]
 language = us
 
 [network]
 listen = 127.0.0.1:1511
-# To enable TLS, uncomment adcs_listen and both [tls] paths below.
+# To enable TLS, uncomment adcs_listen and both certificate/key paths below.
 # For TLS only, replace listen above with: listen = none
 # adcs_listen = 127.0.0.1:1512
 max_connections = 1024
 idle_timeout = 120
+
+[security]
+max_connections_per_ip = 128
+max_accepts_per_minute = 256
+max_frames_per_second = 1024
+max_invalid_frames = 512
+tls_handshake_timeout = 10
+partial_frame_timeout = 10
 
 [tls]
 # certificate = /etc/dc24h/tls/fullchain.pem

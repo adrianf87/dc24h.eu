@@ -19,3 +19,7 @@ All owners must stop and join callers before destroying dependencies. `Logger(Op
 ## Logger — alpha-0.1.6
 
 `Level` includes info/warning/error/off. `info`, `warning` and `error` accept internal non-secret text and never throw. `connection(ConnectionEvent, uint64_t id, bool secure)` accepts only typed lifecycle values, preventing arbitrary event/payload strings. `connection_enabled()` reports the immutable opt-in and INFO threshold. A shared 64-event/second-window budget and destructor/rollover suppression summary are protected by the logger mutex. `Options` order is level, file_path, language, connections, preserving earlier aggregate initializers. Complete record bounds and limitations: [LOGGING.md](LOGGING.md).
+
+## Security — alpha-0.1.7
+
+`network::Options::security` holds six validated `security::Limits` fields. `security::validate` rejects out-of-range values. `PeerLimiter(Limits)` is reactor-confined: `admit(canonical_key, steady_time)` grants an active slot and minute admission; call `release(key)` exactly once on every granted slot after failure/close. Key length and map size are bounded; `tracked_peers()` exposes the current map count. `FrameLimiter(maximum)::admit(steady_time)` provides a connection-local fixed second budget. Caller times must be monotonic. `Statistics` adds independent atomic security_rejected/security_closed counts. No limiter state is shared between server instances/processes. Details: [SECURITY.md](SECURITY.md).

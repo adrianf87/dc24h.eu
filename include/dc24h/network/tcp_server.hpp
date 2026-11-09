@@ -1,5 +1,7 @@
 #pragma once
 
+#include "dc24h/security/limits.hpp"
+
 #include <atomic>
 #include <chrono>
 #include <cstddef>
@@ -27,6 +29,7 @@ struct Options {
     std::string tls_private_key;
     std::size_t max_connections{1024};
     std::chrono::seconds idle_timeout{120};
+    security::Limits security{};
 };
 
 struct Statistics {
@@ -40,6 +43,8 @@ struct Statistics {
     std::uint64_t adc_keepalives;
     std::uint64_t adcs_handshakes;
     std::uint64_t adcs_incomplete;
+    std::uint64_t security_rejected;
+    std::uint64_t security_closed;
 };
 
 class TcpServer final {
@@ -73,6 +78,8 @@ private:
     std::atomic<std::uint64_t> adc_keepalives_{0};
     std::atomic<std::uint64_t> adcs_handshakes_{0};
     std::atomic<std::uint64_t> adcs_incomplete_{0};
+    std::atomic<std::uint64_t> security_rejected_{0};
+    std::atomic<std::uint64_t> security_closed_{0};
 };
 
 } // namespace dc24h::network

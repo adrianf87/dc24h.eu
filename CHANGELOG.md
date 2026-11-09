@@ -1,5 +1,26 @@
 # Changelog
 
+## alpha-0.1.7 — 2026-11-09
+
+Security/resource-policy milestone, based on main after alpha-0.1.6:
+
+- Reviewed and adapted chatgpt-alpha-0.1.7 while preserving main's TLS scheduling, typed/private logging, strict INI handling and US/PL support.
+- Added independent C++20 `dc24h_security` with validated per-IP active/admission limits and per-connection fixed-window frame budgets.
+- Shares canonical kernel source-IP state across TCP/ADCS listeners before TLS-session allocation/watch registration; releases active slots on disconnect, timeout, rollback and stop.
+- Bounded the admission map to 65536 entries and keys to 48 bytes, with periodic inactive expiry and fail-closed admission when full. Source IPs remain in memory only.
+- Added six INI/CLI settings: 128 active peers/IP, 256 admissions/IP/minute, 1024 decoder results/s/connection, 512 invalid results/connection lifetime, 10-second TLS and partial-frame deadlines by default.
+- Retained parser limits of 16384 frame-body bytes and 128 parameters, UTF-8/NFC validation and discard/resynchronization. `in_progress()` includes oversized discard state for timeout tracking.
+- Applies non-sliding TLS/partial-frame deadlines before/after I/O and before decoder segments. A completed frame followed by a new partial frame in the same read correctly starts a new deadline.
+- Stops parsing the remainder of a read after rate/invalid quota breach. Valid, invalid and keepalive results consume the live frame budget; the crossing rate result is excluded from normal ADC counters.
+- Added atomic security_rejected/security_closed telemetry, rate-limited quota/deadline warnings, typed close events and startup limit summaries without source addresses or payloads.
+- Added security unit/process suites covering exact clock-window boundaries, map exhaustion/pruning, active-slot reuse, shared TCP/TLS and independent-source quotas, keepalive/invalid floods, length/parameter limits, slow partial/TLS input, deadline renewal and INI/CLI validation.
+- Real ncdc ADC/ADCS smoke tests now explicitly configure security limits and assert no security rejection/closure. The large TLS transport regression explicitly raises its frame budget.
+- Updated matched US/PL technical documentation, operator catalogs, INI example, version and CI title. Added a regression check that validates the actual shipped INI example. No redundant root/language documentation copies were introduced.
+
+Local validation: **16/16 CTest suites passed in Debug, Release and ASan/UBSan**, including real ncdc ADC and ADCS, on Debian 13 with GCC 14.2, CMake 3.31.6, OpenSSL 3.5.7 and ncdc 1.23.1. Documentation UTF-8/local links/language parity, staged install/example and Git whitespace checks passed. Remote CI and remaining OS targets are not claimed as verified.
+
+Limits: fixed windows allow boundary bursts, NAT clients share a source budget, and there is no byte-bandwidth or global attempt limiter. Synchronous logging and fatal infrastructure/allocation errors retain their prior limitations. This is not DDoS protection, authentication or a security audit. Full ADC login, accounts/roles/bans, output/backpressure, MariaDB, HTTP API and WebAdmin remain future work. Main and historical stage branches are preserved.
+
 ## alpha-0.1.6 — 2026-11-09
 
 Logging milestone, based on main after the alpha-0.1.5 merge:

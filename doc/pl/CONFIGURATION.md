@@ -1,4 +1,4 @@
-# Konfiguracja — alpha-0.1.6
+# Konfiguracja — alpha-0.1.7
 
 Kolejność ustawień: wartości domyślne, jeden jawny `--config PLIK`, następnie nadpisania CLI niezależnie od miejsca `--config`. Brak automatycznego wyszukiwania pliku, zmiennych środowiskowych, include, reload i konfiguracji zdalnej.
 
@@ -52,3 +52,18 @@ Katalogi muszą być zaufane i kontrolowane przez użytkownika usługi; mechaniz
 Zobacz [TLS](ADCS_TLS.md), [bezpieczeństwo](SECURITY.md) i [przykład INI](../../config/dc24h.ini.example).
 
 Logger ogranicza teraz wiersze UTF-8, dodaje opcjonalne typowane zdarzenia połączeń i niezależne limity ostrzeżeń. [LOGGING.md](LOGGING.md) opisuje nazwy zdarzeń, prywatność, raporty pominięć i synchroniczne I/O.
+
+## Security — alpha-0.1.7
+
+Domyślne wartości obowiązują także bez sekcji security. Każda jest dodatnią liczbą całkowitą; zero nie wyłącza limitu. Składnia/zakres pliku muszą być poprawne przed CLI, a końcowe ustawienia sprawdza `security::validate`.
+
+| Klucz INI w `[security]` | Nadpisanie CLI | Domyślnie | Zakres | Znaczenie |
+| --- | --- | --- | --- | --- |
+| `max_connections_per_ip` | `--max-per-ip` | 128 | 1..65535 | Aktywni klienci na IP |
+| `max_accepts_per_minute` | `--accepts-per-minute` | 256 | 1..100000 | Przyjęcia/IP/stała minuta |
+| `max_frames_per_second` | `--frames-per-second` | 1024 | 1..100000 | Wyniki dekodera/klient/stała sekunda |
+| `max_invalid_frames` | `--max-invalid-frames` | 512 | 1..65535 | Błędy/czas życia połączenia |
+| `tls_handshake_timeout` | `--tls-handshake-timeout` | 10 | 1..3600 | Bezwzględny termin TLS, sekundy |
+| `partial_frame_timeout` | `--partial-frame-timeout` | 10 | 1..3600 | Termin niedokończonej ramki, sekundy |
+
+Porty współdzielą stan przyjęć IP. Tempo jest na połączenie, także keepalive i błędy dekodera. N-ty błąd w czasie życia zamyka klienta. TLS ograniczają jego termin bezwzględny i bezczynność. Termin częściowej ramki nie odnawia się przy kolejnych bajtach, tylko przy następnej ramce po LF. Dokładne okna, pamięć, liczniki i terminy: [SECURITY.md](SECURITY.md).

@@ -13,3 +13,7 @@ Local limits (application policy, not ADC requirements): 16384 body bytes, 128 p
 Shutdown counters: `frames` counts valid nonempty frames; `unknown_commands` is their unknown-command subset; `invalid_frames` includes malformed, oversized and truncated input; `keepalives` counts empty LF. No parameters, PID or PAS hashes enter logs.
 
 No serializer, semantic field validation, command/type permission matrix, SID allocation, session state machine, authentication, routing, chat, search or transfer coordination exists. U headers can be parsed but there is no UDP listener. ncdc tests cover initial HSUP only: no ISUP/ISID response or NORMAL session. TLS transport is described in [ADCS_TLS.md](ADCS_TLS.md).
+
+## Security integration — alpha-0.1.7
+
+The parser library retains its 16 KiB/128-parameter limits and resynchronization contract. `StreamDecoder::in_progress()` reports both buffered partial input and oversized discard state for absolute timeout tracking. The server adds per-connection result-rate and invalid-lifetime budgets, and may close abusive peers. It feeds one LF-delimited segment at a time and stops parsing the rest of a read when a quota is breached. The crossing rate result is not counted in ADC statistics; received_bytes can include unparsed remainder already read from the socket. Final truncated EOF is counted once during close. See [SECURITY.md](SECURITY.md).

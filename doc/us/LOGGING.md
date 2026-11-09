@@ -35,7 +35,7 @@ Per-peer INFO records require `connections=on` or `--log-connections on`, and `l
 2026-11-09T00:00:00Z [INFO] Connection id=2 transport=ADCS event=tls_ready
 ```
 
-Public `ConnectionEvent` values are accepted, peer_closed, tls_ready, tls_handshake_failed, tls_closed, tls_read_error, tcp_read_error, socket_error, idle_timeout, handshake_timeout and shutdown. The API takes the enum, numeric ID and secure flag, not an arbitrary event string. IDs are temporary and process-local, not authenticated user identities. A successful TLS negotiation is not an ADC login. A TLS close_notify received from the peer is distinguished from TLS read failure; sending server close_notify remains future work.
+Public `ConnectionEvent` values are accepted, peer_closed, tls_ready, tls_handshake_failed, tls_closed, tls_read_error, tcp_read_error, socket_error, idle_timeout, handshake_timeout, shutdown, security_quota and partial_frame_timeout. The API takes the enum, numeric ID and secure flag, not an arbitrary event string. IDs are temporary and process-local, not authenticated user identities. A successful TLS negotiation is not an ADC login. A TLS close_notify received from the peer is distinguished from TLS read failure; sending server close_notify remains future work.
 
 No remote addresses, ports, nicknames, CID/PID, PAS hashes or ADC frame bodies are passed to these records. Listener readiness still reports the explicitly configured local bind address. Startup settings report listener counts, connection/timeout limits and whether connection logging is enabled, without configuration/log/key paths. Generic info/warning/error callers must also avoid secrets: sanitization does not redact arbitrary sensitive text.
 
@@ -50,3 +50,7 @@ The message body is at most 1024 bytes including `...[truncated]` when needed, p
 ## Operational limits
 
 Writes are synchronous on the caller thread. Regular-file I/O and a blocked stderr pipe can still delay the reactor; rate budgets bound routine peer-driven log volume, not storage latency. Partial writes/EINTR are handled, runtime sink errors are best effort, and log exceptions do not escape. File-open failures are startup errors. There is no async queue, rotation, reopen, dynamic level change, SIGHUP reload or remote collector. Manage file growth and use trusted directories. These controls do not replace network rate limits, authentication or DDoS protection. Tests and local verification are described in [TESTING.md](TESTING.md).
+
+## Security — alpha-0.1.7
+
+Admission quotas, frame quotas and partial-frame expiry each have their own five-second warning category. Existing ordinary-idle and TLS-deadline categories remain independent. The new typed close events are security_quota and partial_frame_timeout; TLS expiry retains handshake_timeout. Shutdown adds Security stopped; rejected=N closed=N, with exact meanings in [SECURITY.md](SECURITY.md). Source IPs remain absent from logs, even though admission state uses them in memory.

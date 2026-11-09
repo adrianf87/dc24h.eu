@@ -11,3 +11,5 @@ Before significant commits: build, run appropriate CTest suites, update document
 alpha-0.1.5 starts from main after the explicit alpha-0.1.4 merge. The configuration/logging sources and tests from chatgpt-alpha-0.1.5 were reviewed and adapted, preserving main TLS and i18n fixes. No en/ duplicate language directory is imported.
 
 alpha-0.1.6 starts from main after alpha-0.1.5. The logging-specific commits in chatgpt-alpha-0.1.6 were reviewed and adapted; main's safer INI/file handling, TLS scheduling and US/PL support are retained. Use typed ConnectionEvent values and keep all payload/peer data out of operational logs.
+
+alpha-0.1.7 starts from main after the alpha-0.1.6 merge. The security sources/tests in chatgpt-alpha-0.1.7 were reviewed and adapted. Retain bounded admission state, canonical source identities, one release per slot and absolute per-frame deadlines; never log the source keys or payloads. Security is independent of the planned authentication module.

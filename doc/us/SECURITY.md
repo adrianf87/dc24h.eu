@@ -1,19 +1,46 @@
-# Security boundaries
+# Security — alpha-0.1.7
 
-This alpha is transport and syntax infrastructure, not a production-ready authenticated hub. The default listener is loopback; exposing a wildcard requires an explicit address. Use an unprivileged service user. TLS is optional and protects only explicitly configured ADCS listeners. Plaintext TCP remains unencrypted.
+This stage adds local resource controls to the existing TCP/ADCS transport and ADC syntax parser. The executable still has no authenticated users, session identity, role checks or complete ADC login. Run as an unprivileged user; loopback remains the default listener and public/wildcard addresses require explicit configuration.
 
-ADC input has independent bounded decoder state, UTF-8/NFC/header/escape validation and a parameter limit. It does not validate session identity, ownership of SID/IP, authorization or command semantics, and never dispatches commands. Limits on active clients and idle/handshake duration do not provide DDoS, per-IP rate or bandwidth protection. Frame bodies, PID and PAS hashes are not logged.
+## Implemented limits
 
-TLS requires loadable matching credentials and version >=1.2. Clients must validate trust/name/validity. No client certificates or user authentication are used. Encrypted PEM keys are rejected without terminal prompts. Keep keys and credentials outside Git with restricted permissions. The server follows OpenSSL's cipher policy; see [ADCS_TLS.md](ADCS_TLS.md) for shutdown and reload limitations.
+| Setting | Default | Allowed range |
+| --- | --- | --- |
+| Active connections per canonical source IP | 128 | 1..65535 |
+| Admissions per IP per fixed minute window | 256 | 1..100000 |
+| Decoder frame results per connection per fixed second window | 1024 | 1..100000 |
+| Invalid frame results per connection lifetime | 512 | 1..65535 |
+| Absolute TLS handshake deadline | 10 seconds | 1..3600 |
+| Absolute unfinished ADC frame deadline | 10 seconds | 1..3600 |
 
-SIGINT/SIGTERM are consumed synchronously, avoiding unsafe work in asynchronous handlers. SIGPIPE is ignored by main. Socket/event descriptors use close-on-exec. SIGHUP retains default system behavior. Network peer failures close the affected socket; infrastructure exhaustion or fatal reactor errors can still stop the process.
+The global connection limit (default 1024), idle timeout (default 120 seconds), fixed 16384-byte frame body and 128-parameter parser limits remain in force. These are dc24h resource policies, not limits imposed by [ADC 1.0.4](https://dc-protocols.github.io/ADC.html). Small numbers of malformed frames are discarded and parsing can resynchronize; repeated invalid input can close the peer under the configured lifetime threshold.
 
-Future requirements include bounded response queues/backpressure, flood controls, session validation, authenticated roles, audited password hashing (planned Argon2id), parameterized SQL and secured API operations. Do not present planned controls as implemented.
+Configure the six settings in `[security]` or with CLI overrides; see [CONFIGURATION.md](CONFIGURATION.md). Zero cannot disable protections. `--check-config` validates ranges without opening ports or a log. Real startup also validates programmatically supplied Network options.
 
-## Configuration files and log sinks
+## Admission and state bounds
 
-INI reads are bounded and validate the descriptor type before reading. Final symlinks/devices/FIFOs are rejected. Log paths are checked against the active INI and TLS credentials, including existing aliases; regular append files must have one hard link. Opening a FIFO cannot block startup. Runtime writes are synchronous and best effort, without rotation. Trusted directories and unprivileged execution remain necessary. See [configuration](CONFIGURATION.md) and [Linux open(2)](https://man7.org/linux/man-pages/man2/open.2.html).
+After the kernel accepts a socket, the reactor checks the global active limit, then a shared per-IP limiter **before allocating a TLS session or adding a client watch**. All TCP/TLS listeners share that limiter. Pending TLS handshakes consume active slots. Close/error/timeout/stop release the slot; session initialization and watch failures roll back the active count too. A security admission already granted remains counted in its minute window even if later resource setup fails. Rejections do not extend the window or count as new admissions. The kernel TCP handshake can succeed before the application rejects the socket.
 
-## Logging boundaries
+Canonical numeric source IPs come from the accepted sockaddr, not client-supplied ADC fields. IPv4-mapped IPv6 identities normalize to IPv4; listeners still use IPV6_V6ONLY. IPv4/IPv6 textual variants cannot create multiple keys for the same kernel address. Keys are stored only in memory, with at most 48 bytes each and 65536 map entries. An unseen source is rejected when the table is full. On admission, pruning runs at most every five seconds and removes inactive entries whose minute window expired; active entries remain. The map does not grow without bound and contains no persistent bans or account identities.
 
-Typed peer events omit addresses, nicknames, identifiers and password hashes. Generic message bodies are capped at 1024 bytes, made valid UTF-8 and stripped of record/terminal controls. This prevents additional log records from embedded CR/LF/Unicode separators but is not secret redaction. Per-peer logging is opt-in and rate bounded; synchronous I/O remains a storage-latency risk. See [LOGGING.md](LOGGING.md).
+Minute and frame windows begin with their first admission/result and reset on demand; they are fixed windows, not rolling/token buckets. Adjacent-window bursts are possible. A NAT/proxy's clients share one IP budget; configure operational limits accordingly. Proxy headers and trusted reverse-proxy identity are not implemented.
+
+## Frames and deadlines
+
+Every decoder result consumes the per-connection frame budget: valid messages, valid unknown extensions, keepalives and parser errors. Oversize input emits one error and is discarded through its LF without growing the 16 KiB buffer. The Nth invalid result closes the connection when max_invalid_frames=N; valid frames do not reset that lifetime count. A result exceeding the frame-rate budget is excluded from normal ADC counters. The reactor feeds at most one frame segment per decoder call and stops processing the rest of the read after a quota breach. The crossing result may already have been parsed, but later frames in that read are not parsed. There is no queue of pending frames.
+
+TLS has an absolute deadline from admission; partial handshake bytes do not refresh it. Its effective lifetime is bounded by both the configured handshake deadline and idle timeout. Each unfinished ADC frame has an absolute deadline from its first observed bytes, including the oversized discard state. More bytes do not renew it. Completing the frame clears its timer, and another partial frame in the same read gets its own start time. Timeout checks run before/after nonblocking I/O and before decoding segments, so late input cannot reset an expired deadline. The idle timer still measures application activity separately. Expiry is also scanned around the normal <=250 ms reactor poll; CPU/storage/scheduler delay can add latency.
+
+A protocol frame may be fragmented across reads/TLS records. UTF-8/NFC/header/escape validation, NUL/control rejection and bounded parameter handling remain in the parser. EOF/close can report a final truncated frame once; this finalization is counted as invalid after the peer is already being removed, without consuming another live frame-rate slot.
+
+## Observability and privacy
+
+Atomic `security_rejected` counts per-IP/cache admission denials, also included in Network rejected. `security_closed` counts frame-quota/invalid-threshold closes and handshake/partial deadlines (including idle expiry during an unfinished TLS handshake). Ordinary idle expiry, peer I/O failure, EOF and normal stop do not increment it. The INFO shutdown line is `Security stopped; rejected=N closed=N`; atomic fields are sampled independently rather than transactionally.
+
+Rate-limited warnings identify admission quotas, frame quotas and partial-frame deadlines without source addresses or payloads. Opt-in INFO lifecycle logs add `security_quota` and `partial_frame_timeout`, reusing `handshake_timeout` for TLS expiry. Counts and warnings can remain visible even when detailed peer events are disabled. No ADC text, nicknames, CID/PID, passwords/hashes or source IPs are logged. Listener readiness still shows configured local bind addresses. See [LOGGING.md](LOGGING.md).
+
+## Other retained controls and limits
+
+TLS >=1.2 protects only ADCS sockets. Loadable matching PEM credentials are checked before readiness; clients must validate trust/name/validity. No client certificates or password authentication exist. Keep keys outside Git with restricted permissions. INI reads and log files retain descriptor/type/size checks, collision protection and single-line bounded UTF-8 logging; use trusted directories. SIGINT/SIGTERM cleanup is synchronous, SIGPIPE is ignored by main, and descriptors use close-on-exec. [TLS](ADCS_TLS.md) and [configuration](CONFIGURATION.md) describe operational details.
+
+These controls are not DDoS protection, a byte-bandwidth limiter, an authenticated audit trail or a security audit. Slow disk/stderr can block synchronous logging. Fatal reactor/allocation errors can still terminate the process. There is no per-subnet/global connection-attempt rate limiter, abuse sharing across processes, serializer/output backpressure, session semantic validation, accounts/roles/bans, password storage, SQL or HTTP authorization yet. Future modules must implement those explicitly. Tests and their actual OS/toolchain coverage are in [TESTING.md](TESTING.md).

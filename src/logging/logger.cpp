@@ -66,6 +66,8 @@ std::string_view event_name(ConnectionEvent event) noexcept {
     case ConnectionEvent::idle_timeout: return "idle_timeout";
     case ConnectionEvent::handshake_timeout: return "handshake_timeout";
     case ConnectionEvent::shutdown: return "shutdown";
+    case ConnectionEvent::security_quota: return "security_quota";
+    case ConnectionEvent::partial_frame_timeout: return "partial_frame_timeout";
     }
     return {};
 }

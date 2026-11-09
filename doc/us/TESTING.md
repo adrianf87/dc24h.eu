@@ -16,12 +16,14 @@ Run `ctest --test-dir build --output-on-failure` and the equivalent for `build-r
 | `configuration.process` | Actual limits, TLS configuration, dry-run side effects and file safety |
 | `logging.unit` | Severity, sanitization/UTF-8 boundaries, concurrency, budget rollover and PL messages |
 | `logging.process` | TCP/TLS lifecycle, privacy, independent warnings, INI overrides and error sink |
+| `security.unit` | Range boundaries, fake-clock windows, key/map bounds, pruning and slot reuse |
+| `security.process` | Real IP/TLS quotas, frame/invalid budgets, absolute deadlines and INI/CLI |
 | `adc.ncdc` | Real ncdc initial HSUP through plaintext recording relay |
 | `adcs.ncdc` | Real ncdc negotiates TLS directly with C++ through transparent raw relay; one decrypted HSUP, no visible HSUP on wire |
 
 ncdc tests run in disposable PTY sessions. The ADCS relay forwards bytes unchanged, so TLS terminates in C++, not Python. The server's idle close synchronizes the counter check. TLS socket tests trust only the generated local test certificate and verify the hostname. Tests account for missing server close_notify, which is not implemented. ncdc smoke tests validate transport/initial parsing, not full login or NORMAL state.
 
-Local result: 14/14 CTest suites passed in Debug, Release and ASan/UBSan on Debian 13 with GCC 14.2, CMake 3.31.6, OpenSSL 3.5.7 and ncdc 1.23.1. Details are recorded in the [changelog](../../CHANGELOG.md). The CI definition targets Ubuntu 22.04/24.04 in Debug/Release; its existence does not establish a successful remote run. Debian 12 and Ubuntu 26.04 require separate verification. These tests are not a performance benchmark, long-running fuzz campaign, DDoS test or security audit. Kernel/watch allocation failures and all out-of-memory paths are not covered by fault injection.
+Local result: 16/16 CTest suites passed in Debug, Release and ASan/UBSan on Debian 13 with GCC 14.2, CMake 3.31.6, OpenSSL 3.5.7 and ncdc 1.23.1. Details are recorded in the [changelog](../../CHANGELOG.md). The CI definition targets Ubuntu 22.04/24.04 in Debug/Release; its existence does not establish a successful remote run. Debian 12 and Ubuntu 26.04 require separate verification. These tests are not a performance benchmark, long-running fuzz campaign, DDoS test or security audit. Kernel/watch allocation failures and all out-of-memory paths are not covered by fault injection.
 
 ## Configuration — alpha-0.1.5
 
@@ -30,3 +32,9 @@ Local result: 14/14 CTest suites passed in Debug, Release and ASan/UBSan on Debi
 ## Logging — alpha-0.1.6
 
 The unit suite verifies valid bounded UTF-8 at truncation, ASCII/Unicode/ANSI control handling, severity filtering, opt-in behavior, concurrent peer budgets, one-second rollover/destructor summaries and PL translation. Process tests assert warning-only/error-only files, startup summaries, 200 invalid frames with one warning, independent limit/idle warnings, bad/stalled/healthy TLS peers, no secrets/remote addresses in event records, and config/CLI precedence. Real ncdc ADC and ADCS smoke tests now enable lifecycle logs and require accepted/closed or TLS-ready events. These are still initial-HSUP tests, not full ADC login.
+
+## Security — alpha-0.1.7
+
+Unit tests cover lower/upper bounds, exact one-second/minute edges without real-time waits, concurrent-slot reuse, oversized identities, 65536-entry exhaustion, inactive pruning and active-entry retention. Process tests cover independent loopback source IPs, quotas shared by TCP/TLS, closed-slot recovery, valid/invalid/keepalive floods, exact 16 KiB bodies, parameter and UTF-8 errors, partial-frame trickles, renewed deadlines after a completed frame plus new partial data in one read, oversized discard deadlines, TLS trickle timeouts/recovery and all CLI bounds/INI overrides. Both ncdc smoke tests enable security settings and assert no security rejection/close. The large TLS transport regression explicitly raises frames-per-second to 100000 to test throughput separately from the default abuse policy. These results are not a DDoS benchmark or security audit.
+
+The actual shipped INI example is also checked through `--check-config`; staged installation verifies the installed example matches the source and is accepted by the installed binary.

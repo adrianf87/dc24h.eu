@@ -149,13 +149,16 @@ void stream_boundaries() {
     // Complete frames at the exact limit, then one oversize frame across many reads.
     const auto maximum = "HMSG " + std::string(max_frame_bytes - 5, 'a');
     for (char c : maximum) { decoder.feed(std::string_view(&c, 1), collect); }
+    require(decoder.in_progress(), "Partial frame not exposed to timeout tracking");
     require(decoder.buffered_bytes() == max_frame_bytes && messages == 0, "Frame completed without LF");
     decoder.feed("\n", collect);
     require(messages == 1, "Exact limit frame not delivered");
+    require(!decoder.in_progress(), "Completed frame remains in progress");
     for (int i = 0; i < 1024; ++i) {
         decoder.feed(std::string(1024, 'x'), collect);
         require(decoder.buffered_bytes() <= max_frame_bytes, "Unbounded pending frame");
     }
+    require(decoder.in_progress(), "Oversize discard state lost its timeout tracking");
     require(errors == 1 && decoder.buffered_bytes() == 0, "Oversize frame not discarded once");
     decoder.feed("\nHSUP ADBASE\n\nHMSG partial", collect);
     require(messages == 2 && keepalives == 1 && errors == 1, "Resynchronization after oversize failed");
@@ -164,6 +167,7 @@ void stream_boundaries() {
     require(messages == 3, "Decoder reset after EOF failed");
     decoder.feed(std::string(max_frame_bytes + 1, 'x'), collect);
     require(!decoder.finish() && errors == 2, "Oversize EOF counted twice");
+    require(!decoder.in_progress(), "EOF did not clear frame progress");
 }
 
 void randomized_chunks() {
