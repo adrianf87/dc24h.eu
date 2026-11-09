@@ -1,92 +1,55 @@
-# Protokół ADC — alpha-0.1.3
+# ADC Parser — alpha-0.2.2
 
-Implementacja obejmuje parser składni, nie kompletny hub. Punktem odniesienia
-jest [ADC 1.0.4](https://dc-protocols.github.io/ADC.html), rozdział 3.
-Rozpoznawanie nazw BASE nie oznacza wykonania komend ani zgodności pełnej sesji.
+Odniesienie: [ADC 1.0.4](https://adc.sourceforge.io/ADC.html), gramatyka linii i opisy komend BASE. Niezależna biblioteka C++20 `dc24h_adc` parsuje składnię; nie wykonuje komend ani nie realizuje sesji.
 
-## Kontrakt parsera
+## Wynik i układ argumentów
 
-Biblioteka `dc24h_adc`, nagłówek `include/dc24h/adc/parser.hpp`, nie używa
-Core, loggera, gniazd ani bazy danych.
+`parse_line(string_view)` przyjmuje jedną treść ramki **bez LF** i zwraca `KeepAlive`, `Message` albo `ParseError`. Pusty LF jest keepalive. Message jest właścicielem typu, oryginalnej komendy, klasyfikacji, opcjonalnego source/target, uporządkowanych selektorów i odkodowanych parametrów. Bufor wejścia można od razu zwolnić. Nieznane komendy zachowują nazwę i wszystkie parametry.
 
-- `parse_line(string_view)` przyjmuje jedną treść ramki **bez końcowego LF**.
-  Zwraca wariant `KeepAlive`, `Message` albo `ParseError`.
-- `Message` zawiera typ, oryginalną nazwę komendy, klasyfikację `Command`,
-  opcjonalne source/target, selektory cech i odkodowane parametry w kolejności.
-  Wszystkie wartości są własnością wyniku; nie wskazują bufora wejściowego.
-- `recognize_command` rozpoznaje 15 komend: STA, SUP, SID, INF, MSG, SCH, RES,
-  CTM, RCM, GPA, PAS, QUI, GET, GFI, SND. Nazwy rozszerzeń zachowuje jako `unknown`.
-- `StreamDecoder::feed(bytes, sink)` dostarcza wyniki synchronicznie, w kolejności.
-  Jedno wywołanie może dostarczyć zero, jeden lub wiele wyników. Nie przechowuje
-  wiadomości po callbacku. Sink nie może ponownie wywołać tego samego dekodera;
-  wyjątki callbacku propagują się do wywołującego.
-- `finish()` zgłasza `truncated_frame` dla nieukończonej ramki i resetuje dekoder.
-  Kolejne wywołanie nie zgłasza jej ponownie. Ramka odrzucona za rozmiar nie
-  jest ponownie liczona jako ucięta.
+`Message::positional_count` jest ustawiony dla znanych komend BASE. Parametry przed tym indeksem są pozycyjne, pozostałe nazwane. SUP traktuje wszystkie parametry jako pozycyjne aktualizacje cech. Układ nieznanej komendy pozostaje `nullopt`: prefiks NI nie pozwala zgadywać, że parametr rozszerzenia jest polem.
 
-## Sprawdzana składnia
+`parse_named_parameter(decoded_token)` sprawdza dwubajtową nazwę: wielka litera oraz wielka litera/cyfra. Zwraca opcjonalny `NamedParameterView {name, value}`. Oba string_view wskazują pamięć tokena; nie mogą przeżyć jej zwolnienia ani modyfikacji string/vector. Funkcja nie dekoduje ponownie i nie waliduje wartości. Sama nazwa daje pustą wartość, co pozwala anulować pole. Nieznane nazwy, powtórzenia/powtarzane terminy wyszukiwania i ich kolejność są zachowane; parser nie wybiera pierwszej/ostatniej wartości ani nie usuwa duplikatów.
 
-Obsługiwane są nagłówki B/C/D/E/F/H/I/U, wymagane pola routingu, SID base32
-oraz CID bez narzuconej długości konkretnego hasha. Parser sprawdza strukturę
-selektorów cech w F i zachowuje ich kolejność. Rozdziela parametry pojedynczą
-spacją i dekoduje `\s`, `\n`, `\\`; inne escape powodują odrzucenie ramki.
-Pusty LF jest keepalive. Nie ignoruje pustych parametrów ani końcowej spacji.
-Nieznana poprawna składniowo komenda pozostaje wiadomością, gotową do przyszłego
-routingu według typu.
+`parse_integer(decoded_token)` zwraca opcjonalną dziesiętną liczbę całkowitą ze znakiem, 64-bit. Akceptuje minus, początkowe zera i ujemne zero. Odrzuca plus, białe znaki, ułamki, wykładniki, cyfry spoza ASCII, NUL, końcowe dane i przepełnienie. Zero jest poprawnym wynikiem. Funkcja nie narzuca polityki portu/zakresu/transferu.
 
-Biblioteka [utf8proc](https://juliastrings.github.io/utf8proc/doc/utf8proc_8h.html)
-waliduje UTF-8 i pozwala porównać treść z NFC. Parser odrzuca tekst wymagający
-normalizacji zamiast zmieniać identyfikatory lub dane klienta. Uwzględnia znaki
-czterobajtowe, błędne kodowania, surogaty i sekwencje wykraczające poza Unicode.
+## Składnia argumentów BASE
 
-## Lokalne limity i polityka
+| Komendy | Początkowe argumenty pozycyjne | Dodatkowe sprawdzenia |
+| --- | --- | --- |
+| STA | 2 | Pierwszy argument ma trzy cyfry ASCII; nieznana wartość kodu pozostaje poprawna składniowo |
+| SUP | Co najmniej jeden, zmienna liczba | Każdy token ma AD/RM oraz czteroznakową nazwę cechy; bez dowolnych końcowych pól |
+| SID, QUI | 1 | Pozycyjny SID ma cztery znaki base32 |
+| MSG, GPA, PAS | 1 | Tekst/dane zachowane; poprawność i długość hasha nie są sprawdzane |
+| INF, SCH, RES | 0 | Każdy token ma poprawny prefiks nazwany; brak wymaganych pól aplikacji |
+| CTM | 3 | Port ma ograniczoną składnię integer; protokół i token pozostają tekstem |
+| RCM | 2 | Protokół i token pozostają tekstem |
+| GET, SND | 4 | Przestrzeń transferu to litery/cyfry ASCII; offset/liczba bajtów mają składnię integer |
+| GFI | 2 | Przestrzeń transferu to litery/cyfry ASCII |
 
-Te ograniczenia są decyzją dc24h.eu, nie limitami narzuconymi przez ADC:
+Poza SUP wszystkie tokeny po stałym prefiksie pozycyjnym muszą być nazwane. Tekst pozycyjny przypominający nazwę pola nadal pozostaje pozycyjny. Parametry są w jednym własnym wektorze, bez dodatkowych kopii. Przykład: `HMSG NItext PMABCD` ma positional_count 1; `BINF ABCD NI` ma positional_count 0 i puste pole. Przykłady opisują składnię, nie uwierzytelnione osoby ani dozwolone przejścia stanu.
 
-| Ograniczenie | Wartość / zachowanie |
-| --- | --- |
-| Treść ramki, bez LF | Do 16384 bajtów |
-| Parametry, bez routingu | Do 128 |
-| Surowe ASCII control i DEL | Odrzucane, w tym NUL, tab i CR; brak akceptacji CRLF |
-| Błędna ramka | Jeden błąd, następna linia nadal parsowana |
-| Przekroczenie długości | Jeden błąd od razu; odrzucanie danych do LF |
-| Zamknięcie z częściową ramką | Jeden błąd ucięcia |
+Błędne znane komendy, które alpha-0.1 przyjmowała jako ogólne tokeny, są teraz odrzucane: braki wymaganych argumentów, złe nazwy pól, aktualizacje SUP, pozycyjne SID/kody/liczby/nazwy przestrzeni. Nowe kategorie błędów: missing_parameters, invalid_named_parameter, invalid_support, invalid_status_code, invalid_integer, invalid_transfer_type i too_many_features. Dotychczasowe wartości enum zachowują kolejność. Ramkowanie/UTF-8/nagłówki/escape są sprawdzane przed argumentami. Przy kilku błędach nie należy polegać na kolejności diagnostyki poza tą zasadą.
 
-Stan dekodera zawiera najwyżej 16 KiB nieukończonej treści; po przekroczeniu
-limitu bufor jest czyszczony. Pamięć alokatora i chwilowe obiekty parsera mają
-własny narzut. Nie powstaje kolejka wszystkich ramek otrzymanych w odczycie.
+## Ramkowanie, Unicode i limity lokalne
 
-## Integracja TCP i obserwowalność
+Obsługiwane są B/C/D/E/F/H/I/U. Sprawdzane są wymagane SID routingu, CID U o zmiennej długości base32 i selektory F ze znakiem. Długość CID nie jest związana z TIGR. Tokeny rozdziela pojedyncza spacja ASCII; puste/podwójne/końcowe separatory są błędne. Dekodowane są tylko `\s`, `\n` i `\\`. utf8proc sprawdza UTF-8/NFC; tekst wymagający normalizacji jest odrzucany bez przepisywania.
 
-Każde połączenie `TcpServer` posiada niezależny dekoder. Network podaje mu
-odczytane bajty, zlicza wyniki i zwalnia wynik po przetworzeniu. Nie wykonuje
-poleceń i nie wysyła odpowiedzi. Przy zamknięciu połączenia, także przez timeout
-lub zatrzymanie procesu, wywołuje `finish()`.
+Lokalna polityka, nie maksima protokołu:
 
-Log stopu i `Statistics` zawierają:
+- 16384 bajty treści bez LF; 128 parametrów bez routingu.
+- 128 selektorów nagłówka F, sprawdzane przed alokacją wpisów. Nowy osobny limit nie zmienia budżetu parametrów SUP.
+- Liczbowe argumenty pozycyjne w zakresie signed 64-bit. Zakaz surowych ASCII control/DEL, w tym NUL, tab i CR; CRLF jest odrzucane.
 
-- `adc_frames` / `frames`: niepuste wiadomości poprawne składniowo.
-- `adc_unknown` / `unknown_commands`: podzbiór `frames` z nieznaną nazwą komendy.
-- `adc_invalid` / `invalid_frames`: błędne, za długie lub ucięte ramki.
-- `adc_keepalives` / `keepalives`: puste LF.
+`StreamDecoder::feed(bytes, sink)` dostarcza wyniki synchronicznie i w kolejności, bez zachowywania wiadomości. Sink nie może ponownie wejść do tego samego dekodera; wyjątki propagują się. Instancja należy do jednego wątku. Błędna ukończona ramka daje jeden wynik i wznowienie przy kolejnym LF. Nadmiar długości daje natychmiast jeden błąd i odrzucanie do LF, z buforem do 16 KiB. `finish()` zgłasza część ramki raz, resetuje i pozwala użyć dekodera ponownie; już policzony nadmiar nie jest ponawiany. `in_progress()` uwzględnia odrzucanie dla terminów bezwzględnych.
 
-Nie logujemy parametrów, PID ani hashy PAS. Nie ma logu dla każdej ramki,
-co ogranicza możliwość zalania logów danymi klienta. Syntaktycznie poprawna
-ramka nie potwierdza tożsamości nadawcy, zgodności stanu ani wykonania komendy.
+## Integracja i granice etapu
 
-## Poza zakresem tego wydania
+Każde połączenie TCP/TLS automatycznie używa pełniejszego parsera. Liczniki Network zliczają zaakceptowaną składnię; nieznane komendy nadal stanowią jej podzbiór. Błędne argumenty korzystają z dotychczasowych limitów błędów/wyników, ogólnego oczyszczonego ostrzeżenia i odzyskiwania strumienia. Parametry, PID i PAS nie trafiają do logów. Security może zamknąć połączenie po przekroczeniu limitów. Zobacz [SECURITY.md](SECURITY.md) i [ADCS_TLS.md](ADCS_TLS.md).
 
-Nie ma serializera, walidacji semantyki komend/pól (np. liczb w INF, wymaganych
-parametrów SUP, hashy PID/CID), kontroli dozwolonych typów dla konkretnych
-komend, automatu PROTOCOL/IDENTIFY/VERIFY/NORMAL, przydzielania SID, routingu,
-uwierzytelniania, chatu, wyszukiwania ani transferów. Parser nie sprawdza
-zgodności deklarowanego SID/IP z połączeniem. U pozostaje składnią obsługiwaną
-przez bibliotekę; serwer nie otwiera gniazda UDP.
+Brak serializera, kolejek wyjściowych, macierzy dozwolonych komend/typów, alokatora SID, automatu PROTOCOL/IDENTIFY/VERIFY/NORMAL, walidacji tożsamości/hash, logowania użytkowników, routingu, wykonania chatu/wyszukiwania/transferu i nasłuchu UDP. Zakresy portów, sens offset/liczby bajtów, wartości pól i wymagane tożsamości INF/RES należą do przyszłych konsumentów. Parsowanie GET/SND nie włącza DATA ani nie odbiera danych binarnych. Prawdziwy ncdc nadal sprawdza początkowy HSUP; brak odpowiedzi ISUP/ISID i pełnego logowania.
 
-Test ncdc obejmuje wysłany przez rzeczywisty klient początkowy HSUP. Serwer
-nie odpowiada ISUP/ISID, więc logowanie klienta nie dochodzi do NORMAL.
-Szczegóły testów: [TESTING.md](TESTING.md).
+## Weryfikacja
 
-## Security integration — alpha-0.1.7
+`adc.syntax` sprawdza 15 układów BASE, brakujące argumenty, dosłowny tekst pozycyjny, puste/powtórzone/nieznane pola, granice i błędy liczb, nieznane rozszerzenia, budżety selektorów/parametrów i własność wyniku. Korpus strumieniowy porównuje wszystkie nagłówki/wartości/układy/błędy przy każdym podziale na dwa fragmenty i podawaniu bajt po bajcie, także dla Unicode i escape. Dotychczasowe deterministyczne testy błędnych bajtów, podziałów, nadmiaru i EOF pozostają w `adc.parser`.
 
-Biblioteka zachowuje limity 16 KiB/128 parametrów i kontrakt resynchronizacji. `StreamDecoder::in_progress()` zgłasza częściowy bufor oraz odrzucanie za długość, potrzebne do terminu bezwzględnego. Serwer dodaje budżet tempa wyników i błędów w czasie życia; może zamknąć nadużywającego klienta. Podaje segmenty do LF i przerywa resztę odczytu po przekroczeniu limitu. Wynik ponad tempo nie trafia do statystyk ADC; received_bytes może obejmować nieparsowaną resztę już odczytaną z gniazda. Końcowe ucięcie EOF jest liczone raz przy zamknięciu. Zobacz [SECURITY.md](SECURITY.md).
+Regresje TCP i prawdziwego TLS mieszają błędne argumenty BASE z poprawnymi ramkami i nieznanymi rozszerzeniami, sprawdzając liczniki, odzyskiwanie i brak sekretów w logach. Dotychczasowy ncdc ADC/ADCS nadal sprawdza rzeczywisty ruch klienta. Uruchomienie pełnego zestawu opisuje [TESTING.md](TESTING.md).

@@ -3,7 +3,7 @@
 Podstawę alpha-0.2 i priorytety odbioru opisuje [audyt alpha-0.1](AUDIT_ALPHA_0.1.md). Numerowane gałęzie nadal powstają z aktualnego main. `alpha-0.2` oznacza sprawdzony commit audytu. Pełna weryfikacja używa `DC24H_REQUIRE_INTEGRATION_TESTS=ON`; zachować spójność project.metadata, npm lock, wersji programu/panelu i obu języków dokumentacji.
 
 Pracuj na gałęziach wydań, zachowując historię `main`. Aktualny etap:
-`alpha-0.2.1`. Każdy istotny etap otrzymuje opisowy commit. Nie dodawaj
+`alpha-0.2.2`. Każdy istotny etap otrzymuje opisowy commit. Nie dodawaj
 artefaktów kompilacji, sekretów ani zależności vendored bez uzasadnienia.
 
 | Katalog | Rola |
@@ -51,3 +51,7 @@ alpha-0.1.10 powstaje z main po alpha-0.1.9. Oddzielaj schemat/formatowanie prze
 ## Etap Apache2
 
 alpha-0.1.11 powstaje z main po alpha-0.1.10. Oddzielaj aktywację hosta, rzeczywiste certyfikaty i reload od tworzenia/testowania przykładu. Testuj dokładnie dostarczaną politykę TLS/dostępu/nagłówków z tymczasowymi ścieżkami/portami, bez konfiguracji hosta. Sukces apache2 -t nie dowodzi zgodności certyfikatu/klucza; sprawdzaj inicjalizację. Zachowuj oba języki dokumentacji i spójne wersje fixture.
+
+## Etap ADC Parser
+
+alpha-0.2.2 powstaje z main po jawnym scaleniu alpha-0.2/alpha-0.2.1. Oddzielać składnię argumentów BASE od autoryzacji, tożsamości i wykonania. Zachować nieinterpretowane układy rozszerzeń, kolejność pól i powtórzenia. NamedParameterView wskazuje odkodowany token; nie przechowywać go po modyfikacji/zniszczeniu. Nowe reguły wymagają testów aktywnych w Release i porównywania pełnych wyników strumienia, następnie TCP, TLS i obu transportów ncdc.

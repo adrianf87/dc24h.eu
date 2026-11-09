@@ -14,11 +14,12 @@
 | alpha-0.1.10 | alpha-0.1.10 | React/TypeScript/Vite WebAdmin layout and local read-only adapter |
 | alpha-0.1.11 | alpha-0.1.11 | Apache2 static HTTPS template and isolated TLS/access tests |
 | alpha-0.2.1 | alpha-0.2.1 | Project: alpha-0.1 audit and alpha-0.2 preparation |
+| alpha-0.2.2 | alpha-0.2.2 | ADC Parser: BASE arguments, named fields and bounded scalar syntax |
 
 Identify an individual build with its version and Git commit SHA; compiling does not modify tracked source. Each significant change updates CHANGELOG.md. Alpha denotes development status, not complete hub functionality. Tags and production deployment are not created automatically.
 
 Historical stage branches and commit history are preserved. alpha-0.1.4 retains the reference TLS branch through a merge and includes follow-up fixes.
 
-## alpha-0.2.1 Project
+## Current version — alpha-0.2.2
 
-CMake PROJECT_VERSION is **0.2.1**, runtime and WebAdmin release are **alpha-0.2.1**, and both npm package/lock root versions are **0.2.1**. `project.metadata` enforces consistency. alpha-0.1.11 is merged into main; alpha-0.2.1 starts from that main. alpha-0.2 is a line marker at the same audit commit. Neither new branch changes main automatically. Proposed later alpha-0.2 versions in ROADMAP remain unimplemented. See [audit](AUDIT_ALPHA_0.1.md).
+CMake PROJECT_VERSION and npm package/lock root versions are **0.2.2**; runtime/WebAdmin identify **alpha-0.2.2**. `project.metadata` enforces consistency. The parser stage starts from main after the audit merge (`ca464e0`); it does not merge itself into main or change the historical alpha-0.2 marker. Alpha-0.2.1 and alpha-0.2 audit branches remain preserved. See [parser contract](ADC_PROTOCOL.md) and [historical audit](AUDIT_ALPHA_0.1.md).

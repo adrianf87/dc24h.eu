@@ -155,3 +155,5 @@ Dalsze operacje administracyjne i integracja Apache wymagają kontroli ról oraz
 ## Podstawa WebAdmin — alpha-0.1.10
 
 Panel React tylko do odczytu i opcjonalny lokalny adapter Vite tego samego UID są dostępne: [WEBADMIN.md](WEBADMIN.md). Kontrakt i uprawnienia prywatnego API C++ nie zmieniają się. Statyczny Apache nie zapewnia uwierzytelnionej bramy API.
+
+Od alpha-0.2.2 `Message::positional_count` określa układ argumentów BASE (nieznane komendy pozostają nieinterpretowane). `parse_named_parameter` zwraca pożyczone widoki nazwy/wartości; `parse_integer` opcjonalne signed 64-bit. Dotychczasowe parse_line/StreamDecoder odrzucają teraz błędną składnię argumentów BASE; szczegóły opisuje [kontrakt parsera](ADC_PROTOCOL.md).

@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.2.1 (Project audit and alpha-0.2 preparation).**
+**Current development version: alpha-0.2.2 (ADC Parser).**
 
 Completed increments:
+
+- **alpha-0.2.2 ADC Parser**: BASE argument layouts, named-field syntax, bounded decimal integers, feature budgets and TCP/TLS recovery tests.
 
 - **alpha-0.2.1 Project**: [alpha-0.1 audit](doc/us/AUDIT_ALPHA_0.1.md), prioritized alpha-0.2 acceptance plan, version/documentation checks and required CI integrations.
 

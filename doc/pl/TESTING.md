@@ -1,6 +1,12 @@
 # Testowanie
 
-## Aktualny audyt — alpha-0.2.1
+## Aktualny etap parsera — alpha-0.2.2
+
+Pełny zestaw ma teraz **23 pozycje CTest**. Lokalnie wszystkie przeszły w Debug, Release i ASan/UBSan, w tym nowe `adc.syntax`, rozszerzone odzyskiwanie składni TCP/TLS i oba transporty prawdziwego ncdc. `adc.syntax` sprawdza 15 układów BASE, wymagane liczby argumentów, pola/anulowania/powtórzenia, nieinterpretowane rozszerzenia, granice liczb/selektorów/parametrów i własność wyników. Każdy podział oraz strumień bajtowy porównują wszystkie pola nagłówków, odkodowane wartości, układy i błędy zamiast samych liczników komend.
+
+Build/typecheck frontendu, 3 testy Node, 3 przeglądarkowe i rzeczywista integracja C++/Vite/Chromium przeszły z nową wersją. Przeszła instalacja z panelem i bez niego, dokładne bajty instalacji, konfiguracja/wersja i kontrole metadanych/dokumentacji. Zobacz [kontrakt parsera](ADC_PROTOCOL.md), [polecenia budowania](BUILD.md) i [changelog](../../CHANGELOG.md). Pełne logowanie i semantyczna walidacja pól/stanu/tożsamości pozostają niezaimplementowane. Wyniki poniżej opisują etapy historyczne.
+
+## Etap audytu — alpha-0.2.1
 
 Pełny bieżący zestaw ma **22 pozycje CTest**, w tym `project.metadata`. Wszystkie przeszły lokalnie w Debug, Release i ASan/UBSan; przeszły też build frontendu, 3 testy Node, 3 przeglądarkowe i rzeczywista integracja API C++. CI używa `-DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, odrzucając brak openssl/ncdc/MariaDB/Apache. Domyślny tryb opcjonalny może rejestrować mniej testów. Kontrola metadanych potrzebuje wyłącznie Pythona, bez Node i Git. Osobno sprawdzono negatywne przypadki konfiguracji i metadanych.
 

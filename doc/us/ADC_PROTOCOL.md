@@ -1,19 +1,55 @@
-# ADC syntax parser
+# ADC Parser — alpha-0.2.2
 
-The reference is [ADC 1.0.4](https://dc-protocols.github.io/ADC.html), section 3. This milestone implements syntax parsing, not the complete client/session protocol.
+Reference: [ADC 1.0.4](https://adc.sourceforge.io/ADC.html), line grammar and BASE command descriptions. The independent C++20 `dc24h_adc` library parses syntax; it does not execute commands or implement a session.
 
-`parse_line(string_view)` accepts a frame body without LF and returns `KeepAlive`, `Message` or `ParseError`. The result owns its strings. Messages retain type, original command, optional source/target, feature selectors and decoded parameters. `recognize_command` recognizes STA, SUP, SID, INF, MSG, SCH, RES, CTM, RCM, GPA, PAS, QUI, GET, GFI and SND. Valid extension commands remain `unknown` messages.
+## Owned result and argument layout
 
-`StreamDecoder::feed(bytes, sink)` synchronously delivers zero or more results in order. Do not reenter the same decoder from its sink; sink exceptions propagate. `finish()` reports an unfinished frame once and resets the decoder. Oversized frames already counted as invalid are not counted again at EOF. Instances are single-threaded; separate instances can run independently.
+`parse_line(string_view)` accepts one frame body **without LF** and returns `KeepAlive`, `Message` or `ParseError`. Empty LF is keepalive. A Message owns type, original command, recognized kind, optional routing source/target, ordered feature selectors and unescaped parameters. Input buffers may be released immediately. Unknown commands retain their original name and every parameter.
 
-Headers B/C/D/E/F/H/I/U, routing fields, base32 SID/CID syntax and feature selectors are validated. CID length is not tied to a particular hash. Parameters use one ASCII space; escapes are `\s`, `\n` and `\\`. Empty LF is keepalive. utf8proc validates UTF-8 and NFC; non-normalized input is rejected rather than rewritten.
+`Message::positional_count` is set for known BASE commands. Parameters before that index are positional; the remainder are named. SUP uses all parameters as positional feature updates. Unknown command layouts remain `nullopt`: a token beginning with NI must not be guessed to be a field in an unknown extension.
 
-Local limits (application policy, not ADC requirements): 16384 body bytes, 128 parameters excluding routing, no raw ASCII controls/DEL including NUL, tab and CR. CRLF is rejected. An invalid frame produces one error and parsing resumes at the next LF. Oversize input is discarded until LF with bounded memory. Every TCP/TLS client has an independent decoder; results are counted and released without dispatch or queues.
+`parse_named_parameter(decoded_token)` validates the two-byte uppercase/alphanumeric name prefix and returns optional `NamedParameterView {name, value}`. These two string_views borrow the token's storage and must not outlive it or survive string/vector mutation. It does not decode again or validate the value. Bare names have empty values, supporting cancellation. Unknown names, repeated names/search terms and their order are preserved; the parser does not choose a first/last value or deduplicate them.
 
-Shutdown counters: `frames` counts valid nonempty frames; `unknown_commands` is their unknown-command subset; `invalid_frames` includes malformed, oversized and truncated input; `keepalives` counts empty LF. No parameters, PID or PAS hashes enter logs.
+`parse_integer(decoded_token)` returns an optional signed 64-bit decimal integer. Minus, leading zeroes and negative zero are accepted. Plus, whitespace, fractions, exponents, non-ASCII digits, embedded NUL, trailing data and overflow are rejected. Zero is a successful result. This helper does not enforce port/range/transfer policy.
 
-No serializer, semantic field validation, command/type permission matrix, SID allocation, session state machine, authentication, routing, chat, search or transfer coordination exists. U headers can be parsed but there is no UDP listener. ncdc tests cover initial HSUP only: no ISUP/ISID response or NORMAL session. TLS transport is described in [ADCS_TLS.md](ADCS_TLS.md).
+## BASE argument syntax
 
-## Security integration — alpha-0.1.7
+| Commands | Leading positional arguments | Additional checks |
+| --- | --- | --- |
+| STA | 2 | First argument has three ASCII digits; unknown status values remain syntactically valid |
+| SUP | One or more, variadic | Every token has AD/RM plus a four-character feature identifier; no arbitrary named suffix |
+| SID, QUI | 1 | Positional SID has four base32 characters |
+| MSG, GPA, PAS | 1 | Positional text/data retained; hash correctness/length is not checked |
+| INF, SCH, RES | 0 | All tokens must have a valid named prefix; no required application fields imposed |
+| CTM | 3 | Port has bounded integer syntax; protocol and token remain strings |
+| RCM | 2 | Protocol and token remain strings |
+| GET, SND | 4 | Transfer namespace is ASCII letters/digits; offset/count have bounded integer syntax |
+| GFI | 2 | Transfer namespace is ASCII letters/digits |
 
-The parser library retains its 16 KiB/128-parameter limits and resynchronization contract. `StreamDecoder::in_progress()` reports both buffered partial input and oversized discard state for absolute timeout tracking. The server adds per-connection result-rate and invalid-lifetime budgets, and may close abusive peers. It feeds one LF-delimited segment at a time and stops parsing the rest of a read when a quota is breached. The crossing rate result is not counted in ADC statistics; received_bytes can include unparsed remainder already read from the socket. Final truncated EOF is counted once during close. See [SECURITY.md](SECURITY.md).
+Except for SUP, all tokens following the fixed positional prefix must be named parameters. Positional strings that look like field names remain positional. Existing parameters stay in one owning vector, avoiding duplicate copies. For example, `HMSG NItext PMABCD` has positional_count 1; `BINF ABCD NI` has positional_count 0 and a bare field. These examples describe parser syntax, not authenticated users or allowed state transitions.
+
+Known malformed commands that alpha-0.1 accepted as generic tokens now fail: missing mandatory arguments, malformed named prefixes, SUP updates, positional SID/status/numeric/namespace syntax. New error categories are missing_parameters, invalid_named_parameter, invalid_support, invalid_status_code, invalid_integer, invalid_transfer_type and too_many_features. Existing errors retain their enum order. Raw framing/UTF-8/header/escape errors are checked before argument syntax. When several errors occur, callers must not rely on a diagnostic precedence beyond this order.
+
+## Framing, Unicode and local limits
+
+B/C/D/E/F/H/I/U headers are supported. Required routing SIDs, variable-length base32 U CIDs and signed F feature selectors are checked. CID length is not tied to TIGR. One ASCII space separates tokens; empty/trailing/double separators are rejected. Only `\s`, `\n` and `\\` escapes are decoded. utf8proc checks UTF-8/NFC; non-normalized text is rejected without rewriting it.
+
+Application policy limits, not protocol maxima:
+
+- 16384 frame-body bytes, excluding LF; 128 parameters, excluding routing.
+- 128 F-header selectors, checked before allocating selector entries. This new independent bound does not affect SUP's parameter budget.
+- Signed 64-bit numeric positional values. No raw ASCII controls/DEL, including NUL, tab and CR; CRLF is rejected.
+
+`StreamDecoder::feed(bytes, sink)` synchronously delivers results in order without retaining messages. A sink must not reenter its decoder; exceptions propagate. Instances are confined to one thread. A malformed completed frame produces one result and resumes at the next LF. Oversized input emits one immediate error and discards until LF, retaining at most 16 KiB. `finish()` reports a partial frame once, resets and permits reuse; already counted oversized frames are not counted again. `in_progress()` includes the discard state for absolute deadlines.
+
+## Integration and limits of this stage
+
+Every TCP/TLS connection uses the same stricter parser automatically. Network counters count accepted syntax; unknown commands remain an accepted subset. Invalid argument frames use the existing invalid/result quotas, generic sanitized warning and recovery path. No payload, PID or PAS value enters logs. Security can close a peer after quota breaches. See [SECURITY.md](SECURITY.md) and [ADCS_TLS.md](ADCS_TLS.md).
+
+No serializer, outbound queue, command/type permission matrix, SID allocator, PROTOCOL/IDENTIFY/VERIFY/NORMAL state machine, identity/hash validation, authentication, routing, chat/search/transfer execution or UDP listener exists. Port domains, transfer offset/count meaning, field value semantics and mandatory INF/RES identity fields belong to future consumers. Parsing GET/SND does not enter DATA mode or consume binary data. Real ncdc tests still cover initial HSUP only; no ISUP/ISID response or full login is claimed.
+
+## Verification
+
+`adc.syntax` checks all 15 BASE layouts, missing arguments, literal positional text, bare/repeated/unknown fields, scalar errors/boundaries, opaque extensions, selector/parameter budgets and result ownership. Its stream corpus compares all decoded headers/values/layouts/errors across every two-chunk split and bytewise input, including Unicode and escapes. Existing deterministic malformed-byte/chunking/oversize/EOF tests remain in `adc.parser`.
+
+TCP and real TLS regressions mix malformed BASE arguments with valid frames and opaque extensions, checking counters, recovery and secret-free logging. Existing ncdc ADC/ADCS regressions still exercise actual client traffic. Run the complete suite as described in [TESTING.md](TESTING.md).

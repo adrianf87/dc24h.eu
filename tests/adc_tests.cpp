@@ -54,8 +54,8 @@ void headers_and_commands() {
     require(extension.kind == Command::unknown && extension.command == "Z99" &&
             extension.parameters.size() == 2, "Unknown extension not preserved");
     require(recognize_command("sup") == Command::unknown, "Command comparison not case sensitive");
-    // Command-specific semantics and state checks deliberately belong to a later layer.
-    require(message("HSUP").parameters.empty(), "Parser performed semantic validation");
+    // Required argument syntax is checked; negotiation/state remains outside the parser.
+    error("HSUP", ParseError::missing_parameters);
     require(std::holds_alternative<KeepAlive>(parse_line("")), "Empty LF not a keepalive");
 }
 

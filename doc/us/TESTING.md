@@ -1,6 +1,12 @@
 # Testing
 
-## Current audit — alpha-0.2.1
+## Current parser stage — alpha-0.2.2
+
+The complete suite now has **23 CTest entries**. Local Debug, Release and ASan/UBSan passed all entries, including the new `adc.syntax`, expanded TCP/TLS syntax recovery and both real ncdc transports. `adc.syntax` exercises all 15 BASE argument layouts, required counts, named fields/cancellations/duplicates, opaque extension layouts, bounded integer/selector/parameter cases and owned results. Every split and bytewise stream comparisons verify all header fields, decoded values, layouts and errors, rather than only command counts.
+
+Frontend build/typecheck, 3 Node tests, 3 browser tests and the real C++/Vite/Chromium integration passed with the new version. Staged installation with/without frontend assets, exact installed bytes, config/version and metadata/documentation checks passed. See the [parser contract](ADC_PROTOCOL.md), [build commands](BUILD.md) and [changelog](../../CHANGELOG.md). Full login and semantic field/state/identity checks remain unimplemented. Results below describe historical stages.
+
+## Audit milestone — alpha-0.2.1
 
 The complete current suite has **22 CTest entries**, including `project.metadata`. All passed locally in Debug, Release and ASan/UBSan; frontend build, 3 Node tests, 3 browser tests and the real C++ API integration also passed. CI uses `-DDC24H_REQUIRE_INTEGRATION_TESTS=ON` to reject missing openssl/ncdc/MariaDB/Apache tools. The default optional mode may register fewer tests. Metadata checks need only Python, with no Node or Git dependency. Negative configuration and metadata fixtures were checked separately.
 

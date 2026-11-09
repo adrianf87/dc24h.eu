@@ -41,6 +41,17 @@ class AdcsProcessTests(unittest.TestCase):
         self.assertEqual(counters(self, hub), (2, 0, 0, 0))
         self.assertIn(b'ADCS stopped; handshakes=1', hub.log)
 
+    def test_base_argument_syntax_recovers_inside_tls(self):
+        hub = self.hub()
+        peer = self.connect_tls(hub)
+        wire = b'ISID ABC0\nHMSG hi lowerPRIVATETLS\nHSUP ADBASE\nBINF ABC2 NIJoanna DE\n'
+        for offset in range(0, len(wire), 3):
+            peer.sendall(wire[offset:offset + 3])
+        finish_tls(self, peer)
+        hub.stop()
+        self.assertEqual(counters(self, hub), (2, 0, 2, 0))
+        self.assertNotIn(b'PRIVATETLS', hub.log)
+
     def test_mixed_listeners_and_bad_handshakes(self):
         hub = self.hub()
         with socket.create_connection(self.tls_endpoint(hub), timeout=3) as invalid:
