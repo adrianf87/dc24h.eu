@@ -1,5 +1,7 @@
 # ADC State — alpha-0.2.3
 
+Od alpha-0.2.6 [ADC INF](ADC_INF.md) udostępnia ClientSession, łączący niższe warstwy z walidacją INF i weryfikacją Tiger PID/CID. Wymaga poprawnych metadanych przed zewnętrzną decyzją dopuszczenia i nie zachowuje/eksportuje PD. Unikalność w rejestrze i podłączenie Network pozostają planowane; wcześniejsze API/fixture zachowują swój zakres.
+
 Od alpha-0.2.5 [ADC SID](ADC_SID.md) udostępnia wspólną pulę huba i SidSession z kontrolą własności ISID oraz automatycznym zwalnianiem rezerwacji. Parser/automat używają tego samego kodera SID; AAAA nadal jest poprawną składnią, ale pula rezerwuje go jako lokalną politykę. Pierwotne API niższego poziomu i historyczne fixture pozostają dostępne. Network nadal używa samego parsera.
 
 Od alpha-0.2.4 [ADC SUP](ADC_SUP.md) udostępnia `ProtocolConnection`, łączący ten automat z negocjacją funkcji/hash i automatycznym zatwierdzeniem protokołu wyłącznie po poprawnym SUP. Tożsamość/hasło nadal wymagają zewnętrznych decyzji. Ten dokument opisuje pierwotne API automatu; podłączenie Network nadal wymaga uporządkowanego wyjścia.

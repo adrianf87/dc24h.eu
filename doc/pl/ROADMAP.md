@@ -18,6 +18,7 @@
 | alpha-0.2.3 ADC State | Niezależny automat huba, jawne zatwierdzanie i kontrola komend/kierunków/SID |
 | alpha-0.2.4 SUP | Funkcje AD/RM, BASE/wspólny TIGR, limity i połączenie z automatem |
 | alpha-0.2.5 SID | Koder 20-bitowy, ograniczona wspólna pula, rezerwacje RAII i zarządzane sesje SID |
+| alpha-0.2.6 INF | Ograniczone metadane, Tiger tożsamości, kontrola IP i publiczne snapshoty bez PD |
 
 ## Proponowane etapy alpha-0.2
 
@@ -29,7 +30,7 @@ To plan kryteriów odbioru, nie zaimplementowane funkcje. Ostateczny zakres nale
 | --- | --- | --- |
 | Plan: ADC output | Serializer, escape, walidacja nagłówków i limity zakodowanych bajtów | Dokładne bajty zgodne z gramatyką; parse/serialize, Unicode, granice i błędy; jeszcze bez zapisu do sieci |
 | Plan: Network output | Ograniczone kolejki klienta i łączne, częściowy zapis TCP/TLS, WANT_READ/WANT_WRITE i polityka wolnego odbiorcy | Fragmentowany zapis TCP/ADCS, limity kolejek, sprawiedliwa obsługa przy zatrzymanym odbiorcy, błędy klienta i ograniczony stop; bez nieograniczonych alokacji |
-| Plan: Sessions | Integracja stanów/SUP/SID z transportem, rejestr użytkowników, obliczanie Tiger i walidacja INF/tożsamości | Dozwolone/niedozwolone przejścia, unikalność/zwalnianie SID, odrzucanie podszytego źródła i duplikatów; bez wycieku PID |
+| Plan: Sessions | Integracja stanów/SUP/SID/INF z transportem, rejestr użytkowników, unikalność nicku/CID i dopuszczenie | Dozwolone/niedozwolone przejścia, unikalność/zwalnianie SID, odrzucanie podszytego źródła i duplikatów; bez wycieku PID |
 | Plan: Client integration | Pełne logowanie gościa przez ADC i ADCS, rozłączenia i znaczenie gotowości | Prawdziwy ncdc osiąga normalny stan zalogowania na obu transportach; reconnect, wielu użytkowników, błędna negocjacja i dotychczasowe regresje przechodzą |
 
 Pełny chat, wyszukiwanie i koordynacja transferów pozostają osobnymi etapami po poprawności sesji. Konta wymagają przeglądu uwierzytelniania/uprawnień/haseł oraz migracji aplikacji. Produkcyjna administracja WWW wymaga uwierzytelnionej bramy Apache, sesji/ról przeglądarki, CSRF i audytu przed udostępnieniem. Izolacja/rotacja logów, close_notify/reload TLS, pomiary obciążenia/fuzzing/fault injection i pozostałe systemy to jawne dalsze zadania.
@@ -47,3 +48,5 @@ alpha-0.2.3 powstaje z main w `4c98e10` po scaleniu alpha-0.2.2. [Moduł stanów
 alpha-0.2.4 powstaje z main w `1dd0b9f1a94626789d1ac9addad991a6eae78910`, po jawnym scaleniu alpha-0.2.3. [Moduł SUP](ADC_SUP.md) implementuje wybór funkcji/hash i łączy go z zatwierdzeniem stanu. Ogólne wyjście, podłączenie transportu, obliczanie hash i pełne logowanie pozostają planowane. Gałąź nie scala się samoczynnie do main.
 
 alpha-0.2.5 powstaje z main w `350a43f69b5134bd049923739cd606f798f846ec` po scaleniu SUP. [SID](ADC_SID.md) realizuje własność alokatora/rezerwacji i połączenie modułów; wyjście/podłączenie sesji i tożsamość pozostają planowane. Gałąź nie scala się samoczynnie do main.
+
+alpha-0.2.6 powstaje z main w `85524067756ac5fcbd177bb47f5d2cfe33fad063`. [INF](ADC_INF.md) realizuje walidację pól/PID-CID i połączenie stosu. Globalny rejestr/dopuszczenie, hasła kont, wyjście i pełne logowanie pozostają planowane. Gałąź nie scala się automatycznie.

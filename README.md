@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.2.5 (SID).**
+**Current development version: alpha-0.2.6 (INF).**
 
 Completed increments:
+
+- **alpha-0.2.6 INF**: bounded client metadata, Tiger PID/CID verification, peer-address and field validation, transactional updates and public snapshots without PD. Composed ClientSession is tested with real ncdc; live transport attachment remains planned.
 
 - **alpha-0.2.5 SID**: typed 20-bit base32 SID codec, bounded shared hub pool, move-only RAII reservations and SidSession composition with SUP/state. Real ncdc fixture uses allocated SIDs; live Network attachment remains planned.
 
@@ -36,7 +38,7 @@ A full ADC/ADCS hub is **not yet implemented**: no complete ADC handshake or liv
 ## Build
 
 ```sh
-sudo apt-get install build-essential cmake libutf8proc-dev libssl-dev openssl python3 ncdc libmariadb-dev
+sudo apt-get install build-essential cmake libutf8proc-dev libgcrypt20-dev libssl-dev openssl python3 ncdc libmariadb-dev
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel 2
 ctest --test-dir build --output-on-failure

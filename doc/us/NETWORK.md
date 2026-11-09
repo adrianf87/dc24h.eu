@@ -39,3 +39,7 @@ The [SUP/state adapter](ADC_SUP.md) completes feature/hash selection as a standa
 ## SID boundary — alpha-0.2.5
 
 [SidSession](ADC_SID.md) now supplies allocator-backed ISID ownership in the independent protocol stack. One shared SidPool must cover every listener of one hub on its reactor thread. The actual Network Client does not attach SidSession yet; the wire path remains receive-only. Integration must commit ISUP, reserve a SID, send/commit ISID, cancel/drain old-session output and remove registry references before releasing a value. A SID may be reused after release; raw socket numbers and copied SID values are not ownership tokens. Bounded output, user registry/QUIT ordering, identity validation and deadlines remain future work.
+
+## INF boundary — alpha-0.2.6
+
+[ClientSession](ADC_INF.md) now validates intrinsic client information in the independent stack. Future Network attachment must pass the actual kernel peer address (not an INF claim), serialize decoded public snapshots with escaping, and enforce global nickname/CID admission and update uniqueness before committing/announcing user information. The receive-only reactor remains unchanged. The new ncdc fixture validates real PID/CID over Python-owned TCP/TLS; existing actual C++ transport fixtures remain separate. Ordered bounded output, registry/lifecycle dispatch and login deadlines are still required.

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.2.5 LANGUAGES CXX)
+project(dc24h VERSION 0.2.6 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -28,11 +28,18 @@ set_target_properties(UTF8Proc::UTF8Proc PROPERTIES
     IMPORTED_LOCATION "${UTF8PROC_LIBRARY}"
     INTERFACE_INCLUDE_DIRECTORIES "${UTF8PROC_INCLUDE_DIR}")
 target_link_libraries(dc24h_logging PRIVATE UTF8Proc::UTF8Proc)
-add_library(dc24h_adc src/adc/parser.cpp src/adc/state.cpp src/adc/sup.cpp src/adc/sid.cpp src/adc/sid_session.cpp)
+find_path(GCRYPT_INCLUDE_DIR NAMES gcrypt.h REQUIRED)
+find_library(GCRYPT_LIBRARY NAMES gcrypt REQUIRED)
+add_library(Gcrypt::Gcrypt UNKNOWN IMPORTED)
+set_target_properties(Gcrypt::Gcrypt PROPERTIES
+    IMPORTED_LOCATION "${GCRYPT_LIBRARY}"
+    INTERFACE_INCLUDE_DIRECTORIES "${GCRYPT_INCLUDE_DIR}")
+add_library(dc24h_adc src/adc/parser.cpp src/adc/state.cpp src/adc/sup.cpp src/adc/sid.cpp src/adc/sid_session.cpp
+    src/adc/identity_hash.cpp src/adc/inf.cpp)
 target_compile_features(dc24h_adc PUBLIC cxx_std_20)
 set_target_properties(dc24h_adc PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_adc PUBLIC include)
-target_link_libraries(dc24h_adc PRIVATE UTF8Proc::UTF8Proc)
+target_link_libraries(dc24h_adc PRIVATE UTF8Proc::UTF8Proc Gcrypt::Gcrypt OpenSSL::Crypto)
 
 add_library(dc24h_adcs src/adcs/tls.cpp)
 target_compile_features(dc24h_adcs PUBLIC cxx_std_20)
@@ -169,6 +176,12 @@ if(BUILD_TESTING)
     set_target_properties(adc_sid_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME adc.sid COMMAND adc_sid_tests)
     set_tests_properties(adc.sid PROPERTIES TIMEOUT 60)
+    add_executable(adc_inf_tests tests/adc_inf_tests.cpp)
+    target_link_libraries(adc_inf_tests PRIVATE dc24h_adc)
+    target_compile_options(adc_inf_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(adc_inf_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME adc.inf COMMAND adc_inf_tests)
+    set_tests_properties(adc.inf PROPERTIES TIMEOUT 30)
     add_test(NAME adc.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/adc_process_tests.py" "$<TARGET_FILE:dc24h>")
     add_executable(adcs_unit_tests tests/adcs_unit_tests.cpp)
@@ -246,6 +259,10 @@ if(BUILD_TESTING)
     endif()
     find_program(NCDC_EXECUTABLE ncdc)
     if(NCDC_EXECUTABLE)
+        add_test(NAME adc.inf.ncdc COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_sup_test.py"
+            "$<TARGET_FILE:adc_inf_tests>" "${NCDC_EXECUTABLE}" --inf)
+        set_tests_properties(adc.inf.ncdc PROPERTIES TIMEOUT 30)
         add_test(NAME adc.sid.ncdc COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_sup_test.py"
             "$<TARGET_FILE:adc_sid_tests>" "${NCDC_EXECUTABLE}" --sid)

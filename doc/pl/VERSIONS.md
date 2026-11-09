@@ -18,11 +18,12 @@
 | alpha-0.2.3 | alpha-0.2.3 | ADC State: niezależny automat połączenia huba |
 | alpha-0.2.4 | alpha-0.2.4 | SUP: negocjacja funkcji/hash i integracja stanów |
 | alpha-0.2.5 | alpha-0.2.5 | SID: generowanie, rezerwacje RAII i powiązanie sesji |
+| alpha-0.2.6 | alpha-0.2.6 | INF: informacja klienta i walidacja tożsamości Tiger |
 
 Dokładną kompilację identyfikuje wersja wraz z SHA commita. Budowanie nie zmienia plików źródłowych. Istotne zmiany trafiają do CHANGELOG.md. Alpha oznacza rozwój, nie pełną funkcjonalność huba. Tagi i wdrożenie nie powstają automatycznie.
 
 Wcześniejsze gałęzie i historia commitów są zachowane. alpha-0.1.4 zachowuje przez merge historię referencyjnego TLS i zawiera poprawki.
 
-## Aktualna wersja — alpha-0.2.5
+## Aktualna wersja — alpha-0.2.6
 
-CMake PROJECT_VERSION i główne wersje npm package/lock to **0.2.5**; program/WebAdmin identyfikują się jako **alpha-0.2.5**. Kontrola metadanych wymusza spójność. Gałąź powstaje z main w `350a43f` po scaleniu SUP i dodaje [własność SID](ADC_SID.md). Produkcyjny Network pozostaje odbiorczy; pełne logowanie i walidacja tożsamości są planowane. Main i historyczne gałęzie pozostają zachowane.
+CMake PROJECT_VERSION i główne wersje npm package/lock to **0.2.6**; program/WebAdmin identyfikują się jako **alpha-0.2.6**. Kontrola metadanych wymusza spójność. Gałąź powstaje z main w `8552406` po scaleniu SID i dodaje [walidację INF](ADC_INF.md), wymagającą plików deweloperskich Libgcrypt. Produkcyjny Network pozostaje odbiorczy; rejestr/dopuszczenie i pełne logowanie są planowane. Main i historyczne gałęzie pozostają zachowane.

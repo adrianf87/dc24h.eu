@@ -1,5 +1,13 @@
 # Testowanie
 
+## Etap INF — alpha-0.2.6
+
+Pełny zestaw rejestruje teraz **30 pozycji CTest**, dodając `adc.inf` i `adc.inf.ncdc`. Zakres obejmuje wektory Tiger empty/abc i kolejność bajtów, kanoniczne base32/bity końca i 1000 rund, wymagane/duplikowane/prywatne/nieznane pola, granice liczb/tekstu/SU/pamięci, zgodność/normalizację IP, stały CID i aktualizacje, publiczne snapshoty oraz bramki dopuszczenia. Każdy podział na dwa fragmenty i bajtowy UTF-8 sprawdzają odzyskiwanie parsera i atomowe odrzucanie. Nowy fixture prawdziwego ncdc sprawdza PID/CID i eksportuje bez PD przez TCP loopback i TLS Pythona, pozostając w niezatwierdzonym IDENTIFY. Jest osobny od testów rzeczywistego transportu C++. Zobacz [ADC_INF.md](ADC_INF.md).
+
+Wynik lokalny: **30/30 zestawów CTest przeszło w Debug, Release i ASan/UBSan**, z wymaganymi narzędziami, rzeczywistym C++ ncdc ADC/ADCS, fixture modułów, tymczasową MariaDB i izolowanym Apache HTTPS. Dodatkowe dokładne granice nicku/SU/łącznej pamięci INF i fixture ncdc przeszły we wszystkich trzech konfiguracjach. Przeszły build/typecheck WebAdmin, 3 testy Node, 3 testy Chromium i rzeczywista integracja C++ API/Vite/React. Chromium używał `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium`. Zainstalowano Libgcrypt 1.11.0; wersje npm są bez zmian. Wynik lokalny nie dowodzi pozostałych systemów/zdalnego CI.
+
+Zainstalować libgcrypt20-dev: `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug --parallel 4`, `ctest --test-dir build-debug --output-on-failure --parallel 3`; powtórzyć z Release. Nowy zakres: `ctest --test-dir build-debug -R '^adc.inf' --output-on-failure`. Polecenia sanitizerów/Chromium poniżej nadal obowiązują. Brak algorytmu i pamięci jest obsłużony, ale nie wstrzykiwany w tych testach. Wyniki historyczne zachowują zakres swoich etapów.
+
 ## Etap SID — alpha-0.2.5
 
 Pełny zestaw z wymaganymi narzędziami rejestruje **28 pozycji CTest**, w tym nowe `adc.sid` i `adc.sid.ncdc`. SID obejmuje wszystkie wartości kodera 20-bitowego, pełną przestrzeń puli/wyczerpanie, granice bitmapy 64-bit/zawijanie, reuse/churn, własność move-only i życie po zniszczeniu alokatora, błędne/powtórzone ISID, rollback przed wysyłką, wspólne sesje i sprzątanie terminalne. Fixture ncdc używa przydzielonego SID i osobno zgłasza ukończenia SUP/SID w TCP i TLS Pythona; kończy w niezatwierdzonym IDENTIFY. Dotychczasowe testy rzeczywistego Network/OpenSSL C++ są osobne. Zobacz [ADC_SID.md](ADC_SID.md).

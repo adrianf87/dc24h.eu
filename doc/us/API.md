@@ -128,3 +128,7 @@ Since alpha-0.2.2, `Message::positional_count` identifies known BASE argument la
 ## SID API — alpha-0.2.5
 
 `adc/sid.hpp` exposes Sid value parsing/encoding, SidPool and move-only SidLease. `adc/sid_session.hpp` composes pool ownership with protocol support/state in SidSession; it returns optional `variant<StateError, SupportError, SidError>`. Only the reserved SID may be committed. Preparation/encoding does not advance the protocol; completed-send observation does. Pool counters are reactor-confined, not HTTP telemetry. No API HTTP routes/schema change. See [ADC_SID.md](ADC_SID.md) for lifetime, capacity and release ordering.
+
+## INF API — alpha-0.2.6
+
+`adc/identity_hash.hpp` supplies Tiger/192 and canonical 39-symbol base32 helpers. `adc/inf.hpp` supplies InfValidator, read-only ClientInfo and ClientSession composition. Snapshots expose optional borrowed field views, checked integer values and an owning public BINF Message without PD. `observe` returns optional `variant<StateError, SupportError, SidError, InfError>`; failed input preserves state/metadata/reservations. Identity approval additionally requires validated INF but still delegates registry/admission and account decisions. HTTP routes/schema/counters remain unchanged. See [ADC_INF.md](ADC_INF.md).
