@@ -96,3 +96,7 @@ Nowa [biblioteka ADC State](ADC_STATE.md) jest niezależna od transportu i nie j
 ## Adapter SUP — alpha-0.2.4
 
 [Adapter SUP/stanów](ADC_SUP.md) realizuje wybór funkcji/hash jako samodzielny moduł C++. Network nadal używa samego parsera i nie wysyła odpowiedzi SUP. Nowy fixture SUP łączy prawdziwy ncdc z tymczasowymi gniazdami/TLS Pythona i sterownikiem modułu C++; dotychczasowe testy ADC/ADCS nadal obejmują rzeczywisty reaktor C++. Testy potwierdzają różne granice integracji. Podłączyć ProtocolConnection dopiero z ograniczonym wyjściem, zdarzeniami ukończenia wysyłek, unikalnymi SID, obliczaniem/walidacją tożsamości/hash i terminami logowania.
+
+## Granica SID — alpha-0.2.5
+
+[SidSession](ADC_SID.md) dodaje własność ISID opartą na alokatorze w niezależnym stosie protokołu. Jedna współdzielona SidPool musi obejmować wszystkie listenery huba na wątku reaktora. Obecny Network Client jeszcze nie posiada SidSession; ścieżka sieciowa nadal jest odbiorcza. Integracja musi zatwierdzić ISUP, zarezerwować SID, wysłać/zatwierdzić ISID, anulować/opróżnić wyjście starej sesji i usunąć referencje rejestru przed zwolnieniem wartości. SID może być ponownie użyty; deskryptory gniazd i skopiowane wartości SID nie są tokenami własności. Ograniczone wyjście, rejestr/kolejność QUIT, tożsamość i terminy pozostają przyszłym etapem.

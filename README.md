@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.2.4 (SUP).**
+**Current development version: alpha-0.2.5 (SID).**
 
 Completed increments:
+
+- **alpha-0.2.5 SID**: typed 20-bit base32 SID codec, bounded shared hub pool, move-only RAII reservations and SidSession composition with SUP/state. Real ncdc fixture uses allocated SIDs; live Network attachment remains planned.
 
 - **alpha-0.2.4 SUP**: bounded feature AD/RM sets, BASE checks, TIGR session-hash selection, deterministic ISUP and composition with ADC State. Tested with real ncdc in an isolated fixture; Network attachment remains planned.
 

@@ -1,5 +1,13 @@
 # Testing
 
+## SID increment — alpha-0.2.5
+
+The complete strict suite registers **28 CTest entries**, including new `adc.sid` and `adc.sid.ncdc`. SID checks cover every 20-bit codec value, the entire client pool namespace and exhaustion, 64-bit bitmap boundaries/wrap, reuse/churn, move-only ownership and surviving allocator destruction, rejected/repeated ISID, pending-send rollback, shared sessions and terminal cleanup. The ncdc fixture uses an allocated SID and reports separate SUP/SID send completions on TCP and Python-owned TLS; it stops at unapproved IDENTIFY. Existing actual C++ Network/OpenSSL tests remain separate. See [ADC_SID.md](ADC_SID.md).
+
+Local result: **28/28 CTest suites passed in Debug, Release and ASan/UBSan** with strict integration tools, actual C++ ADC/ADCS ncdc, SID/SUP fixtures, disposable MariaDB and isolated Apache HTTPS. WebAdmin npm ci, typecheck/production build, 3 Node tests, 3 Chromium browser tests and real C++ API/Vite/React integration passed. Browser runs used `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium`; dependency versions are unchanged. This is local verification, not proof of other OS/remote CI results.
+
+Reproduce: `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug --parallel 4`, `ctest --test-dir build-debug --output-on-failure --parallel 3`; repeat for Release. New scope: `ctest --test-dir build-debug -R '^adc.sid' --output-on-failure`. The full-namespace SID suite has a 60-second timeout; ncdc fixtures use 30 seconds. Historical results below retain their named stage scope.
+
 ## SUP increment — alpha-0.2.4
 
 The strict full suite registers **26 CTest entries**, adding `adc.sup` and `adc.sup.ncdc`. The first covers required BASE/common TIGR, deterministic independent local replies, owned support, AD/RM ordering, cumulative/policy bounds and rollback, fixed session hash, manual-message guards and composition with state sequencing. Stream fixtures test every split of an initial SUP/replay transcript. The second uses real ncdc on disposable loopback TCP and Python-owned TLS through the C++ module driver, receiving BINF while remaining in unapproved IDENTIFY. Existing actual C++ Network/OpenSSL ncdc tests remain separate; no live hub login is claimed. See [ADC_SUP.md](ADC_SUP.md).

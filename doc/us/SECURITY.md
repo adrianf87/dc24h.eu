@@ -68,3 +68,7 @@ The independent state module rejects premature commands, repeated login steps, i
 ## SUP policy — alpha-0.2.4
 
 The composed SUP/state module now checks initial BASE/common TIGR, keeps local and peer advertisements separate, bounds feature/token storage and rolls back failed updates. The selected hash cannot be removed or changed. Unknown peer features are inert metadata and are never reflected into the hub response. Additional local features require caller implementations; the default advertisement is BASE/TIGR only. Selection is not Tiger computation, PID/CID validation, password verification or TLS configuration. Production transport does not invoke the module yet. No peer text or credentials enter errors/logs. See [ADC_SUP.md](ADC_SUP.md).
+
+## SID ownership — alpha-0.2.5
+
+The shared pool guarantees uniqueness among live reservations within one hub, including pending ISID sends. Move-only private leases prevent arbitrary release by a copied SID and moved-from/stale reset cannot release a new owner. Codec validation covers all 20 bits; local policy excludes zero/AAAA from client allocation. SIDs are deterministic public routing identifiers, not secrets, authorization or session cookies. Actor/source checks remain required. Exhaustion yields a fixed error and no partial reservation. Pool/session mutation and final shared-owner destruction belong to one thread. Cancel old queued output and registry references before release/reuse. The module is not yet a live transport security boundary. See [ADC_SID.md](ADC_SID.md).

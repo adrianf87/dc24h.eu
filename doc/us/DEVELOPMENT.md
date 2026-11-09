@@ -43,3 +43,7 @@ This branch starts from main at `4c98e10` after the parser merge. Maintain the [
 ## SUP — alpha-0.2.4
 
 Branch from main at `1dd0b9f` after the ADC State merge. Keep support parsing, protocol sequencing and identity/hash computation separate. Prefer ProtocolConnection over manual low-level protocol approval for future transport integration. New hash algorithms require an explicit registry/metadata and selection/reply-order tests; unknown feature names are never guessed to be hashes. Preserve transactional updates, immutable session hash, bounded cumulative support and deterministic local replies. ncdc fixture success is not live hub login. See [ADC_SUP.md](ADC_SUP.md).
+
+## SID — alpha-0.2.5
+
+Branch from current main at `350a43f`. Use one shared SidPool for one hub and unique move-only leases; never add release-by-SID or copyable ownership. Preserve allocation-free acquire/release, the 20-bit codec, full namespace and word-boundary tests, and one-thread lifetime rules. SidSession supersedes arbitrary caller-assigned ISID for future transport integration. Test cleanup before bind, terminal responses, destruction and reuse; do not call completed-send observation for queue insertion. Do not infer user identity from SID ownership. See [ADC_SID.md](ADC_SID.md).

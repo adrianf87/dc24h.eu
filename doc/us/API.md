@@ -124,3 +124,7 @@ Since alpha-0.2.2, `Message::positional_count` identifies known BASE argument la
 ## SUP negotiation API — alpha-0.2.4
 
 `dc24h/adc/sup.hpp` exposes SupportPolicy, SupportNegotiation, SessionHash, SupportError and ProtocolConnection. The adapter returns optional `variant<StateError, SupportError>`; all rejected events preserve state/support. It exposes only const negotiated metadata and no manual protocol approval. Initial reply Message/string values own their data. No HTTP API routes or schema/counters change. See [ADC_SUP.md](ADC_SUP.md) for lifetimes, limits, errors and intended transport integration.
+
+## SID API — alpha-0.2.5
+
+`adc/sid.hpp` exposes Sid value parsing/encoding, SidPool and move-only SidLease. `adc/sid_session.hpp` composes pool ownership with protocol support/state in SidSession; it returns optional `variant<StateError, SupportError, SidError>`. Only the reserved SID may be committed. Preparation/encoding does not advance the protocol; completed-send observation does. Pool counters are reactor-confined, not HTTP telemetry. No API HTTP routes/schema change. See [ADC_SID.md](ADC_SID.md) for lifetime, capacity and release ordering.

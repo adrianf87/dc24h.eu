@@ -1,5 +1,7 @@
 # SUP — alpha-0.2.4
 
+Od alpha-0.2.5 [ADC SID](ADC_SID.md) udostępnia wspólną pulę huba i SidSession z kontrolą własności ISID oraz automatycznym zwalnianiem rezerwacji. Parser/automat używają tego samego kodera SID; AAAA nadal jest poprawną składnią, ale pula rezerwuje go jako lokalną politykę. Pierwotne API niższego poziomu i historyczne fixture pozostają dostępne. Network nadal używa samego parsera.
+
 ## Zakres etapu
 
 `dc24h/adc/sup.hpp` dodaje `SupportNegotiation` i `ProtocolConnection` do `dc24h_adc`. Pierwszy utrzymuje reklamowane funkcje i wybiera hash sesji. Drugi łączy negocjację z [ADC State](ADC_STATE.md), zastępując ręczne zatwierdzenie protokołu sprawdzoną wymianą SUP. Brak nowej zależności od gniazd, logowania, bazy, pliku konfiguracji i kryptografii.

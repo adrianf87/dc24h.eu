@@ -3,7 +3,7 @@
 Podstawę alpha-0.2 i priorytety odbioru opisuje [audyt alpha-0.1](AUDIT_ALPHA_0.1.md). Numerowane gałęzie nadal powstają z aktualnego main. `alpha-0.2` oznacza sprawdzony commit audytu. Pełna weryfikacja używa `DC24H_REQUIRE_INTEGRATION_TESTS=ON`; zachować spójność project.metadata, npm lock, wersji programu/panelu i obu języków dokumentacji.
 
 Pracuj na gałęziach wydań, zachowując historię `main`. Aktualny etap:
-`alpha-0.2.4`. Każdy istotny etap otrzymuje opisowy commit. Nie dodawaj
+`alpha-0.2.5`. Każdy istotny etap otrzymuje opisowy commit. Nie dodawaj
 artefaktów kompilacji, sekretów ani zależności vendored bez uzasadnienia.
 
 | Katalog | Rola |
@@ -63,3 +63,7 @@ Gałąź powstaje z main w `4c98e10` po scaleniu parsera. Zachować [kontrakt st
 ## SUP — alpha-0.2.4
 
 Gałąź z main w `1dd0b9f` po scaleniu ADC State. Oddzielać semantykę SUP, kolejność protokołu i obliczanie tożsamości/hash. Przy przyszłej integracji transportu preferować ProtocolConnection względem ręcznego zatwierdzania protokołu w automacie niskiego poziomu. Nowy hash wymaga jawnego rejestru/metadanych i testów wyboru/kolejności odpowiedzi; nie rozpoznawać hash po nieznanej nazwie. Zachować transakcyjność, stały hash sesji, ograniczony łączny zbiór funkcji i deterministyczną odpowiedź lokalną. Sukces fixture ncdc nie oznacza logowania w hubie. Zobacz [ADC_SUP.md](ADC_SUP.md).
+
+## SID — alpha-0.2.5
+
+Gałąź z aktualnego main w `350a43f`. Używać jednej wspólnej SidPool na hub i unikalnych przenoszalnych uchwytów; nie dodawać zwalniania przez sam SID ani kopiowalnej własności. Zachować przydział/zwalnianie bez alokacji, koder 20-bitowy, test pełnej przestrzeni i granic słów oraz jednowątkowy czas życia. SidSession zastępuje dowolny ISID wywołującego przy przyszłej integracji transportu. Sprawdzać sprzątanie przed bind, terminalne odpowiedzi, destrukcję i ponowne użycie; nie obserwować ukończenia po samym zakolejkowaniu. Własność SID nie potwierdza tożsamości osoby. Zobacz [ADC_SID.md](ADC_SID.md).

@@ -1,5 +1,7 @@
 # ADC Parser — alpha-0.2.2
 
+Since alpha-0.2.5, [ADC SID](ADC_SID.md) supplies a shared hub pool and SidSession composition with checked ISID ownership and automatic reservation cleanup. Parser/state SID syntax uses the same codec; AAAA remains valid syntax but is reserved by the pool as local policy. The original lower-level APIs and historical fixtures remain available. Network still uses only the parser.
+
 alpha-0.2.4 adds the independent [SUP semantics and state adapter](ADC_SUP.md). Parser behavior is unchanged. Existing hub ncdc tests still cover initial HSUP; a new isolated SUP fixture exchanges module-generated ISUP and a fixed test SID with ncdc, stopping at unapproved IDENTIFY. It is not the live Network reactor.
 
 Reference: [ADC 1.0.4](https://adc.sourceforge.io/ADC.html), line grammar and BASE command descriptions. The independent C++20 `dc24h_adc` library parses syntax; it does not execute commands or implement a session.

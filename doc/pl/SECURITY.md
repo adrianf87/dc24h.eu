@@ -68,3 +68,7 @@ Niezależny moduł stanów odrzuca przedwczesne komendy, powtórzone kroki logow
 ## Polityka SUP — alpha-0.2.4
 
 Połączony moduł SUP/stanów sprawdza początkowy BASE/wspólny TIGR, rozdziela funkcje lokalne i klienta, ogranicza tokeny/pamięć i wycofuje błędne aktualizacje. Wybranego hash nie można usunąć ani zmienić. Nieznane funkcje klienta są biernymi metadanymi i nie są odbijane do odpowiedzi huba. Dodatkowe funkcje lokalne wymagają implementacji wywołującego; domyślnie reklamowane są tylko BASE/TIGR. Wybór nie oznacza obliczania Tiger, walidacji PID/CID, hasła ani konfiguracji TLS. Transport produkcyjny jeszcze nie wywołuje modułu. Błędy/logi nie zawierają tekstu klienta ani sekretów. Zobacz [ADC_SUP.md](ADC_SUP.md).
+
+## Własność SID — alpha-0.2.5
+
+Wspólna pula gwarantuje unikalność aktywnych rezerwacji jednego huba, także podczas oczekiwania na wysłanie ISID. Prywatny przenoszalny uchwyt zapobiega zwalnianiu przez skopiowany SID, a reset przeniesionego/starego uchwytu nie zwalnia nowego właściciela. Koder obejmuje pełne 20 bitów; lokalna polityka wyklucza zero/AAAA z przydziału klientom. SID jest deterministycznym publicznym adresem routingu, nie sekretem, uprawnieniem ani cookie. Nadal wymagane są kontrole wykonawcy/źródła. Wyczerpanie daje stały błąd bez częściowej rezerwacji. Zmiany puli/sesji i zniszczenie ostatniego współwłaściciela należą do jednego wątku. Anulować stare wyjście i referencje rejestru przed zwolnieniem/ponownym użyciem. Moduł nie jest jeszcze granicą bezpieczeństwa działającego transportu. Zobacz [ADC_SID.md](ADC_SID.md).

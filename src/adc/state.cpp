@@ -1,4 +1,5 @@
 #include "dc24h/adc/state.hpp"
+#include "dc24h/adc/sid.hpp"
 
 #include <algorithm>
 #include <initializer_list>
@@ -46,9 +47,7 @@ bool valid_state(ConnectionState state, Command command) noexcept {
 }
 
 bool valid_sid(std::string_view value) noexcept {
-    return value.size() == 4 && std::all_of(value.begin(), value.end(), [](char c) {
-        return (c >= 'A' && c <= 'Z') || (c >= '2' && c <= '7');
-    });
+    return Sid::parse(value).has_value();
 }
 } // namespace
 

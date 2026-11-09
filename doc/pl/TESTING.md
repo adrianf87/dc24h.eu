@@ -1,5 +1,13 @@
 # Testowanie
 
+## Etap SID — alpha-0.2.5
+
+Pełny zestaw z wymaganymi narzędziami rejestruje **28 pozycji CTest**, w tym nowe `adc.sid` i `adc.sid.ncdc`. SID obejmuje wszystkie wartości kodera 20-bitowego, pełną przestrzeń puli/wyczerpanie, granice bitmapy 64-bit/zawijanie, reuse/churn, własność move-only i życie po zniszczeniu alokatora, błędne/powtórzone ISID, rollback przed wysyłką, wspólne sesje i sprzątanie terminalne. Fixture ncdc używa przydzielonego SID i osobno zgłasza ukończenia SUP/SID w TCP i TLS Pythona; kończy w niezatwierdzonym IDENTIFY. Dotychczasowe testy rzeczywistego Network/OpenSSL C++ są osobne. Zobacz [ADC_SID.md](ADC_SID.md).
+
+Wynik lokalny: **28/28 zestawów CTest przeszło w Debug, Release i ASan/UBSan**, z wymaganymi narzędziami, rzeczywistym C++ ADC/ADCS ncdc, fixture SID/SUP, tymczasową MariaDB i izolowanym Apache HTTPS. Przeszły npm ci, typecheck/build WebAdmin, 3 testy Node, 3 testy przeglądarkowe Chromium i rzeczywista integracja C++ API/Vite/React. Przeglądarka używała `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium`; zależności są bez zmian. To weryfikacja lokalna, nie dowód innych systemów/zdalnego CI.
+
+Odtworzenie: `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug --parallel 4`, `ctest --test-dir build-debug --output-on-failure --parallel 3`; powtórzyć dla Release. Nowy zakres: `ctest --test-dir build-debug -R '^adc.sid' --output-on-failure`. Pełna przestrzeń SID ma limit 60 sekund; fixture ncdc 30 sekund. Wyniki historyczne poniżej zachowują zakres nazwanych etapów.
+
 ## Etap SUP — alpha-0.2.4
 
 Pełny zestaw z wymaganymi narzędziami rejestruje **26 pozycji CTest**, dodając `adc.sup` i `adc.sup.ncdc`. Pierwszy obejmuje BASE/wspólny TIGR, deterministyczne osobne odpowiedzi lokalne, własność funkcji, kolejność AD/RM, limity zbioru/polityki i rollback, stały hash sesji, ręcznie błędne Message i połączenie z automatem. Strumień sprawdza każdy podział pierwszego SUP/powtórzenia. Drugi uruchamia prawdziwy ncdc przez tymczasowe TCP i TLS Pythona ze sterownikiem modułu C++, odbiera BINF i pozostaje w niezatwierdzonym IDENTIFY. Dotychczasowe testy prawdziwego Network/OpenSSL ncdc są osobne; brak pełnego logowania huba. Zobacz [ADC_SUP.md](ADC_SUP.md).
