@@ -1,12 +1,13 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.1.5: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.1.6: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
 - [ARCHITECTURE.md](ARCHITECTURE.md)
 - [ADC_PROTOCOL.md](ADC_PROTOCOL.md)
 - [ADCS_TLS.md](ADCS_TLS.md)
 - [NETWORK.md](NETWORK.md)
 - [CONFIGURATION.md](CONFIGURATION.md)
+- [LOGGING.md](LOGGING.md)
 - [DATABASE.md](DATABASE.md)
 - [WEBADMIN.md](WEBADMIN.md)
 - [API.md](API.md)

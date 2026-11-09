@@ -7,6 +7,7 @@
 | alpha-0.1.3 ADC | Bounded stream syntax parser, commands and data validation |
 | alpha-0.1.4 ADCS | TLS credentials, nonblocking encrypted inbound transport, tests, US/PL documentation and operator messages |
 | alpha-0.1.5 Configuration | INI, CLI overrides, path/limit validation and append-file logging |
+| alpha-0.1.6 Logging | Startup summaries, WARN, typed connection events, bounded UTF-8 and rate budgets |
 
 Next increments must define their version and acceptance tests before implementation:
 
@@ -16,7 +17,7 @@ Next increments must define their version and acceptance tests before implementa
 4. Public/private chat, search and client transfer coordination.
 5. Secured HTTP API and real React/TypeScript/Vite WebAdmin through Apache2.
 
-Versions beyond alpha-0.1.5 have not been implemented or imported as part of this task. Their presence on unrelated remote branches does not establish release readiness.
+Versions beyond alpha-0.1.6 have not been implemented or imported as part of this task. Their presence on unrelated remote branches does not establish release readiness.
 
 ## alpha-0.1.5
 

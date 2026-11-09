@@ -1,4 +1,4 @@
-# Konfiguracja — alpha-0.1.5
+# Konfiguracja — alpha-0.1.6
 
 Kolejność ustawień: wartości domyślne, jeden jawny `--config PLIK`, następnie nadpisania CLI niezależnie od miejsca `--config`. Brak automatycznego wyszukiwania pliku, zmiennych środowiskowych, include, reload i konfiguracji zdalnej.
 
@@ -21,7 +21,8 @@ UTF-8, opcjonalny BOM, LF lub CRLF. Faktyczny odczyt ograniczono do 65536 bajtó
 | `network` | `idle_timeout` | 120 | 1..86400 sekund |
 | `tls` | `certificate` | Brak | Pełny łańcuch PEM |
 | `tls` | `private_key` | Brak | Zgodny nieszyfrowany klucz PEM |
-| `logging` | `level` | `info` | `info`, `error`, `off` |
+| `logging` | `level` | `info` | `info`, `warning`, `error`, `off` |
+| `logging` | `connections` | `off` | `on` lub `off`; zdarzenia klientów INFO |
 | `logging` | `file` | `stderr` | `stderr` lub ścieżka pliku append |
 
 Pierwszy jawny nasłuch usuwa domyślny TCP; samo `adcs_listen` włącza wyłącznie TLS. Kolejne wpisy tworzą listę danego transportu. `none` musi być jedynym wpisem. Łącznie wymagany jest co najmniej 1 i najwyżej 16 nasłuchów. Równoważne zapisy IPv6 nie mogą powtarzać portu; port 0 wolno powtarzać dla niezależnych portów systemowych. Wildcard jest jawny. Konflikt wildcard/adres na tym samym porcie może ujawnić się dopiero podczas bind.
@@ -34,7 +35,8 @@ Pierwszy jawny nasłuch usuwa domyślny TCP; samo `adcs_listen` włącza wyłąc
 - `--check-config` sprawdza ustawienia po nadpisaniach i wczytuje parę TLS, bez bind, startu Core i tworzenia/otwierania logu.
 - `--listen ENDPOINT/none` i `--adcs-listen ENDPOINT/none` zastępują listę danego transportu przy pierwszym użyciu; kolejne dodają wpisy.
 - `--tls-cert`, `--tls-key`, `--max-connections`, `--idle-timeout` nadpisują odpowiednie pola.
-- `--log-level info/error/off`, `--log-file ŚCIEŻKA/-` i `--language us/pl` nadpisują logowanie/język. `-` oznacza stderr.
+- `--log-connections on/off` włącza/wyłącza zdarzenia połączeń przy INFO.
+- `--log-level info/warning/error/off`, `--log-file ŚCIEŻKA/-` i `--language us/pl` nadpisują logowanie/język. `-` oznacza stderr.
 - `--help` i `--version` wolno łączyć tylko z wyborem języka.
 
 Nadpisanie listy zachowuje drugi jawnie skonfigurowany transport. Pierwszy jawny nasłuch usuwa jedynie domyślny niejawny TCP. Ostatnia powtórzona opcja skalarna CLI obowiązuje. Sprawdzanie nie bada dostępności portu, prawa zapisu logu ani istnienia jego katalogu; zasoby są otwierane podczas startu. Sprawdza kolizje ścieżek i wczytywalność/zgodność TLS, lecz zaufanie, nazwę i ważność certyfikatu weryfikuje klient.
@@ -43,8 +45,10 @@ Kody: 0 sukces sprawdzenia/pomocy/wersji/stopu; 2 błędne argumenty, INI lub ni
 
 ## Logowanie i ścieżki
 
-`info` emituje INFO/ERROR, `error` tylko ERROR, `off` wyłącza oba poziomy, ale wskazany plik nadal jest otwierany i sprawdzany. Format UTC: `YYYY-MM-DDTHH:MM:SSZ [INFO|ERROR] komunikat`. Mutex chroni kompletne wiersze między wątkami. Append zachowuje stare dane. Nowy plik żąda praw 0600 (umask może je ograniczyć); istniejące prawa nie są zmieniane. Wymagany jest zwykły plik z jednym dowiązaniem. Końcowe symlinki, FIFO i urządzenia są odrzucane; używane są O_APPEND/O_CLOEXEC/O_NOFOLLOW/O_NONBLOCK. Log nie może wskazywać używanego INI, certyfikatu ani klucza, także przez istniejące hardlinki i alias katalogu symlink.
+`info` emituje INFO/WARN/ERROR, `warning` WARN/ERROR, `error` tylko ERROR, `off` wyłącza oba poziomy, ale wskazany plik nadal jest otwierany i sprawdzany. Format UTC: `YYYY-MM-DDTHH:MM:SSZ [INFO|WARN|ERROR] komunikat`. Mutex chroni kompletne wiersze między wątkami. Append zachowuje stare dane. Nowy plik żąda praw 0600 (umask może je ograniczyć); istniejące prawa nie są zmieniane. Wymagany jest zwykły plik z jednym dowiązaniem. Końcowe symlinki, FIFO i urządzenia są odrzucane; używane są O_APPEND/O_CLOEXEC/O_NOFOLLOW/O_NONBLOCK. Log nie może wskazywać używanego INI, certyfikatu ani klucza, także przez istniejące hardlinki i alias katalogu symlink.
 
 Katalogi muszą być zaufane i kontrolowane przez użytkownika usługi; mechanizm nie zastępuje ochrony przed równoczesną podmianą ścieżek przez administratora. Zapis do zwykłego pliku jest synchroniczny i może czekać na dysk. Błędy działającego wyjścia są best effort, bez wyjątków z loggera. Brak rotacji, reopen, asynchronicznego loggera i reload przez SIGHUP. Wzrost logu wymaga obsługi operacyjnej. Nie loguj sekretów ani ramek klientów.
 
 Zobacz [TLS](ADCS_TLS.md), [bezpieczeństwo](SECURITY.md) i [przykład INI](../../config/dc24h.ini.example).
+
+Logger ogranicza teraz wiersze UTF-8, dodaje opcjonalne typowane zdarzenia połączeń i niezależne limity ostrzeżeń. [LOGGING.md](LOGGING.md) opisuje nazwy zdarzeń, prywatność, raporty pominięć i synchroniczne I/O.

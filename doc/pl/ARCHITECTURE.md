@@ -92,3 +92,7 @@ w odwrotnej kolejności startu. Nie ma jeszcze rejestru ani interfejsu modułów
 ## Konfiguracja i logowanie — alpha-0.1.5
 
 `dc24h_configuration` zawiera Settings, ograniczony parser INI, składanie CLI i walidację zależności pól. main najpierw sprawdza ustawienia, potem tworzy logger, sygnały, transport i Core. Błąd otwarcia logu daje kod 1; działający logger pozostaje best effort. Zobacz [CONFIGURATION.md](CONFIGURATION.md).
+
+## Logging — alpha-0.1.6
+
+Start raportuje niesekretne liczby nasłuchów/limity przed przeniesieniem opcji do Network. Reaktor przekazuje stałe kategorie ostrzeżeń i typowane zdarzenia. Mutex chroni ograniczone wiersze UTF-8, bez nowego wątku i nieograniczonej kolejki logów. Zobacz [LOGGING.md](LOGGING.md).

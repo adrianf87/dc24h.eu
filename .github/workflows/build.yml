@@ -1,4 +1,4 @@
-name: Build and test Core, Network, ADC, ADCS and Configuration
+name: Build and test Core, Network, ADC, ADCS, Configuration and Logging
 on: [push, pull_request]
 permissions:
   contents: read

@@ -13,3 +13,7 @@ Network owns nonblocking sockets, epoll and eventfd using RAII. All client opera
 ## Configuration and logging — alpha-0.1.5
 
 `dc24h_configuration` owns Settings, bounded INI parsing, CLI composition and cross-field validation. main validates before creating the logger, signal adapter, transport and Core. Logger file-open failures abort startup with code 1; runtime writes remain best effort. See [CONFIGURATION.md](CONFIGURATION.md).
+
+## Logging — alpha-0.1.6
+
+Startup now reports only non-secret listener counts/limits before moving Network options into the transport. The reactor supplies fixed warning categories and typed connection events. Logger records are mutex-serialized and bounded UTF-8; there is no extra logging thread or unbounded queue. See [LOGGING.md](LOGGING.md).

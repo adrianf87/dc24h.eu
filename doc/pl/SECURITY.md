@@ -13,3 +13,7 @@ Plan obejmuje kolejki wyjściowe, backpressure, limity wiadomości, walidację s
 ## Konfiguracja i logi
 
 Odczyt INI jest ograniczony, a typ otwartego deskryptora sprawdzany przed czytaniem. Końcowe symlinki/urządzenia/FIFO są odrzucane. Log jest porównywany z aktywnym INI i plikami TLS, także aliasami; zwykły plik append musi mieć jedno dowiązanie. FIFO nie blokuje startu. Zapis logu jest synchroniczny, best effort, bez rotacji. Wymagane są zaufane katalogi i zwykły użytkownik. Zobacz [konfigurację](CONFIGURATION.md) i [open(2)](https://man7.org/linux/man-pages/man2/open.2.html).
+
+## Granice logowania
+
+Typowane zdarzenia pomijają adresy, nicki, identyfikatory i hashe haseł. Treść ma do 1024 bajtów, poprawne UTF-8 i usunięte sterowanie rekordami/terminalem. CR/LF i separatory Unicode nie tworzą dodatkowych rekordów; nie jest to usuwanie sekretów. Logowanie klientów jest opcjonalne i ograniczone; synchroniczny zapis nadal zależy od nośnika. Zobacz [LOGGING.md](LOGGING.md).

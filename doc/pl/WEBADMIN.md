@@ -1,6 +1,6 @@
 # WebAdmin
 
-Status alpha-0.1.5: katalog planowanego frontendu, bez aplikacji i pakietów npm.
+Status alpha-0.1.6: katalog planowanego frontendu, bez aplikacji i pakietów npm.
 Obecne etapy realizują Core, TCP, parser ADC i TLS.
 
 Stos docelowy: React + TypeScript + Vite. Apache2 będzie serwował zbudowane

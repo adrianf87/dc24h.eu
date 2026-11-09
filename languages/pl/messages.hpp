@@ -3,7 +3,7 @@
 #include <string_view>
 
 namespace dc24h::i18n::pl {
-inline constexpr std::array<std::string_view, 68> messages{{
+inline constexpr std::array<std::string_view, 79> messages{{
     "Uruchamianie dc24h.eu ",
     "Core działa",
     "Zatrzymywanie Core",
@@ -44,7 +44,7 @@ inline constexpr std::array<std::string_view, 68> messages{{
     "Sprawdzenie konfiguracji nie powiodło się: ",
     "Błąd uruchomienia: ",
     "Nieprawidłowa wartość liczbowa konfiguracji",
-    "Poziom logowania musi być info, error lub off",
+    "Poziom logowania musi być info, warning, error lub off",
     "Pusta ścieżka konfiguracji",
     "Niedozwolony znak sterujący w ścieżce",
     "Nie można rozwiązać skonfigurowanej ścieżki",
@@ -71,14 +71,26 @@ inline constexpr std::array<std::string_view, 68> messages{{
     "Podaj --config tylko raz ze ścieżką pliku",
     "Pomocy/wersji nie można łączyć z opcjami operacyjnymi",
     "Nie można otworzyć skonfigurowanego pliku logu",
-    "Log musi wskazywać zwykły plik z jednym dowiązaniem"
+    "Log musi wskazywać zwykły plik z jednym dowiązaniem",
+    "Ustawienia startowe: adc_listeners=",
+    "Połączenie id=",
+    "Pominięte zdarzenia połączeń: suppressed=",
+    "Odrzucono nieprawidłową ramkę ADC; treść pominięta",
+    "Osiągnięto limit połączeń; nadmiarowy klient odrzucony",
+    "Nie udało się utworzyć sesji ADCS; klient odrzucony",
+    "Błąd negocjacji ADCS; połączenie zamknięte",
+    "Błąd komunikacji z klientem; połączenie zamknięte",
+    "Przekroczono czas negocjacji ADCS; połączenie zamknięte",
+    "Zamknięto bezczynne połączenie",
+    "Logowanie połączeń musi być on lub off"
 }};
 inline constexpr std::string_view help = R"HELP(Użycie: dc24h [--config PLIK] [--check-config]
               [--listen IPv4:port | [IPv6]:port | none] ...
               [--adcs-listen IPv4:port | [IPv6]:port | none] ...
               [--tls-cert ŁAŃCUCH.pem --tls-key KLUCZ.pem]
               [--max-connections N] [--idle-timeout SEKUNDY]
-              [--log-level info|error|off] [--log-file ŚCIEŻKA|-] [--language us|pl]
+              [--log-level info|warning|error|off] [--log-file ŚCIEŻKA|-] [--language us|pl]
+              [--log-connections on|off]
         dc24h [--language us|pl] --help | --version
 Kolejność: ustawienia domyślne, opcjonalny plik INI, nadpisania z CLI.
 Ścieżki INI są względne do katalogu pliku; ścieżki CLI do katalogu roboczego.

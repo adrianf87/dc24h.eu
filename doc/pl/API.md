@@ -58,4 +58,8 @@ administracyjnych.
 
 ## Konfiguracja i logger
 
-`configuration::Settings` zawiera opcje sieci/loggera i pochodzenie (`source_file`, `implicit_plain_listener`). `load_file` parsuje składnię i pojedyncze pola; zależności sprawdza osobne `validate(Settings)` po nadpisaniach. `parse_arguments(argc, argv)` wczytuje plik, stosuje CLI i waliduje; `CommandLine` dodaje flagi check/help/version. `logging::Options` ma level, file_path (puste = stderr) i language. `Logger(Options = {})` otwiera plik w konstruktorze; pozostaje też `Logger(Language)`. Obiekt jest niekopiowalny i musi żyć dłużej niż wywołujący. Brak API zmiany ustawień/reload.
+`configuration::Settings` zawiera opcje sieci/loggera i pochodzenie (`source_file`, `implicit_plain_listener`). `load_file` parsuje składnię i pojedyncze pola; zależności sprawdza osobne `validate(Settings)` po nadpisaniach. `parse_arguments(argc, argv)` wczytuje plik, stosuje CLI i waliduje; `CommandLine` dodaje flagi check/help/version. `logging::Options` ma level, file_path (puste = stderr), language i connections. `Logger(Options = {})` otwiera plik w konstruktorze; pozostaje też `Logger(Language)`. Obiekt jest niekopiowalny i musi żyć dłużej niż wywołujący. Brak API zmiany ustawień/reload.
+
+## Logger — alpha-0.1.6
+
+`Level` ma info/warning/error/off. `info`, `warning`, `error` przyjmują niesekretny tekst wewnętrzny i nie rzucają. `connection(ConnectionEvent, uint64_t id, bool secure)` dopuszcza tylko enum zdarzeń, bez dowolnej treści. `connection_enabled()` sprawdza niezmienną flagę i próg INFO. Mutex chroni wspólny limit 64 wpisów/okno sekundy i raport pominięć w destruktorze/przy odnowieniu. Kolejność Options: level, file_path, language, connections; wcześniejsze inicjalizacje pozostają zgodne. Szczegóły: [LOGGING.md](LOGGING.md).
