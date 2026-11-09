@@ -1,5 +1,22 @@
 # Changelog
 
+## alpha-0.2.1 — 2026-11-09
+
+Project audit of alpha-0.1 and preparation of alpha-0.2, based on main at `8277bc14ea3a722fdfc72f600be3e9cb5f2d9158`:
+
+- Added matched US/PL audit reports with module inventory, evidence, four closed consistency/verification findings, six prioritized open capability/operational gaps and reproducible checks. Distinguished initial ncdc HSUP transport coverage from the still missing complete ADC login.
+- Prepared the alpha-0.2 line marker and alpha-0.2.1 stage at the same reviewed commit. Updated roadmap with proposed serializer, bounded output, session and real-client login acceptance gates. New numbered stages continue to originate from main; neither new branch merges itself into main.
+- Added default-OFF `DC24H_REQUIRE_INTEGRATION_TESTS`. CI enables it and fails configuration when openssl, ncdc, MariaDB server/client tools or Apache2/mod_ssl are missing, instead of accepting a partial suite. Rejects strict mode with BUILD_TESTING=OFF; ordinary developer builds retain optional integrations.
+- Added Python-only `project.metadata` CTest: CMake/npm/package-lock/frontend release consistency, current documentation introductions, UTF-8, US/PL Markdown filename parity and local link targets. No translation/external-URL validation is claimed.
+- Fixed WebAdmin documentation links pinned to alpha-0.1.10, deriving the branch from WEBADMIN_VERSION and testing US/PL links in the browser. Corrected the obsolete README frontend statement and stale roadmap/version wording.
+- Updated runtime, npm/lock/frontend metadata and version-sensitive fixtures to alpha-0.2.1; retained dependency versions, API v1 meaning, SQL migration bytes and alpha-0.1 history.
+
+Local validation: **22/22 CTest suites passed in Debug, Release and ASan/UBSan**, including real ncdc ADC/ADCS, disposable MariaDB, Apache HTTPS and new project checks. Sanitizer build used `-fno-pie` / `-no-pie`. Frontend production build/typecheck, **3 Node tests, 3 Playwright browser tests and real C++/Vite/Chromium integration** passed. Configuration negative checks covered each required tool family, optional omission and disabled testing. Metadata negative fixtures rejected mismatched package/lock/frontend/introduction versions, missing language peers, invalid UTF-8 and broken links. Staged installs with/without WebAdmin verified binary version, accepted INI and exact examples/migration/assets. Git whitespace and documentation checks passed. Full locked npm dependency audit reported zero vulnerabilities on the audit date; it does not cover C++/OS libraries.
+
+Observed baseline remote CI: [main push run 42561475283](https://github.com/adrianf87/dc24h.eu/actions/runs/42561475283) succeeded for the exact audited SHA on Ubuntu 22.04/24.04 Debug/Release and frontend. This historical observation is separate from new-branch CI. Local environment: Debian 13, GCC 14.2, OpenSSL 3.5.7, MariaDB 11.8.6, ncdc 1.23.1, Apache 2.4.69, Node 20.19.2 and Chromium 156. Debian 12 and Ubuntu 26.04 remain unverified.
+
+Limits: engineering regression/source audit, not an independent penetration test or production certification. Full ADC sessions, Users/Chat/Search/Transfers, application persistence and production authenticated web administration remain unimplemented. Main and historical stage branches are preserved.
+
 ## alpha-0.1.11 — 2026-11-09
 
 Apache2 HTTPS configuration milestone, based on main after alpha-0.1.10:

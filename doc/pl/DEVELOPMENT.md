@@ -1,7 +1,9 @@
 # Rozwój projektu
 
+Podstawę alpha-0.2 i priorytety odbioru opisuje [audyt alpha-0.1](AUDIT_ALPHA_0.1.md). Numerowane gałęzie nadal powstają z aktualnego main. `alpha-0.2` oznacza sprawdzony commit audytu. Pełna weryfikacja używa `DC24H_REQUIRE_INTEGRATION_TESTS=ON`; zachować spójność project.metadata, npm lock, wersji programu/panelu i obu języków dokumentacji.
+
 Pracuj na gałęziach wydań, zachowując historię `main`. Aktualny etap:
-`alpha-0.1.11`. Każdy istotny etap otrzymuje opisowy commit. Nie dodawaj
+`alpha-0.2.1`. Każdy istotny etap otrzymuje opisowy commit. Nie dodawaj
 artefaktów kompilacji, sekretów ani zależności vendored bez uzasadnienia.
 
 | Katalog | Rola |

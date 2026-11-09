@@ -1,5 +1,11 @@
 # Testing
 
+## Current audit — alpha-0.2.1
+
+The complete current suite has **22 CTest entries**, including `project.metadata`. All passed locally in Debug, Release and ASan/UBSan; frontend build, 3 Node tests, 3 browser tests and the real C++ API integration also passed. CI uses `-DDC24H_REQUIRE_INTEGRATION_TESTS=ON` to reject missing openssl/ncdc/MariaDB/Apache tools. The default optional mode may register fewer tests. Metadata checks need only Python, with no Node or Git dependency. Negative configuration and metadata fixtures were checked separately.
+
+The [audit](AUDIT_ALPHA_0.1.md) records the exact baseline SHA, observed successful historical main CI, environment, findings and reproduction commands. Older results below describe their named historical stages. Initial ncdc HSUP is still transport coverage, not full hub login. Debian 12, Ubuntu 26.04, sustained load and fuzzing remain separate acceptance work.
+
 Run `ctest --test-dir build --output-on-failure` and the equivalent for `build-release`. Tests use only loopback, ephemeral ports and temporary data; they never use the user's ncdc configuration or shares. Each wait/process has a timeout and cleanup.
 
 | CTest suite | Coverage |

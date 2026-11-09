@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.1.11 (Apache2 HTTPS).**
+**Current development version: alpha-0.2.1 (Project audit and alpha-0.2 preparation).**
 
 Completed increments:
+
+- **alpha-0.2.1 Project**: [alpha-0.1 audit](doc/us/AUDIT_ALPHA_0.1.md), prioritized alpha-0.2 acceptance plan, version/documentation checks and required CI integrations.
 
 - **alpha-0.1.1 Core**: lifecycle, signal handling, graceful shutdown.
 - **alpha-0.1.2 Network**: multiple nonblocking IPv4/IPv6 TCP listeners/clients.
@@ -71,7 +73,7 @@ Security defaults: 128 active peers/IP, 256 admissions/IP/minute, 1024 decoder r
 
 MariaDB is disabled by default. Configure `[database]` to enable connection checks before listener startup. Use `--check-database` to connect/ping or `--migrate-database` to explicitly create/verify migration metadata; startup never migrates. Install `mariadb-server` to run disposable integration tests. See [database documentation](doc/us/DATABASE.md) for setup, privileges and limits.
 
-The administrative API is disabled by default. Enable `[api]` with a private Unix socket directory and a private 64-hex-character token file. Authenticated `GET /api/v1/health` and `GET /api/v1/status` are read-only. There is no remote API, administrative mutation or frontend yet. See [API setup and contract](doc/us/API.md).
+The administrative API is disabled by default. Enable `[api]` with a private Unix socket directory and a private 64-hex-character token file. Authenticated `GET /api/v1/health` and `GET /api/v1/status` are read-only. The read-only WebAdmin uses a local development adapter; production web authentication, a remote gateway and administrative mutations remain planned. See [API setup and contract](doc/us/API.md).
 
 ## WebAdmin
 
