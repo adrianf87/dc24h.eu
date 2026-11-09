@@ -1,5 +1,7 @@
 # Architektura
 
+W alpha-0.2.3 `dc24h_adc` udostępnia też `ConnectionStateMachine` po stronie huba, bez zależności od gniazd, logów, bazy i Core. Zachowuje tylko czteroznakowy SID i stałe flagi handshake. Network nadal używa samego parsera; [ADC_STATE.md](ADC_STATE.md) określa granicę integracji i jawne zatwierdzanie.
+
 W alpha-0.2.2 niezależna biblioteka ADC sprawdza też układy argumentów BASE i udostępnia funkcje pól nazwanych/liczb. Network używa pełniejszej składni przez dotychczasowy dekoder; bez nowej zależności od Core/bazy/frontendu i bez wykonania/wyjścia. Zobacz [ADC_PROTOCOL.md](ADC_PROTOCOL.md).
 
 ## Core — alpha-0.1.1 / alpha-0.1.2

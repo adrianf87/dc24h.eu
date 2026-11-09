@@ -116,3 +116,7 @@ All owners must stop and join callers before destroying dependencies. `Logger(Op
 The read-only React panel and optional same-UID local Vite development adapter now exist; see [WEBADMIN.md](WEBADMIN.md). The private C++ API contract and permissions are unchanged. Static Apache serving does not provide an authenticated API gateway.
 
 Since alpha-0.2.2, `Message::positional_count` identifies known BASE argument layouts (unknown commands remain opaque). `parse_named_parameter` returns borrowed name/value views; `parse_integer` returns optional signed 64-bit values. The same parse_line/StreamDecoder now reject malformed BASE argument syntax; see the complete [parser contract](ADC_PROTOCOL.md).
+
+## ADC state API — alpha-0.2.3
+
+`dc24h/adc/state.hpp` exposes `ConnectionStateMachine`, `ConnectionState`, `Direction`, `IdentityMode`, `StateError` and `StateResult`. `observe`, `keepalive`, `approve_protocol`, `approve_identity`, `approve_password` and terminal `disconnect` are detailed in [ADC_STATE.md](ADC_STATE.md). Results contain fixed error categories, never peer payloads. These are C++ module APIs; no HTTP routes/counters or live session enforcement are added.

@@ -27,3 +27,7 @@ The Network options include `security::Limits`. A single bounded `PeerLimiter` s
 ## Administrative socket — alpha-0.1.9
 
 The optional local HTTP API uses a separate private Unix-domain stream socket and worker, not an ADC/ADCS listener. Its active-client/deadline policies are independent of TCP/TLS security counters. No HTTP port is opened and Apache2 is not involved in transport tests. See [API.md](API.md).
+
+## State integration boundary — alpha-0.2.3
+
+The new [ADC State library](ADC_STATE.md) is transport-independent and not yet attached to Client objects. ADC/ADCS wire behavior and syntax counters are unchanged. Attachment requires bounded ordered output, committed-send events, protocol/identity validation and a unique SID allocator; otherwise an inbound-only handshake would reject valid clients while being unable to reply. Existing frame/TLS deadlines remain in Network; a future session deadline must bound complete login independently of keepalives.

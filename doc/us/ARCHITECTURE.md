@@ -1,5 +1,7 @@
 # Architecture
 
+In alpha-0.2.3, `dc24h_adc` also provides a hub-side `ConnectionStateMachine` with no socket, logger, database or Core dependencies. It stores only a four-character SID and fixed handshake flags. Network still uses the parser alone; [ADC_STATE.md](ADC_STATE.md) defines the explicit integration boundary and approval contract.
+
 In alpha-0.2.2, the independent ADC library also validates BASE argument layouts and exposes named-field/integer helpers. Network uses this stricter syntax through the existing decoder; no Core/database/frontend dependency or dispatch/output path is added. See [ADC_PROTOCOL.md](ADC_PROTOCOL.md).
 
 The executable composes independent C++20 libraries: `dc24h_core`, `dc24h_network`, `dc24h_adc`, `dc24h_adcs`, `dc24h_logging`, `dc24h_i18n`, `dc24h_configuration`, `dc24h_security`, `dc24h_database` and `dc24h_api`. Public headers live in `include/dc24h/`; implementations live under the corresponding `src/` directory. Network depends on ADC and ADCS. The parser has no dependency on Core or sockets. OpenSSL handles remain inside ADCS.

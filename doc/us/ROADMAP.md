@@ -15,6 +15,7 @@
 | alpha-0.1.11 Apache2 | Static HTTPS example, canonical redirect, TLS/security policy and disposable Apache tests |
 | alpha-0.2.1 Project | Audit of alpha-0.1, bounded consistency fixes, strict CI integration gate and alpha-0.2 baseline |
 | alpha-0.2.2 ADC Parser | BASE argument syntax, named fields, scalar helpers and TCP/TLS recovery |
+| alpha-0.2.3 ADC State | Independent hub state machine, explicit approvals and command/direction/source gates |
 
 ## Proposed alpha-0.2 increments
 
@@ -26,7 +27,7 @@ These are planned acceptance gates, not implemented features. Define the final s
 | --- | --- | --- |
 | Planned ADC output | Serializer, escaping, header validation and encoded byte limits | Byte-exact grammar fixtures; parse/serialize cases, Unicode/boundary/error coverage; no writes yet |
 | Planned Network output | Bounded per-client and aggregate queues, TCP/TLS partial writes, WANT_READ/WANT_WRITE and slow-reader policy | TCP/ADCS fragmented writes, queue limits, fairness under a stalled reader, peer failure and bounded shutdown; no unbounded allocation |
-| Planned Sessions | SUP/hash negotiation, SID allocator, handshake state machine and INF/identity checks | Legal/illegal state transitions, SID uniqueness/release, spoofed-source and duplicate identity rejection; no PID leakage |
+| Planned Sessions | Wire integration of the state machine, SUP/hash negotiation, SID allocator and INF/identity checks | Legal/illegal state transitions, SID uniqueness/release, spoofed-source and duplicate identity rejection; no PID leakage |
 | Planned Client integration | Complete guest login over ADC and ADCS, lifecycle/disconnect behavior and readiness semantics | Real ncdc reaches normal logged-in state on both transports; reconnect, concurrent users, malformed negotiation and existing regressions pass |
 
 Full chat, search and transfer coordination remain separate future stages after session correctness. Registered users require a reviewed authentication/permissions/password design and application SQL migrations. Production web administration requires an authenticated Apache gateway, browser sessions/roles, CSRF policy and audit before exposure. Logging isolation/rotation, TLS close_notify/reload, measured load/fuzz/fault-injection and the remaining OS matrix remain explicit follow-up work.
@@ -38,3 +39,5 @@ alpha-0.2.2 starts from main at `ca464e02e714c1e81ed4c37279496168a6c47e23`, afte
 alpha-0.2.1 originates from main after the alpha-0.1.11 merge. alpha-0.2 is prepared at the same audit commit as a line marker; it is not a substitute for the requested main-based numbered branches. Merge a reviewed numbered stage to main only on a separate instruction. Keep historical branches and immutable SQL migrations.
 
 Every stage must pass strict integration CTest, frontend checks when affected, metadata/documentation checks and an updated changelog. Green initial-HSUP ncdc tests are transport evidence only until the complete-login gate is implemented. See [the audit and prioritized findings](AUDIT_ALPHA_0.1.md).
+
+alpha-0.2.3 starts from main at `4c98e10` after the alpha-0.2.2 merge. Its [state module](ADC_STATE.md) completes the standalone sequencing gate; outbound transport, feature/identity/password validation, SID uniqueness and complete ncdc login remain planned. This stage does not merge itself into main.

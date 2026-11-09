@@ -15,11 +15,12 @@
 | alpha-0.1.11 | alpha-0.1.11 | Szablon HTTPS Apache2 i izolowane testy TLS/dostępu |
 | alpha-0.2.1 | alpha-0.2.1 | Project: audyt alpha-0.1 i przygotowanie alpha-0.2 |
 | alpha-0.2.2 | alpha-0.2.2 | ADC Parser: argumenty BASE, pola nazwane i ograniczona składnia liczb |
+| alpha-0.2.3 | alpha-0.2.3 | ADC State: niezależny automat połączenia huba |
 
 Dokładną kompilację identyfikuje wersja wraz z SHA commita. Budowanie nie zmienia plików źródłowych. Istotne zmiany trafiają do CHANGELOG.md. Alpha oznacza rozwój, nie pełną funkcjonalność huba. Tagi i wdrożenie nie powstają automatycznie.
 
 Wcześniejsze gałęzie i historia commitów są zachowane. alpha-0.1.4 zachowuje przez merge historię referencyjnego TLS i zawiera poprawki.
 
-## Aktualna wersja — alpha-0.2.2
+## Aktualna wersja — alpha-0.2.3
 
-CMake PROJECT_VERSION i główne wersje npm package/lock to **0.2.2**; program/WebAdmin mają **alpha-0.2.2**. `project.metadata` wymusza spójność. Etap parsera powstaje z main po scaleniu audytu (`ca464e0`); nie scala się samoczynnie do main i nie przesuwa historycznego znacznika alpha-0.2. Gałęzie audytu alpha-0.2.1 i alpha-0.2 pozostają zachowane. Zobacz [kontrakt parsera](ADC_PROTOCOL.md) i [historyczny audyt](AUDIT_ALPHA_0.1.md).
+CMake PROJECT_VERSION i główne wersje npm package/lock to **0.2.3**; program/WebAdmin identyfikują się jako **alpha-0.2.3**. `project.metadata` sprawdza spójność. Gałąź powstaje z main w `4c98e10` po scaleniu parsera i dodaje niezależny [moduł stanów](ADC_STATE.md). Integracja transportu i pełne logowanie pozostają planowane. Main i historyczne gałęzie nie są zmieniane przez ten etap.

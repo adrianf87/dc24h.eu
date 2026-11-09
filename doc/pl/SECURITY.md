@@ -60,3 +60,7 @@ Nie umieszczaj tokena w pamięci przeglądarki, JavaScript, URL, zmiennych VITE 
 ## Przykład HTTPS Apache2 — alpha-0.1.11
 
 TLS i logowanie WWW są osobnymi mechanizmami. Szablon wybiera TLS 1.2/1.3 z AEAD, ustala host przekierowania, zachowuje Require local, blokuje prywatne/ukryte/sekretne ścieżki i wyłącza indeksy/symlinki. HSTS jest krótki, tylko dla hosta i HTTPS; CSP/no-sniff/referrer/frame obejmują błędy. Przed użyciem zweryfikuj zaufanie/nazwę/zgodność klucza; sama składnia nie dowodzi zgodności. Szablon nie ujawnia tokena i nie aktywuje bramy produkcyjnej. Zobacz [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
+
+## Granica ADC State — alpha-0.2.3
+
+Niezależny moduł stanów odrzuca przedwczesne komendy, powtórzone kroki logowania, przychodzące typy zarezerwowane dla huba i podszyty źródłowy SID. Jawne zatwierdzenie wymaga oczekującego żądania; samo parsowanie INF/PAS nie przyznaje NORMAL. Moduł nie zachowuje PID, PAS, nicku ani parametrów i nie loguje. To kontrola kolejności, nie uwierzytelnianie ani wdrożona granica bezpieczeństwa: odbiorczy Network go nie wywołuje. Przyszły dispatcher musi sprawdzić zgodność funkcji/hash, PID/CID, wymagane pola, IP, unikalność nicku/CID i hasło przed zatwierdzeniem, usunąć PD przed przekazaniem, zastosować limity/terminy i zamknąć po odrzuceniu. Zobacz [ADC_STATE.md](ADC_STATE.md).
