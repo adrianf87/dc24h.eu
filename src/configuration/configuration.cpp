@@ -154,6 +154,7 @@ std::string read_file(const std::string& filename) {
 } // namespace
 
 void validate(const Settings& settings) {
+    database::validate(settings.database);
     const auto& net = settings.network;
     security::validate(net.security);
     const auto count = net.listeners.size() + net.tls_listeners.size();
@@ -180,9 +181,9 @@ void validate(const Settings& settings) {
     }
     if (!log.file_path.empty()) {
         path_text(log.file_path);
-        for (const auto& protected_path : {settings.source_file, net.tls_certificate, net.tls_private_key}) {
+        for (const auto& protected_path : {settings.source_file, net.tls_certificate, net.tls_private_key, settings.database.password_file}) {
             if (!protected_path.empty() && same_file(log.file_path, protected_path)) {
-                throw std::invalid_argument("Log file cannot be the configuration, TLS certificate or private key");
+                throw std::invalid_argument("Log file cannot target configuration or credential files");
             }
         }
     }
@@ -218,7 +219,7 @@ Settings load_file(const std::string& filename) {
                 throw std::invalid_argument("Invalid section at line " + std::to_string(line_number));
             }
             section = trim(std::string_view(text).substr(1, text.size() - 2));
-            if (section != "network" && section != "tls" && section != "logging" && section != "general" && section != "security") {
+            if (section != "network" && section != "tls" && section != "logging" && section != "general" && section != "security" && section != "database") {
                 throw std::invalid_argument("Unknown configuration section at line " + std::to_string(line_number));
             }
             continue;
@@ -264,6 +265,18 @@ Settings load_file(const std::string& filename) {
                 settings.logging.file_path = value == "stderr" ? "" : resolve_path(value, path.parent_path());
             } else if (section == "logging" && key == "connections") {
                 settings.logging.connections = connection_logging(value);
+            } else if (section == "database" && key == "enabled") {
+                settings.database.enabled = connection_logging(value);
+            } else if (section == "database" && key == "socket") {
+                settings.database.socket = value.empty() ? "" : resolve_path(value, path.parent_path());
+            } else if (section == "database" && key == "name") {
+                settings.database.name = value;
+            } else if (section == "database" && key == "user") {
+                settings.database.user = value;
+            } else if (section == "database" && key == "password_file") {
+                settings.database.password_file = resolve_path(value, path.parent_path());
+            } else if (section == "database" && key == "timeout") {
+                settings.database.timeout = positive_number(value, 60);
             } else if (section == "general" && key == "language") {
                 settings.logging.language = i18n::parse_language(value);
             } else { throw std::invalid_argument("Unknown configuration key"); }
@@ -283,7 +296,7 @@ CommandLine parse_arguments(int argc, char* const argv[]) {
         const std::string_view key(argv[i]);
         if (key == "--help") { result.show_help = true; continue; }
         if (key == "--version") { result.show_version = true; continue; }
-        if (key == "--check-config") { operational = true; continue; }
+        if (key == "--check-config" || key == "--check-database" || key == "--migrate-database") { operational = true; continue; }
         if (key == "--config") {
             if (has_config || i + 1 == argc) {
                 throw std::invalid_argument("Provide --config only once with a file");
@@ -310,6 +323,8 @@ CommandLine parse_arguments(int argc, char* const argv[]) {
         const std::string_view key(argv[i]);
         if (key == "--config") { ++i; continue; }
         if (key == "--check-config") { result.check_only = true; continue; }
+        if (key == "--check-database") { result.check_database = true; continue; }
+        if (key == "--migrate-database") { result.migrate_database = true; continue; }
         if (key == "--help" || key == "--version") { continue; }
         const std::string_view value(argv[++i]);
         if (key == "--listen") { plain.add(result.settings, result.settings.network.listeners, value); }
@@ -339,6 +354,13 @@ CommandLine parse_arguments(int argc, char* const argv[]) {
         else if (key == "--log-file") {
             path_text(value); result.settings.logging.file_path = value == "-" ? "" : std::string(value);
         } else if (key == "--language") { result.settings.logging.language = i18n::parse_language(value); }
+    }
+    if (static_cast<int>(result.check_only) + static_cast<int>(result.check_database) +
+        static_cast<int>(result.migrate_database) > 1) {
+        throw std::invalid_argument("Database actions and configuration check are mutually exclusive");
+    }
+    if ((result.check_database || result.migrate_database) && !result.settings.database.enabled) {
+        throw std::invalid_argument("Database is disabled");
     }
     validate(result.settings);
     return result;

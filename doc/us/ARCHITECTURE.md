@@ -1,6 +1,6 @@
 # Architecture
 
-The executable composes independent C++20 libraries: `dc24h_core`, `dc24h_network`, `dc24h_adc`, `dc24h_adcs`, `dc24h_logging`, `dc24h_i18n`, `dc24h_configuration` and `dc24h_security`. Public headers live in `include/dc24h/`; implementations live under the corresponding `src/` directory. Network depends on ADC and ADCS. The parser has no dependency on Core or sockets. OpenSSL handles remain inside ADCS.
+The executable composes independent C++20 libraries: `dc24h_core`, `dc24h_network`, `dc24h_adc`, `dc24h_adcs`, `dc24h_logging`, `dc24h_i18n`, `dc24h_configuration`, `dc24h_security` and `dc24h_database`. Public headers live in `include/dc24h/`; implementations live under the corresponding `src/` directory. Network depends on ADC and ADCS. The parser has no dependency on Core or sockets. OpenSSL handles remain inside ADCS.
 
 Core has a single-use `created → running → stopping → stopped` lifecycle. Without transport, `run()` waits on a condition variable. With transport, it runs the blocking reactor on the calling thread. `request_stop()` is thread safe, idempotent and retained before startup. Calling `run()` again throws. The owner must join all callers before destruction; the logger and transport must outlive Core.
 
@@ -8,7 +8,7 @@ Before creating threads, main blocks SIGINT/SIGTERM with `pthread_sigmask`. A `s
 
 Network owns nonblocking sockets, epoll and eventfd using RAII. All client operations run on one reactor thread; only stop flags, counters and eventfd wakeups cross threads. Client event tokens never reuse socket descriptor numbers. TLS contexts outlive sessions, and sessions are destroyed before their sockets. Partial startup failures close resources before propagating to Core, which enters `stopped`. Readiness is advertised only after every listener starts.
 
-[Network](NETWORK.md), [ADC](ADC_PROTOCOL.md), [ADCS](ADCS_TLS.md) and [API](API.md) define module contracts. Users, Chat, Search, Transfers, Security/authentication, Database and HTTP API remain planned. WebAdmin will be a separate React/TypeScript/Vite application.
+[Network](NETWORK.md), [ADC](ADC_PROTOCOL.md), [ADCS](ADCS_TLS.md) and [API](API.md) define module contracts. Users, Chat, Search, Transfers, Security/authentication and HTTP API remain planned. WebAdmin will be a separate React/TypeScript/Vite application.
 
 ## Configuration and logging — alpha-0.1.5
 
@@ -21,3 +21,7 @@ Startup now reports only non-secret listener counts/limits before moving Network
 ## Security — alpha-0.1.7
 
 The independent C++20 `dc24h_security` target implements validated limits and clock-driven peer/frame quotas without logging, sockets or Core dependencies. Network owns one peer limiter and each connection owns its frame/timing state. Stop and rollback release active admissions in the reactor thread; telemetry exposes counts, not addresses. This module is resource policy, not user authentication. See [SECURITY.md](SECURITY.md).
+
+## Database — alpha-0.1.8
+
+`dc24h_database` hides Connector/C handles behind a noncopyable RAII connection. Configuration owns its options; main optionally connects before Network startup and destroys the database after Core/Network shutdown. SQL remains outside the reactor and Core. Explicit check/migration modes do not create the logger or transport. No automatic migrations or reconnect are performed. See [DATABASE.md](DATABASE.md).

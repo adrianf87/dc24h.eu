@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dc24h/logging/logger.hpp"
+#include "dc24h/database/database.hpp"
 #include "dc24h/network/tcp_server.hpp"
 
 #include <string>
@@ -10,6 +11,7 @@ namespace dc24h::configuration {
 struct Settings {
     network::Options network;
     logging::Options logging;
+    database::Options database;
     // Parsing provenance, used to preserve TLS-only CLI defaults and protect the INI.
     bool implicit_plain_listener{true};
     std::string source_file;
@@ -18,6 +20,8 @@ struct Settings {
 struct CommandLine {
     Settings settings;
     bool check_only{false};
+    bool check_database{false};
+    bool migrate_database{false};
     bool show_help{false};
     bool show_version{false};
 };

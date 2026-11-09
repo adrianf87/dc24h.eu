@@ -1,4 +1,4 @@
-# dc24h.eu alpha-0.1.7 configuration (UTF-8, no secrets committed)
+# dc24h.eu alpha-0.1.8 configuration (UTF-8, no secrets committed)
 # Section names and keys are case-sensitive; duplicate singular keys are errors.
 [general]
 language = us
@@ -29,3 +29,14 @@ level = info
 connections = off
 file = stderr
 # file = /var/log/dc24h/hub.log
+
+[database]
+# Optional; no connection or automatic migration when disabled.
+enabled = off
+socket = /run/mysqld/mysqld.sock
+name = dc24h
+user = dc24h
+timeout = 5
+# Password: private regular file, current effective UID, mode 0600 or 0400.
+# password_file = /etc/dc24h/database.password
+# alpha-0.1.8 supports local Unix sockets only; TCP database transport is deferred.

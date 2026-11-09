@@ -3,7 +3,7 @@
 #include <string_view>
 
 namespace dc24h::i18n::pl {
-inline constexpr std::array<std::string_view, 84> messages{{
+inline constexpr std::array<std::string_view, 101> messages{{
     "Uruchamianie dc24h.eu ",
     "Core działa",
     "Zatrzymywanie Core",
@@ -60,7 +60,7 @@ inline constexpr std::array<std::string_view, 84> messages{{
     "Nieprawidłowe limity nasłuchów lub połączeń",
     "ADCS wymaga nasłuchu, certyfikatu i klucza prywatnego",
     "Nieprawidłowy poziom logowania",
-    "Log nie może wskazywać pliku konfiguracji, certyfikatu TLS ani klucza prywatnego",
+    "Log nie może wskazywać plików konfiguracji ani danych dostępowych",
     "Nie można rozwiązać ścieżki pliku konfiguracji",
     "Nieprawidłowy wiersz konfiguracji ",
     "Nieprawidłowa sekcja w wierszu ",
@@ -87,9 +87,26 @@ inline constexpr std::array<std::string_view, 84> messages{{
     "Security zatrzymany; rejected=",
     "Osiągnięto limit przyjęć dla IP; klient odrzucony",
     "Osiągnięto limit ramek; połączenie zamknięte",
-    "Przekroczono czas niedokończonej ramki; połączenie zamknięte"
+    "Przekroczono czas niedokończonej ramki; połączenie zamknięte",
+    "Nieprawidłowe ustawienia bazy danych",
+    "Nie można odczytać prywatnego pliku hasła bazy danych",
+    "Baza danych jest wyłączona",
+    "Nie udało się zainicjować bazy danych",
+    "Nie udało się ustawić opcji bazy danych",
+    "Połączenie z bazą danych nie powiodło się",
+    "Nie udało się ustawić kodowania bazy danych",
+    "Sprawdzenie połączenia z bazą danych nie powiodło się",
+    "Wykonanie instrukcji bazy danych nie powiodło się",
+    "Nieprawidłowy format wyniku bazy danych",
+    "Migracja bazy danych nie powiodła się",
+    "Blokada migracji bazy danych jest niedostępna",
+    "Niezgodna historia migracji bazy danych",
+    "Operacje bazy i sprawdzenie konfiguracji wykluczają się",
+    "Zastosowane migracje bazy danych=",
+    "Połączenie z bazą danych poprawne\n",
+    "Połączono z bazą danych"
 }};
-inline constexpr std::string_view help = R"HELP(Użycie: dc24h [--config PLIK] [--check-config]
+inline constexpr std::string_view help = R"HELP(Użycie: dc24h [--config PLIK] [--check-config | --check-database | --migrate-database]
               [--listen IPv4:port | [IPv6]:port | none] ...
               [--adcs-listen IPv4:port | [IPv6]:port | none] ...
               [--tls-cert ŁAŃCUCH.pem --tls-key KLUCZ.pem]
@@ -111,5 +128,8 @@ Program działa na pierwszym planie; stop przez SIGINT (Ctrl+C) lub SIGTERM.
 Domyślne limity: 128 klientów/IP, 256 przyjęć/IP/minutę, 1024 ramki/s/klienta,
 512 błędnych ramek/klienta, 10 sekund dla TLS i niedokończonej ramki.
 Tylko parser ADC: brak pełnego logowania ADC, routingu i sesji użytkowników.
+Ustawienia bazy w sekcji INI [database]; domyślnie wyłączona.
+--check-database sprawdza połączenie; --migrate-database jawnie stosuje migracje metadanych.
+--check-config nie łączy z MariaDB ani nie odczytuje pliku hasła.
 )HELP";
 } // namespace dc24h::i18n::pl

@@ -1,7 +1,7 @@
 # Rozwój projektu
 
 Pracuj na gałęziach wydań, zachowując historię `main`. Aktualny etap:
-`alpha-0.1.7`. Każdy istotny etap otrzymuje opisowy commit. Nie dodawaj
+`alpha-0.1.8`. Każdy istotny etap otrzymuje opisowy commit. Nie dodawaj
 artefaktów kompilacji, sekretów ani zależności vendored bez uzasadnienia.
 
 | Katalog | Rola |
@@ -13,7 +13,8 @@ artefaktów kompilacji, sekretów ani zależności vendored bez uzasadnienia.
 | `cmake/` | Generowana informacja o wersji |
 | `tests/` | Testy C++ i testy procesu w Pythonie |
 | `config/` | Przykładowy INI i lokalne ustawienia |
-| `database/migrations/` | Miejsce na przyszłe migracje MariaDB |
+| `src/database`, `include/dc24h/database` | Adapter połączenia MariaDB i zapytań |
+| `database/migrations/` | Niezmienna migracja rejestru wersji MariaDB |
 | `webadmin/` | Miejsce na przyszły frontend |
 | `doc/` | Dokumentacja techniczna |
 | `.github/workflows/` | Automatyzacja budowania/testów |
@@ -32,3 +33,7 @@ alpha-0.1.5 powstaje z main po jawnym scaleniu alpha-0.1.4. Kod konfiguracji/log
 alpha-0.1.6 powstaje z main po alpha-0.1.5. Sprawdzono i dostosowano zmiany loggera chatgpt-alpha-0.1.6; zachowano bezpieczniejsze INI/pliki, planowanie TLS i US/PL z main. Używaj enum ConnectionEvent, bez ramek i danych klientów w logach.
 
 alpha-0.1.7 powstaje z main po scaleniu alpha-0.1.6. Sprawdzono i dostosowano kod/testy chatgpt-alpha-0.1.7. Zachowuj ograniczoną pamięć, kanoniczne IP, jedno zwolnienie slotu i bezwzględne terminy ramek; nie loguj kluczy IP i danych. Security pozostaje niezależne od planowanego uwierzytelniania.
+
+## Etap Database
+
+alpha-0.1.8 powstaje z main po alpha-0.1.7. Nie przenoś SQL i haseł do Core/Network, wiąż wartości zapytań i nie edytuj zastosowanych migracji. Przed nieidempotentnym DDL dodaj obsługę częściowej awarii. Testy bazy muszą mieć własny katalog danych/socket i `--no-defaults`; nie korzystaj z bazy dewelopera.

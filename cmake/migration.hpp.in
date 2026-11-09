@@ -1,0 +1,6 @@
+#pragma once
+#include <string_view>
+namespace dc24h::database {
+inline constexpr std::string_view baseline_sql = R"DC24H(@DC24H_BASELINE_SQL@)DC24H";
+inline constexpr std::string_view baseline_checksum = "@DC24H_BASELINE_SHA256@";
+}

@@ -1,4 +1,4 @@
-# Konfiguracja — alpha-0.1.7
+# Konfiguracja — alpha-0.1.8
 
 Kolejność ustawień: wartości domyślne, jeden jawny `--config PLIK`, następnie nadpisania CLI niezależnie od miejsca `--config`. Brak automatycznego wyszukiwania pliku, zmiennych środowiskowych, include, reload i konfiguracji zdalnej.
 
@@ -67,3 +67,7 @@ Domyślne wartości obowiązują także bez sekcji security. Każda jest dodatni
 | `partial_frame_timeout` | `--partial-frame-timeout` | 10 | 1..3600 | Termin niedokończonej ramki, sekundy |
 
 Porty współdzielą stan przyjęć IP. Tempo jest na połączenie, także keepalive i błędy dekodera. N-ty błąd w czasie życia zamyka klienta. TLS ograniczają jego termin bezwzględny i bezczynność. Termin częściowej ramki nie odnawia się przy kolejnych bajtach, tylko przy następnej ramce po LF. Dokładne okna, pamięć, liczniki i terminy: [SECURITY.md](SECURITY.md).
+
+## Database — alpha-0.1.8
+
+Sekcja INI `[database]`: `enabled=off`, `socket=/run/mysqld/mysqld.sock`, `name=dc24h`, `user=dc24h`, `timeout=5`, opcjonalny `password_file` (wymagany po włączeniu). Obsługiwane jest lokalne gniazdo Unix. `--check-database` łączy i wykonuje ping; `--migrate-database` jawnie stosuje/sprawdza metadane migracji. Te operacje i `--check-config` wzajemnie się wykluczają. Dry-run nie odczytuje hasła i nie łączy z MariaDB. Log nie może wskazywać hasła ani jego aliasów. Zakresy, wymagania pliku i kody zakończenia: [DATABASE.md](DATABASE.md).
