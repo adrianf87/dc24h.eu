@@ -1,5 +1,13 @@
 # Testowanie
 
+## Etap SUP — alpha-0.2.4
+
+Pełny zestaw z wymaganymi narzędziami rejestruje **26 pozycji CTest**, dodając `adc.sup` i `adc.sup.ncdc`. Pierwszy obejmuje BASE/wspólny TIGR, deterministyczne osobne odpowiedzi lokalne, własność funkcji, kolejność AD/RM, limity zbioru/polityki i rollback, stały hash sesji, ręcznie błędne Message i połączenie z automatem. Strumień sprawdza każdy podział pierwszego SUP/powtórzenia. Drugi uruchamia prawdziwy ncdc przez tymczasowe TCP i TLS Pythona ze sterownikiem modułu C++, odbiera BINF i pozostaje w niezatwierdzonym IDENTIFY. Dotychczasowe testy prawdziwego Network/OpenSSL ncdc są osobne; brak pełnego logowania huba. Zobacz [ADC_SUP.md](ADC_SUP.md).
+
+Wynik lokalny: **26/26 zestawów CTest przeszło w Debug, Release i ASan/UBSan**, z obowiązkowym wykrywaniem narzędzi integracyjnych. Przeszły build/typecheck WebAdmin, 3 testy Node, 3 testy przeglądarkowe Chromium i rzeczywista integracja C++ API/Vite/React. Przeglądarka używała `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium`; wersje zależności są bez zmian. To wyniki lokalne; pozostałe systemy i zdalne CI wymagają osobnych dowodów.
+
+Odtworzenie: `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug --parallel 4`, `ctest --test-dir build-debug --output-on-failure --parallel 3`; powtórzyć dla Release. Nowe testy: `ctest --test-dir build-debug -R '^adc.sup' --output-on-failure`. Dotychczasowe polecenia sanitizerów i Chromium poniżej nadal obowiązują. Wyniki historyczne zachowują zakres swoich etapów.
+
 ## Aktualny moduł stanów — alpha-0.2.3
 
 Pełny zestaw obejmuje teraz **24 pozycje CTest**, w tym `adc.state`. Wszystkie przeszły lokalnie w Debug, Release i ASan/UBSan z obowiązkowym wykrywaniem narzędzi integracyjnych. Zakres stanów: gość/hasło, macierz komenda/stan/kierunek wszystkich komend BASE, jawne zatwierdzanie, powtórzenia/kolejność, podszyte SID, izolacja instancji, fatalne/lokalne/obce rozłączenia i pipeline/fragmentacja parser → automat. Nie oznacza to egzekwowania stanów w transporcie ani pełnego logowania. Oba transporty prawdziwego ncdc, tymczasowa MariaDB i izolowany Apache HTTPS pozostają osobno testowane. Zobacz [ADC_STATE.md](ADC_STATE.md).

@@ -96,7 +96,7 @@ class ApiProcessTests(unittest.TestCase):
         self.assertEqual(peer.recv(1), b'')
         snapshot = fetch_status(fx.endpoint, fx.token)
         self.assertEqual(snapshot['api_version'], 'v1')
-        self.assertEqual(snapshot['server']['version'], 'alpha-0.2.3')
+        self.assertEqual(snapshot['server']['version'], 'alpha-0.2.4')
         self.assertTrue(snapshot['server']['core_running'])
         self.assertGreaterEqual(snapshot['network']['accepted_connections'], 1)
         self.assertEqual(snapshot['network']['adc_frames'], 1)

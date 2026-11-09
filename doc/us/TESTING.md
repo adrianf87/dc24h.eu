@@ -1,5 +1,13 @@
 # Testing
 
+## SUP increment — alpha-0.2.4
+
+The strict full suite registers **26 CTest entries**, adding `adc.sup` and `adc.sup.ncdc`. The first covers required BASE/common TIGR, deterministic independent local replies, owned support, AD/RM ordering, cumulative/policy bounds and rollback, fixed session hash, manual-message guards and composition with state sequencing. Stream fixtures test every split of an initial SUP/replay transcript. The second uses real ncdc on disposable loopback TCP and Python-owned TLS through the C++ module driver, receiving BINF while remaining in unapproved IDENTIFY. Existing actual C++ Network/OpenSSL ncdc tests remain separate; no live hub login is claimed. See [ADC_SUP.md](ADC_SUP.md).
+
+Local result: **26/26 CTest suites passed in Debug, Release and ASan/UBSan**, with strict integration-tool detection. WebAdmin production build/typecheck, 3 Node tests, 3 Chromium browser tests and real C++ API/Vite/React integration passed. Browser runs used `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium`; dependency versions are unchanged. These are local results; other operating systems and remote CI require separate evidence.
+
+Reproduce with `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug --parallel 4`, `ctest --test-dir build-debug --output-on-failure --parallel 3`; repeat for Release. Use `ctest --test-dir build-debug -R '^adc.sup' --output-on-failure` for the new tests. Existing sanitizer and Chromium commands below remain applicable. Historical results retain their original stage scope.
+
 ## Current state module — alpha-0.2.3
 
 The complete suite now has **24 CTest entries**, including `adc.state`. All passed locally in Debug, Release and ASan/UBSan with strict integration-tool detection. State coverage includes guest/password paths, all BASE command/state/direction cases, explicit approval gates, replay/ordering rejection, spoofed source SIDs, per-instance isolation, fatal/local/other-user termination and parser-to-state pipelining/fragmentation. No live transport state enforcement or full login is claimed. Both real ncdc transports, disposable MariaDB and isolated Apache HTTPS remain covered separately. See [ADC_STATE.md](ADC_STATE.md).

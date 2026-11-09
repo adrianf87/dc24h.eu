@@ -1,5 +1,7 @@
 # ADC State — alpha-0.2.3
 
+Od alpha-0.2.4 [ADC SUP](ADC_SUP.md) udostępnia `ProtocolConnection`, łączący ten automat z negocjacją funkcji/hash i automatycznym zatwierdzeniem protokołu wyłącznie po poprawnym SUP. Tożsamość/hasło nadal wymagają zewnętrznych decyzji. Ten dokument opisuje pierwotne API automatu; podłączenie Network nadal wymaga uporządkowanego wyjścia.
+
 ## Zakres i własność
 
 `dc24h/adc/state.hpp` dodaje niezależny `ConnectionStateMachine` po stronie huba do `dc24h_adc`. Odbiera sparsowane wiadomości i jawne decyzje aplikacji. Nie wysyła bajtów, nie przydziela globalnych SID, nie negocjuje hash, nie sprawdza tożsamości ani haseł. Network nadal wywołuje wyłącznie parser: ten etap nie dodaje działającego logowania ani nowego zachowania sieciowego. Dotychczasowe testy prawdziwego ncdc ADC/ADCS nadal sprawdzają początkowy HSUP i transport.

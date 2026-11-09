@@ -39,3 +39,7 @@ alpha-0.2.2 starts from main after the explicit alpha-0.2/alpha-0.2.1 merge. Kee
 ## ADC State — alpha-0.2.3
 
 This branch starts from main at `4c98e10` after the parser merge. Maintain the [state contract](ADC_STATE.md), one noncopyable instance per future connection, explicit semantic approvals, unchanged-state rejection and terminal disconnect. Keep state tests active in Release; update the command/state and direction/source matrices with every new command. Never infer authentication from a parsed frame or advance on an enqueued response. Transport integration/output, validation and unique SID allocation remain separate acceptance work.
+
+## SUP — alpha-0.2.4
+
+Branch from main at `1dd0b9f` after the ADC State merge. Keep support parsing, protocol sequencing and identity/hash computation separate. Prefer ProtocolConnection over manual low-level protocol approval for future transport integration. New hash algorithms require an explicit registry/metadata and selection/reply-order tests; unknown feature names are never guessed to be hashes. Preserve transactional updates, immutable session hash, bounded cumulative support and deterministic local replies. ncdc fixture success is not live hub login. See [ADC_SUP.md](ADC_SUP.md).

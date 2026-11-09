@@ -1,5 +1,7 @@
 # ADC Parser — alpha-0.2.2
 
+alpha-0.2.4 adds the independent [SUP semantics and state adapter](ADC_SUP.md). Parser behavior is unchanged. Existing hub ncdc tests still cover initial HSUP; a new isolated SUP fixture exchanges module-generated ISUP and a fixed test SID with ncdc, stopping at unapproved IDENTIFY. It is not the live Network reactor.
+
 Reference: [ADC 1.0.4](https://adc.sourceforge.io/ADC.html), line grammar and BASE command descriptions. The independent C++20 `dc24h_adc` library parses syntax; it does not execute commands or implement a session.
 
 ## Owned result and argument layout

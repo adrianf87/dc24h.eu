@@ -16,11 +16,12 @@
 | alpha-0.2.1 | alpha-0.2.1 | Project: audyt alpha-0.1 i przygotowanie alpha-0.2 |
 | alpha-0.2.2 | alpha-0.2.2 | ADC Parser: argumenty BASE, pola nazwane i ograniczona składnia liczb |
 | alpha-0.2.3 | alpha-0.2.3 | ADC State: niezależny automat połączenia huba |
+| alpha-0.2.4 | alpha-0.2.4 | SUP: negocjacja funkcji/hash i integracja stanów |
 
 Dokładną kompilację identyfikuje wersja wraz z SHA commita. Budowanie nie zmienia plików źródłowych. Istotne zmiany trafiają do CHANGELOG.md. Alpha oznacza rozwój, nie pełną funkcjonalność huba. Tagi i wdrożenie nie powstają automatycznie.
 
 Wcześniejsze gałęzie i historia commitów są zachowane. alpha-0.1.4 zachowuje przez merge historię referencyjnego TLS i zawiera poprawki.
 
-## Aktualna wersja — alpha-0.2.3
+## Aktualna wersja — alpha-0.2.4
 
-CMake PROJECT_VERSION i główne wersje npm package/lock to **0.2.3**; program/WebAdmin identyfikują się jako **alpha-0.2.3**. `project.metadata` sprawdza spójność. Gałąź powstaje z main w `4c98e10` po scaleniu parsera i dodaje niezależny [moduł stanów](ADC_STATE.md). Integracja transportu i pełne logowanie pozostają planowane. Main i historyczne gałęzie nie są zmieniane przez ten etap.
+CMake PROJECT_VERSION i główne wersje npm package/lock to **0.2.4**; program/WebAdmin identyfikują się jako **alpha-0.2.4**. Kontrola metadanych wymusza spójność. Gałąź powstaje z main w `1dd0b9f` po scaleniu stanów. [ADC_SUP.md](ADC_SUP.md) definiuje niezależne połączenie negocjacji/stanów; podłączenie transportu i pełne logowanie pozostają planowane. Main i historyczne gałęzie pozostają zachowane.
