@@ -109,8 +109,17 @@ class NcdcLoginTest(unittest.TestCase):
                 wait_screen(b'Command not implemented')
                 status = fetch_status(api_path, token)
                 self.assertGreaterEqual(status['network']['adc_frames'], 3)
+                # ncdc applies /nick on reconnect (it does not emit a live NI
+                # update). Exercise the new name with the same PID/CID.
+                renamed = 'dc24hŁoś'.encode('utf-8')
+                os.write(master, b'/nick ' + renamed + b'\r')
                 os.write(master, b'/reconnect\r')
                 hub.wait_for(lambda: hub.log.count(b'event=login_ready') == 2)
+                screen.clear()
+                wait_screen(renamed + b' @ ')
+                screen.clear()
+                os.write(master, b'dc24hRenamedProbe\r')
+                wait_screen(b'Command not implemented')
                 if ENCRYPTED:
                     self.assertTrue(wire.startswith(b'\x16\x03'))
                     self.assertNotIn(b'HSUP', wire)
@@ -121,6 +130,7 @@ class NcdcLoginTest(unittest.TestCase):
                     self.assertIn(b'dc24hLoginProbe', wire)
                     self.assertIn(b'BINF ', replies)
                     self.assertIn(b' NI' + nickname, replies)
+                    self.assertIn(b' NI' + renamed, replies)
                     self.assertNotIn(b' PD', replies)
                     self.assertEqual(replies.count(b'ISUP ADBASE ADTIGR\n'), 2)
                 os.write(master, b'/quit\r')
@@ -145,6 +155,7 @@ class NcdcLoginTest(unittest.TestCase):
                     self.assertEqual(len(events), 4 if ENCRYPTED else 3, 'Session cleanup missing or duplicated')
                 self.assertEqual(counters(self, hub)[2], 0)
                 self.assertNotIn(nickname, hub.log)
+                self.assertNotIn(renamed, hub.log)
                 self.assertNotIn(b'dc24hLoginProbe', hub.log)
                 self.assertNotIn(b'event=login_rejected', hub.log)
                 print(f'ncdc completed guest NORMAL and reconnect via {scheme.upper()} on the C++ hub')

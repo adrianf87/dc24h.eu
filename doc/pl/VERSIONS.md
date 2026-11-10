@@ -1,6 +1,8 @@
 # Wersjonowanie
 
-**Bieżący etap — alpha-0.3.5:** [User Core](USER_CORE.md) dodaje typ Nickname sprawdzający UTF-8/NFC, wspólną walidację tekstu ADC/Users, samodzielnych kandydatów zmiany nicku i jawną projekcję ClientInfo/VerifiedIdentity. Users korzysta z neutralnego dc24h_text i istniejącego utf8proc. Własność/unikalność managera pozostają bez zmian. Starsze opisy dotyczą zakresu historycznego.
+**Bieżący etap — alpha-0.3.6:** [Nick Manager](NICK_MANAGER.md) utrzymuje ograniczony rejestr nicków i odwrotny indeks właścicieli sesji wewnątrz SessionManager. Sprawdzone wartości Nickname egzekwują istniejącą politykę UTF-8/NFC. Przyjęcie, aktualizacja profilu, zmiana nicka i usunięcie korzystają z tego rejestru; rezerwacje zamykanych sesji trwają do usunięcia. Starsze opisy zachowują zakres historyczny.
+
+**Etap dostarczony w alpha-0.3.5:** [User Core](USER_CORE.md) dodaje typ Nickname sprawdzający UTF-8/NFC, wspólną walidację tekstu ADC/Users, samodzielnych kandydatów zmiany nicku i jawną projekcję ClientInfo/VerifiedIdentity. Users korzysta z neutralnego dc24h_text i istniejącego utf8proc. Własność/unikalność managera pozostają bez zmian. Starsze opisy dotyczą zakresu historycznego.
 
 **Etap dostarczony w alpha-0.3.4:** [Session Manager](SESSION_MANAGER.md) posiada indeksy SID/CID/nick wraz z żywymi modelami. Odczyt const i zarządzane zmiany cyklu życia/User zachowują unikalność przy przyjęciu, zmianie nicku i sprzątaniu. LoginHub zachowuje protokół i kolejki. Starsze opisy dotyczą zakresu historycznych etapów.
 
@@ -36,6 +38,7 @@
 | alpha-0.3.3 | alpha-0.3.3 | User Core |
 | alpha-0.3.4 | alpha-0.3.4 | Session Manager: central identity registry |
 | alpha-0.3.5 | alpha-0.3.5 | User Core: checked public values and ADC projection |
+| alpha-0.3.6 | alpha-0.3.6 | Nick Manager: walidacja, ograniczony rejestr i atomowa zmiana nicka |
 
 Dokładną kompilację identyfikuje wersja wraz z SHA commita. Budowanie nie zmienia plików źródłowych. Istotne zmiany trafiają do CHANGELOG.md. Alpha oznacza rozwój, nie pełną funkcjonalność huba. Tagi i wdrożenie nie powstają automatycznie.
 

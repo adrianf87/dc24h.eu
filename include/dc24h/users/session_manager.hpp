@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dc24h/users/session.hpp"
+#include "dc24h/users/nick_manager.hpp"
 
 #include <map>
 #include <memory>
@@ -65,6 +66,7 @@ private:
     std::size_t capacity_;
     std::uint64_t greatest_id_{};
     std::map<std::uint64_t, std::unique_ptr<Session>> sessions_;
-    Index sids_, cids_, nicknames_;
+    Index sids_, cids_;
+    NickManager nicknames_;
 };
 } // namespace dc24h::users
