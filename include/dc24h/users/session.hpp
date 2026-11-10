@@ -99,6 +99,7 @@ public:
     [[nodiscard]] std::optional<CloseCause> terminal_cause() const noexcept;
     [[nodiscard]] Snapshot snapshot() const;
 private:
+    friend class SessionManager;
     [[nodiscard]] bool valid_time(TimePoint now) const noexcept { return now >= last_; }
     SessionId id_;
     Transport transport_;

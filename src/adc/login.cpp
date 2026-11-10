@@ -10,17 +10,17 @@
 namespace dc24h::adc {
 struct LoginHub::Peer {
     struct Frame { Message message; std::string wire; Completion completion; };
-    Peer(std::shared_ptr<SidPool> pool, std::string_view address, users::Session& model)
+    Peer(std::shared_ptr<SidPool> pool, std::string_view address, const users::Session& model)
         : session(std::move(pool), address), lifecycle(model) {}
     ClientSession session;
-    users::Session& lifecycle;
+    const users::Session& lifecycle;
     std::deque<Frame> output;
     std::size_t offset{0};
     std::size_t queued{0};
     bool quit_queued{false};
 };
 namespace {
-void check_model(users::Result result) {
+void check_model(users::MutationResult result) {
     if (result) { throw std::logic_error("Session lifecycle transition rejected"); }
 }
 users::CloseCause session_cause(CloseReason reason) noexcept {
@@ -99,22 +99,22 @@ void LoginHub::connect(Id id, std::string_view address, users::Transport transpo
     const auto key = users::SessionId::from_value(id);
     if (!key) { throw std::logic_error("Zero login connection ID"); }
     const auto registered = sessions_.add(*key,transport,accepted);
-    const auto model = std::get_if<users::Session*>(&registered);
+    const auto model = std::get_if<const users::Session*>(&registered);
     if (!model) { throw std::logic_error("Duplicate, reused or excess login connection"); }
     try {
         auto peer = std::make_unique<Peer>(pool_, address, **model);
-        if (transport == users::Transport::adc) { check_model(peer->lifecycle.start_negotiation(accepted)); }
+        if (transport == users::Transport::adc) { check_model(sessions_.start_negotiation(peer->lifecycle.id(),accepted)); }
         peers_.emplace(id,std::move(peer));
     } catch (...) {
         // Failed protocol allocation leaves no orphan registry entry. The ID
         // remains consumed, so no stale reference can identify a later peer.
-        check_model((*model)->finish_close(users::CloseCause::internal_error,accepted));
+        check_model(sessions_.finish_close((*model)->id(),users::CloseCause::internal_error,accepted));
         (void)sessions_.remove(*key);
         throw;
     }
 }
 void LoginHub::transport_ready(Id id, users::TimePoint now) {
-    check_model(peers_.at(id)->lifecycle.start_negotiation(now));
+    check_model(sessions_.start_negotiation(peers_.at(id)->lifecycle.id(),now));
 }
 
 bool LoginHub::enqueue(Peer& peer, Message message, Completion completion) {
@@ -123,7 +123,7 @@ bool LoginHub::enqueue(Peer& peer, Message message, Completion completion) {
     auto* wire = std::get_if<std::string>(&encoded);
     if (!wire) { throw std::logic_error("Invalid locally generated ADC output"); }
     if (wire->size() > limits_.output_per_client - peer.queued || wire->size() > limits_.output_total - queued_) {
-        check_model(peer.lifecycle.force_close(users::CloseCause::output_limit,users::Clock::now()));
+        check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::output_limit,users::Clock::now()));
         // Owner closes immediately without disturbing a pinned TLS front.
         return false;
     }
@@ -136,7 +136,7 @@ bool LoginHub::enqueue(Peer& peer, Message message, Completion completion) {
 void LoginHub::reject(Peer& peer, std::string_view status, std::optional<std::string_view> command,
                       std::string_view description, users::CloseCause cause, users::TimePoint now) {
     if (peer.lifecycle.closing() || peer.lifecycle.immediate()) { return; }
-    check_model(peer.lifecycle.begin_close(cause,now));
+    check_model(sessions_.begin_close(peer.lifecycle.id(),cause,now));
     // Keep a possibly partially sent/TLS-pinned front, cancel all later ordinary
     // frames. Never mutate the immutable front pointer or its remaining length.
     while (peer.output.size() > 1) {
@@ -159,7 +159,7 @@ void LoginHub::close(Id id, CloseReason reason, users::TimePoint now) {
     auto& peer = *peers_.at(id);
     if (peer.lifecycle.phase() == users::Phase::accepted) {
         // An unready TLS transport cannot carry an application notice.
-        check_model(peer.lifecycle.force_close(session_cause(reason),now));
+        check_model(sessions_.force_close(peer.lifecycle.id(),session_cause(reason),now));
         return;
     }
     switch (reason) {
@@ -199,8 +199,8 @@ void LoginHub::receive(Id id, const Message& message) {
         for (const auto& token : message.parameters) {
             const auto field = parse_named_parameter(token);
             if (field && field->name == "NI") {
-                const auto found = nicknames_.find(std::string(field->value));
-                if (found != nicknames_.end() && found->second != id) { reject(peer, "222"); return; }
+                const auto* found = sessions_.by_nickname(field->value);
+                if (found && found->id().value() != id) { reject(peer, "222"); return; }
             }
         }
     }
@@ -217,16 +217,15 @@ void LoginHub::receive(Id id, const Message& message) {
         return;
     }
     if (peer.session.state() == ConnectionState::disconnected) {
-        check_model(peer.lifecycle.force_close(users::CloseCause::peer_status,users::Clock::now())); return;
+        check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::peer_status,users::Clock::now())); return;
     }
     if (before == ConnectionState::protocol && message.kind == Command::sup) {
         (void)enqueue(peer, *peer.session.support().initial_reply(), Completion::support);
     } else if (message.kind == Command::inf) {
         const auto& metadata = *peer.session.info();
-        const std::string nickname(*metadata.field("NI"));
         const std::string cid(*metadata.field("ID"));
-        const auto duplicate = cids_.find(cid);
-        if (duplicate != cids_.end() && duplicate->second != id) { reject(peer, "224"); return; }
+        const auto* duplicate = sessions_.by_cid(cid);
+        if (duplicate && duplicate->id().value() != id) { reject(peer, "224"); return; }
         if (before == ConnectionState::identify) {
             // Accounts are not implemented: this release explicitly admits guests.
             // CID proof is not an account/password/role authentication mechanism.
@@ -241,16 +240,10 @@ void LoginHub::receive(Id id, const Message& message) {
             // preserves welcome-before-join and avoids simultaneous-login gaps.
             const auto public_info = metadata.public_message(*Sid::parse(peer.session.sid()));
             if (!enqueue(peer, public_info, Completion::welcome)) { return; } // Own INF is last in the initial list.
-            check_model(peer.lifecycle.identify(public_user(metadata,peer.session.sid()),users::Clock::now()));
-            nicknames_.emplace(nickname, id);
-            cids_.emplace(cid, id);
-            sids_.emplace(peer.lifecycle.identity()->sid(), id);
+            check_model(sessions_.identify(peer.lifecycle.id(),public_user(metadata,peer.session.sid()),users::Clock::now()));
             relay(id, public_info);
         } else {
-            const std::string old_nickname(peer.lifecycle.identity()->nickname());
-            check_model(peer.lifecycle.update_user(public_user(metadata,peer.session.sid()),users::Clock::now()));
-            nicknames_.erase(old_nickname);
-            nicknames_.emplace(nickname, id);
+            check_model(sessions_.update_user(peer.lifecycle.id(),public_user(metadata,peer.session.sid()),users::Clock::now()));
             // A complete public snapshot also conveys optional field cancellations.
             // Relay the sanitized update below, preserving bare cancellation names.
             auto update = metadata.public_message(*Sid::parse(peer.session.sid()));
@@ -270,13 +263,13 @@ void LoginHub::receive(Id id, const Message& message) {
 void LoginHub::route_status(Id id, const Message& message) {
     const auto safe = public_status(message);
     if (message.type == MessageType::direct || message.type == MessageType::echo) {
-        const auto target = sids_.find(*message.target);
-        if (target == sids_.end() || !ready(target->second)) {
+        const auto* target = sessions_.by_sid(*message.target);
+        if (!target || !target->ready()) {
             (void)enqueue(*peers_.at(id), make_status(*StatusCode::parse("140"), "Status recipient unavailable"));
             return;
         }
-        (void)enqueue(*peers_.at(target->second), safe);
-        if (message.type == MessageType::echo && target->second != id) { (void)enqueue(*peers_.at(id), safe); }
+        (void)enqueue(*peers_.at(target->id().value()), safe);
+        if (message.type == MessageType::echo && target->id().value() != id) { (void)enqueue(*peers_.at(id), safe); }
         return;
     }
     for (auto& [recipient, peer] : peers_) {
@@ -321,34 +314,24 @@ bool LoginHub::consume(Id id, std::size_t bytes) {
     queued_ -= frame.wire.size();
     if (peer.lifecycle.closing()) { return false; }
     if (peer.session.observe(Direction::to_client, frame.message)) {
-        check_model(peer.lifecycle.force_close(users::CloseCause::internal_error,users::Clock::now())); return false;
+        check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now())); return false;
     }
     if (frame.completion == Completion::support) {
         if (const auto error = peer.session.prepare_sid()) { reject(peer, sid_status_code(*error)); return false; }
         (void)enqueue(peer, *peer.session.sid_reply());
     } else if (frame.completion == Completion::welcome) {
-        check_model(peer.lifecycle.mark_ready(users::Clock::now())); return true;
+        check_model(sessions_.mark_ready(peer.lifecycle.id(),users::Clock::now())); return true;
     }
     return false;
-}
-void LoginHub::remove_identity(Id id, const Peer& peer) {
-    if (!peer.lifecycle.identity()) { return; }
-    const auto nickname = nicknames_.find(peer.lifecycle.identity()->nickname());
-    if (nickname != nicknames_.end() && nickname->second == id) { nicknames_.erase(nickname); }
-    const auto cid = cids_.find(peer.lifecycle.identity()->cid());
-    if (cid != cids_.end() && cid->second == id) { cids_.erase(cid); }
-    const auto sid = sids_.find(peer.lifecycle.identity()->sid());
-    if (sid != sids_.end() && sid->second == id) { sids_.erase(sid); }
 }
 void LoginHub::disconnect(Id id, bool announce, users::CloseCause cause, users::TimePoint now) {
     const auto found = peers_.find(id);
     if (found == peers_.end()) { return; }
     auto& peer = *found->second;
     if (announce && peer.lifecycle.identity() != nullptr) { relay(id, make_quit(*Sid::parse(peer.lifecycle.identity()->sid()))); }
-    remove_identity(id, peer);
     queued_ -= peer.queued;
     peer.session.disconnect();
-    check_model(peer.lifecycle.finish_close(cause,now));
+    check_model(sessions_.finish_close(peer.lifecycle.id(),cause,now));
     peers_.erase(found); // Drop protocol/output references before deleting the model.
     if (sessions_.remove(*users::SessionId::from_value(id))) { throw std::logic_error("Session registry cleanup failed"); }
 }

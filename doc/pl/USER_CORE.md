@@ -1,5 +1,7 @@
 # User Core — alpha-0.3.3
 
+**Bieżący etap — alpha-0.3.4:** [Session Manager](SESSION_MANAGER.md) posiada indeksy SID/CID/nick wraz z żywymi modelami. Odczyt const i zarządzane zmiany cyklu życia/User zachowują unikalność przy przyjęciu, zmianie nicku i sprzątaniu. LoginHub zachowuje protokół i kolejki. Starsze opisy dotyczą zakresu historycznych etapów.
+
 Gałąź bazuje na main `ca00266992dd866bdd30ff68e911c981c6665a62`, po scaleniu Session Core. Pierwotne gałęzie alpha-0.3.2 i alpha-0.3.3 powstały z tego samego main. Zgodnie z jawnym zleceniem main łączy teraz najpierw Session Manager, potem User Core. Manager posiada żywe Session zawierające User; obiekty protokołu pożyczają te same modele. User Core rozszerza dc24h_users o samodzielny publiczny model gościa User i ograniczony, typowany Profile, zintegrowane z logowaniem i aktualizacjami LoginHub.
 
 ## Użytkownik, sesja i tożsamość

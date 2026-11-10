@@ -1,6 +1,8 @@
 # Plan rozwoju
 
-**Bieżący etap — alpha-0.3.3:** [User Core](USER_CORE.md) dodaje do Session publiczny model gościa i profilu, projekcję całego zwalidowanego INF oraz aktualizacje przez bramkę cyklu życia. Powstał bezpośrednio z main z Session Core; main łączy go teraz z wcześniej scalonym alpha-0.3.2 Session Manager. Starsze opisy zachowują zakres historyczny.
+**Bieżący etap — alpha-0.3.4:** [Session Manager](SESSION_MANAGER.md) posiada indeksy SID/CID/nick wraz z żywymi modelami. Odczyt const i zarządzane zmiany cyklu życia/User zachowują unikalność przy przyjęciu, zmianie nicku i sprzątaniu. LoginHub zachowuje protokół i kolejki. Starsze opisy dotyczą zakresu historycznych etapów.
+
+**Etap dostarczony w alpha-0.3.3:** [User Core](USER_CORE.md) dodaje do Session publiczny model gościa i profilu, projekcję całego zwalidowanego INF oraz aktualizacje przez bramkę cyklu życia. Powstał bezpośrednio z main z Session Core; main łączy go teraz z wcześniej scalonym alpha-0.3.2 Session Manager. Starsze opisy zachowują zakres historyczny.
 
 **Etap dostarczony w alpha-0.3.2:** [Session Manager](SESSION_MANAGER.md) jest centralnym właścicielem modeli wszystkich zarejestrowanych sesji; zapewnia limit, stabilny odczyt, liczenie faz i uporządkowane strony kopii. Obiekty protokołu pożyczają modele, a kolejki i indeksy publiczne pozostają w ADC. Starsze opisy zachowują zakres historyczny.
 
@@ -38,6 +40,7 @@
 | alpha-0.3.1 Session Core | Model Users, identyfikator czasu życia, kopie i rzeczywisty cykl połączenia |
 | alpha-0.3.2 Session Manager | Centralna własność, ograniczony rejestr, stabilny odczyt, liczenie faz i strony kopii |
 | alpha-0.3.3 User Core | Publiczna tożsamość/profil gościa, własność w sesji, projekcja i aktualizacje INF (integracja po Session Manager) |
+| alpha-0.3.4 Session Manager | Centralne indeksy tożsamości publicznej i zarządzane zmiany cyklu życia/profilu |
 
 ## Historyczny plan odbioru przed alpha-0.2.8
 
