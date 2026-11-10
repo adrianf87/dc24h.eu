@@ -1,5 +1,20 @@
 # Changelog
 
+## alpha-0.3.5 — 2026-11-10
+
+User Core increment, based on main `ba12aa3a96ea70e2b64ca3b11a519bd862e7f2f4` after the alpha-0.3.4 Session Manager merge:
+
+- Added owning users::Nickname with checked nonempty, bounded UTF-8/NFC construction and no unchecked/default constructor. Identity owns this value while preserving existing string access; SID/CID remain bounded opaque keys whose ADC/Tiger/lease verification is external. The generic 256-byte name bound and stricter ADC 64-byte policy remain distinct. No normalization or case-folding rewrite is introduced.
+- Extracted the existing ADC INF text rules into neutral dc24h_text using the existing utf8proc package. ADC and Users share UTF-8/NFC/control/format/separator checks, with a 4096-byte input cap before normalization allocation. Profile factories now reject malformed non-ASCII/non-NFC text directly; wire validation policy is preserved. Allocation failure propagates before model mutation; no new system dependency or Users-to-ADC cycle.
+- Added detached User::with_nickname candidates preserving SID/CID/profile. Standalone and managed rename use checked public factories and normal phase/time/uniqueness gates; removed privileged Session access to private User/Identity fields. Failed names/updates preserve model, profile and indexes.
+- Added explicit adc::user_from_info projection from validated ClientInfo, nonzero typed Sid and public CID from VerifiedIdentity. It copies only the existing profile allowlist and never PID/PAS, peer IP, arbitrary extensions, referrer or privileges. LoginHub uses this shared adapter for admission and merged updates/cancellations; no credential hashing is repeated in projection.
+- Added users.values covering malformed/truncated/overlong UTF-8, surrogates, NFC, NUL/controls/format/separators across all text fields, byte bounds, typed construction, immutable candidate ownership, standalone/registry rollback, verified projection and cancellation. The real ncdc ADC/ADCS login/reconnect fixtures now use dc24hŻółw, check public plaintext INF and keep the name out of logs.
+- Rewrote matched US/PL User Core documentation and updated module, architecture, ADC, security/API, build/development/testing, roadmap/version and metadata. No SQL migration, API JSON field, new runtime message or configuration option; existing US/PL runtime catalogs remain applicable.
+
+Local validation: **51/51 strict CTest suites passed in Debug, Release and ASan/UBSan**, including real ncdc ADC/ADCS with the Polish nickname, prior registry/identity/provider/STA/security/terminal-output cases, mixed transports, disposable MariaDB and isolated Apache. WebAdmin typecheck/production build, 3 Node tests, 3 Chromium tests and real C++ API → Vite → React integration passed. Metadata, UTF-8/local links/language parity, Python syntax and Git whitespace checks passed. Sanitizers used -fno-pie / -no-pie.
+
+Limits: in-memory public guest values only; SID/CID storage and projection are not accounts, lease acquisition, new proof, global uniqueness or permissions. Client profile declarations are unverified metadata. No persistent/multi-session accounts, roles/bans, distributed registry, HTTP profile endpoint or administrative mutation is added. No other OS, remote CI, production load/fuzz/fault-injection/security audit results are inferred. Main and historical branches are preserved; no automatic merge or tag.
+
 ## alpha-0.3.4 — 2026-11-10
 
 Session Manager increment, based on main `6162f8a648b4e7b720d0417d0e829c521ea0e55d` after the ordered alpha-0.3.2/alpha-0.3.3 merges:

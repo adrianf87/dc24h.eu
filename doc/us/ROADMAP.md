@@ -1,6 +1,8 @@
 # Roadmap
 
-**Current increment — alpha-0.3.4:** [Session Manager](SESSION_MANAGER.md) owns SID/CID/nickname indexes together with live models. Const lookups and managed lifecycle/User mutations preserve uniqueness through admission, rename and cleanup. LoginHub retains protocol and output ownership. Earlier descriptions retain their historical delivery scope.
+**Current increment — alpha-0.3.5:** [User Core](USER_CORE.md) adds checked UTF-8/NFC Nickname values, shared ADC/User text validation, immutable rename candidates and explicit projection from validated ClientInfo/VerifiedIdentity. Users now links the neutral dc24h_text library using the existing utf8proc package. Manager ownership/uniqueness remains unchanged. Earlier descriptions retain their historical scope.
+
+**Increment delivered in alpha-0.3.4:** [Session Manager](SESSION_MANAGER.md) owns SID/CID/nickname indexes together with live models. Const lookups and managed lifecycle/User mutations preserve uniqueness through admission, rename and cleanup. LoginHub retains protocol and output ownership. Earlier descriptions retain their historical delivery scope.
 
 **Increment delivered in alpha-0.3.3:** [User Core](USER_CORE.md) adds an owning public guest identity/profile to Session, with validated full-INF projection and lifecycle-guarded updates. It was developed directly from main with Session Core; main now combines it with the previously merged alpha-0.3.2 Session Manager. Earlier descriptions retain their historical scope.
 
@@ -41,6 +43,7 @@
 | alpha-0.3.2 Session Manager | Central ownership, bounded registry, stable lookup, phase counts and snapshot pages |
 | alpha-0.3.3 User Core | Public guest identity/profile, lifecycle ownership and validated INF projection/updates (integrated after Session Manager) |
 | alpha-0.3.4 Session Manager | Central public identity indexes and managed lifecycle/profile mutations |
+| alpha-0.3.5 User Core | Checked public names/profile text, immutable rename values and verified ADC projection |
 
 ## Historical acceptance plan before alpha-0.2.8
 

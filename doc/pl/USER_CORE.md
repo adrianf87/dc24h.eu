@@ -1,44 +1,54 @@
-# User Core — alpha-0.3.3
+# User Core — alpha-0.3.5
 
-**Bieżący etap — alpha-0.3.4:** [Session Manager](SESSION_MANAGER.md) posiada indeksy SID/CID/nick wraz z żywymi modelami. Odczyt const i zarządzane zmiany cyklu życia/User zachowują unikalność przy przyjęciu, zmianie nicku i sprzątaniu. LoginHub zachowuje protokół i kolejki. Starsze opisy dotyczą zakresu historycznych etapów.
+Etap bazuje na main `ba12aa3a96ea70e2b64ca3b11a519bd862e7f2f4`, po scaleniu alpha-0.3.4 Session Manager. Rozwija publiczny model gościa z alpha-0.3.3: sprawdzony typ nicku, wspólne reguły Unicode i jawną projekcję ADC. Manager nadal posiada zarejestrowane sesje i indeksy unikalności. Main i historyczne gałęzie są zachowane; ta gałąź nie scala się automatycznie.
 
-Gałąź bazuje na main `ca00266992dd866bdd30ff68e911c981c6665a62`, po scaleniu Session Core. Pierwotne gałęzie alpha-0.3.2 i alpha-0.3.3 powstały z tego samego main. Zgodnie z jawnym zleceniem main łączy teraz najpierw Session Manager, potem User Core. Manager posiada żywe Session zawierające User; obiekty protokołu pożyczają te same modele. User Core rozszerza dc24h_users o samodzielny publiczny model gościa User i ograniczony, typowany Profile, zintegrowane z logowaniem i aktualizacjami LoginHub.
+## Tożsamość i sprawdzone nazwy
 
-## Użytkownik, sesja i tożsamość
+Session opisuje jeden czas życia transportu, a User — Identity i Profile przyjętego gościa. Session posiada opcjonalny User, nieobecny przed przyjęciem. SessionManager posiada zarejestrowane Session oraz indeksy SID/CID/nick. Odczyt modeli jest const; zmiany przechodzą przez bramki managera. User/Identity/Profile są samodzielnymi kopiowalnymi wartościami, nie kontami.
 
-Session opisuje jeden czas życia transportu oraz gotowość i zamykanie. User opisuje przyjętego publicznego gościa na sesji: Identity (SID protokołu, CID klienta, nick) oraz Profile. Session posiada opcjonalny User, nieobecny przed przyjęciem. Model Users ma jedną żywą kopię tożsamości. Session::identity() zwraca pożyczony wskaźnik const do User; Session::user() referencję const do optional. Mutacje odbywają się wyłącznie przez metody cyklu życia. Kopie User/Profile posiadają własne teksty i listę funkcji.
+Identity posiada ograniczone teksty SID/CID i wartość `users::Nickname`. Limity SID/CID pozostają 64/128 bajtów, wartości niepuste i bez NUL. Ich ogólna fabryka nie dowodzi składni ADC, własności dzierżawy, dowodu Tiger, konta ani unikalności. Adapter dostarcza rzeczywisty czteroznakowy Sid i kanoniczny publiczny CID z ClientInfo::VerifiedIdentity. SID jest ponownie używalną dzierżawą protokołu; SessionId rozróżnia czasy życia. CID nie uwierzytelnia konta.
 
-Identity przeniesiono z session.hpp do user.hpp; dotychczasowy include session.hpp nadal działa. Limity magazynowania pozostają: SID 64 bajty, CID 128, nick 256, wartości niepuste i bez NUL. To ograniczone klucze publiczne, a nie dodatkowa walidacja ADC. Kodeki Sid/TigerCid, dowód Tiger, reguły NFC/nick oraz indeksy unikalności ADC pozostają autorytatywne. Bezpośrednie utworzenie Identity/User dowodzi wyłącznie ograniczeń pamięci, nie własności CID, konta ani unikalności. CID nie jest trwałym ID konta ani poświadczeniem. SID należy do połączenia i może być ponownie wydzierżawiony po sprzątaniu; lokalny SessionId rozróżnia czasy życia.
+Nickname nie ma domyślnego ani publicznego konstruktora bez sprawdzenia. `Nickname::create` wymaga niepustego tekstu do 256 bajtów UTF-8, już w NFC, bez kontrolek/znaków formatu i separatorów wiersza/akapitu. Spacja ASCII jest zabroniona w nazwie, zgodnie z dotychczasową polityką tekstową ADC. Nie ma cichej normalizacji, ignorowania wielkości liter ani porównań zależnych od locale. Ogólny limit 256 bajtów jest szerszy niż niezmieniony limit nicku ADC — 64 bajty; sama fabryka modelu nie spełnia wszystkich zasad ADC. Znaki nie-ASCII podlegają dotychczasowym kategoriom Unicode, bez rozszerzania zakazu na wszystkie białe znaki.
 
-User jest kopiowalną wartością z dostępem tylko do odczytu. User::create odrzuca niepoprawną tożsamość, także opróżnioną przez przeniesienie. Klucze przyjętej sesji są niezmienne. Session::identify(User,time) wiąże użytkownika raz, podczas negotiating. Wariant Identity nadal istnieje i tworzy pusty profil. Session::update_user(User,time) zastępuje nick i cały profil jednocześnie, wyłącznie w identified/ready, przy niezmiennych SID/CID i niemalejącym czasie. Niepoprawna faza, cofnięty czas lub zmienione klucze pozostawiają model bez zmian. Dotychczasowe rename zmienia tę samą tożsamość User i zachowuje profil. Zamykanie utrzymuje ostatnią wartość publiczną do usunięcia sesji, bez tworzenia trwałego konta.
+`Identity::create(sid,cid,text)` używa tego typu. Wariant z Nickname zachowuje ograniczenia SID/CID bez ponownej walidacji nazwy. `nickname_value()` zwraca const Nickname, a `nickname()` zachowuje dotychczasowy dostęp const do tekstu. Istnieje jedna własna kopia nicku. `Nickname::valid()` tanio sprawdza obecność/limit skonstruowanej lub przeniesionej wartości, bez ponownej alokacji Unicode. Dostęp tylko do odczytu uniemożliwia ominięcie fabryki przez obsługiwane API.
 
-## Profil publiczny
+## Wspólny tekst i zależność budowania
 
-ProfileData zawiera jawną listę pól, zamiast dowolnych pól INF:
+`dc24h_text` udostępnia `text::valid_public_text(value, nickname)` z istniejącą zależnością utf8proc. Wydziela wcześniejsze sprawdzenia UTF-8/NFC/kategorii z walidatora INF; ADC i Users korzystają z tej samej funkcji. Puste fragmenty są poprawne dla opcjonalnych pól profilu, a Nickname osobno wymaga obecności. Odrzucane są błędne/nadmiarowe kodowania UTF-8, surogaty, tekst poza NFC, kontrolki ASCII/C1, znaki formatu i separatory wiersza/akapitu. Limit wejścia wynosi 4096 bajtów przed alokacją normalizacji. Najpierw sprawdzane są limity konkretnego pola.
 
-| Pole | Projekcja ADC | Przechowywanie / znaczenie |
+Fabryki Profile stosują teraz te reguły do każdego publicznego pola tekstowego, zamykając wcześniejszą lukę bezpośredniego modelu, który mógł przyjąć niepoprawne dane nie-ASCII po samym sprawdzeniu bajtów/kontrolek. Polityka protokołu się nie zmienia: ADC już sprawdzało te zasady. Błędne wartości zwracają nullopt; błąd alokacji propaguje wyjątek przed zmianą modelu, bez wymuszonego zakończenia procesu ani udawanego wyniku walidacji. Pamięć normalizacji ogranicza limit wejścia i przetwarzanie biblioteki; nie zadeklarowano dokładnego budżetu bajtów ani audytu wymuszania awarii.
+
+Users zależy od neutralnej biblioteki tekstu, prywatnie połączonej z utf8proc. ADC używa tej samej biblioteki. Nie ma zależności Users od ADC, TLS, kryptografii, gniazd, SQL ani logowania. To nowa zależność wewnętrznych celów, bez nowego pakietu systemowego; dotychczasowy `libutf8proc-dev` pozostaje wymagany.
+
+## Profil i zmiany wartości
+
+ProfileData zachowuje jawną listę pól:
+
+| Pole | Projekcja ADC | Limit / znaczenie |
 | --- | --- | --- |
-| description | DE | Do 2048 bajtów |
-| email | EM | Do 254 bajtów; publiczna deklaracja klienta, bez potwierdzania kontaktu |
-| application / version | AP / VE | Do 128 bajtów każde |
-| locale | LO | Do 64 bajtów; deklaracja tekstowa, nie wybór języka serwera |
-| shared_bytes / shared_files / slots | SS / SF / SL | Opcjonalne nieujemne int64, również zero i INT64_MAX |
-| features | SU | Do 128 unikalnych czteroznakowych tokenów wielkich liter/cyfr |
+| description | DE | 2048 bajtów |
+| email | EM | 254 bajty, publiczna deklaracja zamiast potwierdzonych danych kontaktowych |
+| application / version | AP / VE | 128 bajtów każde |
+| locale | LO | 64 bajty, deklaracja zamiast wyboru języka serwera |
+| shared_bytes / shared_files / slots | SS / SF / SL | Opcjonalne nieujemne int64, także zero i INT64_MAX |
+| features | SU | Do 128 unikalnych czteroznakowych funkcji wielkich liter/cyfr |
 
-Profile::create sprawdza limity bajtów/liczby elementów, brak kontrolek ASCII/NUL, nieujemne liczby oraz format/unikalność funkcji. Suma treści tekstowej/tokenów nie przekracza 4096 bajtów; obecne limity pojedynczych pól też ograniczają ją poniżej tej wartości. Pusty tekst/lista i brak liczby oznaczają brak deklaracji, odróżniony od liczbowego zera. Model nie potwierdza zasobów, adresu email ani działania funkcji. Semantykę UTF-8/NFC sprawdza walidator ADC przed projekcją; fabryka magazynowania nie jest walidatorem Unicode/protokołu. Biblioteka pozostaje niezależna od ADC, OpenSSL, utf8proc, SQL, gniazd i logowania.
+Tekst ma poprawne NFC UTF-8 bez zabronionych kategorii; zwykłe spacje pozostają dozwolone w profilu. Pusty tekst/lista i brak liczby oznaczają brak deklaracji, odróżniony od zera. Łączny limit tekstu/tokenów 4096 bajtów oraz limity pól pozostają bez zmian. Deklaracje zasobów, email i funkcji nie są zweryfikowanymi faktami.
 
-User/Profile nie przechowuje PID/PD, PAS/hasła, adresu transportowego, I4/I6, portów, dowolnych rozszerzeń, RF/referrera, uprawnień CT, konta, roli ani bana. Jawne pola C++ wykluczają dowolną mapę metadanych. Dotychczasowy ClientInfo nadal posiada zwalidowane dane protokołu potrzebne do przekazywania INF; etap nie zmienia serializacji publicznego INF ani nie usuwa pól wymaganych przez protokół.
+`User::with_nickname(Nickname)` tworzy samodzielnego kandydata, zachowując SID, CID i cały profil. Nie zmienia źródła ani nie rezerwuje nazwy. Samodzielne rename w Session i zarządzane rename w SessionManager korzystają z tej ścieżki. Nie potrzebują uprzywilejowanego dostępu do prywatnych pól User/Identity. Żywa zmiana nadal wymaga fazy/czasu, niezmiennych SID/CID i unikalności managera. Błędny tekst lub zajęty nick pozostawia User i indeksy bez zmian. Istniejące identify(User), update_user i przyjęcie Identity pozostają dostępne.
 
-## Przyjęcie, aktualizacje i kopie
+Snapshot kopiuje tożsamość/profil z tego samego User i przetrwa aktualizacje, zamknięcie oraz usunięcie źródła. Pożyczone referencje do modelu/profilu/nazwy dotyczą wyłącznie wątku właściciela i wygasają przy zastąpieniu lub zniszczeniu. Nie dodano rewizji użytkownika, publikacji między wątkami, trwałego konta ani endpointu HTTP profilu.
 
-LoginHub projektuje cały zwalidowany ClientInfo, nigdy surowe tokeny. User powstaje po walidacji tożsamości/unikalności i poprawnym zbudowaniu ograniczonego powitania. Identified pozostaje odrębne od ready do pełnego wysłania własnego INF. Każda przyjęta aktualizacja INF projektuje cały scalony ClientInfo: pominięte pola zachowują wartość, jawne kasowanie ją usuwa. Nick i profil zatwierdzane są razem przez update_user. Błędne INF i zajęty nick zachowują poprzedni model podczas zamykania według istniejącej polityki. Wyjątki alokacji i błędy wyjścia obsługuje dotychczasowa ścieżka; nie dodano gwarancji odporności na dowolny błąd alokacji.
+## Jawna projekcja zwalidowanego ADC
 
-Snapshot zachowuje opcjonalne identity i dodaje opcjonalny profile, kopiowane z tego samego User. Oba są nieobecne przed przyjęciem i obecne po nim, również przy pustym profilu. Nie powiela to tożsamości żywego modelu, zachowując dotychczasowy odczyt identity w kopii. Kopie przetrwają aktualizacje, zamknięcie i usunięcie źródła. Pożyczone referencje dotyczą wyłącznie wątku właściciela i wygasają przy zastąpieniu/zniszczeniu. Są to dane wewnętrzne C++, bez zmiany schematu JSON API ani udostępnienia profili przez HTTP.
+`adc::user_from_info(const ClientInfo&, Sid)` jest publicznym adapterem w adc/user.hpp/cpp. Przyjmuje typ już zwalidowanych metadanych, pobiera CID z VerifiedIdentity i niezerowy typowany Sid od wywołującego, tworzy sprawdzony nick oraz projektuje tylko wymienione pola. Zwraca opcjonalny User; brak tożsamości/nazwy, zerowy SID lub niespełnione ograniczenia modelu powodują odrzucenie. Nie liczy ponownie PID, nie odczytuje poświadczeń, nie przydziela dzierżawy SID ani nie rozstrzyga unikalności/gotowości.
 
-Indeksy unikalności nick/CID/SID, rejestr obiektów protokołu, własność transportu, limity bezpieczeństwa i odpowiedzi protokołu pozostają bez zmian. Nie potrzeba migracji SQL, trwałych kont, konfiguracji, nowych komunikatów runtime ani zależności. Istniejące katalogi US/PL są nadal aktualne. Main i historyczne gałęzie są zachowane.
+LoginHub używa adaptera po zbudowaniu ograniczonego powitania i po zaakceptowanych scalonych aktualizacjach INF. Pominięte pola zachowują scalone wartości, jawne kasowanie je usuwa. Adapter pożycza ClientInfo i zwraca samodzielne wartości. PID/PD, PAS/hasło, adres IP, I4/I6, porty, dowolne rozszerzenia, RF/referrer, uprawnienia CT, konto/role i bany nie trafiają do User/Profile. ClientInfo zachowuje zwalidowane metadane protokołu potrzebne do dotychczasowego przekazywania; serializacja i kody statusów są niezmienione.
 
-## Weryfikacja i ograniczenia
+Nie potrzeba migracji SQL, pól JSON API, konfiguracji ani nowych komunikatów runtime. Istniejące katalogi US/PL są aktualne. Uwierzytelnianie kont, wiele sesji konta, role, bany, tożsamość trwała/rozproszona, czat/wyszukiwanie/transfery i mutacje administracyjne pozostają osobnymi etapami.
 
-`users.core` sprawdza granice tekstu/funkcji/liczb, kontrolki/NUL, błędny format/powtórzenia funkcji, ujemne deklaracje, własność kopii, fazę/czas, niezmienne SID/CID i atomową wymianę profilu. Testy rzeczywistego LoginHub obejmują projekcję profilu, INT64_MAX bez obcięcia, aktualizacje/kasowanie, odrzucenie błędnego INF i zajętego nicka bez częściowej zmiany, niezależnego klienta, sprzątanie i ponowne logowanie. Dotychczasowe testy Session Core, procesów TCP/TLS i rzeczywistego ncdc pozostają wymagane.
+## Weryfikacja
 
-To publiczny model gościa w pamięci, bez uwierzytelniania kont, globalnego katalogu, wielu sesji konta, ról, banów, czatu/wyszukiwania/transferów, trwałej historii i administracyjnych mutacji. Deklaracje klienta nie są zaufanymi faktami. Zobacz [testowanie](TESTING.md), [Session Core](SESSION_CORE.md), [INF](ADC_INF.md) i [walidację tożsamości](ADC_IDENTITY.md). Lokalne testy nie dowodzą działania innych systemów, zdalnego CI, obciążenia, fuzzingu ani audytu bezpieczeństwa.
+`users.values` sprawdza typowaną konstrukcję, błędne/nadmiarowe/ucięte UTF-8, surogaty, niekanoniczną normalizację, NUL/kontrolki/format/separatory w nazwach i każdym polu tekstu profilu, granice bajtów UTF-8, własność kandydata zmiany nicku, odrzucanie bez zmian modelu/indeksów, projekcję zweryfikowanego CID/SID oraz kasowanie pól. Sprawdza też zachowanie ostrzejszego limitu nicku ADC — 64 bajty. Dotychczasowe testy managera/modelu/tożsamości pozostają wymagane.
+
+Rzeczywisty ncdc loguje się i łączy ponownie jako `dc24hŻółw` w ADC i ADCS. Test tekstowego transportu sprawdza publiczne INF; oba transporty osiągają NORMAL, zachowują pojedynczą gotowość/sprzątanie każdego połączenia i nie ujawniają nicku w logach. ADCS pozostaje szyfrowane. Zobacz [testowanie](TESTING.md), [Session Core](SESSION_CORE.md), [Session Manager](SESSION_MANAGER.md), [INF](ADC_INF.md) i [dowód tożsamości](ADC_IDENTITY.md). Testy lokalne nie dowodzą innych systemów, zdalnego CI, obciążenia ani audytu bezpieczeństwa.

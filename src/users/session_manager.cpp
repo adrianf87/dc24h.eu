@@ -110,9 +110,9 @@ MutationResult SessionManager::rename(SessionId id, std::string_view nickname, T
     if (!model) { return RegistryError::missing; }
     if (model->phase()!=Phase::identified && model->phase()!=Phase::ready) { return SessionError::invalid_state; }
     if (!model->valid_time(now)) { return SessionError::backwards_time; }
-    auto identity=Identity::create(model->identity()->sid(),model->identity()->cid(),nickname);
-    if (!identity) { return SessionError::invalid_identity; }
-    auto user=User::create(std::move(*identity),model->user()->profile());
+    auto checked=Nickname::create(nickname);
+    if (!checked) { return SessionError::invalid_identity; }
+    auto user=model->user()->with_nickname(std::move(*checked));
     return update_user(id,std::move(*user),now);
 }
 std::optional<RegistryError> SessionManager::remove(SessionId id) noexcept {

@@ -1,6 +1,7 @@
 #include "dc24h/adc/login.hpp"
 #include "dc24h/adc/serializer.hpp"
 #include "dc24h/adc/status.hpp"
+#include "dc24h/adc/user.hpp"
 
 #include <deque>
 #include <stdexcept>
@@ -38,26 +39,8 @@ Message info_message(std::string command, Command kind, std::vector<std::string>
     return {MessageType::info, std::move(command), kind, {}, {}, {}, std::move(parameters), {}};
 }
 users::User public_user(const ClientInfo& metadata, std::string_view sid) {
-    auto identity=users::Identity::create(sid,*metadata.field("ID"),*metadata.field("NI"));
-    users::ProfileData data;
-    data.description=metadata.field("DE").value_or("");
-    data.email=metadata.field("EM").value_or("");
-    data.application=metadata.field("AP").value_or("");
-    data.version=metadata.field("VE").value_or("");
-    data.locale=metadata.field("LO").value_or("");
-    data.shared_bytes=metadata.integer("SS");
-    data.shared_files=metadata.integer("SF");
-    data.slots=metadata.integer("SL");
-    auto features=metadata.field("SU").value_or("");
-    while (!features.empty()) {
-        const auto comma=features.find(',');
-        data.features.emplace_back(features.substr(0,comma));
-        if (comma==std::string_view::npos) { break; }
-        features.remove_prefix(comma+1);
-    }
-    auto profile=users::Profile::create(std::move(data));
-    if (!identity || !profile) { throw std::logic_error("Validated metadata exceeds user model bounds"); }
-    auto user=users::User::create(std::move(*identity),std::move(*profile));
+    const auto source=Sid::parse(sid);
+    auto user=source ? user_from_info(metadata,*source) : std::nullopt;
     if (!user) { throw std::logic_error("Invalid validated public user"); }
     return std::move(*user);
 }

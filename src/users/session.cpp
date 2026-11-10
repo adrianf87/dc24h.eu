@@ -6,11 +6,6 @@
 #include <utility>
 
 namespace dc24h::users {
-namespace {
-bool bounded(std::string_view value, std::size_t maximum) noexcept {
-    return !value.empty() && value.size() <= maximum && value.find('\0') == std::string_view::npos;
-}
-} // namespace
 std::optional<SessionId> SessionId::from_value(std::uint64_t value) noexcept {
     return value == 0 ? std::nullopt : std::optional<SessionId>{SessionId(value)};
 }
@@ -59,8 +54,11 @@ Result Session::mark_ready(TimePoint now) noexcept {
 Result Session::rename(std::string_view nickname, TimePoint now) {
     if (phase_ != Phase::identified && phase_ != Phase::ready) { return SessionError::invalid_state; }
     if (!valid_time(now)) { return SessionError::backwards_time; }
-    if (!bounded(nickname,max_nickname_bytes)) { return SessionError::invalid_identity; }
-    std::string owned(nickname);user_->identity_.nickname_.swap(owned);last_=now;return {};
+    auto checked=Nickname::create(nickname);
+    if (!checked) { return SessionError::invalid_identity; }
+    auto candidate=user_->with_nickname(std::move(*checked));
+    if (!candidate) { return SessionError::invalid_identity; }
+    return update_user(std::move(*candidate),now);
 }
 Result Session::begin_close(CloseCause cause, TimePoint now) noexcept {
     if (phase_ == Phase::closing || phase_ == Phase::closed) { return {}; }

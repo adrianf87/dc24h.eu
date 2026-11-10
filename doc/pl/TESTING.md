@@ -1,10 +1,16 @@
 # Testowanie
 
+## Weryfikacja User Core — alpha-0.3.5
+
+Pełna bramka ma **51 zestawów**, z users.values na zintegrowanej bazie main. Wszystkie przeszły w Debug, Release i ASan/UBSan, w tym rzeczywisty ncdc ADC/ADCS z logowaniem/reconnect jako dc24hŻółw, dotychczasowe testy rejestru/tożsamości/dostawcy kryptografii/bezpieczeństwa/STA/wyjścia, mieszane transporty, MariaDB i Apache. WebAdmin: typecheck/budowanie, 3 testy Node, 3 Chromium i rzeczywista integracja API C++ poprawne. Odtwarzanie: `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug -j 4`, `ctest --test-dir build-debug --output-on-failure -j 4`. Flagi sanitizerów opisano poniżej. [User Core](USER_CORE.md) opisuje sprawdzenia tekstu, projekcji i granice lokalnych wyników.
+
+**Bieżący etap — alpha-0.3.5:** [User Core](USER_CORE.md) dodaje typ Nickname sprawdzający UTF-8/NFC, wspólną walidację tekstu ADC/Users, samodzielnych kandydatów zmiany nicku i jawną projekcję ClientInfo/VerifiedIdentity. Users korzysta z neutralnego dc24h_text i istniejącego utf8proc. Własność/unikalność managera pozostają bez zmian. Starsze opisy dotyczą zakresu historycznego.
+
 ## Weryfikacja Session Manager — alpha-0.3.4
 
 Pełna bramka ma **50 zestawów**, z users.registry na zintegrowanej bazie main. Wszystkie przeszły w Debug, Release i ASan/UBSan, w tym rzeczywisty ncdc ADC/ADCS, mieszane transporty/duplikaty/zmiana nicku/reconnect, regresje tożsamości/dostawcy kryptografii/bezpieczeństwa/STA/końcowego wyjścia, MariaDB i Apache. WebAdmin: typecheck/budowanie, 3 testy Node, 3 Chromium i rzeczywista integracja API poprawne. Odtwarzanie: `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug -j 4`, `ctest --test-dir build-debug --output-on-failure -j 4`. Flagi sanitizerów opisano poniżej. [Session Manager](SESSION_MANAGER.md) opisuje nowe sprawdzenia własności/braku częściowych zmian i granice lokalnych wyników.
 
-**Bieżący etap — alpha-0.3.4:** [Session Manager](SESSION_MANAGER.md) posiada indeksy SID/CID/nick wraz z żywymi modelami. Odczyt const i zarządzane zmiany cyklu życia/User zachowują unikalność przy przyjęciu, zmianie nicku i sprzątaniu. LoginHub zachowuje protokół i kolejki. Starsze opisy dotyczą zakresu historycznych etapów.
+**Etap dostarczony w alpha-0.3.4:** [Session Manager](SESSION_MANAGER.md) posiada indeksy SID/CID/nick wraz z żywymi modelami. Odczyt const i zarządzane zmiany cyklu życia/User zachowują unikalność przy przyjęciu, zmianie nicku i sprzątaniu. LoginHub zachowuje protokół i kolejki. Starsze opisy dotyczą zakresu historycznych etapów.
 
 ## Integracja main — alpha-0.3.2, następnie alpha-0.3.3
 
