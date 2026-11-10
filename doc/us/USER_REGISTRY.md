@@ -1,6 +1,6 @@
 # User Registry — alpha-0.3.7
 
-**Current increment — alpha-0.3.9:** [User List](USER_LIST.md) builds an owned deterministic initial welcome from paged identified/ready membership and validated public ADC metadata. The complete escaped wire size is checked before enqueue/registration. Own INF stays last; subsequent join/update/quit frames preserve FIFO synchronization. Earlier module descriptions retain their historical scope.
+**Current increment — alpha-0.3.10:** [INF Updates](INF_UPDATES.md) validates and prepares ready-state updates before atomically committing ClientInfo, User/profile and nickname ownership. Fanout carries validated supplied fields and explicit cancellations; initial lists remain full public snapshots. Unknown-only/empty updates produce no public frame. Earlier module descriptions retain their historical scope.
 
 This increment starts directly from main `ca75d6c53d9b228b978dc3b3b8fdd2fcb0f33852`, after the alpha-0.3.6 Nick Manager merge. Earlier requested stages alpha-0.3.1–alpha-0.3.6 are already present. The alpha-0.3.7 branch preserves main and historical branches; it is not merged automatically.
 

@@ -1,5 +1,13 @@
 # Testing
 
+## INF Updates validation — alpha-0.3.10
+
+All **61 CTest suites** passed locally in Debug, Release and ASan/UBSan. New users.inf_updates and users.inf_updates.process cover atomic ClientInfo/User/nickname updates, incremental supplied fields, explicit cancellation and zero values, normalized addresses, omitted-field retention, unknown/empty suppression, identity/lifecycle/time/source/privilege/validation rejection, stale adapter detection and allocation rollback/retry. Mixed ADC/ADCS fanout agrees with later full user lists. Actual ncdc changes its description live over both transports, including its optional supplied HN field; existing list/reconnect/identity/privacy tests remain. All earlier server tests, MariaDB and Apache HTTPS passed. See [INF Updates](INF_UPDATES.md) for the precise contract and limits.
+
+Reproduce with `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug --parallel 4` and `ctest --test-dir build-debug --output-on-failure -j 4`. Repeat for build-release/Release. In build-sanitize/Debug add `-DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie"` and `-DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined -no-pie"`. Scoped C++ fault injection covers apply staging/index allocations before commit with an unrelated user preserved; it does not inject C allocator/OS failures or promise atomic network-wide fanout.
+
+WebAdmin typecheck/production build, 3 Node tests, 3 Chromium tests and real C++ API integration passed. From webadmin run `npm run build`, `npm test`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e` and `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:integration -- ../build-debug/dc24h`. Metadata/fixtures match alpha-0.3.10. Results are local, not a remote CI/OS-matrix/load claim.
+
 ## User List validation — alpha-0.3.9
 
 All **59 CTest suites** passed locally in Debug, Release and ASan/UBSan. New users.list and users.list.process cover public membership lifecycle/cursors, deterministic complete plans, own-INF ordering, exact escaped wire budgets, private-field exclusion/ADC metadata retention, stale sources, 260-user pagination, allocation rollback and actual mixed-transport list convergence across concurrent joins, updates, cancellations, departures and reconnect. Real ncdc ADC/ADCS displays two users with a live observer and synchronizes both initial lists and reconnect quit/join events. Earlier login/readiness/overflow/identity/security/registry tests, MariaDB and Apache HTTPS also passed. See [User List](USER_LIST.md) for precise scope and limits.
@@ -34,7 +42,7 @@ Reproduce the strict build with `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=De
 
 WebAdmin typecheck/production build, 3 Node tests, 3 Chromium tests and real C++ API integration passed. From webadmin run `npm run build`, `npm test`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e` and `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:integration -- ../build-debug/dc24h`. This uses the installed system Chromium; otherwise install Playwright's browser normally. Version assertions and frontend fixtures match alpha-0.3.6. Local checks do not establish remote GitHub Actions results or the full supported OS matrix.
 
-**Current increment — alpha-0.3.9:** [User List](USER_LIST.md) builds an owned deterministic initial welcome from paged identified/ready membership and validated public ADC metadata. The complete escaped wire size is checked before enqueue/registration. Own INF stays last; subsequent join/update/quit frames preserve FIFO synchronization. Earlier module descriptions retain their historical scope.
+**Current increment — alpha-0.3.10:** [INF Updates](INF_UPDATES.md) validates and prepares ready-state updates before atomically committing ClientInfo, User/profile and nickname ownership. Fanout carries validated supplied fields and explicit cancellations; initial lists remain full public snapshots. Unknown-only/empty updates produce no public frame. Earlier module descriptions retain their historical scope.
 
 ## User Core validation — alpha-0.3.5
 

@@ -50,7 +50,7 @@ class UserRegistryProcessTests(unittest.TestCase):
                     owner.send(b'BINF ' + owner.sid + b' NI' + 'Łoś'.encode() + b' DECurrentProfile')
                     update = owner.line()
                     self.assertEqual(watcher.line(), update)
-                    self.assertIn(b' ID' + pair(11)[1], update)
+                    self.assertNotIn(b' ID', update)  # Untouched CID is retained, not repeated in the delta.
                     self.assertIn(b' NI' + 'Łoś'.encode(), update)
                 previous_sid = owner.sid
                 owner.peer.close()

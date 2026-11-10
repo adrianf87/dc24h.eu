@@ -1,5 +1,7 @@
 # User List — alpha-0.3.9
 
+**Current integration — alpha-0.3.10:** [INF Updates](INF_UPDATES.md) now commits ClientInfo and User/profile/nickname together and sends incremental public fields/cancellations. InitialUserList still uses full current snapshots and preserves own-INF/FIFO ordering.
+
 This increment starts from main `b191141ad1cfa5a6a915945b5a934fe82640340e` after the alpha-0.3.8 User Login merge. Earlier requested stages are already present. The alpha-0.3.9 branch preserves main/history and is not merged automatically.
 
 ## Initial synchronization

@@ -212,6 +212,20 @@ ClientSessionResult ClientSession::observe(Direction direction, const Message& m
     if (session_.state() == ConnectionState::disconnected) { info_.reset(); }
     return std::nullopt;
 }
+std::variant<ClientInfo, ClientSessionError> ClientSession::prepare_update(const Message& message) const {
+    if (state() != ConnectionState::normal) { return ClientSessionError{StateError::invalid_state}; }
+    if (!info_) { return ClientSessionError{InfError::missing_identity}; }
+    const auto sid = Sid::parse(session_.sid());
+    const auto hash = support().selected_hash();
+    if (!sid || !hash) { return ClientSessionError{StateError::invalid_sequence}; }
+    auto candidate = validator_.validate(message,*sid,*hash,&*info_);
+    if (const auto* error = std::get_if<InfError>(&candidate)) { return ClientSessionError{*error}; }
+    return std::get<ClientInfo>(std::move(candidate));
+}
+void ClientSession::commit_update(ClientInfo info) noexcept {
+    static_assert(std::is_nothrow_move_assignable_v<std::optional<ClientInfo>>);
+    info_ = std::move(info);
+}
 ClientSessionResult ClientSession::approve_identity(IdentityMode mode) noexcept {
     if (session_.state() == ConnectionState::disconnected) { return ClientSessionError{StateError::disconnected}; }
     if (!info_) { return ClientSessionError{InfError::missing_identity}; }

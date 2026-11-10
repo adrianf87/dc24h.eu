@@ -116,6 +116,12 @@ class NcdcLoginTest(unittest.TestCase):
                 wait_screen(b'2 users')
                 status = fetch_status(api_path, token)
                 self.assertGreaterEqual(status['network']['adc_frames'], 3)
+                os.write(master, b'/hset description dc24hINFUpdate\r')
+                live_update = observer.line()
+                self.assertEqual(live_update.split()[:2], [b'BINF', initial_sid])
+                # ncdc may also flush its changed HN count with description.
+                self.assertIn(b'DEdc24hINFUpdate', live_update.split()[2:])
+                self.assertTrue(set(live_update.split()[2:]) <= {b'DEdc24hINFUpdate', b'HN1'})
                 # ncdc applies /nick on reconnect (it does not emit a live NI
                 # update). Exercise the new name with the same PID/CID.
                 renamed = 'dc24hŁoś'.encode('utf-8')
@@ -179,6 +185,7 @@ class NcdcLoginTest(unittest.TestCase):
                 self.assertNotIn(nickname, hub.log)
                 self.assertNotIn(renamed, hub.log)
                 self.assertNotIn(b'dc24hLoginProbe', hub.log)
+                self.assertNotIn(b'dc24hINFUpdate', hub.log)
                 self.assertNotIn(b'event=login_rejected', hub.log)
                 print(f'ncdc completed guest NORMAL and reconnect via {scheme.upper()} on the C++ hub')
             finally:

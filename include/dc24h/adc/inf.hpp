@@ -77,6 +77,11 @@ public:
     [[nodiscard]] StateResult keepalive() const noexcept { return session_.keepalive(); }
     void disconnect() noexcept;
 private:
+    friend class InfUpdates;
+    // Ready-state staging for the transactional live INF updater. These do not
+    // expose mutable metadata or bypass the validator's public-field policy.
+    [[nodiscard]] std::variant<ClientInfo, ClientSessionError> prepare_update(const Message& message) const;
+    void commit_update(ClientInfo info) noexcept;
     SidSession session_;
     InfValidator validator_;
     std::optional<ClientInfo> info_;
