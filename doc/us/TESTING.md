@@ -1,8 +1,18 @@
 # Testing
 
-**Current increment — alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) adds semantic status/quit validation, source-checked B/D/E/F status routing, precise errors and bounded terminal ISTA/own-IQUI output. Historical descriptions below retain the behavior of their original releases.
+**Current increment — alpha-0.2.10:** [Negotiation security](NEGOTIATION_SECURITY.md) adds pending admission caps, cumulative pre-readiness input budgets and shared pre-INF/Tiger attempt limits. Earlier release descriptions below retain their original scope.
+
+**Increment delivered in alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) adds semantic status/quit validation, source-checked B/D/E/F status routing, precise errors and bounded terminal ISTA/own-IQUI output. Historical descriptions below retain the behavior of their original releases.
 
 **Integration delivered in alpha-0.2.8:** [Guest login](ADC_LOGIN.md) attaches the state/SUP/SID/INF/Tiger stack to the actual C++ TCP/TLS reactor with bounded ordered output, nickname/CID admission, public presence and complete ncdc NORMAL/reconnect tests. Historical stage descriptions below retain their original scope; statements that transport attachment/output/login were still planned describe those earlier versions. Registered-user authentication, chat, search and transfer dispatch remain planned.
+
+## Negotiation security — alpha-0.2.10
+
+The strict gate registers **44 CTest suites**, adding security.negotiation, security.negotiation.process, adc.security.ncdc and adcs.security.ncdc. [Negotiation security](NEGOTIATION_SECURITY.md) defines exact accounting, readiness ownership, pre-Tiger windows and the unit/process/ncdc cases. Fake-clock checks include a globally denied attempt followed by a delayed first charged attempt, proving denial cannot start the IP minute early; pruning preserves later identity windows. Real TCP/TLS tests cover pending capacity before TLS, exact budgets, timeout-independent cumulative limits, IP isolation and quota-before-invalid-proof behavior. Existing large-stream TLS tests log in before their NORMAL stream.
+
+Local result: **44/44 CTest suites passed in Debug, Release and ASan/UBSan**, including the final deferred-first-charge regression, real ncdc ADC/ADCS, MariaDB and Apache HTTPS. WebAdmin build/typecheck, 3 Node tests, 3 Chromium tests and real API/Vite/React integration passed. Metadata, UTF-8/local links/language parity, Python syntax and Git whitespace checks passed.
+
+Reproduce the full strict CMake gate as below; focused scope: `ctest --test-dir build-debug -R 'security.negotiation|security.ncdc' --output-on-failure`. Use the existing sanitizer/no-PIE flags and system Chromium setting. Results are local evidence, not another OS/remote CI or production-load/security audit.
 
 ## STA/QUI increment — alpha-0.2.9
 

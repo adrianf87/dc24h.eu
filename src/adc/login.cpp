@@ -116,7 +116,15 @@ void LoginHub::close(Id id, CloseReason reason) {
     case CloseReason::idle_timeout: reject(peer, "230", {}, "Idle connection timed out"); break;
     case CloseReason::partial_frame_timeout: reject(peer, "240", {}, "Incomplete frame timed out"); break;
     case CloseReason::security_quota: reject(peer, "240", {}, "Protocol resource limit exceeded"); break;
+    case CloseReason::negotiation_limit: reject(peer, "240", {}, "Negotiation resource limit exceeded"); break;
+    case CloseReason::identity_limit: reject(peer, "240", {}, "Identity verification rate limit exceeded"); break;
     }
+}
+bool LoginHub::needs_identity_check(Id id, const Message& message) const {
+    const auto& peer = *peers_.at(id);
+    return !peer.closing && !peer.abort && peer.session.state() == ConnectionState::identify &&
+        !peer.session.info() && message.kind == Command::inf && message.command == "INF" &&
+        message.type == MessageType::broadcast;
 }
 void LoginHub::relay(Id except, const Message& message) {
     for (auto& [id, peer] : peers_) {

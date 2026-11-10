@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.2.9 LANGUAGES CXX)
+project(dc24h VERSION 0.2.10 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -247,6 +247,14 @@ if(BUILD_TESTING)
     add_test(NAME logging.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/logging_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(logging.unit logging.process PROPERTIES TIMEOUT 45)
+    add_executable(negotiation_tests tests/negotiation_tests.cpp)
+    target_link_libraries(negotiation_tests PRIVATE dc24h_security)
+    target_compile_options(negotiation_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(negotiation_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME security.negotiation COMMAND negotiation_tests)
+    add_test(NAME security.negotiation.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/negotiation_process_tests.py" "$<TARGET_FILE:dc24h>")
+    set_tests_properties(security.negotiation security.negotiation.process PROPERTIES TIMEOUT 45)
     add_executable(security_tests tests/security_tests.cpp)
     target_link_libraries(security_tests PRIVATE dc24h_security)
     set_target_properties(security_tests PROPERTIES CXX_EXTENSIONS OFF)
@@ -297,6 +305,13 @@ if(BUILD_TESTING)
     endif()
     find_program(NCDC_EXECUTABLE ncdc)
     if(NCDC_EXECUTABLE)
+        add_test(NAME adc.security.ncdc COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_negotiation_test.py"
+            "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}")
+        add_test(NAME adcs.security.ncdc COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_negotiation_test.py"
+            "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" --tls)
+        set_tests_properties(adc.security.ncdc adcs.security.ncdc PROPERTIES TIMEOUT 30)
         add_test(NAME adc.status.ncdc COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_status_test.py"
             "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}")

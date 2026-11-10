@@ -1,6 +1,8 @@
 # Logowanie — alpha-0.1.6
 
-**Aktualny etap — alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) dodaje walidację semantyki statusów/rozłączeń, kontrolowany routing B/D/E/F, dokładniejsze błędy i ograniczone końcowe ISTA/własne IQUI. Opisy historyczne poniżej zachowują zachowanie pierwotnych wersji.
+**Aktualny etap — alpha-0.2.10:** [Bezpieczeństwo negocjacji](NEGOTIATION_SECURITY.md) dodaje limity oczekujących sesji, łączne budżety wejścia do gotowości i wspólne limity prób przed INF/Tiger. Opisy historyczne poniżej zachowują pierwotny zakres.
+
+**Etap dostarczony w alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) dodaje walidację semantyki statusów/rozłączeń, kontrolowany routing B/D/E/F, dokładniejsze błędy i ograniczone końcowe ISTA/własne IQUI. Opisy historyczne poniżej zachowują zachowanie pierwotnych wersji.
 
 `dc24h_logging` zapisuje zsynchronizowane wiersze UTC na stderr lub do zwykłego pliku append. Błędy zapisu działają best effort. Logger musi żyć dłużej niż wywołujący; przed zniszczeniem zakończ i dołącz wszystkie wątki. Domyślne komunikaty są US, opcjonalnie PL z katalogów. Dane protokołu i klucze zdarzeń nie są tłumaczone.
 

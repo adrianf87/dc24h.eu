@@ -24,7 +24,7 @@ class LoggingProcessTests(unittest.TestCase):
         hub.stop(signal.SIGINT)
         self.assertEqual(counters(self, hub), (2, 0, 1, 0))
         log = bytes(hub.log)
-        self.assertRegex(log, rb"\[INFO\] Starting dc24h.eu alpha-0.2.9")
+        self.assertRegex(log, rb"\[INFO\] Starting dc24h.eu alpha-0.2.10")
         self.assertIn(b"Startup settings: adc_listeners=", log)
         self.assertRegex(log, rb"Connection id=\d+ transport=ADC event=accepted")
         self.assertRegex(log, rb"Connection id=\d+ transport=ADC event=login_rejected")
@@ -75,11 +75,11 @@ class LoggingProcessTests(unittest.TestCase):
         for _ in range(5):
             excess = hub.connect()
             self.assertEqual(excess.recv(1), b'')
-        peer.sendall(b'HMSG BAD\\q\n' * 200)
+        peer.sendall(b'HMSG BAD\\q\n' * 32)
         peer.settimeout(3)
         drain_until_eof(peer)
         hub.stop()
-        self.assertEqual(counters(self, hub), (0, 0, 200, 0))
+        self.assertEqual(counters(self, hub), (0, 0, 32, 0))
         for text in (b'ADC invalid frame rejected', b'Network connection limit reached',
                      b'Network idle connection closed'):
             self.assertEqual(hub.log.count(text), 1, hub.log)

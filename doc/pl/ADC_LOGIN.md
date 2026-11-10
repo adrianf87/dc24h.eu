@@ -1,6 +1,8 @@
 # Logowanie gości ADC — alpha-0.2.8
 
-**Aktualny etap — alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) dodaje walidację semantyki statusów/rozłączeń, kontrolowany routing B/D/E/F, dokładniejsze błędy i ograniczone końcowe ISTA/własne IQUI. Opisy historyczne poniżej zachowują zachowanie pierwotnych wersji.
+**Aktualny etap — alpha-0.2.10:** [Bezpieczeństwo negocjacji](NEGOTIATION_SECURITY.md) dodaje limity oczekujących sesji, łączne budżety wejścia do gotowości i wspólne limity prób przed INF/Tiger. Opisy historyczne poniżej zachowują pierwotny zakres.
+
+**Etap dostarczony w alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) dodaje walidację semantyki statusów/rozłączeń, kontrolowany routing B/D/E/F, dokładniejsze błędy i ograniczone końcowe ISTA/własne IQUI. Opisy historyczne poniżej zachowują zachowanie pierwotnych wersji.
 
 Hub C++ kończy teraz logowanie gościa przez rzeczywiste nieblokujące porty TCP i OpenSSL TLS. `LoginHub` łączy istniejące moduły SUP, SID, INF, Tiger i automatu stanów; jedna instancja w wątku reaktora obejmuje wszystkie porty ADC/ADCS. Zarządza publiczną listą, rezerwacjami nicków/CID i ograniczonym uporządkowanym wyjściem. Konta, hasła, bany/role, czat, wyszukiwanie i transfery pozostają dalszymi etapami.
 

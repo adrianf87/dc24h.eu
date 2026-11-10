@@ -1,8 +1,18 @@
 # Testowanie
 
-**Aktualny etap — alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) dodaje walidację semantyki statusów/rozłączeń, kontrolowany routing B/D/E/F, dokładniejsze błędy i ograniczone końcowe ISTA/własne IQUI. Opisy historyczne poniżej zachowują zachowanie pierwotnych wersji.
+**Aktualny etap — alpha-0.2.10:** [Bezpieczeństwo negocjacji](NEGOTIATION_SECURITY.md) dodaje limity oczekujących sesji, łączne budżety wejścia do gotowości i wspólne limity prób przed INF/Tiger. Opisy historyczne poniżej zachowują pierwotny zakres.
+
+**Etap dostarczony w alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) dodaje walidację semantyki statusów/rozłączeń, kontrolowany routing B/D/E/F, dokładniejsze błędy i ograniczone końcowe ISTA/własne IQUI. Opisy historyczne poniżej zachowują zachowanie pierwotnych wersji.
 
 **Integracja dostarczona w alpha-0.2.8:** [Logowanie gości](ADC_LOGIN.md) podłącza state/SUP/SID/INF/Tiger do rzeczywistego reaktora C++ TCP/TLS, z ograniczonym uporządkowanym wyjściem, unikalnością nick/CID, listą obecności i pełnymi testami ncdc NORMAL/reconnect. Historyczne opisy poniżej zachowują pierwotny zakres; wzmianki o planowanym podłączeniu/wyjściu/logowaniu dotyczą wcześniejszych wersji. Konta/hasła, czat, wyszukiwanie i przekazywanie transferów pozostają planowane.
+
+## Bezpieczeństwo negocjacji — alpha-0.2.10
+
+Pełny zestaw rejestruje **44 testy CTest**, dodając security.negotiation, security.negotiation.process, adc.security.ncdc i adcs.security.ncdc. [Bezpieczeństwo negocjacji](NEGOTIATION_SECURITY.md) opisuje naliczanie, gotowość, okna przed Tiger i przypadki jednostkowe/sieciowe/ncdc. Sztuczny zegar sprawdza odmowę globalną i opóźnioną pierwszą naliczoną próbę: odmowa nie zaczyna wcześniej minuty IP, a pruning zachowuje nowsze okno. Rzeczywiste TCP/TLS sprawdzają miejsca przed TLS, dokładne budżety, łączne limity niezależne od czasu, izolację IP i odmowę przed błędną parą. Duży strumień TLS najpierw kończy logowanie, później bada NORMAL.
+
+Wynik lokalny: **44/44 testów CTest w Debug, Release i ASan/UBSan**, także końcowy test opóźnionej pierwszej naliczonej próby, rzeczywisty ncdc ADC/ADCS, MariaDB i Apache HTTPS. WebAdmin: build/typecheck, 3 testy Node, 3 Chromium i rzeczywista integracja API/Vite/React przeszły. Metadane, UTF-8/linki/parytet języków, składnia Python i białe znaki Git poprawne.
+
+Powtórzenie: pełny wymagany zestaw CMake jak poniżej; zakres etapu: `ctest --test-dir build-debug -R 'security.negotiation|security.ncdc' --output-on-failure`. Dotychczasowe flagi sanitizera/no-PIE i systemowy Chromium pozostają aktualne. To lokalne dowody, nie inne OS/CI ani audyt produkcyjnego obciążenia/bezpieczeństwa.
 
 ## STA/QUI — alpha-0.2.9
 

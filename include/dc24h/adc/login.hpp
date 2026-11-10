@@ -12,7 +12,7 @@ struct LoginLimits {
     std::size_t output_per_client{256 * 1024};
     std::size_t output_total{16 * 1024 * 1024};
 };
-enum class CloseReason { login_timeout, idle_timeout, partial_frame_timeout, security_quota };
+enum class CloseReason { login_timeout, idle_timeout, partial_frame_timeout, security_quota, negotiation_limit, identity_limit };
 
 // Single reactor-thread owner of guest admission, public presence and ordered
 // output. IDs are transport tokens, never fd numbers. No socket/SQL/logger I/O.
@@ -26,6 +26,7 @@ public:
     LoginHub& operator=(const LoginHub&) = delete;
     void connect(Id id, std::string_view numeric_peer);
     void receive(Id id, const Message& message);
+    [[nodiscard]] bool needs_identity_check(Id id, const Message& message) const;
     // Sanitized terminal notification; idempotent and bounded by existing output
     // caps. Assigned clients receive ISTA then a final own IQUI. No clocks here.
     void close(Id id, CloseReason reason);

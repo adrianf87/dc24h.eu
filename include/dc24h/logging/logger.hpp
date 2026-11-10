@@ -17,7 +17,7 @@ enum class ConnectionEvent {
     accepted, peer_closed, tls_ready, tls_handshake_failed, tls_closed,
     tls_read_error, tcp_read_error, socket_error, idle_timeout, handshake_timeout, shutdown, security_quota, partial_frame_timeout,
     login_ready, login_rejected, login_timeout, output_timeout, output_limit, write_error,
-    peer_status, close_timeout
+    peer_status, close_timeout, negotiation_limit, identity_limit
 };
 struct Options {
     Level level{Level::info};

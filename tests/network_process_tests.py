@@ -101,7 +101,7 @@ class NetworkProcessTests(unittest.TestCase):
     def test_many_simultaneous_connections_and_data(self):
         hub = self.hub()
         peers = [hub.connect() for _ in range(48)]
-        payload = b"BMSG invalid-transport-test\n" * 256
+        payload = b"BMSG invalid-transport-test\n" * 32
         with ThreadPoolExecutor(max_workers=8) as pool:
             list(pool.map(lambda peer: peer.sendall(payload), peers))
         # Syntax parsing does not send a protocol response or echo.

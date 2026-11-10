@@ -1,6 +1,8 @@
 # Lokalne API administracyjne — alpha-0.1.9
 
-**Aktualny etap — alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) dodaje walidację semantyki statusów/rozłączeń, kontrolowany routing B/D/E/F, dokładniejsze błędy i ograniczone końcowe ISTA/własne IQUI. Opisy historyczne poniżej zachowują zachowanie pierwotnych wersji.
+**Aktualny etap — alpha-0.2.10:** [Bezpieczeństwo negocjacji](NEGOTIATION_SECURITY.md) dodaje limity oczekujących sesji, łączne budżety wejścia do gotowości i wspólne limity prób przed INF/Tiger. Opisy historyczne poniżej zachowują pierwotny zakres.
+
+**Etap dostarczony w alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) dodaje walidację semantyki statusów/rozłączeń, kontrolowany routing B/D/E/F, dokładniejsze błędy i ograniczone końcowe ISTA/własne IQUI. Opisy historyczne poniżej zachowują zachowanie pierwotnych wersji.
 
 Zaimplementowano opcjonalne API HTTP/1.1/JSON tylko do odczytu, dostępne przez lokalne gniazdo Unix w Linux. Jest niezależne od ADC/ADCS i nie otwiera portu TCP. To podstawa API, nie kompletny backend WebAdmin. Brak zarządzania użytkownikami, ról, operacji zmieniających stan, edycji konfiguracji, zapytań SQL, zdalnego HTTP/TLS i produkcyjnego logowania WWW.
 

@@ -180,14 +180,16 @@ class AdcsProcessTests(unittest.TestCase):
         hub = self.hub('--frames-per-second', '100000')
         peers = [self.connect_tls(hub) for _ in range(12)]
         payload = b'\n' * 60000
-        for peer in peers:
+        from adc_login_process_tests import Peer
+        for index, peer in enumerate(peers):
+            Peer(self,peer).login(f'Throughput{index}'.encode(),index+1)
             peer.sendall(payload)
             finish_tls(self, peer)
         stalled = socket.create_connection(tls_endpoint(hub), timeout=3)
         self.addCleanup(stalled.close)
         active = self.connect_tls(hub)
         hub.stop()
-        self.assertEqual(counters(self, hub), (0, 0, 0, 720000))
+        self.assertEqual(counters(self, hub), (24, 0, 0, 720000))
         self.assertEqual(active.recv(1), b'')
         self.assertEqual(stalled.recv(1), b'')
 

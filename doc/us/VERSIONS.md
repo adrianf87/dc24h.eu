@@ -22,6 +22,7 @@
 | alpha-0.2.7 | alpha-0.2.7 | CID/PID: dedicated Tiger verification and failure handling |
 | alpha-0.2.8 | alpha-0.2.8 | Login: guest NORMAL, bounded TCP/TLS output, public presence |
 | alpha-0.2.9 | alpha-0.2.9 | STA/QUI: protocol diagnostics, routing and bounded close |
+| alpha-0.2.10 | alpha-0.2.10 | Security: pending sessions, cumulative login and identity-work limits |
 
 Identify an individual build with its version and Git commit SHA; compiling does not modify tracked source. Each significant change updates CHANGELOG.md. Alpha denotes development status, not complete hub functionality. Tags and production deployment are not created automatically.
 
@@ -42,3 +43,8 @@ CMake/npm version 0.2.8; runtime alpha-0.2.8. Branch alpha-0.2.8 starts from mai
 ## alpha-0.2.9
 
 CMake/npm 0.2.9; runtime/WebAdmin alpha-0.2.9. Base: main `da1521502c4a8936b3427a7d38fea6b904686b39`. [STA/QUI](ADC_STATUS.md) extends live guest sessions without a new API schema, dependencies or SQL migrations. No automatic merge/tag.
+
+
+## alpha-0.2.10
+
+CMake/npm 0.2.10, runtime/WebAdmin alpha-0.2.10. Base: main `a3ca70d65a0fcbb563147e8a44a1ce2669a0ec53`. [Security](NEGOTIATION_SECURITY.md) adds local negotiation policy without new dependencies, SQL migrations or API schema changes. No automatic main merge or tag.

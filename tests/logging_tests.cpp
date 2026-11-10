@@ -166,11 +166,15 @@ void window_rollover_and_polish() {
         std::this_thread::sleep_for(std::chrono::milliseconds(1100));
         logger.connection(Event::tls_ready, 100, true);
         logger.warning("Network idle connection closed");
+        logger.warning("Security negotiation limit reached; connection closed");
+        logger.warning("Security identity verification limit reached; connection closed");
     }
     const auto data = f.contents("window.log");
     require(occurrences(data, "event=accepted") == 64, "wrong first-window budget");
     require(occurrences(data, "event=tls_ready") == 1, "new window did not admit events");
     require(occurrences(data, "suppressed=1") == 1, "rollover/destructor duplicated the summary");
+    require(data.find("Limit negocjacji przekroczony") != std::string::npos &&
+            data.find("Limit weryfikacji tożsamości przekroczony") != std::string::npos, "Negotiation warnings not localized");
     require(data.find("Połączenie id=") != std::string::npos, "connection prefix not localized");
     require(data.find("[WARN] Zamknięto bezczynne połączenie") != std::string::npos,
             "warning not localized");
