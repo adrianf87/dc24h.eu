@@ -1,5 +1,13 @@
 # Testowanie
 
+## Weryfikacja User Disconnect — alpha-0.3.11
+
+Lokalnie przeszły wszystkie **63 zestawy CTest** w Debug, Release i ASan/UBSan. Nowe users.disconnect i users.disconnect.process obejmują finalizację/usunięcie bez alokacji, wszystkie fazy cyklu życia, pierwszą przyczynę/czas, powtórzone/brakujące sprzątanie, ponowne użycie SID/CID/nicka i limitów pending/per-IP, anulowanie powitania, pojedyncze bare publiczne QUI, odzyskanie budżetu źródła przed rozsyłaniem, stabilność przypiętego wyjścia, błędy alokacji powiadomień i dalsze dostarczanie po izolacji jednego odbiorcy. Rzeczywiste mieszane ADC/ADCS obejmuje EOF, reset, fatalny status klienta, odrzucenie błędnego INF, anonimowe błędne TLS i wyłączenie. Rzeczywisty ncdc ADC/ADCS potwierdza też brak routingu do starego SID. Przeszły wcześniejsze regresje, MariaDB i Apache HTTPS. [User Disconnect](USER_DISCONNECT.md) opisuje własność i obsługę błędów.
+
+Powtórz przez `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug --parallel 4` i `ctest --test-dir build-debug --output-on-failure -j 4`. Powtórz dla build-release/Release. W build-sanitize/Debug dodaj `-DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie"` i `-DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined -no-pie"`. Wstrzykiwanie błędów obejmuje badane ścieżki sprzątania/powiadomień C++, bez niezwiązanych awarii alokatora C i systemu operacyjnego.
+
+WebAdmin: poprawne typecheck/budowanie produkcyjne, 3 testy Node, 3 Chromium i integracja rzeczywistego API C++. W webadmin uruchom `npm run build`, `npm test`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e` i `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:integration -- ../build-debug/dc24h`. Metadane/dane testowe odpowiadają alpha-0.3.11. Wyniki są lokalne i nie oznaczają zdalnego CI, pełnej macierzy systemów ani testów obciążenia.
+
 ## Weryfikacja INF Updates — alpha-0.3.10
 
 Lokalnie przeszło wszystkich **61 zestawów CTest** w Debug, Release i ASan/UBSan. Nowe users.inf_updates i users.inf_updates.process obejmują wspólną transakcję ClientInfo/User/nicka, wskazane pola przyrostowe, anulowania i zera, normalizację adresów, zachowanie pominiętych pól, brak nieznanych/pustych ramek, odrzucenie błędnej tożsamości/cyklu życia/czasu/źródła/uprawnień/wartości, wykrycie niespójnego adaptera i wycofanie/ponowienie alokacji. Rozsyłanie ADC/ADCS zgadza się z późniejszą pełną listą. Rzeczywisty ncdc zmienia opis w działającej sesji przez oba transporty, także z opcjonalnym wskazanym HN; zachowano testy list/reconnect/tożsamości/prywatności. Przeszły wcześniejsze testy serwera, MariaDB i Apache HTTPS. Dokładny kontrakt/ograniczenia opisuje [INF Updates](INF_UPDATES.md).
@@ -42,7 +50,7 @@ Odtwarzanie: `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE
 
 WebAdmin: poprawne typecheck/budowanie produkcyjne, 3 testy Node, 3 testy Chromium i integracja API C++. W webadmin uruchom `npm run build`, `npm test`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e` i `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:integration -- ../build-debug/dc24h`. Użyto systemowego Chromium; alternatywnie zainstaluj przeglądarkę Playwright. Asercje wersji i dane testowe odpowiadają alpha-0.3.6. Wyniki lokalne nie potwierdzają zdalnego GitHub Actions ani pełnej macierzy systemów operacyjnych.
 
-**Bieżący etap — alpha-0.3.10:** [INF Updates](INF_UPDATES.md) waliduje i przygotowuje aktualizacje gotowej sesji przed wspólnym zatwierdzeniem ClientInfo, User/profilu i nicka. Rozsyła zweryfikowane wskazane pola i jawne anulowania; początkowe listy pozostają pełnymi snapshotami publicznymi. Aktualizacja pusta/tylko z nieznanymi polami nie daje publicznej ramki. Starsze opisy zachowują zakres historyczny.
+**Bieżący etap — alpha-0.3.11:** [User Disconnect](USER_DISCONNECT.md) kończy cykl życia i zwalnia kolejkę, stan protokołu/SID oraz rejestry odchodzącego użytkownika przed publicznym QUI. Błąd alokacji powiadomienia nie przerywa sprzątania źródła; odbiorcy bez możliwości przyjęcia powiadomienia są zamykani. Zachowano własne ISTA → IQUI i zachowanie przy wyłączeniu. Starsze opisy zachowują zakres historyczny.
 
 ## Weryfikacja User Core — alpha-0.3.5
 

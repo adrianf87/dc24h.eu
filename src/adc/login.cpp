@@ -25,6 +25,9 @@ namespace {
 void check_model(users::MutationResult result) {
     if (result) { throw std::logic_error("Session lifecycle transition rejected"); }
 }
+bool public_member(const users::Session& model) noexcept {
+    return model.phase()==users::Phase::identified || model.phase()==users::Phase::ready;
+}
 users::CloseCause session_cause(CloseReason reason) noexcept {
     switch (reason) {
     case CloseReason::login_timeout: return users::CloseCause::login_timeout;
@@ -61,7 +64,7 @@ std::string_view status_description(std::string_view code) noexcept {
 }
 } // namespace
 
-LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.connections), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_) {
+LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.connections), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
     if (limits.connections == 0 || limits.connections > 65535 ||
         limits.output_per_client < 128 || limits.output_per_client > 16 * 1024 * 1024 ||
         limits.output_total < limits.output_per_client || limits.output_total > 256 * 1024 * 1024) {
@@ -154,7 +157,7 @@ bool LoginHub::needs_identity_check(Id id, const Message& message) const {
 }
 void LoginHub::relay(Id except, const Message& message) {
     for (auto& [id, peer] : peers_) {
-        if (id != except && peer->lifecycle.identity() != nullptr && !peer->lifecycle.closing() && !peer->lifecycle.immediate()) { (void)enqueue(*peer, message); }
+        if (id != except && public_member(peer->lifecycle)) { (void)enqueue(*peer, message); }
     }
 }
 
@@ -328,12 +331,41 @@ void LoginHub::disconnect(Id id, bool announce, users::CloseCause cause, users::
     const auto found = peers_.find(id);
     if (found == peers_.end()) { return; }
     auto& peer = *found->second;
-    if (announce && peer.lifecycle.identity() != nullptr) { relay(id, make_quit(*Sid::parse(peer.lifecycle.identity()->sid()))); }
+    const auto result = user_disconnect_.begin(peer.lifecycle.id(),cause,now);
+    const auto* departure = std::get_if<Departure>(&result);
+    if (!departure) { throw std::logic_error("User disconnect lifecycle rejected"); }
+    // Reclaim all source resources before any allocating public notification.
+    // This also releases global queue capacity for the surviving peers' QUI.
     queued_ -= peer.queued;
     peer.session.disconnect();
-    check_model(sessions_.finish_close(peer.lifecycle.id(),cause,now));
     peers_.erase(found); // Drop protocol/output references before deleting the model.
-    if (sessions_.remove(*users::SessionId::from_value(id))) { throw std::logic_error("Session registry cleanup failed"); }
+    if (user_disconnect_.release(departure->id)) { throw std::logic_error("User disconnect cleanup failed"); }
+    if (announce && departure->first) { announce_departure(*departure); }
+}
+void LoginHub::announce_departure(const Departure& departure) {
+    const auto fail_recipient = [this](Peer& peer) {
+        check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
+    };
+    std::optional<Message> notice;
+    if (departure.public_sid) {
+        try { notice.emplace(make_quit(*departure.public_sid)); }
+        catch (const std::bad_alloc&) {
+            // A client that cannot learn this departure must not keep using a
+            // stale list. Do not allocate another frame under memory pressure.
+            for (auto& [id,peer] : peers_) {
+                (void)id;
+                if (public_member(peer->lifecycle)) { fail_recipient(*peer); }
+            }
+            return;
+        }
+    } else if (!departure.invalid_public_sid) { return; } // Anonymous connection.
+    for (auto& [id,peer] : peers_) {
+        (void)id;
+        if (!public_member(peer->lifecycle)) { continue; }
+        if (!notice) { fail_recipient(*peer); continue; }
+        try { (void)enqueue(*peer,*notice); }
+        catch (const std::bad_alloc&) { fail_recipient(*peer); }
+    }
 }
 bool LoginHub::closing(Id id) const { return session_model(id).closing(); }
 bool LoginHub::must_close(Id id) const {

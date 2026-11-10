@@ -1,6 +1,6 @@
 # User Login — alpha-0.3.8
 
-**Current increment — alpha-0.3.10:** [INF Updates](INF_UPDATES.md) validates and prepares ready-state updates before atomically committing ClientInfo, User/profile and nickname ownership. Fanout carries validated supplied fields and explicit cancellations; initial lists remain full public snapshots. Unknown-only/empty updates produce no public frame. Earlier module descriptions retain their historical scope.
+**Current increment — alpha-0.3.11:** [User Disconnect](USER_DISCONNECT.md) finalizes lifecycle and releases departing output, protocol/SID and registry resources before sending public QUI. Notification allocation failures cannot abort source cleanup; recipients that cannot receive the notice are closed. Existing own ISTA → IQUI drain and shutdown behavior remain. Earlier module descriptions retain their historical scope.
 
 This increment starts directly from main `cc2a52603d0e67a6de722c783d84922f204ca0db`, after the alpha-0.3.7 User Registry merge. Earlier requested stages are already present. The alpha-0.3.8 branch preserves main/history and is not merged automatically.
 

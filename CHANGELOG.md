@@ -1,5 +1,18 @@
 # Changelog
 
+## alpha-0.3.11 — 2026-11-10
+
+User Disconnect increment, based directly on main `49b57749b346cb1638eae856c4b778a371616c47` after the alpha-0.3.10 INF Updates merge:
+
+- Added adc::UserDisconnect with allocation-free/noexcept lifecycle begin and closed-model release. Departure copies the typed public SID and readiness history; typed missing/time errors, first-cause preservation, repeated cleanup and invalid generic SID handling remain explicit. The caller drops borrowed Session references before release.
+- Reordered LoginHub cleanup: finish lifecycle, reclaim source output charge, release ClientSession metadata/SID lease, destroy Peer, remove Session/UserRegistry/NickManager ownership, then announce the saved SID. An allocation failure while building public QUI can no longer retain the departing source. Reclaimed queue capacity is available before charging survivors.
+- Public departure sends exactly one bare IQUI to identified/ready recipients under existing FIFO, pinned-buffer and output limits. Anonymous/closing/immediate recipients are excluded. Notice allocation failure immediately closes public recipients without another frame; a per-recipient enqueue allocation failure closes that recipient and fanout continues. Existing own ISTA → IQUI drain/deadline and shutdown suppression remain; Network retains socket/TLS/epoll/quota/event ownership.
+- Added users.disconnect and users.disconnect.process for all lifecycle phases, no-allocation cleanup, first cause/time, invalid/missing/repeated operations, SID/CID/nick lease reuse, queued welcome cancellation, capacity reclamation, pinned output stability, persistent/transient allocation faults, exactly-once public QUI and isolated continued delivery. Mixed ADC/ADCS loops exercise EOF, reset, fatal HSTA, invalid INF, failed anonymous TLS, pending/per-IP reuse and shutdown with one terminal event per accepted connection.
+- Extended actual ncdc ADC/ADCS tests to prove its departed SID is unavailable for routed status delivery. Existing NORMAL, live INF update, user-list/reconnect and private-payload checks remain covered.
+- Updated server/WebAdmin metadata and fixtures to alpha-0.3.11, added mirrored US/PL User Disconnect documentation and refreshed navigation, current integration, testing and version context. Existing EN/US-default and PL runtime catalogs remain applicable; no dependency, configuration, SQL/API contract, WebAdmin feature or runtime translation key is added.
+- Validation: all 63 CTest suites passed locally in Debug, Release and ASan/UBSan, including actual ncdc ADC/ADCS, earlier lifecycle/terminal/list/update/security regressions, MariaDB and Apache HTTPS. WebAdmin typecheck/production build, 3 Node tests, 3 Chromium tests and real C++ API integration passed with system Chromium. These are local results, not remote CI, every supported OS or production load guarantees; fault injection is scoped to tested C++ paths.
+- main and earlier alpha branches/history are preserved; no automatic merge or production deployment. Accounts, roles, persistence and chat/search/transfers remain separate work.
+
 ## alpha-0.3.10 — 2026-11-10
 
 INF Updates increment, based directly on main `c3cc9c098512b9a9a8299dbd8d1c98e455073eaf` after the alpha-0.3.9 User List merge:

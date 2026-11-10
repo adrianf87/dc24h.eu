@@ -1,6 +1,6 @@
 # User Registry — alpha-0.3.7
 
-**Bieżący etap — alpha-0.3.10:** [INF Updates](INF_UPDATES.md) waliduje i przygotowuje aktualizacje gotowej sesji przed wspólnym zatwierdzeniem ClientInfo, User/profilu i nicka. Rozsyła zweryfikowane wskazane pola i jawne anulowania; początkowe listy pozostają pełnymi snapshotami publicznymi. Aktualizacja pusta/tylko z nieznanymi polami nie daje publicznej ramki. Starsze opisy zachowują zakres historyczny.
+**Bieżący etap — alpha-0.3.11:** [User Disconnect](USER_DISCONNECT.md) kończy cykl życia i zwalnia kolejkę, stan protokołu/SID oraz rejestry odchodzącego użytkownika przed publicznym QUI. Błąd alokacji powiadomienia nie przerywa sprzątania źródła; odbiorcy bez możliwości przyjęcia powiadomienia są zamykani. Zachowano własne ISTA → IQUI i zachowanie przy wyłączeniu. Starsze opisy zachowują zakres historyczny.
 
 Etap powstał bezpośrednio z main `ca75d6c53d9b228b978dc3b3b8fdd2fcb0f33852`, po scaleniu alpha-0.3.6 Nick Manager. Wcześniejsze etapy alpha-0.3.1–alpha-0.3.6 są już obecne. Gałąź alpha-0.3.7 zachowuje main i gałęzie historyczne; nie jest scalana automatycznie.
 

@@ -1,6 +1,6 @@
 # Nick Manager — alpha-0.3.6
 
-**Current increment — alpha-0.3.10:** [INF Updates](INF_UPDATES.md) validates and prepares ready-state updates before atomically committing ClientInfo, User/profile and nickname ownership. Fanout carries validated supplied fields and explicit cancellations; initial lists remain full public snapshots. Unknown-only/empty updates produce no public frame. Earlier module descriptions retain their historical scope.
+**Current increment — alpha-0.3.11:** [User Disconnect](USER_DISCONNECT.md) finalizes lifecycle and releases departing output, protocol/SID and registry resources before sending public QUI. Notification allocation failures cannot abort source cleanup; recipients that cannot receive the notice are closed. Existing own ISTA → IQUI drain and shutdown behavior remain. Earlier module descriptions retain their historical scope.
 
 This increment starts directly from main `cb49cdb9e1e714f3b548be6a842063c58890eaf6`, which already includes alpha-0.3.1–alpha-0.3.5. Historical branches and main are preserved. The new alpha-0.3.6 branch is not merged automatically.
 

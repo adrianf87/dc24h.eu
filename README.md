@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.3.10 (INF Updates).**
+**Current development version: alpha-0.3.11 (User Disconnect).**
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.3.11 User Disconnect**: allocation-free lifecycle finalization, ordered release of output/protocol/SID and public identity reservations, then bounded public QUI. Failed notifications cannot retain the departing user or a usable stale recipient. See [User Disconnect](doc/us/USER_DISCONNECT.md).
 
 - **alpha-0.3.10 INF Updates**: transactional ready-state INF updates commit ADC metadata, User/profile and nickname ownership together. Public incremental deltas carry only validated supplied fields and cancellations; unknown/private data is excluded. See [INF Updates](doc/us/INF_UPDATES.md).
 

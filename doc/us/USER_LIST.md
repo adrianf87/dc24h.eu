@@ -1,6 +1,6 @@
 # User List — alpha-0.3.9
 
-**Current integration — alpha-0.3.10:** [INF Updates](INF_UPDATES.md) now commits ClientInfo and User/profile/nickname together and sends incremental public fields/cancellations. InitialUserList still uses full current snapshots and preserves own-INF/FIFO ordering.
+**Current increment — alpha-0.3.11:** [User Disconnect](USER_DISCONNECT.md) finalizes lifecycle and releases departing output, protocol/SID and registry resources before sending public QUI. Notification allocation failures cannot abort source cleanup; recipients that cannot receive the notice are closed. Existing own ISTA → IQUI drain and shutdown behavior remain. Earlier module descriptions retain their historical scope.
 
 This increment starts from main `b191141ad1cfa5a6a915945b5a934fe82640340e` after the alpha-0.3.8 User Login merge. Earlier requested stages are already present. The alpha-0.3.9 branch preserves main/history and is not merged automatically.
 
