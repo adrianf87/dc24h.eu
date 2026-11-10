@@ -1,5 +1,7 @@
 # ADCS / TLS — alpha-0.1.4
 
+**Current integration — alpha-0.2.8:** [Guest login](ADC_LOGIN.md) attaches the state/SUP/SID/INF/Tiger stack to the actual C++ TCP/TLS reactor with bounded ordered output, nickname/CID admission, public presence and complete ncdc NORMAL/reconnect tests. Historical stage descriptions below retain their original scope; statements that transport attachment/output/login were still planned describe those earlier versions. Registered-user authentication, chat, search and transfer dispatch remain planned.
+
 ADCS wraps the ADC byte stream in TLS; it does not add a second ADC dialect or STARTTLS upgrade. References: [ADC extensions / ADCS](https://dc-protocols.github.io/ADC-EXT.html), [OpenSSL nonblocking I/O](https://docs.openssl.org/3.5/man3/SSL_get_error/) and [SSL_accept](https://docs.openssl.org/3.5/man3/SSL_accept/).
 
 `adcs::Context` owns an OpenSSL server context. It loads a PEM full certificate chain and matching unencrypted PEM private key before opening ports. Invalid, missing, mismatched or password-encrypted keys fail startup without readiness logs or interactive password prompts. This checks loadability and key correspondence; clients are responsible for certificate trust, hostname and validity verification. No mutual TLS is requested.

@@ -1,5 +1,15 @@
 # Testing
 
+**Current integration — alpha-0.2.8:** [Guest login](ADC_LOGIN.md) attaches the state/SUP/SID/INF/Tiger stack to the actual C++ TCP/TLS reactor with bounded ordered output, nickname/CID admission, public presence and complete ncdc NORMAL/reconnect tests. Historical stage descriptions below retain their original scope; statements that transport attachment/output/login were still planned describe those earlier versions. Registered-user authentication, chat, search and transfer dispatch remain planned.
+
+## Login increment — alpha-0.2.8
+
+The strict configuration registers **35 CTest entries**. New `adc.login` and `adc.login.process` cover bounded serialization, ordered partial sends, admission/uniqueness, simultaneous user lists, updates/cancellations, privacy, rejection/cleanup, real TCP/TLS guest sessions, absolute login deadlines and slow-reader isolation on both transports. Extended `adcs.crypto` forces SSL write backpressure and checks exact decrypted bytes. `adc.ncdc` and `adcs.ncdc` now prove complete live C++ guest NORMAL and reconnect; earlier module fixtures retain their historical narrower scope. See [ADC_LOGIN.md](ADC_LOGIN.md).
+
+Local result: **35/35 CTest suites passed in Debug, Release and ASan/UBSan**, with required integrations, MariaDB and Apache HTTPS. The invalid-TLS fixture now permits the server to reject bad records before a client half-close; corrected ADCS/logging suites passed in all configurations. WebAdmin build/typecheck, 3 Node tests, 3 Chromium browser tests and real C++ API/Vite/React integration passed. Sanitizer flags: `-fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie` and linker `-fsanitize=address,undefined -no-pie`. These are local checks; other OS/remote CI, production load/fuzz and exhaustive TLS WANT_READ/fault-injection work remain separate.
+
+Reproduce the full suite using the existing strict CMake commands; focused scope: `ctest --test-dir build-debug -R 'adc.login|adc.ncdc|adcs.ncdc|adcs.crypto' --output-on-failure`. Chromium uses `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium` when the system browser is installed. Metadata/link/language-parity, Python syntax and Git whitespace checks also passed.
+
 ## CID/PID increment — alpha-0.2.7
 
 The strict suite registers **33 CTest entries**, adding `adc.identity`, `adc.identity.failure` and `adc.identity.ncdc`. They cover direct Tiger vectors/aliasing, canonical CID/PID values, all nonalphabet byte substitutions at every position, all tail symbols, wrong lengths, failed-output clearing, 1000 valid/mismatched pairs, public result ownership and INF preservation. Executable-local linker wrappers inject algorithm/context/read failures and verify no commit plus recovery/cleanup. The real ncdc fixture rejects a tampered canonical CID before accepting the actual pair on TCP and Python-owned TLS, stopping at unapproved IDENTIFY. Existing actual C++ transport tests remain separate. See [ADC_IDENTITY.md](ADC_IDENTITY.md).

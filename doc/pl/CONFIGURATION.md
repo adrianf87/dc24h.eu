@@ -83,3 +83,8 @@ Frontend jest niezależny od INI: serwerowe `DC24H_API_SOCKET`/`DC24H_API_TOKEN_
 ## Szablon HTTPS Apache2
 
 Nowy `apache2-webadmin-https.conf.example` jest niezależny od INI. Ustaw nazwę hosta, katalog zasobów i ścieżki certyfikatu/klucza w kopii Apache. Nie zawiera Listen, korzysta z ports.conf dystrybucji; domyślnie dostęp lokalny/statyczny z blokadą API. Brak nowego parametru wykonawczego C++. Zobacz [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
+
+
+## alpha-0.2.8
+
+Sekcja [security] dodaje login_timeout (domyślnie 30 sekund) i output_timeout (10 sekund), obie 1–3600. Tylko INI/biblioteka, bez nowych opcji CLI. Termin logowania biegnie bezwzględnie od accept do własnego INF, obejmując TLS; termin wyjścia liczy brak postępu wysyłki. Stałe limity: 256 KiB/klient, 16 MiB/hub. Zobacz [ADC_LOGIN.md](ADC_LOGIN.md).

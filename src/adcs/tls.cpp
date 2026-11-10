@@ -85,4 +85,12 @@ IoResult Connection::receive(char* buffer, std::size_t capacity) noexcept {
 
 bool Connection::pending() const noexcept { return SSL_pending(ssl_) > 0; }
 
+IoResult Connection::send(const char* buffer, std::size_t size) noexcept {
+    if (size == 0 || size > static_cast<std::size_t>(INT_MAX)) { return {IoStatus::error}; }
+    std::size_t bytes = 0;
+    ERR_clear_error();
+    const int result = SSL_write_ex(ssl_, buffer, size, &bytes);
+    return result == 1 ? IoResult{IoStatus::complete, bytes} : classify(ssl_, result);
+}
+
 } // namespace dc24h::adcs

@@ -1,5 +1,7 @@
 # Architektura
 
+**Aktualna integracja — alpha-0.2.8:** [Logowanie gości](ADC_LOGIN.md) podłącza state/SUP/SID/INF/Tiger do rzeczywistego reaktora C++ TCP/TLS, z ograniczonym uporządkowanym wyjściem, unikalnością nick/CID, listą obecności i pełnymi testami ncdc NORMAL/reconnect. Historyczne opisy poniżej zachowują pierwotny zakres; wzmianki o planowanym podłączeniu/wyjściu/logowaniu dotyczą wcześniejszych wersji. Konta/hasła, czat, wyszukiwanie i przekazywanie transferów pozostają planowane.
+
 W alpha-0.2.7 dc24h_adc wydziela weryfikację Tiger z INF do tiger_identity.hpp/cpp. TigerCid reprezentuje kanoniczne publiczne bajty; VerifiedIdentity powstaje tylko po poprawnej parze i nie zawiera PID. Bezpośrednie wyjście dekodowania/hash eliminuje prywatne bufory optional zwracane przez wartość; niekopiowalne lokalne bufory PID/wyniku są czyszczone przy wyjściu. INF używa weryfikatora i zachowuje publiczny wynik przy zwykłych aktualizacjach. Wrappery awarii należą wyłącznie do izolowanego testu. Zobacz [ADC_IDENTITY.md](ADC_IDENTITY.md).
 
 W alpha-0.2.6 dc24h_adc dodaje publiczny snapshot ClientInfo, InfValidator, funkcje Tiger/base32 i ClientSession nad SidSession. Walidacja buduje ograniczonego kandydata przed zmianą stanu, sprawdza PID/CID przez Libgcrypt TIGER1, wiąże deklarowany IP z zaufanym numerycznym adresem klienta i odrzuca PD z wyniku. Dopuszczenie/unikalność pozostają zewnętrznymi decyzjami. Brak zależności od gniazd, SQL, logowania i HTTP; Network nadal używa samego parsera. Zobacz [ADC_INF.md](ADC_INF.md).

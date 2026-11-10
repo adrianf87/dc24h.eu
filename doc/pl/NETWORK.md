@@ -1,5 +1,7 @@
 # Sieć i proces
 
+**Aktualna integracja — alpha-0.2.8:** [Logowanie gości](ADC_LOGIN.md) podłącza state/SUP/SID/INF/Tiger do rzeczywistego reaktora C++ TCP/TLS, z ograniczonym uporządkowanym wyjściem, unikalnością nick/CID, listą obecności i pełnymi testami ncdc NORMAL/reconnect. Historyczne opisy poniżej zachowują pierwotny zakres; wzmianki o planowanym podłączeniu/wyjściu/logowaniu dotyczą wcześniejszych wersji. Konta/hasła, czat, wyszukiwanie i przekazywanie transferów pozostają planowane.
+
 ## Transport TCP (alpha-0.1.2) i parser ADC (alpha-0.1.3)
 
 `network::TcpServer` obsługuje nieblokujące gniazda IPv4/IPv6 w pojedynczym

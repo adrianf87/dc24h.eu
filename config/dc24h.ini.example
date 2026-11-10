@@ -18,6 +18,8 @@ max_frames_per_second = 1024
 max_invalid_frames = 512
 tls_handshake_timeout = 10
 partial_frame_timeout = 10
+login_timeout = 30
+output_timeout = 10
 
 [tls]
 # certificate = /etc/dc24h/tls/fullchain.pem

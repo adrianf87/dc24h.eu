@@ -1,5 +1,7 @@
 # Development
 
+**Current integration — alpha-0.2.8:** [Guest login](ADC_LOGIN.md) attaches the state/SUP/SID/INF/Tiger stack to the actual C++ TCP/TLS reactor with bounded ordered output, nickname/CID admission, public presence and complete ncdc NORMAL/reconnect tests. Historical stage descriptions below retain their original scope; statements that transport attachment/output/login were still planned describe those earlier versions. Registered-user authentication, chat, search and transfer dispatch remain planned.
+
 The alpha-0.2 baseline and prioritized acceptance gates are recorded in [the alpha-0.1 audit](AUDIT_ALPHA_0.1.md). Numbered branches still start from current main. `alpha-0.2` marks the reviewed audit commit. Use `DC24H_REQUIRE_INTEGRATION_TESTS=ON` for full validation; keep project.metadata, npm lock metadata, runtime/frontend version and both documentation trees aligned.
 
 Create each new release branch from the current `main`, preserving existing history and code. alpha-0.1.4 was created from main and merged the reviewed `chatgpt-alpha-0.1.4` history; fixes and validation follow on the release branch. Main is not automatically changed by this work.

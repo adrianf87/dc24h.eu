@@ -54,3 +54,8 @@ Writes are synchronous on the caller thread. Regular-file I/O and a blocked stde
 ## Security — alpha-0.1.7
 
 Admission quotas, frame quotas and partial-frame expiry each have their own five-second warning category. Existing ordinary-idle and TLS-deadline categories remain independent. The new typed close events are security_quota and partial_frame_timeout; TLS expiry retains handshake_timeout. Shutdown adds Security stopped; rejected=N closed=N, with exact meanings in [SECURITY.md](SECURITY.md). Source IPs remain absent from logs, even though admission state uses them in memory.
+
+
+## alpha-0.2.8
+
+`login_ready`, `login_rejected`, `login_timeout`, `output_timeout`, `output_limit`, `write_error`: new fixed opt-in INFO events, without nicknames, addresses or payloads. Login/output timeout warnings have US/PL translations and separate five-second budgets. Wire status descriptions remain English. See [ADC_LOGIN.md](ADC_LOGIN.md).

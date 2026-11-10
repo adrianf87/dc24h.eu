@@ -20,11 +20,19 @@
 | alpha-0.2.5 | alpha-0.2.5 | SID: generowanie, rezerwacje RAII i powiązanie sesji |
 | alpha-0.2.6 | alpha-0.2.6 | INF: informacja klienta i walidacja tożsamości Tiger |
 | alpha-0.2.7 | alpha-0.2.7 | CID/PID: dedykowana weryfikacja Tiger i obsługa błędów |
+| alpha-0.2.8 | alpha-0.2.8 | Login: NORMAL gościa, ograniczone wyjście TCP/TLS, publiczna obecność |
 
 Dokładną kompilację identyfikuje wersja wraz z SHA commita. Budowanie nie zmienia plików źródłowych. Istotne zmiany trafiają do CHANGELOG.md. Alpha oznacza rozwój, nie pełną funkcjonalność huba. Tagi i wdrożenie nie powstają automatycznie.
 
 Wcześniejsze gałęzie i historia commitów są zachowane. alpha-0.1.4 zachowuje przez merge historię referencyjnego TLS i zawiera poprawki.
 
-## Aktualna wersja — alpha-0.2.7
+## Wersja historyczna — alpha-0.2.7
 
 CMake PROJECT_VERSION i główne wersje npm package/lock to **0.2.7**; program/WebAdmin mają **alpha-0.2.7**. Kontrola metadanych wymusza spójność. Gałąź powstaje z main w `9d3443a` po scaleniu INF i dodaje [dedykowaną weryfikację CID/PID](ADC_IDENTITY.md). Wymagania Libgcrypt/OpenSSL są dotychczasowe. Podłączenie Network, rejestr/dopuszczenie i pełne logowanie pozostają planowane. Main i wcześniejsze gałęzie są zachowane.
+
+
+## alpha-0.2.8
+
+**Aktualna integracja — alpha-0.2.8:** [Logowanie gości](ADC_LOGIN.md) podłącza state/SUP/SID/INF/Tiger do rzeczywistego reaktora C++ TCP/TLS, z ograniczonym uporządkowanym wyjściem, unikalnością nick/CID, listą obecności i pełnymi testami ncdc NORMAL/reconnect. Historyczne opisy poniżej zachowują pierwotny zakres; wzmianki o planowanym podłączeniu/wyjściu/logowaniu dotyczą wcześniejszych wersji. Konta/hasła, czat, wyszukiwanie i przekazywanie transferów pozostają planowane.
+
+Wersja CMake/npm 0.2.8; runtime alpha-0.2.8. Gałąź alpha-0.2.8 pochodzi z main b8978491fa8e146527eba818f9bc1ab0a31aa90d. Bez automatycznego scalania main i tagu wydania.

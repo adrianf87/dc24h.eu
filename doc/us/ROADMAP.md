@@ -1,5 +1,7 @@
 # Roadmap
 
+**Current integration — alpha-0.2.8:** [Guest login](ADC_LOGIN.md) attaches the state/SUP/SID/INF/Tiger stack to the actual C++ TCP/TLS reactor with bounded ordered output, nickname/CID admission, public presence and complete ncdc NORMAL/reconnect tests. Historical stage descriptions below retain their original scope; statements that transport attachment/output/login were still planned describe those earlier versions. Registered-user authentication, chat, search and transfer dispatch remain planned.
+
 | Stage | Implemented scope |
 | --- | --- |
 | alpha-0.1.1 Core | Lifecycle, start/stop, synchronous system signals, logging |
@@ -20,8 +22,9 @@
 | alpha-0.2.5 SID | 20-bit codec, bounded shared pool, RAII leases and managed SID sessions |
 | alpha-0.2.6 INF | Bounded metadata, Tiger identity verification, peer-IP checks and public PD-free snapshots |
 | alpha-0.2.7 CID/PID | Dedicated Tiger verifier, public identity result, cleansed buffers and provider-failure coverage |
+| alpha-0.2.8 Login | Live guest NORMAL, ordered bounded output, nickname/CID registry, public presence and ncdc reconnect |
 
-## Proposed alpha-0.2 increments
+## Historical acceptance plan before alpha-0.2.8
 
 alpha-0.2.2 delivers the requested fuller parser. The earlier serializer proposal remains planned; subsequent stage numbers will be assigned when their scope is requested.
 
@@ -29,10 +32,10 @@ These are planned acceptance gates, not implemented features. Define the final s
 
 | Proposed stage | Scope | Acceptance gate |
 | --- | --- | --- |
-| Planned ADC output | Serializer, escaping, header validation and encoded byte limits | Byte-exact grammar fixtures; parse/serialize cases, Unicode/boundary/error coverage; no writes yet |
-| Planned Network output | Bounded per-client and aggregate queues, TCP/TLS partial writes, WANT_READ/WANT_WRITE and slow-reader policy | TCP/ADCS fragmented writes, queue limits, fairness under a stalled reader, peer failure and bounded shutdown; no unbounded allocation |
-| Planned Sessions | Wire integration of state/SUP/SID/INF modules, user registry, nickname/CID uniqueness and admission | Legal/illegal state transitions, SID uniqueness/release, spoofed-source and duplicate identity rejection; no PID leakage |
-| Planned Client integration | Complete guest login over ADC and ADCS, lifecycle/disconnect behavior and readiness semantics | Real ncdc reaches normal logged-in state on both transports; reconnect, concurrent users, malformed negotiation and existing regressions pass |
+| Delivered in alpha-0.2.8: ADC output | Serializer, escaping, header validation and encoded byte limits | Byte-exact grammar fixtures; parse/serialize cases, Unicode/boundary/error coverage; no writes yet |
+| Delivered in alpha-0.2.8: Network output | Bounded per-client and aggregate queues, TCP/TLS partial writes, WANT_READ/WANT_WRITE and slow-reader policy | TCP/ADCS fragmented writes, queue limits, fairness under a stalled reader, peer failure and bounded shutdown; no unbounded allocation |
+| Delivered in alpha-0.2.8: guest sessions | Wire integration of state/SUP/SID/INF modules, user registry, nickname/CID uniqueness and admission | Legal/illegal state transitions, SID uniqueness/release, spoofed-source and duplicate identity rejection; no PID leakage |
+| Delivered in alpha-0.2.8: guest client integration | Complete guest login over ADC and ADCS, lifecycle/disconnect behavior and readiness semantics | Real ncdc reaches normal logged-in state on both transports; reconnect, concurrent users, malformed negotiation and existing regressions pass |
 
 Full chat, search and transfer coordination remain separate future stages after session correctness. Registered users require a reviewed authentication/permissions/password design and application SQL migrations. Production web administration requires an authenticated Apache gateway, browser sessions/roles, CSRF policy and audit before exposure. Logging isolation/rotation, TLS close_notify/reload, measured load/fuzz/fault-injection and the remaining OS matrix remain explicit follow-up work.
 
@@ -53,3 +56,8 @@ alpha-0.2.5 starts from main at `350a43f69b5134bd049923739cd606f798f846ec` after
 alpha-0.2.6 starts from main at `85524067756ac5fcbd177bb47f5d2cfe33fad063`. [INF](ADC_INF.md) completes intrinsic field/PID-CID validation and stack composition. Global registry/admission, registered-user passwords, live output and complete login remain planned. This branch does not merge automatically.
 
 alpha-0.2.7 starts from main at `9d3443a4d889e745b6490a139435a8f44297cfba`. [CID/PID](ADC_IDENTITY.md) extracts and hardens the basic check introduced in INF; it does not add live login, global CID uniqueness, account authentication or file-tree hashing. This branch is not merged automatically.
+
+
+## alpha-0.2.8 Login
+
+Delivered: ordered output/serializer, guest sessions and registry, live TCP/TLS guest NORMAL and ncdc reconnect. Remaining: registered-user credentials/permissions, chat/search/transfer handlers, TLS close_notify/reload, production load/fuzz/fault-injection and remaining OS validation. Base: main b8978491fa8e146527eba818f9bc1ab0a31aa90d. The numbered branch is not merged automatically.

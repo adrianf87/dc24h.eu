@@ -1,5 +1,7 @@
 # Security — alpha-0.1.7
 
+**Current integration — alpha-0.2.8:** [Guest login](ADC_LOGIN.md) attaches the state/SUP/SID/INF/Tiger stack to the actual C++ TCP/TLS reactor with bounded ordered output, nickname/CID admission, public presence and complete ncdc NORMAL/reconnect tests. Historical stage descriptions below retain their original scope; statements that transport attachment/output/login were still planned describe those earlier versions. Registered-user authentication, chat, search and transfer dispatch remain planned.
+
 This stage adds local resource controls to the existing TCP/ADCS transport and ADC syntax parser. The executable still has no authenticated users, session identity, role checks or complete ADC login. Run as an unprivileged user; loopback remains the default listener and public/wildcard addresses require explicit configuration.
 
 ## Implemented limits

@@ -3,7 +3,7 @@
 #include <string_view>
 
 namespace dc24h::i18n::pl {
-inline constexpr std::array<std::string_view, 114> messages{{
+inline constexpr std::array<std::string_view, 116> messages{{
     "Uruchamianie dc24h.eu ",
     "Core działa",
     "Zatrzymywanie Core",
@@ -118,6 +118,8 @@ inline constexpr std::array<std::string_view, 114> messages{{
     "Lokalne API nasłuchuje",
     "Lokalne API można uruchomić tylko raz",
     "Gniazdo API nie może wskazywać plików konfiguracji ani danych dostępowych"
+    "Upłynął czas logowania ADC; połączenie zamknięte",
+    "Wysyłanie ADC zatrzymane; połączenie zamknięte",
 }};
 inline constexpr std::string_view help = R"HELP(Użycie: dc24h [--config PLIK] [--check-config | --check-database | --migrate-database]
               [--listen IPv4:port | [IPv6]:port | none] ...
@@ -140,7 +142,7 @@ Limity: 1..65535 połączeń; 1..86400 sekund bezczynności.
 Program działa na pierwszym planie; stop przez SIGINT (Ctrl+C) lub SIGTERM.
 Domyślne limity: 128 klientów/IP, 256 przyjęć/IP/minutę, 1024 ramki/s/klienta,
 512 błędnych ramek/klienta, 10 sekund dla TLS i niedokończonej ramki.
-Tylko parser ADC: brak pełnego logowania ADC, routingu i sesji użytkowników.
+Działa logowanie gości ADC i publiczna lista; czat/wyszukiwanie/transfery są planowane.
 Ustawienia bazy w sekcji INI [database]; domyślnie wyłączona.
 --check-database sprawdza połączenie; --migrate-database jawnie stosuje migracje metadanych.
 --check-config nie łączy z MariaDB ani nie odczytuje pliku hasła.

@@ -1,5 +1,15 @@
 # Testowanie
 
+**Aktualna integracja — alpha-0.2.8:** [Logowanie gości](ADC_LOGIN.md) podłącza state/SUP/SID/INF/Tiger do rzeczywistego reaktora C++ TCP/TLS, z ograniczonym uporządkowanym wyjściem, unikalnością nick/CID, listą obecności i pełnymi testami ncdc NORMAL/reconnect. Historyczne opisy poniżej zachowują pierwotny zakres; wzmianki o planowanym podłączeniu/wyjściu/logowaniu dotyczą wcześniejszych wersji. Konta/hasła, czat, wyszukiwanie i przekazywanie transferów pozostają planowane.
+
+## Logowanie — alpha-0.2.8
+
+Konfiguracja wymagająca integracji rejestruje **35 testów CTest**. Nowe `adc.login` i `adc.login.process` sprawdzają serializację z limitami, częściowe uporządkowane wysyłki, unikalność/przyjęcia, równoczesne listy, aktualizacje/anulowanie pól, prywatność, odrzucenia/sprzątanie, rzeczywiste sesje TCP/TLS, termin logowania i izolację wolnego odbiorcy w obu transportach. Rozszerzony `adcs.crypto` wymusza blokadę zapisu SSL i porównuje dokładne odszyfrowane bajty. `adc.ncdc` i `adcs.ncdc` dowodzą pełnego NORMAL gościa i reconnect do C++; wcześniejsze testy modułów zachowują węższy historyczny zakres. Zobacz [ADC_LOGIN.md](ADC_LOGIN.md).
+
+Wynik lokalny: **35/35 testów CTest przeszło w Debug, Release i ASan/UBSan**, z wymaganymi integracjami, MariaDB i Apache HTTPS. Test błędnego TLS dopuszcza odrzucenie rekordu przed półzamknięciem klienta; poprawione testy ADCS/logowania przeszły we wszystkich konfiguracjach. WebAdmin: build/typecheck, 3 testy Node, 3 testy Chromium i integracja rzeczywistego API C++/Vite/React. Flagi sanitizera: `-fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie`, linkowanie `-fsanitize=address,undefined -no-pie`. To wyniki lokalne; pozostałe OS/CI, obciążenie/fuzz i pełne wymuszanie WANT_READ/awarii pozostają osobno.
+
+Powtórzenie: dotychczasowe polecenia CMake z wymaganymi integracjami; zakres modułu: `ctest --test-dir build-debug -R 'adc.login|adc.ncdc|adcs.ncdc|adcs.crypto' --output-on-failure`. Systemowy Chromium wybiera `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium`. Kontrola metadanych/linków/parytetu języków, składni Python i białych znaków Git także przeszła.
+
 ## Etap CID/PID — alpha-0.2.7
 
 Pełny zestaw rejestruje **33 pozycje CTest**, dodając `adc.identity`, `adc.identity.failure` i `adc.identity.ncdc`. Obejmują wektory/alias Tiger, kanoniczne CID/PID, wszystkie bajty spoza alfabetu w każdej pozycji, znaki końca, długości, czyszczenie błędnego wyjścia, 1000 par/mismatch, własność wyniku i zachowanie INF. Lokalne wrappery linkera wstrzykują awarie algorytmu/kontekstu/odczytu, sprawdzają brak zatwierdzenia, odzyskanie i sprzątanie. Prawdziwy ncdc odrzuca zmieniony CID przed prawdziwą parą w TCP i TLS Pythona, pozostając w niezatwierdzonym IDENTIFY. Testy rzeczywistego transportu C++ są osobne. Zobacz [ADC_IDENTITY.md](ADC_IDENTITY.md).

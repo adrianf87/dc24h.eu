@@ -1,5 +1,7 @@
 # CID/PID — alpha-0.2.7
 
+**Current integration — alpha-0.2.8:** [Guest login](ADC_LOGIN.md) attaches the state/SUP/SID/INF/Tiger stack to the actual C++ TCP/TLS reactor with bounded ordered output, nickname/CID admission, public presence and complete ncdc NORMAL/reconnect tests. Historical stage descriptions below retain their original scope; statements that transport attachment/output/login were still planned describe those earlier versions. Registered-user authentication, chat, search and transfer dispatch remain planned.
+
 ## Scope
 
 The basic Tiger relationship check was introduced with [INF](ADC_INF.md) in alpha-0.2.6. This increment extracts it into `adc/tiger_identity.hpp` and adds typed public values, direct-buffer handling, final binary comparison and dedicated failure tests. INF now uses the shared verifier and retains its public result. Accepted canonical pair semantics remain compatible.

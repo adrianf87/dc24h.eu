@@ -1,6 +1,7 @@
 #include "dc24h/network/tcp_server.hpp"
 #include "dc24h/logging/logger.hpp"
 #include "dc24h/adc/parser.hpp"
+#include "dc24h/adc/login.hpp"
 #include "dc24h/adcs/tls.hpp"
 
 #include <arpa/inet.h>
@@ -99,9 +100,9 @@ void watch(int epoll_fd, int fd, std::uint64_t token, std::uint32_t flags) {
     }
 }
 
-void update_client_interest(int epoll_fd, int fd, std::uint64_t token, bool want_write) {
+void update_client_interest(int epoll_fd, int fd, std::uint64_t token, bool want_read, bool want_write) {
     epoll_event event{};
-    event.events = (want_write ? EPOLLOUT : EPOLLIN) | EPOLLRDHUP;
+    event.events = (want_read ? EPOLLIN : 0U) | (want_write ? EPOLLOUT : 0U) | EPOLLRDHUP;
     event.data.u64 = token;
     if (::epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event) == -1) {
         system_failure("epoll_ctl MOD");
@@ -137,6 +138,11 @@ struct Connection {
     std::size_t invalid_frames{0};
     security::FrameLimiter frame_budget{1024};
     bool security_violation{false};
+    std::optional<adcs::IoStatus> write_wait;
+    std::array<char, 8192> input{};
+    std::optional<Clock::time_point> output_progress;
+    bool login_logged{false};
+    std::uint32_t interest{EPOLLIN | EPOLLRDHUP};
 };
 } // namespace
 
@@ -255,14 +261,14 @@ void TcpServer::run() {
     // Log readiness only after every configured listener has started successfully.
     for (const auto& address : addresses) { logger_.info(address); }
     std::unordered_map<std::uint64_t, Connection> connections;
+    adc::LoginHub login({options_.max_connections});
     security::PeerLimiter peer_limiter(options_.security);
     std::uint64_t next_token = listeners.size() + 1;
     std::array<epoll_event, 64> events{};
-    std::array<char, 8192> buffer{};
     bool accepting = true;
     Clock::time_point resume_accepting{};
 
-    enum class Warning { invalid_frame, connection_limit, idle, tls_failure, handshake_timeout, peer_io, admission_quota, frame_quota, partial_frame, count };
+    enum class Warning { invalid_frame, connection_limit, idle, tls_failure, handshake_timeout, peer_io, admission_quota, frame_quota, partial_frame, login_timeout, output_timeout, count };
     std::array<std::optional<Clock::time_point>, static_cast<std::size_t>(Warning::count)> last_warnings{};
     auto warn_once = [&](Warning category, std::string_view message) {
         const auto now = Clock::now();
@@ -294,6 +300,7 @@ void TcpServer::run() {
         // DEL before close; event tokens are never reused even when the OS reuses an fd.
         ::epoll_ctl(epoll.get(), EPOLL_CTL_DEL, iterator->second.fd.get(), nullptr);
         peer_limiter.release(iterator->second.peer_key);
+        login.disconnect(iterator->first, reason != Event::shutdown);
         connections.erase(iterator);
         active_.fetch_sub(1);
     };
@@ -305,7 +312,11 @@ void TcpServer::run() {
         const bool partial_expired = connection.partial_started &&
             now - *connection.partial_started >= options_.security.partial_frame_timeout;
         const bool idle_expired = now - connection.last_activity >= options_.idle_timeout;
-        if (!handshake_expired && !partial_expired && !idle_expired) { return false; }
+        const bool login_expired = !login.ready(iterator->first) &&
+            now - connection.connected_at >= options_.security.login_timeout;
+        const bool output_expired = connection.output_progress &&
+            now - *connection.output_progress >= options_.security.output_timeout;
+        if (!handshake_expired && !partial_expired && !idle_expired && !login_expired && !output_expired) { return false; }
         if (handshake_expired || (handshake && idle_expired)) {
             security_closed_.fetch_add(1);
             warn_once(Warning::handshake_timeout, "ADCS handshake timed out; connection closed");
@@ -314,6 +325,11 @@ void TcpServer::run() {
             security_closed_.fetch_add(1);
             warn_once(Warning::partial_frame, "Security partial frame timed out; connection closed");
             disconnect(iterator, Event::partial_frame_timeout);
+        } else if (login_expired || output_expired) {
+            security_closed_.fetch_add(1);
+            warn_once(login_expired ? Warning::login_timeout : Warning::output_timeout,
+                      login_expired ? "ADC login timed out; connection closed" : "ADC output stalled; connection closed");
+            disconnect(iterator, login_expired ? Event::login_timeout : Event::output_timeout);
         } else {
             warn_once(Warning::idle, "Network idle connection closed");
             disconnect(iterator, Event::idle_timeout);
@@ -327,11 +343,37 @@ void TcpServer::run() {
             }
             accepting = true;
         }
+        // A relay can queue output for a peer other than the current event.
+        // Refresh every interest before waiting; never poll EPOLLOUT without work.
+        for (auto it = connections.begin(); it != connections.end();) {
+            auto current = it++;
+            const auto id = current->first;
+            auto& connection = current->second;
+            if (login.must_close(id)) {
+                if (login.overloaded(id)) { security_closed_.fetch_add(1); }
+                disconnect(current, login.overloaded(id) ? Event::output_limit : Event::login_rejected);
+                continue;
+            }
+            const bool pending = !login.output(id).empty();
+            if (pending && !connection.output_progress) { connection.output_progress = Clock::now(); }
+            if (!pending) { connection.output_progress.reset(); }
+            bool read = !connection.want_write;
+            bool write = connection.want_write || (connection.tls_ready && pending);
+            if (connection.write_wait) {
+                read = *connection.write_wait == adcs::IoStatus::want_read;
+                write = *connection.write_wait == adcs::IoStatus::want_write;
+            }
+            const auto interest = (read ? EPOLLIN : 0U) | (write ? EPOLLOUT : 0U) | EPOLLRDHUP;
+            if (interest != connection.interest) {
+                update_client_interest(epoll.get(), connection.fd.get(), id, read, write);
+                connection.interest = interest;
+            }
+        }
         // SSL_pending bytes have no corresponding kernel readiness event. Schedule
         // them explicitly while retaining the bounded per-client read budget.
         std::vector<epoll_event> buffered;
         for (const auto& [client_token, connection] : connections) {
-            if (connection.tls && connection.tls_ready && !connection.want_write &&
+            if (connection.tls && connection.tls_ready && !connection.want_write && !connection.write_wait &&
                 connection.tls->pending()) {
                 epoll_event ready{};
                 ready.events = EPOLLIN;
@@ -422,7 +464,8 @@ void TcpServer::run() {
                     connections.emplace(client_token, Connection{
                         std::move(client), admitted_at, {}, std::move(tls), !secure, false,
                         key, admitted_at, std::nullopt, 0,
-                        security::FrameLimiter(options_.security.max_frames_per_second), false});
+                        security::FrameLimiter(options_.security.max_frames_per_second), false, {}, {}, {}, false, EPOLLIN | EPOLLRDHUP});
+                    login.connect(client_token, std::string_view(key).substr(2));
                     active_.fetch_add(1);
                     accepted_.fetch_add(1);
                     logger_.connection(Event::accepted, client_token, secure);
@@ -443,6 +486,7 @@ void TcpServer::run() {
                 if (const auto* message = std::get_if<adc::Message>(&result)) {
                     adc_frames_.fetch_add(1);
                     if (message->kind == adc::Command::unknown) { adc_unknown_.fetch_add(1); }
+                    login.receive(token, *message);
                 } else if (std::holds_alternative<adc::KeepAlive>(result)) {
                     adc_keepalives_.fetch_add(1);
                 } else {
@@ -458,10 +502,7 @@ void TcpServer::run() {
             bool closed = false;
             auto close_reason = Event::peer_closed;
             auto change_interest = [&](bool write) {
-                if (found->second.want_write != write) {
-                    update_client_interest(epoll.get(), found->second.fd.get(), token, write);
-                    found->second.want_write = write;
-                }
+                found->second.want_write = write;
             };
             if (found->second.tls && !found->second.tls_ready) {
                 const auto result = found->second.tls->handshake();
@@ -482,12 +523,52 @@ void TcpServer::run() {
                     warn_once(Warning::tls_failure, "ADCS handshake failed; connection closed");
                 }
             }
-            if (!closed && found->second.tls_ready) {
+            // Retry a pinned SSL write before any SSL_read. Queue storage and
+            // the byte range stay unchanged across WANT_READ/WANT_WRITE.
+            auto flush_output = [&] {
+                auto& connection = found->second;
+                if (!connection.tls_ready || connection.want_write) { return; }
+                if (connection.write_wait &&
+                    (event.events & (*connection.write_wait == adcs::IoStatus::want_read ? EPOLLIN : EPOLLOUT)) == 0) { return; }
+                for (int batch = 0; batch < 8 && !stop_.load(); ++batch) {
+                    const auto output = login.output(token);
+                    if (output.empty() || login.must_close(token)) { break; }
+                    std::size_t sent = 0;
+                    if (connection.tls) {
+                        const auto result = connection.tls->send(output.data(), output.size());
+                        if (result.status == adcs::IoStatus::want_read || result.status == adcs::IoStatus::want_write) {
+                            connection.write_wait = result.status;
+                            break;
+                        }
+                        connection.write_wait.reset();
+                        if (result.status != adcs::IoStatus::complete) { closed = true; close_reason = Event::write_error; break; }
+                        sent = result.bytes;
+                    } else {
+                        const auto result = ::send(connection.fd.get(), output.data(), output.size(), MSG_NOSIGNAL);
+                        if (result > 0) { sent = static_cast<std::size_t>(result); }
+                        else if (result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) { break; }
+                        else if (result < 0 && errno == EINTR) { continue; }
+                        else { closed = true; close_reason = Event::write_error; break; }
+                    }
+                    if (sent == 0) { closed = true; close_reason = Event::write_error; break; }
+                    login.consume(token, sent);
+                    connection.output_progress = Clock::now();
+                    if (login.ready(token) && !connection.login_logged) {
+                        connection.login_logged = true;
+                        logger_.connection(Event::login_ready, token, static_cast<bool>(connection.tls));
+                    }
+                }
+                if (login.output(token).empty()) { connection.output_progress.reset(); }
+            };
+            if (!closed && found->second.tls_ready && !found->second.want_write) { flush_output(); }
+            const bool readable = found->second.want_write ? (event.events & EPOLLOUT) != 0 :
+                (event.events & EPOLLIN) != 0 || (found->second.tls && found->second.tls->pending());
+            if (!closed && found->second.tls_ready && !found->second.write_wait && readable) {
                 for (int batch = 0; batch < 8 && !stop_.load(); ++batch) {
                     if (expire(found, Clock::now())) { removed = true; break; }
                     std::size_t size = 0;
                     if (found->second.tls) {
-                        const auto result = found->second.tls->receive(buffer.data(), buffer.size());
+                        const auto result = found->second.tls->receive(found->second.input.data(), found->second.input.size());
                         if (result.status == adcs::IoStatus::complete) {
                             size = result.bytes;
                             change_interest(false);
@@ -505,7 +586,7 @@ void TcpServer::run() {
                             break;
                         }
                     } else {
-                        const auto received = ::recv(found->second.fd.get(), buffer.data(), buffer.size(), 0);
+                        const auto received = ::recv(found->second.fd.get(), found->second.input.data(), found->second.input.size(), 0);
                         if (received > 0) {
                             size = static_cast<std::size_t>(received);
                         } else if (received == 0) {
@@ -528,7 +609,7 @@ void TcpServer::run() {
                     found->second.last_activity = Clock::now();
                     // At most one decoder result per segment. Stop immediately
                     // after a quota breach rather than parsing the remainder.
-                    auto input = std::string_view(buffer.data(), size);
+                    auto input = std::string_view(found->second.input.data(), size);
                     while (!input.empty() && !found->second.security_violation) {
                         if (expire(found, Clock::now())) { removed = true; break; }
                         const auto lf = input.find('\n');
@@ -550,6 +631,12 @@ void TcpServer::run() {
                 }
             }
             if (removed) { continue; }
+            if (!closed && !found->second.write_wait) { flush_output(); }
+            if (login.must_close(token)) {
+                if (login.overloaded(token)) { security_closed_.fetch_add(1); }
+                closed = true;
+                close_reason = login.overloaded(token) ? Event::output_limit : Event::login_rejected;
+            }
             if (closed || (event.events & (EPOLLERR | EPOLLHUP)) != 0) {
                 if (!closed) { warn_once(Warning::peer_io, "Network peer I/O failed; connection closed"); }
                 disconnect(found, closed ? close_reason : Event::socket_error);

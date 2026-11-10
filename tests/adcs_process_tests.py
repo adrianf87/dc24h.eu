@@ -9,7 +9,7 @@ import tempfile
 import time
 import unittest
 
-from network_process_tests import BINARY, Hub
+from network_process_tests import BINARY, Hub, drain_until_eof
 from adc_process_tests import counters
 from tls_support import credentials, connect_tls, tls_endpoint, finish_tls, TLS_READY
 
@@ -44,7 +44,7 @@ class AdcsProcessTests(unittest.TestCase):
     def test_base_argument_syntax_recovers_inside_tls(self):
         hub = self.hub()
         peer = self.connect_tls(hub)
-        wire = b'ISID ABC0\nHMSG hi lowerPRIVATETLS\nHSUP ADBASE\nBINF ABC2 NIJoanna DE\n'
+        wire = b'ISID ABC0\nHMSG hi lowerPRIVATETLS\nHSUP ADBASE ADTIGR\nBINF ABC2 NIJoanna DE\n'
         for offset in range(0, len(wire), 3):
             peer.sendall(wire[offset:offset + 3])
         finish_tls(self, peer)
@@ -56,7 +56,6 @@ class AdcsProcessTests(unittest.TestCase):
         hub = self.hub()
         with socket.create_connection(self.tls_endpoint(hub), timeout=3) as invalid:
             invalid.sendall(b'NOT TLS\n')
-            invalid.shutdown(socket.SHUT_WR)
             invalid.settimeout(3)
             try:
                 invalid.recv(1024)
@@ -65,7 +64,7 @@ class AdcsProcessTests(unittest.TestCase):
         with socket.create_connection(hub.endpoints[0], timeout=3) as plain:
             plain.sendall(b'HSUP ADBASE\n')
             plain.shutdown(socket.SHUT_WR)
-            self.assertEqual(plain.recv(1), b'')
+            drain_until_eof(plain)
         peer = self.connect_tls(hub)
         peer.sendall(b'HSUP ADTIGR\n')
         finish_tls(self, peer)
@@ -180,7 +179,7 @@ class AdcsProcessTests(unittest.TestCase):
         # Transport throughput regression with an explicitly higher security budget.
         hub = self.hub('--frames-per-second', '100000')
         peers = [self.connect_tls(hub) for _ in range(12)]
-        payload = b'HSUP ADBASE\n' * 20000
+        payload = b'\n' * 60000
         for peer in peers:
             peer.sendall(payload)
             finish_tls(self, peer)
@@ -188,7 +187,7 @@ class AdcsProcessTests(unittest.TestCase):
         self.addCleanup(stalled.close)
         active = self.connect_tls(hub)
         hub.stop()
-        self.assertEqual(counters(self, hub), (240000, 0, 0, 0))
+        self.assertEqual(counters(self, hub), (0, 0, 0, 720000))
         self.assertEqual(active.recv(1), b'')
         self.assertEqual(stalled.recv(1), b'')
 

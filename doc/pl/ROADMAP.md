@@ -1,5 +1,7 @@
 # Plan rozwoju
 
+**Aktualna integracja — alpha-0.2.8:** [Logowanie gości](ADC_LOGIN.md) podłącza state/SUP/SID/INF/Tiger do rzeczywistego reaktora C++ TCP/TLS, z ograniczonym uporządkowanym wyjściem, unikalnością nick/CID, listą obecności i pełnymi testami ncdc NORMAL/reconnect. Historyczne opisy poniżej zachowują pierwotny zakres; wzmianki o planowanym podłączeniu/wyjściu/logowaniu dotyczą wcześniejszych wersji. Konta/hasła, czat, wyszukiwanie i przekazywanie transferów pozostają planowane.
+
 | Etap | Zaimplementowany zakres |
 | --- | --- |
 | alpha-0.1.1 Core | Cykl życia, start/stop, sygnały i logger |
@@ -20,8 +22,9 @@
 | alpha-0.2.5 SID | Koder 20-bitowy, ograniczona wspólna pula, rezerwacje RAII i zarządzane sesje SID |
 | alpha-0.2.6 INF | Ograniczone metadane, Tiger tożsamości, kontrola IP i publiczne snapshoty bez PD |
 | alpha-0.2.7 CID/PID | Dedykowany weryfikator Tiger, wynik publiczny, czyszczenie buforów i testy awarii |
+| alpha-0.2.8 Login | NORMAL gości, ograniczone uporządkowane wyjście, rejestr nick/CID, publiczna obecność i reconnect ncdc |
 
-## Proponowane etapy alpha-0.2
+## Historyczny plan odbioru przed alpha-0.2.8
 
 alpha-0.2.2 realizuje zamówiony pełniejszy parser. Wcześniejsza propozycja serializera pozostaje planowana; numery dalszych etapów zostaną przypisane po określeniu zakresu.
 
@@ -53,3 +56,8 @@ alpha-0.2.5 powstaje z main w `350a43f69b5134bd049923739cd606f798f846ec` po scal
 alpha-0.2.6 powstaje z main w `85524067756ac5fcbd177bb47f5d2cfe33fad063`. [INF](ADC_INF.md) realizuje walidację pól/PID-CID i połączenie stosu. Globalny rejestr/dopuszczenie, hasła kont, wyjście i pełne logowanie pozostają planowane. Gałąź nie scala się automatycznie.
 
 alpha-0.2.7 powstaje z main w `9d3443a4d889e745b6490a139435a8f44297cfba`. [CID/PID](ADC_IDENTITY.md) wydziela i wzmacnia sprawdzanie rozpoczęte w INF; nie dodaje logowania, globalnej unikalności CID, uwierzytelniania kont ani drzew plików. Gałąź nie scala się automatycznie.
+
+
+## alpha-0.2.8 Login
+
+Dostarczono: uporządkowane wyjście/serializację, sesje gości i rejestr, rzeczywiste TCP/TLS NORMAL oraz reconnect ncdc. Pozostają: konta/hasła/uprawnienia, obsługa czatu/wyszukiwania/transferów, TLS close_notify/reload, produkcyjne testy obciążenia/fuzz/fault injection i pozostałych OS. Podstawa: main b8978491fa8e146527eba818f9bc1ab0a31aa90d. Gałąź numerowana nie scala się automatycznie.

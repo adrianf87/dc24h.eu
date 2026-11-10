@@ -10,7 +10,7 @@ import tempfile
 import time
 import unittest
 
-from network_process_tests import BINARY, Hub
+from network_process_tests import BINARY, Hub, drain_until_eof
 from tls_support import credentials, connect_tls, finish_tls, TLS_READY
 
 class ConfigurationProcessTests(unittest.TestCase):
@@ -124,7 +124,7 @@ class ConfigurationProcessTests(unittest.TestCase):
         next_peer = hub.connect()
         next_peer.sendall(b'HSUP ADBASE\n')
         next_peer.shutdown(socket.SHUT_WR)
-        self.assertEqual(next_peer.recv(1), b'')
+        drain_until_eof(next_peer)
         hub.stop()
         self.assertIn(b'accepted=2 rejected=1', hub.log)
 

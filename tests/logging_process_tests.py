@@ -10,7 +10,7 @@ import pathlib
 import time
 import unittest
 
-from network_process_tests import BINARY, Hub
+from network_process_tests import BINARY, Hub, drain_until_eof
 from adc_process_tests import counters
 from tls_support import credentials, connect_tls, finish_tls, tls_endpoint
 
@@ -20,15 +20,14 @@ class LoggingProcessTests(unittest.TestCase):
         hub = Hub(self, "--listen", "127.0.0.1:0", "--log-connections", "on")
         peer = hub.connect()
         peer.sendall(b"HPAS PRIVATE_HASH_DO_NOT_LOG\nHMSG INVALID\\q\nHSUP ADBASE\n")
-        peer.shutdown(socket.SHUT_WR)
-        self.assertEqual(peer.recv(1), b"")
+        drain_until_eof(peer)
         hub.stop(signal.SIGINT)
         self.assertEqual(counters(self, hub), (2, 0, 1, 0))
         log = bytes(hub.log)
-        self.assertRegex(log, rb"\[INFO\] Starting dc24h.eu alpha-0.2.7")
+        self.assertRegex(log, rb"\[INFO\] Starting dc24h.eu alpha-0.2.8")
         self.assertIn(b"Startup settings: adc_listeners=", log)
         self.assertRegex(log, rb"Connection id=\d+ transport=ADC event=accepted")
-        self.assertRegex(log, rb"Connection id=\d+ transport=ADC event=peer_closed")
+        self.assertRegex(log, rb"Connection id=\d+ transport=ADC event=login_rejected")
         self.assertIn(b"[WARN] ADC invalid frame rejected; payload omitted", log)
         self.assertNotIn(b"PRIVATE_HASH_DO_NOT_LOG", log)
         self.assertNotIn(b"INVALID", log)
@@ -94,7 +93,6 @@ class LoggingProcessTests(unittest.TestCase):
                       '--log-connections', 'on')
             with socket.create_connection(tls_endpoint(hub), timeout=3) as bad:
                 bad.sendall(b'NOT_TLS_SECRET_MARKER\n')
-                bad.shutdown(socket.SHUT_WR)
                 try:
                     self.assertEqual(bad.recv(1024), b'')
                 except ConnectionResetError:
@@ -104,8 +102,11 @@ class LoggingProcessTests(unittest.TestCase):
             peer = connect_tls(self, hub, cert)
             peer.sendall(b'HPAS PRIVATE_HASH_DO_NOT_LOG\n')
             finish_tls(self, peer)
+            healthy = connect_tls(self, hub, cert)
+            healthy.sendall(b'\n')
+            finish_tls(self, healthy)
             hub.stop()
-            for event in (b'tls_handshake_failed', b'handshake_timeout', b'tls_ready', b'tls_closed'):
+            for event in (b'tls_handshake_failed', b'handshake_timeout', b'tls_ready', b'login_rejected', b'tls_closed'):
                 self.assertIn(b'event=' + event, hub.log)
             self.assertIn(b'[WARN] ADCS handshake timed out', hub.log)
             self.assertIn(b'[WARN] ADCS handshake failed', hub.log)
