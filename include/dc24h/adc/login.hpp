@@ -55,7 +55,7 @@ public:
     [[nodiscard]] bool ready(Id id) const;
     [[nodiscard]] ConnectionState state(Id id) const;
     [[nodiscard]] std::size_t queued_bytes() const noexcept { return queued_; }
-    [[nodiscard]] std::size_t users() const noexcept { return nicknames_.size(); }
+    [[nodiscard]] std::size_t users() const noexcept { return sessions_.identified_users(); }
 private:
     struct Peer;
     enum class Completion { observe, support, welcome };
@@ -65,14 +65,10 @@ private:
                 users::TimePoint now = users::Clock::now());
     void route_status(Id id, const Message& message);
     void relay(Id except, const Message& message);
-    void remove_identity(Id id, const Peer& peer);
     LoginLimits limits_;
     std::shared_ptr<SidPool> pool_;
     users::SessionManager sessions_; // Outlives the peers that borrow models.
     std::unordered_map<Id, std::unique_ptr<Peer>> peers_;
-    std::unordered_map<std::string, Id> nicknames_;
-    std::unordered_map<std::string, Id> cids_;
-    std::unordered_map<std::string, Id> sids_;
     std::size_t queued_{0};
 };
 } // namespace dc24h::adc

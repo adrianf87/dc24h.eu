@@ -1,5 +1,11 @@
 # Testing
 
+## Session Manager validation — alpha-0.3.4
+
+The strict gate has **50 suites**, adding users.registry to the integrated main baseline. All passed in Debug, Release and ASan/UBSan, including real ncdc ADC/ADCS, mixed-transport duplicate/rename/reconnect cases, identity/provider/security/STA/terminal-output regressions, MariaDB and Apache. WebAdmin typecheck/build, 3 Node tests, 3 Chromium tests and live API integration passed. Reproduce with `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug -j 4` and `ctest --test-dir build-debug --output-on-failure -j 4`. Sanitizer flags remain as documented below. [Session Manager](SESSION_MANAGER.md) describes the new ownership/rollback assertions and exact limits of these local results.
+
+**Current increment — alpha-0.3.4:** [Session Manager](SESSION_MANAGER.md) owns SID/CID/nickname indexes together with live models. Const lookups and managed lifecycle/User mutations preserve uniqueness through admission, rename and cleanup. LoginHub retains protocol and output ownership. Earlier descriptions retain their historical delivery scope.
+
 ## Main integration — alpha-0.3.2 then alpha-0.3.3
 
 The combined main tree passed **49/49 strict CTest suites in Debug, Release and ASan/UBSan**. Both users.manager and users.core remain enabled. The added composition checks confirm that manager pages contain admitted/updated profiles, phase counts reflect the same live models, earlier pages retain their values and disconnected users disappear from the registry. Real ncdc ADC/ADCS, transport/security/identity/STA regressions, disposable MariaDB and isolated Apache passed. WebAdmin build/typecheck, 3 Node tests, 3 Chromium tests and real C++ API → Vite → React integration passed. These are local results; the original 48-suite branch runs below describe their pre-merge scope.
@@ -8,7 +14,7 @@ The combined main tree passed **49/49 strict CTest suites in Debug, Release and 
 
 The strict gate has **48 suites**, adding users.core on the main-based User Core branch. All passed in Debug, Release and ASan/UBSan, including real ncdc ADC/ADCS, MariaDB and Apache. WebAdmin build/typecheck, 3 Node tests, 3 Chromium tests and live C++ API integration passed. Reproduce with `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug -j 4` and `ctest --test-dir build-debug --output-on-failure -j 4`. Sanitizer flags remain as documented below. The existing API shutdown fixture accepts EOF/reset when closing an unread request prefix; application responses remain checked normally.
 
-**Current increment — alpha-0.3.3:** [User Core](USER_CORE.md) adds an owning public guest identity/profile to Session, with validated full-INF projection and lifecycle-guarded updates. It was developed directly from main with Session Core; main now combines it with the previously merged alpha-0.3.2 Session Manager. Earlier descriptions retain their historical scope.
+**Increment delivered in alpha-0.3.3:** [User Core](USER_CORE.md) adds an owning public guest identity/profile to Session, with validated full-INF projection and lifecycle-guarded updates. It was developed directly from main with Session Core; main now combines it with the previously merged alpha-0.3.2 Session Manager. Earlier descriptions retain their historical scope.
 
 ## Original Session Manager branch validation — alpha-0.3.2
 

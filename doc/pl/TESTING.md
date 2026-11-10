@@ -1,5 +1,11 @@
 # Testowanie
 
+## Weryfikacja Session Manager — alpha-0.3.4
+
+Pełna bramka ma **50 zestawów**, z users.registry na zintegrowanej bazie main. Wszystkie przeszły w Debug, Release i ASan/UBSan, w tym rzeczywisty ncdc ADC/ADCS, mieszane transporty/duplikaty/zmiana nicku/reconnect, regresje tożsamości/dostawcy kryptografii/bezpieczeństwa/STA/końcowego wyjścia, MariaDB i Apache. WebAdmin: typecheck/budowanie, 3 testy Node, 3 Chromium i rzeczywista integracja API poprawne. Odtwarzanie: `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug -j 4`, `ctest --test-dir build-debug --output-on-failure -j 4`. Flagi sanitizerów opisano poniżej. [Session Manager](SESSION_MANAGER.md) opisuje nowe sprawdzenia własności/braku częściowych zmian i granice lokalnych wyników.
+
+**Bieżący etap — alpha-0.3.4:** [Session Manager](SESSION_MANAGER.md) posiada indeksy SID/CID/nick wraz z żywymi modelami. Odczyt const i zarządzane zmiany cyklu życia/User zachowują unikalność przy przyjęciu, zmianie nicku i sprzątaniu. LoginHub zachowuje protokół i kolejki. Starsze opisy dotyczą zakresu historycznych etapów.
+
 ## Integracja main — alpha-0.3.2, następnie alpha-0.3.3
 
 Połączony main przeszedł **49/49 pełnych zestawów CTest w Debug, Release i ASan/UBSan**. Zachowano users.manager i users.core. Nowe sprawdzenia integracji potwierdzają profil przyjętego użytkownika i jego aktualizacje w stronach managera, zgodność faz z żywymi modelami, własność wcześniejszych kopii oraz usuwanie rozłączonego użytkownika z rejestru. Rzeczywisty ncdc ADC/ADCS, regresje transportu/bezpieczeństwa/tożsamości/STA, tymczasowa MariaDB i izolowany Apache poprawne. WebAdmin: budowanie/typecheck, 3 testy Node, 3 Chromium i integracja C++ API → Vite → React poprawne. To wyniki lokalne; opisane poniżej pierwotne bramki 48 zestawów dotyczą stanu przed scaleniem.
@@ -8,7 +14,7 @@ Połączony main przeszedł **49/49 pełnych zestawów CTest w Debug, Release i 
 
 Pierwotna bramka gałęzi miała **48 zestawów**, z users.core na gałęzi User Core z main. Wszystkie przeszły w Debug, Release i ASan/UBSan, wraz z rzeczywistym ncdc ADC/ADCS, MariaDB i Apache. WebAdmin: budowanie/typecheck, 3 testy Node, 3 Chromium i integracja rzeczywistego API C++ poprawne. Odtwarzanie: `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug -j 4`, `ctest --test-dir build-debug --output-on-failure -j 4`. Flagi sanitizerów opisano poniżej. Dotychczasowy test zamykania API akceptuje EOF/reset przy nieodczytanym prefiksie żądania; odpowiedzi aplikacji nadal są sprawdzane normalnie.
 
-**Bieżący etap — alpha-0.3.3:** [User Core](USER_CORE.md) dodaje do Session publiczny model gościa i profilu, projekcję całego zwalidowanego INF oraz aktualizacje przez bramkę cyklu życia. Powstał bezpośrednio z main z Session Core; main łączy go teraz z wcześniej scalonym alpha-0.3.2 Session Manager. Starsze opisy zachowują zakres historyczny.
+**Etap dostarczony w alpha-0.3.3:** [User Core](USER_CORE.md) dodaje do Session publiczny model gościa i profilu, projekcję całego zwalidowanego INF oraz aktualizacje przez bramkę cyklu życia. Powstał bezpośrednio z main z Session Core; main łączy go teraz z wcześniej scalonym alpha-0.3.2 Session Manager. Starsze opisy zachowują zakres historyczny.
 
 ## Weryfikacja pierwotnej gałęzi Session Manager — alpha-0.3.2
 

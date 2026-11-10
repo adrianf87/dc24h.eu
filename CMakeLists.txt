@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.3.3 LANGUAGES CXX)
+project(dc24h VERSION 0.3.4 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -197,6 +197,11 @@ if(BUILD_TESTING)
     add_test(NAME adc.status.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/adc_status_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(adc.status adc.status.process PROPERTIES TIMEOUT 45)
+    add_executable(session_registry_tests tests/session_registry_tests.cpp)
+    target_link_libraries(session_registry_tests PRIVATE dc24h_users)
+    target_compile_options(session_registry_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    add_test(NAME users.registry COMMAND session_registry_tests)
+    set_tests_properties(users.registry PROPERTIES TIMEOUT 30)
     add_executable(session_manager_tests tests/session_manager_tests.cpp)
     target_link_libraries(session_manager_tests PRIVATE dc24h_adc)
     target_compile_options(session_manager_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)

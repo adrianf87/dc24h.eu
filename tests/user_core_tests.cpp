@@ -74,6 +74,9 @@ void adapter() {
     const auto admitted_page=hub.sessions().page();
     require(admitted_page.size()==1 && admitted_page[0].profile==identified.profile &&
         hub.sessions().counts().identified==1,"Registry did not publish the admitted user profile");
+    require(hub.sessions().by_sid(first)==&hub.session_model(1) &&
+        hub.sessions().by_cid(identified.identity->cid())==&hub.session_model(1) &&
+        hub.sessions().by_nickname("First")==&hub.session_model(1),"Public indexes are not owned by the session registry");
     const auto& profile=identified.profile->data();
     require(profile.description=="Description" && profile.email=="public@example.test" && profile.application=="Client" && profile.version=="1.2" &&
         profile.locale=="pl_PL" && profile.shared_bytes==std::numeric_limits<std::int64_t>::max() && profile.shared_files==10 && profile.slots==3 &&
@@ -83,6 +86,7 @@ void adapter() {
     const auto updated=*hub.snapshot(1);
     require(hub.sessions().page()[0].profile==updated.profile && hub.sessions().counts().ready==1 &&
         admitted_page[0].profile==identified.profile,"Registry profile/count update or snapshot ownership failed");
+    require(!hub.sessions().by_nickname("First") && hub.sessions().by_nickname("Renamed")==&hub.session_model(1),"Live rename left stale registry index");
     require(updated.identity->nickname()=="Renamed" && updated.profile->data().description=="Changed" && updated.profile->data().email.empty() &&
         !updated.profile->data().shared_bytes && updated.profile->data().features.empty() && updated.profile->data().application.empty(),"Merged INF cancellation left stale profile");
     require(identified.identity->nickname()=="First" && profile.description=="Description","User snapshot aliases update");
@@ -98,7 +102,8 @@ void adapter() {
     const auto third_before=*hub.snapshot(3);
     hub.receive(3,parse("BINF "+third+" NISecond DEUncommitted"));
     require(hub.closing(3) && hub.snapshot(3)->identity==third_before.identity && hub.snapshot(3)->profile==third_before.profile,"Duplicate nick modified user");
-    hub.disconnect(3);require(hub.ready(2),"Rejected peer damaged survivor");hub.disconnect(2);
+    require(hub.sessions().by_sid(third)->closing() && hub.sessions().by_nickname("Third")->closing(),"Rejected admitted peer lost its identity reservation");
+    hub.disconnect(3);require(!hub.sessions().by_sid(third) && !hub.sessions().by_nickname("Third"),"Disconnected peer left public indexes");require(hub.ready(2),"Rejected peer damaged survivor");hub.disconnect(2);
     const auto reconnect=negotiate(hub,4);hub.receive(4,login(reconnect,2,"Second"));drain(hub,4);
     require(hub.ready(4) && hub.snapshot(4)->identity->cid()==second_user.identity->cid() && hub.snapshot(4)->id!=second_user.id,"Reconnect/public identity failed");hub.disconnect(4);
 }

@@ -1,5 +1,7 @@
 # User Core — alpha-0.3.3
 
+**Current increment — alpha-0.3.4:** [Session Manager](SESSION_MANAGER.md) owns SID/CID/nickname indexes together with live models. Const lookups and managed lifecycle/User mutations preserve uniqueness through admission, rename and cleanup. LoginHub retains protocol and output ownership. Earlier descriptions retain their historical delivery scope.
+
 This branch starts from main `ca00266992dd866bdd30ff68e911c981c6665a62`, after the Session Core merge. The original alpha-0.3.2 and alpha-0.3.3 branches were siblings from the same main. Main now integrates Session Manager first, then User Core, following the explicit merge request. The manager owns the live Sessions that own Users; protocol peers borrow those same models. User Core extends dc24h_users with an owning public guest User and a bounded typed Profile, integrated with live LoginHub admission and updates.
 
 ## User, session and identity
