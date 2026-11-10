@@ -8,7 +8,7 @@ import tempfile
 import time
 import unittest
 
-from network_process_tests import BINARY, Hub
+from network_process_tests import BINARY, Hub, drain_until_eof
 from adc_process_tests import counters
 from tls_support import credentials, connect_tls, finish_tls, tls_endpoint
 
@@ -26,7 +26,7 @@ class SecurityProcessTests(unittest.TestCase):
 
     def finish(self, peer):
         peer.shutdown(socket.SHUT_WR)
-        self.closed(peer)
+        drain_until_eof(peer)
 
     def test_per_ip_concurrent_limit_and_reuse(self):
         hub = self.hub('--max-per-ip', '1')
@@ -136,7 +136,11 @@ class SecurityProcessTests(unittest.TestCase):
         peer = hub.connect()
         peer.sendall(b'HSUP AD')
         time.sleep(0.65)
-        peer.sendall(b'BASE\nHSUP NEW')
+        peer.sendall(b'BASE ADTIGR\nHSUP NEW')
+        response = bytearray()
+        while response.count(b'\n') < 2:
+            response.extend(peer.recv(1024))
+        self.assertTrue(response.startswith(b'ISUP ADBASE ADTIGR\nISID '))
         time.sleep(0.5)
         peer.settimeout(0.1)
         with self.assertRaises(socket.timeout):

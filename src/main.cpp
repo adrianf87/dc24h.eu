@@ -104,7 +104,9 @@ int main(int argc, char* argv[]) {
                     " frames_per_second=" + std::to_string(parsed.settings.network.security.max_frames_per_second) +
                     " max_invalid_frames=" + std::to_string(parsed.settings.network.security.max_invalid_frames) +
                     " tls_handshake_timeout_seconds=" + std::to_string(parsed.settings.network.security.tls_handshake_timeout.count()) +
-                    " partial_frame_timeout_seconds=" + std::to_string(parsed.settings.network.security.partial_frame_timeout.count()));
+                    " partial_frame_timeout_seconds=" + std::to_string(parsed.settings.network.security.partial_frame_timeout.count()) +
+                    " login_timeout_seconds=" + std::to_string(parsed.settings.network.security.login_timeout.count()) +
+                    " output_timeout_seconds=" + std::to_string(parsed.settings.network.security.output_timeout.count()));
             std::unique_ptr<dc24h::database::Connection> database;
             if (parsed.settings.database.enabled) {
                 database = std::make_unique<dc24h::database::Connection>(parsed.settings.database);

@@ -264,6 +264,10 @@ Settings load_file(const std::string& filename) {
                 settings.network.security.tls_handshake_timeout = std::chrono::seconds(positive_number(value, 3600));
             } else if (section == "security" && key == "partial_frame_timeout") {
                 settings.network.security.partial_frame_timeout = std::chrono::seconds(positive_number(value, 3600));
+            } else if (section == "security" && key == "login_timeout") {
+                settings.network.security.login_timeout = std::chrono::seconds(positive_number(value, 3600));
+            } else if (section == "security" && key == "output_timeout") {
+                settings.network.security.output_timeout = std::chrono::seconds(positive_number(value, 3600));
             } else if (section == "tls" && key == "certificate") {
                 settings.network.tls_certificate = resolve_path(value, path.parent_path());
             } else if (section == "tls" && key == "private_key") {

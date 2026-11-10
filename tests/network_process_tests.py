@@ -16,6 +16,21 @@ BINARY = os.path.abspath(sys.argv.pop(1))
 READY = re.compile(rb"Network listening on (\[[^\]]+\]|[^ :]+):([0-9]+)")
 
 
+def drain_until_eof(peer):
+    """Consume bounded protocol replies while waiting for transport cleanup."""
+    data = bytearray()
+    try:
+        while True:
+            chunk = peer.recv(4096)
+            if not chunk:
+                return bytes(data)
+            data.extend(chunk)
+            if len(data) > 1024 * 1024:
+                raise AssertionError('Unexpectedly large shutdown response')
+    except ConnectionResetError:
+        return bytes(data)
+
+
 class Hub:
     def __init__(self, case, *options, listeners=1, fd_limit=None, ready_pattern=READY):
         self.case = case

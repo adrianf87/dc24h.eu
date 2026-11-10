@@ -40,8 +40,18 @@ def connect_tls(case, hub, cert, version=None):
 
 
 def finish_tls(case, peer):
-    # Peer close_notify establishes that all preceding application bytes were
-    # consumed before the server closes. Server close_notify is a later milestone.
+    # Drain any ordered reply before sending close_notify. Old transport tests
+    # may deliberately negotiate invalid support and receive a fatal status/EOF.
+    old_timeout = peer.gettimeout()
+    peer.settimeout(0.1)
+    try:
+        while peer.recv(65536):
+            pass
+        return
+    except socket.timeout:
+        pass
+    finally:
+        peer.settimeout(old_timeout)
     try:
         peer.unwrap()
     except ssl.SSLEOFError:

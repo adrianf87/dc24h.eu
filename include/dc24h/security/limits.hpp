@@ -22,6 +22,8 @@ struct Limits {
     std::uint32_t max_invalid_frames{512};
     std::chrono::seconds tls_handshake_timeout{10};
     std::chrono::seconds partial_frame_timeout{10};
+    std::chrono::seconds login_timeout{30};
+    std::chrono::seconds output_timeout{10};
 };
 
 // Reject zero and unreasonably large values. The caller must also verify

@@ -54,3 +54,8 @@ Zapis jest synchroniczny. Dysk i zablokowany potok stderr mogą opóźnić reakt
 ## Security — alpha-0.1.7
 
 Limity przyjęć, ramek i termin częściowej ramki mają własne kategorie ostrzeżeń na pięć sekund. Bezczynność i termin TLS pozostają niezależne. Nowe typowane zamknięcia to security_quota i partial_frame_timeout; TLS zachowuje handshake_timeout. Stop dodaje Security stopped; rejected=N closed=N; znaczenia podaje [SECURITY.md](SECURITY.md). IP klientów nadal nie są logowane, mimo ich użycia w pamięci limitera.
+
+
+## alpha-0.2.8
+
+`login_ready`, `login_rejected`, `login_timeout`, `output_timeout`, `output_limit`, `write_error`: nowe stałe opcjonalne zdarzenia INFO, bez nicków, adresów i treści. Ostrzeżenia login/output timeout mają tłumaczenia US/PL i osobne budżety pięciosekundowe. Opisy statusów sieciowych pozostają angielskie. Zobacz [ADC_LOGIN.md](ADC_LOGIN.md).

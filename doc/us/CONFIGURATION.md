@@ -89,3 +89,8 @@ Frontend settings are separate from INI: server-only `DC24H_API_SOCKET`/`DC24H_A
 ## Apache2 HTTPS template
 
 The new `apache2-webadmin-https.conf.example` is independent of the INI. Set the actual hostname, static asset directory and external certificate/key paths in the Apache copy. It contains no Listen directives, relying on distro ports.conf, and defaults to local static access/API denial. No native C++ runtime setting is added. See [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
+
+
+## alpha-0.2.8
+
+[security] adds login_timeout (default 30 seconds) and output_timeout (default 10 seconds), both 1–3600. INI/library only; no new CLI switches. Login has an absolute accept-to-own-INF deadline, including TLS; output uses time since last send progress. Compiled queue limits: 256 KiB/client, 16 MiB/hub. See [ADC_LOGIN.md](ADC_LOGIN.md).

@@ -66,7 +66,35 @@ int main(int argc, char** argv) {
         const auto result = server.receive(buffer, sizeof(buffer));
         require(result.status == dc24h::adcs::IoStatus::complete, "server read failed");
         require(std::string(buffer, result.bytes) == payload, "decrypted bytes differ");
-        std::cout << "ADCS OpenSSL handshake and application data OK\n";
+        const int tiny = 1024;
+        require(setsockopt(pair[0], SOL_SOCKET, SO_SNDBUF, &tiny, sizeof(tiny)) == 0, "send buffer limit failed");
+        const std::string output(512 * 1024, 'x');
+        std::string received;
+        bool sent = false, blocked = false;
+        char decoded[16384]{};
+        for (int i=0; i<10000 && (!sent || received.size()!=output.size()); ++i) {
+            if (!sent) {
+                ERR_put_error(ERR_LIB_USER, 0, 1, __FILE__, __LINE__);
+                const auto write = server.send(output.data(), output.size());
+                if (write.status == dc24h::adcs::IoStatus::complete) {
+                    require(write.bytes == output.size(), "TLS write completion length");
+                    sent = true;
+                } else {
+                    require(write.status == dc24h::adcs::IoStatus::want_write ||
+                            write.status == dc24h::adcs::IoStatus::want_read, "TLS write retry failed");
+                    blocked = true;
+                }
+            }
+            const int count = SSL_read(client.get(), decoded, sizeof(decoded));
+            if (count > 0) { received.append(decoded, static_cast<std::size_t>(count)); }
+            else {
+                const int error = SSL_get_error(client.get(), count);
+                require(error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE, "Client read failed");
+            }
+        }
+        require(sent && blocked && received == output, "TLS backpressure lost/duplicated bytes");
+        require(server.send(output.data(), 0).status == dc24h::adcs::IoStatus::error, "Empty TLS write accepted");
+        std::cout << "ADCS OpenSSL handshake, receive and write retry/backpressure OK\n";
         return EXIT_SUCCESS;
     } catch (const std::exception& e) {
         std::cerr << e.what() << '\n';

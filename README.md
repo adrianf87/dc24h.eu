@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.2.7 (CID/PID).**
+**Current development version: alpha-0.2.8 (Login).**
 
-Completed increments:
+Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.2.8 Login**: complete guest ADC/ADCS login on the C++ hub, ordered bounded replies, unique nickname/CID admission, public user lists, INF updates and disconnect cleanup. Real ncdc reaches NORMAL and reconnects over both transports. See [guest login](doc/us/ADC_LOGIN.md).
 
 - **alpha-0.2.7 CID/PID**: dedicated Tiger identity verifier, typed public CID/verified result, direct cleansed buffers, constant-time digest comparison and deterministic provider-failure tests. INF uses the shared verifier; Network attachment remains planned.
 
@@ -35,7 +37,7 @@ Completed increments:
 
 - **alpha-0.1.11 Apache2**: customizable static WebAdmin HTTPS example, HTTP→HTTPS redirect, TLS 1.2/1.3, certificate paths and isolated HTTPS tests.
 
-A full ADC/ADCS hub is **not yet implemented**: no complete ADC handshake or live user sessions, hub-user authentication, messaging, search, or transfer coordination. Account persistence and a production authenticated web gateway remain future milestones.
+Guest login and public user sessions are implemented. Registered-user authentication, chat, search, transfer coordination, account persistence and a production authenticated web gateway remain future milestones.
 
 ## Build
 
@@ -50,7 +52,7 @@ ctest --test-dir build --output-on-failure
 ## Run
 
 ```sh
-# Plain ADC parser on loopback:
+# Guest ADC hub on loopback:
 ./build/dc24h --listen 127.0.0.1:1511
 
 # TLS only (replace credentials with your own):
@@ -80,6 +82,8 @@ cp config/dc24h.ini.example config/dc24h.ini
 Defaults, then explicit INI, then CLI. No file is loaded automatically. INI paths use its directory; CLI paths use the working directory. Use `--log-level info|warning|error|off` and `--log-file PATH` (or `-` for stderr). See [configuration](doc/us/CONFIGURATION.md) for complete precedence, format, limits and logging constraints.
 
 Connection records are off by default; enable with `--log-connections on` or `[logging] connections=on` at INFO. Records use internal IDs and fixed events without client addresses or ADC payloads. See [logging](doc/us/LOGGING.md) for limits and suppression behavior.
+
+Login/output defaults: 30 seconds for full login, 10 seconds without output progress, 256 KiB queued wire bytes/client and 16 MiB/hub. The two deadlines are INI settings in `[security]`; byte limits are compiled defaults.
 
 Security defaults: 128 active peers/IP, 256 admissions/IP/minute, 1024 decoder results/s/connection, 512 invalid frames/connection, and 10-second TLS/partial-frame deadlines. Frame bodies remain capped at 16 KiB with 128 parameters. Configure `[security]` or CLI; see [security](doc/us/SECURITY.md) for exact policies and limitations.
 

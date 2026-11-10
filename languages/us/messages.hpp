@@ -3,7 +3,7 @@
 #include <string_view>
 
 namespace dc24h::i18n::us {
-inline constexpr std::array<std::string_view, 114> messages{{
+inline constexpr std::array<std::string_view, 116> messages{{
     "Starting dc24h.eu ",
     "Core running",
     "Core stopping",
@@ -118,6 +118,8 @@ inline constexpr std::array<std::string_view, 114> messages{{
     "Local API listening",
     "Local API start may only be called once",
     "API socket cannot target configuration or credential files"
+    "ADC login timed out; connection closed",
+    "ADC output stalled; connection closed",
 }};
 inline constexpr std::string_view help = R"HELP(Usage: dc24h [--config FILE] [--check-config | --check-database | --migrate-database]
              [--listen IPv4:port | [IPv6]:port | none] ...
@@ -140,7 +142,7 @@ Limits: connections 1..65535; idle timeout 1..86400 seconds.
 Run dc24h.eu in the foreground; stop with SIGINT (Ctrl+C) or SIGTERM.
 Security defaults: 128 peers/IP, 256 admissions/IP/minute, 1024 frames/s/peer,
 512 invalid frames/peer, 10 seconds for TLS and each unfinished frame.
-ADC syntax parsing only: no complete ADC login, routing or user sessions.
+ADC guest login and public presence are implemented; chat/search/transfers remain planned.
 Database settings use [database] in INI; disabled by default.
 --check-database connects/pings; --migrate-database explicitly applies metadata migrations.
 --check-config never connects to MariaDB or reads the password file.

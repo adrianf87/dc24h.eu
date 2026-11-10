@@ -1,5 +1,7 @@
 # Debian / Ubuntu installation
 
+**Current integration — alpha-0.2.8:** [Guest login](ADC_LOGIN.md) attaches the state/SUP/SID/INF/Tiger stack to the actual C++ TCP/TLS reactor with bounded ordered output, nickname/CID admission, public presence and complete ncdc NORMAL/reconnect tests. Historical stage descriptions below retain their original scope; statements that transport attachment/output/login were still planned describe those earlier versions. Registered-user authentication, chat, search and transfer dispatch remain planned.
+
 Targets: Debian 12/13 and Ubuntu 22.04/24.04/26.04 LTS. Only the locally tested environment is claimed in [TESTING.md](TESTING.md); a target list is not proof of compatibility.
 
 ```sh

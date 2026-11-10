@@ -1,5 +1,7 @@
 # ADC Parser — alpha-0.2.2
 
+**Aktualna integracja — alpha-0.2.8:** [Logowanie gości](ADC_LOGIN.md) podłącza state/SUP/SID/INF/Tiger do rzeczywistego reaktora C++ TCP/TLS, z ograniczonym uporządkowanym wyjściem, unikalnością nick/CID, listą obecności i pełnymi testami ncdc NORMAL/reconnect. Historyczne opisy poniżej zachowują pierwotny zakres; wzmianki o planowanym podłączeniu/wyjściu/logowaniu dotyczą wcześniejszych wersji. Konta/hasła, czat, wyszukiwanie i przekazywanie transferów pozostają planowane.
+
 Od alpha-0.2.7 [weryfikacja CID/PID](ADC_IDENTITY.md) jest osobnym wspólnym modułem z TigerCid/VerifiedIdentity, bezpośrednimi czyszczonymi buforami i stałoczasowym końcowym porównaniem skrótu. Snapshot INF zachowuje wyłącznie publiczny wynik weryfikacji. Podstawowa obsługa z alpha-0.2.6 pozostaje zgodna; transport i polityka kont/rejestru są osobne.
 
 Od alpha-0.2.6 [ADC INF](ADC_INF.md) udostępnia ClientSession, łączący niższe warstwy z walidacją INF i weryfikacją Tiger PID/CID. Wymaga poprawnych metadanych przed zewnętrzną decyzją dopuszczenia i nie zachowuje/eksportuje PD. Unikalność w rejestrze i podłączenie Network pozostają planowane; wcześniejsze API/fixture zachowują swój zakres.

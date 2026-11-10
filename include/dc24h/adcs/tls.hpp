@@ -41,6 +41,9 @@ public:
     // Decrypted data can remain buffered after the socket stops being readable.
     [[nodiscard]] bool pending() const noexcept;
     [[nodiscard]] IoResult receive(char* buffer, std::size_t capacity) noexcept;
+    // On WANT_READ/WANT_WRITE retry the identical pointer and length; do not
+    // interleave another SSL operation before that write completes or fails.
+    [[nodiscard]] IoResult send(const char* buffer, std::size_t size) noexcept;
 
 private:
     ssl_st* ssl_{nullptr};

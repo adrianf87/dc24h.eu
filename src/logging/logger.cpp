@@ -68,6 +68,12 @@ std::string_view event_name(ConnectionEvent event) noexcept {
     case ConnectionEvent::shutdown: return "shutdown";
     case ConnectionEvent::security_quota: return "security_quota";
     case ConnectionEvent::partial_frame_timeout: return "partial_frame_timeout";
+    case ConnectionEvent::login_ready: return "login_ready";
+    case ConnectionEvent::login_rejected: return "login_rejected";
+    case ConnectionEvent::login_timeout: return "login_timeout";
+    case ConnectionEvent::output_timeout: return "output_timeout";
+    case ConnectionEvent::output_limit: return "output_limit";
+    case ConnectionEvent::write_error: return "write_error";
     }
     return {};
 }

@@ -19,7 +19,7 @@ enum class SupportError {
     invalid_message, feature_limit, missing_base, no_common_hash,
     session_hash_removed, invalid_sequence, reply_mismatch, local_update_unsupported
 };
-// Suggested fatal ADC status for a future dispatcher; never includes peer input.
+// Fatal status mapping used by login admission; never includes peer input.
 [[nodiscard]] std::string_view support_status_code(SupportError error) noexcept;
 
 struct SupportPolicy {
@@ -55,8 +55,8 @@ using ProtocolError = std::variant<StateError, SupportError>;
 using ProtocolResult = std::optional<ProtocolError>; // nullopt = accepted
 
 // Composition of sequencing and negotiated support. No bypassing SUP approval
-// is exposed. One noncopyable/nonmovable instance per future connection/thread.
-// Network does not attach this adapter until bounded ordered output exists.
+// is exposed. One noncopyable/nonmovable instance per connection/thread.
+// Network attaches it through ClientSession/LoginHub and ordered send completions.
 class ProtocolConnection final {
 public:
     explicit ProtocolConnection(SupportPolicy policy = {});

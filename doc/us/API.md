@@ -136,3 +136,8 @@ Since alpha-0.2.2, `Message::positional_count` identifies known BASE argument la
 ## CID/PID API — alpha-0.2.7
 
 `adc/tiger_identity.hpp` exposes TigerCid::parse/text/bytes and verify_tiger_identity(cid, pid, hash), returning variant<VerifiedIdentity, IdentityError>. Only public CID is retained. `ClientInfo::identity()` returns an optional owning copy of that result. `decode_tiger_base32` and `tiger192_into` write a caller-owned 24-byte destination and clear it on failure; existing optional-return helpers remain compatible. The final comparison uses CRYPTO_memcmp. No HTTP route/schema or authentication API changes. See [ADC_IDENTITY.md](ADC_IDENTITY.md).
+
+
+## alpha-0.2.8
+
+API v1 schema is unchanged. active_connections counts transport sockets, adc_frames counts parsed syntax; neither represents logged-in users. Guest login/readiness is internal reactor state and opt-in logging. See [ADC_LOGIN.md](ADC_LOGIN.md).

@@ -13,7 +13,7 @@ import time
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 
-from network_process_tests import Hub, BINARY
+from network_process_tests import Hub, BINARY, drain_until_eof
 from api_support import enable_api, fetch_status
 
 
@@ -93,10 +93,10 @@ class ApiProcessTests(unittest.TestCase):
         _, health = fx.decode(fx.request(target='/api/v1/health', fragments=True))
         self.assertEqual(health, {'status': 'ok'})
         peer = hub.connect(); peer.sendall(b'HSUP ADBASE ADTIGR\n'); peer.shutdown(socket.SHUT_WR)
-        self.assertEqual(peer.recv(1), b'')
+        drain_until_eof(peer)
         snapshot = fetch_status(fx.endpoint, fx.token)
         self.assertEqual(snapshot['api_version'], 'v1')
-        self.assertEqual(snapshot['server']['version'], 'alpha-0.2.7')
+        self.assertEqual(snapshot['server']['version'], 'alpha-0.2.8')
         self.assertTrue(snapshot['server']['core_running'])
         self.assertGreaterEqual(snapshot['network']['accepted_connections'], 1)
         self.assertEqual(snapshot['network']['adc_frames'], 1)

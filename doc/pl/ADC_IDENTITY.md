@@ -1,5 +1,7 @@
 # CID/PID — alpha-0.2.7
 
+**Aktualna integracja — alpha-0.2.8:** [Logowanie gości](ADC_LOGIN.md) podłącza state/SUP/SID/INF/Tiger do rzeczywistego reaktora C++ TCP/TLS, z ograniczonym uporządkowanym wyjściem, unikalnością nick/CID, listą obecności i pełnymi testami ncdc NORMAL/reconnect. Historyczne opisy poniżej zachowują pierwotny zakres; wzmianki o planowanym podłączeniu/wyjściu/logowaniu dotyczą wcześniejszych wersji. Konta/hasła, czat, wyszukiwanie i przekazywanie transferów pozostają planowane.
+
 ## Zakres
 
 Podstawowe sprawdzanie związku Tiger powstało w [INF](ADC_INF.md) w alpha-0.2.6. Ten etap wydziela je do `adc/tiger_identity.hpp`, dodaje typy publiczne, bezpośrednie bufory, porównanie binarne i osobne testy błędów. INF używa wspólnego weryfikatora i zachowuje wynik publiczny. Semantyka akceptowanych kanonicznych par pozostaje zgodna.
