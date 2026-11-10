@@ -1,5 +1,19 @@
 # Changelog
 
+## alpha-0.3.2 — 2026-11-10
+
+Session Manager increment, based on main `ca00266992dd866bdd30ff68e911c981c6665a62` after the Session Core merge:
+
+- Added bounded, noncopyable/nonmovable users::SessionManager as the single owner of live lifecycle models. Typed registration/removal errors, monotonic ID watermark, stable references, closed-only removal and exception-safe insertion prevent stale identity reuse and orphan registrations.
+- Added immutable lookup, owning snapshots, ordered exclusive-cursor pages limited to 256 entries and phase counts derived from model state. Closing entries retain capacity until cleanup; no duplicated transition counters, live iterators, persistent history or HTTP session endpoint.
+- Integrated every accepted ADC/ADCS LoginHub peer with the manager. Protocol peers borrow models; peer-construction failure finalizes/removes its model without reusing the ID. Cleanup destroys protocol/output before removing the closed model. Public routing indexes, security policy, transport ownership and wire behavior remain unchanged.
+- Added users.manager for capacity, phase counts, pagination gaps/bounds, stable references, 2000-lifetime churn, maximum IDs and live adapter/initialization rollback. The shutdown API fixture now accepts both EOF and reset when an unread request prefix is closed, matching Unix socket behavior; no API behavior changed.
+- Updated release metadata and matched US/PL Session Manager/module/testing/version documentation. Existing US/PL runtime catalogs remain applicable; no new dependencies, configuration, SQL migration or API schema.
+
+Local validation: **48/48 CTest suites passed in Debug, Release and ASan/UBSan** with strict integration enabled, including real ncdc ADC/ADCS, disposable MariaDB and isolated Apache. The initial Debug API shutdown fixture received a legal reset instead of EOF; it passed alone, then was hardened as described above and rechecked in each build. WebAdmin typecheck/build, 3 Node tests, 3 Chromium tests and real API → Vite → React integration passed. Metadata, UTF-8/language parity/local links, Python syntax and whitespace checks passed.
+
+Limits: owner-thread in-memory registry only; no cross-thread access, remote administration, distributed identity, accounts, roles, bans, persistence or user profile layer. Local validation does not imply other OS, remote CI, production load or fault-injection coverage. Main and historical branches remain unchanged; no automatic merge.
+
 ## alpha-0.3.1 — 2026-11-10
 
 Session Core increment, based on main at `5bc79d0a12eb37d0869651eb48b57d2bf338d7fe` after the alpha-0.2.10 negotiation-security merge:

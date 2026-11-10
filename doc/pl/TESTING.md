@@ -1,5 +1,11 @@
 # Testowanie
 
+## Weryfikacja Session Manager — alpha-0.3.2
+
+Pełna bramka ma **48 zestawów**, w tym users.manager. Debug, Release i ASan/UBSan przeszły wraz z rzeczywistym ncdc ADC/ADCS, MariaDB i Apache. Pierwsze sprawdzenie zamykania w Debug otrzymało poprawny reset gniazda Unix; test akceptuje EOF/reset przy nieodczytanych danych i został powtórzony we wszystkich wariantach. WebAdmin: budowanie, 3 testy Node, 3 Chromium i rzeczywista integracja API poprawne. Odtwarzanie: `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug -j 4`, `ctest --test-dir build-debug --output-on-failure -j 4`. Flagi sanitizerów opisano poniżej.
+
+**Bieżący etap — alpha-0.3.2:** [Session Manager](SESSION_MANAGER.md) jest centralnym właścicielem modeli wszystkich zarejestrowanych sesji; zapewnia limit, stabilny odczyt, liczenie faz i uporządkowane strony kopii. Obiekty protokołu pożyczają modele, a kolejki i indeksy publiczne pozostają w ADC. Starsze opisy zachowują zakres historyczny.
+
 **Aktualny etap — alpha-0.3.1:** [Session Core](SESSION_CORE.md) dostarcza niezależny model Users i trwałe w obrębie reaktora ID sesji, podłączone do rzeczywistej gotowości, zamykania i czasów. Wcześniejsze opisy zachowują zakres pierwotnego etapu.
 
 **Etap dostarczony w alpha-0.2.10:** [Bezpieczeństwo negocjacji](NEGOTIATION_SECURITY.md) dodaje limity oczekujących sesji, łączne budżety wejścia do gotowości i wspólne limity prób przed INF/Tiger. Opisy historyczne poniżej zachowują pierwotny zakres.

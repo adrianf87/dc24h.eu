@@ -1,5 +1,7 @@
 # Session Core — alpha-0.3.1
 
+**Bieżący etap — alpha-0.3.2:** [Session Manager](SESSION_MANAGER.md) jest centralnym właścicielem modeli wszystkich zarejestrowanych sesji; zapewnia limit, stabilny odczyt, liczenie faz i uporządkowane strony kopii. Obiekty protokołu pożyczają modele, a kolejki i indeksy publiczne pozostają w ADC. Starsze opisy zachowują zakres historyczny.
+
 Nowa biblioteka C++20 `dc24h_users` jest właścicielem modelu cyklu życia sesji używanego przez rzeczywisty hub ADC/ADCS. Podstawa gałęzi: main `5bc79d0a12eb37d0869651eb48b57d2bf338d7fe`, po scaleniu ochrony negocjacji alpha-0.2.10. Protokół, reguły gości, odpowiedzi sieciowe, konfiguracja bezpieczeństwa, SQL i API v1 pozostają dotychczasowe. Historia jest zachowana; gałąź nie scala się automatycznie.
 
 ## Identyfikator i własność

@@ -10,11 +10,10 @@
 namespace dc24h::adc {
 struct LoginHub::Peer {
     struct Frame { Message message; std::string wire; Completion completion; };
-    Peer(std::shared_ptr<SidPool> pool, std::string_view address, users::SessionId id,
-         users::Transport transport, users::TimePoint accepted)
-        : session(std::move(pool), address), lifecycle(id,transport,accepted) {}
+    Peer(std::shared_ptr<SidPool> pool, std::string_view address, users::Session& model)
+        : session(std::move(pool), address), lifecycle(model) {}
     ClientSession session;
-    users::Session lifecycle;
+    users::Session& lifecycle;
     std::deque<Frame> output;
     std::size_t offset{0};
     std::size_t queued{0};
@@ -63,7 +62,7 @@ std::string_view status_description(std::string_view code) noexcept {
 }
 } // namespace
 
-LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()) {
+LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.connections) {
     if (limits.connections == 0 || limits.connections > 65535 ||
         limits.output_per_client < 128 || limits.output_per_client > 16 * 1024 * 1024 ||
         limits.output_total < limits.output_per_client || limits.output_total > 256 * 1024 * 1024) {
@@ -73,13 +72,22 @@ LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared
 LoginHub::~LoginHub() = default;
 
 void LoginHub::connect(Id id, std::string_view address, users::Transport transport, users::TimePoint accepted) {
-    if (id <= greatest_id_ || peers_.size() >= limits_.connections) {
-        throw std::logic_error("Duplicate, reused or excess login connection");
+    const auto key = users::SessionId::from_value(id);
+    if (!key) { throw std::logic_error("Zero login connection ID"); }
+    const auto registered = sessions_.add(*key,transport,accepted);
+    const auto model = std::get_if<users::Session*>(&registered);
+    if (!model) { throw std::logic_error("Duplicate, reused or excess login connection"); }
+    try {
+        auto peer = std::make_unique<Peer>(pool_, address, **model);
+        if (transport == users::Transport::adc) { check_model(peer->lifecycle.start_negotiation(accepted)); }
+        peers_.emplace(id,std::move(peer));
+    } catch (...) {
+        // Failed protocol allocation leaves no orphan registry entry. The ID
+        // remains consumed, so no stale reference can identify a later peer.
+        check_model((*model)->finish_close(users::CloseCause::internal_error,accepted));
+        (void)sessions_.remove(*key);
+        throw;
     }
-    auto peer = std::make_unique<Peer>(pool_, address, *users::SessionId::from_value(id), transport, accepted);
-    if (transport == users::Transport::adc) { check_model(peer->lifecycle.start_negotiation(accepted)); }
-    peers_.emplace(id,std::move(peer));
-    greatest_id_=id;
 }
 void LoginHub::transport_ready(Id id, users::TimePoint now) {
     check_model(peers_.at(id)->lifecycle.start_negotiation(now));
@@ -318,7 +326,8 @@ void LoginHub::disconnect(Id id, bool announce, users::CloseCause cause, users::
     queued_ -= peer.queued;
     peer.session.disconnect();
     check_model(peer.lifecycle.finish_close(cause,now));
-    peers_.erase(found); // Drop all old output before releasing/reusing the SID.
+    peers_.erase(found); // Drop protocol/output references before deleting the model.
+    if (sessions_.remove(*users::SessionId::from_value(id))) { throw std::logic_error("Session registry cleanup failed"); }
 }
 bool LoginHub::closing(Id id) const { return session_model(id).closing(); }
 bool LoginHub::must_close(Id id) const {
@@ -328,10 +337,15 @@ bool LoginHub::must_close(Id id) const {
 bool LoginHub::ready(Id id) const { return session_model(id).ready(); }
 bool LoginHub::overloaded(Id id) const { return session_model(id).terminal_cause() == users::CloseCause::output_limit; }
 bool LoginHub::peer_fatal(Id id) const { return session_model(id).terminal_cause() == users::CloseCause::peer_status; }
-const users::Session& LoginHub::session_model(Id id) const { return peers_.at(id)->lifecycle; }
+const users::Session& LoginHub::session_model(Id id) const {
+    const auto key=users::SessionId::from_value(id);
+    const auto* model=key ? sessions_.find(*key) : nullptr;
+    if (!model) { throw std::out_of_range("Missing session"); }
+    return *model;
+}
 std::optional<users::Snapshot> LoginHub::snapshot(Id id) const {
-    const auto found=peers_.find(id);
-    return found == peers_.end() ? std::nullopt : std::optional<users::Snapshot>{found->second->lifecycle.snapshot()};
+    const auto key=users::SessionId::from_value(id);
+    return key ? sessions_.snapshot(*key) : std::nullopt;
 }
 ConnectionState LoginHub::state(Id id) const { return peers_.at(id)->session.state(); }
 } // namespace dc24h::adc

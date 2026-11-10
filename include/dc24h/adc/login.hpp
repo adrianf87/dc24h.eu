@@ -1,7 +1,7 @@
 #pragma once
 
 #include "dc24h/adc/inf.hpp"
-#include "dc24h/users/session.hpp"
+#include "dc24h/users/session_manager.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -47,6 +47,7 @@ public:
     // owner thread. Snapshot is an owning copy; stale/missing IDs return nullopt.
     [[nodiscard]] const users::Session& session_model(Id id) const;
     [[nodiscard]] std::optional<users::Snapshot> snapshot(Id id) const;
+    [[nodiscard]] const users::SessionManager& sessions() const noexcept { return sessions_; }
     [[nodiscard]] bool closing(Id id) const;
     [[nodiscard]] bool must_close(Id id) const;
     [[nodiscard]] bool overloaded(Id id) const;
@@ -67,11 +68,11 @@ private:
     void remove_identity(Id id, const Peer& peer);
     LoginLimits limits_;
     std::shared_ptr<SidPool> pool_;
+    users::SessionManager sessions_; // Outlives the peers that borrow models.
     std::unordered_map<Id, std::unique_ptr<Peer>> peers_;
     std::unordered_map<std::string, Id> nicknames_;
     std::unordered_map<std::string, Id> cids_;
     std::unordered_map<std::string, Id> sids_;
     std::size_t queued_{0};
-    Id greatest_id_{0};
 };
 } // namespace dc24h::adc
