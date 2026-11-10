@@ -1,6 +1,8 @@
 # Testowanie
 
-**Bieżący etap — alpha-0.4.2:** [Chat Core](CHAT_CORE.md) dodaje osobny silnik wiadomości niezależny od protokołu oraz publiczne BMSG, z kopią dla nadawcy i /me. Czat prywatny/grupowy/feature/hub, moderacja i historia pozostają osobnymi etapami.
+**Bieżący etap — alpha-0.4.3:** [Public Chat](PUBLIC_CHAT.md) dodaje osobny adapter polityki i rozsyłania BMSG oraz jedną wspólną niemutowalną ramkę na publikację. Offsety i logiczne budżety odbiorców pozostają niezależne; zachowano bramki źródła/stanu/prywatności i FIFO.
+
+**Etap dostarczony w alpha-0.4.2:** [Chat Core](CHAT_CORE.md) dodaje osobny silnik wiadomości niezależny od protokołu oraz publiczne BMSG, z kopią dla nadawcy i /me. Czat prywatny/grupowy/feature/hub, moderacja i historia pozostają osobnymi etapami.
 
 **Etap dostarczony w alpha-0.4.1:** [ADC MSG](ADC_MSG.md) dodaje kodek MSG z typowanymi polami PM/ME, sprawdzanym budowaniem komunikatów, ograniczoną serializacją i walidacją w maszynie stanów. Dostarczanie czatu i polityka rozmów pozostają kolejnymi etapami.
 
@@ -255,3 +257,5 @@ Lokalna weryfikacja alpha-0.3.13: 67/67 zestawów CTest w Debug, Release i ASan/
 Lokalna weryfikacja alpha-0.4.1: 69/69 zestawów CTest w Debug, Release i ASan/UBSan, w tym kodek/proces MSG, prawdziwy ncdc ADC/ADCS, MariaDB i Apache HTTPS. Przeszły produkcyjne budowanie WebAdmin, 4 testy Node, 3 testy Chromium i integracja z rzeczywistym API C++. Bez deklaracji wykonania zdalnego CI, pełnej macierzy systemów ani obciążenia produkcyjnego.
 
 Lokalna weryfikacja alpha-0.4.2: 72/72 zestawów CTest w Debug, Release i ASan/UBSan, w tym Chat Core/ADC/proces, publiczny czat prawdziwego ncdc ADC/ADCS, MariaDB i Apache HTTPS. Przeszły budowanie WebAdmin, 4 testy Node, 3 testy Chromium i integracja API C++. Końcowe testy Chat/logowania obejmują poprawkę instrumentacji alokatora. Bez deklaracji zdalnego CI, pełnej macierzy systemów/klientów i obciążenia produkcyjnego.
+
+Lokalna weryfikacja alpha-0.4.3: 74/74 zestawów CTest w Debug, Release i ASan/UBSan, w tym Public Chat unit/proces i prawdziwy ncdc ADC/ADCS. Powtórzone testy Public Chat przeszły po poprawce instrumentacji alokatora. Przeszły MariaDB, Apache HTTPS, budowanie WebAdmin, 4 testy Node, 3 testy Chromium i integracja API C++. Bez deklaracji zdalnego CI, pełnej macierzy systemów/klientów i benchmarku.

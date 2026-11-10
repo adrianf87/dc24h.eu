@@ -1,6 +1,8 @@
 # Lokalne API administracyjne — alpha-0.1.9
 
-**Bieżący etap — alpha-0.4.2:** [Chat Core](CHAT_CORE.md) dodaje osobny silnik wiadomości niezależny od protokołu oraz publiczne BMSG, z kopią dla nadawcy i /me. Czat prywatny/grupowy/feature/hub, moderacja i historia pozostają osobnymi etapami.
+**Bieżący etap — alpha-0.4.3:** [Public Chat](PUBLIC_CHAT.md) dodaje osobny adapter polityki i rozsyłania BMSG oraz jedną wspólną niemutowalną ramkę na publikację. Offsety i logiczne budżety odbiorców pozostają niezależne; zachowano bramki źródła/stanu/prywatności i FIFO.
+
+**Etap dostarczony w alpha-0.4.2:** [Chat Core](CHAT_CORE.md) dodaje osobny silnik wiadomości niezależny od protokołu oraz publiczne BMSG, z kopią dla nadawcy i /me. Czat prywatny/grupowy/feature/hub, moderacja i historia pozostają osobnymi etapami.
 
 **Etap dostarczony w alpha-0.4.1:** [ADC MSG](ADC_MSG.md) dodaje kodek MSG z typowanymi polami PM/ME, sprawdzanym budowaniem komunikatów, ograniczoną serializacją i walidacją w maszynie stanów. Dostarczanie czatu i polityka rozmów pozostają kolejnymi etapami.
 
@@ -84,7 +86,7 @@ Obie trasy wymagają uwierzytelnienia. Klucze JSON i błędy protokołu pozostaj
 ```json
 {
   "api_version": "v1",
-  "server": {"name": "dc24h.eu", "version": "alpha-0.4.2", "core_running": true, "uptime_seconds": 3},
+  "server": {"name": "dc24h.eu", "version": "alpha-0.4.3", "core_running": true, "uptime_seconds": 3},
   "network": {"active_connections": 0, "accepted_connections": 1, "adc_frames": 1, "adcs_handshakes": 0, "security_rejected": 0, "security_closed": 0, "rejected_connections": 0, "closed_connections": 1, "received_bytes": 20, "sent_bytes": 32, "peak_connections": 1},
   "users": {"online": 0, "peak_online": 0, "successful_logins": 0},
   "database": {"enabled": false}

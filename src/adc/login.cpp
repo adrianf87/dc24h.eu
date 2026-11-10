@@ -12,7 +12,19 @@
 
 namespace dc24h::adc {
 struct LoginHub::Peer {
-    struct Frame { Message message; std::string wire; Completion completion; };
+    struct Frame {
+        struct Owned { Message message; std::string wire; };
+        std::variant<Owned,SharedPublicChatFrame> content;
+        Completion completion;
+        [[nodiscard]] const Message& message() const noexcept {
+            if (const auto* owned=std::get_if<Owned>(&content)) { return owned->message; }
+            return std::get<SharedPublicChatFrame>(content)->message();
+        }
+        [[nodiscard]] std::string_view wire() const noexcept {
+            if (const auto* owned=std::get_if<Owned>(&content)) { return owned->wire; }
+            return std::get<SharedPublicChatFrame>(content)->wire();
+        }
+    };
     Peer(std::shared_ptr<SidPool> pool, std::string_view address, const users::Session& model)
         : session(std::move(pool), address), lifecycle(model) {}
     ClientSession session;
@@ -65,7 +77,7 @@ std::string_view status_description(std::string_view code) noexcept {
 }
 } // namespace
 
-LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), chat_(sessions_), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
+LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), chat_(sessions_), public_chat_(chat_), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
     if (limits.connections == 0 || limits.connections > 65535 ||
         limits.output_per_client < 128 || limits.output_per_client > 16 * 1024 * 1024 ||
         limits.output_total < limits.output_per_client || limits.output_total > 256 * 1024 * 1024) {
@@ -107,9 +119,23 @@ bool LoginHub::enqueue(Peer& peer, Message message, Completion completion) {
         return false;
     }
     const auto size = wire->size();
-    peer.output.push_back({std::move(message), std::move(*wire), completion});
+    peer.output.push_back({Peer::Frame::Owned{std::move(message), std::move(*wire)}, completion});
     peer.queued += size;
     queued_ += size;
+    return true;
+}
+bool LoginHub::enqueue_public(Peer& peer, SharedPublicChatFrame frame) {
+    if (peer.lifecycle.immediate() || peer.lifecycle.closing() || peer.quit_queued) { return false; }
+    const auto size=frame->wire().size();
+    if (size>limits_.output_per_client-peer.queued || size>limits_.output_total-queued_) {
+        check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::output_limit,users::Clock::now()));
+        return false;
+    }
+    // No message copy or serialization per recipient; the front remains pinned
+    // through partial TCP/TLS sends while other queues release their references.
+    peer.output.push_back({std::move(frame),Completion::observe});
+    peer.queued+=size;
+    queued_+=size;
     return true;
 }
 void LoginHub::reject(Peer& peer, std::string_view status, std::optional<std::string_view> command,
@@ -119,14 +145,14 @@ void LoginHub::reject(Peer& peer, std::string_view status, std::optional<std::st
     // Keep a possibly partially sent/TLS-pinned front, cancel all later ordinary
     // frames. Never mutate the immutable front pointer or its remaining length.
     while (peer.output.size() > 1) {
-        queued_ -= peer.output.back().wire.size();
-        peer.queued -= peer.output.back().wire.size();
+        queued_ -= peer.output.back().wire().size();
+        peer.queued -= peer.output.back().wire().size();
         peer.output.pop_back();
     }
     std::optional<Sid> sid = Sid::parse(peer.session.sid());
-    if (!sid && !peer.output.empty() && peer.output.front().message.kind == Command::sid) {
+    if (!sid && !peer.output.empty() && peer.output.front().message().kind == Command::sid) {
         // This already queued ISID must complete ahead of the terminal status.
-        sid = Sid::parse(peer.output.front().message.parameters[0]);
+        sid = Sid::parse(peer.output.front().message().parameters[0]);
     }
     if (description.empty()) { description = status_description(status); }
     if (!enqueue(peer, make_status(*StatusCode::parse(status), description, command))) { return; }
@@ -275,27 +301,19 @@ void LoginHub::receive(Id id, const Message& message) {
 void LoginHub::route_chat(Id id, const Message& message) {
     auto& sender=*peers_.at(id);
     try {
-        const auto validated=validate_msg(message);
-        const auto* view=std::get_if<MsgView>(&validated);
-        if (!view) { reject(sender,"240");return; }
-        // Never downgrade private/group intent to a public broadcast. Unknown
-        // extensions are not copied to outgoing public metadata.
-        if (message.type!=MessageType::broadcast || view->private_group) {
+        auto prepared=public_chat_.prepare(sender.lifecycle.id(),message);
+        if (const auto* error=std::get_if<PublicChatError>(&prepared)) {
             const std::string command=std::string(1,static_cast<char>(message.type))+"MSG";
-            (void)enqueue(sender,make_status(*StatusCode::parse("125"),"Command not implemented",command));
+            if (*error==PublicChatError::unsupported_type || *error==PublicChatError::private_message) {
+                (void)enqueue(sender,make_status(*StatusCode::parse("125"),"Command not implemented",command));
+            } else { reject(sender,*error==PublicChatError::invalid_state ? "244" : "240",command); }
             return;
         }
-        auto prepared=chat_.prepare(sender.lifecycle.id(),*message.source,view->text,view->third_person);
-        const auto* plan=std::get_if<chat::Broadcast>(&prepared);
-        if (!plan) { reject(sender,"240", "BMSG");return; }
-        MsgOptions options;options.type=MessageType::broadcast;
-        options.source=Sid::parse(plan->source());options.third_person=plan->third_person();
-        // Complete validation/projection before any recipient queue changes.
-        const auto public_message=make_msg(plan->text(),std::move(options));
-        const auto result=chat_.dispatch(*plan,[&](users::SessionId recipient,const chat::Broadcast&) {
+        const auto& plan=std::get<PublicBroadcast>(prepared);
+        const auto result=public_chat_.dispatch(plan,[&](users::SessionId recipient,const SharedPublicChatFrame& frame) {
             const auto found=peers_.find(recipient.value());
             if (found==peers_.end()) { return false; }
-            try { return enqueue(*found->second,public_message); }
+            try { return enqueue_public(*found->second,frame); }
             catch (const std::bad_alloc&) {
                 check_model(sessions_.force_close(recipient,users::CloseCause::internal_error,users::Clock::now()));
                 return false;
@@ -348,22 +366,22 @@ void LoginHub::route_status(Id id, const Message& message) {
 
 std::string_view LoginHub::output(Id id) const {
     const auto& peer = *peers_.at(id);
-    return peer.output.empty() ? std::string_view{} : std::string_view(peer.output.front().wire).substr(peer.offset);
+    return peer.output.empty() ? std::string_view{} : peer.output.front().wire().substr(peer.offset);
 }
 bool LoginHub::consume(Id id, std::size_t bytes) {
     auto& peer = *peers_.at(id);
-    if (peer.output.empty() || bytes == 0 || bytes > peer.output.front().wire.size() - peer.offset) {
+    if (peer.output.empty() || bytes == 0 || bytes > peer.output.front().wire().size() - peer.offset) {
         throw std::logic_error("Invalid transport send completion");
     }
     peer.offset += bytes;
-    if (peer.offset != peer.output.front().wire.size()) { return false; }
+    if (peer.offset != peer.output.front().wire().size()) { return false; }
     auto frame = std::move(peer.output.front());
     peer.output.pop_front();
     peer.offset = 0;
-    peer.queued -= frame.wire.size();
-    queued_ -= frame.wire.size();
+    peer.queued -= frame.wire().size();
+    queued_ -= frame.wire().size();
     if (peer.lifecycle.closing()) { return false; }
-    if (peer.session.observe(Direction::to_client, frame.message)) {
+    if (peer.session.observe(Direction::to_client, frame.message())) {
         check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now())); return false;
     }
     if (frame.completion == Completion::support) {

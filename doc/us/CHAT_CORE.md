@@ -1,5 +1,7 @@
 # Chat Core — alpha-0.4.2
 
+**Current increment — alpha-0.4.3:** [Public Chat](PUBLIC_CHAT.md) adds a dedicated BMSG policy/dispatch adapter and one immutable shared public frame per publication. Recipient offsets and logical queue charges remain independent; source/state/private-message gates and FIFO are preserved.
+
 Based directly on main `508b43df7316ff1a45a41374ca0a38ce2a0ab6f0`, containing the merged alpha-0.4.1 ADC MSG codec. Existing code/history and branches are retained. EN/US UTF-8 remains the server default; documentation and operator help also support PL.
 
 ## Scope and module boundary

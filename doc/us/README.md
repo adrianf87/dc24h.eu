@@ -1,8 +1,9 @@
 # dc24h.eu documentation
 
-alpha-0.4.2: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.4.3: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
 - [AUDIT_ALPHA_0.1.md](AUDIT_ALPHA_0.1.md)
+- [Public Chat — alpha-0.4.3](PUBLIC_CHAT.md)
 - [Chat Core — alpha-0.4.2](CHAT_CORE.md)
 - [ADC MSG — alpha-0.4.1](ADC_MSG.md)
 - [ARCHITECTURE.md](ARCHITECTURE.md)

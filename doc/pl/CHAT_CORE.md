@@ -1,5 +1,7 @@
 # Chat Core — alpha-0.4.2
 
+**Bieżący etap — alpha-0.4.3:** [Public Chat](PUBLIC_CHAT.md) dodaje osobny adapter polityki i rozsyłania BMSG oraz jedną wspólną niemutowalną ramkę na publikację. Offsety i logiczne budżety odbiorców pozostają niezależne; zachowano bramki źródła/stanu/prywatności i FIFO.
+
 Etap utworzony bezpośrednio z main `508b43df7316ff1a45a41374ca0a38ce2a0ab6f0`, zawierającego scalony kodek ADC MSG alpha-0.4.1. Dotychczasowy kod, historia i gałęzie są zachowane. Domyślny język serwera pozostaje EN/US UTF-8; dokumentacja i pomoc operatora wspierają też PL.
 
 ## Zakres i architektura

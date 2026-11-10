@@ -119,6 +119,10 @@ class NcdcLoginTest(unittest.TestCase):
                 os.write(master, b'dc24hLoginProbe\r')
                 self.assertEqual(observer.line(), b'BMSG '+initial_sid+b' dc24hLoginProbe')
                 wait_screen(b'dc24hLoginProbe')
+                public_text='dc24hPublicŻółw 😀 path\\folder'.encode()
+                os.write(master, public_text+b'\r')
+                self.assertEqual(observer.line(), b'BMSG '+initial_sid+b' '+r'dc24hPublicŻółw\s😀\spath\\folder'.encode())
+                wait_screen('dc24hPublicŻółw'.encode())
                 for command in (b'/me dc24hActionProbe likes cats', b'/msg ListObserver dc24hPrivateProbe'):
                     before_frames = fetch_status(api_path, token)['network']['adc_frames']
                     os.write(master, command+b'\r')
@@ -235,6 +239,7 @@ class NcdcLoginTest(unittest.TestCase):
                 self.assertNotIn(b'dc24hActionProbe', hub.log)
                 self.assertNotIn(b'dc24hPrivateProbe', hub.log)
                 self.assertNotIn(b'dc24hIncomingChat', hub.log)
+                self.assertNotIn(b'dc24hPublic', hub.log)
                 self.assertNotIn(b'event=login_rejected', hub.log)
                 print(f'ncdc completed guest NORMAL and reconnect via {scheme.upper()} on the C++ hub')
             finally:

@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.4.2 (Chat Core).**
+**Current development version: alpha-0.4.3 (Public Chat).**
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.4.3 Public Chat**: dedicated BMSG admission/projection/dispatch adapter with one immutable public frame shared by recipient queues. Independent offsets and logical charges preserve bounded FIFO delivery and pinned TLS output through partial sends, terminal close and source cleanup. See [Public Chat](doc/us/PUBLIC_CHAT.md).
 
 - **alpha-0.4.2 Chat Core**: independent message engine with owned lifecycle-bound broadcast plans and live public BMSG delivery, including sender echo and /me. Unknown fields are removed; private intent is never downgraded to public. Existing bounded queues isolate slow/failing recipients. See [Chat Core](doc/us/CHAT_CORE.md).
 
