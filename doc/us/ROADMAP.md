@@ -1,6 +1,8 @@
 # Roadmap
 
-**Current increment — alpha-0.2.10:** [Negotiation security](NEGOTIATION_SECURITY.md) adds pending admission caps, cumulative pre-readiness input budgets and shared pre-INF/Tiger attempt limits. Earlier release descriptions below retain their original scope.
+**Current increment — alpha-0.3.1:** [Session Core](SESSION_CORE.md) provides the independent Users model and stable lifetime IDs, with live readiness/closure/timeline integration. Earlier stage descriptions below retain their original delivery scope.
+
+**Increment delivered in alpha-0.2.10:** [Negotiation security](NEGOTIATION_SECURITY.md) adds pending admission caps, cumulative pre-readiness input budgets and shared pre-INF/Tiger attempt limits. Earlier release descriptions below retain their original scope.
 
 **Increment delivered in alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) adds semantic status/quit validation, source-checked B/D/E/F status routing, precise errors and bounded terminal ISTA/own-IQUI output. Historical descriptions below retain the behavior of their original releases.
 
@@ -29,6 +31,7 @@
 | alpha-0.2.8 Login | Live guest NORMAL, ordered bounded output, nickname/CID registry, public presence and ncdc reconnect |
 | alpha-0.2.9 STA/QUI | Semantic errors, status routing, final own QUI and bounded terminal drain |
 | alpha-0.2.10 Security | Pending admission, cumulative negotiation budgets and pre-verification quotas |
+| alpha-0.3.1 Session Core | Users model, stable lifetime identity, snapshots and actual connection lifecycle |
 
 ## Historical acceptance plan before alpha-0.2.8
 

@@ -25,6 +25,28 @@ namespace dc24h::network {
 namespace {
 using Clock = std::chrono::steady_clock;
 using Event = logging::ConnectionEvent;
+using Cause = users::CloseCause;
+constexpr std::array close_events{
+    std::pair{Cause::protocol_rejected,Event::login_rejected},
+    std::pair{Cause::peer_status,Event::peer_status}, std::pair{Cause::peer_closed,Event::peer_closed},
+    std::pair{Cause::tls_handshake_failed,Event::tls_handshake_failed}, std::pair{Cause::tls_closed,Event::tls_closed},
+    std::pair{Cause::tls_read_error,Event::tls_read_error}, std::pair{Cause::tcp_read_error,Event::tcp_read_error},
+    std::pair{Cause::socket_error,Event::socket_error}, std::pair{Cause::write_error,Event::write_error},
+    std::pair{Cause::shutdown,Event::shutdown}, std::pair{Cause::login_timeout,Event::login_timeout},
+    std::pair{Cause::idle_timeout,Event::idle_timeout}, std::pair{Cause::handshake_timeout,Event::handshake_timeout},
+    std::pair{Cause::partial_frame_timeout,Event::partial_frame_timeout}, std::pair{Cause::output_timeout,Event::output_timeout},
+    std::pair{Cause::output_limit,Event::output_limit}, std::pair{Cause::security_quota,Event::security_quota},
+    std::pair{Cause::negotiation_limit,Event::negotiation_limit}, std::pair{Cause::identity_limit,Event::identity_limit},
+    std::pair{Cause::close_timeout,Event::close_timeout}, std::pair{Cause::internal_error,Event::socket_error}
+};
+Cause session_cause(Event event) noexcept {
+    for (const auto& [cause,value] : close_events) { if (value==event) { return cause; } }
+    return Cause::internal_error;
+}
+Event session_event(std::optional<Cause> cause) noexcept {
+    for (const auto& [value,event] : close_events) { if (cause==value) { return event; } }
+    return Event::login_rejected;
+}
 
 class Fd final {
 public:
@@ -133,7 +155,6 @@ struct Connection {
     bool tls_ready{true};
     bool want_write{false};
     std::string peer_key;
-    Clock::time_point connected_at;
     std::optional<Clock::time_point> partial_started;
     std::size_t invalid_frames{0};
     security::FrameLimiter frame_budget{1024};
@@ -141,10 +162,7 @@ struct Connection {
     std::optional<adcs::IoStatus> write_wait;
     std::array<char, 8192> input{};
     std::optional<Clock::time_point> output_progress;
-    bool login_logged{false};
     std::uint32_t interest{EPOLLIN | EPOLLRDHUP};
-    std::optional<Clock::time_point> close_started;
-    std::optional<Event> close_event;
     bool security_counted{false};
     security::NegotiationBudget negotiation{65536,64};
     bool negotiation_violation{false};
@@ -269,12 +287,12 @@ void TcpServer::run() {
     std::unordered_map<std::uint64_t, Connection> connections;
     adc::LoginHub login({options_.max_connections});
     security::PeerLimiter peer_limiter(options_.security);
-    std::uint64_t next_token = listeners.size() + 1;
+    users::SessionIds session_ids(static_cast<std::uint64_t>(listeners.size()+1));
     std::array<epoll_event, 64> events{};
     bool accepting = true;
     Clock::time_point resume_accepting{};
 
-    enum class Warning { invalid_frame, connection_limit, idle, tls_failure, handshake_timeout, peer_io, admission_quota, frame_quota, partial_frame, login_timeout, output_timeout, negotiation_limit, identity_limit, count };
+    enum class Warning { invalid_frame, connection_limit, idle, tls_failure, handshake_timeout, peer_io, admission_quota, frame_quota, partial_frame, login_timeout, output_timeout, negotiation_limit, identity_limit, session_id_limit, count };
     std::array<std::optional<Clock::time_point>, static_cast<std::size_t>(Warning::count)> last_warnings{};
     auto warn_once = [&](Warning category, std::string_view message) {
         const auto now = Clock::now();
@@ -305,26 +323,21 @@ void TcpServer::run() {
         }
         // DEL before close; event tokens are never reused even when the OS reuses an fd.
         ::epoll_ctl(epoll.get(), EPOLL_CTL_DEL, iterator->second.fd.get(), nullptr);
-        peer_limiter.release(iterator->second.peer_key, !iterator->second.login_logged);
-        login.disconnect(iterator->first, reason != Event::shutdown);
+        peer_limiter.release(iterator->second.peer_key, !login.session_model(iterator->first).was_ready());
+        login.disconnect(iterator->first, reason != Event::shutdown, session_cause(reason), Clock::now());
         connections.erase(iterator);
         active_.fetch_sub(1);
     };
     auto count_security_close = [&](Connection& connection) {
         if (!connection.security_counted) { connection.security_counted=true; security_closed_.fetch_add(1); }
     };
-    auto begin_close = [&](auto iterator, adc::CloseReason reason, Event event, Clock::time_point now) {
-        auto& connection = iterator->second;
-        if (login.closing(iterator->first)) { return; }
-        login.close(iterator->first, reason);
-        connection.close_started = now;
-        connection.close_event = event;
+    auto begin_close = [&](auto iterator, adc::CloseReason reason, Clock::time_point now) {
+        login.close(iterator->first, reason, now);
     };
     auto expire = [&](auto iterator, Clock::time_point now) {
         auto& connection = iterator->second;
         if (login.closing(iterator->first)) {
-            if (!connection.close_started) { connection.close_started=now; }
-            if (now - *connection.close_started >= options_.security.close_timeout) {
+            if (now - *login.session_model(iterator->first).timeline().closing >= options_.security.close_timeout) {
                 disconnect(iterator, Event::close_timeout);
                 return true;
             }
@@ -332,12 +345,12 @@ void TcpServer::run() {
         }
         const bool handshake = connection.tls && !connection.tls_ready;
         const bool handshake_expired = handshake &&
-            now - connection.connected_at >= options_.security.tls_handshake_timeout;
+            now - login.session_model(iterator->first).timeline().accepted >= options_.security.tls_handshake_timeout;
         const bool partial_expired = connection.partial_started &&
             now - *connection.partial_started >= options_.security.partial_frame_timeout;
         const bool idle_expired = now - connection.last_activity >= options_.idle_timeout;
-        const bool login_expired = !login.ready(iterator->first) &&
-            now - connection.connected_at >= options_.security.login_timeout;
+        const bool login_expired = !login.session_model(iterator->first).was_ready() &&
+            now - login.session_model(iterator->first).timeline().accepted >= options_.security.login_timeout;
         const bool output_expired = connection.output_progress &&
             now - *connection.output_progress >= options_.security.output_timeout;
         if (!handshake_expired && !partial_expired && !idle_expired && !login_expired && !output_expired) { return false; }
@@ -348,7 +361,7 @@ void TcpServer::run() {
         } else if (partial_expired) {
             count_security_close(connection);
             warn_once(Warning::partial_frame, "Security partial frame timed out; connection closed");
-            begin_close(iterator, adc::CloseReason::partial_frame_timeout, Event::partial_frame_timeout, now);
+            begin_close(iterator, adc::CloseReason::partial_frame_timeout, now);
             return false;
         } else if (login_expired || output_expired) {
             count_security_close(connection);
@@ -356,12 +369,12 @@ void TcpServer::run() {
                       login_expired ? "ADC login timed out; connection closed" : "ADC output stalled; connection closed");
             if (output_expired) { disconnect(iterator, Event::output_timeout); }
             else {
-                begin_close(iterator, adc::CloseReason::login_timeout, Event::login_timeout, now);
+                begin_close(iterator, adc::CloseReason::login_timeout, now);
                 return false;
             }
         } else {
             warn_once(Warning::idle, "Network idle connection closed");
-            begin_close(iterator, adc::CloseReason::idle_timeout, Event::idle_timeout, now);
+            begin_close(iterator, adc::CloseReason::idle_timeout, now);
             return false;
         }
         return true;
@@ -381,14 +394,12 @@ void TcpServer::run() {
             auto& connection = current->second;
             if (login.must_close(id)) {
                 if (login.overloaded(id)) { count_security_close(connection); }
-                disconnect(current, login.overloaded(id) ? Event::output_limit :
-                    connection.close_event.value_or(login.peer_fatal(id) ? Event::peer_status : Event::login_rejected));
+                disconnect(current, session_event(login.session_model(id).terminal_cause()));
                 continue;
             }
             const bool pending = !login.output(id).empty();
             if (pending && !connection.output_progress) { connection.output_progress = Clock::now(); }
             if (!pending) { connection.output_progress.reset(); }
-            if (login.closing(id) && !connection.close_started) { connection.close_started = Clock::now(); }
             bool read = !connection.want_write && !login.closing(id);
             bool write = connection.want_write || (connection.tls_ready && pending);
             if (connection.write_wait) {
@@ -470,7 +481,13 @@ void TcpServer::run() {
                         warn_once(Warning::admission_quota, "Security admission or pending-login quota reached; peer rejected");
                         continue;
                     }
-                    const auto client_token = next_token++;
+                    const auto allocated = session_ids.acquire();
+                    if (!allocated) {
+                        peer_limiter.release(key);rejected_.fetch_add(1);
+                        warn_once(Warning::session_id_limit,"Session identifier space exhausted; peer rejected");
+                        continue;
+                    }
+                    const auto client_token = allocated->value();
                     const bool secure = secure_listeners[static_cast<std::size_t>(token - 1)];
                     std::unique_ptr<adcs::Connection> tls;
                     if (secure) {
@@ -495,10 +512,11 @@ void TcpServer::run() {
                     }
                     connections.emplace(client_token, Connection{
                         std::move(client), admitted_at, {}, std::move(tls), !secure, false,
-                        key, admitted_at, std::nullopt, 0,
-                        security::FrameLimiter(options_.security.max_frames_per_second), false, {}, {}, {}, false, EPOLLIN | EPOLLRDHUP, {}, {}, false,
+                        key, std::nullopt, 0,
+                        security::FrameLimiter(options_.security.max_frames_per_second), false, {}, {}, {}, EPOLLIN | EPOLLRDHUP, false,
                         security::NegotiationBudget(options_.security.max_login_bytes,options_.security.max_login_frames),false,false});
-                    login.connect(client_token, std::string_view(key).substr(2));
+                    login.connect(client_token, std::string_view(key).substr(2),
+                                  secure ? users::Transport::adcs : users::Transport::adc, admitted_at);
                     active_.fetch_add(1);
                     accepted_.fetch_add(1);
                     logger_.connection(Event::accepted, client_token, secure);
@@ -516,7 +534,7 @@ void TcpServer::run() {
                     connection.security_violation = true;
                     return;
                 }
-                if (!connection.login_logged && !login.closing(token) && !connection.negotiation.admit_frame()) {
+                if (!login.session_model(token).was_ready() && !login.closing(token) && !connection.negotiation.admit_frame()) {
                     connection.security_violation = connection.negotiation_violation = true;
                     return;
                 }
@@ -550,6 +568,7 @@ void TcpServer::run() {
                 if (expire(found, Clock::now())) { continue; }
                 if (result.status == adcs::IoStatus::complete) {
                     found->second.tls_ready = true;
+                    login.transport_ready(token,Clock::now());
                     found->second.last_activity = Clock::now();
                     adcs_handshakes_.fetch_add(1);
                     logger_.connection(Event::tls_ready, token, true);
@@ -592,11 +611,10 @@ void TcpServer::run() {
                         else { closed = true; close_reason = Event::write_error; break; }
                     }
                     if (sent == 0) { closed = true; close_reason = Event::write_error; break; }
-                    login.consume(token, sent);
+                    const bool became_ready = login.consume(token, sent);
                     connection.output_progress = Clock::now();
-                    if (login.ready(token) && !connection.login_logged) {
+                    if (became_ready) {
                         peer_limiter.complete_login(connection.peer_key);
-                        connection.login_logged = true;
                         logger_.connection(Event::login_ready, token, static_cast<bool>(connection.tls));
                     }
                 }
@@ -664,7 +682,7 @@ void TcpServer::run() {
                         const auto lf = input.find('\n');
                         const auto length = lf == std::string_view::npos ? input.size() : lf + 1;
                         auto& connection = found->second;
-                        if (!connection.login_logged && !login.closing(token) && !connection.negotiation.admit_bytes(length)) {
+                        if (!login.session_model(token).was_ready() && !login.closing(token) && !connection.negotiation.admit_bytes(length)) {
                             connection.security_violation = connection.negotiation_violation = true;
                             break; // Includes unfinished/discarded bytes, before decoder allocation/work.
                         }
@@ -678,13 +696,13 @@ void TcpServer::run() {
                         count_security_close(found->second);
                         if (found->second.negotiation_violation) {
                             warn_once(Warning::negotiation_limit, "Security negotiation limit reached; connection closed");
-                            begin_close(found, adc::CloseReason::negotiation_limit, Event::negotiation_limit, Clock::now());
+                            begin_close(found, adc::CloseReason::negotiation_limit, Clock::now());
                         } else if (found->second.identity_violation) {
                             warn_once(Warning::identity_limit, "Security identity verification limit reached; connection closed");
-                            begin_close(found, adc::CloseReason::identity_limit, Event::identity_limit, Clock::now());
+                            begin_close(found, adc::CloseReason::identity_limit, Clock::now());
                         } else {
                             warn_once(Warning::frame_quota, "Security frame quota reached; connection closed");
-                            begin_close(found, adc::CloseReason::security_quota, Event::security_quota, Clock::now());
+                            begin_close(found, adc::CloseReason::security_quota, Clock::now());
                         }
                         break;
                     }
@@ -695,8 +713,7 @@ void TcpServer::run() {
             if (login.must_close(token)) {
                 if (login.overloaded(token)) { count_security_close(found->second); }
                 closed = true;
-                close_reason = login.overloaded(token) ? Event::output_limit :
-                    found->second.close_event.value_or(login.peer_fatal(token) ? Event::peer_status : Event::login_rejected);
+                close_reason = session_event(login.session_model(token).terminal_cause());
             }
             if (closed || (event.events & (EPOLLERR | EPOLLHUP)) != 0) {
                 if (!closed) { warn_once(Warning::peer_io, "Network peer I/O failed; connection closed"); }

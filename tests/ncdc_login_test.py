@@ -3,6 +3,7 @@ import fcntl
 import os
 import pathlib
 import pty
+import re
 import select
 import socket
 import struct
@@ -131,6 +132,15 @@ class NcdcLoginTest(unittest.TestCase):
                 self.assertEqual(process.wait(timeout=2), 0)
                 hub.stop()
                 self.assertEqual(hub.log.count(b'event=login_ready'), 2)
+                records = re.findall(rb'Connection id=(\d+) transport=(ADC|ADCS) event=([a-z_]+)', hub.log)
+                accepted = [ident for ident, _, event in records if event == b'accepted']
+                self.assertEqual(len(accepted), 2)
+                self.assertLess(int(accepted[0]), int(accepted[1]), 'Reconnect reused a local session identity')
+                for ident in accepted:
+                    events = [event for current, _, event in records if current == ident]
+                    self.assertEqual(events.count(b'login_ready'), 1)
+                    self.assertEqual(events.count(b'tls_ready'), 1 if ENCRYPTED else 0)
+                    self.assertEqual(len(events), 4 if ENCRYPTED else 3, 'Session cleanup missing or duplicated')
                 self.assertEqual(counters(self, hub)[2], 0)
                 self.assertNotIn(b'dc24hLoginTest', hub.log)
                 self.assertNotIn(b'dc24hLoginProbe', hub.log)

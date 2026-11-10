@@ -1,5 +1,7 @@
 # Negotiation security — alpha-0.2.10
 
+**Current increment — alpha-0.3.1:** [Session Core](SESSION_CORE.md) provides the independent Users model and stable lifetime IDs, with live readiness/closure/timeline integration. Earlier stage descriptions below retain their original delivery scope.
+
 This increment adds cumulative initial-login input budgets, bounded pending admissions and shared pre-verification rate gates. Its base is main `a3ca70d65a0fcbb563147e8a44a1ce2669a0ec53`, following the alpha-0.2.9 STA/QUI merge. The numbered branch preserves history and is not merged automatically. The ADC protocol, guest admission model, API v1 and database schema are unchanged.
 
 ## Limits and configuration

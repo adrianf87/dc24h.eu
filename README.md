@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.2.10 (Security).**
+**Current development version: alpha-0.3.1 (Session Core).**
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.3.1 Session Core**: independent Users lifecycle model, stable local session IDs, public identity snapshots, monotonic transition times and typed closure causes. Live ADC/ADCS uses this model for readiness, deadlines and cleanup. See [Session Core](doc/us/SESSION_CORE.md).
 
 - **alpha-0.2.10 Security**: cumulative login input budgets, global/per-IP pending admissions and shared identity-attempt gates before Tiger validation. Tested with real ADC/ADCS and ncdc. See [negotiation security](doc/us/NEGOTIATION_SECURITY.md).
 

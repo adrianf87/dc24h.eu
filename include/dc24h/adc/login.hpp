@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dc24h/adc/inf.hpp"
+#include "dc24h/users/session.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -24,19 +25,28 @@ public:
     ~LoginHub();
     LoginHub(const LoginHub&) = delete;
     LoginHub& operator=(const LoginHub&) = delete;
-    void connect(Id id, std::string_view numeric_peer);
+    void connect(Id id, std::string_view numeric_peer, users::Transport transport = users::Transport::adc,
+                 users::TimePoint accepted = users::Clock::now());
+    void transport_ready(Id id, users::TimePoint now = users::Clock::now());
     void receive(Id id, const Message& message);
     [[nodiscard]] bool needs_identity_check(Id id, const Message& message) const;
     // Sanitized terminal notification; idempotent and bounded by existing output
     // caps. Assigned clients receive ISTA then a final own IQUI. No clocks here.
-    void close(Id id, CloseReason reason);
+    void close(Id id, CloseReason reason, users::TimePoint now = users::Clock::now());
     // Borrowed immutable front until consume/disconnect, including across queue
     // appends. A TLS WANT retry must use the same address and remaining length.
     [[nodiscard]] std::string_view output(Id id) const;
     // Bytes actually accepted by transport. Commits state only at the final LF.
-    void consume(Id id, std::size_t bytes);
+    // True only on the first completed welcome: caller releases pending admission
+    // and emits readiness once. Partial/terminal/ordinary sends return false.
+    bool consume(Id id, std::size_t bytes);
     // Process shutdown can suppress public QUIT broadcasts to other sockets.
-    void disconnect(Id id, bool announce = true);
+    void disconnect(Id id, bool announce = true, users::CloseCause cause = users::CloseCause::peer_closed,
+                    users::TimePoint now = users::Clock::now());
+    // Borrowed model is valid only while this ID remains registered, on the
+    // owner thread. Snapshot is an owning copy; stale/missing IDs return nullopt.
+    [[nodiscard]] const users::Session& session_model(Id id) const;
+    [[nodiscard]] std::optional<users::Snapshot> snapshot(Id id) const;
     [[nodiscard]] bool closing(Id id) const;
     [[nodiscard]] bool must_close(Id id) const;
     [[nodiscard]] bool overloaded(Id id) const;
@@ -50,7 +60,8 @@ private:
     enum class Completion { observe, support, welcome };
     bool enqueue(Peer& peer, Message message, Completion completion = Completion::observe);
     void reject(Peer& peer, std::string_view status, std::optional<std::string_view> command = {},
-                std::string_view description = {});
+                std::string_view description = {}, users::CloseCause cause = users::CloseCause::protocol_rejected,
+                users::TimePoint now = users::Clock::now());
     void route_status(Id id, const Message& message);
     void relay(Id except, const Message& message);
     void remove_identity(Id id, const Peer& peer);
@@ -61,5 +72,6 @@ private:
     std::unordered_map<std::string, Id> cids_;
     std::unordered_map<std::string, Id> sids_;
     std::size_t queued_{0};
+    Id greatest_id_{0};
 };
 } // namespace dc24h::adc

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.2.10 LANGUAGES CXX)
+project(dc24h VERSION 0.3.1 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -34,12 +34,17 @@ add_library(Gcrypt::Gcrypt UNKNOWN IMPORTED)
 set_target_properties(Gcrypt::Gcrypt PROPERTIES
     IMPORTED_LOCATION "${GCRYPT_LIBRARY}"
     INTERFACE_INCLUDE_DIRECTORIES "${GCRYPT_INCLUDE_DIR}")
+add_library(dc24h_users src/users/session.cpp)
+target_compile_features(dc24h_users PUBLIC cxx_std_20)
+set_target_properties(dc24h_users PROPERTIES CXX_EXTENSIONS OFF)
+target_include_directories(dc24h_users PUBLIC include)
+
 add_library(dc24h_adc src/adc/parser.cpp src/adc/state.cpp src/adc/sup.cpp src/adc/sid.cpp src/adc/sid_session.cpp
     src/adc/identity_hash.cpp src/adc/tiger_identity.cpp src/adc/inf.cpp src/adc/serializer.cpp src/adc/login.cpp src/adc/status.cpp)
 target_compile_features(dc24h_adc PUBLIC cxx_std_20)
 set_target_properties(dc24h_adc PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_adc PUBLIC include)
-target_link_libraries(dc24h_adc PRIVATE UTF8Proc::UTF8Proc Gcrypt::Gcrypt OpenSSL::Crypto)
+target_link_libraries(dc24h_adc PUBLIC dc24h_users PRIVATE UTF8Proc::UTF8Proc Gcrypt::Gcrypt OpenSSL::Crypto)
 
 add_library(dc24h_adcs src/adcs/tls.cpp)
 target_compile_features(dc24h_adcs PUBLIC cxx_std_20)
@@ -101,7 +106,7 @@ add_executable(dc24h src/main.cpp)
 target_link_libraries(dc24h PRIVATE dc24h_core dc24h_configuration)
 set_target_properties(dc24h PROPERTIES CXX_EXTENSIONS OFF)
 
-foreach(target dc24h_i18n dc24h_core dc24h_network dc24h_logging dc24h_adc dc24h_adcs dc24h_security dc24h_configuration dc24h_database dc24h_api dc24h)
+foreach(target dc24h_users dc24h_i18n dc24h_core dc24h_network dc24h_logging dc24h_adc dc24h_adcs dc24h_security dc24h_configuration dc24h_database dc24h_api dc24h)
     target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 endforeach()
 
@@ -192,6 +197,19 @@ if(BUILD_TESTING)
     add_test(NAME adc.status.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/adc_status_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(adc.status adc.status.process PROPERTIES TIMEOUT 45)
+    add_executable(user_session_tests tests/user_session_tests.cpp)
+    target_link_libraries(user_session_tests PRIVATE dc24h_users)
+    add_executable(user_session_adc_tests tests/user_session_adc_tests.cpp)
+    target_link_libraries(user_session_adc_tests PRIVATE dc24h_adc)
+    foreach(target user_session_tests user_session_adc_tests)
+        target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+        set_target_properties(${target} PROPERTIES CXX_EXTENSIONS OFF)
+    endforeach()
+    add_test(NAME users.session COMMAND user_session_tests)
+    add_test(NAME users.session.adc COMMAND user_session_adc_tests)
+    add_test(NAME users.session.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/user_session_process_tests.py" "$<TARGET_FILE:dc24h>")
+    set_tests_properties(users.session users.session.adc users.session.process PROPERTIES TIMEOUT 30)
     add_executable(adc_login_tests tests/adc_login_tests.cpp)
     target_link_libraries(adc_login_tests PRIVATE dc24h_adc)
     target_compile_options(adc_login_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)

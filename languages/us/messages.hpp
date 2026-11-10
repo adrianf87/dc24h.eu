@@ -3,7 +3,7 @@
 #include <string_view>
 
 namespace dc24h::i18n::us {
-inline constexpr std::array<std::string_view, 118> messages{{
+inline constexpr std::array<std::string_view, 119> messages{{
     "Starting dc24h.eu ",
     "Core running",
     "Core stopping",
@@ -122,6 +122,7 @@ inline constexpr std::array<std::string_view, 118> messages{{
     "ADC output stalled; connection closed",
     "Security negotiation limit reached; connection closed",
     "Security identity verification limit reached; connection closed",
+    "Session identifier space exhausted; peer rejected",
 }};
 inline constexpr std::string_view help = R"HELP(Usage: dc24h [--config FILE] [--check-config | --check-database | --migrate-database]
              [--listen IPv4:port | [IPv6]:port | none] ...

@@ -1,6 +1,8 @@
 # STA / QUI — alpha-0.2.9
 
-**Current increment — alpha-0.2.10:** [Negotiation security](NEGOTIATION_SECURITY.md) adds pending admission caps, cumulative pre-readiness input budgets and shared pre-INF/Tiger attempt limits. Earlier release descriptions below retain their original scope.
+**Current increment — alpha-0.3.1:** [Session Core](SESSION_CORE.md) provides the independent Users model and stable lifetime IDs, with live readiness/closure/timeline integration. Earlier stage descriptions below retain their original delivery scope.
+
+**Increment delivered in alpha-0.2.10:** [Negotiation security](NEGOTIATION_SECURITY.md) adds pending admission caps, cumulative pre-readiness input budgets and shared pre-INF/Tiger attempt limits. Earlier release descriptions below retain their original scope.
 
 This increment adds typed status/quit validation, protocol diagnostics, status routing and bounded terminal output on the actual C++ ADC/ADCS reactor. It starts from main `da1521502c4a8936b3427a7d38fea6b904686b39`, after the alpha-0.2.8 login merge. Earlier branches/history are preserved. This numbered branch is not merged automatically.
 
