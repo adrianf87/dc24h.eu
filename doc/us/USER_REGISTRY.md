@@ -1,5 +1,7 @@
 # User Registry — alpha-0.3.7
 
+**Current integration — alpha-0.3.8:** The dedicated [User Login](USER_LOGIN.md) bridge now registers validated ADC guests through SessionManager and verifies identity again before final welcome readiness. UserRegistry remains the privately owned SID/CID index.
+
 This increment starts directly from main `ca75d6c53d9b228b978dc3b3b8fdd2fcb0f33852`, after the alpha-0.3.6 Nick Manager merge. Earlier requested stages alpha-0.3.1–alpha-0.3.6 are already present. The alpha-0.3.7 branch preserves main and historical branches; it is not merged automatically.
 
 ## Ownership and key meaning

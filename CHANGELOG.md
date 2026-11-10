@@ -1,5 +1,17 @@
 # Changelog
 
+## alpha-0.3.8 — 2026-11-10
+
+User Login increment, based directly on main `cc2a52603d0e67a6de722c783d84922f204ca0db` after the alpha-0.3.7 User Registry merge:
+
+- Added adc::UserLogin, an explicit bridge from an already validated and guest-approved ADC ClientSession to SessionManager. Registration requires a negotiating model, protocol NORMAL, verified public CID and valid SID, then uses the shared public User projection and transactional UserRegistry/NickManager admission. Duplicate/lifecycle/time failures remain typed; registration itself does not mark a user ready.
+- Added identity-bound complete_welcome, requiring identified state and matching verified SID/CID/nickname before exactly-once mark_ready. Completion is allocation-free/noexcept. LoginHub calls it only after the own-INF final LF is actually sent; partial/canceled/terminal output cannot fabricate readiness.
+- Integrated registration after all bounded welcome frames are successfully enqueued and before public presence relay. A bad_alloc from this specific projection/registration call now forces immediate internal-error closure without allocating a rejection frame or publishing a user. Earlier protocol/welcome and later relay allocations remain outside this narrow guard; full system OOM recovery is not claimed.
+- Added users.login and users.login.process. Unit tests cover negotiation/proof/approval gates, collision/time/lifecycle failures, public lookups, stale/mismatched completion, final-LF readiness, welcome overflow, allocation rollback/retry and guarded LoginHub allocation-failure cleanup. Real mixed ADC/ADCS tests cover unidentified SID routing, invalid proof without public presence, fragmented valid login, duplicate CID, fatal cleanup and reconnect.
+- Updated server/WebAdmin release metadata and fixtures to alpha-0.3.8. Added mirrored US/PL User Login documentation and refreshed module/version/navigation context. Existing EN/US-default and PL runtime catalogs remain applicable; no new dependency, configuration, SQL/API contract, WebAdmin feature or operator translation key is needed.
+- Validation: all 57 CTest suites passed locally in Debug, Release and ASan/UBSan, including real ncdc ADC/ADCS with Polish nickname reconnect, MariaDB, Apache HTTPS, security, identity, registry and transport regressions. WebAdmin typecheck/production build, 3 Node tests, 3 Chromium tests and real C++ API integration passed with system Chromium. These results do not claim remote CI, every supported OS or production load validation.
+- main and alpha-0.3.1–alpha-0.3.7 history/branches are preserved; no automatic merge or production deployment. Registered accounts/passwords/roles and chat/search/transfers remain separate work.
+
 ## alpha-0.3.7 — 2026-11-10
 
 User Registry increment, based directly on main `ca75d6c53d9b228b978dc3b3b8fdd2fcb0f33852` after the alpha-0.3.6 Nick Manager merge:

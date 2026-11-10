@@ -4,6 +4,7 @@
 #include "dc24h/adc/user.hpp"
 
 #include <deque>
+#include <new>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -69,7 +70,7 @@ std::string_view status_description(std::string_view code) noexcept {
 }
 } // namespace
 
-LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.connections) {
+LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.connections), user_login_(sessions_) {
     if (limits.connections == 0 || limits.connections > 65535 ||
         limits.output_per_client < 128 || limits.output_per_client > 16 * 1024 * 1024 ||
         limits.output_total < limits.output_per_client || limits.output_total > 256 * 1024 * 1024) {
@@ -223,7 +224,20 @@ void LoginHub::receive(Id id, const Message& message) {
             // preserves welcome-before-join and avoids simultaneous-login gaps.
             const auto public_info = metadata.public_message(*Sid::parse(peer.session.sid()));
             if (!enqueue(peer, public_info, Completion::welcome)) { return; } // Own INF is last in the initial list.
-            check_model(sessions_.identify(peer.lifecycle.id(),public_user(metadata,peer.session.sid()),users::Clock::now()));
+            UserLoginResult registration;
+            try {
+                registration = user_login_.register_guest(peer.lifecycle.id(), peer.session, users::Clock::now());
+            } catch (const std::bad_alloc&) {
+                // Projection/index allocation failure must not publish this
+                // guest or stop the reactor. Preserve pinned output until the
+                // transport owner performs immediate cleanup; do not allocate
+                // another status frame under memory pressure.
+                check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
+                return;
+            }
+            if (const auto& error = registration) {
+                reject(peer, user_login_status(*error)); return;
+            }
             relay(id, public_info);
         } else {
             check_model(sessions_.update_user(peer.lifecycle.id(),public_user(metadata,peer.session.sid()),users::Clock::now()));
@@ -303,7 +317,11 @@ bool LoginHub::consume(Id id, std::size_t bytes) {
         if (const auto error = peer.session.prepare_sid()) { reject(peer, sid_status_code(*error)); return false; }
         (void)enqueue(peer, *peer.session.sid_reply());
     } else if (frame.completion == Completion::welcome) {
-        check_model(sessions_.mark_ready(peer.lifecycle.id(),users::Clock::now())); return true;
+        if (user_login_.complete_welcome(peer.lifecycle.id(), peer.session, users::Clock::now())) {
+            check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
+            return false;
+        }
+        return true;
     }
     return false;
 }

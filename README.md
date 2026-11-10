@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.3.7 (User Registry).**
+**Current development version: alpha-0.3.8 (User Login).**
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.3.8 User Login**: explicit verified ADC guest-to-session registration, typed rejection, transactional public indexes and identity-bound welcome completion. Readiness is published once after the own-INF final LF is sent. See [User Login](doc/us/USER_LOGIN.md).
 
 - **alpha-0.3.7 User Registry**: bounded SID/CID indexes with one registration per session lifetime, transactional admission and owner-specific cleanup. SessionManager resolves both keys to the same live, read-only User. See [User Registry](doc/us/USER_REGISTRY.md).
 

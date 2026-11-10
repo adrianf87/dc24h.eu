@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.3.7 LANGUAGES CXX)
+project(dc24h VERSION 0.3.8 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -48,7 +48,7 @@ target_include_directories(dc24h_users PUBLIC include)
 target_link_libraries(dc24h_users PRIVATE dc24h_text)
 
 add_library(dc24h_adc src/adc/parser.cpp src/adc/state.cpp src/adc/sup.cpp src/adc/sid.cpp src/adc/sid_session.cpp
-    src/adc/identity_hash.cpp src/adc/tiger_identity.cpp src/adc/inf.cpp src/adc/serializer.cpp src/adc/login.cpp src/adc/status.cpp src/adc/user.cpp)
+    src/adc/identity_hash.cpp src/adc/tiger_identity.cpp src/adc/inf.cpp src/adc/serializer.cpp src/adc/login.cpp src/adc/status.cpp src/adc/user.cpp src/adc/user_login.cpp)
 target_compile_features(dc24h_adc PUBLIC cxx_std_20)
 set_target_properties(dc24h_adc PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_adc PUBLIC include)
@@ -205,6 +205,14 @@ if(BUILD_TESTING)
     add_test(NAME adc.status.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/adc_status_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(adc.status adc.status.process PROPERTIES TIMEOUT 45)
+    add_executable(user_login_tests tests/user_login_tests.cpp)
+    target_link_libraries(user_login_tests PRIVATE dc24h_adc)
+    target_compile_options(user_login_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(user_login_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME users.login COMMAND user_login_tests)
+    add_test(NAME users.login.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/user_login_process_tests.py" "$<TARGET_FILE:dc24h>")
+    set_tests_properties(users.login users.login.process PROPERTIES TIMEOUT 30)
     add_executable(user_registry_tests tests/user_registry_tests.cpp)
     target_link_libraries(user_registry_tests PRIVATE dc24h_users)
     target_compile_options(user_registry_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)

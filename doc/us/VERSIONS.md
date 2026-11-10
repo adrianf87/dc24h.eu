@@ -1,6 +1,6 @@
 # Versions
 
-**Current increment — alpha-0.3.7:** [User Registry](USER_REGISTRY.md) owns bounded SID/CID indexes and a reverse session-owner index privately within SessionManager. Admission is transactional across this registry, NickManager and the Session model. Const User lookups resolve both keys to the same current model; reservations remain until session removal. Earlier module descriptions retain their historical scope.
+**Current increment — alpha-0.3.8:** [User Login](USER_LOGIN.md) bridges a validated, guest-approved ADC ClientSession to SessionManager registration. It projects verified public identity, returns typed failures and checks identity/lifecycle again before welcome completion. LoginHub retains bounded output ownership and marks readiness only after the own-INF final LF is sent. Earlier module descriptions retain their historical scope.
 
 **Increment delivered in alpha-0.3.5:** [User Core](USER_CORE.md) adds checked UTF-8/NFC Nickname values, shared ADC/User text validation, immutable rename candidates and explicit projection from validated ClientInfo/VerifiedIdentity. Users now links the neutral dc24h_text library using the existing utf8proc package. Manager ownership/uniqueness remains unchanged. Earlier descriptions retain their historical scope.
 
@@ -40,6 +40,7 @@
 | alpha-0.3.5 | alpha-0.3.5 | User Core: checked public values and ADC projection |
 | alpha-0.3.6 | alpha-0.3.6 | Nick Manager: checked names, bounded ownership and atomic rename |
 | alpha-0.3.7 | alpha-0.3.7 | User Registry: SID/CID indexes and session-owner cleanup |
+| alpha-0.3.8 | alpha-0.3.8 | User Login: validated ADC identity to managed session registration |
 
 Identify an individual build with its version and Git commit SHA; compiling does not modify tracked source. Each significant change updates CHANGELOG.md. Alpha denotes development status, not complete hub functionality. Tags and production deployment are not created automatically.
 
