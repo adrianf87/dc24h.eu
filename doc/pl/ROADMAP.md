@@ -1,6 +1,8 @@
 # Plan rozwoju
 
-**Bieżący etap — alpha-0.4.3:** [Public Chat](PUBLIC_CHAT.md) dodaje osobny adapter polityki i rozsyłania BMSG oraz jedną wspólną niemutowalną ramkę na publikację. Offsety i logiczne budżety odbiorców pozostają niezależne; zachowano bramki źródła/stanu/prywatności i FIFO.
+**Bieżący etap — alpha-0.4.4:** [Private Chat](PRIVATE_CHAT.md) dodaje DMSG tylko do celu i EMSG do celu oraz nadawcy, pojedyncze wiadomości do siebie, powiązanie celu z ID życia i kontrolę PM. Czat publiczny pozostaje oddzielony; grupy/historia/moderacja to kolejne etapy.
+
+**Etap dostarczony w alpha-0.4.3:** [Public Chat](PUBLIC_CHAT.md) dodaje osobny adapter polityki i rozsyłania BMSG oraz jedną wspólną niemutowalną ramkę na publikację. Offsety i logiczne budżety odbiorców pozostają niezależne; zachowano bramki źródła/stanu/prywatności i FIFO.
 
 **Etap dostarczony w alpha-0.4.2:** [Chat Core](CHAT_CORE.md) dodaje osobny silnik wiadomości niezależny od protokołu oraz publiczne BMSG, z kopią dla nadawcy i /me. Czat prywatny/grupowy/feature/hub, moderacja i historia pozostają osobnymi etapami.
 
@@ -64,6 +66,7 @@
 | alpha-0.4.1 ADC MSG | Kodek MSG i walidacja stanów; rozsyłanie czatu pozostaje planem |
 | alpha-0.4.2 Chat Core | Publiczne BMSG i /me; polityka prywatna/grupowa i moderacja pozostają planem |
 | alpha-0.4.3 Public Chat | Osobna polityka publicznego BMSG i wspólna ramka; czat prywatny/grupowy pozostaje planem |
+| alpha-0.4.4 Private Chat | Prywatne DMSG/EMSG; grupy, historia i moderacja pozostają planem |
 
 ## Historyczny plan odbioru przed alpha-0.2.8
 

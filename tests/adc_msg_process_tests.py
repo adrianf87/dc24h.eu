@@ -37,6 +37,9 @@ class MsgProcessTests(unittest.TestCase):
                 response = peer.line()
                 if prefix.startswith(b'BMSG '):
                     self.assertEqual(response, prefix+b' '+r'PrivateŻółw\s😀\nline\\path'.encode())
+                elif prefix.startswith(b'DMSG '):
+                    self.assertTrue(response.startswith(b'ISTA 140 '), response)
+                    self.assertIn(b' FCDMSG', response)
                 else:
                     self.assertTrue(response.startswith(b'ISTA 125 '), response)
                     self.assertIn(b' FC'+prefix.split()[0], response)

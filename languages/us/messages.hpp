@@ -149,8 +149,8 @@ User/session ceilings: 1..65535, default 65535; effective caps also obey connect
 Run dc24h.eu in the foreground; stop with SIGINT (Ctrl+C) or SIGTERM.
 Security defaults: 128 peers/IP, 256 admissions/IP/minute, 1024 frames/s/peer,
 512 invalid frames/peer, 10 seconds for TLS and each unfinished frame.
-ADC guest login, public presence and public chat are implemented.
-Private/group chat, search and transfers remain planned.
+ADC guest login, public presence, public and private chat are implemented.
+Group chat, search and transfers remain planned.
 Database settings use [database] in INI; disabled by default.
 --check-database connects/pings; --migrate-database explicitly applies metadata migrations.
 --check-config never connects to MariaDB or reads the password file.

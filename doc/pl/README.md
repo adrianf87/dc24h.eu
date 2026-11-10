@@ -1,8 +1,9 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.4.3: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.4.4: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
 - [AUDIT_ALPHA_0.1.md](AUDIT_ALPHA_0.1.md)
+- [Private Chat — alpha-0.4.4](PRIVATE_CHAT.md)
 - [Public Chat — alpha-0.4.3](PUBLIC_CHAT.md)
 - [Chat Core — alpha-0.4.2](CHAT_CORE.md)
 - [ADC MSG — alpha-0.4.1](ADC_MSG.md)

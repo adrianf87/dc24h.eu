@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.4.3 (Public Chat).**
+**Current development version: alpha-0.4.4 (Private Chat).**
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.4.4 Private Chat**: DMSG target-only and EMSG target/sender delivery, deduplicated self-messages, source/PM checks and target lifetime binding. Private frames share immutable storage only between selected queues and never fall back to public delivery. See [Private Chat](doc/us/PRIVATE_CHAT.md).
 
 - **alpha-0.4.3 Public Chat**: dedicated BMSG admission/projection/dispatch adapter with one immutable public frame shared by recipient queues. Independent offsets and logical charges preserve bounded FIFO delivery and pinned TLS output through partial sends, terminal close and source cleanup. See [Public Chat](doc/us/PUBLIC_CHAT.md).
 
@@ -73,7 +75,7 @@ Completed increments (older bullets describe their original delivery scope):
 
 - **alpha-0.1.11 Apache2**: customizable static WebAdmin HTTPS example, HTTP→HTTPS redirect, TLS 1.2/1.3, certificate paths and isolated HTTPS tests.
 
-Guest login, public user sessions and basic public chat are implemented. Private/group chat, registered-user authentication, moderation/history, search, transfer coordination, account persistence and a production authenticated web gateway remain future milestones.
+Guest login, public user sessions, public chat and direct/echo private chat are implemented. Group chat, registered-user authentication, moderation/history, search, transfer coordination, account persistence and a production authenticated web gateway remain future milestones.
 
 ## Build
 

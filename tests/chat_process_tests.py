@@ -34,11 +34,14 @@ class ChatProcessTests(unittest.TestCase):
                 self.assertEqual(peer.line(), b'BINF '+first.sid+b' NIRenamed')
                 self.assertEqual(peer.line(), b'BMSG '+first.sid+b' AfterRename ME0')
             for message in (b'BMSG '+first.sid+b' PrivateGroup PM'+first.sid,
-                            b'DMSG '+first.sid+b' '+second.sid+b' PrivateDirect PM'+first.sid,
-                            b'EMSG '+first.sid+b' '+second.sid+b' PrivateEcho PM'+first.sid,
                             b'FMSG '+first.sid+b' +BASE PrivateFeature', b'HMSG PrivateHub'):
                 first.send(message)
                 self.assertTrue(first.line().startswith(b'ISTA 125 '))
+            direct = b'DMSG '+first.sid+b' '+second.sid+b' PrivateDirect PM'+first.sid
+            first.send(direct);self.assertEqual(second.line(), direct)
+            echo = b'EMSG '+first.sid+b' '+second.sid+b' PrivateEcho PM'+first.sid
+            first.send(echo)
+            self.assertEqual(first.line(), echo);self.assertEqual(second.line(), echo)
             # A recovering syntax failure must not break the next valid chat.
             second.send(b'BMSG '+second.sid+b' Bad\\q')
             second.send(b'BMSG '+second.sid+b' AfterSyntax')

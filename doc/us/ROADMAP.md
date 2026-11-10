@@ -1,6 +1,8 @@
 # Roadmap
 
-**Current increment — alpha-0.4.3:** [Public Chat](PUBLIC_CHAT.md) adds a dedicated BMSG policy/dispatch adapter and one immutable shared public frame per publication. Recipient offsets and logical queue charges remain independent; source/state/private-message gates and FIFO are preserved.
+**Current increment — alpha-0.4.4:** [Private Chat](PRIVATE_CHAT.md) adds DMSG target-only and EMSG target-plus-sender delivery, deduplicated self-messages, lifetime-bound targets and PM origin checks. Public chat remains isolated; groups/history/moderation remain separate stages.
+
+**Increment delivered in alpha-0.4.3:** [Public Chat](PUBLIC_CHAT.md) adds a dedicated BMSG policy/dispatch adapter and one immutable shared public frame per publication. Recipient offsets and logical queue charges remain independent; source/state/private-message gates and FIFO are preserved.
 
 **Increment delivered in alpha-0.4.2:** [Chat Core](CHAT_CORE.md) adds a separate protocol-independent message engine and live public BMSG delivery, including sender echo and /me. Private/group/feature/hub chat, moderation and history remain separate increments.
 
@@ -64,6 +66,7 @@
 | alpha-0.4.1 ADC MSG | MSG codec and state validation; chat routing remains planned |
 | alpha-0.4.2 Chat Core | Public BMSG/action delivery; private/group policy and moderation remain planned |
 | alpha-0.4.3 Public Chat | Dedicated public BMSG policy and shared-frame fanout; private/group chat remains planned |
+| alpha-0.4.4 Private Chat | Private DMSG/EMSG delivery; group chat, history and moderation remain planned |
 
 ## Historical acceptance plan before alpha-0.2.8
 

@@ -14,15 +14,17 @@ namespace dc24h::adc {
 struct LoginHub::Peer {
     struct Frame {
         struct Owned { Message message; std::string wire; };
-        std::variant<Owned,SharedPublicChatFrame> content;
+        std::variant<Owned,SharedPublicChatFrame,SharedPrivateChatFrame> content;
         Completion completion;
         [[nodiscard]] const Message& message() const noexcept {
             if (const auto* owned=std::get_if<Owned>(&content)) { return owned->message; }
-            return std::get<SharedPublicChatFrame>(content)->message();
+            if (const auto* packet=std::get_if<SharedPublicChatFrame>(&content)) { return (*packet)->message(); }
+            return std::get<SharedPrivateChatFrame>(content)->message();
         }
         [[nodiscard]] std::string_view wire() const noexcept {
             if (const auto* owned=std::get_if<Owned>(&content)) { return owned->wire; }
-            return std::get<SharedPublicChatFrame>(content)->wire();
+            if (const auto* packet=std::get_if<SharedPublicChatFrame>(&content)) { return (*packet)->wire(); }
+            return std::get<SharedPrivateChatFrame>(content)->wire();
         }
     };
     Peer(std::shared_ptr<SidPool> pool, std::string_view address, const users::Session& model)
@@ -77,7 +79,7 @@ std::string_view status_description(std::string_view code) noexcept {
 }
 } // namespace
 
-LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), chat_(sessions_), public_chat_(chat_), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
+LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), chat_(sessions_), public_chat_(chat_), private_chat_(chat_), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
     if (limits.connections == 0 || limits.connections > 65535 ||
         limits.output_per_client < 128 || limits.output_per_client > 16 * 1024 * 1024 ||
         limits.output_total < limits.output_per_client || limits.output_total > 256 * 1024 * 1024) {
@@ -124,7 +126,8 @@ bool LoginHub::enqueue(Peer& peer, Message message, Completion completion) {
     queued_ += size;
     return true;
 }
-bool LoginHub::enqueue_public(Peer& peer, SharedPublicChatFrame frame) {
+template<class Packet>
+bool LoginHub::enqueue_shared(Peer& peer, std::shared_ptr<const Packet> frame) {
     if (peer.lifecycle.immediate() || peer.lifecycle.closing() || peer.quit_queued) { return false; }
     const auto size=frame->wire().size();
     if (size>limits_.output_per_client-peer.queued || size>limits_.output_total-queued_) {
@@ -301,6 +304,9 @@ void LoginHub::receive(Id id, const Message& message) {
 void LoginHub::route_chat(Id id, const Message& message) {
     auto& sender=*peers_.at(id);
     try {
+        if (message.type==MessageType::direct || message.type==MessageType::echo) {
+            route_private_chat(id,message);return;
+        }
         auto prepared=public_chat_.prepare(sender.lifecycle.id(),message);
         if (const auto* error=std::get_if<PublicChatError>(&prepared)) {
             const std::string command=std::string(1,static_cast<char>(message.type))+"MSG";
@@ -313,7 +319,7 @@ void LoginHub::route_chat(Id id, const Message& message) {
         const auto result=public_chat_.dispatch(plan,[&](users::SessionId recipient,const SharedPublicChatFrame& frame) {
             const auto found=peers_.find(recipient.value());
             if (found==peers_.end()) { return false; }
-            try { return enqueue_public(*found->second,frame); }
+            try { return enqueue_shared(*found->second,frame); }
             catch (const std::bad_alloc&) {
                 check_model(sessions_.force_close(recipient,users::CloseCause::internal_error,users::Clock::now()));
                 return false;
@@ -326,6 +332,35 @@ void LoginHub::route_chat(Id id, const Message& message) {
         // Preparation failed before dispatch, or an unsupported-mode reply could
         // not be allocated. Per-recipient queue faults are isolated above.
         check_model(sessions_.force_close(sender.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
+    }
+}
+void LoginHub::route_private_chat(Id id, const Message& message) {
+    auto& sender=*peers_.at(id);
+    const std::string command=std::string(1,static_cast<char>(message.type))+"MSG";
+    const auto unavailable=[&] {
+        (void)enqueue(sender,make_status(*StatusCode::parse("140"),"Private message recipient unavailable",command));
+    };
+    auto prepared=private_chat_.prepare(sender.lifecycle.id(),message);
+    if (const auto* error=std::get_if<PrivateChatError>(&prepared)) {
+        if (*error==PrivateChatError::recipient_unavailable) { unavailable(); }
+        else if (*error==PrivateChatError::unsupported_type || *error==PrivateChatError::unsupported_group) {
+            (void)enqueue(sender,make_status(*StatusCode::parse("125"),"Command not implemented",command));
+        } else { reject(sender,*error==PrivateChatError::invalid_state ? "244" : "240",command); }
+        return;
+    }
+    const auto& plan=std::get<PrivateDelivery>(prepared);
+    const auto result=private_chat_.dispatch(plan,[&](users::SessionId recipient,const SharedPrivateChatFrame& frame) {
+        const auto found=peers_.find(recipient.value());
+        if (found==peers_.end()) { return false; }
+        try { return enqueue_shared(*found->second,frame); }
+        catch (const std::bad_alloc&) {
+            check_model(sessions_.force_close(recipient,users::CloseCause::internal_error,users::Clock::now()));
+            return false;
+        }
+    });
+    if (const auto* error=std::get_if<chat::Error>(&result)) {
+        if (*error==chat::Error::recipient_unavailable) { unavailable(); }
+        else { check_model(sessions_.force_close(sender.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now())); }
     }
 }
 void LoginHub::route_status(Id id, const Message& message) {
