@@ -1,5 +1,7 @@
 # Roadmap
 
+**Current increment — alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) adds semantic status/quit validation, source-checked B/D/E/F status routing, precise errors and bounded terminal ISTA/own-IQUI output. Historical descriptions below retain the behavior of their original releases.
+
 **Current integration — alpha-0.2.8:** [Guest login](ADC_LOGIN.md) attaches the state/SUP/SID/INF/Tiger stack to the actual C++ TCP/TLS reactor with bounded ordered output, nickname/CID admission, public presence and complete ncdc NORMAL/reconnect tests. Historical stage descriptions below retain their original scope; statements that transport attachment/output/login were still planned describe those earlier versions. Registered-user authentication, chat, search and transfer dispatch remain planned.
 
 | Stage | Implemented scope |
@@ -23,6 +25,7 @@
 | alpha-0.2.6 INF | Bounded metadata, Tiger identity verification, peer-IP checks and public PD-free snapshots |
 | alpha-0.2.7 CID/PID | Dedicated Tiger verifier, public identity result, cleansed buffers and provider-failure coverage |
 | alpha-0.2.8 Login | Live guest NORMAL, ordered bounded output, nickname/CID registry, public presence and ncdc reconnect |
+| alpha-0.2.9 STA/QUI | Semantic errors, status routing, final own QUI and bounded terminal drain |
 
 ## Historical acceptance plan before alpha-0.2.8
 

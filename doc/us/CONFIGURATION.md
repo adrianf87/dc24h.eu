@@ -1,5 +1,7 @@
 # Configuration — alpha-0.1.11
 
+**Current increment — alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) adds semantic status/quit validation, source-checked B/D/E/F status routing, precise errors and bounded terminal ISTA/own-IQUI output. Historical descriptions below retain the behavior of their original releases.
+
 Settings are composed in this order: built-in defaults, one explicit `--config FILE`, then command-line overrides regardless of where `--config` appears. There is no automatic file search, environment substitution, include directive, reload or remote configuration.
 
 ```sh
@@ -94,3 +96,8 @@ The new `apache2-webadmin-https.conf.example` is independent of the INI. Set the
 ## alpha-0.2.8
 
 [security] adds login_timeout (default 30 seconds) and output_timeout (default 10 seconds), both 1–3600. INI/library only; no new CLI switches. Login has an absolute accept-to-own-INF deadline, including TLS; output uses time since last send progress. Compiled queue limits: 256 KiB/client, 16 MiB/hub. See [ADC_LOGIN.md](ADC_LOGIN.md).
+
+
+## alpha-0.2.9
+
+INI `[security] close_timeout=2` accepts 1–3600 seconds. It is the absolute terminal-drain deadline, without renewal from I/O; no new CLI switch. See [ADC_STATUS.md](ADC_STATUS.md).

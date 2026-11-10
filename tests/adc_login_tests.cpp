@@ -106,7 +106,7 @@ void rejection() {
         hub.receive(id,identity(sid,seed,nick));
         require(hub.closing(id), "Duplicate accepted");
         const auto frames=drain(hub,id);
-        require(frames.size()==1 && frames[0].starts_with("ISTA "+std::string(status)), "Wrong duplicate status");
+        require(frames.size()==2 && frames[0].starts_with("ISTA "+std::string(status)) && frames[1].starts_with("IQUI "+sid+" "), "Wrong duplicate status");
         require(hub.must_close(id) && !hub.ready(id), "Rejected login became ready");
         hub.disconnect(id);
         require(hub.users()==1 && hub.output(1).empty(), "Rejected guest announced/removed another owner");

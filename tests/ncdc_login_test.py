@@ -57,12 +57,18 @@ class NcdcLoginTest(unittest.TestCase):
                             while not finished.is_set():
                                 ended = False
                                 for source in select.select([client, upstream], [], [], 0.05)[0]:
-                                    chunk = source.recv(65536)
-                                    if not chunk:
+                                    try:
+                                        chunk = source.recv(65536)
+                                        if not chunk:
+                                            ended = True
+                                            break
+                                        (wire if source is client else replies).extend(chunk)
+                                        (upstream if source is client else client).sendall(chunk)
+                                    except (ConnectionResetError, BrokenPipeError):
+                                        # Normal /reconnect or /quit may reset
+                                        # a transport with TLS bytes in flight.
                                         ended = True
                                         break
-                                    (wire if source is client else replies).extend(chunk)
-                                    (upstream if source is client else client).sendall(chunk)
                                 if ended:
                                     break
                 except Exception as error:

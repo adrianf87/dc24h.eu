@@ -24,6 +24,7 @@ struct Limits {
     std::chrono::seconds partial_frame_timeout{10};
     std::chrono::seconds login_timeout{30};
     std::chrono::seconds output_timeout{10};
+    std::chrono::seconds close_timeout{2};
 };
 
 // Reject zero and unreasonably large values. The caller must also verify

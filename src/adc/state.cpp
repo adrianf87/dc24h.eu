@@ -1,5 +1,6 @@
 #include "dc24h/adc/state.hpp"
 #include "dc24h/adc/sid.hpp"
+#include "dc24h/adc/status.hpp"
 
 #include <algorithm>
 #include <initializer_list>
@@ -74,12 +75,13 @@ StateResult ConnectionStateMachine::observe(Direction direction, const Message& 
     // During login only HSTA/ISTA is meaningful; routed status requires NORMAL.
     if (message.kind == Command::sta) {
         if (state_ != ConnectionState::normal && routed) { return StateError::invalid_type; }
-        if (message.parameters.empty() || message.parameters[0].size() != 3) {
+        const auto status = validate_status(message);
+        if (!std::holds_alternative<StatusView>(status)) {
             return StateError::invalid_message;
         }
         // A fatal hub-peer status terminates this connection; a forwarded fatal
         // status belongs to its recipient and must not terminate the observer.
-        if (!routed && message.parameters[0][0] == '2') { disconnect(); }
+        if (!routed && std::get<StatusView>(status).code.severity() == Severity::fatal) { disconnect(); }
         return std::nullopt;
     }
     if (state_ == ConnectionState::protocol) {
@@ -100,7 +102,7 @@ StateResult ConnectionStateMachine::observe(Direction direction, const Message& 
             state_ = ConnectionState::identify;
         }
     } else if (message.kind == Command::qui) {
-        if (message.parameters.empty() || !valid_sid(message.parameters[0])) {
+        if (!std::holds_alternative<QuitView>(validate_quit(message))) {
             return StateError::invalid_message;
         }
         if (message.parameters[0] == sid_) { disconnect(); }

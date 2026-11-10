@@ -94,7 +94,7 @@ class NetworkProcessTests(unittest.TestCase):
     def assert_closed(self, peer, timeout=3):
         peer.settimeout(timeout)
         try:
-            self.assertEqual(peer.recv(1), b"")
+            drain_until_eof(peer)
         except ConnectionResetError:
             pass  # Rejected/closed TCP sockets may reset when input is pending.
 

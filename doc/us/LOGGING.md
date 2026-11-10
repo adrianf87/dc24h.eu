@@ -1,5 +1,7 @@
 # Logging — alpha-0.1.6
 
+**Current increment — alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) adds semantic status/quit validation, source-checked B/D/E/F status routing, precise errors and bounded terminal ISTA/own-IQUI output. Historical descriptions below retain the behavior of their original releases.
+
 `dc24h_logging` provides synchronized, best-effort UTC records to stderr or a regular append file. The logger must outlive its callers; stop/join all callers before destruction. Operator messages use US by default, or PL through the compiled catalogs. Protocol data and event keys are not translated.
 
 ## Levels and configuration

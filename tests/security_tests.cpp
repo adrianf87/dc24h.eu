@@ -29,6 +29,7 @@ void check_validation() {
     upper.partial_frame_timeout = std::chrono::seconds(3600);
     upper.login_timeout = std::chrono::seconds(3600);
     upper.output_timeout = std::chrono::seconds(3600);
+    upper.close_timeout = std::chrono::seconds(3600);
     validate(upper);
     test([](Limits& l) { l.max_connections_per_ip = 65536; });
     test([](Limits& l) { l.max_accepts_per_minute = 100001; });
@@ -44,6 +45,8 @@ void check_validation() {
     test([](Limits& l) { l.partial_frame_timeout = std::chrono::seconds(0); });
     test([](Limits& l) { l.login_timeout = std::chrono::seconds(0); });
     test([](Limits& l) { l.output_timeout = std::chrono::seconds(0); });
+    test([](Limits& l) { l.close_timeout = std::chrono::seconds(0); });
+    test([](Limits& l) { l.close_timeout = std::chrono::seconds(3601); });
     test([](Limits& l) { l.login_timeout = std::chrono::seconds(3601); });
     test([](Limits& l) { l.output_timeout = std::chrono::seconds(3601); });
 }

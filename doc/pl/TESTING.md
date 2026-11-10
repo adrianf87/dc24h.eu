@@ -1,6 +1,16 @@
 # Testowanie
 
-**Aktualna integracja — alpha-0.2.8:** [Logowanie gości](ADC_LOGIN.md) podłącza state/SUP/SID/INF/Tiger do rzeczywistego reaktora C++ TCP/TLS, z ograniczonym uporządkowanym wyjściem, unikalnością nick/CID, listą obecności i pełnymi testami ncdc NORMAL/reconnect. Historyczne opisy poniżej zachowują pierwotny zakres; wzmianki o planowanym podłączeniu/wyjściu/logowaniu dotyczą wcześniejszych wersji. Konta/hasła, czat, wyszukiwanie i przekazywanie transferów pozostają planowane.
+**Aktualny etap — alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) dodaje walidację semantyki statusów/rozłączeń, kontrolowany routing B/D/E/F, dokładniejsze błędy i ograniczone końcowe ISTA/własne IQUI. Opisy historyczne poniżej zachowują zachowanie pierwotnych wersji.
+
+**Integracja dostarczona w alpha-0.2.8:** [Logowanie gości](ADC_LOGIN.md) podłącza state/SUP/SID/INF/Tiger do rzeczywistego reaktora C++ TCP/TLS, z ograniczonym uporządkowanym wyjściem, unikalnością nick/CID, listą obecności i pełnymi testami ncdc NORMAL/reconnect. Historyczne opisy poniżej zachowują pierwotny zakres; wzmianki o planowanym podłączeniu/wyjściu/logowaniu dotyczą wcześniejszych wersji. Konta/hasła, czat, wyszukiwanie i przekazywanie transferów pozostają planowane.
+
+## STA/QUI — alpha-0.2.9
+
+Pełna konfiguracja rejestruje **40 testów CTest**, dodając `adc.status`, `adc.status.process`, `adc.close.process`, `adc.status.ncdc` i `adcs.status.ncdc`. [STA/QUI](ADC_STATUS.md) opisuje semantykę, końcową kolejność/własność, przekazywanie statusów oraz rzeczywiste TCP/OpenSSL/ncdc. Test zamykania używa wyłącznie testowego GNU `--wrap=accept4`, wymusza zablokowane zapisy TCP/TLS i sprawdza bezwzględny termin bez zmian produkcyjnych gniazd lub sysctl hosta. Dotychczasowy relay ncdc dopuszcza reset/broken-pipe jako zamknięcie danej sesji przy reconnect/quit; pełne asercje protokołu/UI pozostają wymagane.
+
+Wynik lokalny: **40/40 w Debug, Release i ASan/UBSan**, z wymaganymi integracjami, MariaDB i Apache HTTPS. WebAdmin: build/typecheck, 3 testy Node, 3 Chromium i rzeczywista integracja API C++/Vite/React także przeszły. Dotychczasowe flagi sanitizera/no-PIE i ustawienia Chromium opisane poniżej pozostają aktualne. Metadane, UTF-8/linki/parytet języków, składnia Python i białe znaki Git poprawne. Pozostałe OS/CI, dowolne awarie, wszystkie zależności TLS WANT_READ i produkcyjne audyty wymagają osobnych dowodów.
+
+Zakres etapu: `ctest --test-dir build-debug -R 'adc.status|adcs.status|adc.close' --output-on-failure`; przed zakończeniem etapu należy uruchomić pełny zestaw wymaganych integracji.
 
 ## Logowanie — alpha-0.2.8
 

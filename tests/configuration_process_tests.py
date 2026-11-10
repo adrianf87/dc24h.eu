@@ -120,7 +120,7 @@ class ConfigurationProcessTests(unittest.TestCase):
         excess = hub.connect()
         self.assertEqual(excess.recv(1), b'')
         first.settimeout(3)
-        self.assertEqual(first.recv(1), b'')
+        drain_until_eof(first)
         next_peer = hub.connect()
         next_peer.sendall(b'HSUP ADBASE\n')
         next_peer.shutdown(socket.SHUT_WR)

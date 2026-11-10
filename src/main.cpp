@@ -106,7 +106,8 @@ int main(int argc, char* argv[]) {
                     " tls_handshake_timeout_seconds=" + std::to_string(parsed.settings.network.security.tls_handshake_timeout.count()) +
                     " partial_frame_timeout_seconds=" + std::to_string(parsed.settings.network.security.partial_frame_timeout.count()) +
                     " login_timeout_seconds=" + std::to_string(parsed.settings.network.security.login_timeout.count()) +
-                    " output_timeout_seconds=" + std::to_string(parsed.settings.network.security.output_timeout.count()));
+                    " output_timeout_seconds=" + std::to_string(parsed.settings.network.security.output_timeout.count()) +
+                    " close_timeout_seconds=" + std::to_string(parsed.settings.network.security.close_timeout.count()));
             std::unique_ptr<dc24h::database::Connection> database;
             if (parsed.settings.database.enabled) {
                 database = std::make_unique<dc24h::database::Connection>(parsed.settings.database);

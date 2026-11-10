@@ -127,11 +127,13 @@ class LoginProcessTests(unittest.TestCase):
                 peer.handshake()
                 peer.send(peer.identity(nick, seed))
                 self.assertTrue(peer.line().startswith(b'ISTA ' + status + b' '))
+                self.assertTrue(peer.line().startswith(b'IQUI '+peer.sid+b' '))
                 self.assertEqual(peer.peer.recv(1), b'')
             bad = self.peer(hub, cert, encrypted)
             bad.handshake()
             bad.send(bad.identity(b'Bad', 3).replace(pair(3)[1], pair(4)[1]))
             self.assertTrue(bad.line().startswith(b'ISTA 227 '))
+            self.assertTrue(bad.line().startswith(b'IQUI '+bad.sid+b' '))
             self.assertEqual(bad.peer.recv(1), b'')
         owner.send(b'BINF ' + owner.sid + b' DEStillHere')
         self.assertIn(b'DEStillHere', owner.line())  # No failed guest joined before this echo.
@@ -141,7 +143,7 @@ class LoginProcessTests(unittest.TestCase):
         self.assertTrue(attacker.line().startswith(b'ISTA 243 '))
         early = self.peer(hub, cert)
         early.send(b'BMSG AAAB premature')
-        self.assertTrue(early.line().startswith(b'ISTA 240 '))
+        self.assertTrue(early.line().startswith(b'ISTA 244 '))
         hub.stop()
         self.assertEqual(hub.log.count(b'event=login_ready'), 1)
 
@@ -155,6 +157,9 @@ class LoginProcessTests(unittest.TestCase):
             for _ in range(4):
                 peer.peer.sendall(b'\n')
                 time.sleep(0.2)
+            self.assertTrue(peer.line().startswith(b'ISTA 240 '))
+            if identify:
+                self.assertTrue(peer.line().startswith(b'IQUI '+peer.sid+b' '))
             self.assertEqual(peer.peer.recv(1), b'')
             self.assertLess(time.monotonic() - start, 2.5)
         healthy = self.peer(hub, cert, True)
