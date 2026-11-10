@@ -23,6 +23,7 @@
 | alpha-0.2.8 | alpha-0.2.8 | Login: guest NORMAL, bounded TCP/TLS output, public presence |
 | alpha-0.2.9 | alpha-0.2.9 | STA/QUI: protocol diagnostics, routing and bounded close |
 | alpha-0.2.10 | alpha-0.2.10 | Security: pending sessions, cumulative login and identity-work limits |
+| alpha-0.3.1 | alpha-0.3.1 | Session Core: Users lifecycle, stable local IDs and snapshots |
 
 Identify an individual build with its version and Git commit SHA; compiling does not modify tracked source. Each significant change updates CHANGELOG.md. Alpha denotes development status, not complete hub functionality. Tags and production deployment are not created automatically.
 
@@ -48,3 +49,8 @@ CMake/npm 0.2.9; runtime/WebAdmin alpha-0.2.9. Base: main `da1521502c4a8936b3427
 ## alpha-0.2.10
 
 CMake/npm 0.2.10, runtime/WebAdmin alpha-0.2.10. Base: main `a3ca70d65a0fcbb563147e8a44a1ce2669a0ec53`. [Security](NEGOTIATION_SECURITY.md) adds local negotiation policy without new dependencies, SQL migrations or API schema changes. No automatic main merge or tag.
+
+
+## alpha-0.3.1
+
+CMake/npm 0.3.1, runtime/WebAdmin alpha-0.3.1. Base: main `5bc79d0a12eb37d0869651eb48b57d2bf338d7fe`. [Session Core](SESSION_CORE.md) adds dc24h_users without new dependencies, migrations, security settings or API schema changes. No automatic main merge or tag.

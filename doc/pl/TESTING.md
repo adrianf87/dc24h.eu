@@ -1,10 +1,20 @@
 # Testowanie
 
-**Aktualny etap — alpha-0.2.10:** [Bezpieczeństwo negocjacji](NEGOTIATION_SECURITY.md) dodaje limity oczekujących sesji, łączne budżety wejścia do gotowości i wspólne limity prób przed INF/Tiger. Opisy historyczne poniżej zachowują pierwotny zakres.
+**Aktualny etap — alpha-0.3.1:** [Session Core](SESSION_CORE.md) dostarcza niezależny model Users i trwałe w obrębie reaktora ID sesji, podłączone do rzeczywistej gotowości, zamykania i czasów. Wcześniejsze opisy zachowują zakres pierwotnego etapu.
+
+**Etap dostarczony w alpha-0.2.10:** [Bezpieczeństwo negocjacji](NEGOTIATION_SECURITY.md) dodaje limity oczekujących sesji, łączne budżety wejścia do gotowości i wspólne limity prób przed INF/Tiger. Opisy historyczne poniżej zachowują pierwotny zakres.
 
 **Etap dostarczony w alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) dodaje walidację semantyki statusów/rozłączeń, kontrolowany routing B/D/E/F, dokładniejsze błędy i ograniczone końcowe ISTA/własne IQUI. Opisy historyczne poniżej zachowują zachowanie pierwotnych wersji.
 
 **Integracja dostarczona w alpha-0.2.8:** [Logowanie gości](ADC_LOGIN.md) podłącza state/SUP/SID/INF/Tiger do rzeczywistego reaktora C++ TCP/TLS, z ograniczonym uporządkowanym wyjściem, unikalnością nick/CID, listą obecności i pełnymi testami ncdc NORMAL/reconnect. Historyczne opisy poniżej zachowują pierwotny zakres; wzmianki o planowanym podłączeniu/wyjściu/logowaniu dotyczą wcześniejszych wersji. Konta/hasła, czat, wyszukiwanie i przekazywanie transferów pozostają planowane.
+
+## Session Core — alpha-0.3.1
+
+Pełny zestaw rejestruje **47 testów CTest**, dodając users.session, users.session.adc i users.session.process. [Session Core](SESSION_CORE.md) opisuje model, osobną gotowość, własność tożsamości/kopii i zamykanie. Testy obejmują UINT64_MAX, stare ID, sztuczny zegar/rollback, niezmienne klucze, pierwszą/wymuszoną/końcową przyczynę, bajtowe pojedyncze ukończenie powitania, anulowanie/przepełnienie i rzeczywisty TCP/TLS. Dotychczasowy reconnect ncdc wymaga jednego rosnącego lokalnego ID, gotowości i zamknięcia na połączenie.
+
+Wynik lokalny: **47/47 w Debug, Release i ASan/UBSan**, z wymaganymi ncdc, MariaDB, Apache HTTPS i poprzednimi regresjami protokołu/bezpieczeństwa/provider/blokowanego wyjścia. WebAdmin build/typecheck, 3 testy Node, 3 Chromium i rzeczywista integracja API/Vite/React przeszły. Dotychczasowe flagi sanitizera/no-PIE i ustawienia Chromium pozostają aktualne. Metadane, UTF-8/linki/parytet języków, składnia Python i białe znaki Git poprawne. Pozostałe OS/CI, awarie alokacji i produkcyjne obciążenie/bezpieczeństwo wymagają osobnych dowodów.
+
+Zakres: `ctest --test-dir build-debug -R 'users.session|adc.ncdc|adcs.ncdc' --output-on-failure`; przed zakończeniem etapu obowiązuje cały wymagany zestaw integracji.
 
 ## Bezpieczeństwo negocjacji — alpha-0.2.10
 

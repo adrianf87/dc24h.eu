@@ -10,23 +10,31 @@
 namespace dc24h::adc {
 struct LoginHub::Peer {
     struct Frame { Message message; std::string wire; Completion completion; };
-    Peer(std::shared_ptr<SidPool> pool, std::string_view address) : session(std::move(pool), address) {}
+    Peer(std::shared_ptr<SidPool> pool, std::string_view address, users::SessionId id,
+         users::Transport transport, users::TimePoint accepted)
+        : session(std::move(pool), address), lifecycle(id,transport,accepted) {}
     ClientSession session;
+    users::Session lifecycle;
     std::deque<Frame> output;
     std::size_t offset{0};
     std::size_t queued{0};
-    bool admitted{false};
-    bool ready{false};
-    bool closing{false};
-    bool abort{false};
-    bool overloaded{false};
-    bool peer_fatal{false};
     bool quit_queued{false};
-    std::string public_sid;
-    std::string public_nickname;
-    std::string public_cid;
 };
 namespace {
+void check_model(users::Result result) {
+    if (result) { throw std::logic_error("Session lifecycle transition rejected"); }
+}
+users::CloseCause session_cause(CloseReason reason) noexcept {
+    switch (reason) {
+    case CloseReason::login_timeout: return users::CloseCause::login_timeout;
+    case CloseReason::idle_timeout: return users::CloseCause::idle_timeout;
+    case CloseReason::partial_frame_timeout: return users::CloseCause::partial_frame_timeout;
+    case CloseReason::security_quota: return users::CloseCause::security_quota;
+    case CloseReason::negotiation_limit: return users::CloseCause::negotiation_limit;
+    case CloseReason::identity_limit: return users::CloseCause::identity_limit;
+    }
+    return users::CloseCause::internal_error;
+}
 Message info_message(std::string command, Command kind, std::vector<std::string> parameters) {
     return {MessageType::info, std::move(command), kind, {}, {}, {}, std::move(parameters), {}};
 }
@@ -64,21 +72,27 @@ LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared
 }
 LoginHub::~LoginHub() = default;
 
-void LoginHub::connect(Id id, std::string_view address) {
-    if (id == 0 || peers_.contains(id) || peers_.size() >= limits_.connections) {
-        throw std::logic_error("Duplicate or excess login connection");
+void LoginHub::connect(Id id, std::string_view address, users::Transport transport, users::TimePoint accepted) {
+    if (id <= greatest_id_ || peers_.size() >= limits_.connections) {
+        throw std::logic_error("Duplicate, reused or excess login connection");
     }
-    peers_.emplace(id, std::make_unique<Peer>(pool_, address));
+    auto peer = std::make_unique<Peer>(pool_, address, *users::SessionId::from_value(id), transport, accepted);
+    if (transport == users::Transport::adc) { check_model(peer->lifecycle.start_negotiation(accepted)); }
+    peers_.emplace(id,std::move(peer));
+    greatest_id_=id;
+}
+void LoginHub::transport_ready(Id id, users::TimePoint now) {
+    check_model(peers_.at(id)->lifecycle.start_negotiation(now));
 }
 
 bool LoginHub::enqueue(Peer& peer, Message message, Completion completion) {
-    if (peer.abort || peer.quit_queued) { return false; }
+    if (peer.lifecycle.immediate() || peer.quit_queued) { return false; }
     auto encoded = serialize(message);
     auto* wire = std::get_if<std::string>(&encoded);
     if (!wire) { throw std::logic_error("Invalid locally generated ADC output"); }
     if (wire->size() > limits_.output_per_client - peer.queued || wire->size() > limits_.output_total - queued_) {
-        peer.abort = true; // Owner closes immediately; do not disturb a pinned TLS front.
-        peer.overloaded = true;
+        check_model(peer.lifecycle.force_close(users::CloseCause::output_limit,users::Clock::now()));
+        // Owner closes immediately without disturbing a pinned TLS front.
         return false;
     }
     const auto size = wire->size();
@@ -88,9 +102,9 @@ bool LoginHub::enqueue(Peer& peer, Message message, Completion completion) {
     return true;
 }
 void LoginHub::reject(Peer& peer, std::string_view status, std::optional<std::string_view> command,
-                      std::string_view description) {
-    if (peer.closing || peer.abort) { return; }
-    peer.closing = true;
+                      std::string_view description, users::CloseCause cause, users::TimePoint now) {
+    if (peer.lifecycle.closing() || peer.lifecycle.immediate()) { return; }
+    check_model(peer.lifecycle.begin_close(cause,now));
     // Keep a possibly partially sent/TLS-pinned front, cancel all later ordinary
     // frames. Never mutate the immutable front pointer or its remaining length.
     while (peer.output.size() > 1) {
@@ -109,37 +123,45 @@ void LoginHub::reject(Peer& peer, std::string_view status, std::optional<std::st
     options.message = description;
     if (sid && enqueue(peer, make_quit(*sid, options))) { peer.quit_queued = true; }
 }
-void LoginHub::close(Id id, CloseReason reason) {
+void LoginHub::close(Id id, CloseReason reason, users::TimePoint now) {
     auto& peer = *peers_.at(id);
+    if (peer.lifecycle.phase() == users::Phase::accepted) {
+        // An unready TLS transport cannot carry an application notice.
+        check_model(peer.lifecycle.force_close(session_cause(reason),now));
+        return;
+    }
     switch (reason) {
-    case CloseReason::login_timeout: reject(peer, "240", {}, "Login timed out"); break;
-    case CloseReason::idle_timeout: reject(peer, "230", {}, "Idle connection timed out"); break;
-    case CloseReason::partial_frame_timeout: reject(peer, "240", {}, "Incomplete frame timed out"); break;
-    case CloseReason::security_quota: reject(peer, "240", {}, "Protocol resource limit exceeded"); break;
-    case CloseReason::negotiation_limit: reject(peer, "240", {}, "Negotiation resource limit exceeded"); break;
-    case CloseReason::identity_limit: reject(peer, "240", {}, "Identity verification rate limit exceeded"); break;
+    case CloseReason::login_timeout: reject(peer, "240", {}, "Login timed out", users::CloseCause::login_timeout, now); break;
+    case CloseReason::idle_timeout: reject(peer, "230", {}, "Idle connection timed out", users::CloseCause::idle_timeout, now); break;
+    case CloseReason::partial_frame_timeout: reject(peer, "240", {}, "Incomplete frame timed out", users::CloseCause::partial_frame_timeout, now); break;
+    case CloseReason::security_quota: reject(peer, "240", {}, "Protocol resource limit exceeded", users::CloseCause::security_quota, now); break;
+    case CloseReason::negotiation_limit: reject(peer, "240", {}, "Negotiation resource limit exceeded", users::CloseCause::negotiation_limit, now); break;
+    case CloseReason::identity_limit: reject(peer, "240", {}, "Identity verification rate limit exceeded", users::CloseCause::identity_limit, now); break;
     }
 }
 bool LoginHub::needs_identity_check(Id id, const Message& message) const {
     const auto& peer = *peers_.at(id);
-    return !peer.closing && !peer.abort && peer.session.state() == ConnectionState::identify &&
+    return !peer.lifecycle.closing() && !peer.lifecycle.immediate() && peer.session.state() == ConnectionState::identify &&
         !peer.session.info() && message.kind == Command::inf && message.command == "INF" &&
         message.type == MessageType::broadcast;
 }
 void LoginHub::relay(Id except, const Message& message) {
     for (auto& [id, peer] : peers_) {
-        if (id != except && peer->admitted && !peer->closing && !peer->abort) { (void)enqueue(*peer, message); }
+        if (id != except && peer->lifecycle.identity().has_value() && !peer->lifecycle.closing() && !peer->lifecycle.immediate()) { (void)enqueue(*peer, message); }
     }
 }
 
 void LoginHub::receive(Id id, const Message& message) {
     auto& peer = *peers_.at(id);
-    if (peer.closing || peer.abort) { return; }
+    if (peer.lifecycle.closing() || peer.lifecycle.immediate()) { return; }
+    if (peer.lifecycle.phase() == users::Phase::accepted) {
+        throw std::logic_error("Application input before transport readiness");
+    }
     const auto before = peer.session.state();
     const auto previous = message.kind == Command::inf ? peer.session.info() : std::optional<ClientInfo>{};
     const std::string fourcc(1, static_cast<char>(message.type));
     const std::string offending = fourcc + message.command;
-    if (before == ConnectionState::normal && !peer.ready) { reject(peer, "244", offending); return; }
+    if (before == ConnectionState::normal && !peer.lifecycle.ready()) { reject(peer, "244", offending); return; }
     if (message.kind == Command::inf && message.type == MessageType::broadcast) {
         // Check prospective nickname before the session commits an update.
         for (const auto& token : message.parameters) {
@@ -162,7 +184,9 @@ void LoginHub::receive(Id id, const Message& message) {
         reject(peer, code, code == "245" ? std::optional<std::string_view>{feature} : std::optional<std::string_view>{offending});
         return;
     }
-    if (peer.session.state() == ConnectionState::disconnected) { peer.abort = true; peer.peer_fatal = true; return; }
+    if (peer.session.state() == ConnectionState::disconnected) {
+        check_model(peer.lifecycle.force_close(users::CloseCause::peer_status,users::Clock::now())); return;
+    }
     if (before == ConnectionState::protocol && message.kind == Command::sup) {
         (void)enqueue(peer, *peer.session.support().initial_reply(), Completion::support);
     } else if (message.kind == Command::inf) {
@@ -177,7 +201,7 @@ void LoginHub::receive(Id id, const Message& message) {
             if (peer.session.approve_identity(IdentityMode::guest)) { reject(peer, "240"); return; }
             if (!enqueue(peer, info_message("INF", Command::inf, {"CT32", "NIdc24h.eu", "DEGuest login alpha"}))) { return; }
             for (const auto& [other, existing] : peers_) {
-                if (other != id && existing->admitted && !existing->closing && !existing->abort) {
+                if (other != id && existing->lifecycle.identity().has_value() && !existing->lifecycle.closing() && !existing->lifecycle.immediate()) {
                     if (!enqueue(peer, existing->session.info()->public_message(*Sid::parse(existing->session.sid())))) { return; }
                 }
             }
@@ -185,22 +209,21 @@ void LoginHub::receive(Id id, const Message& message) {
             // preserves welcome-before-join and avoids simultaneous-login gaps.
             const auto public_info = metadata.public_message(*Sid::parse(peer.session.sid()));
             if (!enqueue(peer, public_info, Completion::welcome)) { return; } // Own INF is last in the initial list.
-            peer.public_sid = peer.session.sid();
-            peer.public_nickname = nickname;
-            peer.public_cid = cid;
+            auto identity=users::Identity::create(peer.session.sid(),cid,nickname);
+            if (!identity) { throw std::logic_error("Validated public identity exceeds session bounds"); }
+            check_model(peer.lifecycle.identify(std::move(*identity),users::Clock::now()));
             nicknames_.emplace(nickname, id);
             cids_.emplace(cid, id);
-            sids_.emplace(peer.public_sid, id);
-            peer.admitted = true;
+            sids_.emplace(peer.lifecycle.identity()->sid(), id);
             relay(id, public_info);
         } else {
-            nicknames_.erase(peer.public_nickname);
+            nicknames_.erase(peer.lifecycle.identity()->nickname());
             nicknames_.emplace(nickname, id);
-            peer.public_nickname = nickname;
+            check_model(peer.lifecycle.rename(nickname,users::Clock::now()));
             // A complete public snapshot also conveys optional field cancellations.
             // Relay the sanitized update below, preserving bare cancellation names.
             auto update = metadata.public_message(*Sid::parse(peer.session.sid()));
-            for (const auto& token : previous->public_message(*Sid::parse(peer.public_sid)).parameters) {
+            for (const auto& token : previous->public_message(*Sid::parse(peer.lifecycle.identity()->sid())).parameters) {
                 const auto field = *parse_named_parameter(token);
                 if (!metadata.field(field.name)) { update.parameters.emplace_back(field.name); }
             }
@@ -253,53 +276,62 @@ std::string_view LoginHub::output(Id id) const {
     const auto& peer = *peers_.at(id);
     return peer.output.empty() ? std::string_view{} : std::string_view(peer.output.front().wire).substr(peer.offset);
 }
-void LoginHub::consume(Id id, std::size_t bytes) {
+bool LoginHub::consume(Id id, std::size_t bytes) {
     auto& peer = *peers_.at(id);
     if (peer.output.empty() || bytes == 0 || bytes > peer.output.front().wire.size() - peer.offset) {
         throw std::logic_error("Invalid transport send completion");
     }
     peer.offset += bytes;
-    if (peer.offset != peer.output.front().wire.size()) { return; }
+    if (peer.offset != peer.output.front().wire.size()) { return false; }
     auto frame = std::move(peer.output.front());
     peer.output.pop_front();
     peer.offset = 0;
     peer.queued -= frame.wire.size();
     queued_ -= frame.wire.size();
-    if (peer.closing || peer.abort) { return; }
-    if (peer.session.observe(Direction::to_client, frame.message)) { peer.abort = true; return; }
+    if (peer.lifecycle.closing()) { return false; }
+    if (peer.session.observe(Direction::to_client, frame.message)) {
+        check_model(peer.lifecycle.force_close(users::CloseCause::internal_error,users::Clock::now())); return false;
+    }
     if (frame.completion == Completion::support) {
-        if (const auto error = peer.session.prepare_sid()) { reject(peer, sid_status_code(*error)); return; }
+        if (const auto error = peer.session.prepare_sid()) { reject(peer, sid_status_code(*error)); return false; }
         (void)enqueue(peer, *peer.session.sid_reply());
-    } else if (frame.completion == Completion::welcome) { peer.ready = true; }
+    } else if (frame.completion == Completion::welcome) {
+        check_model(peer.lifecycle.mark_ready(users::Clock::now())); return true;
+    }
+    return false;
 }
 void LoginHub::remove_identity(Id id, const Peer& peer) {
-    const auto nickname = nicknames_.find(peer.public_nickname);
+    if (!peer.lifecycle.identity()) { return; }
+    const auto nickname = nicknames_.find(peer.lifecycle.identity()->nickname());
     if (nickname != nicknames_.end() && nickname->second == id) { nicknames_.erase(nickname); }
-    const auto cid = cids_.find(peer.public_cid);
+    const auto cid = cids_.find(peer.lifecycle.identity()->cid());
     if (cid != cids_.end() && cid->second == id) { cids_.erase(cid); }
-    const auto sid = sids_.find(peer.public_sid);
+    const auto sid = sids_.find(peer.lifecycle.identity()->sid());
     if (sid != sids_.end() && sid->second == id) { sids_.erase(sid); }
 }
-void LoginHub::disconnect(Id id, bool announce) {
+void LoginHub::disconnect(Id id, bool announce, users::CloseCause cause, users::TimePoint now) {
     const auto found = peers_.find(id);
     if (found == peers_.end()) { return; }
     auto& peer = *found->second;
-    if (announce && peer.admitted) { relay(id, make_quit(*Sid::parse(peer.public_sid))); }
+    if (announce && peer.lifecycle.identity().has_value()) { relay(id, make_quit(*Sid::parse(peer.lifecycle.identity()->sid()))); }
     remove_identity(id, peer);
     queued_ -= peer.queued;
     peer.session.disconnect();
+    check_model(peer.lifecycle.finish_close(cause,now));
     peers_.erase(found); // Drop all old output before releasing/reusing the SID.
 }
-bool LoginHub::closing(Id id) const { return peers_.at(id)->closing; }
+bool LoginHub::closing(Id id) const { return session_model(id).closing(); }
 bool LoginHub::must_close(Id id) const {
     const auto& peer = *peers_.at(id);
-    return peer.abort || (peer.closing && peer.output.empty());
+    return peer.lifecycle.immediate() || (peer.lifecycle.closing() && peer.output.empty());
 }
-bool LoginHub::ready(Id id) const {
-    const auto& peer = *peers_.at(id);
-    return peer.ready && !peer.closing && !peer.abort;
+bool LoginHub::ready(Id id) const { return session_model(id).ready(); }
+bool LoginHub::overloaded(Id id) const { return session_model(id).terminal_cause() == users::CloseCause::output_limit; }
+bool LoginHub::peer_fatal(Id id) const { return session_model(id).terminal_cause() == users::CloseCause::peer_status; }
+const users::Session& LoginHub::session_model(Id id) const { return peers_.at(id)->lifecycle; }
+std::optional<users::Snapshot> LoginHub::snapshot(Id id) const {
+    const auto found=peers_.find(id);
+    return found == peers_.end() ? std::nullopt : std::optional<users::Snapshot>{found->second->lifecycle.snapshot()};
 }
-bool LoginHub::overloaded(Id id) const { return peers_.at(id)->overloaded; }
-bool LoginHub::peer_fatal(Id id) const { return peers_.at(id)->peer_fatal; }
 ConnectionState LoginHub::state(Id id) const { return peers_.at(id)->session.state(); }
 } // namespace dc24h::adc

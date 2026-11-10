@@ -1,6 +1,8 @@
 # Plan rozwoju
 
-**Aktualny etap — alpha-0.2.10:** [Bezpieczeństwo negocjacji](NEGOTIATION_SECURITY.md) dodaje limity oczekujących sesji, łączne budżety wejścia do gotowości i wspólne limity prób przed INF/Tiger. Opisy historyczne poniżej zachowują pierwotny zakres.
+**Aktualny etap — alpha-0.3.1:** [Session Core](SESSION_CORE.md) dostarcza niezależny model Users i trwałe w obrębie reaktora ID sesji, podłączone do rzeczywistej gotowości, zamykania i czasów. Wcześniejsze opisy zachowują zakres pierwotnego etapu.
+
+**Etap dostarczony w alpha-0.2.10:** [Bezpieczeństwo negocjacji](NEGOTIATION_SECURITY.md) dodaje limity oczekujących sesji, łączne budżety wejścia do gotowości i wspólne limity prób przed INF/Tiger. Opisy historyczne poniżej zachowują pierwotny zakres.
 
 **Etap dostarczony w alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) dodaje walidację semantyki statusów/rozłączeń, kontrolowany routing B/D/E/F, dokładniejsze błędy i ograniczone końcowe ISTA/własne IQUI. Opisy historyczne poniżej zachowują zachowanie pierwotnych wersji.
 
@@ -29,6 +31,7 @@
 | alpha-0.2.8 Login | NORMAL gości, ograniczone uporządkowane wyjście, rejestr nick/CID, publiczna obecność i reconnect ncdc |
 | alpha-0.2.9 STA/QUI | Semantyka błędów, routing STA, końcowe własne QUI i ograniczone opróżnianie |
 | alpha-0.2.10 Security | Przyjęcia oczekujące, łączne budżety negocjacji i limity przed weryfikacją |
+| alpha-0.3.1 Session Core | Model Users, identyfikator czasu życia, kopie i rzeczywisty cykl połączenia |
 
 ## Historyczny plan odbioru przed alpha-0.2.8
 

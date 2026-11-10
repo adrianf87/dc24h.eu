@@ -1,5 +1,7 @@
 # Bezpieczeństwo negocjacji — alpha-0.2.10
 
+**Aktualny etap — alpha-0.3.1:** [Session Core](SESSION_CORE.md) dostarcza niezależny model Users i trwałe w obrębie reaktora ID sesji, podłączone do rzeczywistej gotowości, zamykania i czasów. Wcześniejsze opisy zachowują zakres pierwotnego etapu.
+
 Etap dodaje łączne budżety wejścia początkowego logowania, limity oczekujących przyjęć i wspólne bramki przed weryfikacją tożsamości. Podstawa: main `a3ca70d65a0fcbb563147e8a44a1ce2669a0ec53`, po scaleniu STA/QUI alpha-0.2.9. Historia zostaje zachowana, a gałąź nie scala się automatycznie. Protokół ADC, model gości, API v1 i schemat bazy pozostają dotychczasowe.
 
 ## Limity i konfiguracja

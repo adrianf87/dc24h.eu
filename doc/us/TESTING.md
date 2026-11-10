@@ -1,10 +1,20 @@
 # Testing
 
-**Current increment — alpha-0.2.10:** [Negotiation security](NEGOTIATION_SECURITY.md) adds pending admission caps, cumulative pre-readiness input budgets and shared pre-INF/Tiger attempt limits. Earlier release descriptions below retain their original scope.
+**Current increment — alpha-0.3.1:** [Session Core](SESSION_CORE.md) provides the independent Users model and stable lifetime IDs, with live readiness/closure/timeline integration. Earlier stage descriptions below retain their original delivery scope.
+
+**Increment delivered in alpha-0.2.10:** [Negotiation security](NEGOTIATION_SECURITY.md) adds pending admission caps, cumulative pre-readiness input budgets and shared pre-INF/Tiger attempt limits. Earlier release descriptions below retain their original scope.
 
 **Increment delivered in alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) adds semantic status/quit validation, source-checked B/D/E/F status routing, precise errors and bounded terminal ISTA/own-IQUI output. Historical descriptions below retain the behavior of their original releases.
 
 **Integration delivered in alpha-0.2.8:** [Guest login](ADC_LOGIN.md) attaches the state/SUP/SID/INF/Tiger stack to the actual C++ TCP/TLS reactor with bounded ordered output, nickname/CID admission, public presence and complete ncdc NORMAL/reconnect tests. Historical stage descriptions below retain their original scope; statements that transport attachment/output/login were still planned describe those earlier versions. Registered-user authentication, chat, search and transfer dispatch remain planned.
+
+## Session Core — alpha-0.3.1
+
+The strict gate registers **47 CTest suites**, adding users.session, users.session.adc and users.session.process. [Session Core](SESSION_CORE.md) documents the model, distinct readiness, identity/snapshot ownership and closure phases. Tests cover UINT64_MAX exhaustion, stale IDs, fake-clock rollback, immutable keys, first/forced/final causes, bytewise one-shot welcome completion, cancellation/overflow and live mixed TCP/TLS cleanup. Existing real ncdc reconnect fixtures now require one increasing local identity, readiness and cleanup for each connection.
+
+Local result: **47/47 passed in Debug, Release and ASan/UBSan**, including required ncdc, MariaDB, Apache HTTPS and existing protocol/security/provider/blocked-output regressions. WebAdmin build/typecheck, 3 Node tests, 3 Chromium tests and real API/Vite/React integration passed. Existing sanitizer/no-PIE and Chromium settings below apply. Metadata, UTF-8/local links/language parity, Python syntax and Git whitespace checks passed. Remaining OS/remote CI, allocation faults and production load/security are not inferred.
+
+Focused gate: `ctest --test-dir build-debug -R 'users.session|adc.ncdc|adcs.ncdc' --output-on-failure`; full strict integration remains required before finishing a stage.
 
 ## Negotiation security — alpha-0.2.10
 

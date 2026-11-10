@@ -1,6 +1,8 @@
 # STA / QUI — alpha-0.2.9
 
-**Aktualny etap — alpha-0.2.10:** [Bezpieczeństwo negocjacji](NEGOTIATION_SECURITY.md) dodaje limity oczekujących sesji, łączne budżety wejścia do gotowości i wspólne limity prób przed INF/Tiger. Opisy historyczne poniżej zachowują pierwotny zakres.
+**Aktualny etap — alpha-0.3.1:** [Session Core](SESSION_CORE.md) dostarcza niezależny model Users i trwałe w obrębie reaktora ID sesji, podłączone do rzeczywistej gotowości, zamykania i czasów. Wcześniejsze opisy zachowują zakres pierwotnego etapu.
+
+**Etap dostarczony w alpha-0.2.10:** [Bezpieczeństwo negocjacji](NEGOTIATION_SECURITY.md) dodaje limity oczekujących sesji, łączne budżety wejścia do gotowości i wspólne limity prób przed INF/Tiger. Opisy historyczne poniżej zachowują pierwotny zakres.
 
 Etap dodaje typowaną walidację statusów/rozłączeń, diagnostykę protokołu, przekazywanie STA i ograniczone wyjście kończące połączenie w rzeczywistym reaktorze C++ ADC/ADCS. Podstawa to main `da1521502c4a8936b3427a7d38fea6b904686b39`, po scaleniu logowania alpha-0.2.8. Historia i wcześniejsze gałęzie zostają zachowane; nowa gałąź nie scala się automatycznie.
 

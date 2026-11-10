@@ -3,7 +3,7 @@
 #include <string_view>
 
 namespace dc24h::i18n::pl {
-inline constexpr std::array<std::string_view, 118> messages{{
+inline constexpr std::array<std::string_view, 119> messages{{
     "Uruchamianie dc24h.eu ",
     "Core działa",
     "Zatrzymywanie Core",
@@ -122,6 +122,7 @@ inline constexpr std::array<std::string_view, 118> messages{{
     "Wysyłanie ADC zatrzymane; połączenie zamknięte",
     "Limit negocjacji przekroczony; połączenie zamknięte",
     "Limit weryfikacji tożsamości przekroczony; połączenie zamknięte",
+    "Wyczerpano identyfikatory sesji; klient odrzucony",
 }};
 inline constexpr std::string_view help = R"HELP(Użycie: dc24h [--config PLIK] [--check-config | --check-database | --migrate-database]
               [--listen IPv4:port | [IPv6]:port | none] ...
