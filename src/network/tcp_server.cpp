@@ -146,6 +146,9 @@ struct Connection {
     std::optional<Clock::time_point> close_started;
     std::optional<Event> close_event;
     bool security_counted{false};
+    security::NegotiationBudget negotiation{65536,64};
+    bool negotiation_violation{false};
+    bool identity_violation{false};
 };
 } // namespace
 
@@ -271,7 +274,7 @@ void TcpServer::run() {
     bool accepting = true;
     Clock::time_point resume_accepting{};
 
-    enum class Warning { invalid_frame, connection_limit, idle, tls_failure, handshake_timeout, peer_io, admission_quota, frame_quota, partial_frame, login_timeout, output_timeout, count };
+    enum class Warning { invalid_frame, connection_limit, idle, tls_failure, handshake_timeout, peer_io, admission_quota, frame_quota, partial_frame, login_timeout, output_timeout, negotiation_limit, identity_limit, count };
     std::array<std::optional<Clock::time_point>, static_cast<std::size_t>(Warning::count)> last_warnings{};
     auto warn_once = [&](Warning category, std::string_view message) {
         const auto now = Clock::now();
@@ -302,7 +305,7 @@ void TcpServer::run() {
         }
         // DEL before close; event tokens are never reused even when the OS reuses an fd.
         ::epoll_ctl(epoll.get(), EPOLL_CTL_DEL, iterator->second.fd.get(), nullptr);
-        peer_limiter.release(iterator->second.peer_key);
+        peer_limiter.release(iterator->second.peer_key, !iterator->second.login_logged);
         login.disconnect(iterator->first, reason != Event::shutdown);
         connections.erase(iterator);
         active_.fetch_sub(1);
@@ -464,7 +467,7 @@ void TcpServer::run() {
                     if (!peer_limiter.admit(key, admitted_at)) {
                         rejected_.fetch_add(1);
                         security_rejected_.fetch_add(1);
-                        warn_once(Warning::admission_quota, "Security per-IP admission quota reached; peer rejected");
+                        warn_once(Warning::admission_quota, "Security admission or pending-login quota reached; peer rejected");
                         continue;
                     }
                     const auto client_token = next_token++;
@@ -493,7 +496,8 @@ void TcpServer::run() {
                     connections.emplace(client_token, Connection{
                         std::move(client), admitted_at, {}, std::move(tls), !secure, false,
                         key, admitted_at, std::nullopt, 0,
-                        security::FrameLimiter(options_.security.max_frames_per_second), false, {}, {}, {}, false, EPOLLIN | EPOLLRDHUP, {}, {}, false});
+                        security::FrameLimiter(options_.security.max_frames_per_second), false, {}, {}, {}, false, EPOLLIN | EPOLLRDHUP, {}, {}, false,
+                        security::NegotiationBudget(options_.security.max_login_bytes,options_.security.max_login_frames),false,false});
                     login.connect(client_token, std::string_view(key).substr(2));
                     active_.fetch_add(1);
                     accepted_.fetch_add(1);
@@ -512,9 +516,17 @@ void TcpServer::run() {
                     connection.security_violation = true;
                     return;
                 }
+                if (!connection.login_logged && !login.closing(token) && !connection.negotiation.admit_frame()) {
+                    connection.security_violation = connection.negotiation_violation = true;
+                    return;
+                }
                 if (const auto* message = std::get_if<adc::Message>(&result)) {
                     adc_frames_.fetch_add(1);
                     if (message->kind == adc::Command::unknown) { adc_unknown_.fetch_add(1); }
+                    if (login.needs_identity_check(token,*message) && !peer_limiter.identity_check(connection.peer_key,Clock::now())) {
+                        connection.security_violation = connection.identity_violation = true;
+                        return; // No INF validation/Tiger work on a denied attempt.
+                    }
                     login.receive(token, *message);
                 } else if (std::holds_alternative<adc::KeepAlive>(result)) {
                     adc_keepalives_.fetch_add(1);
@@ -583,6 +595,7 @@ void TcpServer::run() {
                     login.consume(token, sent);
                     connection.output_progress = Clock::now();
                     if (login.ready(token) && !connection.login_logged) {
+                        peer_limiter.complete_login(connection.peer_key);
                         connection.login_logged = true;
                         logger_.connection(Event::login_ready, token, static_cast<bool>(connection.tls));
                     }
@@ -651,6 +664,10 @@ void TcpServer::run() {
                         const auto lf = input.find('\n');
                         const auto length = lf == std::string_view::npos ? input.size() : lf + 1;
                         auto& connection = found->second;
+                        if (!connection.login_logged && !login.closing(token) && !connection.negotiation.admit_bytes(length)) {
+                            connection.security_violation = connection.negotiation_violation = true;
+                            break; // Includes unfinished/discarded bytes, before decoder allocation/work.
+                        }
                         if (!connection.partial_started) { connection.partial_started = Clock::now(); }
                         connection.decoder.feed(input.substr(0, length), record_frame);
                         if (!connection.decoder.in_progress()) { connection.partial_started.reset(); }
@@ -659,8 +676,16 @@ void TcpServer::run() {
                     if (removed) { break; }
                     if (found->second.security_violation) {
                         count_security_close(found->second);
-                        warn_once(Warning::frame_quota, "Security frame quota reached; connection closed");
-                        begin_close(found, adc::CloseReason::security_quota, Event::security_quota, Clock::now());
+                        if (found->second.negotiation_violation) {
+                            warn_once(Warning::negotiation_limit, "Security negotiation limit reached; connection closed");
+                            begin_close(found, adc::CloseReason::negotiation_limit, Event::negotiation_limit, Clock::now());
+                        } else if (found->second.identity_violation) {
+                            warn_once(Warning::identity_limit, "Security identity verification limit reached; connection closed");
+                            begin_close(found, adc::CloseReason::identity_limit, Event::identity_limit, Clock::now());
+                        } else {
+                            warn_once(Warning::frame_quota, "Security frame quota reached; connection closed");
+                            begin_close(found, adc::CloseReason::security_quota, Event::security_quota, Clock::now());
+                        }
                         break;
                     }
                 }

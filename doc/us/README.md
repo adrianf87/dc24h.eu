@@ -1,6 +1,6 @@
 # dc24h.eu documentation
 
-alpha-0.2.9: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.2.10: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
 - [AUDIT_ALPHA_0.1.md](AUDIT_ALPHA_0.1.md)
 - [ARCHITECTURE.md](ARCHITECTURE.md)
@@ -21,6 +21,7 @@ alpha-0.2.9: implemented behavior and clearly identified future modules. Default
 - [APACHE2_HTTPS.md](APACHE2_HTTPS.md)
 - [API.md](API.md)
 - [SECURITY.md](SECURITY.md)
+- [NEGOTIATION_SECURITY.md](NEGOTIATION_SECURITY.md)
 - [BUILD.md](BUILD.md)
 - [INSTALLATION.md](INSTALLATION.md)
 - [TESTING.md](TESTING.md)

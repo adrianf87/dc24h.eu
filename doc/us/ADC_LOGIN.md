@@ -1,6 +1,8 @@
 # ADC guest login — alpha-0.2.8
 
-**Current increment — alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) adds semantic status/quit validation, source-checked B/D/E/F status routing, precise errors and bounded terminal ISTA/own-IQUI output. Historical descriptions below retain the behavior of their original releases.
+**Current increment — alpha-0.2.10:** [Negotiation security](NEGOTIATION_SECURITY.md) adds pending admission caps, cumulative pre-readiness input budgets and shared pre-INF/Tiger attempt limits. Earlier release descriptions below retain their original scope.
+
+**Increment delivered in alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) adds semantic status/quit validation, source-checked B/D/E/F status routing, precise errors and bounded terminal ISTA/own-IQUI output. Historical descriptions below retain the behavior of their original releases.
 
 The C++ hub now completes guest login through its actual nonblocking TCP and OpenSSL TLS listeners. `LoginHub` composes the existing SUP, SID, INF, Tiger and state modules; one reactor-owned instance spans every ADC/ADCS listener. It owns public presence, nickname/CID reservations and bounded ordered output. Registered accounts, password verification, bans/roles, chat, searches and transfers remain future stages.
 

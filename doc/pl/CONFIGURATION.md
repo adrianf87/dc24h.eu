@@ -1,6 +1,8 @@
 # Konfiguracja — alpha-0.1.11
 
-**Aktualny etap — alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) dodaje walidację semantyki statusów/rozłączeń, kontrolowany routing B/D/E/F, dokładniejsze błędy i ograniczone końcowe ISTA/własne IQUI. Opisy historyczne poniżej zachowują zachowanie pierwotnych wersji.
+**Aktualny etap — alpha-0.2.10:** [Bezpieczeństwo negocjacji](NEGOTIATION_SECURITY.md) dodaje limity oczekujących sesji, łączne budżety wejścia do gotowości i wspólne limity prób przed INF/Tiger. Opisy historyczne poniżej zachowują pierwotny zakres.
+
+**Etap dostarczony w alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) dodaje walidację semantyki statusów/rozłączeń, kontrolowany routing B/D/E/F, dokładniejsze błędy i ograniczone końcowe ISTA/własne IQUI. Opisy historyczne poniżej zachowują zachowanie pierwotnych wersji.
 
 Kolejność ustawień: wartości domyślne, jeden jawny `--config PLIK`, następnie nadpisania CLI niezależnie od miejsca `--config`. Brak automatycznego wyszukiwania pliku, zmiennych środowiskowych, include, reload i konfiguracji zdalnej.
 

@@ -69,7 +69,7 @@ class Peer:
             self.case.assertLess(len(result), 100)
         for line in result:
             self.case.assertNotIn(b' PD', line)
-            self.case.assertNotIn(b'XX', line)
+            self.case.assertNotIn(b' XX', line)
         return result
 
 

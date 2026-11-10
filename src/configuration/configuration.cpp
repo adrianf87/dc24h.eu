@@ -260,6 +260,18 @@ Settings load_file(const std::string& filename) {
                 settings.network.security.max_frames_per_second = positive_number(value, 100000);
             } else if (section == "security" && key == "max_invalid_frames") {
                 settings.network.security.max_invalid_frames = positive_number(value, 65535);
+            } else if (section == "security" && key == "max_pending_logins") {
+                settings.network.security.max_pending_logins = positive_number(value, 65535);
+            } else if (section == "security" && key == "max_pending_per_ip") {
+                settings.network.security.max_pending_per_ip = positive_number(value, 65535);
+            } else if (section == "security" && key == "max_login_bytes") {
+                settings.network.security.max_login_bytes = positive_number(value, 16777216);
+            } else if (section == "security" && key == "max_login_frames") {
+                settings.network.security.max_login_frames = positive_number(value, 65535);
+            } else if (section == "security" && key == "max_identity_checks_per_minute") {
+                settings.network.security.max_identity_checks_per_minute = positive_number(value, 100000);
+            } else if (section == "security" && key == "max_identity_checks_per_second") {
+                settings.network.security.max_identity_checks_per_second = positive_number(value, 100000);
             } else if (section == "security" && key == "tls_handshake_timeout") {
                 settings.network.security.tls_handshake_timeout = std::chrono::seconds(positive_number(value, 3600));
             } else if (section == "security" && key == "partial_frame_timeout") {

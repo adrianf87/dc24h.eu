@@ -1,6 +1,8 @@
 # Local administrative API — alpha-0.1.9
 
-**Current increment — alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) adds semantic status/quit validation, source-checked B/D/E/F status routing, precise errors and bounded terminal ISTA/own-IQUI output. Historical descriptions below retain the behavior of their original releases.
+**Current increment — alpha-0.2.10:** [Negotiation security](NEGOTIATION_SECURITY.md) adds pending admission caps, cumulative pre-readiness input budgets and shared pre-INF/Tiger attempt limits. Earlier release descriptions below retain their original scope.
+
+**Increment delivered in alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) adds semantic status/quit validation, source-checked B/D/E/F status routing, precise errors and bounded terminal ISTA/own-IQUI output. Historical descriptions below retain the behavior of their original releases.
 
 Implemented: an opt-in, read-only HTTP/1.1/JSON API on a Linux Unix-domain stream socket. It is independent of ADC/ADCS and does not expose a TCP port. This is an administrative API foundation, not a complete WebAdmin backend. No user management, role system, mutations, configuration updates, SQL queries, remote HTTP/TLS endpoint or production browser authentication is implemented.
 

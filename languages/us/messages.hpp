@@ -3,7 +3,7 @@
 #include <string_view>
 
 namespace dc24h::i18n::us {
-inline constexpr std::array<std::string_view, 116> messages{{
+inline constexpr std::array<std::string_view, 118> messages{{
     "Starting dc24h.eu ",
     "Core running",
     "Core stopping",
@@ -85,7 +85,7 @@ inline constexpr std::array<std::string_view, 116> messages{{
     "Connection logging must be on or off",
     "Invalid security limits",
     "Security stopped; rejected=",
-    "Security per-IP admission quota reached; peer rejected",
+    "Security admission or pending-login quota reached; peer rejected",
     "Security frame quota reached; connection closed",
     "Security partial frame timed out; connection closed",
     "Invalid database settings",
@@ -120,6 +120,8 @@ inline constexpr std::array<std::string_view, 116> messages{{
     "API socket cannot target configuration or credential files"
     "ADC login timed out; connection closed",
     "ADC output stalled; connection closed",
+    "Security negotiation limit reached; connection closed",
+    "Security identity verification limit reached; connection closed",
 }};
 inline constexpr std::string_view help = R"HELP(Usage: dc24h [--config FILE] [--check-config | --check-database | --migrate-database]
              [--listen IPv4:port | [IPv6]:port | none] ...

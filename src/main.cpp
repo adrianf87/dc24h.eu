@@ -103,6 +103,12 @@ int main(int argc, char* argv[]) {
                     " accepts_per_minute=" + std::to_string(parsed.settings.network.security.max_accepts_per_minute) +
                     " frames_per_second=" + std::to_string(parsed.settings.network.security.max_frames_per_second) +
                     " max_invalid_frames=" + std::to_string(parsed.settings.network.security.max_invalid_frames) +
+                    " max_pending_logins=" + std::to_string(parsed.settings.network.security.max_pending_logins) +
+                    " max_pending_per_ip=" + std::to_string(parsed.settings.network.security.max_pending_per_ip) +
+                    " max_login_bytes=" + std::to_string(parsed.settings.network.security.max_login_bytes) +
+                    " max_login_frames=" + std::to_string(parsed.settings.network.security.max_login_frames) +
+                    " max_identity_checks_per_minute=" + std::to_string(parsed.settings.network.security.max_identity_checks_per_minute) +
+                    " max_identity_checks_per_second=" + std::to_string(parsed.settings.network.security.max_identity_checks_per_second) +
                     " tls_handshake_timeout_seconds=" + std::to_string(parsed.settings.network.security.tls_handshake_timeout.count()) +
                     " partial_frame_timeout_seconds=" + std::to_string(parsed.settings.network.security.partial_frame_timeout.count()) +
                     " login_timeout_seconds=" + std::to_string(parsed.settings.network.security.login_timeout.count()) +

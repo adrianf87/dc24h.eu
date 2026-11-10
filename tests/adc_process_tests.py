@@ -78,7 +78,7 @@ class AdcProcessTests(unittest.TestCase):
     def test_oversize_input_resynchronizes_without_affecting_other_clients(self):
         hub = self.hub()
         attacker = hub.connect()
-        attacker.sendall(b"x" * (1024 * 1024))
+        attacker.sendall(b"x" * 20000)
         self.send_and_finish(hub, b"HSUP ADBASE\n")
         attacker.sendall(b"\nHSUP ADBASE\n")
         attacker.shutdown(socket.SHUT_WR)

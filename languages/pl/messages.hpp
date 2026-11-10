@@ -3,7 +3,7 @@
 #include <string_view>
 
 namespace dc24h::i18n::pl {
-inline constexpr std::array<std::string_view, 116> messages{{
+inline constexpr std::array<std::string_view, 118> messages{{
     "Uruchamianie dc24h.eu ",
     "Core działa",
     "Zatrzymywanie Core",
@@ -85,7 +85,7 @@ inline constexpr std::array<std::string_view, 116> messages{{
     "Logowanie połączeń musi być on lub off",
     "Nieprawidłowe limity bezpieczeństwa",
     "Security zatrzymany; rejected=",
-    "Osiągnięto limit przyjęć dla IP; klient odrzucony",
+    "Osiągnięto limit przyjęć lub oczekujących logowań; klient odrzucony",
     "Osiągnięto limit ramek; połączenie zamknięte",
     "Przekroczono czas niedokończonej ramki; połączenie zamknięte",
     "Nieprawidłowe ustawienia bazy danych",
@@ -120,6 +120,8 @@ inline constexpr std::array<std::string_view, 116> messages{{
     "Gniazdo API nie może wskazywać plików konfiguracji ani danych dostępowych"
     "Upłynął czas logowania ADC; połączenie zamknięte",
     "Wysyłanie ADC zatrzymane; połączenie zamknięte",
+    "Limit negocjacji przekroczony; połączenie zamknięte",
+    "Limit weryfikacji tożsamości przekroczony; połączenie zamknięte",
 }};
 inline constexpr std::string_view help = R"HELP(Użycie: dc24h [--config PLIK] [--check-config | --check-database | --migrate-database]
               [--listen IPv4:port | [IPv6]:port | none] ...
