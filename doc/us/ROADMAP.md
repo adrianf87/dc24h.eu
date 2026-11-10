@@ -1,6 +1,8 @@
 # Roadmap
 
-**Current increment — alpha-0.3.2:** [Session Manager](SESSION_MANAGER.md) centrally owns all registered lifecycle models, with bounded capacity, stable lookup, phase counts and ordered snapshot pages. Protocol peers borrow models; their queues and public routing indexes remain in ADC. Earlier descriptions retain their historical scope.
+**Current increment — alpha-0.3.3:** [User Core](USER_CORE.md) adds an owning public guest identity/profile to Session, with validated full-INF projection and lifecycle-guarded updates. It was developed directly from main with Session Core; main now combines it with the previously merged alpha-0.3.2 Session Manager. Earlier descriptions retain their historical scope.
+
+**Increment delivered in alpha-0.3.2:** [Session Manager](SESSION_MANAGER.md) centrally owns all registered lifecycle models, with bounded capacity, stable lookup, phase counts and ordered snapshot pages. Protocol peers borrow models; their queues and public routing indexes remain in ADC. Earlier descriptions retain their historical scope.
 
 **Increment delivered in alpha-0.3.1:** [Session Core](SESSION_CORE.md) provides the independent Users model and stable lifetime IDs, with live readiness/closure/timeline integration. Earlier stage descriptions below retain their original delivery scope.
 
@@ -35,6 +37,7 @@
 | alpha-0.2.10 Security | Pending admission, cumulative negotiation budgets and pre-verification quotas |
 | alpha-0.3.1 Session Core | Users model, stable lifetime identity, snapshots and actual connection lifecycle |
 | alpha-0.3.2 Session Manager | Central ownership, bounded registry, stable lookup, phase counts and snapshot pages |
+| alpha-0.3.3 User Core | Public guest identity/profile, lifecycle ownership and validated INF projection/updates (integrated after Session Manager) |
 
 ## Historical acceptance plan before alpha-0.2.8
 

@@ -1,5 +1,22 @@
 # Changelog
 
+## alpha-0.3.3 — 2026-11-10
+
+**Main integration — 2026-11-10:** merged alpha-0.3.2 Session Manager first (`fbc27f9`), then alpha-0.3.3 User Core. Resolved shared release metadata, CMake and US/PL documentation while retaining both libraries/tests and original branch histories. The manager owns the Sessions that own Users, with no second public-identity owner. Added composition assertions for registry profile pages, ready/identified counts, snapshot ownership across updates and removal after disconnect. The combined tree passed **49/49 strict CTest suites in Debug, Release and ASan/UBSan**, including real ncdc ADC/ADCS, MariaDB and Apache. WebAdmin build/typecheck, 3 Node tests, 3 Chromium tests and real API integration passed. Metadata, Python syntax and whitespace checks passed. The original branch scope and validation below remain historical.
+
+User Core increment, based directly on main `ca00266992dd866bdd30ff68e911c981c6665a62` after the Session Core merge. The requested alpha-0.3.2 Session Manager is a separate sibling branch from this same main.
+
+- Added users::User as an owning public guest Identity plus immutable-access Profile. Moved Identity to user.hpp while preserving the session.hpp include path. CID/SID/nickname retain bounded opaque storage; existing ADC/Tiger/NFC validation and uniqueness remain authoritative. No account or ownership proof is inferred from constructing a model.
+- Added typed ProfileData for description, public email, application/version/locale, optional nonnegative int64 share/file/slot declarations and a bounded unique feature list. Factories enforce byte/count/control/NUL/numeric/feature bounds; no arbitrary INF maps, PID/PAS, peer addresses, privileges, accounts or roles are retained. Unicode protocol semantics remain the adapter responsibility. No new library dependencies.
+- Session now owns one optional User, with derived borrowed identity access and full public profile in owning snapshots. Added identify(User,time) and atomic update_user with unchanged SID/CID, phase and monotonic-time guards; retained Identity admission and nickname rename. Failed state/time/key updates leave the model intact.
+- LoginHub projects only selected fields from fully validated merged ClientInfo after bounded welcome admission, and refreshes the whole user after accepted INF updates. Optional field cancellation removes stale profile values; invalid INF and duplicate nickname attempts preserve the previous public model. Protocol indexes, wire behavior, guest rules, readiness and transport cleanup remain unchanged.
+- Added users.core for exact storage/numeric limits, feature validation, control/NUL rejection, immutable keys, owned snapshots, lifecycle guards, atomic replacement and actual LoginHub profile projection/cancellation/rejection/reconnect. Hardened the existing Unix-socket shutdown fixture to accept both EOF and reset when unread input is closed.
+- Updated version metadata and matched US/PL User Core/module/testing/version documentation. Existing runtime catalogs remain applicable. No configuration, API JSON schema, WebAdmin profile endpoint or SQL migration is introduced.
+
+Local validation: **48/48 CTest suites passed in Debug, Release and ASan/UBSan**, strict integration enabled, including real ncdc ADC/ADCS, mixed transport lifecycle, negotiation/security/STA/identity regressions, disposable MariaDB and isolated Apache. WebAdmin typecheck/production build, 3 Node tests, 3 Chromium tests and real C++ API → Vite → React integration passed. Metadata, UTF-8/local links/language parity, Python syntax and Git whitespace checks passed. Sanitizers used -fno-pie / -no-pie.
+
+Limits: public in-memory guest model only. Client profile declarations are not verified resource/contact facts. No persistent accounts, roles, bans, global/multi-session user directory, HTTP profile access, chat/search/transfers or audit history. Local checks do not establish other OS, remote CI, production load or allocation/fuzz/security audit results. Main and historical branches remain unchanged; no automatic merge.
+
 ## alpha-0.3.2 — 2026-11-10
 
 Session Manager increment, based on main `ca00266992dd866bdd30ff68e911c981c6665a62` after the Session Core merge:

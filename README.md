@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.3.2 (Session Manager).**
+**Current development version: alpha-0.3.3 (User Core).**
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.3.3 User Core**: owning public guest identity and bounded typed profile, composed with session lifecycle and validated ADC INF updates/cancellations. See [User Core](doc/us/USER_CORE.md).
 
 - **alpha-0.3.2 Session Manager**: bounded central ownership of live session models, stable lookup, phase counts and ordered snapshot pages. ADC/ADCS register and remove every connection through the manager. See [Session Manager](doc/us/SESSION_MANAGER.md).
 

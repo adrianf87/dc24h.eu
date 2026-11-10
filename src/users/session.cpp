@@ -24,12 +24,6 @@ std::optional<SessionId> SessionIds::acquire() noexcept {
     else { ++next_; }
     return result;
 }
-Identity::Identity(std::string_view sid, std::string_view cid, std::string_view nickname)
-    : sid_(sid), cid_(cid), nickname_(nickname) {}
-std::optional<Identity> Identity::create(std::string_view sid, std::string_view cid, std::string_view nickname) {
-    if (!bounded(sid,max_session_key_bytes) || !bounded(cid,max_client_key_bytes) || !bounded(nickname,max_nickname_bytes)) { return std::nullopt; }
-    return Identity(sid,cid,nickname);
-}
 Session::Session(SessionId id, Transport transport, TimePoint accepted) noexcept
     : id_(id), transport_(transport), timeline_{accepted,{},{},{},{},{}}, last_(accepted) {}
 Result Session::start_negotiation(TimePoint now) noexcept {
@@ -38,14 +32,24 @@ Result Session::start_negotiation(TimePoint now) noexcept {
     timeline_.negotiating=now;last_=now;phase_=Phase::negotiating;return {};
 }
 Result Session::identify(Identity identity, TimePoint now) noexcept {
-    static_assert(std::is_nothrow_move_assignable_v<std::optional<Identity>>);
+    auto user=User::create(std::move(identity));
+    if (!user) { return SessionError::invalid_identity; }
+    return identify(std::move(*user),now);
+}
+Result Session::identify(User user, TimePoint now) noexcept {
+    static_assert(std::is_nothrow_move_assignable_v<std::optional<User>>);
     if (phase_ != Phase::negotiating) { return SessionError::invalid_state; }
     if (!valid_time(now)) { return SessionError::backwards_time; }
-    if (!bounded(identity.sid(),max_session_key_bytes) || !bounded(identity.cid(),max_client_key_bytes) ||
-        !bounded(identity.nickname(),max_nickname_bytes)) {
+    if (!user.valid()) { return SessionError::invalid_identity; }
+    user_=std::move(user);timeline_.identified=now;last_=now;phase_=Phase::identified;return {};
+}
+Result Session::update_user(User user, TimePoint now) noexcept {
+    if (phase_ != Phase::identified && phase_ != Phase::ready) { return SessionError::invalid_state; }
+    if (!valid_time(now)) { return SessionError::backwards_time; }
+    if (!user.valid() || user.identity().sid()!=identity()->sid() || user.identity().cid()!=identity()->cid()) {
         return SessionError::invalid_identity;
     }
-    identity_=std::move(identity);timeline_.identified=now;last_=now;phase_=Phase::identified;return {};
+    user_=std::move(user);last_=now;return {};
 }
 Result Session::mark_ready(TimePoint now) noexcept {
     if (phase_ != Phase::identified) { return SessionError::invalid_state; }
@@ -56,7 +60,7 @@ Result Session::rename(std::string_view nickname, TimePoint now) {
     if (phase_ != Phase::identified && phase_ != Phase::ready) { return SessionError::invalid_state; }
     if (!valid_time(now)) { return SessionError::backwards_time; }
     if (!bounded(nickname,max_nickname_bytes)) { return SessionError::invalid_identity; }
-    std::string owned(nickname);identity_->nickname_.swap(owned);last_=now;return {};
+    std::string owned(nickname);user_->identity_.nickname_.swap(owned);last_=now;return {};
 }
 Result Session::begin_close(CloseCause cause, TimePoint now) noexcept {
     if (phase_ == Phase::closing || phase_ == Phase::closed) { return {}; }
@@ -82,6 +86,9 @@ std::optional<CloseCause> Session::terminal_cause() const noexcept {
     return forced_cause_ ? forced_cause_ : close_cause_;
 }
 Snapshot Session::snapshot() const {
-    return {id_,transport_,phase_,timeline_,identity_,close_cause_,forced_cause_,final_cause_,close_mode_};
+    return {id_,transport_,phase_,timeline_,
+        user_ ? std::optional<Identity>{user_->identity()} : std::nullopt,
+        user_ ? std::optional<Profile>{user_->profile()} : std::nullopt,
+        close_cause_,forced_cause_,final_cause_,close_mode_};
 }
 } // namespace dc24h::users

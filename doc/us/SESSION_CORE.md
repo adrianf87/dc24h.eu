@@ -1,6 +1,8 @@
 # Session Core — alpha-0.3.1
 
-**Current increment — alpha-0.3.2:** [Session Manager](SESSION_MANAGER.md) centrally owns all registered lifecycle models, with bounded capacity, stable lookup, phase counts and ordered snapshot pages. Protocol peers borrow models; their queues and public routing indexes remain in ADC. Earlier descriptions retain their historical scope.
+**Current increment — alpha-0.3.3:** [User Core](USER_CORE.md) adds an owning public guest identity/profile to Session, with validated full-INF projection and lifecycle-guarded updates. It was developed directly from main with Session Core; main now combines it with the previously merged alpha-0.3.2 Session Manager. Earlier descriptions retain their historical scope.
+
+**Increment delivered in alpha-0.3.2:** [Session Manager](SESSION_MANAGER.md) centrally owns all registered lifecycle models, with bounded capacity, stable lookup, phase counts and ordered snapshot pages. Protocol peers borrow models; their queues and public routing indexes remain in ADC. Earlier descriptions retain their historical scope.
 
 The new `dc24h_users` C++20 library owns the user-session lifecycle model used by the live ADC/ADCS hub. This branch starts from main `5bc79d0a12eb37d0869651eb48b57d2bf338d7fe`, after alpha-0.2.10 negotiation security. The protocol, guest admission rules, wire replies, security settings, SQL schema and API v1 remain unchanged. Historical branches are preserved; this branch is not merged automatically.
 
