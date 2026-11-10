@@ -1,5 +1,13 @@
 # Testowanie
 
+## Weryfikacja User Login — alpha-0.3.8
+
+Lokalnie przeszło wszystkich **57 zestawów CTest** w Debug, Release i ASan/UBSan. Nowe users.login i users.login.process obejmują zwalidowaną/zatwierdzoną tożsamość, pojedynczą publiczną rejestrację, kolizje SID/CID/nicka, błędy czasu/cyklu życia, zgodność tożsamości przy końcu powitania, pojedynczą gotowość dokładnie po wysłaniu LF własnego INF, przepełnienie, wycofanie alokacji rejestracji i chronione natychmiastowe zamknięcie. Mieszane testy ADC/ADCS potwierdzają brak publicznej obecności przy błędnym dowodzie, rejestrację po fragmentowanym poprawnym INF, routing po gotowości i reconnect z tym samym CID. Rzeczywisty ncdc ADC/ADCS osiąga NORMAL i reconnect z polskimi nickami; przeszły MariaDB, Apache HTTPS i wcześniejsze testy bezpieczeństwa/rejestrów/transportu. Dokładny kontrakt i granice ochrony alokacji opisuje [User Login](USER_LOGIN.md).
+
+Odtwarzanie: `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug --parallel 4`, `ctest --test-dir build-debug --output-on-failure -j 4`. Powtórz dla build-release/Release. W build-sanitize/Debug dodaj `-DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie"` i `-DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined -no-pie"`. Ograniczone testy alokacji C++ obejmują projekcję/rejestrację indeksów i zakończenie bez alokacji; nie wstrzykują błędów alokatora C utf8proc ani systemu.
+
+WebAdmin: poprawne typecheck/budowanie produkcyjne, 3 testy Node, 3 Chromium i integracja rzeczywistego API C++. W webadmin uruchom `npm run build`, `npm test`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e` i `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:integration -- ../build-debug/dc24h`. Metadane/dane testowe odpowiadają alpha-0.3.8. Wyniki są lokalne i nie oznaczają zdalnego CI, pełnej macierzy systemów ani testu obciążenia.
+
 ## Weryfikacja User Registry — alpha-0.3.7
 
 Lokalnie przeszło wszystkich **55 zestawów CTest** w Debug, Release i ASan/UBSan, w tym rzeczywisty ncdc ADC/ADCS, mieszane transporty, MariaDB i Apache HTTPS. Nowe users.user_registry i users.user_registry.process obejmują unikalność SID/CID i lokalnego właściciela, aktualny User const, niezmienne klucze, rezerwacje/usuwanie cyklu życia, reconnect/routing i wycofanie alokacji C++ z zachowaniem innych użytkowników. Przechwycenie ADC ncdc dodatkowo wymaga nowego SID i niezmienionego CID przy reconnect; oba transporty nadal osiągają NORMAL z polską zmianą nicka. Kontrakt i szczegóły opisuje [User Registry](USER_REGISTRY.md).
@@ -18,7 +26,7 @@ Odtwarzanie: `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE
 
 WebAdmin: poprawne typecheck/budowanie produkcyjne, 3 testy Node, 3 testy Chromium i integracja API C++. W webadmin uruchom `npm run build`, `npm test`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e` i `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:integration -- ../build-debug/dc24h`. Użyto systemowego Chromium; alternatywnie zainstaluj przeglądarkę Playwright. Asercje wersji i dane testowe odpowiadają alpha-0.3.6. Wyniki lokalne nie potwierdzają zdalnego GitHub Actions ani pełnej macierzy systemów operacyjnych.
 
-**Bieżący etap — alpha-0.3.7:** [User Registry](USER_REGISTRY.md) utrzymuje ograniczone indeksy SID/CID i odwrotny indeks właścicieli prywatnie w SessionManager. Przyjęcie jest transakcyjne między tym rejestrem, NickManager i modelem Session. Wyszukiwanie User tylko do odczytu wskazuje z obu kluczy ten sam aktualny model; rezerwacje trwają do usunięcia sesji. Starsze opisy modułów zachowują zakres historyczny.
+**Bieżący etap — alpha-0.3.8:** [User Login](USER_LOGIN.md) łączy zwalidowaną i zatwierdzoną jako gość ClientSession ADC z rejestracją w SessionManager. Projektuje zweryfikowaną tożsamość publiczną, zwraca typowane błędy i ponownie sprawdza tożsamość/cykl życia przy zakończeniu powitania. LoginHub nadal zarządza ograniczonym wyjściem i ustawia gotowość po wysłaniu końcowego LF własnego INF. Starsze opisy zachowują zakres historyczny.
 
 ## Weryfikacja User Core — alpha-0.3.5
 

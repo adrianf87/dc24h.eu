@@ -1,5 +1,7 @@
 # User Registry — alpha-0.3.7
 
+**Bieżąca integracja — alpha-0.3.8:** Osobny [User Login](USER_LOGIN.md) rejestruje zwalidowanych gości ADC przez SessionManager i sprawdza zgodność tożsamości przed gotowością po powitaniu. UserRegistry nadal jest prywatnym indeksem SID/CID.
+
 Etap powstał bezpośrednio z main `ca75d6c53d9b228b978dc3b3b8fdd2fcb0f33852`, po scaleniu alpha-0.3.6 Nick Manager. Wcześniejsze etapy alpha-0.3.1–alpha-0.3.6 są już obecne. Gałąź alpha-0.3.7 zachowuje main i gałęzie historyczne; nie jest scalana automatycznie.
 
 ## Własność i znaczenie kluczy

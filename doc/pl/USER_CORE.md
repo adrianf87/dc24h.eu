@@ -1,6 +1,6 @@
 # User Core — alpha-0.3.5
 
-**Bieżący etap — alpha-0.3.7:** [User Registry](USER_REGISTRY.md) utrzymuje ograniczone indeksy SID/CID i odwrotny indeks właścicieli prywatnie w SessionManager. Przyjęcie jest transakcyjne między tym rejestrem, NickManager i modelem Session. Wyszukiwanie User tylko do odczytu wskazuje z obu kluczy ten sam aktualny model; rezerwacje trwają do usunięcia sesji. Starsze opisy modułów zachowują zakres historyczny.
+**Bieżący etap — alpha-0.3.8:** [User Login](USER_LOGIN.md) łączy zwalidowaną i zatwierdzoną jako gość ClientSession ADC z rejestracją w SessionManager. Projektuje zweryfikowaną tożsamość publiczną, zwraca typowane błędy i ponownie sprawdza tożsamość/cykl życia przy zakończeniu powitania. LoginHub nadal zarządza ograniczonym wyjściem i ustawia gotowość po wysłaniu końcowego LF własnego INF. Starsze opisy zachowują zakres historyczny.
 
 Etap bazuje na main `ba12aa3a96ea70e2b64ca3b11a519bd862e7f2f4`, po scaleniu alpha-0.3.4 Session Manager. Rozwija publiczny model gościa z alpha-0.3.3: sprawdzony typ nicku, wspólne reguły Unicode i jawną projekcję ADC. Manager nadal posiada zarejestrowane sesje i indeksy unikalności. Main i historyczne gałęzie są zachowane; ta gałąź nie scala się automatycznie.
 

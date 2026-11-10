@@ -1,5 +1,13 @@
 # Testing
 
+## User Login validation — alpha-0.3.8
+
+All **57 CTest suites** passed locally in Debug, Release and ASan/UBSan. New users.login and users.login.process cover validated/approved identity gates, single public registration, SID/CID/nick collisions, time/lifecycle rejection, identity-bound welcome completion, exactly-once readiness on the actual own-INF final LF, overflow, registration allocation rollback and guarded immediate-close cleanup. Mixed ADC/ADCS process tests prove no public presence for invalid proof, registration after fragmented valid INF, routing after readiness and same-CID reconnect. Existing real ncdc ADC/ADCS reaches client-side NORMAL and reconnects with Polish nicknames; MariaDB, Apache HTTPS and all earlier security/registry/transport tests passed. See [User Login](USER_LOGIN.md) for the precise integration contract and allocation-guard limits.
+
+Reproduce with `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug --parallel 4` and `ctest --test-dir build-debug --output-on-failure -j 4`. Repeat for build-release/Release. For build-sanitize/Debug add `-DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie"` and `-DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined -no-pie"`. Scoped C++ allocation tests cover projection/index registration and zero-allocation completion; they do not inject utf8proc's C allocator or OS failures.
+
+WebAdmin typecheck/production build, 3 Node tests, 3 Chromium tests and real C++ API integration passed. From webadmin run `npm run build`, `npm test`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e` and `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:integration -- ../build-debug/dc24h`. Metadata/fixtures match alpha-0.3.8. Results are local, not a remote CI/OS-matrix/load claim.
+
 ## User Registry validation — alpha-0.3.7
 
 All **55 CTest suites** passed locally in Debug, Release and ASan/UBSan, including real ncdc ADC/ADCS, mixed transports, MariaDB and Apache HTTPS. New users.user_registry and users.user_registry.process cover SID/CID and local-owner uniqueness, current const User resolution, immutable keys, lifecycle retention/removal, reconnect/routing and C++ allocation rollback with unaffected existing users. ncdc plaintext capture additionally requires a new SID and unchanged CID on reconnect; both transports still reach client-side NORMAL with Polish nick changes. See [User Registry](USER_REGISTRY.md) for the contract and detailed scope.
@@ -18,7 +26,7 @@ Reproduce the strict build with `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=De
 
 WebAdmin typecheck/production build, 3 Node tests, 3 Chromium tests and real C++ API integration passed. From webadmin run `npm run build`, `npm test`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e` and `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:integration -- ../build-debug/dc24h`. This uses the installed system Chromium; otherwise install Playwright's browser normally. Version assertions and frontend fixtures match alpha-0.3.6. Local checks do not establish remote GitHub Actions results or the full supported OS matrix.
 
-**Current increment — alpha-0.3.7:** [User Registry](USER_REGISTRY.md) owns bounded SID/CID indexes and a reverse session-owner index privately within SessionManager. Admission is transactional across this registry, NickManager and the Session model. Const User lookups resolve both keys to the same current model; reservations remain until session removal. Earlier module descriptions retain their historical scope.
+**Current increment — alpha-0.3.8:** [User Login](USER_LOGIN.md) bridges a validated, guest-approved ADC ClientSession to SessionManager registration. It projects verified public identity, returns typed failures and checks identity/lifecycle again before welcome completion. LoginHub retains bounded output ownership and marks readiness only after the own-INF final LF is sent. Earlier module descriptions retain their historical scope.
 
 ## User Core validation — alpha-0.3.5
 

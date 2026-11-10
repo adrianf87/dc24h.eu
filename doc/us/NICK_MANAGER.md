@@ -1,6 +1,6 @@
 # Nick Manager — alpha-0.3.6
 
-**Current integration — alpha-0.3.7:** SessionManager now composes NickManager with the dedicated [User Registry](USER_REGISTRY.md) for SID/CID ownership. Its admission transaction and owner-ID cleanup keep all public reservations consistent.
+**Current increment — alpha-0.3.8:** [User Login](USER_LOGIN.md) bridges a validated, guest-approved ADC ClientSession to SessionManager registration. It projects verified public identity, returns typed failures and checks identity/lifecycle again before welcome completion. LoginHub retains bounded output ownership and marks readiness only after the own-INF final LF is sent. Earlier module descriptions retain their historical scope.
 
 This increment starts directly from main `cb49cdb9e1e714f3b548be6a842063c58890eaf6`, which already includes alpha-0.3.1–alpha-0.3.5. Historical branches and main are preserved. The new alpha-0.3.6 branch is not merged automatically.
 

@@ -1,6 +1,6 @@
 # Roadmap
 
-**Current increment — alpha-0.3.7:** [User Registry](USER_REGISTRY.md) owns bounded SID/CID indexes and a reverse session-owner index privately within SessionManager. Admission is transactional across this registry, NickManager and the Session model. Const User lookups resolve both keys to the same current model; reservations remain until session removal. Earlier module descriptions retain their historical scope.
+**Current increment — alpha-0.3.8:** [User Login](USER_LOGIN.md) bridges a validated, guest-approved ADC ClientSession to SessionManager registration. It projects verified public identity, returns typed failures and checks identity/lifecycle again before welcome completion. LoginHub retains bounded output ownership and marks readiness only after the own-INF final LF is sent. Earlier module descriptions retain their historical scope.
 
 **Increment delivered in alpha-0.3.5:** [User Core](USER_CORE.md) adds checked UTF-8/NFC Nickname values, shared ADC/User text validation, immutable rename candidates and explicit projection from validated ClientInfo/VerifiedIdentity. Users now links the neutral dc24h_text library using the existing utf8proc package. Manager ownership/uniqueness remains unchanged. Earlier descriptions retain their historical scope.
 
@@ -48,6 +48,7 @@
 | alpha-0.3.5 User Core | Checked public names/profile text, immutable rename values and verified ADC projection |
 | alpha-0.3.6 Nick Manager | Bounded nickname ownership, validation, transactional rename and lifecycle cleanup |
 | alpha-0.3.7 User Registry | Bounded SID/CID ownership, read-only User lookup and transactional admission/cleanup |
+| alpha-0.3.8 User Login | Verified guest registration, typed failures and identity-bound final-welcome readiness |
 
 ## Historical acceptance plan before alpha-0.2.8
 
