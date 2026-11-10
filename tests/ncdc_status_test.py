@@ -68,7 +68,7 @@ class NcdcStatusTest(unittest.TestCase):
                 hub.wait_for(lambda:hub.log.count(b'event=login_ready')==3)
                 time.sleep(0.1)
                 os.write(master,b'NormalAfterStatus\r')
-                wait_for_text(b'Command not implemented')
+                wait_for_text(b'NormalAfterStatus')
                 os.write(master,b'/quit\r')
                 deadline=time.monotonic()+4
                 while client.poll() is None and time.monotonic()<deadline:

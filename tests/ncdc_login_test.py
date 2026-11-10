@@ -110,11 +110,15 @@ class NcdcLoginTest(unittest.TestCase):
                 self.assertTrue(initial_join.startswith(b'BINF '))
                 initial_sid = initial_join.split()[1]
                 # ncdc refuses chat until its own INF completed the initial user
-                # list. Its normal BMSG and the returned status prove client-side
-                # NORMAL; this stage deliberately has no chat dispatch.
+                # list. The observer and own echo now prove client-side NORMAL
+                # and public delivery.
                 wait_screen(b'2 users')
+                observer.send(b'BMSG '+observer.sid+b' dc24hIncomingChat')
+                self.assertEqual(observer.line(), b'BMSG '+observer.sid+b' dc24hIncomingChat')
+                wait_screen(b'dc24hIncomingChat')
                 os.write(master, b'dc24hLoginProbe\r')
-                wait_screen(b'Command not implemented')
+                self.assertEqual(observer.line(), b'BMSG '+initial_sid+b' dc24hLoginProbe')
+                wait_screen(b'dc24hLoginProbe')
                 for command in (b'/me dc24hActionProbe likes cats', b'/msg ListObserver dc24hPrivateProbe'):
                     before_frames = fetch_status(api_path, token)['network']['adc_frames']
                     os.write(master, command+b'\r')
@@ -126,6 +130,8 @@ class NcdcLoginTest(unittest.TestCase):
                         self.assertLess(time.monotonic(), deadline, 'ncdc did not send MSG')
                         time.sleep(0.01)
                     self.assertEqual(probe['users']['online'], 2)
+                    if command.startswith(b'/me '):
+                        self.assertEqual(observer.line(), b'BMSG '+initial_sid+b' dc24hActionProbe\\slikes\\scats ME1')
                 os.write(master, b'/open dc24h_login\r')
                 wait_screen(b'2 users')
                 status = fetch_status(api_path, token)
@@ -161,7 +167,8 @@ class NcdcLoginTest(unittest.TestCase):
                 wait_screen(renamed + b' @ ')
                 screen.clear()
                 os.write(master, b'dc24hRenamedProbe\r')
-                wait_screen(b'Command not implemented')
+                self.assertEqual(observer.line(), b'BMSG '+replacement_sid+b' dc24hRenamedProbe')
+                wait_screen(b'dc24hRenamedProbe')
                 if ENCRYPTED:
                     self.assertTrue(wire.startswith(b'\x16\x03'))
                     self.assertNotIn(b'HSUP', wire)
@@ -227,6 +234,7 @@ class NcdcLoginTest(unittest.TestCase):
                 self.assertNotIn(b'dc24hINFUpdate', hub.log)
                 self.assertNotIn(b'dc24hActionProbe', hub.log)
                 self.assertNotIn(b'dc24hPrivateProbe', hub.log)
+                self.assertNotIn(b'dc24hIncomingChat', hub.log)
                 self.assertNotIn(b'event=login_rejected', hub.log)
                 print(f'ncdc completed guest NORMAL and reconnect via {scheme.upper()} on the C++ hub')
             finally:

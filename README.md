@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.4.1 (ADC MSG).**
+**Current development version: alpha-0.4.2 (Chat Core).**
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.4.2 Chat Core**: independent message engine with owned lifecycle-bound broadcast plans and live public BMSG delivery, including sender echo and /me. Unknown fields are removed; private intent is never downgraded to public. Existing bounded queues isolate slow/failing recipients. See [Chat Core](doc/us/CHAT_CORE.md).
 
 - **alpha-0.4.1 ADC MSG**: dedicated MSG parsing/serialization, checked PM/ME flags, typed views/builders, exact escaped frame limits and live NORMAL/source validation. Actual ncdc public/action/private messages are tested; chat routing remains planned. See [ADC MSG](doc/us/ADC_MSG.md).
 
@@ -69,7 +71,7 @@ Completed increments (older bullets describe their original delivery scope):
 
 - **alpha-0.1.11 Apache2**: customizable static WebAdmin HTTPS example, HTTP→HTTPS redirect, TLS 1.2/1.3, certificate paths and isolated HTTPS tests.
 
-Guest login and public user sessions are implemented. Registered-user authentication, chat, search, transfer coordination, account persistence and a production authenticated web gateway remain future milestones.
+Guest login, public user sessions and basic public chat are implemented. Private/group chat, registered-user authentication, moderation/history, search, transfer coordination, account persistence and a production authenticated web gateway remain future milestones.
 
 ## Build
 

@@ -1,6 +1,8 @@
 # Roadmap
 
-**Current increment — alpha-0.4.1:** [ADC MSG](ADC_MSG.md) adds a dedicated MSG codec with typed PM/ME views, checked builders, bounded serialization and live state-machine validation. Chat delivery and conversation policy remain later increments.
+**Current increment — alpha-0.4.2:** [Chat Core](CHAT_CORE.md) adds a separate protocol-independent message engine and live public BMSG delivery, including sender echo and /me. Private/group/feature/hub chat, moderation and history remain separate increments.
+
+**Increment delivered in alpha-0.4.1:** [ADC MSG](ADC_MSG.md) adds a dedicated MSG codec with typed PM/ME views, checked builders, bounded serialization and live state-machine validation. Chat delivery and conversation policy remain later increments.
 
 **Increment delivered in alpha-0.3.13:** [Statistics](STATISTICS.md) adds constant-time lifecycle counts, online/peak users and completed-login totals, atomic transport statistics, authenticated API fields and bilingual WebAdmin metrics. Historical increments below retain their delivery scope.
 
@@ -58,6 +60,7 @@
 | alpha-0.3.12 Limits | Configurable connection/session/user ceilings and lifecycle-safe admission/reuse |
 | alpha-0.3.13 Statistics | Lifecycle counts, online/peak, connection counters, API and WebAdmin |
 | alpha-0.4.1 ADC MSG | MSG codec and state validation; chat routing remains planned |
+| alpha-0.4.2 Chat Core | Public BMSG/action delivery; private/group policy and moderation remain planned |
 
 ## Historical acceptance plan before alpha-0.2.8
 

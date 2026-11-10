@@ -1,6 +1,8 @@
 # Testowanie
 
-**Bieżący etap — alpha-0.4.1:** [ADC MSG](ADC_MSG.md) dodaje kodek MSG z typowanymi polami PM/ME, sprawdzanym budowaniem komunikatów, ograniczoną serializacją i walidacją w maszynie stanów. Dostarczanie czatu i polityka rozmów pozostają kolejnymi etapami.
+**Bieżący etap — alpha-0.4.2:** [Chat Core](CHAT_CORE.md) dodaje osobny silnik wiadomości niezależny od protokołu oraz publiczne BMSG, z kopią dla nadawcy i /me. Czat prywatny/grupowy/feature/hub, moderacja i historia pozostają osobnymi etapami.
+
+**Etap dostarczony w alpha-0.4.1:** [ADC MSG](ADC_MSG.md) dodaje kodek MSG z typowanymi polami PM/ME, sprawdzanym budowaniem komunikatów, ograniczoną serializacją i walidacją w maszynie stanów. Dostarczanie czatu i polityka rozmów pozostają kolejnymi etapami.
 
 **Etap dostarczony w alpha-0.3.13:** [Statistics](STATISTICS.md) dodaje liczniki cyklu życia w czasie stałym, użytkowników online/szczyt i sumę logowań, atomowe statystyki transportu, pola chronionego API oraz metryki WebAdmin US/PL. Starsze etapy poniżej zachowują swój zakres historyczny.
 
@@ -251,3 +253,5 @@ Wykrywanie Apache2/mod_ssl jest opcjonalne, a brak raportowany; CI instaluje Apa
 Lokalna weryfikacja alpha-0.3.13: 67/67 zestawów CTest w Debug, Release i ASan/UBSan, w tym ncdc ADC/ADCS, MariaDB i Apache HTTPS. Przeszły produkcyjne budowanie WebAdmin, 4 testy Node, 3 testy Chromium i integracja z rzeczywistym API C++. Wyniki nie oznaczają wykonania zdalnego CI, pełnej macierzy systemów ani testów obciążenia produkcyjnego.
 
 Lokalna weryfikacja alpha-0.4.1: 69/69 zestawów CTest w Debug, Release i ASan/UBSan, w tym kodek/proces MSG, prawdziwy ncdc ADC/ADCS, MariaDB i Apache HTTPS. Przeszły produkcyjne budowanie WebAdmin, 4 testy Node, 3 testy Chromium i integracja z rzeczywistym API C++. Bez deklaracji wykonania zdalnego CI, pełnej macierzy systemów ani obciążenia produkcyjnego.
+
+Lokalna weryfikacja alpha-0.4.2: 72/72 zestawów CTest w Debug, Release i ASan/UBSan, w tym Chat Core/ADC/proces, publiczny czat prawdziwego ncdc ADC/ADCS, MariaDB i Apache HTTPS. Przeszły budowanie WebAdmin, 4 testy Node, 3 testy Chromium i integracja API C++. Końcowe testy Chat/logowania obejmują poprawkę instrumentacji alokatora. Bez deklaracji zdalnego CI, pełnej macierzy systemów/klientów i obciążenia produkcyjnego.

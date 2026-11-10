@@ -1,5 +1,7 @@
 # ADC MSG — alpha-0.4.1
 
+**Bieżący etap — alpha-0.4.2:** [Chat Core](CHAT_CORE.md) dodaje osobny silnik wiadomości niezależny od protokołu oraz publiczne BMSG, z kopią dla nadawcy i /me. Czat prywatny/grupowy/feature/hub, moderacja i historia pozostają osobnymi etapami.
+
 Gałąź alpha-0.4.1 utworzono bezpośrednio z main `b528248dbe6984c6554821d758f0f5d0cbc285fb`, po scaleniu Statistics. Dotychczasowy kod, historia i gałęzie są zachowane. Domyślny język serwera to EN/US UTF-8; dostępne są dokumentacja PL i dotychczasowe katalogi runtime.
 
 ## Zakres

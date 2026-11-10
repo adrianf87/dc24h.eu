@@ -6,6 +6,7 @@
 #include "dc24h/adc/inf_updates.hpp"
 #include "dc24h/adc/user_disconnect.hpp"
 #include "dc24h/users/session_manager.hpp"
+#include "dc24h/chat/core.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -22,7 +23,7 @@ enum class CloseReason { login_timeout, idle_timeout, partial_frame_timeout, sec
 
 // Single reactor-thread owner of guest admission, public presence and ordered
 // output. IDs are transport tokens, never fd numbers. No socket/SQL/logger I/O.
-// Registered accounts/passwords and chat/search/transfer dispatch are not here.
+// Public chat delegates to Chat Core. Accounts and search/transfers remain separate.
 class LoginHub final {
 public:
     using Id = std::uint64_t;
@@ -69,11 +70,13 @@ private:
                 std::string_view description = {}, users::CloseCause cause = users::CloseCause::protocol_rejected,
                 users::TimePoint now = users::Clock::now());
     void route_status(Id id, const Message& message);
+    void route_chat(Id id, const Message& message);
     void relay(Id except, const Message& message);
     void announce_departure(const Departure& departure);
     LoginLimits limits_;
     std::shared_ptr<SidPool> pool_;
     users::SessionManager sessions_; // Outlives the peers that borrow models.
+    chat::Core chat_;
     UserLogin user_login_;
     UserList user_list_;
     InfUpdates inf_updates_;
