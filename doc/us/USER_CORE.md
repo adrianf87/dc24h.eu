@@ -1,6 +1,6 @@
 # User Core — alpha-0.3.5
 
-**Current increment — alpha-0.3.9:** [User List](USER_LIST.md) builds an owned deterministic initial welcome from paged identified/ready membership and validated public ADC metadata. The complete escaped wire size is checked before enqueue/registration. Own INF stays last; subsequent join/update/quit frames preserve FIFO synchronization. Earlier module descriptions retain their historical scope.
+**Current increment — alpha-0.3.10:** [INF Updates](INF_UPDATES.md) validates and prepares ready-state updates before atomically committing ClientInfo, User/profile and nickname ownership. Fanout carries validated supplied fields and explicit cancellations; initial lists remain full public snapshots. Unknown-only/empty updates produce no public frame. Earlier module descriptions retain their historical scope.
 
 This increment starts from main `ba12aa3a96ea70e2b64ca3b11a519bd862e7f2f4`, after the alpha-0.3.4 Session Manager merge. It develops the public guest model introduced in alpha-0.3.3: checked nickname values, shared Unicode text rules and an explicit ADC projection. The manager remains the owner of registered sessions and uniqueness indexes. Main and historical branches are preserved; this branch is not merged automatically.
 

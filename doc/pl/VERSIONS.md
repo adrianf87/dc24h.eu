@@ -1,6 +1,6 @@
 # Wersjonowanie
 
-**Bieżący etap — alpha-0.3.9:** [User List](USER_LIST.md) tworzy samodzielne, deterministyczne powitanie ze stronicowanej listy identified/ready i zwalidowanych metadanych publicznych ADC. Sprawdza cały rozmiar po kodowaniu przed kolejkowaniem/rejestracją. Własny INF jest ostatni; dalsze join/update/quit zachowują synchronizację FIFO. Starsze opisy modułów zachowują zakres historyczny.
+**Bieżący etap — alpha-0.3.10:** [INF Updates](INF_UPDATES.md) waliduje i przygotowuje aktualizacje gotowej sesji przed wspólnym zatwierdzeniem ClientInfo, User/profilu i nicka. Rozsyła zweryfikowane wskazane pola i jawne anulowania; początkowe listy pozostają pełnymi snapshotami publicznymi. Aktualizacja pusta/tylko z nieznanymi polami nie daje publicznej ramki. Starsze opisy zachowują zakres historyczny.
 
 **Etap dostarczony w alpha-0.3.5:** [User Core](USER_CORE.md) dodaje typ Nickname sprawdzający UTF-8/NFC, wspólną walidację tekstu ADC/Users, samodzielnych kandydatów zmiany nicku i jawną projekcję ClientInfo/VerifiedIdentity. Users korzysta z neutralnego dc24h_text i istniejącego utf8proc. Własność/unikalność managera pozostają bez zmian. Starsze opisy dotyczą zakresu historycznego.
 
@@ -42,6 +42,7 @@
 | alpha-0.3.7 | alpha-0.3.7 | User Registry: indeksy SID/CID i usuwanie po właścicielu sesji |
 | alpha-0.3.8 | alpha-0.3.8 | User Login: rejestracja sesji po zwalidowanej identyfikacji ADC |
 | alpha-0.3.9 | alpha-0.3.9 | User List: synchronizacja początkowej listy użytkowników |
+| alpha-0.3.10 | alpha-0.3.10 | INF Updates: walidacja, anulowania i rozsyłanie przyrostowe |
 
 Dokładną kompilację identyfikuje wersja wraz z SHA commita. Budowanie nie zmienia plików źródłowych. Istotne zmiany trafiają do CHANGELOG.md. Alpha oznacza rozwój, nie pełną funkcjonalność huba. Tagi i wdrożenie nie powstają automatycznie.
 

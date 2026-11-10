@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.3.9 (User List).**
+**Current development version: alpha-0.3.10 (INF Updates).**
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.3.10 INF Updates**: transactional ready-state INF updates commit ADC metadata, User/profile and nickname ownership together. Public incremental deltas carry only validated supplied fields and cancellations; unknown/private data is excluded. See [INF Updates](doc/us/INF_UPDATES.md).
 
 - **alpha-0.3.9 User List**: deterministic initial public-user synchronization, complete welcome wire-budget preflight, lifecycle filtering and owned snapshots with own INF last. Mixed ADC/ADCS clients and real ncdc synchronize lists across joins, updates and reconnect. See [User List](doc/us/USER_LIST.md).
 

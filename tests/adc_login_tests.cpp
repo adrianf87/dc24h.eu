@@ -88,7 +88,8 @@ void guests() {
     require(first[1].find("I4127.0.0.1") != std::string::npos, "Unnormalized peer address");
     hub.receive(1,parse("BINF "+one+" DE NIrenamed XX"));
     first=drain(hub,1); second=drain(hub,2);
-    require(first==second && first.size()==1 && first[0].find(" DE\n")!=std::string::npos && first[0].find("XX")==std::string::npos, "Update cancellation/privacy");
+    require(first==second && first.size()==1 && first[0].find(" DE ")!=std::string::npos && first[0].find("XX")==std::string::npos &&
+        first[0].find(" ID")==std::string::npos, "Incremental update cancellation/privacy");
     hub.receive(1,parse("BMSG "+one+" no-dispatch"));
     require(drain(hub,1).front().starts_with("ISTA 125 "), "Unimplemented dispatch claimed");
     require(hub.output(2).empty(), "Chat was forwarded");

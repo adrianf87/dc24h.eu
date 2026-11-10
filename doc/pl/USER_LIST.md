@@ -1,5 +1,7 @@
 # User List — alpha-0.3.9
 
+**Bieżąca integracja — alpha-0.3.10:** [INF Updates](INF_UPDATES.md) wspólnie zatwierdza ClientInfo i User/profil/nick oraz rozsyła przyrostowe pola/anulowania. InitialUserList nadal używa pełnych aktualnych snapshotów i zachowuje własny INF/kolejność FIFO.
+
 Etap powstał z main `b191141ad1cfa5a6a915945b5a934fe82640340e` po scaleniu alpha-0.3.8 User Login. Poprzednie etapy są już obecne. Gałąź alpha-0.3.9 zachowuje main/historię i nie jest scalana automatycznie.
 
 ## Synchronizacja początkowa

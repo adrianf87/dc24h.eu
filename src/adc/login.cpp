@@ -1,7 +1,6 @@
 #include "dc24h/adc/login.hpp"
 #include "dc24h/adc/serializer.hpp"
 #include "dc24h/adc/status.hpp"
-#include "dc24h/adc/user.hpp"
 
 #include <deque>
 #include <algorithm>
@@ -37,12 +36,6 @@ users::CloseCause session_cause(CloseReason reason) noexcept {
     }
     return users::CloseCause::internal_error;
 }
-users::User public_user(const ClientInfo& metadata, std::string_view sid) {
-    const auto source=Sid::parse(sid);
-    auto user=source ? user_from_info(metadata,*source) : std::nullopt;
-    if (!user) { throw std::logic_error("Invalid validated public user"); }
-    return std::move(*user);
-}
 std::string_view error_status(const ClientSessionError& error) {
     return std::visit([](auto value) -> std::string_view {
         using T = decltype(value);
@@ -68,7 +61,7 @@ std::string_view status_description(std::string_view code) noexcept {
 }
 } // namespace
 
-LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.connections), user_login_(sessions_), user_list_(sessions_) {
+LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.connections), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_) {
     if (limits.connections == 0 || limits.connections > 65535 ||
         limits.output_per_client < 128 || limits.output_per_client > 16 * 1024 * 1024 ||
         limits.output_total < limits.output_per_client || limits.output_total > 256 * 1024 * 1024) {
@@ -172,7 +165,6 @@ void LoginHub::receive(Id id, const Message& message) {
         throw std::logic_error("Application input before transport readiness");
     }
     const auto before = peer.session.state();
-    const auto previous = message.kind == Command::inf ? peer.session.info() : std::optional<ClientInfo>{};
     const std::string fourcc(1, static_cast<char>(message.type));
     const std::string offending = fourcc + message.command;
     if (before == ConnectionState::normal && !peer.lifecycle.ready()) { reject(peer, "244", offending); return; }
@@ -185,6 +177,20 @@ void LoginHub::receive(Id id, const Message& message) {
                 if (found && found->id().value() != id) { reject(peer, "222"); return; }
             }
         }
+    }
+    if (before == ConnectionState::normal && message.kind == Command::inf) {
+        std::optional<InfUpdateResult> update;
+        try {
+            update.emplace(inf_updates_.apply(peer.lifecycle.id(),peer.session,message,users::Clock::now()));
+        } catch (const std::bad_alloc&) {
+            check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
+            return;
+        }
+        if (const auto* error = std::get_if<InfUpdateFailure>(&*update)) {
+            reject(peer,inf_update_status(*error),offending); return;
+        }
+        if (const auto& delta = std::get<AppliedInfUpdate>(*update).message) { relay(0,*delta); }
+        return;
     }
     if (const auto error = peer.session.observe(Direction::from_client, message)) {
         const auto* state_error = std::get_if<StateError>(&*error);
@@ -242,16 +248,6 @@ void LoginHub::receive(Id id, const Message& message) {
             // Publication follows the complete prepared welcome and registry
             // commit. Subsequent FIFO joins/updates/quits follow own INF.
             relay(id, welcome->frames().back());
-        } else {
-            check_model(sessions_.update_user(peer.lifecycle.id(),public_user(metadata,peer.session.sid()),users::Clock::now()));
-            // A complete public snapshot also conveys optional field cancellations.
-            // Relay the sanitized update below, preserving bare cancellation names.
-            auto update = metadata.public_message(*Sid::parse(peer.session.sid()));
-            for (const auto& token : previous->public_message(*Sid::parse(peer.lifecycle.identity()->sid())).parameters) {
-                const auto field = *parse_named_parameter(token);
-                if (!metadata.field(field.name)) { update.parameters.emplace_back(field.name); }
-            }
-            relay(0, update); // Transport IDs are nonzero; includes the sender.
         }
     } else if (message.kind == Command::sta) {
         if (message.type != MessageType::hub) { route_status(id, message); }

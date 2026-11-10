@@ -1,5 +1,19 @@
 # Changelog
 
+## alpha-0.3.10 — 2026-11-10
+
+INF Updates increment, based directly on main `c3cc9c098512b9a9a8299dbd8d1c98e455073eaf` after the alpha-0.3.9 User List merge:
+
+- Added adc::InfUpdates with typed results and a ready-state transaction spanning ClientInfo, User/profile and nickname ownership. ClientSession now provides private friend-only candidate validation and nonthrowing commit; malformed data, collisions, backwards time and allocation failures leave both public models/indexes unchanged before commit.
+- Ready-state INF is staged before generic ClientSession observation. The updater checks current projected identity/profile consistency, validates the entire candidate with existing INF/source/CID/PID/IP/Unicode/size/privilege rules, projects User and builds/serializes public output before SessionManager's transactional mutation and ClientInfo commit.
+- Replaced full-snapshot update broadcasts with sanitized supplied-field deltas in input order. Normalized candidate values are used; omitted fields remain, explicit unchanged known fields are echoed, previously advertised cancellations are bare names, and empty/unknown-only updates produce no public frame. Full initial user lists still contain current complete public metadata without PID/unknown fields.
+- LoginHub catches bad_alloc during apply and forces immediate internal-error cleanup without publishing the failed change. Fanout remains after commit under existing recipient/global queue limits and FIFO/pinned-output rules; network-wide atomic delivery or system-wide OOM recovery is not claimed.
+- Added users.inf_updates and users.inf_updates.process for transactional changes/cancellations/zero values, omitted-field retention, normalized addresses, unknown suppression, identity/lifecycle/time/error gates, stale adapter detection, allocation rollback/retry with an unrelated user preserved, mixed ADC/ADCS fanout and later full-list consistency. Existing registry/login assertions now check incremental semantics.
+- Extended actual ncdc ADC/ADCS to change description live through the new path. A simultaneously supplied HN declaration is accepted, while unrelated full-profile fields are not repeated. User lists, nickname reconnect, stable CID and private-payload logging checks remain covered.
+- Updated server/WebAdmin metadata and fixtures to alpha-0.3.10, added mirrored US/PL INF Updates documentation and refreshed module/navigation/testing/version context. EN/US-default and PL runtime catalogs remain applicable; no dependency, configuration, SQL/API contract, WebAdmin feature or runtime translation key is added.
+- Validation: all 61 CTest suites passed locally in Debug, Release and ASan/UBSan, including actual ncdc ADC/ADCS, mixed transports, identity/security/registry/list regressions, MariaDB and Apache HTTPS. WebAdmin typecheck/production build, 3 Node tests, 3 Chromium tests and real C++ API integration passed with system Chromium. Results do not claim remote CI, every supported OS or production load validation.
+- main and alpha-0.3.1–alpha-0.3.9 history/branches are preserved; no automatic merge or production deployment. Accounts, roles, persistent profiles and chat/search/transfers remain separate work.
+
 ## alpha-0.3.9 — 2026-11-10
 
 User List increment, based directly on main `b191141ad1cfa5a6a915945b5a934fe82640340e` after the alpha-0.3.8 User Login merge:

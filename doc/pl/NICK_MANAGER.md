@@ -1,6 +1,6 @@
 # Nick Manager — alpha-0.3.6
 
-**Bieżący etap — alpha-0.3.9:** [User List](USER_LIST.md) tworzy samodzielne, deterministyczne powitanie ze stronicowanej listy identified/ready i zwalidowanych metadanych publicznych ADC. Sprawdza cały rozmiar po kodowaniu przed kolejkowaniem/rejestracją. Własny INF jest ostatni; dalsze join/update/quit zachowują synchronizację FIFO. Starsze opisy modułów zachowują zakres historyczny.
+**Bieżący etap — alpha-0.3.10:** [INF Updates](INF_UPDATES.md) waliduje i przygotowuje aktualizacje gotowej sesji przed wspólnym zatwierdzeniem ClientInfo, User/profilu i nicka. Rozsyła zweryfikowane wskazane pola i jawne anulowania; początkowe listy pozostają pełnymi snapshotami publicznymi. Aktualizacja pusta/tylko z nieznanymi polami nie daje publicznej ramki. Starsze opisy zachowują zakres historyczny.
 
 Etap powstał bezpośrednio z main `cb49cdb9e1e714f3b548be6a842063c58890eaf6`, zawierającego już alpha-0.3.1–alpha-0.3.5. Zachowano main i historyczne gałęzie. Nowa gałąź alpha-0.3.6 nie jest scalana automatycznie.
 
