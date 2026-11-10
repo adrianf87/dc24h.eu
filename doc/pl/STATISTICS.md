@@ -1,0 +1,51 @@
+# Statistics — alpha-0.3.13
+
+Gałąź utworzona bezpośrednio z main `59b7b3a048b6d00504038a6a0d0b6580f3c04907`, zawierającego alpha-0.3.1–alpha-0.3.12. Poprzednie gałęzie i historia są zachowane.
+
+## Własność i liczniki sesji
+
+`users::Statistics` jest kopią wartości należących do SessionManager. `statistics()` i `counts()` działają w O(1), bez alokacji, noexcept, wyłącznie w wątku właściciela. Każda poprawna zmiana fazy aktualizuje liczniki po zatwierdzeniu modelu. Błędy walidacji, stare ID, odmowy limitów i wycofane alokacje nie zmieniają statystyk. Powtórzone close/finish nie nalicza zdarzenia ponownie; zmiana nicka/profilu nie jest nowym logowaniem.
+
+| Pole | Znaczenie |
+| --- | --- |
+| `sessions.total` | Wszystkie posiadane modele, także closed oczekujące na usunięcie |
+| `sessions.accepted/negotiating/identified/ready/closing/closed` | Rozłączne bieżące fazy; ich suma jest równa total |
+| `online()` | Dokładnie `sessions.ready` |
+| `peak_online` | Najwyższa liczba jednoczesnych ready w życiu managera |
+| `created_sessions` | Poprawne dodania modelu, po alokacji i wstawieniu |
+| `successful_logins` | Pierwsze przejścia do ready dla kolejnych sesji |
+| `completed_sessions` | Pierwsze przejścia do closed, także błędy anonimowe i shutdown |
+
+Zweryfikowany użytkownik czekający na powitanie jest identified, zajmuje limit użytkowników, ale nie jest online. Ready następuje po przyjęciu przez transport ostatniego LF własnego INF powitania. Rozpoczęcie closing natychmiast zmniejsza online; rezerwacje tożsamości pozostają do remove. Bezpośrednie EOF/wymuszone sprzątanie z dowolnej fazy również aktualizuje liczniki. Remove zmniejsza tylko total/closed. Sumy historyczne Users zatrzymują się na UINT64_MAX zamiast zawijać. Nowy manager/proces zaczyna od zera; MariaDB nie przechowuje statystyk.
+
+## Publikacja i API
+
+Tylko reaktor odczytuje SessionManager i publikuje liczby w atomikach Network przed oczekiwaniem oraz przy wyjściu. Wątek API nie odczytuje modeli ani kontenerów użytkowników. Bieżące wartości mogą czekać na granicę publikacji reaktora; niezależnie próbkowane pola nie stanowią transakcji. Nie należy wymagać równości między polami w czasie zmian połączeń. Active/online wracają do zera po zwykłym lub wyjątkowym zakończeniu reaktora. Sumy historyczne pozostają dostępne w obiekcie C++ TcpServer po run; pracownik HTTP kończy pracę podczas zamykania procesu.
+
+`GET /api/v1/status` zachowuje dotychczasowe pola v1 i dodaje:
+
+| Pole JSON | Znaczenie |
+| --- | --- |
+| `users.online` | Bieżący ready łącznie ADC/ADCS |
+| `users.peak_online` | Szczyt ready od uruchomienia |
+| `users.successful_logins` | Ukończone powitania, również po reconnect |
+| `network.rejected_connections` | Wszystkie odmowy przyjęcia transportu; security_rejected jest podzbiorem |
+| `network.closed_connections` | Zwolnione przyjęte gniazda, także anonimowe/błędne TLS i shutdown |
+| `network.peak_connections` | Najwięcej jednocześnie przyjętych gniazd, także anonimowych i closing |
+| `network.received_bytes/sent_bytes` | Faktycznie odebrane/wysłane bajty aplikacji z ramkami ADC, bez narzutu TLS |
+
+`active_connections` liczy przyjęte gniazda, a `accepted_connections` sumuje ich przyjęcia, nie próby accept4 i nie logowania. Błędna identyfikacja po przyjęciu zwiększa accepted/closed, nie transport rejected. Odrzucone gniazdo nie zwiększa closed. Połączenia HTTP API nie wchodzą do liczników huba. Dotychczasowe statystyki ADCS/security zachowują znaczenie. Bajty opisują protokół huba, nie transfery plików P2P. W stanie bez zmian accepted = active + closed; jednoczesne niezależne odczyty nie gwarantują tej równości.
+
+Pola są liczbowe, bez nicków, SID, CID, PID, IP, sekretów i ścieżek. Nadal wymagane są ten sam UID gniazda Unix i Bearer. Nie dodano publicznego portu ani trasy. Serializacja JSON zachowuje uint64; WebAdmin odrzuca liczby spoza bezpiecznego zakresu JavaScript zamiast wyświetlać niedokładne wartości.
+
+## WebAdmin i zgodność
+
+Przegląd pokazuje online, szczyt, poprawne logowania i zamknięte połączenia. Połączenia pokazują szczyt gniazd, wszystkie odmowy i sumy bajtów. Domyślny język to EN/US, dostępny jest PL. Dotychczasowy monitoring, nawigacja i wykres pozostają dostępne. Nieznane pola są usuwane przed wyświetleniem/eksportem. Brak lub błędna wartość licznika unieważnia odczyt, usuwa stare wartości i wyłącza eksport.
+
+Starsze klienty v1 mogą ignorować nowe pola. Ten WebAdmin należy uruchamiać z alpha-0.3.13 lub późniejszym serwerem implementującym te pola; parser nie zastępuje brakujących danych zerami. Bez nowych opcji konfiguracji, zależności, migracji SQL i poleceń ADC. Konta, trwałe metryki, szybkości, histogramy, statystyki poszczególnych użytkowników i zdalna administracja pozostają planami.
+
+## Weryfikacja
+
+`users.statistics` porównuje pamiętane liczniki z modelami we wszystkich fazach, przy błędach, awariach alokacji, powtórzeniach i sprzątaniu. Sprawdza niepełny ostatni LF i anulowanie powitania w LoginHub. `users.statistics.process` używa prawdziwych mieszanych połączeń ADC/ADCS i chronionego API: anonimowy TLS, odmowy, błędny dowód, INF/nick, EOF, reconnect, fatal close, szczyty/sumy/bajty i brak danych prywatnych. Prawdziwy ncdc ADC/ADCS sprawdza logowanie, reconnect i online po wyjściu. Pozostają wymagane regresje cyklu życia, limitów, TLS, bazy i Apache. Testy parsera, przeglądarki i rzeczywistego API C++ weryfikują WebAdmin, US/PL i bezpieczny eksport.
+
+Źródła: [oficjalna specyfikacja ADC](https://adc.sourceforge.io/ADC.html), [ncdc](https://dev.yorhel.nl/ncdc). Ten etap dodaje obserwację; dotychczasowe reguły logowania ADC nadal obowiązują.

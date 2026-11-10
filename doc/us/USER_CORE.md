@@ -1,6 +1,6 @@
 # User Core — alpha-0.3.5
 
-**Current increment — alpha-0.3.12:** [Limits](LIMITS.md) adds configurable session/user ceilings shared by ADC/ADCS, bounded by the connection cap. SessionManager checks capacity transactionally; LoginHub rejects a full user registry before welcome/list preparation with ISTA 211 and own IQUI. Closing reservations count until cleanup. Earlier descriptions retain their historical scope.
+**Increment delivered in alpha-0.3.12:** [Limits](LIMITS.md) adds configurable session/user ceilings shared by ADC/ADCS, bounded by the connection cap. SessionManager checks capacity transactionally; LoginHub rejects a full user registry before welcome/list preparation with ISTA 211 and own IQUI. Closing reservations count until cleanup. Earlier descriptions retain their historical scope.
 
 This increment starts from main `ba12aa3a96ea70e2b64ca3b11a519bd862e7f2f4`, after the alpha-0.3.4 Session Manager merge. It develops the public guest model introduced in alpha-0.3.3: checked nickname values, shared Unicode text rules and an explicit ADC projection. The manager remains the owner of registered sessions and uniqueness indexes. Main and historical branches are preserved; this branch is not merged automatically.
 

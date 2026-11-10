@@ -1,6 +1,6 @@
 # User Registry — alpha-0.3.7
 
-**Bieżący etap — alpha-0.3.12:** [Limits](LIMITS.md) dodaje konfigurowalne limity sesji/użytkowników wspólne dla ADC/ADCS, ograniczone limitem połączeń. SessionManager transakcyjnie sprawdza pojemność; LoginHub odrzuca pełny rejestr przed przygotowaniem powitania/listy przez ISTA 211 i własne IQUI. Rezerwacje closing liczą się aż do sprzątania. Starsze opisy zachowują zakres historyczny.
+**Etap dostarczony w alpha-0.3.12:** [Limits](LIMITS.md) dodaje konfigurowalne limity sesji/użytkowników wspólne dla ADC/ADCS, ograniczone limitem połączeń. SessionManager transakcyjnie sprawdza pojemność; LoginHub odrzuca pełny rejestr przed przygotowaniem powitania/listy przez ISTA 211 i własne IQUI. Rezerwacje closing liczą się aż do sprzątania. Starsze opisy zachowują zakres historyczny.
 
 Etap powstał bezpośrednio z main `ca75d6c53d9b228b978dc3b3b8fdd2fcb0f33852`, po scaleniu alpha-0.3.6 Nick Manager. Wcześniejsze etapy alpha-0.3.1–alpha-0.3.6 są już obecne. Gałąź alpha-0.3.7 zachowuje main i gałęzie historyczne; nie jest scalana automatycznie.
 

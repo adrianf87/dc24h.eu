@@ -2,9 +2,26 @@
 
 #include <algorithm>
 #include <stdexcept>
+#include <limits>
 #include <utility>
 
 namespace dc24h::users {
+namespace {
+void increment(std::uint64_t& value) noexcept {
+    if (value != std::numeric_limits<std::uint64_t>::max()) { ++value; }
+}
+std::size_t& phase_count(SessionCounts& counts, Phase phase) noexcept {
+    switch (phase) {
+    case Phase::accepted: return counts.accepted;
+    case Phase::negotiating: return counts.negotiating;
+    case Phase::identified: return counts.identified;
+    case Phase::ready: return counts.ready;
+    case Phase::closing: return counts.closing;
+    case Phase::closed: return counts.closed;
+    }
+    std::terminate();
+}
+} // namespace
 SessionManager::SessionManager(std::size_t capacity) : SessionManager(Limits{capacity,capacity}) {}
 SessionManager::SessionManager(Limits limits) : limits_(limits.bounded_by(limits.max_sessions)),
     users_(limits_.max_users), nicknames_(limits_.max_users) {}
@@ -15,6 +32,9 @@ Registration SessionManager::add(SessionId id, Transport transport, TimePoint ac
     auto* result = model.get();
     sessions_.emplace(id.value(), std::move(model));
     greatest_id_ = id.value();
+    ++statistics_.sessions.total;
+    ++statistics_.sessions.accepted;
+    increment(statistics_.created_sessions);
     return result;
 }
 Session* SessionManager::mutable_find(SessionId id) noexcept {
@@ -28,10 +48,6 @@ const Session* SessionManager::find(SessionId id) const noexcept {
 namespace {
 MutationResult promote(Result result) noexcept {
     return result ? MutationResult{*result} : std::nullopt;
-}
-template<class Operation>
-MutationResult apply(Session* model, Operation operation) noexcept {
-    return model ? promote(operation(*model)) : MutationResult{RegistryError::missing};
 }
 } // namespace
 const Session* SessionManager::by_sid(std::string_view sid) const noexcept {
@@ -55,19 +71,19 @@ const User* SessionManager::user_by_cid(std::string_view cid) const noexcept {
     return session ? &*session->user() : nullptr;
 }
 MutationResult SessionManager::start_negotiation(SessionId id, TimePoint now) noexcept {
-    return apply(mutable_find(id),[now](Session& model) { return model.start_negotiation(now); });
+    return mutate(id,[now](Session& model) { return model.start_negotiation(now); });
 }
 MutationResult SessionManager::mark_ready(SessionId id, TimePoint now) noexcept {
-    return apply(mutable_find(id),[now](Session& model) { return model.mark_ready(now); });
+    return mutate(id,[now](Session& model) { return model.mark_ready(now); });
 }
 MutationResult SessionManager::begin_close(SessionId id, CloseCause cause, TimePoint now) noexcept {
-    return apply(mutable_find(id),[=](Session& model) { return model.begin_close(cause,now); });
+    return mutate(id,[=](Session& model) { return model.begin_close(cause,now); });
 }
 MutationResult SessionManager::force_close(SessionId id, CloseCause cause, TimePoint now) noexcept {
-    return apply(mutable_find(id),[=](Session& model) { return model.force_close(cause,now); });
+    return mutate(id,[=](Session& model) { return model.force_close(cause,now); });
 }
 MutationResult SessionManager::finish_close(SessionId id, CloseCause cause, TimePoint now) noexcept {
-    return apply(mutable_find(id),[=](Session& model) { return model.finish_close(cause,now); });
+    return mutate(id,[=](Session& model) { return model.finish_close(cause,now); });
 }
 void SessionManager::erase_identity(SessionId id) noexcept {
     (void)users_.remove(id);
@@ -97,7 +113,7 @@ MutationResult SessionManager::identify(SessionId id, User user, TimePoint now) 
         erase_identity(id);
         throw;
     }
-    return promote(model->identify(std::move(user),now));
+    return mutate(id,[&](Session& session) { return session.identify(std::move(user),now); });
 }
 MutationResult SessionManager::update_user(SessionId id, User user, TimePoint now) {
     auto* model=mutable_find(id);
@@ -132,6 +148,8 @@ std::optional<RegistryError> SessionManager::remove(SessionId id) noexcept {
     if (found == sessions_.end()) { return RegistryError::missing; }
     if (found->second->phase() != Phase::closed) { return RegistryError::not_closed; }
     erase_identity(id);
+    --statistics_.sessions.total;
+    --statistics_.sessions.closed;
     sessions_.erase(found);
     return {};
 }
@@ -159,20 +177,14 @@ std::vector<SessionId> SessionManager::public_users(std::uint64_t after, std::si
     }
     return result;
 }
-SessionCounts SessionManager::counts() const noexcept {
-    SessionCounts result;
-    result.total = size();
-    for (const auto& [id, model] : sessions_) {
-        (void)id;
-        switch (model->phase()) {
-        case Phase::accepted: ++result.accepted; break;
-        case Phase::negotiating: ++result.negotiating; break;
-        case Phase::identified: ++result.identified; break;
-        case Phase::ready: ++result.ready; break;
-        case Phase::closing: ++result.closing; break;
-        case Phase::closed: ++result.closed; break;
-        }
+void SessionManager::record_transition(Phase before, Phase after) noexcept {
+    if (before == after) { return; }
+    --phase_count(statistics_.sessions, before);
+    ++phase_count(statistics_.sessions, after);
+    if (after == Phase::ready) {
+        increment(statistics_.successful_logins);
+        statistics_.peak_online = std::max(statistics_.peak_online, statistics_.online());
     }
-    return result;
+    if (after == Phase::closed) { increment(statistics_.completed_sessions); }
 }
 } // namespace dc24h::users

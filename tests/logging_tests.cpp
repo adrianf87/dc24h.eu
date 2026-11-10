@@ -202,6 +202,8 @@ void concurrent_peer_budget() {
 
 }
 int main() {
+    if (dc24h::i18n::translate("Users stopped; online=0", dc24h::i18n::Language::pl) !=
+        "Użytkownicy zakończeni; online=0") { return 1; }
     try {
         severity_and_sanitization();
         levels();

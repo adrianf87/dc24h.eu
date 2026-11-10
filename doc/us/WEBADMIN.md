@@ -1,5 +1,7 @@
 # WebAdmin — alpha-0.1.10
 
+**Current increment — alpha-0.3.13:** [Statistics](STATISTICS.md) adds constant-time lifecycle counts, online/peak users and completed-login totals, atomic transport statistics, authenticated API fields and bilingual WebAdmin metrics. Historical increments below retain their delivery scope.
+
 Implemented: a React 19 / TypeScript / Vite project in `webadmin/`, with a responsive read-only panel, EN/US and Polish catalogs, four hash-based views (overview, connections, security, database), manual/5-second refresh, bounded in-session observations and JSON snapshot export. Configuration and event-log controls are explicitly disabled as future work. No account/login/role UI, mutations, persistent metrics or fabricated dashboard values are included.
 
 The default panel shows disconnected/loading/error states and dashes for unavailable counters. Only a validated API response creates live values; failed refreshes clear the displayed snapshot and chart. The last-received timestamp identifies the most recent successful sample. A database flag reports startup configuration, not live SQL health. Network counters are independent snapshots; observations are limited to the last 30 successful samples in browser memory and reset after detected server uptime decrease. Full ADC login is still not implemented.

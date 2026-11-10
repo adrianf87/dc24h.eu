@@ -22,6 +22,7 @@ import {
   Settings2,
   ShieldCheck,
   X,
+  Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { us } from "./languages/us";
@@ -665,6 +666,30 @@ export default function App() {
                 hint={t.securityHint}
                 color="amber"
               />
+            </div>
+          )}
+          {page === "overview" && (
+            <div className="metrics-grid" data-testid="user-statistics">
+              <Metric icon={Users} label={t.onlineUsers}
+                value={number(snapshot?.users.online)} hint={t.onlineHint} />
+              <Metric icon={Users} label={t.peakOnline}
+                value={number(snapshot?.users.peak_online)} hint={t.peakOnlineHint} color="violet" />
+              <Metric icon={Activity} label={t.successfulLogins}
+                value={number(snapshot?.users.successful_logins)} hint={t.loginsHint} color="teal" />
+              <Metric icon={Cable} label={t.closedConnections}
+                value={number(snapshot?.network.closed_connections)} hint={t.closedHint} color="amber" />
+            </div>
+          )}
+          {page === "connections" && (
+            <div className="metrics-grid" data-testid="connection-statistics">
+              <Metric icon={Network} label={t.peakConnections}
+                value={number(snapshot?.network.peak_connections)} hint={t.peakConnectionsHint} />
+              <Metric icon={ShieldCheck} label={t.allRejected}
+                value={number(snapshot?.network.rejected_connections)} hint={t.allRejectedHint} color="amber" />
+              <Metric icon={ArrowDownToLine} label={t.receivedBytes}
+                value={number(snapshot?.network.received_bytes)} hint={t.bytesHint} color="teal" />
+              <Metric icon={ArrowUpRight} label={t.sentBytes}
+                value={number(snapshot?.network.sent_bytes)} hint={t.bytesHint} color="violet" />
             </div>
           )}
           {(page === "overview" || page === "connections") && (

@@ -135,7 +135,9 @@ int main(int argc, char* argv[]) {
                         static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::seconds>(
                             std::chrono::steady_clock::now() - started).count()),
                         stats.active, stats.accepted, stats.adc_frames, stats.adcs_handshakes,
-                        stats.security_rejected, stats.security_closed, database != nullptr};
+                        stats.security_rejected, stats.security_closed, database != nullptr,
+                        stats.rejected, stats.closed, stats.received_bytes, stats.sent_bytes,
+                        stats.peak_connections, stats.online_users, stats.peak_online_users, stats.successful_logins};
                 }, [&] { signal_error.store(true); server.request_stop(); });
                 api->start();
             }

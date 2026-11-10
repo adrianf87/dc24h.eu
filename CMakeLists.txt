@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.3.12 LANGUAGES CXX)
+project(dc24h VERSION 0.3.13 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -79,8 +79,8 @@ set_target_properties(MariaDB::ConnectorC PROPERTIES
     IMPORTED_LOCATION "${MARIADB_LIBRARY}"
     INTERFACE_INCLUDE_DIRECTORIES "${MARIADB_INCLUDE_DIR}")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS database/migrations/0001_schema_migrations.sql)
-file(READ database/migrations/0001_schema_migrations.sql DC24H_BASELINE_SQL)
-file(SHA256 database/migrations/0001_schema_migrations.sql DC24H_BASELINE_SHA256)
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/database/migrations/0001_schema_migrations.sql" DC24H_BASELINE_SQL)
+file(SHA256 "${CMAKE_CURRENT_SOURCE_DIR}/database/migrations/0001_schema_migrations.sql" DC24H_BASELINE_SHA256)
 configure_file(cmake/migration.hpp.in generated/dc24h/database/migration.hpp @ONLY)
 add_library(dc24h_database src/database/database.cpp)
 target_compile_features(dc24h_database PUBLIC cxx_std_20)
@@ -213,6 +213,14 @@ if(BUILD_TESTING)
     add_test(NAME users.disconnect.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/user_disconnect_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(users.disconnect users.disconnect.process PROPERTIES TIMEOUT 30)
+    add_executable(statistics_tests tests/statistics_tests.cpp)
+    target_link_libraries(statistics_tests PRIVATE dc24h_adc)
+    target_compile_options(statistics_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(statistics_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME users.statistics COMMAND statistics_tests)
+    add_test(NAME users.statistics.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/statistics_process_tests.py" "$<TARGET_FILE:dc24h>")
+    set_tests_properties(users.statistics users.statistics.process PROPERTIES TIMEOUT 30)
     add_executable(user_limits_tests tests/user_limits_tests.cpp)
     target_link_libraries(user_limits_tests PRIVATE dc24h_adc)
     target_compile_options(user_limits_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)

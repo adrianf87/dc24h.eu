@@ -1,6 +1,8 @@
 # Session Manager — alpha-0.3.4
 
-**Bieżący etap — alpha-0.3.12:** [Limits](LIMITS.md) dodaje konfigurowalne limity sesji/użytkowników wspólne dla ADC/ADCS, ograniczone limitem połączeń. SessionManager transakcyjnie sprawdza pojemność; LoginHub odrzuca pełny rejestr przed przygotowaniem powitania/listy przez ISTA 211 i własne IQUI. Rezerwacje closing liczą się aż do sprzątania. Starsze opisy zachowują zakres historyczny.
+**Bieżący etap — alpha-0.3.13:** [Statistics](STATISTICS.md) dodaje liczniki cyklu życia w czasie stałym, użytkowników online/szczyt i sumę logowań, atomowe statystyki transportu, pola chronionego API oraz metryki WebAdmin US/PL. Starsze etapy poniżej zachowują swój zakres historyczny.
+
+**Etap dostarczony w alpha-0.3.12:** [Limits](LIMITS.md) dodaje konfigurowalne limity sesji/użytkowników wspólne dla ADC/ADCS, ograniczone limitem połączeń. SessionManager transakcyjnie sprawdza pojemność; LoginHub odrzuca pełny rejestr przed przygotowaniem powitania/listy przez ISTA 211 i własne IQUI. Rezerwacje closing liczą się aż do sprzątania. Starsze opisy zachowują zakres historyczny.
 
 **Etap dostarczony w alpha-0.3.5:** [User Core](USER_CORE.md) dodaje typ Nickname sprawdzający UTF-8/NFC, wspólną walidację tekstu ADC/Users, samodzielnych kandydatów zmiany nicku i jawną projekcję ClientInfo/VerifiedIdentity. Users korzysta z neutralnego dc24h_text i istniejącego utf8proc. Własność/unikalność managera pozostają bez zmian. Starsze opisy dotyczą zakresu historycznego.
 
@@ -32,7 +34,7 @@ Rezerwacje utrzymują się w closing i closed do remove, wykluczając ponowne u�
 
 `find(id)`, `by_sid(key)`, `by_cid(key)` i `by_nickname(key)` zwracają pożyczony wskaźnik const Session albo null. Zapytania publiczne odrzucają pusty/NUL/zbyt długi klucz przed wyszukiwaniem; limity modelu wynoszą 64/128/256 bajtów. Trzy przestrzenie kluczy są niezależne. Przed przekazaniem aplikacyjnym trzeba sprawdzić ready(); znalezienie rezerwacji nie oznacza zgody na dostarczenie ani uwierzytelnienia. Uporządkowane mapy zapewniają O(log n) przy ograniczonej długości kluczy, bez alokowania tymczasowych tekstów zapytania.
 
-`identified_users()` liczy publiczne rezerwacje, w tym identified/ready/closing i sfinalizowane wpisy czekające na usunięcie. `counts()` wylicza sumę i sześć faz w O(n) z rzeczywistych modeli, bez powielonych liczników przejść. Hub usuwa sfinalizowane wpisy w tym samym wywołaniu sprzątania.
+`identified_users()` liczy publiczne rezerwacje, w tym identified/ready/closing i sfinalizowane wpisy czekające na usunięcie. `counts()` zwraca sumę i sześć bieżących liczników w O(1), aktualizowanych po poprawnych przejściach modeli. Testy porównują je z posiadanymi modelami. Patrz [Statistics](STATISTICS.md). Hub usuwa sfinalizowane wpisy w tym samym wywołaniu sprzątania.
 
 `snapshot(id)` zwraca samodzielną kopię lub nullopt. `page(after, limit)` zwraca kopie według rosnącego SessionId ściśle po wyłącznym kursorze; domyślnie 64, limit 1–256. Niepoprawny limit powoduje wyjątek przed kopiowaniem; luki/usunięte kursory działają, UINT64_MAX nie zawija. Pusta strona oznacza bieżący koniec. Ostatnie ID jest kolejnym kursorem. Strony są niezależnymi odczytami właściciela, nie zamrożoną transakcją. Kopie zawierają ograniczoną tożsamość/profil i cykl życia; przetrwają aktualizację/usunięcie źródła. Nie dodano nieograniczonego kopiowania całego rejestru.
 

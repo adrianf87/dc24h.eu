@@ -117,6 +117,7 @@ class NcdcLoginTest(unittest.TestCase):
                 wait_screen(b'2 users')
                 status = fetch_status(api_path, token)
                 self.assertGreaterEqual(status['network']['adc_frames'], 3)
+                self.assertEqual(status['users'], {'online': 2, 'peak_online': 2, 'successful_logins': 2})
                 os.write(master, b'/hset description dc24hINFUpdate\r')
                 live_update = observer.line()
                 self.assertEqual(live_update.split()[:2], [b'BINF', initial_sid])
@@ -136,6 +137,13 @@ class NcdcLoginTest(unittest.TestCase):
                 self.assertNotEqual(initial_sid, replacement_sid)
                 public_cid = lambda line: re.search(rb'(?:^| )ID([A-Z2-7]+)(?: |$)', line)[1]
                 self.assertEqual(public_cid(initial_join), public_cid(replacement_join))
+                deadline = time.monotonic() + 3
+                while True:
+                    stats = fetch_status(api_path, token)
+                    if stats['users'] == {'online': 2, 'peak_online': 2, 'successful_logins': 3}:
+                        break
+                    self.assertLess(time.monotonic(), deadline, stats)
+                    time.sleep(0.01)
                 screen.clear()
                 wait_screen(renamed + b' @ ')
                 screen.clear()
@@ -172,8 +180,16 @@ class NcdcLoginTest(unittest.TestCase):
                 self.assertEqual(observer.line(), b'IQUI ' + replacement_sid)
                 observer.send(b'DSTA ' + observer.sid + b' ' + replacement_sid + b' 100 Departed')
                 self.assertTrue(observer.line().startswith(b'ISTA 140 '))
+                deadline = time.monotonic() + 3
+                while True:
+                    stats = fetch_status(api_path, token)
+                    if stats['users']['online'] == 1 and stats['network']['closed_connections'] == 2:
+                        break
+                    self.assertLess(time.monotonic(), deadline, stats)
+                    time.sleep(0.01)
                 observer.peer.close()
                 hub.stop()
+                self.assertIn(b'Users stopped; online=0 peak_online=2 successful_logins=3', hub.log)
                 self.assertEqual(hub.log.count(b'event=login_ready'), 3)
                 records = re.findall(rb'Connection id=(\d+) transport=(ADC|ADCS) event=([a-z_]+)', hub.log)
                 accepted = [ident for ident, _, event in records if event == b'accepted']

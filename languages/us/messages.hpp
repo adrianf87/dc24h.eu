@@ -3,7 +3,8 @@
 #include <string_view>
 
 namespace dc24h::i18n::us {
-inline constexpr std::array<std::string_view, 121> messages{{
+inline constexpr std::array<std::string_view, 122> messages{{
+    "Users stopped; online=",
     "Starting dc24h.eu ",
     "Core running",
     "Core stopping",

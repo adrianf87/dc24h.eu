@@ -1,5 +1,7 @@
 # Testing
 
+**Current increment — alpha-0.3.13:** [Statistics](STATISTICS.md) adds constant-time lifecycle counts, online/peak users and completed-login totals, atomic transport statistics, authenticated API fields and bilingual WebAdmin metrics. Historical increments below retain their delivery scope.
+
 ## Limits validation — alpha-0.3.12
 
 All **65 CTest suites** passed locally in Debug, Release and ASan/UBSan. New users.limits and users.limits.process cover checked raw/effective ceilings, backward-compatible defaults, all lifecycle capacity boundaries, refusal without partial state/ID consumption, no-allocation full-user checks, transactional allocation rollback/retry, pre-welcome ISTA 211 → own IQUI, stable pinned output and capacity reuse. Real mixed ADC/ADCS independently exercises the connection and session caps, incomplete TLS, excess sockets without TLS admission, API counters and warning budgets; repeated full-user rejection produces no public presence and admits the same CID/nickname after cleanup. Configuration/Network tests cover invalid direct/INI/CLI settings, precedence and US/PL help/warnings. Actual ncdc ADC/ADCS fills max_users=2 with its observer, updates and reconnects under max_sessions=3. All earlier regressions, MariaDB and Apache HTTPS passed. See [Limits](LIMITS.md) for exact counting and scope.
@@ -58,7 +60,7 @@ Reproduce the strict build with `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=De
 
 WebAdmin typecheck/production build, 3 Node tests, 3 Chromium tests and real C++ API integration passed. From webadmin run `npm run build`, `npm test`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e` and `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:integration -- ../build-debug/dc24h`. This uses the installed system Chromium; otherwise install Playwright's browser normally. Version assertions and frontend fixtures match alpha-0.3.6. Local checks do not establish remote GitHub Actions results or the full supported OS matrix.
 
-**Current increment — alpha-0.3.12:** [Limits](LIMITS.md) adds configurable session/user ceilings shared by ADC/ADCS, bounded by the connection cap. SessionManager checks capacity transactionally; LoginHub rejects a full user registry before welcome/list preparation with ISTA 211 and own IQUI. Closing reservations count until cleanup. Earlier descriptions retain their historical scope.
+**Increment delivered in alpha-0.3.12:** [Limits](LIMITS.md) adds configurable session/user ceilings shared by ADC/ADCS, bounded by the connection cap. SessionManager checks capacity transactionally; LoginHub rejects a full user registry before welcome/list preparation with ISTA 211 and own IQUI. Closing reservations count until cleanup. Earlier descriptions retain their historical scope.
 
 ## User Core validation — alpha-0.3.5
 
@@ -244,3 +246,5 @@ The Apache2 sample passed syntax validation and isolated loopback serving with C
 Local result: **21/21 CTest suites passed in Debug, Release and ASan/UBSan**, including the new `apache2.https` suite, real ncdc ADC/ADCS and disposable MariaDB. The seven Apache cases use the shipped template policy under a temporary independent ServerRoot on loopback ephemeral ports, with a disposable certificate/key and fixture assets. Coverage: verified TLS 1.2/1.3, legacy rejection, fixed HTTP redirect/path/query/Host behavior, success/error headers, HTTPS-only HSTS, private/hidden/secret/index/symlink denial, untrusted/wrong-host client rejection, missing credential syntax failure and actual startup rejection of a mismatched pair. No host site, trust store, certificate or service configuration is changed.
 
 Apache2/mod_ssl detection is optional and absence is reported; CI installs Apache2. The frontend typecheck/build, 3 Node unit tests, 3 browser tests and real C++/Vite/Chromium integration also passed with version alpha-0.1.11. Staged installs verified the unchanged HTTPS example both with and without optional WebAdmin assets and accepted the installed INI. UTF-8/local-link/language-parity and Git whitespace checks passed. Local Apache 2.4.69 / OpenSSL 3.5.7 on Debian 13; remote CI and remaining OS versions are not claimed as verified. See [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
+
+alpha-0.3.13 local validation: 67/67 CTest suites passed in Debug, Release and ASan/UBSan, including ncdc ADC/ADCS, MariaDB and Apache HTTPS. WebAdmin production build, 4 Node tests, 3 Chromium tests and live C++ API integration passed. These results do not imply remote CI, OS-matrix or production-load coverage.

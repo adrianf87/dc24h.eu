@@ -47,6 +47,12 @@ struct Statistics {
     std::uint64_t adcs_incomplete;
     std::uint64_t security_rejected;
     std::uint64_t security_closed;
+    std::uint64_t closed{};
+    std::uint64_t sent_bytes{};
+    std::size_t peak_connections{};
+    std::size_t online_users{};
+    std::size_t peak_online_users{};
+    std::uint64_t successful_logins{};
 };
 
 class TcpServer final {
@@ -82,6 +88,9 @@ private:
     std::atomic<std::uint64_t> adcs_incomplete_{0};
     std::atomic<std::uint64_t> security_rejected_{0};
     std::atomic<std::uint64_t> security_closed_{0};
+    std::atomic<std::uint64_t> closed_{0}, sent_bytes_{0};
+    std::atomic<std::size_t> peak_connections_{0}, online_users_{0}, peak_online_users_{0};
+    std::atomic<std::uint64_t> successful_logins_{0};
 };
 
 } // namespace dc24h::network

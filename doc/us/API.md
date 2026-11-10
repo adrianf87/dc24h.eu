@@ -1,6 +1,8 @@
 # Local administrative API — alpha-0.1.9
 
-**Current increment — alpha-0.3.12:** [Limits](LIMITS.md) adds configurable session/user ceilings shared by ADC/ADCS, bounded by the connection cap. SessionManager checks capacity transactionally; LoginHub rejects a full user registry before welcome/list preparation with ISTA 211 and own IQUI. Closing reservations count until cleanup. Earlier descriptions retain their historical scope.
+**Current increment — alpha-0.3.13:** [Statistics](STATISTICS.md) adds constant-time lifecycle counts, online/peak users and completed-login totals, atomic transport statistics, authenticated API fields and bilingual WebAdmin metrics. Historical increments below retain their delivery scope.
+
+**Increment delivered in alpha-0.3.12:** [Limits](LIMITS.md) adds configurable session/user ceilings shared by ADC/ADCS, bounded by the connection cap. SessionManager checks capacity transactionally; LoginHub rejects a full user registry before welcome/list preparation with ISTA 211 and own IQUI. Closing reservations count until cleanup. Earlier descriptions retain their historical scope.
 
 **Increment delivered in alpha-0.3.5:** [User Core](USER_CORE.md) adds checked UTF-8/NFC Nickname values, shared ADC/User text validation, immutable rename candidates and explicit projection from validated ClientInfo/VerifiedIdentity. Users now links the neutral dc24h_text library using the existing utf8proc package. Manager ownership/uniqueness remains unchanged. Earlier descriptions retain their historical scope.
 
@@ -79,8 +81,9 @@ Both routes require authentication. JSON keys/protocol errors remain EN/US regar
 ```json
 {
   "api_version": "v1",
-  "server": {"name": "dc24h.eu", "version": "alpha-0.1.9", "core_running": true, "uptime_seconds": 3},
-  "network": {"active_connections": 0, "accepted_connections": 1, "adc_frames": 1, "adcs_handshakes": 0, "security_rejected": 0, "security_closed": 0},
+  "server": {"name": "dc24h.eu", "version": "alpha-0.3.13", "core_running": true, "uptime_seconds": 3},
+  "network": {"active_connections": 0, "accepted_connections": 1, "adc_frames": 1, "adcs_handshakes": 0, "security_rejected": 0, "security_closed": 0, "rejected_connections": 0, "closed_connections": 1, "received_bytes": 20, "sent_bytes": 32, "peak_connections": 1},
+  "users": {"online": 0, "peak_online": 0, "successful_logins": 0},
   "database": {"enabled": false}
 }
 ```
@@ -156,4 +159,6 @@ Since alpha-0.2.2, `Message::positional_count` identifies known BASE argument la
 
 ## alpha-0.2.8
 
-API v1 schema is unchanged. active_connections counts transport sockets, adc_frames counts parsed syntax; neither represents logged-in users. Guest login/readiness is internal reactor state and opt-in logging. See [ADC_LOGIN.md](ADC_LOGIN.md).
+In alpha-0.2.8 the API v1 schema was unchanged (alpha-0.3.13 adds the fields in [Statistics](STATISTICS.md)). active_connections counts transport sockets, adc_frames counts parsed syntax; neither represents logged-in users. Guest login/readiness is internal reactor state and opt-in logging. See [ADC_LOGIN.md](ADC_LOGIN.md).
+
+Current additive status fields, sampling and compatibility: [Statistics](STATISTICS.md).
