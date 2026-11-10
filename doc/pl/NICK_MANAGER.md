@@ -1,6 +1,6 @@
 # Nick Manager — alpha-0.3.6
 
-**Bieżący etap — alpha-0.3.8:** [User Login](USER_LOGIN.md) łączy zwalidowaną i zatwierdzoną jako gość ClientSession ADC z rejestracją w SessionManager. Projektuje zweryfikowaną tożsamość publiczną, zwraca typowane błędy i ponownie sprawdza tożsamość/cykl życia przy zakończeniu powitania. LoginHub nadal zarządza ograniczonym wyjściem i ustawia gotowość po wysłaniu końcowego LF własnego INF. Starsze opisy zachowują zakres historyczny.
+**Bieżący etap — alpha-0.3.9:** [User List](USER_LIST.md) tworzy samodzielne, deterministyczne powitanie ze stronicowanej listy identified/ready i zwalidowanych metadanych publicznych ADC. Sprawdza cały rozmiar po kodowaniu przed kolejkowaniem/rejestracją. Własny INF jest ostatni; dalsze join/update/quit zachowują synchronizację FIFO. Starsze opisy modułów zachowują zakres historyczny.
 
 Etap powstał bezpośrednio z main `cb49cdb9e1e714f3b548be6a842063c58890eaf6`, zawierającego już alpha-0.3.1–alpha-0.3.5. Zachowano main i historyczne gałęzie. Nowa gałąź alpha-0.3.6 nie jest scalana automatycznie.
 

@@ -1,5 +1,7 @@
 # User Login — alpha-0.3.8
 
+**Current integration — alpha-0.3.9:** [User List](USER_LIST.md) now prepares the complete deterministic welcome before queueing/registration. The allocation guard includes list planning, welcome queueing and registration; later presence relay remains outside it. The lifecycle/final-LF completion contract below still applies.
+
 This increment starts directly from main `cc2a52603d0e67a6de722c783d84922f204ca0db`, after the alpha-0.3.7 User Registry merge. Earlier requested stages are already present. The alpha-0.3.8 branch preserves main/history and is not merged automatically.
 
 ## Responsibility and prerequisites

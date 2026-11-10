@@ -147,6 +147,17 @@ std::vector<Snapshot> SessionManager::page(std::uint64_t after, std::size_t limi
     }
     return result;
 }
+std::vector<SessionId> SessionManager::public_users(std::uint64_t after, std::size_t limit) const {
+    if (limit == 0 || limit > max_page_size) { throw std::invalid_argument("Invalid public user page size"); }
+    std::vector<SessionId> result;
+    result.reserve(std::min(limit, identified_users()));
+    for (auto it = sessions_.upper_bound(after); it != sessions_.end() && result.size() < limit; ++it) {
+        if (it->second->phase() == Phase::identified || it->second->phase() == Phase::ready) {
+            result.push_back(it->second->id());
+        }
+    }
+    return result;
+}
 SessionCounts SessionManager::counts() const noexcept {
     SessionCounts result;
     result.total = size();

@@ -1,5 +1,13 @@
 # Testing
 
+## User List validation — alpha-0.3.9
+
+All **59 CTest suites** passed locally in Debug, Release and ASan/UBSan. New users.list and users.list.process cover public membership lifecycle/cursors, deterministic complete plans, own-INF ordering, exact escaped wire budgets, private-field exclusion/ADC metadata retention, stale sources, 260-user pagination, allocation rollback and actual mixed-transport list convergence across concurrent joins, updates, cancellations, departures and reconnect. Real ncdc ADC/ADCS displays two users with a live observer and synchronizes both initial lists and reconnect quit/join events. Earlier login/readiness/overflow/identity/security/registry tests, MariaDB and Apache HTTPS also passed. See [User List](USER_LIST.md) for precise scope and limits.
+
+Reproduce with `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug --parallel 4` and `ctest --test-dir build-debug --output-on-failure -j 4`. Repeat for build-release/Release. In build-sanitize/Debug add `-DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie"` and `-DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined -no-pie"`. Allocation tests inject C++ allocation failures in preparation and the live prepublication path; C allocator/OS failure recovery is not claimed.
+
+WebAdmin typecheck/production build, 3 Node tests, 3 Chromium tests and real C++ API integration passed. From webadmin run `npm run build`, `npm test`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e` and `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:integration -- ../build-debug/dc24h`. Metadata/fixtures match alpha-0.3.9. Results are local, not a remote CI/OS-matrix/load claim.
+
 ## User Login validation — alpha-0.3.8
 
 All **57 CTest suites** passed locally in Debug, Release and ASan/UBSan. New users.login and users.login.process cover validated/approved identity gates, single public registration, SID/CID/nick collisions, time/lifecycle rejection, identity-bound welcome completion, exactly-once readiness on the actual own-INF final LF, overflow, registration allocation rollback and guarded immediate-close cleanup. Mixed ADC/ADCS process tests prove no public presence for invalid proof, registration after fragmented valid INF, routing after readiness and same-CID reconnect. Existing real ncdc ADC/ADCS reaches client-side NORMAL and reconnects with Polish nicknames; MariaDB, Apache HTTPS and all earlier security/registry/transport tests passed. See [User Login](USER_LOGIN.md) for the precise integration contract and allocation-guard limits.
@@ -26,7 +34,7 @@ Reproduce the strict build with `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=De
 
 WebAdmin typecheck/production build, 3 Node tests, 3 Chromium tests and real C++ API integration passed. From webadmin run `npm run build`, `npm test`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e` and `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:integration -- ../build-debug/dc24h`. This uses the installed system Chromium; otherwise install Playwright's browser normally. Version assertions and frontend fixtures match alpha-0.3.6. Local checks do not establish remote GitHub Actions results or the full supported OS matrix.
 
-**Current increment — alpha-0.3.8:** [User Login](USER_LOGIN.md) bridges a validated, guest-approved ADC ClientSession to SessionManager registration. It projects verified public identity, returns typed failures and checks identity/lifecycle again before welcome completion. LoginHub retains bounded output ownership and marks readiness only after the own-INF final LF is sent. Earlier module descriptions retain their historical scope.
+**Current increment — alpha-0.3.9:** [User List](USER_LIST.md) builds an owned deterministic initial welcome from paged identified/ready membership and validated public ADC metadata. The complete escaped wire size is checked before enqueue/registration. Own INF stays last; subsequent join/update/quit frames preserve FIFO synchronization. Earlier module descriptions retain their historical scope.
 
 ## User Core validation — alpha-0.3.5
 

@@ -1,5 +1,13 @@
 # Testowanie
 
+## Weryfikacja User List — alpha-0.3.9
+
+Lokalnie przeszło wszystkich **59 zestawów CTest** w Debug, Release i ASan/UBSan. Nowe users.list i users.list.process obejmują cykl życia/kursory publicznego członkostwa, deterministyczne plany, własny INF na końcu, dokładny budżet po kodowaniu, brak danych prywatnych/zachowanie metadanych ADC, nieaktualne źródła, 260 użytkowników przez granicę strony, wycofanie alokacji oraz zgodność list przy mieszanych transportach i równoczesnych dołączeniach, zmianach, anulowaniach, odejściach i reconnect. Rzeczywisty ncdc ADC/ADCS pokazuje dwóch użytkowników przy działającym obserwatorze i synchronizuje listy oraz quit/join przy reconnect. Przeszły także wcześniejsze testy logowania/gotowości/przepełnienia/tożsamości/bezpieczeństwa/rejestrów, MariaDB i Apache HTTPS. Dokładny zakres i ograniczenia opisuje [User List](USER_LIST.md).
+
+Odtwarzanie: `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug --parallel 4`, `ctest --test-dir build-debug --output-on-failure -j 4`. Powtórz dla build-release/Release. W build-sanitize/Debug dodaj `-DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie"` i `-DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined -no-pie"`. Testy wstrzykują błędy alokacji C++ przy przygotowaniu i przed publikacją; nie deklaruje się odtwarzania po błędach alokatora C/systemu.
+
+WebAdmin: poprawne typecheck/budowanie produkcyjne, 3 testy Node, 3 Chromium i integracja rzeczywistego API C++. W webadmin uruchom `npm run build`, `npm test`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e` i `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:integration -- ../build-debug/dc24h`. Metadane/dane testowe odpowiadają alpha-0.3.9. Wyniki są lokalne i nie oznaczają zdalnego CI, pełnej macierzy systemów ani testów obciążenia.
+
 ## Weryfikacja User Login — alpha-0.3.8
 
 Lokalnie przeszło wszystkich **57 zestawów CTest** w Debug, Release i ASan/UBSan. Nowe users.login i users.login.process obejmują zwalidowaną/zatwierdzoną tożsamość, pojedynczą publiczną rejestrację, kolizje SID/CID/nicka, błędy czasu/cyklu życia, zgodność tożsamości przy końcu powitania, pojedynczą gotowość dokładnie po wysłaniu LF własnego INF, przepełnienie, wycofanie alokacji rejestracji i chronione natychmiastowe zamknięcie. Mieszane testy ADC/ADCS potwierdzają brak publicznej obecności przy błędnym dowodzie, rejestrację po fragmentowanym poprawnym INF, routing po gotowości i reconnect z tym samym CID. Rzeczywisty ncdc ADC/ADCS osiąga NORMAL i reconnect z polskimi nickami; przeszły MariaDB, Apache HTTPS i wcześniejsze testy bezpieczeństwa/rejestrów/transportu. Dokładny kontrakt i granice ochrony alokacji opisuje [User Login](USER_LOGIN.md).
@@ -26,7 +34,7 @@ Odtwarzanie: `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE
 
 WebAdmin: poprawne typecheck/budowanie produkcyjne, 3 testy Node, 3 testy Chromium i integracja API C++. W webadmin uruchom `npm run build`, `npm test`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e` i `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:integration -- ../build-debug/dc24h`. Użyto systemowego Chromium; alternatywnie zainstaluj przeglądarkę Playwright. Asercje wersji i dane testowe odpowiadają alpha-0.3.6. Wyniki lokalne nie potwierdzają zdalnego GitHub Actions ani pełnej macierzy systemów operacyjnych.
 
-**Bieżący etap — alpha-0.3.8:** [User Login](USER_LOGIN.md) łączy zwalidowaną i zatwierdzoną jako gość ClientSession ADC z rejestracją w SessionManager. Projektuje zweryfikowaną tożsamość publiczną, zwraca typowane błędy i ponownie sprawdza tożsamość/cykl życia przy zakończeniu powitania. LoginHub nadal zarządza ograniczonym wyjściem i ustawia gotowość po wysłaniu końcowego LF własnego INF. Starsze opisy zachowują zakres historyczny.
+**Bieżący etap — alpha-0.3.9:** [User List](USER_LIST.md) tworzy samodzielne, deterministyczne powitanie ze stronicowanej listy identified/ready i zwalidowanych metadanych publicznych ADC. Sprawdza cały rozmiar po kodowaniu przed kolejkowaniem/rejestracją. Własny INF jest ostatni; dalsze join/update/quit zachowują synchronizację FIFO. Starsze opisy modułów zachowują zakres historyczny.
 
 ## Weryfikacja User Core — alpha-0.3.5
 

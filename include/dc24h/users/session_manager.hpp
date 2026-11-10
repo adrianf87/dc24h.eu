@@ -59,6 +59,9 @@ public:
     // Strictly increasing IDs after an exclusive cursor; no live iterators escape.
     // Independent point-in-time pages, not a frozen multi-page transaction.
     [[nodiscard]] std::vector<Snapshot> page(std::uint64_t after = 0, std::size_t limit = 64) const;
+    // Current identified/ready membership only, ordered by local lifetime ID.
+    // No profile copies; the caller stays on the owner thread while resolving.
+    [[nodiscard]] std::vector<SessionId> public_users(std::uint64_t after = 0, std::size_t limit = 64) const;
     [[nodiscard]] SessionCounts counts() const noexcept;
     [[nodiscard]] std::size_t size() const noexcept { return sessions_.size(); }
     [[nodiscard]] std::size_t capacity() const noexcept { return capacity_; }

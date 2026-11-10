@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.3.8 (User Login).**
+**Current development version: alpha-0.3.9 (User List).**
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.3.9 User List**: deterministic initial public-user synchronization, complete welcome wire-budget preflight, lifecycle filtering and owned snapshots with own INF last. Mixed ADC/ADCS clients and real ncdc synchronize lists across joins, updates and reconnect. See [User List](doc/us/USER_LIST.md).
 
 - **alpha-0.3.8 User Login**: explicit verified ADC guest-to-session registration, typed rejection, transactional public indexes and identity-bound welcome completion. Readiness is published once after the own-INF final LF is sent. See [User Login](doc/us/USER_LOGIN.md).
 

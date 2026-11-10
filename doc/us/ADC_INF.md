@@ -1,6 +1,6 @@
 # INF — alpha-0.2.6
 
-**Current increment — alpha-0.3.8:** [User Login](USER_LOGIN.md) bridges a validated, guest-approved ADC ClientSession to SessionManager registration. It projects verified public identity, returns typed failures and checks identity/lifecycle again before welcome completion. LoginHub retains bounded output ownership and marks readiness only after the own-INF final LF is sent. Earlier module descriptions retain their historical scope.
+**Current increment — alpha-0.3.9:** [User List](USER_LIST.md) builds an owned deterministic initial welcome from paged identified/ready membership and validated public ADC metadata. The complete escaped wire size is checked before enqueue/registration. Own INF stays last; subsequent join/update/quit frames preserve FIFO synchronization. Earlier module descriptions retain their historical scope.
 
 **Increment delivered in alpha-0.3.5:** [User Core](USER_CORE.md) adds checked UTF-8/NFC Nickname values, shared ADC/User text validation, immutable rename candidates and explicit projection from validated ClientInfo/VerifiedIdentity. Users now links the neutral dc24h_text library using the existing utf8proc package. Manager ownership/uniqueness remains unchanged. Earlier descriptions retain their historical scope.
 

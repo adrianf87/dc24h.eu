@@ -4,6 +4,7 @@
 #include "dc24h/adc/user.hpp"
 
 #include <deque>
+#include <algorithm>
 #include <new>
 #include <stdexcept>
 #include <type_traits>
@@ -36,9 +37,6 @@ users::CloseCause session_cause(CloseReason reason) noexcept {
     }
     return users::CloseCause::internal_error;
 }
-Message info_message(std::string command, Command kind, std::vector<std::string> parameters) {
-    return {MessageType::info, std::move(command), kind, {}, {}, {}, std::move(parameters), {}};
-}
 users::User public_user(const ClientInfo& metadata, std::string_view sid) {
     const auto source=Sid::parse(sid);
     auto user=source ? user_from_info(metadata,*source) : std::nullopt;
@@ -70,7 +68,7 @@ std::string_view status_description(std::string_view code) noexcept {
 }
 } // namespace
 
-LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.connections), user_login_(sessions_) {
+LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.connections), user_login_(sessions_), user_list_(sessions_) {
     if (limits.connections == 0 || limits.connections > 65535 ||
         limits.output_per_client < 128 || limits.output_per_client > 16 * 1024 * 1024 ||
         limits.output_total < limits.output_per_client || limits.output_total > 256 * 1024 * 1024) {
@@ -214,31 +212,36 @@ void LoginHub::receive(Id id, const Message& message) {
             // Accounts are not implemented: this release explicitly admits guests.
             // CID proof is not an account/password/role authentication mechanism.
             if (peer.session.approve_identity(IdentityMode::guest)) { reject(peer, "240"); return; }
-            if (!enqueue(peer, info_message("INF", Command::inf, {"CT32", "NIdc24h.eu", "DEGuest login alpha"}))) { return; }
-            for (const auto& [other, existing] : peers_) {
-                if (other != id && existing->lifecycle.identity() != nullptr && !existing->lifecycle.closing() && !existing->lifecycle.immediate()) {
-                    if (!enqueue(peer, existing->session.info()->public_message(*Sid::parse(existing->session.sid())))) { return; }
-                }
-            }
-            // Include pending admissions in snapshots and relays. FIFO ordering
-            // preserves welcome-before-join and avoids simultaneous-login gaps.
-            const auto public_info = metadata.public_message(*Sid::parse(peer.session.sid()));
-            if (!enqueue(peer, public_info, Completion::welcome)) { return; } // Own INF is last in the initial list.
-            UserLoginResult registration;
+            std::optional<InitialUserList> welcome;
             try {
-                registration = user_login_.register_guest(peer.lifecycle.id(), peer.session, users::Clock::now());
+                const auto available = std::min(limits_.output_per_client - peer.queued, limits_.output_total - queued_);
+                auto result = user_list_.prepare(peer.lifecycle.id(), peer.session,
+                    [this](users::SessionId owner) -> const ClientInfo* {
+                        const auto found = peers_.find(owner.value());
+                        return found != peers_.end() && found->second->session.info() ? &*found->second->session.info() : nullptr;
+                    }, available);
+                if (const auto* error = std::get_if<UserListError>(&result)) {
+                    const auto cause = *error == UserListError::output_limit ? users::CloseCause::output_limit : users::CloseCause::internal_error;
+                    check_model(sessions_.force_close(peer.lifecycle.id(),cause,users::Clock::now()));
+                    return;
+                }
+                welcome.emplace(std::move(std::get<InitialUserList>(result)));
+                const auto& frames = welcome->frames();
+                for (std::size_t i = 0; i < frames.size(); ++i) {
+                    if (!enqueue(peer, frames[i], i + 1 == frames.size() ? Completion::welcome : Completion::observe)) { return; }
+                }
+                if (const auto error = user_login_.register_guest(peer.lifecycle.id(), peer.session, users::Clock::now())) {
+                    reject(peer, user_login_status(*error)); return;
+                }
             } catch (const std::bad_alloc&) {
-                // Projection/index allocation failure must not publish this
-                // guest or stop the reactor. Preserve pinned output until the
-                // transport owner performs immediate cleanup; do not allocate
-                // another status frame under memory pressure.
+                // Welcome planning/queueing and registration failures publish no
+                // user. Preserve pinned output until immediate transport cleanup.
                 check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
                 return;
             }
-            if (const auto& error = registration) {
-                reject(peer, user_login_status(*error)); return;
-            }
-            relay(id, public_info);
+            // Publication follows the complete prepared welcome and registry
+            // commit. Subsequent FIFO joins/updates/quits follow own INF.
+            relay(id, welcome->frames().back());
         } else {
             check_model(sessions_.update_user(peer.lifecycle.id(),public_user(metadata,peer.session.sid()),users::Clock::now()));
             // A complete public snapshot also conveys optional field cancellations.

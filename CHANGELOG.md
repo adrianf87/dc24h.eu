@@ -1,5 +1,18 @@
 # Changelog
 
+## alpha-0.3.9 — 2026-11-10
+
+User List increment, based directly on main `b191141ad1cfa5a6a915945b5a934fe82640340e` after the alpha-0.3.8 User Login merge:
+
+- Added adc::UserList and owned InitialUserList plans: hub INF, public existing users in deterministic local SessionId order, own INF last. Paged SessionManager::public_users selects identified/ready lifetimes without copying profiles; pending/closing/closed models are excluded. Plans include identified users awaiting welcome, preserving simultaneous-admission synchronization.
+- Validate public metadata against each registered identity and retain ADC-only public fields through ClientInfo projection without PID/unknown-field disclosure. Missing/stale sources fail the whole plan. Complete escaped wire bytes including hub/own INF and LF are checked against the smaller remaining client/hub queue allowance before enqueue/registration.
+- Integrated prepare → ordered enqueue → UserLogin registration → public join publication. Expanded the prepublication allocation guard to list preparation and welcome queueing, preserving immediate cleanup without publishing failed users. Subsequent joins/updates/cancellations/quits remain FIFO after own INF; actual final-LF readiness and pinned TLS output rules are preserved. Postcommit presence relay remains outside this allocation guard.
+- Added users.list and users.list.process. Unit tests cover lifecycle membership/cursors, exact byte budgets, stale/missing sources, deterministic ordering, immutable owned frames, a 260-user multipage list and allocation failure without registry/model mutation. Real mixed ADC/ADCS clients converge after overlapping joins, Polish rename, field cancellation, later initial lists, quit and same-CID/new-SID reconnect.
+- Extended real ncdc ADC/ADCS tests with a live observer: the client displays two users, receives the observer on both initial lists, and the observer sees ordered quit/join with unchanged CID on reconnect. Replaced the initial timing sleep with observed user-list readiness.
+- Updated release metadata/fixtures to alpha-0.3.9 and added mirrored US/PL User List documentation with refreshed module/navigation/testing/version context. Existing EN/US-default and PL runtime catalogs apply. No new dependency, configuration, SQL/API contract, WebAdmin feature or runtime translation key is required.
+- Validation: all 59 CTest suites passed locally in Debug, Release and ASan/UBSan, including real ncdc, mixed TCP/TLS, security/identity/registry regressions, MariaDB and Apache HTTPS. WebAdmin typecheck/production build, 3 Node tests, 3 Chromium tests and real C++ API integration passed with system Chromium. These results do not claim remote CI, all supported operating systems or production load validation.
+- main and alpha-0.3.1–alpha-0.3.8 history/branches are preserved; no automatic merge or production deployment. Accounts, explicit resynchronization extensions and chat/search/transfers remain separate work.
+
 ## alpha-0.3.8 — 2026-11-10
 
 User Login increment, based directly on main `cc2a52603d0e67a6de722c783d84922f204ca0db` after the alpha-0.3.7 User Registry merge:
