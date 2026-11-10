@@ -2,6 +2,7 @@
 
 #include "dc24h/adc/inf.hpp"
 #include "dc24h/adc/user_login.hpp"
+#include "dc24h/adc/user_list.hpp"
 #include "dc24h/users/session_manager.hpp"
 
 #include <cstdint>
@@ -70,6 +71,7 @@ private:
     std::shared_ptr<SidPool> pool_;
     users::SessionManager sessions_; // Outlives the peers that borrow models.
     UserLogin user_login_;
+    UserList user_list_;
     std::unordered_map<Id, std::unique_ptr<Peer>> peers_;
     std::size_t queued_{0};
 };

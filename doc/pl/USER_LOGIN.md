@@ -1,5 +1,7 @@
 # User Login — alpha-0.3.8
 
+**Bieżąca integracja — alpha-0.3.9:** [User List](USER_LIST.md) przygotowuje całe deterministyczne powitanie przed kolejkowaniem/rejestracją. Ochrona alokacji obejmuje plan listy, kolejkę powitania i rejestrację; późniejsze rozsyłanie obecności jest poza nią. Poniższy kontrakt cyklu życia i końcowego LF nadal obowiązuje.
+
 Etap powstał bezpośrednio z main `cc2a52603d0e67a6de722c783d84922f204ca0db`, po scaleniu alpha-0.3.7 User Registry. Poprzednie etapy są już obecne. Gałąź alpha-0.3.8 zachowuje main/historię i nie jest scalana automatycznie.
 
 ## Odpowiedzialność i wymagania

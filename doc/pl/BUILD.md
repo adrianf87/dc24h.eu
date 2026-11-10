@@ -1,6 +1,6 @@
 # Budowanie
 
-**Bieżący etap — alpha-0.3.8:** [User Login](USER_LOGIN.md) łączy zwalidowaną i zatwierdzoną jako gość ClientSession ADC z rejestracją w SessionManager. Projektuje zweryfikowaną tożsamość publiczną, zwraca typowane błędy i ponownie sprawdza tożsamość/cykl życia przy zakończeniu powitania. LoginHub nadal zarządza ograniczonym wyjściem i ustawia gotowość po wysłaniu końcowego LF własnego INF. Starsze opisy zachowują zakres historyczny.
+**Bieżący etap — alpha-0.3.9:** [User List](USER_LIST.md) tworzy samodzielne, deterministyczne powitanie ze stronicowanej listy identified/ready i zwalidowanych metadanych publicznych ADC. Sprawdza cały rozmiar po kodowaniu przed kolejkowaniem/rejestracją. Własny INF jest ostatni; dalsze join/update/quit zachowują synchronizację FIFO. Starsze opisy modułów zachowują zakres historyczny.
 
 **Etap dostarczony w alpha-0.3.5:** [User Core](USER_CORE.md) dodaje typ Nickname sprawdzający UTF-8/NFC, wspólną walidację tekstu ADC/Users, samodzielnych kandydatów zmiany nicku i jawną projekcję ClientInfo/VerifiedIdentity. Users korzysta z neutralnego dc24h_text i istniejącego utf8proc. Własność/unikalność managera pozostają bez zmian. Starsze opisy dotyczą zakresu historycznego.
 

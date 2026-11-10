@@ -18,7 +18,8 @@ import unittest
 from network_process_tests import Hub
 from api_support import enable_api, fetch_status
 from adc_process_tests import counters
-from tls_support import credentials, TLS_READY
+from adc_login_process_tests import Peer
+from tls_support import credentials, TLS_READY, connect_tls
 
 NCDC = sys.argv.pop(1)
 ENCRYPTED = '--tls' in sys.argv
@@ -39,6 +40,8 @@ class NcdcLoginTest(unittest.TestCase):
             api_path, token = enable_api(ini, directory)
             options = {'ready_pattern': TLS_READY} if ENCRYPTED else {}
             hub = Hub(self, '--config', str(ini), '--log-connections', 'on', **options)
+            observer = Peer(self, connect_tls(self, hub, str(pathlib.Path(directory) / 'certificate.pem')) if ENCRYPTED else hub.connect())
+            observer.login(b'ListObserver', 99)
             wire, replies, errors = bytearray(), bytearray(), []
             finished = threading.Event()
             listener = socket.socket()
@@ -100,13 +103,17 @@ class NcdcLoginTest(unittest.TestCase):
                 os.write(master, b'/set nick ' + nickname + b'\r')
                 scheme = 'adcs' if ENCRYPTED else 'adc'
                 os.write(master, f'/open dc24h_login {scheme}://127.0.0.1:{listener.getsockname()[1]}/\r'.encode())
-                hub.wait_for(lambda: hub.log.count(b'event=login_ready') == 1)
+                hub.wait_for(lambda: hub.log.count(b'event=login_ready') == 2)
+                initial_join = observer.line()
+                self.assertTrue(initial_join.startswith(b'BINF '))
+                initial_sid = initial_join.split()[1]
                 # ncdc refuses chat until its own INF completed the initial user
                 # list. Its normal BMSG and the returned status prove client-side
                 # NORMAL; this stage deliberately has no chat dispatch.
-                time.sleep(0.1)
+                wait_screen(b'2 users')
                 os.write(master, b'dc24hLoginProbe\r')
                 wait_screen(b'Command not implemented')
+                wait_screen(b'2 users')
                 status = fetch_status(api_path, token)
                 self.assertGreaterEqual(status['network']['adc_frames'], 3)
                 # ncdc applies /nick on reconnect (it does not emit a live NI
@@ -114,7 +121,14 @@ class NcdcLoginTest(unittest.TestCase):
                 renamed = 'dc24hŁoś'.encode('utf-8')
                 os.write(master, b'/nick ' + renamed + b'\r')
                 os.write(master, b'/reconnect\r')
-                hub.wait_for(lambda: hub.log.count(b'event=login_ready') == 2)
+                hub.wait_for(lambda: hub.log.count(b'event=login_ready') == 3)
+                self.assertEqual(observer.line(), b'IQUI ' + initial_sid)
+                replacement_join = observer.line()
+                self.assertTrue(replacement_join.startswith(b'BINF '))
+                replacement_sid = replacement_join.split()[1]
+                self.assertNotEqual(initial_sid, replacement_sid)
+                public_cid = lambda line: re.search(rb'(?:^| )ID([A-Z2-7]+)(?: |$)', line)[1]
+                self.assertEqual(public_cid(initial_join), public_cid(replacement_join))
                 screen.clear()
                 wait_screen(renamed + b' @ ')
                 screen.clear()
@@ -133,6 +147,7 @@ class NcdcLoginTest(unittest.TestCase):
                     self.assertIn(b' NI' + renamed, replies)
                     self.assertNotIn(b' PD', replies)
                     self.assertEqual(replies.count(b'ISUP ADBASE ADTIGR\n'), 2)
+                    self.assertEqual(replies.count(b' NIListObserver'), 2)
                     initial = [line for line in bytes(wire).splitlines() if line.startswith(b'BINF ') and b' PD' in line]
                     self.assertEqual(len(initial), 2)
                     self.assertNotEqual(initial[0].split()[1], initial[1].split()[1], 'Reconnect reused its ADC SID')
@@ -147,12 +162,14 @@ class NcdcLoginTest(unittest.TestCase):
                         except OSError:
                             break
                 self.assertEqual(process.wait(timeout=2), 0)
+                self.assertEqual(observer.line(), b'IQUI ' + replacement_sid)
+                observer.peer.close()
                 hub.stop()
-                self.assertEqual(hub.log.count(b'event=login_ready'), 2)
+                self.assertEqual(hub.log.count(b'event=login_ready'), 3)
                 records = re.findall(rb'Connection id=(\d+) transport=(ADC|ADCS) event=([a-z_]+)', hub.log)
                 accepted = [ident for ident, _, event in records if event == b'accepted']
-                self.assertEqual(len(accepted), 2)
-                self.assertLess(int(accepted[0]), int(accepted[1]), 'Reconnect reused a local session identity')
+                self.assertEqual(len(accepted), 3)
+                self.assertLess(int(accepted[1]), int(accepted[2]), 'Reconnect reused a local session identity')
                 for ident in accepted:
                     events = [event for current, _, event in records if current == ident]
                     self.assertEqual(events.count(b'login_ready'), 1)
