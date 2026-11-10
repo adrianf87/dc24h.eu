@@ -136,6 +136,15 @@ class NcdcLoginTest(unittest.TestCase):
                     self.assertEqual(probe['users']['online'], 2)
                     if command.startswith(b'/me '):
                         self.assertEqual(observer.line(), b'BMSG '+initial_sid+b' dc24hActionProbe\\slikes\\scats ME1')
+                    else:
+                        expected = b'EMSG '+initial_sid+b' '+observer.sid+b' dc24hPrivateProbe PM'+initial_sid
+                        self.assertEqual(observer.line(), expected)
+                        wait_screen(b'dc24hPrivateProbe')
+                private_reply = b'EMSG '+observer.sid+b' '+initial_sid+b' dc24hPrivateReply PM'+observer.sid
+                observer.send(private_reply);self.assertEqual(observer.line(), private_reply)
+                wait_screen(b'dc24hPrivateReply')
+                os.write(master, b'/me dc24hPrivateAction\r')
+                self.assertEqual(observer.line(), b'EMSG '+initial_sid+b' '+observer.sid+b' dc24hPrivateAction PM'+initial_sid+b' ME1')
                 os.write(master, b'/open dc24h_login\r')
                 wait_screen(b'2 users')
                 status = fetch_status(api_path, token)
@@ -238,6 +247,8 @@ class NcdcLoginTest(unittest.TestCase):
                 self.assertNotIn(b'dc24hINFUpdate', hub.log)
                 self.assertNotIn(b'dc24hActionProbe', hub.log)
                 self.assertNotIn(b'dc24hPrivateProbe', hub.log)
+                self.assertNotIn(b'dc24hPrivateReply', hub.log)
+                self.assertNotIn(b'dc24hPrivateAction', hub.log)
                 self.assertNotIn(b'dc24hIncomingChat', hub.log)
                 self.assertNotIn(b'dc24hPublic', hub.log)
                 self.assertNotIn(b'event=login_rejected', hub.log)

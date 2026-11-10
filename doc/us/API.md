@@ -1,6 +1,8 @@
 # Local administrative API — alpha-0.1.9
 
-**Current increment — alpha-0.4.3:** [Public Chat](PUBLIC_CHAT.md) adds a dedicated BMSG policy/dispatch adapter and one immutable shared public frame per publication. Recipient offsets and logical queue charges remain independent; source/state/private-message gates and FIFO are preserved.
+**Current increment — alpha-0.4.4:** [Private Chat](PRIVATE_CHAT.md) adds DMSG target-only and EMSG target-plus-sender delivery, deduplicated self-messages, lifetime-bound targets and PM origin checks. Public chat remains isolated; groups/history/moderation remain separate stages.
+
+**Increment delivered in alpha-0.4.3:** [Public Chat](PUBLIC_CHAT.md) adds a dedicated BMSG policy/dispatch adapter and one immutable shared public frame per publication. Recipient offsets and logical queue charges remain independent; source/state/private-message gates and FIFO are preserved.
 
 **Increment delivered in alpha-0.4.2:** [Chat Core](CHAT_CORE.md) adds a separate protocol-independent message engine and live public BMSG delivery, including sender echo and /me. Private/group/feature/hub chat, moderation and history remain separate increments.
 
@@ -87,7 +89,7 @@ Both routes require authentication. JSON keys/protocol errors remain EN/US regar
 ```json
 {
   "api_version": "v1",
-  "server": {"name": "dc24h.eu", "version": "alpha-0.4.3", "core_running": true, "uptime_seconds": 3},
+  "server": {"name": "dc24h.eu", "version": "alpha-0.4.4", "core_running": true, "uptime_seconds": 3},
   "network": {"active_connections": 0, "accepted_connections": 1, "adc_frames": 1, "adcs_handshakes": 0, "security_rejected": 0, "security_closed": 0, "rejected_connections": 0, "closed_connections": 1, "received_bytes": 20, "sent_bytes": 32, "peak_connections": 1},
   "users": {"online": 0, "peak_online": 0, "successful_logins": 0},
   "database": {"enabled": false}

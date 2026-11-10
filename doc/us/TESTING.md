@@ -1,6 +1,8 @@
 # Testing
 
-**Current increment — alpha-0.4.3:** [Public Chat](PUBLIC_CHAT.md) adds a dedicated BMSG policy/dispatch adapter and one immutable shared public frame per publication. Recipient offsets and logical queue charges remain independent; source/state/private-message gates and FIFO are preserved.
+**Current increment — alpha-0.4.4:** [Private Chat](PRIVATE_CHAT.md) adds DMSG target-only and EMSG target-plus-sender delivery, deduplicated self-messages, lifetime-bound targets and PM origin checks. Public chat remains isolated; groups/history/moderation remain separate stages.
+
+**Increment delivered in alpha-0.4.3:** [Public Chat](PUBLIC_CHAT.md) adds a dedicated BMSG policy/dispatch adapter and one immutable shared public frame per publication. Recipient offsets and logical queue charges remain independent; source/state/private-message gates and FIFO are preserved.
 
 **Increment delivered in alpha-0.4.2:** [Chat Core](CHAT_CORE.md) adds a separate protocol-independent message engine and live public BMSG delivery, including sender echo and /me. Private/group/feature/hub chat, moderation and history remain separate increments.
 
@@ -260,3 +262,5 @@ alpha-0.4.1 local validation: 69/69 CTest suites passed in Debug, Release and AS
 alpha-0.4.2 local validation: 72/72 CTest suites passed in Debug, Release and ASan/UBSan, including Chat Core/ADC/process, real ncdc ADC/ADCS public chat, MariaDB and Apache HTTPS. WebAdmin production build, 4 Node tests, 3 Chromium tests and real C++ API integration passed. Final Chat/login checks cover the allocator instrumentation cleanup. Results do not claim remote CI, a full OS/client matrix or production-load validation.
 
 alpha-0.4.3 local validation: 74/74 CTest suites passed in Debug, Release and ASan/UBSan, including Public Chat unit/process and real ncdc ADC/ADCS. Public Chat unit checks passed again after test allocator instrumentation cleanup. MariaDB and Apache HTTPS integrations, WebAdmin production build, 4 Node tests, 3 Chromium tests and real C++ API integration passed. No remote CI, full OS/client matrix or performance benchmark is claimed.
+
+alpha-0.4.4 local validation: 76/76 CTest suites passed in Debug, Release and ASan/UBSan, including Private Chat unit/process, real ncdc ADC/ADCS private conversations, public-chat regressions, MariaDB and Apache HTTPS. WebAdmin production build, 4 Node tests, 3 Chromium tests and live C++ API integration passed. Builds emitted no compiler warnings. These are local checks, not remote CI, all OS/client combinations or production-load validation.

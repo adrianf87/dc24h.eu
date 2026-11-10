@@ -1,5 +1,7 @@
 # Public Chat — alpha-0.4.3
 
+**Current increment — alpha-0.4.4:** [Private Chat](PRIVATE_CHAT.md) adds DMSG target-only and EMSG target-plus-sender delivery, deduplicated self-messages, lifetime-bound targets and PM origin checks. Public chat remains isolated; groups/history/moderation remain separate stages.
+
 This branch starts directly from main `165c3596d7b2488599bbe6b8297f16cd35825f28`, after the alpha-0.4.2 Chat Core merge. The MSG codec and basic public delivery already existed; this increment makes public BMSG a dedicated adapter and avoids duplicating/serializing queued public frames for each recipient. Previous branches/history remain intact. Server/development default is EN/US UTF-8 with mirrored PL documentation.
 
 ## Public BMSG contract

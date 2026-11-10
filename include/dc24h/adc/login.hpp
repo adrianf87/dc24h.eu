@@ -8,6 +8,7 @@
 #include "dc24h/users/session_manager.hpp"
 #include "dc24h/chat/core.hpp"
 #include "dc24h/adc/public_chat.hpp"
+#include "dc24h/adc/private_chat.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -24,7 +25,7 @@ enum class CloseReason { login_timeout, idle_timeout, partial_frame_timeout, sec
 
 // Single reactor-thread owner of guest admission, public presence and ordered
 // output. IDs are transport tokens, never fd numbers. No socket/SQL/logger I/O.
-// Public chat delegates to Chat Core. Accounts and search/transfers remain separate.
+// Chat delegates to typed adapters and Chat Core. Accounts/search/transfers remain separate.
 class LoginHub final {
 public:
     using Id = std::uint64_t;
@@ -67,12 +68,13 @@ private:
     struct Peer;
     enum class Completion { observe, support, welcome };
     bool enqueue(Peer& peer, Message message, Completion completion = Completion::observe);
-    bool enqueue_public(Peer& peer, SharedPublicChatFrame frame);
+    template<class Packet> bool enqueue_shared(Peer& peer, std::shared_ptr<const Packet> frame);
     void reject(Peer& peer, std::string_view status, std::optional<std::string_view> command = {},
                 std::string_view description = {}, users::CloseCause cause = users::CloseCause::protocol_rejected,
                 users::TimePoint now = users::Clock::now());
     void route_status(Id id, const Message& message);
     void route_chat(Id id, const Message& message);
+    void route_private_chat(Id id, const Message& message);
     void relay(Id except, const Message& message);
     void announce_departure(const Departure& departure);
     LoginLimits limits_;
@@ -80,6 +82,7 @@ private:
     users::SessionManager sessions_; // Outlives the peers that borrow models.
     chat::Core chat_;
     PublicChat public_chat_;
+    PrivateChat private_chat_;
     UserLogin user_login_;
     UserList user_list_;
     InfUpdates inf_updates_;

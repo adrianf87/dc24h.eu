@@ -39,4 +39,28 @@ std::variant<DispatchReport, Error> Core::dispatch(const Broadcast& message, con
     }
     return report;
 }
+std::variant<Directed, Error> Core::prepare_direct(users::SessionId sender, std::string_view source,
+        std::string_view target, std::string_view text, std::optional<bool> third_person, bool echo) const {
+    if (const auto error=check_sender(sender,source)) { return *error; }
+    if (!text::valid_chat_text(text)) { return Error::invalid_text; }
+    const auto* model=sessions_.by_sid(target);
+    if (!model || !model->ready() || !model->identity()) { return Error::recipient_unavailable; }
+    return Directed(sender,model->id(),source,target,text,third_person,echo);
+}
+std::variant<DispatchReport, Error> Core::dispatch(const Directed& message, const DirectedSink& sink) const {
+    if (const auto error=check_sender(message.sender(),message.source())) { return *error; }
+    if (!sink) { return Error::missing_sink; }
+    const auto* target=sessions_.find(message.target());
+    if (!target || !target->ready() || !target->identity() || target->identity()->sid()!=message.target_key()) {
+        return Error::recipient_unavailable; // No echo or rerouting to a replacement lifetime.
+    }
+    DispatchReport report;
+    for (const auto recipient:message.recipients()) {
+        const auto* model=sessions_.find(recipient);
+        if (!model || !model->ready()) { ++report.unavailable;continue; }
+        if (sink(recipient,message)) { ++report.queued; }
+        else { ++report.refused; }
+    }
+    return report;
+}
 } // namespace dc24h::chat
