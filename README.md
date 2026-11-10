@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.3.13 (Statistics).**
+**Current development version: alpha-0.4.1 (ADC MSG).**
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.4.1 ADC MSG**: dedicated MSG parsing/serialization, checked PM/ME flags, typed views/builders, exact escaped frame limits and live NORMAL/source validation. Actual ncdc public/action/private messages are tested; chat routing remains planned. See [ADC MSG](doc/us/ADC_MSG.md).
 
 - **alpha-0.3.13 Statistics**: constant-time session lifecycle counts, online/peak users and successful logins; closed/rejected connections, peak peers and application byte totals exposed through the authenticated local API and US/PL WebAdmin. See [Statistics](doc/us/STATISTICS.md).
 

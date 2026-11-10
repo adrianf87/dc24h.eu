@@ -1,8 +1,9 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.3.13: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.4.1: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
 - [AUDIT_ALPHA_0.1.md](AUDIT_ALPHA_0.1.md)
+- [ADC MSG — alpha-0.4.1](ADC_MSG.md)
 - [ARCHITECTURE.md](ARCHITECTURE.md)
 - [LIMITS.md](LIMITS.md)
 - [USER_DISCONNECT.md](USER_DISCONNECT.md)

@@ -1,4 +1,4 @@
-export const WEBADMIN_VERSION = "alpha-0.3.13";
+export const WEBADMIN_VERSION = "alpha-0.4.1";
 export interface HubSnapshot {
   api_version: "v1";
   server: {

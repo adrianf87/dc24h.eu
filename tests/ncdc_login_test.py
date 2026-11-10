@@ -22,6 +22,7 @@ from adc_login_process_tests import Peer
 from tls_support import credentials, TLS_READY, connect_tls
 
 NCDC = sys.argv.pop(1)
+MSG_CODEC = sys.argv.pop(1)
 ENCRYPTED = '--tls' in sys.argv
 if ENCRYPTED:
     sys.argv.remove('--tls')
@@ -114,6 +115,18 @@ class NcdcLoginTest(unittest.TestCase):
                 wait_screen(b'2 users')
                 os.write(master, b'dc24hLoginProbe\r')
                 wait_screen(b'Command not implemented')
+                for command in (b'/me dc24hActionProbe likes cats', b'/msg ListObserver dc24hPrivateProbe'):
+                    before_frames = fetch_status(api_path, token)['network']['adc_frames']
+                    os.write(master, command+b'\r')
+                    deadline = time.monotonic()+3
+                    while True:
+                        probe = fetch_status(api_path, token)
+                        if probe['network']['adc_frames'] > before_frames:
+                            break
+                        self.assertLess(time.monotonic(), deadline, 'ncdc did not send MSG')
+                        time.sleep(0.01)
+                    self.assertEqual(probe['users']['online'], 2)
+                os.write(master, b'/open dc24h_login\r')
                 wait_screen(b'2 users')
                 status = fetch_status(api_path, token)
                 self.assertGreaterEqual(status['network']['adc_frames'], 3)
@@ -156,6 +169,13 @@ class NcdcLoginTest(unittest.TestCase):
                     self.assertNotIn(b'BINF', replies)
                 else:
                     self.assertIn(b'BMSG ', wire)
+                    msg_frames = [line for line in bytes(wire).splitlines() if line[:4] in (b'BMSG', b'EMSG', b'DMSG')]
+                    self.assertTrue(any(b' ME1' in line for line in msg_frames))
+                    self.assertTrue(any(line.startswith(b'EMSG ') and b' PM' in line for line in msg_frames))
+                    captured = b'\n'.join(msg_frames)+b'\n'
+                    checked = subprocess.run([MSG_CODEC, '--roundtrip'], input=captured, capture_output=True, timeout=5)
+                    self.assertEqual(checked.returncode, 0, 'MSG codec rejected real ncdc frames')
+                    self.assertEqual(checked.stdout, captured, 'MSG codec changed real ncdc frames')
                     self.assertIn(b'dc24hLoginProbe', wire)
                     self.assertIn(b'BINF ', replies)
                     self.assertIn(b' NI' + nickname, replies)
@@ -205,6 +225,8 @@ class NcdcLoginTest(unittest.TestCase):
                 self.assertNotIn(renamed, hub.log)
                 self.assertNotIn(b'dc24hLoginProbe', hub.log)
                 self.assertNotIn(b'dc24hINFUpdate', hub.log)
+                self.assertNotIn(b'dc24hActionProbe', hub.log)
+                self.assertNotIn(b'dc24hPrivateProbe', hub.log)
                 self.assertNotIn(b'event=login_rejected', hub.log)
                 print(f'ncdc completed guest NORMAL and reconnect via {scheme.upper()} on the C++ hub')
             finally:

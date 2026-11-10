@@ -1,6 +1,8 @@
 # Roadmap
 
-**Current increment — alpha-0.3.13:** [Statistics](STATISTICS.md) adds constant-time lifecycle counts, online/peak users and completed-login totals, atomic transport statistics, authenticated API fields and bilingual WebAdmin metrics. Historical increments below retain their delivery scope.
+**Current increment — alpha-0.4.1:** [ADC MSG](ADC_MSG.md) adds a dedicated MSG codec with typed PM/ME views, checked builders, bounded serialization and live state-machine validation. Chat delivery and conversation policy remain later increments.
+
+**Increment delivered in alpha-0.3.13:** [Statistics](STATISTICS.md) adds constant-time lifecycle counts, online/peak users and completed-login totals, atomic transport statistics, authenticated API fields and bilingual WebAdmin metrics. Historical increments below retain their delivery scope.
 
 **Increment delivered in alpha-0.3.12:** [Limits](LIMITS.md) adds configurable session/user ceilings shared by ADC/ADCS, bounded by the connection cap. SessionManager checks capacity transactionally; LoginHub rejects a full user registry before welcome/list preparation with ISTA 211 and own IQUI. Closing reservations count until cleanup. Earlier descriptions retain their historical scope.
 
@@ -55,6 +57,7 @@
 | alpha-0.3.11 User Disconnect | Finalization, resource cleanup and bounded public QUI after release |
 | alpha-0.3.12 Limits | Configurable connection/session/user ceilings and lifecycle-safe admission/reuse |
 | alpha-0.3.13 Statistics | Lifecycle counts, online/peak, connection counters, API and WebAdmin |
+| alpha-0.4.1 ADC MSG | MSG codec and state validation; chat routing remains planned |
 
 ## Historical acceptance plan before alpha-0.2.8
 
