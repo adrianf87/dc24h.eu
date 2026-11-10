@@ -69,8 +69,12 @@ void bounded_slow_recipient() {
 }
 void allocation_failures() {
     bool prepared_failure=false,isolated_failure=false,success=false;
-    for (long budget=0;budget<160 && !success;++budget) {
+    // Shared public frames often enqueue without allocation. Advance one deque
+    // through several block positions so the campaign also reaches block growth.
+    for (unsigned warmup=0;warmup<4 && !(prepared_failure && isolated_failure && success);++warmup) {
+    for (long budget=0;budget<160;++budget) {
         adc::LoginHub hub;const auto sid=login(hub,1);login(hub,2);login(hub,3);drain(hub,1);drain(hub,2);
+        for (unsigned step=0;step<warmup;++step) { hub.receive(2,parse("HMSG Warmup"));drain(hub,2); }
         const auto frame="BMSG "+sid+" "+std::string(160,'x');const auto message=parse(frame);
         allocation_budget=budget;fail_once=true;
         try { hub.receive(1,message); } catch (...) { allocation_budget=-1;fail_once=false;throw; }
@@ -88,9 +92,12 @@ void allocation_failures() {
         }
         prepared_failure=prepared_failure || (closed==1 && queued==0);
         isolated_failure=isolated_failure || (closed==1 && queued==2);
-        success=closed==0 && queued==3;
+        const bool published=closed==0 && queued==3;
+        success=success || published;
         hub.disconnect(1,false);hub.disconnect(2,false);hub.disconnect(3,false);
         require(hub.users()==0 && hub.queued_bytes()==0,"Fault cleanup retained registry or output");
+        if (published) { break; }
+    }
     }
     require(prepared_failure && isolated_failure && success,"Allocation campaign missed prepublication, isolated fanout or success");
 }

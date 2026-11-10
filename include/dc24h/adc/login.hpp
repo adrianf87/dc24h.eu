@@ -7,6 +7,7 @@
 #include "dc24h/adc/user_disconnect.hpp"
 #include "dc24h/users/session_manager.hpp"
 #include "dc24h/chat/core.hpp"
+#include "dc24h/adc/public_chat.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -66,6 +67,7 @@ private:
     struct Peer;
     enum class Completion { observe, support, welcome };
     bool enqueue(Peer& peer, Message message, Completion completion = Completion::observe);
+    bool enqueue_public(Peer& peer, SharedPublicChatFrame frame);
     void reject(Peer& peer, std::string_view status, std::optional<std::string_view> command = {},
                 std::string_view description = {}, users::CloseCause cause = users::CloseCause::protocol_rejected,
                 users::TimePoint now = users::Clock::now());
@@ -77,6 +79,7 @@ private:
     std::shared_ptr<SidPool> pool_;
     users::SessionManager sessions_; // Outlives the peers that borrow models.
     chat::Core chat_;
+    PublicChat public_chat_;
     UserLogin user_login_;
     UserList user_list_;
     InfUpdates inf_updates_;
