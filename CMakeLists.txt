@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.3.6 LANGUAGES CXX)
+project(dc24h VERSION 0.3.7 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -40,7 +40,8 @@ set_target_properties(dc24h_text PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_text PUBLIC include)
 target_link_libraries(dc24h_text PRIVATE UTF8Proc::UTF8Proc)
 
-add_library(dc24h_users src/users/session.cpp src/users/session_manager.cpp src/users/user.cpp src/users/nick_manager.cpp)
+add_library(dc24h_users src/users/session.cpp src/users/session_manager.cpp src/users/user.cpp
+    src/users/nick_manager.cpp src/users/user_registry.cpp)
 target_compile_features(dc24h_users PUBLIC cxx_std_20)
 set_target_properties(dc24h_users PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_users PUBLIC include)
@@ -204,6 +205,14 @@ if(BUILD_TESTING)
     add_test(NAME adc.status.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/adc_status_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(adc.status adc.status.process PROPERTIES TIMEOUT 45)
+    add_executable(user_registry_tests tests/user_registry_tests.cpp)
+    target_link_libraries(user_registry_tests PRIVATE dc24h_users)
+    target_compile_options(user_registry_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(user_registry_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME users.user_registry COMMAND user_registry_tests)
+    add_test(NAME users.user_registry.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/user_registry_process_tests.py" "$<TARGET_FILE:dc24h>")
+    set_tests_properties(users.user_registry users.user_registry.process PROPERTIES TIMEOUT 30)
     add_executable(nick_manager_tests tests/nick_manager_tests.cpp)
     target_link_libraries(nick_manager_tests PRIVATE dc24h_users)
     target_compile_options(nick_manager_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)

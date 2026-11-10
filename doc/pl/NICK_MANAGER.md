@@ -1,5 +1,7 @@
 # Nick Manager — alpha-0.3.6
 
+**Bieżąca integracja — alpha-0.3.7:** SessionManager łączy teraz NickManager z osobnym [User Registry](USER_REGISTRY.md) dla SID/CID. Transakcja przyjęcia i usuwanie po lokalnym ID utrzymują spójność wszystkich publicznych rezerwacji.
+
 Etap powstał bezpośrednio z main `cb49cdb9e1e714f3b548be6a842063c58890eaf6`, zawierającego już alpha-0.3.1–alpha-0.3.5. Zachowano main i historyczne gałęzie. Nowa gałąź alpha-0.3.6 nie jest scalana automatycznie.
 
 ## Własność i walidacja

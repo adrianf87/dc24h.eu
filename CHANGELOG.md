@@ -1,5 +1,18 @@
 # Changelog
 
+## alpha-0.3.7 — 2026-11-10
+
+User Registry increment, based directly on main `ca75d6c53d9b228b978dc3b3b8fdd2fcb0f33852` after the alpha-0.3.6 Nick Manager merge:
+
+- Added bounded users::UserRegistry with exact SID/CID lookup, typed admission errors, one registration per local session owner, immutable public key bindings and owner-specific removal. SID, CID and reverse-owner insertions roll back on allocation failure. Each public key is stored once; User/profile values remain owned only by Session.
+- Replaced SessionManager's raw SID/CID maps with its privately owned registry. Admission rolls back UserRegistry and NickManager together before committing the Session. Const user_by_sid/user_by_cid resolve to the same current User; identified_users reports public registrations. Closing/closed reservations persist until removal, and readiness still gates routing.
+- Added users.user_registry and users.user_registry.process. Unit tests cover key/owner collisions, bounds, independent namespaces, input ownership, key reuse, stale cleanup, read-only current models, lifecycle gates, 1000 lifetimes and allocation failure/retry with an unrelated sentinel. Actual ADC/ADCS tests cover duplicate CID, SID routing, rename, immutable CID rejection and same-CID/new-SID reconnect in both transport directions.
+- Strengthened real ncdc plaintext capture assertions to require a new SID and unchanged CID on reconnect. Existing ncdc tests still reach NORMAL over ADC and ADCS with Polish nick changes. No PID or private payload is exposed in logs.
+- Updated server/WebAdmin metadata and fixtures to alpha-0.3.7. Added mirrored US/PL User Registry documentation and refreshed module/navigation/version context. Existing EN/US-default and PL runtime catalogs remain applicable; no new dependency, configuration, SQL/API contract or operator message is required.
+- Corrected an observed TLS-shutdown fixture race: the existing bounded drain helper accepts EOF or TCP reset after immediate shutdown with final handshake input potentially unread, while still requiring zero application output. Server transport behavior is unchanged.
+- Validation: all 55 CTest suites passed locally in Debug, Release and ASan/UBSan, including real ncdc, mixed TCP/TLS, MariaDB and Apache HTTPS. Debug's shutdown fixture passed after the correction above. WebAdmin typecheck/production build, 3 Node tests, 3 Chromium tests and real C++ API integration passed with system Chromium. These results do not claim remote CI, the full OS matrix or production load validation.
+- main and alpha-0.3.1–alpha-0.3.6 history/branches are preserved; no automatic merge or production deployment.
+
 ## alpha-0.3.6 — 2026-11-10
 
 Nick Manager increment, based directly on main `cb49cdb9e1e714f3b548be6a842063c58890eaf6` after the alpha-0.3.5 User Core merge:

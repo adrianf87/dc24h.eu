@@ -1,5 +1,15 @@
 # Testing
 
+## User Registry validation — alpha-0.3.7
+
+All **55 CTest suites** passed locally in Debug, Release and ASan/UBSan, including real ncdc ADC/ADCS, mixed transports, MariaDB and Apache HTTPS. New users.user_registry and users.user_registry.process cover SID/CID and local-owner uniqueness, current const User resolution, immutable keys, lifecycle retention/removal, reconnect/routing and C++ allocation rollback with unaffected existing users. ncdc plaintext capture additionally requires a new SID and unchanged CID on reconnect; both transports still reach client-side NORMAL with Polish nick changes. See [User Registry](USER_REGISTRY.md) for the contract and detailed scope.
+
+The initial Debug run exposed an existing TLS-shutdown fixture assumption: immediate shutdown may reset a connection while its final handshake input remains unread. The fixture now uses the existing bounded EOF/reset drain helper and still requires zero application output; the corrected suite passed. Server transport behavior was not changed.
+
+Reproduce with `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug --parallel 4` and `ctest --test-dir build-debug --output-on-failure -j 4`. Repeat for build-release/Release. In build-sanitize/Debug add `-DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie"` and `-DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined -no-pie"`. Allocation fault injection covers the tested C++ registration paths, not utf8proc's C allocator or the whole operating system.
+
+WebAdmin typecheck/production build, 3 Node tests, 3 Chromium tests and real C++ API integration passed. From webadmin run `npm run build`, `npm test`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e` and `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:integration -- ../build-debug/dc24h`. All release assertions/fixtures match alpha-0.3.7. Results are local and do not establish remote CI, the full target OS matrix or production load behavior.
+
 ## Nick Manager validation — alpha-0.3.6
 
 All **53 CTest suites** passed locally in Debug, Release and ASan/UBSan. The new suites are users.nicknames and users.nicknames.process; existing tests include real ncdc ADC/ADCS, mixed transports, MariaDB and Apache HTTPS. ncdc changed from dc24hŻółw to dc24hŁoś on reconnect and reached NORMAL again. Validation includes scoped C++ allocation failures in reservation, rename and SessionManager admission; utf8proc allocator failures are not injected. See [Nick Manager](NICK_MANAGER.md) for the exact contract and coverage.
@@ -8,7 +18,7 @@ Reproduce the strict build with `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=De
 
 WebAdmin typecheck/production build, 3 Node tests, 3 Chromium tests and real C++ API integration passed. From webadmin run `npm run build`, `npm test`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e` and `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:integration -- ../build-debug/dc24h`. This uses the installed system Chromium; otherwise install Playwright's browser normally. Version assertions and frontend fixtures match alpha-0.3.6. Local checks do not establish remote GitHub Actions results or the full supported OS matrix.
 
-**Current increment — alpha-0.3.6:** [Nick Manager](NICK_MANAGER.md) owns bounded exact nickname reservations and the reverse session-owner index within SessionManager. Checked Nickname values enforce the existing UTF-8/NFC policy. Admission, profile updates, rename and removal share this registry; closing reservations remain held until removal. Earlier descriptions retain their historical scope.
+**Current increment — alpha-0.3.7:** [User Registry](USER_REGISTRY.md) owns bounded SID/CID indexes and a reverse session-owner index privately within SessionManager. Admission is transactional across this registry, NickManager and the Session model. Const User lookups resolve both keys to the same current model; reservations remain until session removal. Earlier module descriptions retain their historical scope.
 
 ## User Core validation — alpha-0.3.5
 
