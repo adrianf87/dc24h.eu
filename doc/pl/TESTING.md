@@ -1,5 +1,13 @@
 # Testowanie
 
+## Weryfikacja Limits — alpha-0.3.12
+
+Lokalnie przeszło wszystkich **65 zestawów CTest** w Debug, Release i ASan/UBSan. Nowe users.limits i users.limits.process obejmują surowe/efektywne pułapy, zgodne wartości domyślne, granice pojemności wszystkich faz, odmowę bez częściowego stanu/zużycia ID, sprawdzenie pełnego rejestru bez alokacji, rollback/retry alokacji, ISTA 211 → własne IQUI przed powitaniem, stabilny przypięty bufor i odzyskanie miejsca. Rzeczywiste mieszane ADC/ADCS osobno sprawdza niższy limit połączeń i sesji, niepełne TLS, odrzucenie bez przyjęcia TLS, liczniki API i budżet ostrzeżeń; powtarzane odmowy użytkowników nie dają publicznej obecności i pozwalają przyjąć ten sam CID/nick po sprzątaniu. Testy konfiguracji/Network obejmują błędne programowe/INI/CLI ustawienia, pierwszeństwo i pomoc/ostrzeżenia US/PL. Rzeczywisty ncdc ADC/ADCS z obserwatorem zapełnia max_users=2, aktualizuje dane i wraca pod max_sessions=3. Przeszły wcześniejsze regresje, MariaDB i Apache HTTPS. [Limits](LIMITS.md) opisuje dokładne rozliczanie i zakres.
+
+Powtórz przez `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug --parallel 4` i `ctest --test-dir build-debug --output-on-failure -j 4`. Powtórz dla build-release/Release. W build-sanitize/Debug dodaj `-DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie"` i `-DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined -no-pie"`. Kontrolowane błędy alokacji C++ dotyczą badanych ścieżek rejestracji/indeksów, bez dowolnych awarii systemu/alokatora C.
+
+WebAdmin: poprawne typecheck/budowanie produkcyjne, 3 testy Node, 3 Chromium i integracja rzeczywistego API C++. W webadmin uruchom `npm run build`, `npm test`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e` i `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:integration -- ../build-debug/dc24h`. Metadane/dane testowe odpowiadają alpha-0.3.12. Wyniki są lokalne, bez potwierdzenia zdalnego CI, wszystkich wspieranych systemów czy obciążenia produkcyjnego.
+
 ## Weryfikacja User Disconnect — alpha-0.3.11
 
 Lokalnie przeszły wszystkie **63 zestawy CTest** w Debug, Release i ASan/UBSan. Nowe users.disconnect i users.disconnect.process obejmują finalizację/usunięcie bez alokacji, wszystkie fazy cyklu życia, pierwszą przyczynę/czas, powtórzone/brakujące sprzątanie, ponowne użycie SID/CID/nicka i limitów pending/per-IP, anulowanie powitania, pojedyncze bare publiczne QUI, odzyskanie budżetu źródła przed rozsyłaniem, stabilność przypiętego wyjścia, błędy alokacji powiadomień i dalsze dostarczanie po izolacji jednego odbiorcy. Rzeczywiste mieszane ADC/ADCS obejmuje EOF, reset, fatalny status klienta, odrzucenie błędnego INF, anonimowe błędne TLS i wyłączenie. Rzeczywisty ncdc ADC/ADCS potwierdza też brak routingu do starego SID. Przeszły wcześniejsze regresje, MariaDB i Apache HTTPS. [User Disconnect](USER_DISCONNECT.md) opisuje własność i obsługę błędów.
@@ -50,7 +58,7 @@ Odtwarzanie: `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE
 
 WebAdmin: poprawne typecheck/budowanie produkcyjne, 3 testy Node, 3 testy Chromium i integracja API C++. W webadmin uruchom `npm run build`, `npm test`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e` i `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:integration -- ../build-debug/dc24h`. Użyto systemowego Chromium; alternatywnie zainstaluj przeglądarkę Playwright. Asercje wersji i dane testowe odpowiadają alpha-0.3.6. Wyniki lokalne nie potwierdzają zdalnego GitHub Actions ani pełnej macierzy systemów operacyjnych.
 
-**Bieżący etap — alpha-0.3.11:** [User Disconnect](USER_DISCONNECT.md) kończy cykl życia i zwalnia kolejkę, stan protokołu/SID oraz rejestry odchodzącego użytkownika przed publicznym QUI. Błąd alokacji powiadomienia nie przerywa sprzątania źródła; odbiorcy bez możliwości przyjęcia powiadomienia są zamykani. Zachowano własne ISTA → IQUI i zachowanie przy wyłączeniu. Starsze opisy zachowują zakres historyczny.
+**Bieżący etap — alpha-0.3.12:** [Limits](LIMITS.md) dodaje konfigurowalne limity sesji/użytkowników wspólne dla ADC/ADCS, ograniczone limitem połączeń. SessionManager transakcyjnie sprawdza pojemność; LoginHub odrzuca pełny rejestr przed przygotowaniem powitania/listy przez ISTA 211 i własne IQUI. Rezerwacje closing liczą się aż do sprzątania. Starsze opisy zachowują zakres historyczny.
 
 ## Weryfikacja User Core — alpha-0.3.5
 
@@ -80,7 +88,6 @@ Pierwotna bramka gałęzi miała **48 zestawów**, w tym users.manager. Debug, R
 
 **Etap dostarczony w alpha-0.3.2:** [Session Manager](SESSION_MANAGER.md) jest centralnym właścicielem modeli wszystkich zarejestrowanych sesji; zapewnia limit, stabilny odczyt, liczenie faz i uporządkowane strony kopii. Obiekty protokołu pożyczają modele, a kolejki i indeksy publiczne pozostają w ADC. Starsze opisy zachowują zakres historyczny.
 
-**Aktualny etap — alpha-0.3.1:** [Session Core](SESSION_CORE.md) dostarcza niezależny model Users i trwałe w obrębie reaktora ID sesji, podłączone do rzeczywistej gotowości, zamykania i czasów. Wcześniejsze opisy zachowują zakres pierwotnego etapu.
 
 **Etap dostarczony w alpha-0.2.10:** [Bezpieczeństwo negocjacji](NEGOTIATION_SECURITY.md) dodaje limity oczekujących sesji, łączne budżety wejścia do gotowości i wspólne limity prób przed INF/Tiger. Opisy historyczne poniżej zachowują pierwotny zakres.
 

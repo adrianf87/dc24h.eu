@@ -64,7 +64,7 @@ std::string_view status_description(std::string_view code) noexcept {
 }
 } // namespace
 
-LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.connections), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
+LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
     if (limits.connections == 0 || limits.connections > 65535 ||
         limits.output_per_client < 128 || limits.output_per_client > 16 * 1024 * 1024 ||
         limits.output_total < limits.output_per_client || limits.output_total > 256 * 1024 * 1024) {
@@ -218,6 +218,9 @@ void LoginHub::receive(Id id, const Message& message) {
         const auto* duplicate = sessions_.by_cid(cid);
         if (duplicate && duplicate->id().value() != id) { reject(peer, "224"); return; }
         if (before == ConnectionState::identify) {
+            // The manager enforces this again on registration. Preflight before
+            // welcome planning/queueing so a full hub discloses no user list.
+            if (sessions_.users_full()) { reject(peer,"211",{},"Hub user limit reached"); return; }
             // Accounts are not implemented: this release explicitly admits guests.
             // CID proof is not an account/password/role authentication mechanism.
             if (peer.session.approve_identity(IdentityMode::guest)) { reject(peer, "240"); return; }

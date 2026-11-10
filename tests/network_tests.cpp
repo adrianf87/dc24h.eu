@@ -45,7 +45,7 @@ void parser() {
 
 void limits(dc24h::logging::Logger& logger) {
     using dc24h::network::Options;
-    std::vector<Options> bad(8);
+    std::vector<Options> bad(12);
     bad[0].listeners.clear();
     bad[1].listeners.resize(17, {"127.0.0.1", 0});
     bad[2].max_connections = 0;
@@ -54,6 +54,10 @@ void limits(dc24h::logging::Logger& logger) {
     bad[5].idle_timeout = std::chrono::seconds(86401);
     bad[6].listeners = {{"not-an-address", 0}};
     bad[7].listeners = {{std::string("127.0.0.1\0junk", 14), 0}};
+    bad[8].users.max_sessions=0;
+    bad[9].users.max_sessions=65536;
+    bad[10].users.max_users=0;
+    bad[11].users.max_users=65536;
     for (const auto& options : bad) {
         invalid([&] { dc24h::network::TcpServer network(logger, options); });
     }

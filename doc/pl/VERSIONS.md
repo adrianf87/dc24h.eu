@@ -1,6 +1,6 @@
 # Wersjonowanie
 
-**Bieżący etap — alpha-0.3.11:** [User Disconnect](USER_DISCONNECT.md) kończy cykl życia i zwalnia kolejkę, stan protokołu/SID oraz rejestry odchodzącego użytkownika przed publicznym QUI. Błąd alokacji powiadomienia nie przerywa sprzątania źródła; odbiorcy bez możliwości przyjęcia powiadomienia są zamykani. Zachowano własne ISTA → IQUI i zachowanie przy wyłączeniu. Starsze opisy zachowują zakres historyczny.
+**Bieżący etap — alpha-0.3.12:** [Limits](LIMITS.md) dodaje konfigurowalne limity sesji/użytkowników wspólne dla ADC/ADCS, ograniczone limitem połączeń. SessionManager transakcyjnie sprawdza pojemność; LoginHub odrzuca pełny rejestr przed przygotowaniem powitania/listy przez ISTA 211 i własne IQUI. Rezerwacje closing liczą się aż do sprzątania. Starsze opisy zachowują zakres historyczny.
 
 **Etap dostarczony w alpha-0.3.5:** [User Core](USER_CORE.md) dodaje typ Nickname sprawdzający UTF-8/NFC, wspólną walidację tekstu ADC/Users, samodzielnych kandydatów zmiany nicku i jawną projekcję ClientInfo/VerifiedIdentity. Users korzysta z neutralnego dc24h_text i istniejącego utf8proc. Własność/unikalność managera pozostają bez zmian. Starsze opisy dotyczą zakresu historycznego.
 
@@ -44,6 +44,7 @@
 | alpha-0.3.9 | alpha-0.3.9 | User List: synchronizacja początkowej listy użytkowników |
 | alpha-0.3.10 | alpha-0.3.10 | INF Updates: walidacja, anulowania i rozsyłanie przyrostowe |
 | alpha-0.3.11 | alpha-0.3.11 | User Disconnect: QUI, zakończenie cyklu życia i zwalnianie zasobów |
+| alpha-0.3.12 | alpha-0.3.12 | Limits: połączenia, sesje, użytkownicy i zwalnianie po sprzątaniu |
 
 Dokładną kompilację identyfikuje wersja wraz z SHA commita. Budowanie nie zmienia plików źródłowych. Istotne zmiany trafiają do CHANGELOG.md. Alpha oznacza rozwój, nie pełną funkcjonalność huba. Tagi i wdrożenie nie powstają automatycznie.
 

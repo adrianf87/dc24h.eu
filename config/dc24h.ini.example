@@ -1,4 +1,4 @@
-# dc24h.eu alpha-0.1.11 configuration (UTF-8, no secrets committed)
+# dc24h.eu alpha-0.3.12 configuration (UTF-8, no secrets committed)
 # Section names and keys are case-sensitive; duplicate singular keys are errors.
 [general]
 language = us
@@ -10,6 +10,13 @@ listen = 127.0.0.1:1511
 # adcs_listen = 127.0.0.1:1512
 max_connections = 1024
 idle_timeout = 120
+
+[users]
+# Positive ceilings, shared by ADC/ADCS; effective limits also obey max_connections.
+# All sessions count, including anonymous TLS and closing sessions until cleanup.
+max_sessions = 65535
+# Identified/welcome-pending, ready and closing users count until cleanup.
+max_users = 65535
 
 [security]
 max_connections_per_ip = 128

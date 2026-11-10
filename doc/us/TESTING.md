@@ -1,5 +1,13 @@
 # Testing
 
+## Limits validation — alpha-0.3.12
+
+All **65 CTest suites** passed locally in Debug, Release and ASan/UBSan. New users.limits and users.limits.process cover checked raw/effective ceilings, backward-compatible defaults, all lifecycle capacity boundaries, refusal without partial state/ID consumption, no-allocation full-user checks, transactional allocation rollback/retry, pre-welcome ISTA 211 → own IQUI, stable pinned output and capacity reuse. Real mixed ADC/ADCS independently exercises the connection and session caps, incomplete TLS, excess sockets without TLS admission, API counters and warning budgets; repeated full-user rejection produces no public presence and admits the same CID/nickname after cleanup. Configuration/Network tests cover invalid direct/INI/CLI settings, precedence and US/PL help/warnings. Actual ncdc ADC/ADCS fills max_users=2 with its observer, updates and reconnects under max_sessions=3. All earlier regressions, MariaDB and Apache HTTPS passed. See [Limits](LIMITS.md) for exact counting and scope.
+
+Reproduce with `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug --parallel 4` and `ctest --test-dir build-debug --output-on-failure -j 4`. Repeat for build-release/Release. In build-sanitize/Debug add `-DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie"` and `-DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined -no-pie"`. Scoped C++ fault injection checks exercised registration/index paths, not arbitrary OS/C allocator failures.
+
+WebAdmin typecheck/production build, 3 Node tests, 3 Chromium tests and real C++ API integration passed. From webadmin run `npm run build`, `npm test`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e` and `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:integration -- ../build-debug/dc24h`. Metadata/fixtures match alpha-0.3.12. These are local results, not remote CI, all supported operating systems or production load validation.
+
 ## User Disconnect validation — alpha-0.3.11
 
 All **63 CTest suites** passed locally in Debug, Release and ASan/UBSan. New users.disconnect and users.disconnect.process cover allocation-free finalization and release, all lifecycle phases, first-cause/time retention, repeated/missing cleanup, SID/CID/nick and pending/per-IP capacity reuse, queued welcome cancellation, bare public QUI exactly once, source queue reclamation before fanout, pinned output stability, notification allocation failure and continued delivery after an isolated recipient failure. Actual mixed ADC/ADCS cycles exercise EOF, reset, fatal client status, invalid-INF rejection, failed anonymous TLS and shutdown. Real ncdc ADC/ADCS additionally proves the departed SID is unavailable for routing. All earlier regressions, MariaDB and Apache HTTPS passed. See [User Disconnect](USER_DISCONNECT.md) for ownership and failure-handling details.
@@ -50,7 +58,7 @@ Reproduce the strict build with `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=De
 
 WebAdmin typecheck/production build, 3 Node tests, 3 Chromium tests and real C++ API integration passed. From webadmin run `npm run build`, `npm test`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e` and `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:integration -- ../build-debug/dc24h`. This uses the installed system Chromium; otherwise install Playwright's browser normally. Version assertions and frontend fixtures match alpha-0.3.6. Local checks do not establish remote GitHub Actions results or the full supported OS matrix.
 
-**Current increment — alpha-0.3.11:** [User Disconnect](USER_DISCONNECT.md) finalizes lifecycle and releases departing output, protocol/SID and registry resources before sending public QUI. Notification allocation failures cannot abort source cleanup; recipients that cannot receive the notice are closed. Existing own ISTA → IQUI drain and shutdown behavior remain. Earlier module descriptions retain their historical scope.
+**Current increment — alpha-0.3.12:** [Limits](LIMITS.md) adds configurable session/user ceilings shared by ADC/ADCS, bounded by the connection cap. SessionManager checks capacity transactionally; LoginHub rejects a full user registry before welcome/list preparation with ISTA 211 and own IQUI. Closing reservations count until cleanup. Earlier descriptions retain their historical scope.
 
 ## User Core validation — alpha-0.3.5
 

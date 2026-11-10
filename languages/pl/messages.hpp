@@ -3,7 +3,7 @@
 #include <string_view>
 
 namespace dc24h::i18n::pl {
-inline constexpr std::array<std::string_view, 119> messages{{
+inline constexpr std::array<std::string_view, 121> messages{{
     "Uruchamianie dc24h.eu ",
     "Core działa",
     "Zatrzymywanie Core",
@@ -123,12 +123,14 @@ inline constexpr std::array<std::string_view, 119> messages{{
     "Limit negocjacji przekroczony; połączenie zamknięte",
     "Limit weryfikacji tożsamości przekroczony; połączenie zamknięte",
     "Wyczerpano identyfikatory sesji; klient odrzucony",
+    "Nieprawidłowe limity użytkowników/sesji",
+    "Osiągnięto limit sesji użytkowników; nadmiarowy klient odrzucony",
 }};
 inline constexpr std::string_view help = R"HELP(Użycie: dc24h [--config PLIK] [--check-config | --check-database | --migrate-database]
               [--listen IPv4:port | [IPv6]:port | none] ...
               [--adcs-listen IPv4:port | [IPv6]:port | none] ...
               [--tls-cert ŁAŃCUCH.pem --tls-key KLUCZ.pem]
-              [--max-connections N] [--idle-timeout SEKUNDY]
+              [--max-connections N] [--max-sessions N] [--max-users N] [--idle-timeout SEKUNDY]
               [--log-level info|warning|error|off] [--log-file ŚCIEŻKA|-] [--language us|pl]
               [--log-connections on|off]
              [--max-per-ip N] [--accepts-per-minute N]
@@ -143,6 +145,7 @@ ADCS wymaga zgodnego łańcucha PEM i klucza; TLS >=1.2. Łącznie do 16 nasłuc
 Domyślnie: 127.0.0.1:1511, 1024 połączenia, 120 sekund bezczynności, info na stderr, us.
 Limity: 1..65535 połączeń; 1..86400 sekund bezczynności.
 Program działa na pierwszym planie; stop przez SIGINT (Ctrl+C) lub SIGTERM.
+Limity użytkowników/sesji: 1..65535, domyślnie 65535; obowiązuje też limit połączeń.
 Domyślne limity: 128 klientów/IP, 256 przyjęć/IP/minutę, 1024 ramki/s/klienta,
 512 błędnych ramek/klienta, 10 sekund dla TLS i niedokończonej ramki.
 Działa logowanie gości ADC i publiczna lista; czat/wyszukiwanie/transfery są planowane.

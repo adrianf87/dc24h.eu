@@ -1,6 +1,6 @@
 # Development
 
-**Current increment — alpha-0.3.11:** [User Disconnect](USER_DISCONNECT.md) finalizes lifecycle and releases departing output, protocol/SID and registry resources before sending public QUI. Notification allocation failures cannot abort source cleanup; recipients that cannot receive the notice are closed. Existing own ISTA → IQUI drain and shutdown behavior remain. Earlier module descriptions retain their historical scope.
+**Current increment — alpha-0.3.12:** [Limits](LIMITS.md) adds configurable session/user ceilings shared by ADC/ADCS, bounded by the connection cap. SessionManager checks capacity transactionally; LoginHub rejects a full user registry before welcome/list preparation with ISTA 211 and own IQUI. Closing reservations count until cleanup. Earlier descriptions retain their historical scope.
 
 **Increment delivered in alpha-0.3.5:** [User Core](USER_CORE.md) adds checked UTF-8/NFC Nickname values, shared ADC/User text validation, immutable rename candidates and explicit projection from validated ClientInfo/VerifiedIdentity. Users now links the neutral dc24h_text library using the existing utf8proc package. Manager ownership/uniqueness remains unchanged. Earlier descriptions retain their historical scope.
 

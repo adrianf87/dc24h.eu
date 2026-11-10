@@ -145,6 +145,42 @@ void boundaries_and_precedence() {
     invalid([&] { (void)parse(too_many); });
 }
 
+void user_limits() {
+    Fixture fx;
+    require(dc24h::i18n::help(dc24h::i18n::Language::us).find("--max-users")!=std::string_view::npos &&
+        dc24h::i18n::help(dc24h::i18n::Language::pl).find("--max-sessions")!=std::string_view::npos,
+        "User limit CLI help missing");
+    require(dc24h::i18n::translate("User session limit reached; excess peer rejected",dc24h::i18n::Language::pl)==
+        "Osiągnięto limit sesji użytkowników; nadmiarowy klient odrzucony","Session limit warning lacks Polish translation");
+    const auto path=fx.write("[network]\nmax_connections=8\n[users]\nmax_sessions=4\nmax_users=2\n");
+    auto parsed=parse({"dc24h","--config",path.string(),"--check-config"});
+    require(parsed.settings.network.users==dc24h::users::Limits{4,2},"INI user limits missing");
+    parsed=parse({"dc24h","--max-users","1","--config",path.string(),"--max-sessions","3"});
+    require(parsed.settings.network.users==dc24h::users::Limits{3,1},"CLI user limits did not override INI");
+    parsed=parse({"dc24h","--max-connections","1","--max-sessions","65535","--max-users","65535"});
+    require(parsed.settings.network.users.bounded_by(parsed.settings.network.max_connections)==dc24h::users::Limits{1,1},
+        "Effective limits raised lower network ceiling");
+    for (const auto* key : {"max_sessions","max_users"}) {
+        for (const auto* value : {"0","65536","-1","+1","1x","18446744073709551616",""}) {
+            const auto bad=fx.write("[users]\n"+std::string(key)+"="+value+"\n");
+            invalid([&] { (void)parse({"dc24h","--config",bad.string()}); });
+        }
+        const auto duplicate=fx.write("[users]\n"+std::string(key)+"=1\n"+key+"=2\n");
+        invalid([&] { (void)parse({"dc24h","--config",duplicate.string()}); });
+    }
+    for (const auto* option : {"--max-users","--max-sessions"}) {
+        invalid([&] { (void)parse({"dc24h",option}); });
+        for (const auto* value : {"0","65536","-1","+1","1x","18446744073709551616"}) {
+            invalid([&] { (void)parse({"dc24h",option,value}); });
+        }
+    }
+    dc24h::configuration::Settings settings;
+    settings.network.users.max_users=0;
+    invalid([&] { dc24h::configuration::validate(settings); });
+    settings.network.users={65536,1};
+    invalid([&] { dc24h::configuration::validate(settings); });
+}
+
 void logger_file() {
     Fixture fx;
     const auto path = fx.dir / "events.log";
@@ -201,6 +237,7 @@ int main() {
         load_and_override();
         invalid_configs();
         boundaries_and_precedence();
+        user_limits();
         logger_file();
         std::cout << "Configuration parsing, CLI overrides, limits and safe logging OK\n";
     } catch (const std::exception& e) {

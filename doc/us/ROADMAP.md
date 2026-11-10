@@ -1,6 +1,6 @@
 # Roadmap
 
-**Current increment — alpha-0.3.11:** [User Disconnect](USER_DISCONNECT.md) finalizes lifecycle and releases departing output, protocol/SID and registry resources before sending public QUI. Notification allocation failures cannot abort source cleanup; recipients that cannot receive the notice are closed. Existing own ISTA → IQUI drain and shutdown behavior remain. Earlier module descriptions retain their historical scope.
+**Current increment — alpha-0.3.12:** [Limits](LIMITS.md) adds configurable session/user ceilings shared by ADC/ADCS, bounded by the connection cap. SessionManager checks capacity transactionally; LoginHub rejects a full user registry before welcome/list preparation with ISTA 211 and own IQUI. Closing reservations count until cleanup. Earlier descriptions retain their historical scope.
 
 **Increment delivered in alpha-0.3.5:** [User Core](USER_CORE.md) adds checked UTF-8/NFC Nickname values, shared ADC/User text validation, immutable rename candidates and explicit projection from validated ClientInfo/VerifiedIdentity. Users now links the neutral dc24h_text library using the existing utf8proc package. Manager ownership/uniqueness remains unchanged. Earlier descriptions retain their historical scope.
 
@@ -16,7 +16,6 @@
 
 **Increment delivered in alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) adds semantic status/quit validation, source-checked B/D/E/F status routing, precise errors and bounded terminal ISTA/own-IQUI output. Historical descriptions below retain the behavior of their original releases.
 
-**Current integration — alpha-0.2.8:** [Guest login](ADC_LOGIN.md) attaches the state/SUP/SID/INF/Tiger stack to the actual C++ TCP/TLS reactor with bounded ordered output, nickname/CID admission, public presence and complete ncdc NORMAL/reconnect tests. Historical stage descriptions below retain their original scope; statements that transport attachment/output/login were still planned describe those earlier versions. Registered-user authentication, chat, search and transfer dispatch remain planned.
 
 | Stage | Implemented scope |
 | --- | --- |
@@ -52,6 +51,7 @@
 | alpha-0.3.9 User List | Deterministic initial synchronization, bounded owned welcome and FIFO presence updates |
 | alpha-0.3.10 INF Updates | Transactional metadata/profile/nickname updates and sanitized incremental fanout |
 | alpha-0.3.11 User Disconnect | Finalization, resource cleanup and bounded public QUI after release |
+| alpha-0.3.12 Limits | Configurable connection/session/user ceilings and lifecycle-safe admission/reuse |
 
 ## Historical acceptance plan before alpha-0.2.8
 

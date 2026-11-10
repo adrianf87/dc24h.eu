@@ -1,6 +1,6 @@
 # Konfiguracja — alpha-0.1.11
 
-**Aktualny etap — alpha-0.3.1:** [Session Core](SESSION_CORE.md) dostarcza niezależny model Users i trwałe w obrębie reaktora ID sesji, podłączone do rzeczywistej gotowości, zamykania i czasów. Wcześniejsze opisy zachowują zakres pierwotnego etapu.
+**Bieżący etap — alpha-0.3.12:** [Limits](LIMITS.md) dodaje konfigurowalne limity sesji/użytkowników wspólne dla ADC/ADCS, ograniczone limitem połączeń. SessionManager transakcyjnie sprawdza pojemność; LoginHub odrzuca pełny rejestr przed przygotowaniem powitania/listy przez ISTA 211 i własne IQUI. Rezerwacje closing liczą się aż do sprzątania. Starsze opisy zachowują zakres historyczny.
 
 **Etap dostarczony w alpha-0.2.10:** [Bezpieczeństwo negocjacji](NEGOTIATION_SECURITY.md) dodaje limity oczekujących sesji, łączne budżety wejścia do gotowości i wspólne limity prób przed INF/Tiger. Opisy historyczne poniżej zachowują pierwotny zakres.
 
@@ -24,6 +24,8 @@ UTF-8, opcjonalny BOM, LF lub CRLF. Faktyczny odczyt ograniczono do 65536 bajtó
 | `network` | `listen` | `127.0.0.1:1511` | IPv4:port / [IPv6]:port lub `none` |
 | `network` | `adcs_listen` | Brak | Endpoint TLS lub `none` |
 | `network` | `max_connections` | 1024 | Wspólny limit 1..65535 |
+| `users` | `max_sessions` | 65535 | Limit sesji 1..65535; obowiązuje też max_connections |
+| `users` | `max_users` | 65535 | Limit zarejestrowanych użytkowników 1..65535; obowiązują też limity sesji/połączeń |
 | `network` | `idle_timeout` | 120 | 1..86400 sekund |
 | `tls` | `certificate` | Brak | Pełny łańcuch PEM |
 | `tls` | `private_key` | Brak | Zgodny nieszyfrowany klucz PEM |
@@ -99,3 +101,7 @@ Sekcja [security] dodaje login_timeout (domyślnie 30 sekund) i output_timeout (
 ## alpha-0.2.9
 
 INI `[security] close_timeout=2` dopuszcza 1–3600 sekund. To bezwzględny termin końcowego opróżnienia, bez odnawiania przez I/O; brak nowej opcji CLI. Zobacz [ADC_STATUS.md](ADC_STATUS.md).
+
+## Limity sesji i użytkowników — alpha-0.3.12
+
+INI `[users] max_sessions` i `max_users` przyjmują 1..65535, domyślnie 65535. CLI `--max-sessions N` i `--max-users N` nadpisują te wartości. Efektywne sesje = min(max_connections, max_sessions); efektywni użytkownicy = min(efektywne sesje, max_users). Wyższe pułapy są poprawne i nie podnoszą niższych; zero nie wyłącza limitu. Każdy utrzymywany model liczy się jako sesja, także anonimowy TLS. Użytkownicy liczą się od identyfikacji przez closing/closed aż do usunięcia, także podczas powitania. Pełny limit sesji/połączeń zamyka nadmiarowe gniazdo przed alokacją TLS; pełny limit użytkowników daje ograniczone ISTA 211 → własne IQUI przed powitaniem/listą. Log startowy podaje efektywne wartości. [Limits](LIMITS.md) opisuje rozliczanie, typowane bramki i testy.

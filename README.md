@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.3.11 (User Disconnect).**
+**Current development version: alpha-0.3.12 (Limits).**
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.3.12 Limits**: configurable shared connection/session/user ceilings, typed admission gates and user-capacity rejection before welcome/list publication. Slots remain reserved through closing until cleanup. See [Limits](doc/us/LIMITS.md).
 
 - **alpha-0.3.11 User Disconnect**: allocation-free lifecycle finalization, ordered release of output/protocol/SID and public identity reservations, then bounded public QUI. Failed notifications cannot retain the departing user or a usable stale recipient. See [User Disconnect](doc/us/USER_DISCONNECT.md).
 

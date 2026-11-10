@@ -1,5 +1,7 @@
 # User Disconnect — alpha-0.3.11
 
+**Current increment — alpha-0.3.12:** [Limits](LIMITS.md) adds configurable session/user ceilings shared by ADC/ADCS, bounded by the connection cap. SessionManager checks capacity transactionally; LoginHub rejects a full user registry before welcome/list preparation with ISTA 211 and own IQUI. Closing reservations count until cleanup. Earlier descriptions retain their historical scope.
+
 This increment starts directly from main `49b57749b346cb1638eae856c4b778a371616c47`, after the alpha-0.3.10 INF Updates merge. The alpha-0.3.11 branch preserves earlier history and is not merged automatically.
 
 ## Finalization and ownership

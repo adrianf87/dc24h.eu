@@ -16,6 +16,7 @@ struct LoginLimits {
     std::size_t connections{1024};
     std::size_t output_per_client{256 * 1024};
     std::size_t output_total{16 * 1024 * 1024};
+    users::Limits users{};
 };
 enum class CloseReason { login_timeout, idle_timeout, partial_frame_timeout, security_quota, negotiation_limit, identity_limit };
 

@@ -3,6 +3,7 @@
 #include "dc24h/users/session.hpp"
 #include "dc24h/users/nick_manager.hpp"
 #include "dc24h/users/user_registry.hpp"
+#include "dc24h/users/limits.hpp"
 
 #include <map>
 #include <memory>
@@ -12,7 +13,7 @@
 namespace dc24h::users {
 enum class RegistryError {
     stale_id, capacity_reached, missing, not_closed,
-    duplicate_sid, duplicate_cid, duplicate_nickname
+    duplicate_sid, duplicate_cid, duplicate_nickname, user_capacity_reached
 };
 using Registration = std::variant<const Session*, RegistryError>;
 using MutationResult = std::optional<std::variant<RegistryError, SessionError>>;
@@ -26,9 +27,10 @@ struct SessionCounts {
 // References survive operations on OTHER IDs; removal invalidates them.
 class SessionManager final {
 public:
-    static constexpr std::size_t max_capacity = 65535;
+    static constexpr std::size_t max_capacity = Limits::max_capacity;
     static constexpr std::size_t max_page_size = 256;
     explicit SessionManager(std::size_t capacity);
+    explicit SessionManager(Limits limits);
     SessionManager(const SessionManager&) = delete;
     SessionManager& operator=(const SessionManager&) = delete;
     SessionManager(SessionManager&&) = delete;
@@ -64,12 +66,15 @@ public:
     [[nodiscard]] std::vector<SessionId> public_users(std::uint64_t after = 0, std::size_t limit = 64) const;
     [[nodiscard]] SessionCounts counts() const noexcept;
     [[nodiscard]] std::size_t size() const noexcept { return sessions_.size(); }
-    [[nodiscard]] std::size_t capacity() const noexcept { return capacity_; }
+    [[nodiscard]] std::size_t capacity() const noexcept { return limits_.max_sessions; }
+    [[nodiscard]] std::size_t user_capacity() const noexcept { return limits_.max_users; }
+    // Includes identified, ready and closing/closed registrations until remove.
+    [[nodiscard]] bool users_full() const noexcept { return identified_users() >= user_capacity(); }
     [[nodiscard]] std::size_t identified_users() const noexcept { return users_.size(); }
 private:
     [[nodiscard]] Session* mutable_find(SessionId id) noexcept;
     void erase_identity(SessionId id) noexcept;
-    std::size_t capacity_;
+    Limits limits_;
     std::uint64_t greatest_id_{};
     std::map<std::uint64_t, std::unique_ptr<Session>> sessions_;
     UserRegistry users_;

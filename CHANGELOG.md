@@ -1,5 +1,19 @@
 # Changelog
 
+## alpha-0.3.12 — 2026-11-10
+
+Limits increment, based directly on main `4e54b2e0c18f39542cb550d07d4a527ca11a1e10` after the alpha-0.3.11 User Disconnect merge:
+
+- Added users::Limits with checked positive session/user ceilings and effective clamping by network connections. Both new raw defaults are 65535, preserving the existing default effective 1024 sessions/users. Larger ceilings never raise lower caps; zero/out-of-range values are rejected before clamping. SessionManager(capacity) remains compatible.
+- SessionManager enforces session capacity before model allocation/ID consumption and a separate typed user_capacity_reached gate before index mutation. UserRegistry and NickManager use the effective user cap; existing transactional rollback preserves available capacity after allocation failure. Counts come directly from owned models/registrations, without a separate quota ledger.
+- Added [users] max_sessions/max_users and --max-sessions/--max-users with existing INI/CLI precedence, direct Settings/Network/LoginHub validation, EN/US and PL help/diagnostics, an updated INI example and effective startup values. Network rejects full session capacity before per-IP admission, transport token, TLS/watch/protocol/model allocation; generic rejected counts and bounded warnings retain existing privacy.
+- LoginHub rejects full user capacity after validated initial INF and duplicate identity checks, before approval or welcome/list planning. Fixed fatal ISTA 211 plus own IQUI uses existing bounded terminal drain; no rejected user is registered, published, ready or sent a user-list welcome. Identified/welcome-pending, ready and closing/closed registrations occupy slots until cleanup; anonymous models consume only session capacity. Existing updates/rename work at capacity.
+- Added users.limits and users.limits.process for limits/defaults/effective bounds, all lifecycle boundaries, typed/no-allocation refusal, ID/capacity reuse, reservation retention, allocation rollback/retry, pre-welcome rejection and pinned-buffer stability. Real mixed ADC/ADCS tests separately constrain connections/sessions, hold anonymous TLS, reject excess sockets without TLS admission, verify API counts/warning budgets, repeat user-cap refusals without public presence and reconnect after cleanup. Configuration/Network tests add raw/INI/CLI validation, precedence and translation checks.
+- Actual ncdc ADC/ADCS now runs with max_sessions=3/max_users=2, fills the user cap with its observer, changes live metadata and reconnects after release. Earlier identity/list/update/disconnect/security/pending/privacy cases remain covered.
+- Updated server/WebAdmin metadata and fixtures to alpha-0.3.12, added mirrored US/PL Limits documentation and refreshed configuration/module/navigation/testing/version context. No new dependency, SQL migration, API JSON contract or WebAdmin feature is added. Account-specific multisession, operator reservations and runtime limit reload remain future work.
+- Validation: all 65 CTest suites passed locally in Debug, Release and ASan/UBSan, including actual ncdc ADC/ADCS, MariaDB and Apache HTTPS. WebAdmin typecheck/production build, 3 Node tests, 3 Chromium tests and real C++ API integration passed with system Chromium. These are local results, not remote CI, full OS-matrix or production load guarantees; fault injection covers tested C++ paths.
+- main and earlier alpha branches/history are preserved; no automatic merge or production deployment. Accounts, roles, persistence and chat/search/transfers remain separate work.
+
 ## alpha-0.3.11 — 2026-11-10
 
 User Disconnect increment, based directly on main `49b57749b346cb1638eae856c4b778a371616c47` after the alpha-0.3.10 INF Updates merge:
