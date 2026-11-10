@@ -21,6 +21,7 @@
 | alpha-0.2.6 | alpha-0.2.6 | INF: informacja klienta i walidacja tożsamości Tiger |
 | alpha-0.2.7 | alpha-0.2.7 | CID/PID: dedykowana weryfikacja Tiger i obsługa błędów |
 | alpha-0.2.8 | alpha-0.2.8 | Login: NORMAL gościa, ograniczone wyjście TCP/TLS, publiczna obecność |
+| alpha-0.2.9 | alpha-0.2.9 | STA/QUI: diagnostyka protokołu, routing i ograniczone zamykanie |
 
 Dokładną kompilację identyfikuje wersja wraz z SHA commita. Budowanie nie zmienia plików źródłowych. Istotne zmiany trafiają do CHANGELOG.md. Alpha oznacza rozwój, nie pełną funkcjonalność huba. Tagi i wdrożenie nie powstają automatycznie.
 
@@ -36,3 +37,8 @@ CMake PROJECT_VERSION i główne wersje npm package/lock to **0.2.7**; program/W
 **Aktualna integracja — alpha-0.2.8:** [Logowanie gości](ADC_LOGIN.md) podłącza state/SUP/SID/INF/Tiger do rzeczywistego reaktora C++ TCP/TLS, z ograniczonym uporządkowanym wyjściem, unikalnością nick/CID, listą obecności i pełnymi testami ncdc NORMAL/reconnect. Historyczne opisy poniżej zachowują pierwotny zakres; wzmianki o planowanym podłączeniu/wyjściu/logowaniu dotyczą wcześniejszych wersji. Konta/hasła, czat, wyszukiwanie i przekazywanie transferów pozostają planowane.
 
 Wersja CMake/npm 0.2.8; runtime alpha-0.2.8. Gałąź alpha-0.2.8 pochodzi z main b8978491fa8e146527eba818f9bc1ab0a31aa90d. Bez automatycznego scalania main i tagu wydania.
+
+
+## alpha-0.2.9
+
+CMake/npm 0.2.9; runtime/WebAdmin alpha-0.2.9. Podstawa: main `da1521502c4a8936b3427a7d38fea6b904686b39`. [STA/QUI](ADC_STATUS.md) rozwija sesje gości bez nowego schematu API, zależności i migracji SQL. Bez automatycznego merge/tagu.

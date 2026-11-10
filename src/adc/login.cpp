@@ -1,5 +1,6 @@
 #include "dc24h/adc/login.hpp"
 #include "dc24h/adc/serializer.hpp"
+#include "dc24h/adc/status.hpp"
 
 #include <deque>
 #include <stdexcept>
@@ -19,6 +20,8 @@ struct LoginHub::Peer {
     bool closing{false};
     bool abort{false};
     bool overloaded{false};
+    bool peer_fatal{false};
+    bool quit_queued{false};
     std::string public_sid;
     std::string public_nickname;
     std::string public_cid;
@@ -33,8 +36,22 @@ std::string_view error_status(const ClientSessionError& error) {
         if constexpr (std::is_same_v<T, InfError>) { return inf_status_code(value); }
         else if constexpr (std::is_same_v<T, SupportError>) { return support_status_code(value); }
         else if constexpr (std::is_same_v<T, SidError>) { return sid_status_code(value); }
-        else { return "240"; }
+        else { return value == StateError::invalid_state || value == StateError::invalid_sequence ? "244" : "240"; }
     }, error);
+}
+std::string_view status_description(std::string_view code) noexcept {
+    if (code == "211") { return "Hub session limit reached"; }
+    if (code == "221") { return "Invalid nickname"; }
+    if (code == "222") { return "Nickname already in use"; }
+    if (code == "224") { return "Client ID already in use"; }
+    if (code == "227") { return "Invalid client identity"; }
+    if (code == "243") { return "Required client information missing or invalid"; }
+    if (code == "244") { return "Invalid connection state"; }
+    if (code == "245") { return "Required feature missing"; }
+    if (code == "246") { return "Invalid client address"; }
+    if (code == "247") { return "No common session hash"; }
+    if (code == "210") { return "Hub internal error"; }
+    return "Protocol error";
 }
 } // namespace
 
@@ -55,7 +72,7 @@ void LoginHub::connect(Id id, std::string_view address) {
 }
 
 bool LoginHub::enqueue(Peer& peer, Message message, Completion completion) {
-    if (peer.abort) { return false; }
+    if (peer.abort || peer.quit_queued) { return false; }
     auto encoded = serialize(message);
     auto* wire = std::get_if<std::string>(&encoded);
     if (!wire) { throw std::logic_error("Invalid locally generated ADC output"); }
@@ -70,10 +87,36 @@ bool LoginHub::enqueue(Peer& peer, Message message, Completion completion) {
     queued_ += size;
     return true;
 }
-void LoginHub::reject(Peer& peer, std::string_view status) {
-    if (peer.closing) { return; }
+void LoginHub::reject(Peer& peer, std::string_view status, std::optional<std::string_view> command,
+                      std::string_view description) {
+    if (peer.closing || peer.abort) { return; }
     peer.closing = true;
-    (void)enqueue(peer, info_message("STA", Command::sta, {std::string(status), "Request rejected"}));
+    // Keep a possibly partially sent/TLS-pinned front, cancel all later ordinary
+    // frames. Never mutate the immutable front pointer or its remaining length.
+    while (peer.output.size() > 1) {
+        queued_ -= peer.output.back().wire.size();
+        peer.queued -= peer.output.back().wire.size();
+        peer.output.pop_back();
+    }
+    std::optional<Sid> sid = Sid::parse(peer.session.sid());
+    if (!sid && !peer.output.empty() && peer.output.front().message.kind == Command::sid) {
+        // This already queued ISID must complete ahead of the terminal status.
+        sid = Sid::parse(peer.output.front().message.parameters[0]);
+    }
+    if (description.empty()) { description = status_description(status); }
+    if (!enqueue(peer, make_status(*StatusCode::parse(status), description, command))) { return; }
+    QuitOptions options{};
+    options.message = description;
+    if (sid && enqueue(peer, make_quit(*sid, options))) { peer.quit_queued = true; }
+}
+void LoginHub::close(Id id, CloseReason reason) {
+    auto& peer = *peers_.at(id);
+    switch (reason) {
+    case CloseReason::login_timeout: reject(peer, "240", {}, "Login timed out"); break;
+    case CloseReason::idle_timeout: reject(peer, "230", {}, "Idle connection timed out"); break;
+    case CloseReason::partial_frame_timeout: reject(peer, "240", {}, "Incomplete frame timed out"); break;
+    case CloseReason::security_quota: reject(peer, "240", {}, "Protocol resource limit exceeded"); break;
+    }
 }
 void LoginHub::relay(Id except, const Message& message) {
     for (auto& [id, peer] : peers_) {
@@ -86,7 +129,9 @@ void LoginHub::receive(Id id, const Message& message) {
     if (peer.closing || peer.abort) { return; }
     const auto before = peer.session.state();
     const auto previous = message.kind == Command::inf ? peer.session.info() : std::optional<ClientInfo>{};
-    if (before == ConnectionState::normal && !peer.ready) { reject(peer, "240"); return; }
+    const std::string fourcc(1, static_cast<char>(message.type));
+    const std::string offending = fourcc + message.command;
+    if (before == ConnectionState::normal && !peer.ready) { reject(peer, "244", offending); return; }
     if (message.kind == Command::inf && message.type == MessageType::broadcast) {
         // Check prospective nickname before the session commits an update.
         for (const auto& token : message.parameters) {
@@ -98,10 +143,18 @@ void LoginHub::receive(Id id, const Message& message) {
         }
     }
     if (const auto error = peer.session.observe(Direction::from_client, message)) {
-        reject(peer, error_status(*error));
+        const auto* state_error = std::get_if<StateError>(&*error);
+        if (before == ConnectionState::normal && state_error && *state_error == StateError::unsupported_command) {
+            (void)enqueue(peer, make_status(*StatusCode::parse("125"), "Command not implemented", offending));
+            return;
+        }
+        const auto code = error_status(*error);
+        const auto* support_error = std::get_if<SupportError>(&*error);
+        const auto feature = support_error && *support_error == SupportError::session_hash_removed ? "TIGR" : "BASE";
+        reject(peer, code, code == "245" ? std::optional<std::string_view>{feature} : std::optional<std::string_view>{offending});
         return;
     }
-    if (peer.session.state() == ConnectionState::disconnected) { peer.abort = true; return; }
+    if (peer.session.state() == ConnectionState::disconnected) { peer.abort = true; peer.peer_fatal = true; return; }
     if (before == ConnectionState::protocol && message.kind == Command::sup) {
         (void)enqueue(peer, *peer.session.support().initial_reply(), Completion::support);
     } else if (message.kind == Command::inf) {
@@ -129,6 +182,7 @@ void LoginHub::receive(Id id, const Message& message) {
             peer.public_cid = cid;
             nicknames_.emplace(nickname, id);
             cids_.emplace(cid, id);
+            sids_.emplace(peer.public_sid, id);
             peer.admitted = true;
             relay(id, public_info);
         } else {
@@ -144,9 +198,46 @@ void LoginHub::receive(Id id, const Message& message) {
             }
             relay(0, update); // Transport IDs are nonzero; includes the sender.
         }
-    } else if (before == ConnectionState::normal && message.kind != Command::sup && message.kind != Command::sta) {
+    } else if (message.kind == Command::sta) {
+        if (message.type != MessageType::hub) { route_status(id, message); }
+    } else if (before == ConnectionState::normal && message.kind != Command::sup) {
         // Passing the state gate does not implement chat/search/transfers.
-        (void)enqueue(peer, info_message("STA", Command::sta, {"125", "Command not implemented"}));
+        (void)enqueue(peer, make_status(*StatusCode::parse("125"), "Command not implemented", offending));
+    }
+}
+void LoginHub::route_status(Id id, const Message& message) {
+    const auto safe = public_status(message);
+    if (message.type == MessageType::direct || message.type == MessageType::echo) {
+        const auto target = sids_.find(*message.target);
+        if (target == sids_.end() || !ready(target->second)) {
+            (void)enqueue(*peers_.at(id), make_status(*StatusCode::parse("140"), "Status recipient unavailable"));
+            return;
+        }
+        (void)enqueue(*peers_.at(target->second), safe);
+        if (message.type == MessageType::echo && target->second != id) { (void)enqueue(*peers_.at(id), safe); }
+        return;
+    }
+    for (auto& [recipient, peer] : peers_) {
+        if (!ready(recipient)) { continue; }
+        if (message.type == MessageType::feature) {
+            const auto supported = peer->session.info()->field("SU").value_or("");
+            const auto has_feature = [&](std::string_view name) {
+                std::size_t start=0;
+                while (start < supported.size()) {
+                    const auto comma=supported.find(',',start);
+                    if (supported.substr(start, comma==std::string_view::npos ? comma : comma-start)==name) { return true; }
+                    if (comma==std::string_view::npos) { break; }
+                    start=comma+1;
+                }
+                return false;
+            };
+            bool matches=true;
+            for (const auto& feature : message.features) {
+                if (has_feature(feature.name) != feature.required) { matches=false; break; }
+            }
+            if (!matches) { continue; }
+        }
+        (void)enqueue(*peer, safe);
     }
 }
 
@@ -178,12 +269,14 @@ void LoginHub::remove_identity(Id id, const Peer& peer) {
     if (nickname != nicknames_.end() && nickname->second == id) { nicknames_.erase(nickname); }
     const auto cid = cids_.find(peer.public_cid);
     if (cid != cids_.end() && cid->second == id) { cids_.erase(cid); }
+    const auto sid = sids_.find(peer.public_sid);
+    if (sid != sids_.end() && sid->second == id) { sids_.erase(sid); }
 }
 void LoginHub::disconnect(Id id, bool announce) {
     const auto found = peers_.find(id);
     if (found == peers_.end()) { return; }
     auto& peer = *found->second;
-    if (announce && peer.admitted) { relay(id, info_message("QUI", Command::qui, {peer.public_sid})); }
+    if (announce && peer.admitted) { relay(id, make_quit(*Sid::parse(peer.public_sid))); }
     remove_identity(id, peer);
     queued_ -= peer.queued;
     peer.session.disconnect();
@@ -199,5 +292,6 @@ bool LoginHub::ready(Id id) const {
     return peer.ready && !peer.closing && !peer.abort;
 }
 bool LoginHub::overloaded(Id id) const { return peers_.at(id)->overloaded; }
+bool LoginHub::peer_fatal(Id id) const { return peers_.at(id)->peer_fatal; }
 ConnectionState LoginHub::state(Id id) const { return peers_.at(id)->session.state(); }
 } // namespace dc24h::adc

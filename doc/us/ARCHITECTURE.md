@@ -1,6 +1,8 @@
 # Architecture
 
-**Current integration — alpha-0.2.8:** [Guest login](ADC_LOGIN.md) attaches the state/SUP/SID/INF/Tiger stack to the actual C++ TCP/TLS reactor with bounded ordered output, nickname/CID admission, public presence and complete ncdc NORMAL/reconnect tests. Historical stage descriptions below retain their original scope; statements that transport attachment/output/login were still planned describe those earlier versions. Registered-user authentication, chat, search and transfer dispatch remain planned.
+**Current increment — alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) adds semantic status/quit validation, source-checked B/D/E/F status routing, precise errors and bounded terminal ISTA/own-IQUI output. Historical descriptions below retain the behavior of their original releases.
+
+**Integration delivered in alpha-0.2.8:** [Guest login](ADC_LOGIN.md) attaches the state/SUP/SID/INF/Tiger stack to the actual C++ TCP/TLS reactor with bounded ordered output, nickname/CID admission, public presence and complete ncdc NORMAL/reconnect tests. Historical stage descriptions below retain their original scope; statements that transport attachment/output/login were still planned describe those earlier versions. Registered-user authentication, chat, search and transfer dispatch remain planned.
 
 In alpha-0.2.7, dc24h_adc factors intrinsic Tiger identity verification out of INF into tiger_identity.hpp/cpp. TigerCid represents canonical public bytes; VerifiedIdentity can be produced only by successful pair verification and stores no PID. Direct decode/hash output avoids optional by-value private buffers; noncopyable local PID/derived buffers are cleansed on scope exit. INF consumes this verifier and carries its public result across ordinary updates. Provider-failure wrappers belong only to an isolated test executable. See [ADC_IDENTITY.md](ADC_IDENTITY.md).
 

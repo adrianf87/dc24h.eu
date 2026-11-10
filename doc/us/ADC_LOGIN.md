@@ -1,5 +1,7 @@
 # ADC guest login — alpha-0.2.8
 
+**Current increment — alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) adds semantic status/quit validation, source-checked B/D/E/F status routing, precise errors and bounded terminal ISTA/own-IQUI output. Historical descriptions below retain the behavior of their original releases.
+
 The C++ hub now completes guest login through its actual nonblocking TCP and OpenSSL TLS listeners. `LoginHub` composes the existing SUP, SID, INF, Tiger and state modules; one reactor-owned instance spans every ADC/ADCS listener. It owns public presence, nickname/CID reservations and bounded ordered output. Registered accounts, password verification, bans/roles, chat, searches and transfers remain future stages.
 
 This branch starts from main `b8978491fa8e146527eba818f9bc1ab0a31aa90d`, which already contains alpha-0.2.1–alpha-0.2.7. Main and historical branches are preserved; this stage is not merged automatically.

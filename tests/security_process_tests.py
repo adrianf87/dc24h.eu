@@ -20,7 +20,7 @@ class SecurityProcessTests(unittest.TestCase):
     def closed(self, peer, timeout=4):
         peer.settimeout(timeout)
         try:
-            self.assertEqual(peer.recv(1), b'')
+            drain_until_eof(peer)
         except ConnectionResetError:
             pass
 

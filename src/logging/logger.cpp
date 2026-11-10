@@ -74,6 +74,8 @@ std::string_view event_name(ConnectionEvent event) noexcept {
     case ConnectionEvent::output_timeout: return "output_timeout";
     case ConnectionEvent::output_limit: return "output_limit";
     case ConnectionEvent::write_error: return "write_error";
+    case ConnectionEvent::peer_status: return "peer_status";
+    case ConnectionEvent::close_timeout: return "close_timeout";
     }
     return {};
 }

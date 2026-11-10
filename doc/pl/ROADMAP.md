@@ -1,5 +1,7 @@
 # Plan rozwoju
 
+**Aktualny etap — alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) dodaje walidację semantyki statusów/rozłączeń, kontrolowany routing B/D/E/F, dokładniejsze błędy i ograniczone końcowe ISTA/własne IQUI. Opisy historyczne poniżej zachowują zachowanie pierwotnych wersji.
+
 **Aktualna integracja — alpha-0.2.8:** [Logowanie gości](ADC_LOGIN.md) podłącza state/SUP/SID/INF/Tiger do rzeczywistego reaktora C++ TCP/TLS, z ograniczonym uporządkowanym wyjściem, unikalnością nick/CID, listą obecności i pełnymi testami ncdc NORMAL/reconnect. Historyczne opisy poniżej zachowują pierwotny zakres; wzmianki o planowanym podłączeniu/wyjściu/logowaniu dotyczą wcześniejszych wersji. Konta/hasła, czat, wyszukiwanie i przekazywanie transferów pozostają planowane.
 
 | Etap | Zaimplementowany zakres |
@@ -23,6 +25,7 @@
 | alpha-0.2.6 INF | Ograniczone metadane, Tiger tożsamości, kontrola IP i publiczne snapshoty bez PD |
 | alpha-0.2.7 CID/PID | Dedykowany weryfikator Tiger, wynik publiczny, czyszczenie buforów i testy awarii |
 | alpha-0.2.8 Login | NORMAL gości, ograniczone uporządkowane wyjście, rejestr nick/CID, publiczna obecność i reconnect ncdc |
+| alpha-0.2.9 STA/QUI | Semantyka błędów, routing STA, końcowe własne QUI i ograniczone opróżnianie |
 
 ## Historyczny plan odbioru przed alpha-0.2.8
 

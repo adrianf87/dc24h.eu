@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.2.8 LANGUAGES CXX)
+project(dc24h VERSION 0.2.9 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -35,7 +35,7 @@ set_target_properties(Gcrypt::Gcrypt PROPERTIES
     IMPORTED_LOCATION "${GCRYPT_LIBRARY}"
     INTERFACE_INCLUDE_DIRECTORIES "${GCRYPT_INCLUDE_DIR}")
 add_library(dc24h_adc src/adc/parser.cpp src/adc/state.cpp src/adc/sup.cpp src/adc/sid.cpp src/adc/sid_session.cpp
-    src/adc/identity_hash.cpp src/adc/tiger_identity.cpp src/adc/inf.cpp src/adc/serializer.cpp src/adc/login.cpp)
+    src/adc/identity_hash.cpp src/adc/tiger_identity.cpp src/adc/inf.cpp src/adc/serializer.cpp src/adc/login.cpp src/adc/status.cpp)
 target_compile_features(dc24h_adc PUBLIC cxx_std_20)
 set_target_properties(dc24h_adc PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_adc PUBLIC include)
@@ -176,6 +176,22 @@ if(BUILD_TESTING)
     set_target_properties(adc_sid_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME adc.sid COMMAND adc_sid_tests)
     set_tests_properties(adc.sid PROPERTIES TIMEOUT 60)
+    add_executable(adc_close_runner tests/adc_close_runner.cpp)
+    target_link_libraries(adc_close_runner PRIVATE dc24h_core)
+    target_link_options(adc_close_runner PRIVATE -Wl,--wrap=accept4)
+    target_compile_options(adc_close_runner PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(adc_close_runner PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME adc.close.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/adc_close_process_tests.py" "$<TARGET_FILE:adc_close_runner>")
+    set_tests_properties(adc.close.process PROPERTIES TIMEOUT 30)
+    add_executable(adc_status_tests tests/adc_status_tests.cpp)
+    target_link_libraries(adc_status_tests PRIVATE dc24h_adc)
+    target_compile_options(adc_status_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(adc_status_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME adc.status COMMAND adc_status_tests)
+    add_test(NAME adc.status.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/adc_status_process_tests.py" "$<TARGET_FILE:dc24h>")
+    set_tests_properties(adc.status adc.status.process PROPERTIES TIMEOUT 45)
     add_executable(adc_login_tests tests/adc_login_tests.cpp)
     target_link_libraries(adc_login_tests PRIVATE dc24h_adc)
     target_compile_options(adc_login_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
@@ -281,6 +297,13 @@ if(BUILD_TESTING)
     endif()
     find_program(NCDC_EXECUTABLE ncdc)
     if(NCDC_EXECUTABLE)
+        add_test(NAME adc.status.ncdc COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_status_test.py"
+            "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}")
+        add_test(NAME adcs.status.ncdc COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_status_test.py"
+            "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" --tls)
+        set_tests_properties(adc.status.ncdc adcs.status.ncdc PROPERTIES TIMEOUT 30)
         add_test(NAME adc.identity.ncdc COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_sup_test.py"
             "$<TARGET_FILE:adc_identity_tests>" "${NCDC_EXECUTABLE}" --identity)

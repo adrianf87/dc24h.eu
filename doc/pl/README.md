@@ -1,6 +1,6 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.2.8: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.2.9: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
 - [AUDIT_ALPHA_0.1.md](AUDIT_ALPHA_0.1.md)
 - [ARCHITECTURE.md](ARCHITECTURE.md)
@@ -11,6 +11,7 @@ alpha-0.2.8: działająca implementacja oraz jawnie oznaczone plany kolejnych mo
 - [ADC_INF.md](ADC_INF.md)
 - [ADC_IDENTITY.md](ADC_IDENTITY.md)
 - [ADC_LOGIN.md](ADC_LOGIN.md)
+- [ADC_STATUS.md](ADC_STATUS.md)
 - [ADCS_TLS.md](ADCS_TLS.md)
 - [NETWORK.md](NETWORK.md)
 - [CONFIGURATION.md](CONFIGURATION.md)

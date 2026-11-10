@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.2.8 (Login).**
+**Current development version: alpha-0.2.9 (STA/QUI).**
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.2.9 STA/QUI**: typed status/quit validation, precise protocol errors, bounded ISTA → own IQUI → close, safe B/D/E/F status routing and real ncdc rejection/recovery tests. See [STA/QUI](doc/us/ADC_STATUS.md).
 
 - **alpha-0.2.8 Login**: complete guest ADC/ADCS login on the C++ hub, ordered bounded replies, unique nickname/CID admission, public user lists, INF updates and disconnect cleanup. Real ncdc reaches NORMAL and reconnects over both transports. See [guest login](doc/us/ADC_LOGIN.md).
 
@@ -82,6 +84,8 @@ cp config/dc24h.ini.example config/dc24h.ini
 Defaults, then explicit INI, then CLI. No file is loaded automatically. INI paths use its directory; CLI paths use the working directory. Use `--log-level info|warning|error|off` and `--log-file PATH` (or `-` for stderr). See [configuration](doc/us/CONFIGURATION.md) for complete precedence, format, limits and logging constraints.
 
 Connection records are off by default; enable with `--log-connections on` or `[logging] connections=on` at INFO. Records use internal IDs and fixed events without client addresses or ADC payloads. See [logging](doc/us/LOGGING.md) for limits and suppression behavior.
+
+Terminal output has a 2-second absolute drain deadline (`[security] close_timeout`).
 
 Login/output defaults: 30 seconds for full login, 10 seconds without output progress, 256 KiB queued wire bytes/client and 16 MiB/hub. The two deadlines are INI settings in `[security]`; byte limits are compiled defaults.
 

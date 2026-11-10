@@ -1,6 +1,16 @@
 # Testing
 
-**Current integration — alpha-0.2.8:** [Guest login](ADC_LOGIN.md) attaches the state/SUP/SID/INF/Tiger stack to the actual C++ TCP/TLS reactor with bounded ordered output, nickname/CID admission, public presence and complete ncdc NORMAL/reconnect tests. Historical stage descriptions below retain their original scope; statements that transport attachment/output/login were still planned describe those earlier versions. Registered-user authentication, chat, search and transfer dispatch remain planned.
+**Current increment — alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) adds semantic status/quit validation, source-checked B/D/E/F status routing, precise errors and bounded terminal ISTA/own-IQUI output. Historical descriptions below retain the behavior of their original releases.
+
+**Integration delivered in alpha-0.2.8:** [Guest login](ADC_LOGIN.md) attaches the state/SUP/SID/INF/Tiger stack to the actual C++ TCP/TLS reactor with bounded ordered output, nickname/CID admission, public presence and complete ncdc NORMAL/reconnect tests. Historical stage descriptions below retain their original scope; statements that transport attachment/output/login were still planned describe those earlier versions. Registered-user authentication, chat, search and transfer dispatch remain planned.
+
+## STA/QUI increment — alpha-0.2.9
+
+The strict gate registers **40 CTest entries**, adding `adc.status`, `adc.status.process`, `adc.close.process`, `adc.status.ncdc` and `adcs.status.ncdc`. [STA/QUI](ADC_STATUS.md) documents semantic bounds, terminal ordering/ownership, normal status relays and the actual TCP/OpenSSL/ncdc coverage. The close fixture uses executable-local GNU-compatible `--wrap=accept4` to force blocked TCP/TLS writes and verify the absolute drain deadline without altering production sockets or host sysctl. The existing ncdc relay now permits reset/broken-pipe as per-connection closure during reconnect/quit; full protocol/UI assertions remain required.
+
+Local result: **40/40 passed in Debug, Release and ASan/UBSan** with required integrations, MariaDB and Apache HTTPS. WebAdmin build/typecheck, 3 Node tests, 3 Chromium browser tests and actual C++ API/Vite/React integration also passed. Existing sanitizer/no-PIE and Chromium reproduction settings below apply. Metadata, UTF-8/local links/language parity, Python syntax and Git whitespace checks passed. Remaining OS/remote CI, arbitrary faults, all TLS WANT_READ dependencies and production load/security audits require separate evidence.
+
+Focused gate: `ctest --test-dir build-debug -R 'adc.status|adcs.status|adc.close' --output-on-failure`; run the full strict suite before finishing a stage.
 
 ## Login increment — alpha-0.2.8
 

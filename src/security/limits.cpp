@@ -18,7 +18,8 @@ void validate(const Limits& limits) {
         limits.partial_frame_timeout < std::chrono::seconds(1) ||
         limits.partial_frame_timeout > std::chrono::hours(1) ||
         limits.login_timeout < std::chrono::seconds(1) || limits.login_timeout > std::chrono::hours(1) ||
-        limits.output_timeout < std::chrono::seconds(1) || limits.output_timeout > std::chrono::hours(1)) {
+        limits.output_timeout < std::chrono::seconds(1) || limits.output_timeout > std::chrono::hours(1) ||
+        limits.close_timeout < std::chrono::seconds(1) || limits.close_timeout > std::chrono::hours(1)) {
         throw std::invalid_argument("Invalid security limits");
     }
 }
