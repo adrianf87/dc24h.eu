@@ -1,9 +1,10 @@
 # dc24h.eu documentation
 
-alpha-0.3.5: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.3.6: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
 - [AUDIT_ALPHA_0.1.md](AUDIT_ALPHA_0.1.md)
 - [ARCHITECTURE.md](ARCHITECTURE.md)
+- [NICK_MANAGER.md](NICK_MANAGER.md)
 - [USER_CORE.md](USER_CORE.md)
 - [SESSION_MANAGER.md](SESSION_MANAGER.md)
 - [SESSION_CORE.md](SESSION_CORE.md)

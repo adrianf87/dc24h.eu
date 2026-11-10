@@ -5,7 +5,7 @@
 #include <utility>
 
 namespace dc24h::users {
-SessionManager::SessionManager(std::size_t capacity) : capacity_(capacity) {
+SessionManager::SessionManager(std::size_t capacity) : capacity_(capacity), nicknames_(capacity) {
     if (capacity == 0 || capacity > max_capacity) { throw std::invalid_argument("Invalid session registry capacity"); }
 }
 Registration SessionManager::add(SessionId id, Transport transport, TimePoint accepted) {
@@ -41,7 +41,10 @@ const Session* SessionManager::indexed(const Index& index, std::string_view key,
 }
 const Session* SessionManager::by_sid(std::string_view sid) const noexcept { return indexed(sids_,sid,max_session_key_bytes); }
 const Session* SessionManager::by_cid(std::string_view cid) const noexcept { return indexed(cids_,cid,max_client_key_bytes); }
-const Session* SessionManager::by_nickname(std::string_view nickname) const noexcept { return indexed(nicknames_,nickname,max_nickname_bytes); }
+const Session* SessionManager::by_nickname(std::string_view nickname) const noexcept {
+    const auto id = nicknames_.owner(nickname);
+    return id ? find(*id) : nullptr;
+}
 MutationResult SessionManager::start_negotiation(SessionId id, TimePoint now) noexcept {
     return apply(mutable_find(id),[now](Session& model) { return model.start_negotiation(now); });
 }
@@ -62,7 +65,8 @@ void SessionManager::erase_identity(SessionId id, const Identity& identity) noex
         const auto found=index.find(key);
         if (found!=index.end() && found->second==id) { index.erase(found); }
     };
-    erase_owned(sids_,identity.sid());erase_owned(cids_,identity.cid());erase_owned(nicknames_,identity.nickname());
+    erase_owned(sids_,identity.sid());erase_owned(cids_,identity.cid());
+    (void)nicknames_.release(id);
 }
 MutationResult SessionManager::identify(SessionId id, User user, TimePoint now) {
     auto* model=mutable_find(id);
@@ -79,7 +83,9 @@ MutationResult SessionManager::identify(SessionId id, User user, TimePoint now) 
     try {
         sids_.emplace(identity.sid(),id);
         cids_.emplace(identity.cid(),id);
-        nicknames_.emplace(identity.nickname(),id);
+        if (nicknames_.reserve(id,identity.nickname_value())) {
+            throw std::logic_error("Nickname reservation invariant violated");
+        }
     } catch (...) {
         erase_identity(id,identity);
         throw;
@@ -97,13 +103,12 @@ MutationResult SessionManager::update_user(SessionId id, User user, TimePoint no
     }
     if (identity.nickname()==model->identity()->nickname()) { return promote(model->update_user(std::move(user),now)); }
     if (by_nickname(identity.nickname())) { return RegistryError::duplicate_nickname; }
-    const auto old=nicknames_.find(model->identity()->nickname());
-    // std::map keeps old iterators valid while the new key is allocated. User
-    // move assignment and erasing the old key cannot throw after staging.
-    nicknames_.emplace(identity.nickname(),id);
-    const auto result=promote(model->update_user(std::move(user),now));
-    nicknames_.erase(old);
-    return result;
+    // Lifecycle, time and identity gates above match Session::update_user.
+    // NickManager commits first; the checked model move below cannot throw.
+    if (nicknames_.rename(id,identity.nickname_value())) {
+        throw std::logic_error("Nickname rename invariant violated");
+    }
+    return promote(model->update_user(std::move(user),now));
 }
 MutationResult SessionManager::rename(SessionId id, std::string_view nickname, TimePoint now) {
     const auto* model=find(id);

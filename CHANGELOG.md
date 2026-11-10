@@ -1,5 +1,17 @@
 # Changelog
 
+## alpha-0.3.6 — 2026-11-10
+
+Nick Manager increment, based directly on main `cb49cdb9e1e714f3b548be6a842063c58890eaf6` after the alpha-0.3.5 User Core merge:
+
+- Added bounded users::NickManager with typed errors, checked UTF-8/NFC names, exact case-sensitive lookup, one reservation per session owner, transactional rename and explicit lifetime-ID cleanup. Name and reverse-owner indexes roll back on allocation failure.
+- Replaced SessionManager's raw nickname index with its privately owned NickManager. Admission, full User/profile updates, rename and removal share one registry; lifecycle/time/SID/CID gates, closing reservations and ADC's 64-byte NI limit are preserved.
+- Added users.nicknames unit/fault-injection and users.nicknames.process ADC/ADCS integration suites. Covered Polish names, validation/bounds, capacity, self-rename, collisions, old-name reuse, rejected-field isolation, parser recovery, cleanup and allocation rollback/retry. Existing registry tests retain closing/closed reservation coverage.
+- Extended actual ncdc ADC/ADCS login/reconnect to change dc24hŻółw to dc24hŁoś and prove client-side NORMAL again. ncdc applies nick changes on reconnect; live NI changes are tested with protocol clients.
+- Updated server/WebAdmin release metadata and version fixtures to alpha-0.3.6. Added mirrored US/PL Nick Manager documentation and refreshed navigation, architecture, development, testing, security, roadmap and version context. Existing EN/US-default and PL runtime catalogs remain applicable; no new runtime messages, dependencies or SQL/API changes.
+- Validation: all 53 CTest suites passed in Debug, Release and ASan/UBSan, including real ncdc, mixed TCP/TLS, MariaDB and Apache HTTPS. WebAdmin typecheck/production build, 3 Node tests, 3 Chromium tests and real C++ API integration passed with system Chromium. Version-specific assertions were updated after the release bump. These are local results, not remote CI, OS-matrix, load or security-audit claims.
+- main and alpha-0.3.1–alpha-0.3.5 history/branches are preserved; no automatic merge or production deployment.
+
 ## alpha-0.3.5 — 2026-11-10
 
 User Core increment, based on main `ba12aa3a96ea70e2b64ca3b11a519bd862e7f2f4` after the alpha-0.3.4 Session Manager merge:

@@ -1,10 +1,20 @@
 # Testowanie
 
+## Weryfikacja Nick Manager — alpha-0.3.6
+
+Lokalnie przeszły wszystkie **53 zestawy CTest** w Debug, Release oraz ASan/UBSan. Nowe zestawy to users.nicknames i users.nicknames.process; istniejące testy obejmują rzeczywisty ncdc ADC/ADCS, mieszane transporty, MariaDB i Apache HTTPS. ncdc zmienił dc24hŻółw na dc24hŁoś przy reconnect i ponownie osiągnął NORMAL. Sprawdzono błędy alokacji C++ w rezerwacji, zmianie nicka i przyjęciu SessionManager; nie wstrzykiwano błędów alokatora utf8proc. Dokładny kontrakt i zakres opisuje [Nick Manager](NICK_MANAGER.md).
+
+Odtwarzanie: `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug --parallel 4`, `ctest --test-dir build-debug --output-on-failure -j 4`. Powtórz dla build-release/Release. Dla build-sanitize/Debug użyj `-DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie"` i `-DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined -no-pie"`.
+
+WebAdmin: poprawne typecheck/budowanie produkcyjne, 3 testy Node, 3 testy Chromium i integracja API C++. W webadmin uruchom `npm run build`, `npm test`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e` i `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:integration -- ../build-debug/dc24h`. Użyto systemowego Chromium; alternatywnie zainstaluj przeglądarkę Playwright. Asercje wersji i dane testowe odpowiadają alpha-0.3.6. Wyniki lokalne nie potwierdzają zdalnego GitHub Actions ani pełnej macierzy systemów operacyjnych.
+
+**Bieżący etap — alpha-0.3.6:** [Nick Manager](NICK_MANAGER.md) utrzymuje ograniczony rejestr nicków i odwrotny indeks właścicieli sesji wewnątrz SessionManager. Sprawdzone wartości Nickname egzekwują istniejącą politykę UTF-8/NFC. Przyjęcie, aktualizacja profilu, zmiana nicka i usunięcie korzystają z tego rejestru; rezerwacje zamykanych sesji trwają do usunięcia. Starsze opisy zachowują zakres historyczny.
+
 ## Weryfikacja User Core — alpha-0.3.5
 
 Pełna bramka ma **51 zestawów**, z users.values na zintegrowanej bazie main. Wszystkie przeszły w Debug, Release i ASan/UBSan, w tym rzeczywisty ncdc ADC/ADCS z logowaniem/reconnect jako dc24hŻółw, dotychczasowe testy rejestru/tożsamości/dostawcy kryptografii/bezpieczeństwa/STA/wyjścia, mieszane transporty, MariaDB i Apache. WebAdmin: typecheck/budowanie, 3 testy Node, 3 Chromium i rzeczywista integracja API C++ poprawne. Odtwarzanie: `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug -j 4`, `ctest --test-dir build-debug --output-on-failure -j 4`. Flagi sanitizerów opisano poniżej. [User Core](USER_CORE.md) opisuje sprawdzenia tekstu, projekcji i granice lokalnych wyników.
 
-**Bieżący etap — alpha-0.3.5:** [User Core](USER_CORE.md) dodaje typ Nickname sprawdzający UTF-8/NFC, wspólną walidację tekstu ADC/Users, samodzielnych kandydatów zmiany nicku i jawną projekcję ClientInfo/VerifiedIdentity. Users korzysta z neutralnego dc24h_text i istniejącego utf8proc. Własność/unikalność managera pozostają bez zmian. Starsze opisy dotyczą zakresu historycznego.
+**Etap dostarczony w alpha-0.3.5:** [User Core](USER_CORE.md) dodaje typ Nickname sprawdzający UTF-8/NFC, wspólną walidację tekstu ADC/Users, samodzielnych kandydatów zmiany nicku i jawną projekcję ClientInfo/VerifiedIdentity. Users korzysta z neutralnego dc24h_text i istniejącego utf8proc. Własność/unikalność managera pozostają bez zmian. Starsze opisy dotyczą zakresu historycznego.
 
 ## Weryfikacja Session Manager — alpha-0.3.4
 

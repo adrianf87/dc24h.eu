@@ -1,6 +1,8 @@
 # Roadmap
 
-**Current increment — alpha-0.3.5:** [User Core](USER_CORE.md) adds checked UTF-8/NFC Nickname values, shared ADC/User text validation, immutable rename candidates and explicit projection from validated ClientInfo/VerifiedIdentity. Users now links the neutral dc24h_text library using the existing utf8proc package. Manager ownership/uniqueness remains unchanged. Earlier descriptions retain their historical scope.
+**Current increment — alpha-0.3.6:** [Nick Manager](NICK_MANAGER.md) owns bounded exact nickname reservations and the reverse session-owner index within SessionManager. Checked Nickname values enforce the existing UTF-8/NFC policy. Admission, profile updates, rename and removal share this registry; closing reservations remain held until removal. Earlier descriptions retain their historical scope.
+
+**Increment delivered in alpha-0.3.5:** [User Core](USER_CORE.md) adds checked UTF-8/NFC Nickname values, shared ADC/User text validation, immutable rename candidates and explicit projection from validated ClientInfo/VerifiedIdentity. Users now links the neutral dc24h_text library using the existing utf8proc package. Manager ownership/uniqueness remains unchanged. Earlier descriptions retain their historical scope.
 
 **Increment delivered in alpha-0.3.4:** [Session Manager](SESSION_MANAGER.md) owns SID/CID/nickname indexes together with live models. Const lookups and managed lifecycle/User mutations preserve uniqueness through admission, rename and cleanup. LoginHub retains protocol and output ownership. Earlier descriptions retain their historical delivery scope.
 
@@ -44,6 +46,7 @@
 | alpha-0.3.3 User Core | Public guest identity/profile, lifecycle ownership and validated INF projection/updates (integrated after Session Manager) |
 | alpha-0.3.4 Session Manager | Central public identity indexes and managed lifecycle/profile mutations |
 | alpha-0.3.5 User Core | Checked public names/profile text, immutable rename values and verified ADC projection |
+| alpha-0.3.6 Nick Manager | Bounded nickname ownership, validation, transactional rename and lifecycle cleanup |
 
 ## Historical acceptance plan before alpha-0.2.8
 

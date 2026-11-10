@@ -1,6 +1,8 @@
 # INF — alpha-0.2.6
 
-**Current increment — alpha-0.3.5:** [User Core](USER_CORE.md) adds checked UTF-8/NFC Nickname values, shared ADC/User text validation, immutable rename candidates and explicit projection from validated ClientInfo/VerifiedIdentity. Users now links the neutral dc24h_text library using the existing utf8proc package. Manager ownership/uniqueness remains unchanged. Earlier descriptions retain their historical scope.
+**Current increment — alpha-0.3.6:** [Nick Manager](NICK_MANAGER.md) owns bounded exact nickname reservations and the reverse session-owner index within SessionManager. Checked Nickname values enforce the existing UTF-8/NFC policy. Admission, profile updates, rename and removal share this registry; closing reservations remain held until removal. Earlier descriptions retain their historical scope.
+
+**Increment delivered in alpha-0.3.5:** [User Core](USER_CORE.md) adds checked UTF-8/NFC Nickname values, shared ADC/User text validation, immutable rename candidates and explicit projection from validated ClientInfo/VerifiedIdentity. Users now links the neutral dc24h_text library using the existing utf8proc package. Manager ownership/uniqueness remains unchanged. Earlier descriptions retain their historical scope.
 
 **Current increment — alpha-0.3.3:** [User Core](USER_CORE.md) adds an owning public guest identity/profile to Session, with validated full-INF projection and lifecycle-guarded updates. It was developed directly from main with Session Core; main now combines it with the previously merged alpha-0.3.2 Session Manager. Earlier descriptions retain their historical scope.
 
