@@ -1,6 +1,6 @@
 # User List — alpha-0.3.9
 
-**Current increment — alpha-0.3.11:** [User Disconnect](USER_DISCONNECT.md) finalizes lifecycle and releases departing output, protocol/SID and registry resources before sending public QUI. Notification allocation failures cannot abort source cleanup; recipients that cannot receive the notice are closed. Existing own ISTA → IQUI drain and shutdown behavior remain. Earlier module descriptions retain their historical scope.
+**Current increment — alpha-0.3.12:** [Limits](LIMITS.md) adds configurable session/user ceilings shared by ADC/ADCS, bounded by the connection cap. SessionManager checks capacity transactionally; LoginHub rejects a full user registry before welcome/list preparation with ISTA 211 and own IQUI. Closing reservations count until cleanup. Earlier descriptions retain their historical scope.
 
 This increment starts from main `b191141ad1cfa5a6a915945b5a934fe82640340e` after the alpha-0.3.8 User Login merge. Earlier requested stages are already present. The alpha-0.3.9 branch preserves main/history and is not merged automatically.
 

@@ -1,6 +1,6 @@
 # Configuration — alpha-0.1.11
 
-**Current increment — alpha-0.3.1:** [Session Core](SESSION_CORE.md) provides the independent Users model and stable lifetime IDs, with live readiness/closure/timeline integration. Earlier stage descriptions below retain their original delivery scope.
+**Current increment — alpha-0.3.12:** [Limits](LIMITS.md) adds configurable session/user ceilings shared by ADC/ADCS, bounded by the connection cap. SessionManager checks capacity transactionally; LoginHub rejects a full user registry before welcome/list preparation with ISTA 211 and own IQUI. Closing reservations count until cleanup. Earlier descriptions retain their historical scope.
 
 **Increment delivered in alpha-0.2.10:** [Negotiation security](NEGOTIATION_SECURITY.md) adds pending admission caps, cumulative pre-readiness input budgets and shared pre-INF/Tiger attempt limits. Earlier release descriptions below retain their original scope.
 
@@ -24,6 +24,8 @@ UTF-8, optional BOM, LF or CRLF, maximum 65536 bytes in the actual bounded read 
 | `network` | `listen` | `127.0.0.1:1511` | Numeric IPv4:port / [IPv6]:port, or `none` |
 | `network` | `adcs_listen` | None | TLS endpoint or `none` |
 | `network` | `max_connections` | 1024 | Shared limit 1..65535 |
+| `users` | `max_sessions` | 65535 | Session ceiling 1..65535; effective cap also obeys max_connections |
+| `users` | `max_users` | 65535 | Registered-user ceiling 1..65535; effective cap also obeys sessions/connections |
 | `network` | `idle_timeout` | 120 | 1..86400 seconds |
 | `tls` | `certificate` | None | Full PEM chain |
 | `tls` | `private_key` | None | Matching unencrypted PEM key |
@@ -105,3 +107,7 @@ The new `apache2-webadmin-https.conf.example` is independent of the INI. Set the
 ## alpha-0.2.9
 
 INI `[security] close_timeout=2` accepts 1–3600 seconds. It is the absolute terminal-drain deadline, without renewal from I/O; no new CLI switch. See [ADC_STATUS.md](ADC_STATUS.md).
+
+## Session and user capacity — alpha-0.3.12
+
+INI `[users] max_sessions` and `max_users` accept 1..65535, defaulting to 65535. CLI `--max-sessions N` and `--max-users N` override them. Effective sessions = min(max_connections, max_sessions); effective users = min(effective sessions, max_users). Larger ceilings are valid and do not raise smaller caps; zero never disables a cap. Every retained model counts as a session, including anonymous TLS. Registered users count from identification through closing/closed until removal, including pending welcome. A full session/connection cap closes the excess socket before TLS allocation; a full user cap sends bounded ISTA 211 → own IQUI before any welcome/user list. Startup logs report effective limits. See [Limits](LIMITS.md) for accounting, typed gates and tests.

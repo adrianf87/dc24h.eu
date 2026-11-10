@@ -158,6 +158,7 @@ void validate(const Settings& settings) {
     api::validate(settings.api);
     const auto& net = settings.network;
     security::validate(net.security);
+    users::validate(net.users);
     const auto count = net.listeners.size() + net.tls_listeners.size();
     if (count == 0 || count > 16 || net.max_connections == 0 || net.max_connections > 65535 ||
         net.idle_timeout.count() < 1 || net.idle_timeout.count() > 86400) {
@@ -228,7 +229,7 @@ Settings load_file(const std::string& filename) {
                 throw std::invalid_argument("Invalid section at line " + std::to_string(line_number));
             }
             section = trim(std::string_view(text).substr(1, text.size() - 2));
-            if (section != "network" && section != "tls" && section != "logging" && section != "general" && section != "security" && section != "database" && section != "api") {
+            if (section != "network" && section != "tls" && section != "logging" && section != "general" && section != "security" && section != "database" && section != "api" && section != "users") {
                 throw std::invalid_argument("Unknown configuration section at line " + std::to_string(line_number));
             }
             continue;
@@ -252,6 +253,10 @@ Settings load_file(const std::string& filename) {
                 settings.network.max_connections = positive_number(value, 65535);
             } else if (section == "network" && key == "idle_timeout") {
                 settings.network.idle_timeout = std::chrono::seconds(positive_number(value, 86400));
+            } else if (section == "users" && key == "max_sessions") {
+                settings.network.users.max_sessions = positive_number(value, 65535);
+            } else if (section == "users" && key == "max_users") {
+                settings.network.users.max_users = positive_number(value, 65535);
             } else if (section == "security" && key == "max_connections_per_ip") {
                 settings.network.security.max_connections_per_ip = positive_number(value, 65535);
             } else if (section == "security" && key == "max_accepts_per_minute") {
@@ -341,7 +346,7 @@ CommandLine parse_arguments(int argc, char* const argv[]) {
             filename = argv[++i]; has_config = true; operational = true; continue;
         }
         if (key == "--listen" || key == "--adcs-listen" || key == "--tls-cert" || key == "--tls-key" ||
-            key == "--max-connections" || key == "--idle-timeout" || key == "--log-file" ||
+            key == "--max-connections" || key == "--max-sessions" || key == "--max-users" || key == "--idle-timeout" || key == "--log-file" ||
             key == "--log-level" || key == "--log-connections" || key == "--language" ||
             key == "--max-per-ip" || key == "--accepts-per-minute" || key == "--frames-per-second" ||
             key == "--max-invalid-frames" || key == "--tls-handshake-timeout" || key == "--partial-frame-timeout") {
@@ -372,6 +377,10 @@ CommandLine parse_arguments(int argc, char* const argv[]) {
             path_text(value); result.settings.network.tls_private_key = value;
         } else if (key == "--max-connections") {
             result.settings.network.max_connections = positive_number(value, 65535);
+        } else if (key == "--max-sessions") {
+            result.settings.network.users.max_sessions = positive_number(value, 65535);
+        } else if (key == "--max-users") {
+            result.settings.network.users.max_users = positive_number(value, 65535);
         } else if (key == "--idle-timeout") {
             result.settings.network.idle_timeout = std::chrono::seconds(positive_number(value, 86400));
         } else if (key == "--max-per-ip") {

@@ -1,6 +1,6 @@
 # User Core — alpha-0.3.5
 
-**Bieżący etap — alpha-0.3.11:** [User Disconnect](USER_DISCONNECT.md) kończy cykl życia i zwalnia kolejkę, stan protokołu/SID oraz rejestry odchodzącego użytkownika przed publicznym QUI. Błąd alokacji powiadomienia nie przerywa sprzątania źródła; odbiorcy bez możliwości przyjęcia powiadomienia są zamykani. Zachowano własne ISTA → IQUI i zachowanie przy wyłączeniu. Starsze opisy zachowują zakres historyczny.
+**Bieżący etap — alpha-0.3.12:** [Limits](LIMITS.md) dodaje konfigurowalne limity sesji/użytkowników wspólne dla ADC/ADCS, ograniczone limitem połączeń. SessionManager transakcyjnie sprawdza pojemność; LoginHub odrzuca pełny rejestr przed przygotowaniem powitania/listy przez ISTA 211 i własne IQUI. Rezerwacje closing liczą się aż do sprzątania. Starsze opisy zachowują zakres historyczny.
 
 Etap bazuje na main `ba12aa3a96ea70e2b64ca3b11a519bd862e7f2f4`, po scaleniu alpha-0.3.4 Session Manager. Rozwija publiczny model gościa z alpha-0.3.3: sprawdzony typ nicku, wspólne reguły Unicode i jawną projekcję ADC. Manager nadal posiada zarejestrowane sesje i indeksy unikalności. Main i historyczne gałęzie są zachowane; ta gałąź nie scala się automatycznie.
 

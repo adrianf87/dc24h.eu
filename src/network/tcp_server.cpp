@@ -208,6 +208,7 @@ TcpServer::TcpServer(logging::Logger& logger, Options options)
         throw std::invalid_argument("ADCS needs both TLS certificate and private key with a TLS listener");
     }
     security::validate(options_.security);
+    users::validate(options_.users);
     for (const auto& endpoint : options_.listeners) {
         socklen_t size{};
         (void)socket_address(endpoint, size);
@@ -285,14 +286,17 @@ void TcpServer::run() {
     // Log readiness only after every configured listener has started successfully.
     for (const auto& address : addresses) { logger_.info(address); }
     std::unordered_map<std::uint64_t, Connection> connections;
-    adc::LoginHub login({options_.max_connections});
+    adc::LoginLimits login_limits;
+    login_limits.connections=options_.max_connections;
+    login_limits.users=options_.users;
+    adc::LoginHub login(login_limits);
     security::PeerLimiter peer_limiter(options_.security);
     users::SessionIds session_ids(static_cast<std::uint64_t>(listeners.size()+1));
     std::array<epoll_event, 64> events{};
     bool accepting = true;
     Clock::time_point resume_accepting{};
 
-    enum class Warning { invalid_frame, connection_limit, idle, tls_failure, handshake_timeout, peer_io, admission_quota, frame_quota, partial_frame, login_timeout, output_timeout, negotiation_limit, identity_limit, session_id_limit, count };
+    enum class Warning { invalid_frame, connection_limit, idle, tls_failure, handshake_timeout, peer_io, admission_quota, frame_quota, partial_frame, login_timeout, output_timeout, negotiation_limit, identity_limit, session_id_limit, session_limit, count };
     std::array<std::optional<Clock::time_point>, static_cast<std::size_t>(Warning::count)> last_warnings{};
     auto warn_once = [&](Warning category, std::string_view message) {
         const auto now = Clock::now();
@@ -472,6 +476,11 @@ void TcpServer::run() {
                         rejected_.fetch_add(1);
                         warn_once(Warning::connection_limit, "Network connection limit reached; excess peer rejected");
                         continue; // RAII closes this excess client, without per-client log flooding.
+                    }
+                    if (login.sessions().size() >= login.sessions().capacity()) {
+                        rejected_.fetch_add(1);
+                        warn_once(Warning::session_limit,"User session limit reached; excess peer rejected");
+                        continue; // No TLS, quota, model, SID or transport token allocated.
                     }
                     const auto admitted_at = Clock::now();
                     const auto key = peer_identity(remote);

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.3.11 LANGUAGES CXX)
+project(dc24h VERSION 0.3.12 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -41,7 +41,7 @@ target_include_directories(dc24h_text PUBLIC include)
 target_link_libraries(dc24h_text PRIVATE UTF8Proc::UTF8Proc)
 
 add_library(dc24h_users src/users/session.cpp src/users/session_manager.cpp src/users/user.cpp
-    src/users/nick_manager.cpp src/users/user_registry.cpp)
+    src/users/nick_manager.cpp src/users/user_registry.cpp src/users/limits.cpp)
 target_compile_features(dc24h_users PUBLIC cxx_std_20)
 set_target_properties(dc24h_users PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_users PUBLIC include)
@@ -213,6 +213,14 @@ if(BUILD_TESTING)
     add_test(NAME users.disconnect.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/user_disconnect_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(users.disconnect users.disconnect.process PROPERTIES TIMEOUT 30)
+    add_executable(user_limits_tests tests/user_limits_tests.cpp)
+    target_link_libraries(user_limits_tests PRIVATE dc24h_adc)
+    target_compile_options(user_limits_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(user_limits_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME users.limits COMMAND user_limits_tests)
+    add_test(NAME users.limits.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/user_limits_process_tests.py" "$<TARGET_FILE:dc24h>")
+    set_tests_properties(users.limits users.limits.process PROPERTIES TIMEOUT 30)
     add_executable(inf_updates_tests tests/inf_updates_tests.cpp)
     target_link_libraries(inf_updates_tests PRIVATE dc24h_adc)
     target_compile_options(inf_updates_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)

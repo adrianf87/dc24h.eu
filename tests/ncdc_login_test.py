@@ -36,7 +36,8 @@ class NcdcLoginTest(unittest.TestCase):
                 credentials(directory)
                 network = ('[network]\nadcs_listen=127.0.0.1:0\n[tls]\n'
                            'certificate=certificate.pem\nprivate_key=private.pem\n')
-            ini.write_text(network + '[security]\nmax_connections_per_ip=8\n')
+            ini.write_text(network + '[users]\nmax_sessions=3\nmax_users=2\n'
+                           '[security]\nmax_connections_per_ip=8\n')
             api_path, token = enable_api(ini, directory)
             options = {'ready_pattern': TLS_READY} if ENCRYPTED else {}
             hub = Hub(self, '--config', str(ini), '--log-connections', 'on', **options)

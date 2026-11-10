@@ -1,6 +1,6 @@
 # Versions
 
-**Current increment — alpha-0.3.11:** [User Disconnect](USER_DISCONNECT.md) finalizes lifecycle and releases departing output, protocol/SID and registry resources before sending public QUI. Notification allocation failures cannot abort source cleanup; recipients that cannot receive the notice are closed. Existing own ISTA → IQUI drain and shutdown behavior remain. Earlier module descriptions retain their historical scope.
+**Current increment — alpha-0.3.12:** [Limits](LIMITS.md) adds configurable session/user ceilings shared by ADC/ADCS, bounded by the connection cap. SessionManager checks capacity transactionally; LoginHub rejects a full user registry before welcome/list preparation with ISTA 211 and own IQUI. Closing reservations count until cleanup. Earlier descriptions retain their historical scope.
 
 **Increment delivered in alpha-0.3.5:** [User Core](USER_CORE.md) adds checked UTF-8/NFC Nickname values, shared ADC/User text validation, immutable rename candidates and explicit projection from validated ClientInfo/VerifiedIdentity. Users now links the neutral dc24h_text library using the existing utf8proc package. Manager ownership/uniqueness remains unchanged. Earlier descriptions retain their historical scope.
 
@@ -44,6 +44,7 @@
 | alpha-0.3.9 | alpha-0.3.9 | User List: initial public membership synchronization |
 | alpha-0.3.10 | alpha-0.3.10 | INF Updates: validated updates, cancellation and incremental distribution |
 | alpha-0.3.11 | alpha-0.3.11 | User Disconnect: QUI, lifecycle finalization and resource cleanup |
+| alpha-0.3.12 | alpha-0.3.12 | Limits: connections, sessions, users and cleanup-bound capacity |
 
 Identify an individual build with its version and Git commit SHA; compiling does not modify tracked source. Each significant change updates CHANGELOG.md. Alpha denotes development status, not complete hub functionality. Tags and production deployment are not created automatically.
 
@@ -56,7 +57,6 @@ CMake PROJECT_VERSION and npm package/lock root versions are **0.2.7**; runtime/
 
 ## alpha-0.2.8
 
-**Current integration — alpha-0.2.8:** [Guest login](ADC_LOGIN.md) attaches the state/SUP/SID/INF/Tiger stack to the actual C++ TCP/TLS reactor with bounded ordered output, nickname/CID admission, public presence and complete ncdc NORMAL/reconnect tests. Historical stage descriptions below retain their original scope; statements that transport attachment/output/login were still planned describe those earlier versions. Registered-user authentication, chat, search and transfer dispatch remain planned.
 
 CMake/npm version 0.2.8; runtime alpha-0.2.8. Branch alpha-0.2.8 starts from main b8978491fa8e146527eba818f9bc1ab0a31aa90d. No automatic main merge or release tag.
 

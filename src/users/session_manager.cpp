@@ -5,12 +5,12 @@
 #include <utility>
 
 namespace dc24h::users {
-SessionManager::SessionManager(std::size_t capacity) : capacity_(capacity), users_(capacity), nicknames_(capacity) {
-    if (capacity == 0 || capacity > max_capacity) { throw std::invalid_argument("Invalid session registry capacity"); }
-}
+SessionManager::SessionManager(std::size_t capacity) : SessionManager(Limits{capacity,capacity}) {}
+SessionManager::SessionManager(Limits limits) : limits_(limits.bounded_by(limits.max_sessions)),
+    users_(limits_.max_users), nicknames_(limits_.max_users) {}
 Registration SessionManager::add(SessionId id, Transport transport, TimePoint accepted) {
     if (id.value() <= greatest_id_) { return RegistryError::stale_id; }
-    if (size() == capacity_) { return RegistryError::capacity_reached; }
+    if (size() >= capacity()) { return RegistryError::capacity_reached; }
     auto model = std::make_unique<Session>(id, transport, accepted);
     auto* result = model.get();
     sessions_.emplace(id.value(), std::move(model));
@@ -83,6 +83,7 @@ MutationResult SessionManager::identify(SessionId id, User user, TimePoint now) 
     if (by_sid(identity.sid())) { return RegistryError::duplicate_sid; }
     if (by_cid(identity.cid())) { return RegistryError::duplicate_cid; }
     if (by_nickname(identity.nickname())) { return RegistryError::duplicate_nickname; }
+    if (users_full()) { return RegistryError::user_capacity_reached; }
     // Stage allocating indexes before the no-throw model commit. Roll back all
     // successful insertions if any allocation fails; no partial reservations.
     try {

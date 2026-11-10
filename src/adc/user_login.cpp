@@ -25,6 +25,7 @@ std::string_view user_login_status(const UserLoginFailure& error) noexcept {
             case users::RegistryError::duplicate_cid: return "224";
             case users::RegistryError::duplicate_nickname: return "222";
             case users::RegistryError::capacity_reached: return "211";
+            case users::RegistryError::user_capacity_reached: return "211";
             default: return "210";
             }
         } else if constexpr (std::is_same_v<T, users::SessionError>) {

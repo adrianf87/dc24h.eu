@@ -1,6 +1,6 @@
 # Bezpieczeństwo negocjacji — alpha-0.2.10
 
-**Aktualny etap — alpha-0.3.1:** [Session Core](SESSION_CORE.md) dostarcza niezależny model Users i trwałe w obrębie reaktora ID sesji, podłączone do rzeczywistej gotowości, zamykania i czasów. Wcześniejsze opisy zachowują zakres pierwotnego etapu.
+**Bieżący etap — alpha-0.3.12:** [Limits](LIMITS.md) dodaje konfigurowalne limity sesji/użytkowników wspólne dla ADC/ADCS, ograniczone limitem połączeń. SessionManager transakcyjnie sprawdza pojemność; LoginHub odrzuca pełny rejestr przed przygotowaniem powitania/listy przez ISTA 211 i własne IQUI. Rezerwacje closing liczą się aż do sprzątania. Starsze opisy zachowują zakres historyczny.
 
 Etap dodaje łączne budżety wejścia początkowego logowania, limity oczekujących przyjęć i wspólne bramki przed weryfikacją tożsamości. Podstawa: main `a3ca70d65a0fcbb563147e8a44a1ce2669a0ec53`, po scaleniu STA/QUI alpha-0.2.9. Historia zostaje zachowana, a gałąź nie scala się automatycznie. Protokół ADC, model gości, API v1 i schemat bazy pozostają dotychczasowe.
 

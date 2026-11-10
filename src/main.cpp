@@ -97,6 +97,8 @@ int main(int argc, char* argv[]) {
             logger.info("Startup settings: adc_listeners=" + std::to_string(parsed.settings.network.listeners.size()) +
                     " adcs_listeners=" + std::to_string(parsed.settings.network.tls_listeners.size()) +
                     " max_connections=" + std::to_string(parsed.settings.network.max_connections) +
+                    " max_sessions=" + std::to_string(parsed.settings.network.users.bounded_by(parsed.settings.network.max_connections).max_sessions) +
+                    " max_users=" + std::to_string(parsed.settings.network.users.bounded_by(parsed.settings.network.max_connections).max_users) +
                     " idle_timeout_seconds=" + std::to_string(parsed.settings.network.idle_timeout.count()) +
                     " connection_logging=" + (parsed.settings.logging.connections ? "on" : "off") +
                     " max_per_ip=" + std::to_string(parsed.settings.network.security.max_connections_per_ip) +

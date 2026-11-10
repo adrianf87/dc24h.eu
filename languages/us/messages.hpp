@@ -3,7 +3,7 @@
 #include <string_view>
 
 namespace dc24h::i18n::us {
-inline constexpr std::array<std::string_view, 119> messages{{
+inline constexpr std::array<std::string_view, 121> messages{{
     "Starting dc24h.eu ",
     "Core running",
     "Core stopping",
@@ -123,12 +123,14 @@ inline constexpr std::array<std::string_view, 119> messages{{
     "Security negotiation limit reached; connection closed",
     "Security identity verification limit reached; connection closed",
     "Session identifier space exhausted; peer rejected",
+    "Invalid user/session limits",
+    "User session limit reached; excess peer rejected",
 }};
 inline constexpr std::string_view help = R"HELP(Usage: dc24h [--config FILE] [--check-config | --check-database | --migrate-database]
              [--listen IPv4:port | [IPv6]:port | none] ...
              [--adcs-listen IPv4:port | [IPv6]:port | none] ...
              [--tls-cert CHAIN.pem --tls-key KEY.pem]
-             [--max-connections N] [--idle-timeout SECONDS]
+             [--max-connections N] [--max-sessions N] [--max-users N] [--idle-timeout SECONDS]
              [--log-level info|warning|error|off] [--log-file PATH|-] [--language us|pl]
              [--log-connections on|off]
              [--max-per-ip N] [--accepts-per-minute N]
@@ -142,6 +144,7 @@ ADCS requires a matching PEM chain and key; TLS >= 1.2. At most 16 total listene
 --check-config validates settings/TLS without binding ports or creating a log file.
 Defaults: 127.0.0.1:1511, 1024 connections, 120 seconds idle, info to stderr, us.
 Limits: connections 1..65535; idle timeout 1..86400 seconds.
+User/session ceilings: 1..65535, default 65535; effective caps also obey connections.
 Run dc24h.eu in the foreground; stop with SIGINT (Ctrl+C) or SIGTERM.
 Security defaults: 128 peers/IP, 256 admissions/IP/minute, 1024 frames/s/peer,
 512 invalid frames/peer, 10 seconds for TLS and each unfinished frame.

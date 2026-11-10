@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dc24h/security/limits.hpp"
+#include "dc24h/users/limits.hpp"
 
 #include <atomic>
 #include <chrono>
@@ -30,6 +31,7 @@ struct Options {
     std::size_t max_connections{1024};
     std::chrono::seconds idle_timeout{120};
     security::Limits security{};
+    users::Limits users{};
 };
 
 struct Statistics {
