@@ -1,5 +1,7 @@
 # Versions
 
+**Current increment — alpha-0.3.2:** [Session Manager](SESSION_MANAGER.md) centrally owns all registered lifecycle models, with bounded capacity, stable lookup, phase counts and ordered snapshot pages. Protocol peers borrow models; their queues and public routing indexes remain in ADC. Earlier descriptions retain their historical scope.
+
 | Version | Branch | Scope |
 | --- | --- | --- |
 | alpha-0.1.1 | alpha-0.1.1 | Core |
@@ -24,6 +26,7 @@
 | alpha-0.2.9 | alpha-0.2.9 | STA/QUI: protocol diagnostics, routing and bounded close |
 | alpha-0.2.10 | alpha-0.2.10 | Security: pending sessions, cumulative login and identity-work limits |
 | alpha-0.3.1 | alpha-0.3.1 | Session Core: Users lifecycle, stable local IDs and snapshots |
+| alpha-0.3.2 | alpha-0.3.2 | Session Manager |
 
 Identify an individual build with its version and Git commit SHA; compiling does not modify tracked source. Each significant change updates CHANGELOG.md. Alpha denotes development status, not complete hub functionality. Tags and production deployment are not created automatically.
 

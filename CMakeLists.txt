@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.3.1 LANGUAGES CXX)
+project(dc24h VERSION 0.3.2 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -34,7 +34,7 @@ add_library(Gcrypt::Gcrypt UNKNOWN IMPORTED)
 set_target_properties(Gcrypt::Gcrypt PROPERTIES
     IMPORTED_LOCATION "${GCRYPT_LIBRARY}"
     INTERFACE_INCLUDE_DIRECTORIES "${GCRYPT_INCLUDE_DIR}")
-add_library(dc24h_users src/users/session.cpp)
+add_library(dc24h_users src/users/session.cpp src/users/session_manager.cpp)
 target_compile_features(dc24h_users PUBLIC cxx_std_20)
 set_target_properties(dc24h_users PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_users PUBLIC include)
@@ -197,6 +197,11 @@ if(BUILD_TESTING)
     add_test(NAME adc.status.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/adc_status_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(adc.status adc.status.process PROPERTIES TIMEOUT 45)
+    add_executable(session_manager_tests tests/session_manager_tests.cpp)
+    target_link_libraries(session_manager_tests PRIVATE dc24h_adc)
+    target_compile_options(session_manager_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    add_test(NAME users.manager COMMAND session_manager_tests)
+    set_tests_properties(users.manager PROPERTIES TIMEOUT 30)
     add_executable(user_session_tests tests/user_session_tests.cpp)
     target_link_libraries(user_session_tests PRIVATE dc24h_users)
     add_executable(user_session_adc_tests tests/user_session_adc_tests.cpp)

@@ -1,6 +1,12 @@
 # Testing
 
-**Current increment — alpha-0.3.1:** [Session Core](SESSION_CORE.md) provides the independent Users model and stable lifetime IDs, with live readiness/closure/timeline integration. Earlier stage descriptions below retain their original delivery scope.
+## Session Manager validation — alpha-0.3.2
+
+The strict gate now has **48 suites**, including users.manager. Debug, Release and ASan/UBSan passed, with real ncdc ADC/ADCS, MariaDB and Apache. An initial Debug shutdown assertion saw a legal Unix socket reset; the fixture accepts EOF/reset when closing unread input and was rechecked in all builds. WebAdmin build, 3 Node tests, 3 Chromium tests and live API integration passed. Reproduce with `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug -j 4`, and `ctest --test-dir build-debug --output-on-failure -j 4`. Sanitizer flags remain as documented below.
+
+**Current increment — alpha-0.3.2:** [Session Manager](SESSION_MANAGER.md) centrally owns all registered lifecycle models, with bounded capacity, stable lookup, phase counts and ordered snapshot pages. Protocol peers borrow models; their queues and public routing indexes remain in ADC. Earlier descriptions retain their historical scope.
+
+**Increment delivered in alpha-0.3.1:** [Session Core](SESSION_CORE.md) provides the independent Users model and stable lifetime IDs, with live readiness/closure/timeline integration. Earlier stage descriptions below retain their original delivery scope.
 
 **Increment delivered in alpha-0.2.10:** [Negotiation security](NEGOTIATION_SECURITY.md) adds pending admission caps, cumulative pre-readiness input budgets and shared pre-INF/Tiger attempt limits. Earlier release descriptions below retain their original scope.
 
