@@ -169,6 +169,8 @@ class NcdcLoginTest(unittest.TestCase):
                             break
                 self.assertEqual(process.wait(timeout=2), 0)
                 self.assertEqual(observer.line(), b'IQUI ' + replacement_sid)
+                observer.send(b'DSTA ' + observer.sid + b' ' + replacement_sid + b' 100 Departed')
+                self.assertTrue(observer.line().startswith(b'ISTA 140 '))
                 observer.peer.close()
                 hub.stop()
                 self.assertEqual(hub.log.count(b'event=login_ready'), 3)

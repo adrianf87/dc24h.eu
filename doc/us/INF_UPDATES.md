@@ -1,5 +1,7 @@
 # INF Updates — alpha-0.3.10
 
+**Current integration — alpha-0.3.11:** [User Disconnect](USER_DISCONNECT.md) releases the departing source before public QUI and isolates notification allocation failures. The update staging/commit and incremental INF contract below remain applicable.
+
 This increment starts from main `c3cc9c098512b9a9a8299dbd8d1c98e455073eaf` after the alpha-0.3.9 User List merge. Earlier requested stages are present. The alpha-0.3.10 branch preserves main/history and is not merged automatically.
 
 ## Incremental contract

@@ -1,5 +1,13 @@
 # Testing
 
+## User Disconnect validation — alpha-0.3.11
+
+All **63 CTest suites** passed locally in Debug, Release and ASan/UBSan. New users.disconnect and users.disconnect.process cover allocation-free finalization and release, all lifecycle phases, first-cause/time retention, repeated/missing cleanup, SID/CID/nick and pending/per-IP capacity reuse, queued welcome cancellation, bare public QUI exactly once, source queue reclamation before fanout, pinned output stability, notification allocation failure and continued delivery after an isolated recipient failure. Actual mixed ADC/ADCS cycles exercise EOF, reset, fatal client status, invalid-INF rejection, failed anonymous TLS and shutdown. Real ncdc ADC/ADCS additionally proves the departed SID is unavailable for routing. All earlier regressions, MariaDB and Apache HTTPS passed. See [User Disconnect](USER_DISCONNECT.md) for ownership and failure-handling details.
+
+Reproduce with `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug --parallel 4` and `ctest --test-dir build-debug --output-on-failure -j 4`. Repeat for build-release/Release. In build-sanitize/Debug add `-DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie"` and `-DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined -no-pie"`. Fault injection covers tested C++ cleanup/notification paths, not unrelated C allocator or operating-system failures.
+
+WebAdmin typecheck/production build, 3 Node tests, 3 Chromium tests and real C++ API integration passed. From webadmin run `npm run build`, `npm test`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e` and `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:integration -- ../build-debug/dc24h`. Metadata/fixtures match alpha-0.3.11. Results are local, not a remote CI/OS-matrix/load claim.
+
 ## INF Updates validation — alpha-0.3.10
 
 All **61 CTest suites** passed locally in Debug, Release and ASan/UBSan. New users.inf_updates and users.inf_updates.process cover atomic ClientInfo/User/nickname updates, incremental supplied fields, explicit cancellation and zero values, normalized addresses, omitted-field retention, unknown/empty suppression, identity/lifecycle/time/source/privilege/validation rejection, stale adapter detection and allocation rollback/retry. Mixed ADC/ADCS fanout agrees with later full user lists. Actual ncdc changes its description live over both transports, including its optional supplied HN field; existing list/reconnect/identity/privacy tests remain. All earlier server tests, MariaDB and Apache HTTPS passed. See [INF Updates](INF_UPDATES.md) for the precise contract and limits.
@@ -42,7 +50,7 @@ Reproduce the strict build with `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=De
 
 WebAdmin typecheck/production build, 3 Node tests, 3 Chromium tests and real C++ API integration passed. From webadmin run `npm run build`, `npm test`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e` and `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:integration -- ../build-debug/dc24h`. This uses the installed system Chromium; otherwise install Playwright's browser normally. Version assertions and frontend fixtures match alpha-0.3.6. Local checks do not establish remote GitHub Actions results or the full supported OS matrix.
 
-**Current increment — alpha-0.3.10:** [INF Updates](INF_UPDATES.md) validates and prepares ready-state updates before atomically committing ClientInfo, User/profile and nickname ownership. Fanout carries validated supplied fields and explicit cancellations; initial lists remain full public snapshots. Unknown-only/empty updates produce no public frame. Earlier module descriptions retain their historical scope.
+**Current increment — alpha-0.3.11:** [User Disconnect](USER_DISCONNECT.md) finalizes lifecycle and releases departing output, protocol/SID and registry resources before sending public QUI. Notification allocation failures cannot abort source cleanup; recipients that cannot receive the notice are closed. Existing own ISTA → IQUI drain and shutdown behavior remain. Earlier module descriptions retain their historical scope.
 
 ## User Core validation — alpha-0.3.5
 

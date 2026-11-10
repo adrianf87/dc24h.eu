@@ -4,6 +4,7 @@
 #include "dc24h/adc/user_login.hpp"
 #include "dc24h/adc/user_list.hpp"
 #include "dc24h/adc/inf_updates.hpp"
+#include "dc24h/adc/user_disconnect.hpp"
 #include "dc24h/users/session_manager.hpp"
 
 #include <cstdint>
@@ -68,12 +69,14 @@ private:
                 users::TimePoint now = users::Clock::now());
     void route_status(Id id, const Message& message);
     void relay(Id except, const Message& message);
+    void announce_departure(const Departure& departure);
     LoginLimits limits_;
     std::shared_ptr<SidPool> pool_;
     users::SessionManager sessions_; // Outlives the peers that borrow models.
     UserLogin user_login_;
     UserList user_list_;
     InfUpdates inf_updates_;
+    UserDisconnect user_disconnect_;
     std::unordered_map<Id, std::unique_ptr<Peer>> peers_;
     std::size_t queued_{0};
 };

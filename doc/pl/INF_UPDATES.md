@@ -1,5 +1,7 @@
 # INF Updates — alpha-0.3.10
 
+**Bieżąca integracja — alpha-0.3.11:** [User Disconnect](USER_DISCONNECT.md) zwalnia odchodzące źródło przed publicznym QUI i izoluje błędy alokacji powiadomień. Opisane niżej przygotowanie/zatwierdzanie aktualizacji i kontrakt przyrostowego INF nadal obowiązują.
+
 Etap powstał z main `c3cc9c098512b9a9a8299dbd8d1c98e455073eaf` po scaleniu alpha-0.3.9 User List. Poprzednie etapy są obecne. Gałąź alpha-0.3.10 zachowuje main/historię i nie jest scalana automatycznie.
 
 ## Kontrakt przyrostowy
