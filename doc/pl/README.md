@@ -1,9 +1,10 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.3.6: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.3.7: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
 - [AUDIT_ALPHA_0.1.md](AUDIT_ALPHA_0.1.md)
 - [ARCHITECTURE.md](ARCHITECTURE.md)
+- [USER_REGISTRY.md](USER_REGISTRY.md)
 - [NICK_MANAGER.md](NICK_MANAGER.md)
 - [USER_CORE.md](USER_CORE.md)
 - [SESSION_MANAGER.md](SESSION_MANAGER.md)

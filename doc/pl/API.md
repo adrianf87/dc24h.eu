@@ -1,6 +1,6 @@
 # Lokalne API administracyjne — alpha-0.1.9
 
-**Bieżący etap — alpha-0.3.6:** [Nick Manager](NICK_MANAGER.md) utrzymuje ograniczony rejestr nicków i odwrotny indeks właścicieli sesji wewnątrz SessionManager. Sprawdzone wartości Nickname egzekwują istniejącą politykę UTF-8/NFC. Przyjęcie, aktualizacja profilu, zmiana nicka i usunięcie korzystają z tego rejestru; rezerwacje zamykanych sesji trwają do usunięcia. Starsze opisy zachowują zakres historyczny.
+**Bieżący etap — alpha-0.3.7:** [User Registry](USER_REGISTRY.md) utrzymuje ograniczone indeksy SID/CID i odwrotny indeks właścicieli prywatnie w SessionManager. Przyjęcie jest transakcyjne między tym rejestrem, NickManager i modelem Session. Wyszukiwanie User tylko do odczytu wskazuje z obu kluczy ten sam aktualny model; rezerwacje trwają do usunięcia sesji. Starsze opisy modułów zachowują zakres historyczny.
 
 **Etap dostarczony w alpha-0.3.5:** [User Core](USER_CORE.md) dodaje typ Nickname sprawdzający UTF-8/NFC, wspólną walidację tekstu ADC/Users, samodzielnych kandydatów zmiany nicku i jawną projekcję ClientInfo/VerifiedIdentity. Users korzysta z neutralnego dc24h_text i istniejącego utf8proc. Własność/unikalność managera pozostają bez zmian. Starsze opisy dotyczą zakresu historycznego.
 

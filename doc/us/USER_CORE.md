@@ -1,6 +1,6 @@
 # User Core — alpha-0.3.5
 
-**Current integration — alpha-0.3.6:** Nickname reservations and rename uniqueness now use the privately owned [Nick Manager](NICK_MANAGER.md) within SessionManager. The checked User/Nickname value rules below remain applicable.
+**Current increment — alpha-0.3.7:** [User Registry](USER_REGISTRY.md) owns bounded SID/CID indexes and a reverse session-owner index privately within SessionManager. Admission is transactional across this registry, NickManager and the Session model. Const User lookups resolve both keys to the same current model; reservations remain until session removal. Earlier module descriptions retain their historical scope.
 
 This increment starts from main `ba12aa3a96ea70e2b64ca3b11a519bd862e7f2f4`, after the alpha-0.3.4 Session Manager merge. It develops the public guest model introduced in alpha-0.3.3: checked nickname values, shared Unicode text rules and an explicit ADC projection. The manager remains the owner of registered sessions and uniqueness indexes. Main and historical branches are preserved; this branch is not merged automatically.
 

@@ -5,7 +5,7 @@
 #include <utility>
 
 namespace dc24h::users {
-SessionManager::SessionManager(std::size_t capacity) : capacity_(capacity), nicknames_(capacity) {
+SessionManager::SessionManager(std::size_t capacity) : capacity_(capacity), users_(capacity), nicknames_(capacity) {
     if (capacity == 0 || capacity > max_capacity) { throw std::invalid_argument("Invalid session registry capacity"); }
 }
 Registration SessionManager::add(SessionId id, Transport transport, TimePoint accepted) {
@@ -34,16 +34,25 @@ MutationResult apply(Session* model, Operation operation) noexcept {
     return model ? promote(operation(*model)) : MutationResult{RegistryError::missing};
 }
 } // namespace
-const Session* SessionManager::indexed(const Index& index, std::string_view key, std::size_t maximum) const noexcept {
-    if (key.empty() || key.size()>maximum || key.find('\0')!=std::string_view::npos) { return nullptr; }
-    const auto found=index.find(key);
-    return found==index.end() ? nullptr : find(found->second);
+const Session* SessionManager::by_sid(std::string_view sid) const noexcept {
+    const auto id = users_.by_sid(sid);
+    return id ? find(*id) : nullptr;
 }
-const Session* SessionManager::by_sid(std::string_view sid) const noexcept { return indexed(sids_,sid,max_session_key_bytes); }
-const Session* SessionManager::by_cid(std::string_view cid) const noexcept { return indexed(cids_,cid,max_client_key_bytes); }
+const Session* SessionManager::by_cid(std::string_view cid) const noexcept {
+    const auto id = users_.by_cid(cid);
+    return id ? find(*id) : nullptr;
+}
 const Session* SessionManager::by_nickname(std::string_view nickname) const noexcept {
     const auto id = nicknames_.owner(nickname);
     return id ? find(*id) : nullptr;
+}
+const User* SessionManager::user_by_sid(std::string_view sid) const noexcept {
+    const auto* session = by_sid(sid);
+    return session ? &*session->user() : nullptr;
+}
+const User* SessionManager::user_by_cid(std::string_view cid) const noexcept {
+    const auto* session = by_cid(cid);
+    return session ? &*session->user() : nullptr;
 }
 MutationResult SessionManager::start_negotiation(SessionId id, TimePoint now) noexcept {
     return apply(mutable_find(id),[now](Session& model) { return model.start_negotiation(now); });
@@ -60,12 +69,8 @@ MutationResult SessionManager::force_close(SessionId id, CloseCause cause, TimeP
 MutationResult SessionManager::finish_close(SessionId id, CloseCause cause, TimePoint now) noexcept {
     return apply(mutable_find(id),[=](Session& model) { return model.finish_close(cause,now); });
 }
-void SessionManager::erase_identity(SessionId id, const Identity& identity) noexcept {
-    const auto erase_owned=[id](Index& index, std::string_view key) {
-        const auto found=index.find(key);
-        if (found!=index.end() && found->second==id) { index.erase(found); }
-    };
-    erase_owned(sids_,identity.sid());erase_owned(cids_,identity.cid());
+void SessionManager::erase_identity(SessionId id) noexcept {
+    (void)users_.remove(id);
     (void)nicknames_.release(id);
 }
 MutationResult SessionManager::identify(SessionId id, User user, TimePoint now) {
@@ -81,13 +86,14 @@ MutationResult SessionManager::identify(SessionId id, User user, TimePoint now) 
     // Stage allocating indexes before the no-throw model commit. Roll back all
     // successful insertions if any allocation fails; no partial reservations.
     try {
-        sids_.emplace(identity.sid(),id);
-        cids_.emplace(identity.cid(),id);
+        if (users_.add(id,user)) {
+            throw std::logic_error("User registration invariant violated");
+        }
         if (nicknames_.reserve(id,identity.nickname_value())) {
             throw std::logic_error("Nickname reservation invariant violated");
         }
     } catch (...) {
-        erase_identity(id,identity);
+        erase_identity(id);
         throw;
     }
     return promote(model->identify(std::move(user),now));
@@ -124,7 +130,7 @@ std::optional<RegistryError> SessionManager::remove(SessionId id) noexcept {
     const auto found = sessions_.find(id.value());
     if (found == sessions_.end()) { return RegistryError::missing; }
     if (found->second->phase() != Phase::closed) { return RegistryError::not_closed; }
-    if (found->second->identity()) { erase_identity(id,*found->second->identity()); }
+    erase_identity(id);
     sessions_.erase(found);
     return {};
 }

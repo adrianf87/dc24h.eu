@@ -2,6 +2,7 @@
 
 #include "dc24h/users/session.hpp"
 #include "dc24h/users/nick_manager.hpp"
+#include "dc24h/users/user_registry.hpp"
 
 #include <map>
 #include <memory>
@@ -39,6 +40,10 @@ public:
     [[nodiscard]] const Session* by_sid(std::string_view sid) const noexcept;
     [[nodiscard]] const Session* by_cid(std::string_view cid) const noexcept;
     [[nodiscard]] const Session* by_nickname(std::string_view nickname) const noexcept;
+    // Same public User held by the indexed Session; valid until its next User
+    // mutation/removal. A lookup does not imply ready() or account privileges.
+    [[nodiscard]] const User* user_by_sid(std::string_view sid) const noexcept;
+    [[nodiscard]] const User* user_by_cid(std::string_view cid) const noexcept;
     [[nodiscard]] MutationResult start_negotiation(SessionId id, TimePoint now) noexcept;
     [[nodiscard]] MutationResult identify(SessionId id, User user, TimePoint now);
     [[nodiscard]] MutationResult update_user(SessionId id, User user, TimePoint now);
@@ -57,16 +62,14 @@ public:
     [[nodiscard]] SessionCounts counts() const noexcept;
     [[nodiscard]] std::size_t size() const noexcept { return sessions_.size(); }
     [[nodiscard]] std::size_t capacity() const noexcept { return capacity_; }
-    [[nodiscard]] std::size_t identified_users() const noexcept { return nicknames_.size(); }
+    [[nodiscard]] std::size_t identified_users() const noexcept { return users_.size(); }
 private:
-    using Index = std::map<std::string, SessionId, std::less<>>;
     [[nodiscard]] Session* mutable_find(SessionId id) noexcept;
-    [[nodiscard]] const Session* indexed(const Index& index, std::string_view key, std::size_t maximum) const noexcept;
-    void erase_identity(SessionId id, const Identity& identity) noexcept;
+    void erase_identity(SessionId id) noexcept;
     std::size_t capacity_;
     std::uint64_t greatest_id_{};
     std::map<std::uint64_t, std::unique_ptr<Session>> sessions_;
-    Index sids_, cids_;
+    UserRegistry users_;
     NickManager nicknames_;
 };
 } // namespace dc24h::users

@@ -1,5 +1,15 @@
 # Testowanie
 
+## Weryfikacja User Registry — alpha-0.3.7
+
+Lokalnie przeszło wszystkich **55 zestawów CTest** w Debug, Release i ASan/UBSan, w tym rzeczywisty ncdc ADC/ADCS, mieszane transporty, MariaDB i Apache HTTPS. Nowe users.user_registry i users.user_registry.process obejmują unikalność SID/CID i lokalnego właściciela, aktualny User const, niezmienne klucze, rezerwacje/usuwanie cyklu życia, reconnect/routing i wycofanie alokacji C++ z zachowaniem innych użytkowników. Przechwycenie ADC ncdc dodatkowo wymaga nowego SID i niezmienionego CID przy reconnect; oba transporty nadal osiągają NORMAL z polską zmianą nicka. Kontrakt i szczegóły opisuje [User Registry](USER_REGISTRY.md).
+
+Pierwszy przebieg Debug ujawnił założenie istniejącego testu zamykania TLS: natychmiastowe zatrzymanie może zresetować połączenie z nieodczytanym końcowym wejściem handshake. Test używa teraz istniejącego ograniczonego helpera EOF/reset i nadal wymaga braku danych aplikacyjnych; poprawiony zestaw przeszedł. Zachowanie transportu serwera nie zostało zmienione.
+
+Odtwarzanie: `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug --parallel 4`, `ctest --test-dir build-debug --output-on-failure -j 4`. Powtórz dla build-release/Release. W build-sanitize/Debug dodaj `-DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie"` i `-DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined -no-pie"`. Wstrzykiwanie błędów dotyczy sprawdzanych ścieżek rejestracji C++, nie alokatora C utf8proc ani całego systemu.
+
+WebAdmin: poprawne typecheck/budowanie produkcyjne, 3 testy Node, 3 Chromium i integracja rzeczywistego API C++. W webadmin uruchom `npm run build`, `npm test`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e` i `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:integration -- ../build-debug/dc24h`. Asercje/dane wersji odpowiadają alpha-0.3.7. Wyniki są lokalne; nie potwierdzają zdalnego CI, pełnej macierzy systemów ani obciążenia produkcyjnego.
+
 ## Weryfikacja Nick Manager — alpha-0.3.6
 
 Lokalnie przeszły wszystkie **53 zestawy CTest** w Debug, Release oraz ASan/UBSan. Nowe zestawy to users.nicknames i users.nicknames.process; istniejące testy obejmują rzeczywisty ncdc ADC/ADCS, mieszane transporty, MariaDB i Apache HTTPS. ncdc zmienił dc24hŻółw na dc24hŁoś przy reconnect i ponownie osiągnął NORMAL. Sprawdzono błędy alokacji C++ w rezerwacji, zmianie nicka i przyjęciu SessionManager; nie wstrzykiwano błędów alokatora utf8proc. Dokładny kontrakt i zakres opisuje [Nick Manager](NICK_MANAGER.md).
@@ -8,7 +18,7 @@ Odtwarzanie: `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE
 
 WebAdmin: poprawne typecheck/budowanie produkcyjne, 3 testy Node, 3 testy Chromium i integracja API C++. W webadmin uruchom `npm run build`, `npm test`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e` i `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:integration -- ../build-debug/dc24h`. Użyto systemowego Chromium; alternatywnie zainstaluj przeglądarkę Playwright. Asercje wersji i dane testowe odpowiadają alpha-0.3.6. Wyniki lokalne nie potwierdzają zdalnego GitHub Actions ani pełnej macierzy systemów operacyjnych.
 
-**Bieżący etap — alpha-0.3.6:** [Nick Manager](NICK_MANAGER.md) utrzymuje ograniczony rejestr nicków i odwrotny indeks właścicieli sesji wewnątrz SessionManager. Sprawdzone wartości Nickname egzekwują istniejącą politykę UTF-8/NFC. Przyjęcie, aktualizacja profilu, zmiana nicka i usunięcie korzystają z tego rejestru; rezerwacje zamykanych sesji trwają do usunięcia. Starsze opisy zachowują zakres historyczny.
+**Bieżący etap — alpha-0.3.7:** [User Registry](USER_REGISTRY.md) utrzymuje ograniczone indeksy SID/CID i odwrotny indeks właścicieli prywatnie w SessionManager. Przyjęcie jest transakcyjne między tym rejestrem, NickManager i modelem Session. Wyszukiwanie User tylko do odczytu wskazuje z obu kluczy ten sam aktualny model; rezerwacje trwają do usunięcia sesji. Starsze opisy modułów zachowują zakres historyczny.
 
 ## Weryfikacja User Core — alpha-0.3.5
 

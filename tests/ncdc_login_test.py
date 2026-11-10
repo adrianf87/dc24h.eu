@@ -133,6 +133,11 @@ class NcdcLoginTest(unittest.TestCase):
                     self.assertIn(b' NI' + renamed, replies)
                     self.assertNotIn(b' PD', replies)
                     self.assertEqual(replies.count(b'ISUP ADBASE ADTIGR\n'), 2)
+                    initial = [line for line in bytes(wire).splitlines() if line.startswith(b'BINF ') and b' PD' in line]
+                    self.assertEqual(len(initial), 2)
+                    self.assertNotEqual(initial[0].split()[1], initial[1].split()[1], 'Reconnect reused its ADC SID')
+                    cids = [re.search(rb'(?:^| )ID([A-Z2-7]+)(?: |$)', line)[1] for line in initial]
+                    self.assertEqual(cids[0], cids[1], 'Reconnect changed its public CID')
                 os.write(master, b'/quit\r')
                 deadline = time.monotonic() + 4
                 while process.poll() is None and time.monotonic() < deadline:

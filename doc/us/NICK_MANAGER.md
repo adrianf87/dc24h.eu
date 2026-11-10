@@ -1,5 +1,7 @@
 # Nick Manager — alpha-0.3.6
 
+**Current integration — alpha-0.3.7:** SessionManager now composes NickManager with the dedicated [User Registry](USER_REGISTRY.md) for SID/CID ownership. Its admission transaction and owner-ID cleanup keep all public reservations consistent.
+
 This increment starts directly from main `cb49cdb9e1e714f3b548be6a842063c58890eaf6`, which already includes alpha-0.3.1–alpha-0.3.5. Historical branches and main are preserved. The new alpha-0.3.6 branch is not merged automatically.
 
 ## Ownership and validation

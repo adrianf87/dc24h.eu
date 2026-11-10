@@ -190,8 +190,11 @@ class AdcsProcessTests(unittest.TestCase):
         active = self.connect_tls(hub)
         hub.stop()
         self.assertEqual(counters(self, hub), (24, 0, 0, 720000))
-        self.assertEqual(active.recv(1), b'')
-        self.assertEqual(stalled.recv(1), b'')
+        # Shutdown can race the server reading the client's final handshake
+        # bytes. Closing that socket may produce EOF or a TCP reset; neither
+        # may contain application output. Keep the bounded drain assertion.
+        self.assertEqual(drain_until_eof(active), b'')
+        self.assertEqual(drain_until_eof(stalled), b'')
 
 if __name__ == '__main__':
     unittest.main()
