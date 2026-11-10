@@ -234,7 +234,8 @@ Statistics TcpServer::statistics() const noexcept {
     return {active_.load(), accepted_.load(), rejected_.load(), received_bytes_.load(),
             adc_frames_.load(), adc_unknown_.load(), adc_invalid_.load(), adc_keepalives_.load(),
             adcs_handshakes_.load(), adcs_incomplete_.load(),
-            security_rejected_.load(), security_closed_.load()};
+            security_rejected_.load(), security_closed_.load(), closed_.load(), sent_bytes_.load(),
+            peak_connections_.load(), online_users_.load(), peak_online_users_.load(), successful_logins_.load()};
 }
 
 void TcpServer::run() {
@@ -244,8 +245,14 @@ void TcpServer::run() {
     // Reset active on all exits, including exceptions after partially completed startup.
     struct ResetActive {
         std::atomic<std::size_t>& value;
-        ~ResetActive() { value.store(0); }
-    } reset{active_};
+        std::atomic<std::uint64_t>& closed;
+        std::atomic<std::size_t>& online;
+        ~ResetActive() {
+            // RAII closes all remaining sockets on exceptional exits too.
+            closed.fetch_add(value.exchange(0));
+            online.store(0);
+        }
+    } reset{active_, closed_, online_users_};
     Fd epoll(::epoll_create1(EPOLL_CLOEXEC));
     if (epoll.get() == -1) { system_failure("epoll_create1"); }
     watch(epoll.get(), wake_fd_, 0, EPOLLIN);
@@ -290,6 +297,18 @@ void TcpServer::run() {
     login_limits.connections=options_.max_connections;
     login_limits.users=options_.users;
     adc::LoginHub login(login_limits);
+    auto publish_users = [&]() noexcept {
+        const auto value = login.sessions().statistics();
+        online_users_.store(value.online());
+        peak_online_users_.store(value.peak_online);
+        successful_logins_.store(value.successful_logins);
+    };
+    // Publish the final committed model totals before LoginHub destruction,
+    // including an exceptional reactor exit. Never expose models to API threads.
+    struct PublishOnExit {
+        decltype(publish_users)& publish;
+        ~PublishOnExit() { publish(); }
+    } publish_on_exit{publish_users};
     security::PeerLimiter peer_limiter(options_.security);
     users::SessionIds session_ids(static_cast<std::uint64_t>(listeners.size()+1));
     std::array<epoll_event, 64> events{};
@@ -331,6 +350,7 @@ void TcpServer::run() {
         login.disconnect(iterator->first, reason != Event::shutdown, session_cause(reason), Clock::now());
         connections.erase(iterator);
         active_.fetch_sub(1);
+        closed_.fetch_add(1);
     };
     auto count_security_close = [&](Connection& connection) {
         if (!connection.security_counted) { connection.security_counted=true; security_closed_.fetch_add(1); }
@@ -428,6 +448,7 @@ void TcpServer::run() {
                 buffered.push_back(ready);
             }
         }
+        publish_users();
         const int count = ::epoll_wait(epoll.get(), events.data(), static_cast<int>(events.size()),
                                        buffered.empty() ? 250 : 0);
         if (count == -1) {
@@ -526,7 +547,8 @@ void TcpServer::run() {
                         security::NegotiationBudget(options_.security.max_login_bytes,options_.security.max_login_frames),false,false});
                     login.connect(client_token, std::string_view(key).substr(2),
                                   secure ? users::Transport::adcs : users::Transport::adc, admitted_at);
-                    active_.fetch_add(1);
+                    const auto active = active_.fetch_add(1) + 1;
+                    peak_connections_.store(std::max(peak_connections_.load(), active));
                     accepted_.fetch_add(1);
                     logger_.connection(Event::accepted, client_token, secure);
                 }
@@ -620,6 +642,7 @@ void TcpServer::run() {
                         else { closed = true; close_reason = Event::write_error; break; }
                     }
                     if (sent == 0) { closed = true; close_reason = Event::write_error; break; }
+                    sent_bytes_.fetch_add(static_cast<std::uint64_t>(sent));
                     const bool became_ready = login.consume(token, sent);
                     connection.output_progress = Clock::now();
                     if (became_ready) {
@@ -739,9 +762,16 @@ void TcpServer::run() {
     listeners.clear();
     while (!connections.empty()) { disconnect(connections.begin(), Event::shutdown); }
     active_.store(0);
+    publish_users();
+    logger_.info("Users stopped; online=" + std::to_string(online_users_.load()) +
+                 " peak_online=" + std::to_string(peak_online_users_.load()) +
+                 " successful_logins=" + std::to_string(successful_logins_.load()));
     logger_.info("Network stopped; all TCP sockets closed; accepted=" + std::to_string(accepted_.load()) +
                  " rejected=" + std::to_string(rejected_.load()) +
-                 " received_bytes=" + std::to_string(received_bytes_.load()));
+                 " received_bytes=" + std::to_string(received_bytes_.load()) +
+                 " sent_bytes=" + std::to_string(sent_bytes_.load()) +
+                 " closed=" + std::to_string(closed_.load()) +
+                 " peak_connections=" + std::to_string(peak_connections_.load()));
     logger_.info("Security stopped; rejected=" + std::to_string(security_rejected_.load()) +
                  " closed=" + std::to_string(security_closed_.load()));
     logger_.info("ADC stopped; frames=" + std::to_string(adc_frames_.load()) +

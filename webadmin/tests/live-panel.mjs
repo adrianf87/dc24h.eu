@@ -22,7 +22,7 @@ try {
   });
   await page.goto(process.argv[2]);
   await expect(page.getByText("API connected", { exact: true })).toBeVisible();
-  await expect(page.getByText("alpha-0.3.12", { exact: true })).toHaveCount(2);
+  await expect(page.getByText("alpha-0.3.13", { exact: true })).toHaveCount(2);
   await expect(page.locator(".metric-value").nth(1)).toHaveText("1");
   assert.ok(
     Number(await page.locator(".metric-value").first().textContent()) >= 1,
@@ -31,6 +31,9 @@ try {
     new URL("admin-api/v1/status", process.argv[2]).href,
   );
   assert.equal(status.status(), 200);
+  const snapshot = await status.json();
+  assert.deepEqual(snapshot.users, { online: 0, peak_online: 0, successful_logins: 0 });
+  await expect(page.getByTestId("user-statistics").locator(".metric-value")).toHaveText(["0", "0", "0", "0"]);
   assert.ok(!(await status.text()).includes(secret));
   assert.ok(!(await page.content()).includes(secret));
   assert.equal(credentialLeak, false);

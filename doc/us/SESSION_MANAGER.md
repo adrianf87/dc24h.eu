@@ -1,6 +1,8 @@
 # Session Manager — alpha-0.3.4
 
-**Current increment — alpha-0.3.12:** [Limits](LIMITS.md) adds configurable session/user ceilings shared by ADC/ADCS, bounded by the connection cap. SessionManager checks capacity transactionally; LoginHub rejects a full user registry before welcome/list preparation with ISTA 211 and own IQUI. Closing reservations count until cleanup. Earlier descriptions retain their historical scope.
+**Current increment — alpha-0.3.13:** [Statistics](STATISTICS.md) adds constant-time lifecycle counts, online/peak users and completed-login totals, atomic transport statistics, authenticated API fields and bilingual WebAdmin metrics. Historical increments below retain their delivery scope.
+
+**Increment delivered in alpha-0.3.12:** [Limits](LIMITS.md) adds configurable session/user ceilings shared by ADC/ADCS, bounded by the connection cap. SessionManager checks capacity transactionally; LoginHub rejects a full user registry before welcome/list preparation with ISTA 211 and own IQUI. Closing reservations count until cleanup. Earlier descriptions retain their historical scope.
 
 **Increment delivered in alpha-0.3.5:** [User Core](USER_CORE.md) adds checked UTF-8/NFC Nickname values, shared ADC/User text validation, immutable rename candidates and explicit projection from validated ClientInfo/VerifiedIdentity. Users now links the neutral dc24h_text library using the existing utf8proc package. Manager ownership/uniqueness remains unchanged. Earlier descriptions retain their historical scope.
 
@@ -32,7 +34,7 @@ Identity reservations survive closing and closed until remove, preventing reuse 
 
 `find(id)`, `by_sid(key)`, `by_cid(key)` and `by_nickname(key)` return borrowed const Session pointers or null. Public queries reject empty/NUL/oversize keys before search, using existing model storage limits of 64/128/256 bytes. The three namespaces are independent. Check ready() for application routing; finding a reserved public identity does not authorize delivery or authentication. Exact lookup/insertion/removal uses ordered maps with O(log n) behavior and bounded key lengths, without allocating temporary lookup strings.
 
-`identified_users()` reports the number of public reservations, including identified/ready/closing and any finalized entry awaiting removal. `counts()` derives total and all six phase counts in O(n) from the actual models, with no duplicated transition counters. The hub removes finalized entries during the same cleanup call.
+`identified_users()` reports the number of public reservations, including identified/ready/closing and any finalized entry awaiting removal. `counts()` now returns total and all six phase gauges in O(1), maintained at successful model transitions; tests reconcile them with owned models. See [Statistics](STATISTICS.md). The hub removes finalized entries during the same cleanup call.
 
 `snapshot(id)` returns an owning copy or nullopt. `page(after, limit)` returns copies in ascending SessionId order strictly after an exclusive cursor, default 64, limit 1–256. Invalid limits throw before copying; gaps/deleted cursors are supported and UINT64_MAX never wraps. An empty page marks the current end. Use the last returned ID as the next cursor. Pages are independent owner-thread reads, not a frozen transaction. Copying includes bounded public identity/profile and lifecycle data; snapshot values survive source update/removal. No unlimited full-registry snapshot API is introduced.
 

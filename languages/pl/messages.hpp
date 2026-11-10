@@ -3,7 +3,8 @@
 #include <string_view>
 
 namespace dc24h::i18n::pl {
-inline constexpr std::array<std::string_view, 121> messages{{
+inline constexpr std::array<std::string_view, 122> messages{{
+    "Użytkownicy zakończeni; online=",
     "Uruchamianie dc24h.eu ",
     "Core działa",
     "Zatrzymywanie Core",

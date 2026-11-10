@@ -1,4 +1,4 @@
-export const WEBADMIN_VERSION = "alpha-0.3.12";
+export const WEBADMIN_VERSION = "alpha-0.3.13";
 export interface HubSnapshot {
   api_version: "v1";
   server: {
@@ -14,7 +14,13 @@ export interface HubSnapshot {
     adcs_handshakes: number;
     security_rejected: number;
     security_closed: number;
+    rejected_connections: number;
+    closed_connections: number;
+    received_bytes: number;
+    sent_bytes: number;
+    peak_connections: number;
   };
+  users: { online: number; peak_online: number; successful_logins: number };
   database: { enabled: boolean };
 }
 const record = (value: unknown): Record<string, unknown> => {
@@ -31,7 +37,8 @@ export function parseSnapshot(value: unknown): HubSnapshot {
   const root = record(value),
     server = record(root.server),
     network = record(root.network),
-    database = record(root.database);
+    database = record(root.database),
+    users = record(root.users);
   if (
     root.api_version !== "v1" ||
     server.name !== "dc24h.eu" ||
@@ -58,6 +65,16 @@ export function parseSnapshot(value: unknown): HubSnapshot {
       adcs_handshakes: counter(network.adcs_handshakes),
       security_rejected: counter(network.security_rejected),
       security_closed: counter(network.security_closed),
+      rejected_connections: counter(network.rejected_connections),
+      closed_connections: counter(network.closed_connections),
+      received_bytes: counter(network.received_bytes),
+      sent_bytes: counter(network.sent_bytes),
+      peak_connections: counter(network.peak_connections),
+    },
+    users: {
+      online: counter(users.online),
+      peak_online: counter(users.peak_online),
+      successful_logins: counter(users.successful_logins),
     },
     database: { enabled: database.enabled },
   };

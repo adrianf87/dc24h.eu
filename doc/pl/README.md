@@ -1,6 +1,6 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.3.12: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.3.13: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
 - [AUDIT_ALPHA_0.1.md](AUDIT_ALPHA_0.1.md)
 - [ARCHITECTURE.md](ARCHITECTURE.md)
@@ -36,6 +36,7 @@ alpha-0.3.12: działająca implementacja oraz jawnie oznaczone plany kolejnych m
 - [INSTALLATION.md](INSTALLATION.md)
 - [TESTING.md](TESTING.md)
 - [DEVELOPMENT.md](DEVELOPMENT.md)
+- [Statistics — alpha-0.3.13](STATISTICS.md)
 - [ROADMAP.md](ROADMAP.md)
 - [VERSIONS.md](VERSIONS.md)
 

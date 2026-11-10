@@ -58,7 +58,12 @@ std::string status_json(const Snapshot& value) {
         std::to_string(value.active_connections) + ",\"accepted_connections\":" + std::to_string(value.accepted_connections) +
         ",\"adc_frames\":" + std::to_string(value.adc_frames) + ",\"adcs_handshakes\":" + std::to_string(value.adcs_handshakes) +
         ",\"security_rejected\":" + std::to_string(value.security_rejected) + ",\"security_closed\":" +
-        std::to_string(value.security_closed) + "},\"database\":{\"enabled\":" +
+        std::to_string(value.security_closed) + ",\"rejected_connections\":" + std::to_string(value.rejected_connections) +
+        ",\"closed_connections\":" + std::to_string(value.closed_connections) +
+        ",\"received_bytes\":" + std::to_string(value.received_bytes) + ",\"sent_bytes\":" + std::to_string(value.sent_bytes) +
+        ",\"peak_connections\":" + std::to_string(value.peak_connections) + "},\"users\":{\"online\":" +
+        std::to_string(value.online_users) + ",\"peak_online\":" + std::to_string(value.peak_online_users) +
+        ",\"successful_logins\":" + std::to_string(value.successful_logins) + "},\"database\":{\"enabled\":" +
         (value.database_enabled ? "true" : "false") + "}}\n";
 }
 } // namespace

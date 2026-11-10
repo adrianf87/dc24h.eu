@@ -4,6 +4,7 @@
 #include "dc24h/users/nick_manager.hpp"
 #include "dc24h/users/user_registry.hpp"
 #include "dc24h/users/limits.hpp"
+#include "dc24h/users/statistics.hpp"
 
 #include <map>
 #include <memory>
@@ -17,10 +18,6 @@ enum class RegistryError {
 };
 using Registration = std::variant<const Session*, RegistryError>;
 using MutationResult = std::optional<std::variant<RegistryError, SessionError>>;
-struct SessionCounts {
-    std::size_t total{}, accepted{}, negotiating{}, identified{}, ready{}, closing{}, closed{};
-    friend bool operator==(const SessionCounts&, const SessionCounts&) = default;
-};
 
 // One owner/thread. Models and public identity indexes have one owner. Borrowed
 // references are const; all managed mutations pass through this registry.
@@ -64,7 +61,10 @@ public:
     // Current identified/ready membership only, ordered by local lifetime ID.
     // No profile copies; the caller stays on the owner thread while resolving.
     [[nodiscard]] std::vector<SessionId> public_users(std::uint64_t after = 0, std::size_t limit = 64) const;
-    [[nodiscard]] SessionCounts counts() const noexcept;
+    [[nodiscard]] SessionCounts counts() const noexcept { return statistics_.sessions; }
+    // Constant-time owning snapshot, on the owner thread only. Failed/repeated
+    // operations do not count as new transitions. Totals saturate at UINT64_MAX.
+    [[nodiscard]] Statistics statistics() const noexcept { return statistics_; }
     [[nodiscard]] std::size_t size() const noexcept { return sessions_.size(); }
     [[nodiscard]] std::size_t capacity() const noexcept { return limits_.max_sessions; }
     [[nodiscard]] std::size_t user_capacity() const noexcept { return limits_.max_users; }
@@ -74,6 +74,17 @@ public:
 private:
     [[nodiscard]] Session* mutable_find(SessionId id) noexcept;
     void erase_identity(SessionId id) noexcept;
+    void record_transition(Phase before, Phase after) noexcept;
+    template<class Operation>
+    MutationResult mutate(SessionId id, Operation operation) noexcept {
+        auto* model = mutable_find(id);
+        if (!model) { return RegistryError::missing; }
+        const auto before = model->phase();
+        if (const auto error = operation(*model)) { return *error; }
+        record_transition(before, model->phase());
+        return {};
+    }
+    Statistics statistics_{};
     Limits limits_;
     std::uint64_t greatest_id_{};
     std::map<std::uint64_t, std::unique_ptr<Session>> sessions_;

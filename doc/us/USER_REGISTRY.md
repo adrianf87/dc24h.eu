@@ -1,6 +1,6 @@
 # User Registry — alpha-0.3.7
 
-**Current increment — alpha-0.3.12:** [Limits](LIMITS.md) adds configurable session/user ceilings shared by ADC/ADCS, bounded by the connection cap. SessionManager checks capacity transactionally; LoginHub rejects a full user registry before welcome/list preparation with ISTA 211 and own IQUI. Closing reservations count until cleanup. Earlier descriptions retain their historical scope.
+**Increment delivered in alpha-0.3.12:** [Limits](LIMITS.md) adds configurable session/user ceilings shared by ADC/ADCS, bounded by the connection cap. SessionManager checks capacity transactionally; LoginHub rejects a full user registry before welcome/list preparation with ISTA 211 and own IQUI. Closing reservations count until cleanup. Earlier descriptions retain their historical scope.
 
 This increment starts directly from main `ca75d6c53d9b228b978dc3b3b8fdd2fcb0f33852`, after the alpha-0.3.6 Nick Manager merge. Earlier requested stages alpha-0.3.1–alpha-0.3.6 are already present. The alpha-0.3.7 branch preserves main and historical branches; it is not merged automatically.
 

@@ -27,6 +27,8 @@ struct Snapshot {
     std::uint64_t security_rejected{};
     std::uint64_t security_closed{};
     bool database_enabled{};
+    std::uint64_t rejected_connections{}, closed_connections{}, received_bytes{}, sent_bytes{};
+    std::uint64_t peak_connections{}, online_users{}, peak_online_users{}, successful_logins{};
 };
 using StatusProvider = std::function<Snapshot()>;
 using FailureHandler = std::function<void()>;

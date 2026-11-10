@@ -4,7 +4,7 @@ const data = {
   api_version: "v1",
   server: {
     name: "dc24h.eu",
-    version: "alpha-0.3.12",
+    version: "alpha-0.3.13",
     core_running: true,
     uptime_seconds: 3661,
   },
@@ -15,7 +15,13 @@ const data = {
     adcs_handshakes: 3,
     security_rejected: 2,
     security_closed: 1,
+    rejected_connections: 5,
+    closed_connections: 41,
+    received_bytes: 4096,
+    sent_bytes: 8192,
+    peak_connections: 9,
   },
+  users: { online: 4, peak_online: 6, successful_logins: 23 },
   database: { enabled: false },
 };
 test("unconfigured panel stays honest, readable and bilingual with working navigation", async ({
@@ -81,6 +87,10 @@ test("renders real API-shaped values, exports a safe snapshot and clears unavail
   await expect(page.locator(".metric-value").first()).toHaveText("7");
   await expect(page.locator(".metric-value").nth(1)).toHaveText("144");
   await expect(page.getByText("1h 1m", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("user-statistics").locator(".metric-value")).toHaveText(["4", "6", "23", "41"]);
+  await page.getByRole("combobox").selectOption("pl");
+  await expect(page.getByText("Użytkownicy online", { exact: true })).toBeVisible();
+  await page.getByRole("combobox").selectOption("us");
   await page.getByRole("switch").click();
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export snapshot" }).click();
@@ -89,12 +99,14 @@ test("renders real API-shaped values, exports a safe snapshot and clears unavail
   await expect(page.getByText("Disabled", { exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Connections", exact: true }).click();
   await expect(page.locator(".metric-value").nth(1)).toHaveText("48");
+  await expect(page.getByTestId("connection-statistics").locator(".metric-value")).toHaveText(["9", "5", "4,096", "8,192"]);
   online = false;
   await page.getByRole("button", { name: "Refresh now" }).click();
   await expect(
     page.getByText("Connection lost", { exact: true }),
   ).toBeVisible();
   await expect(page.locator(".metric-value").first()).toHaveText("—");
+  await expect(page.getByTestId("connection-statistics").locator(".metric-value")).toHaveText(["—", "—", "—", "—"]);
   await expect(
     page.getByRole("button", { name: "Export snapshot" }),
   ).toBeDisabled();

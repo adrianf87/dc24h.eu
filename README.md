@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.3.12 (Limits).**
+**Current development version: alpha-0.3.13 (Statistics).**
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.3.13 Statistics**: constant-time session lifecycle counts, online/peak users and successful logins; closed/rejected connections, peak peers and application byte totals exposed through the authenticated local API and US/PL WebAdmin. See [Statistics](doc/us/STATISTICS.md).
 
 - **alpha-0.3.12 Limits**: configurable shared connection/session/user ceilings, typed admission gates and user-capacity rejection before welcome/list publication. Slots remain reserved through closing until cleanup. See [Limits](doc/us/LIMITS.md).
 
