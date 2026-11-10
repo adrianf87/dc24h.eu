@@ -96,7 +96,7 @@ class ApiProcessTests(unittest.TestCase):
         drain_until_eof(peer)
         snapshot = fetch_status(fx.endpoint, fx.token)
         self.assertEqual(snapshot['api_version'], 'v1')
-        self.assertEqual(snapshot['server']['version'], 'alpha-0.3.1')
+        self.assertEqual(snapshot['server']['version'], 'alpha-0.3.3')
         self.assertTrue(snapshot['server']['core_running'])
         self.assertGreaterEqual(snapshot['network']['accepted_connections'], 1)
         self.assertEqual(snapshot['network']['adc_frames'], 1)
@@ -166,7 +166,11 @@ class ApiProcessTests(unittest.TestCase):
             parallel.decode(response)
         held = parallel.connect(); held.sendall(b'GET ')
         parallel.hub.stop()
-        self.assertEqual(held.recv(1), b'')
+        # Shutdown can close before reading the prefix; EOF/reset both mean closed.
+        try:
+            self.assertEqual(held.recv(1), b'')
+        except ConnectionResetError:
+            pass
 
     def test_private_files_startup_checks_and_collision_protection(self):
         fx = Fixture(self)

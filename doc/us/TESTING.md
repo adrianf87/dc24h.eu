@@ -1,6 +1,12 @@
 # Testing
 
-**Current increment — alpha-0.3.1:** [Session Core](SESSION_CORE.md) provides the independent Users model and stable lifetime IDs, with live readiness/closure/timeline integration. Earlier stage descriptions below retain their original delivery scope.
+## User Core validation — alpha-0.3.3
+
+The strict gate has **48 suites**, adding users.core on the main-based User Core branch. All passed in Debug, Release and ASan/UBSan, including real ncdc ADC/ADCS, MariaDB and Apache. WebAdmin build/typecheck, 3 Node tests, 3 Chromium tests and live C++ API integration passed. Reproduce with `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug -j 4` and `ctest --test-dir build-debug --output-on-failure -j 4`. Sanitizer flags remain as documented below. The existing API shutdown fixture accepts EOF/reset when closing an unread request prefix; application responses remain checked normally.
+
+**Current increment — alpha-0.3.3:** [User Core](USER_CORE.md) adds an owning public guest identity/profile to Session, with validated full-INF projection and lifecycle-guarded updates. It starts directly from main with Session Core; alpha-0.3.2 is a separate sibling branch. Earlier descriptions retain their historical scope.
+
+**Increment delivered in alpha-0.3.1:** [Session Core](SESSION_CORE.md) provides the independent Users model and stable lifetime IDs, with live readiness/closure/timeline integration. Earlier stage descriptions below retain their original delivery scope.
 
 **Increment delivered in alpha-0.2.10:** [Negotiation security](NEGOTIATION_SECURITY.md) adds pending admission caps, cumulative pre-readiness input budgets and shared pre-INF/Tiger attempt limits. Earlier release descriptions below retain their original scope.
 

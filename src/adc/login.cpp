@@ -38,6 +38,30 @@ users::CloseCause session_cause(CloseReason reason) noexcept {
 Message info_message(std::string command, Command kind, std::vector<std::string> parameters) {
     return {MessageType::info, std::move(command), kind, {}, {}, {}, std::move(parameters), {}};
 }
+users::User public_user(const ClientInfo& metadata, std::string_view sid) {
+    auto identity=users::Identity::create(sid,*metadata.field("ID"),*metadata.field("NI"));
+    users::ProfileData data;
+    data.description=metadata.field("DE").value_or("");
+    data.email=metadata.field("EM").value_or("");
+    data.application=metadata.field("AP").value_or("");
+    data.version=metadata.field("VE").value_or("");
+    data.locale=metadata.field("LO").value_or("");
+    data.shared_bytes=metadata.integer("SS");
+    data.shared_files=metadata.integer("SF");
+    data.slots=metadata.integer("SL");
+    auto features=metadata.field("SU").value_or("");
+    while (!features.empty()) {
+        const auto comma=features.find(',');
+        data.features.emplace_back(features.substr(0,comma));
+        if (comma==std::string_view::npos) { break; }
+        features.remove_prefix(comma+1);
+    }
+    auto profile=users::Profile::create(std::move(data));
+    if (!identity || !profile) { throw std::logic_error("Validated metadata exceeds user model bounds"); }
+    auto user=users::User::create(std::move(*identity),std::move(*profile));
+    if (!user) { throw std::logic_error("Invalid validated public user"); }
+    return std::move(*user);
+}
 std::string_view error_status(const ClientSessionError& error) {
     return std::visit([](auto value) -> std::string_view {
         using T = decltype(value);
@@ -147,7 +171,7 @@ bool LoginHub::needs_identity_check(Id id, const Message& message) const {
 }
 void LoginHub::relay(Id except, const Message& message) {
     for (auto& [id, peer] : peers_) {
-        if (id != except && peer->lifecycle.identity().has_value() && !peer->lifecycle.closing() && !peer->lifecycle.immediate()) { (void)enqueue(*peer, message); }
+        if (id != except && peer->lifecycle.identity() != nullptr && !peer->lifecycle.closing() && !peer->lifecycle.immediate()) { (void)enqueue(*peer, message); }
     }
 }
 
@@ -201,7 +225,7 @@ void LoginHub::receive(Id id, const Message& message) {
             if (peer.session.approve_identity(IdentityMode::guest)) { reject(peer, "240"); return; }
             if (!enqueue(peer, info_message("INF", Command::inf, {"CT32", "NIdc24h.eu", "DEGuest login alpha"}))) { return; }
             for (const auto& [other, existing] : peers_) {
-                if (other != id && existing->lifecycle.identity().has_value() && !existing->lifecycle.closing() && !existing->lifecycle.immediate()) {
+                if (other != id && existing->lifecycle.identity() != nullptr && !existing->lifecycle.closing() && !existing->lifecycle.immediate()) {
                     if (!enqueue(peer, existing->session.info()->public_message(*Sid::parse(existing->session.sid())))) { return; }
                 }
             }
@@ -209,17 +233,16 @@ void LoginHub::receive(Id id, const Message& message) {
             // preserves welcome-before-join and avoids simultaneous-login gaps.
             const auto public_info = metadata.public_message(*Sid::parse(peer.session.sid()));
             if (!enqueue(peer, public_info, Completion::welcome)) { return; } // Own INF is last in the initial list.
-            auto identity=users::Identity::create(peer.session.sid(),cid,nickname);
-            if (!identity) { throw std::logic_error("Validated public identity exceeds session bounds"); }
-            check_model(peer.lifecycle.identify(std::move(*identity),users::Clock::now()));
+            check_model(peer.lifecycle.identify(public_user(metadata,peer.session.sid()),users::Clock::now()));
             nicknames_.emplace(nickname, id);
             cids_.emplace(cid, id);
             sids_.emplace(peer.lifecycle.identity()->sid(), id);
             relay(id, public_info);
         } else {
-            nicknames_.erase(peer.lifecycle.identity()->nickname());
+            const std::string old_nickname(peer.lifecycle.identity()->nickname());
+            check_model(peer.lifecycle.update_user(public_user(metadata,peer.session.sid()),users::Clock::now()));
+            nicknames_.erase(old_nickname);
             nicknames_.emplace(nickname, id);
-            check_model(peer.lifecycle.rename(nickname,users::Clock::now()));
             // A complete public snapshot also conveys optional field cancellations.
             // Relay the sanitized update below, preserving bare cancellation names.
             auto update = metadata.public_message(*Sid::parse(peer.session.sid()));
@@ -313,7 +336,7 @@ void LoginHub::disconnect(Id id, bool announce, users::CloseCause cause, users::
     const auto found = peers_.find(id);
     if (found == peers_.end()) { return; }
     auto& peer = *found->second;
-    if (announce && peer.lifecycle.identity().has_value()) { relay(id, make_quit(*Sid::parse(peer.lifecycle.identity()->sid()))); }
+    if (announce && peer.lifecycle.identity() != nullptr) { relay(id, make_quit(*Sid::parse(peer.lifecycle.identity()->sid()))); }
     remove_identity(id, peer);
     queued_ -= peer.queued;
     peer.session.disconnect();

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "dc24h/users/user.hpp"
+
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -10,10 +12,6 @@
 namespace dc24h::users {
 using Clock = std::chrono::steady_clock;
 using TimePoint = Clock::time_point;
-inline constexpr std::size_t max_session_key_bytes = 64;
-inline constexpr std::size_t max_client_key_bytes = 128;
-inline constexpr std::size_t max_nickname_bytes = 256;
-
 // Local lifetime identity, independent of the ADC SID, fd, CID or account.
 class SessionId final {
 public:
@@ -50,21 +48,6 @@ enum class CloseMode { drain, immediate };
 enum class SessionError { invalid_state, backwards_time, invalid_identity };
 using Result = std::optional<SessionError>;
 
-// Already validated public identity supplied by the protocol adapter. These are
-// bounded opaque keys, not proof/account/role validation; no PID or password.
-class Identity final {
-public:
-    [[nodiscard]] static std::optional<Identity> create(std::string_view sid,
-        std::string_view cid, std::string_view nickname);
-    [[nodiscard]] const std::string& sid() const noexcept { return sid_; }
-    [[nodiscard]] const std::string& cid() const noexcept { return cid_; }
-    [[nodiscard]] const std::string& nickname() const noexcept { return nickname_; }
-    friend bool operator==(const Identity&, const Identity&) = default;
-private:
-    friend class Session;
-    Identity(std::string_view sid, std::string_view cid, std::string_view nickname);
-    std::string sid_, cid_, nickname_;
-};
 struct Timeline {
     TimePoint accepted;
     std::optional<TimePoint> negotiating, identified, ready, closing, closed;
@@ -76,6 +59,7 @@ struct Snapshot {
     Phase phase;
     Timeline timeline;
     std::optional<Identity> identity;
+    std::optional<Profile> profile;
     std::optional<CloseCause> close_cause;
     std::optional<CloseCause> forced_cause;
     std::optional<CloseCause> final_cause;
@@ -95,6 +79,8 @@ public:
     Session& operator=(Session&&) = delete;
     [[nodiscard]] Result start_negotiation(TimePoint now) noexcept;
     [[nodiscard]] Result identify(Identity identity, TimePoint now) noexcept;
+    [[nodiscard]] Result identify(User user, TimePoint now) noexcept;
+    [[nodiscard]] Result update_user(User user, TimePoint now) noexcept;
     [[nodiscard]] Result mark_ready(TimePoint now) noexcept;
     [[nodiscard]] Result rename(std::string_view nickname, TimePoint now);
     [[nodiscard]] Result begin_close(CloseCause cause, TimePoint now) noexcept;
@@ -104,7 +90,8 @@ public:
     [[nodiscard]] Transport transport() const noexcept { return transport_; }
     [[nodiscard]] Phase phase() const noexcept { return phase_; }
     [[nodiscard]] const Timeline& timeline() const noexcept { return timeline_; }
-    [[nodiscard]] const std::optional<Identity>& identity() const noexcept { return identity_; }
+    [[nodiscard]] const Identity* identity() const noexcept { return user_ ? &user_->identity() : nullptr; }
+    [[nodiscard]] const std::optional<User>& user() const noexcept { return user_; }
     [[nodiscard]] bool was_ready() const noexcept { return timeline_.ready.has_value(); }
     [[nodiscard]] bool ready() const noexcept { return phase_ == Phase::ready; }
     [[nodiscard]] bool closing() const noexcept { return phase_ == Phase::closing; }
@@ -118,7 +105,7 @@ private:
     Phase phase_{Phase::accepted};
     Timeline timeline_;
     TimePoint last_;
-    std::optional<Identity> identity_;
+    std::optional<User> user_;
     std::optional<CloseCause> close_cause_, forced_cause_, final_cause_;
     CloseMode close_mode_{CloseMode::drain};
 };

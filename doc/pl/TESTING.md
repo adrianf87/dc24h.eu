@@ -1,5 +1,11 @@
 # Testowanie
 
+## Weryfikacja User Core — alpha-0.3.3
+
+Pełna bramka ma **48 zestawów**, z users.core na gałęzi User Core z main. Wszystkie przeszły w Debug, Release i ASan/UBSan, wraz z rzeczywistym ncdc ADC/ADCS, MariaDB i Apache. WebAdmin: budowanie/typecheck, 3 testy Node, 3 Chromium i integracja rzeczywistego API C++ poprawne. Odtwarzanie: `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug -j 4`, `ctest --test-dir build-debug --output-on-failure -j 4`. Flagi sanitizerów opisano poniżej. Dotychczasowy test zamykania API akceptuje EOF/reset przy nieodczytanym prefiksie żądania; odpowiedzi aplikacji nadal są sprawdzane normalnie.
+
+**Bieżący etap — alpha-0.3.3:** [User Core](USER_CORE.md) dodaje do Session publiczny model gościa i profilu, projekcję całego zwalidowanego INF oraz aktualizacje przez bramkę cyklu życia. Bazuje bezpośrednio na main z Session Core; alpha-0.3.2 jest osobną gałęzią. Starsze opisy zachowują zakres historyczny.
+
 **Aktualny etap — alpha-0.3.1:** [Session Core](SESSION_CORE.md) dostarcza niezależny model Users i trwałe w obrębie reaktora ID sesji, podłączone do rzeczywistej gotowości, zamykania i czasów. Wcześniejsze opisy zachowują zakres pierwotnego etapu.
 
 **Etap dostarczony w alpha-0.2.10:** [Bezpieczeństwo negocjacji](NEGOTIATION_SECURITY.md) dodaje limity oczekujących sesji, łączne budżety wejścia do gotowości i wspólne limity prób przed INF/Tiger. Opisy historyczne poniżej zachowują pierwotny zakres.

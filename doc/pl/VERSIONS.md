@@ -1,5 +1,7 @@
 # Wersjonowanie
 
+**Bieżący etap — alpha-0.3.3:** [User Core](USER_CORE.md) dodaje do Session publiczny model gościa i profilu, projekcję całego zwalidowanego INF oraz aktualizacje przez bramkę cyklu życia. Bazuje bezpośrednio na main z Session Core; alpha-0.3.2 jest osobną gałęzią. Starsze opisy zachowują zakres historyczny.
+
 | Wersja | Gałąź | Zakres |
 | --- | --- | --- |
 | alpha-0.1.1 | alpha-0.1.1 | Core |
@@ -24,6 +26,7 @@
 | alpha-0.2.9 | alpha-0.2.9 | STA/QUI: diagnostyka protokołu, routing i ograniczone zamykanie |
 | alpha-0.2.10 | alpha-0.2.10 | Security: oczekujące sesje, łączne logowanie i limity prób tożsamości |
 | alpha-0.3.1 | alpha-0.3.1 | Session Core: cykl Users, stabilne lokalne ID i snapshoty |
+| alpha-0.3.3 | alpha-0.3.3 | User Core |
 
 Dokładną kompilację identyfikuje wersja wraz z SHA commita. Budowanie nie zmienia plików źródłowych. Istotne zmiany trafiają do CHANGELOG.md. Alpha oznacza rozwój, nie pełną funkcjonalność huba. Tagi i wdrożenie nie powstają automatycznie.
 

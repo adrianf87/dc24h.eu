@@ -1,6 +1,8 @@
 # Roadmap
 
-**Current increment — alpha-0.3.1:** [Session Core](SESSION_CORE.md) provides the independent Users model and stable lifetime IDs, with live readiness/closure/timeline integration. Earlier stage descriptions below retain their original delivery scope.
+**Current increment — alpha-0.3.3:** [User Core](USER_CORE.md) adds an owning public guest identity/profile to Session, with validated full-INF projection and lifecycle-guarded updates. It starts directly from main with Session Core; alpha-0.3.2 is a separate sibling branch. Earlier descriptions retain their historical scope.
+
+**Increment delivered in alpha-0.3.1:** [Session Core](SESSION_CORE.md) provides the independent Users model and stable lifetime IDs, with live readiness/closure/timeline integration. Earlier stage descriptions below retain their original delivery scope.
 
 **Increment delivered in alpha-0.2.10:** [Negotiation security](NEGOTIATION_SECURITY.md) adds pending admission caps, cumulative pre-readiness input budgets and shared pre-INF/Tiger attempt limits. Earlier release descriptions below retain their original scope.
 
@@ -32,6 +34,7 @@
 | alpha-0.2.9 STA/QUI | Semantic errors, status routing, final own QUI and bounded terminal drain |
 | alpha-0.2.10 Security | Pending admission, cumulative negotiation budgets and pre-verification quotas |
 | alpha-0.3.1 Session Core | Users model, stable lifetime identity, snapshots and actual connection lifecycle |
+| alpha-0.3.3 User Core | Public guest identity/profile, lifecycle ownership and validated INF projection/updates (sibling main-based branch) |
 
 ## Historical acceptance plan before alpha-0.2.8
 
