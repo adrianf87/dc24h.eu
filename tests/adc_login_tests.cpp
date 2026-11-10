@@ -90,9 +90,9 @@ void guests() {
     first=drain(hub,1); second=drain(hub,2);
     require(first==second && first.size()==1 && first[0].find(" DE ")!=std::string::npos && first[0].find("XX")==std::string::npos &&
         first[0].find(" ID")==std::string::npos, "Incremental update cancellation/privacy");
-    hub.receive(1,parse("BMSG "+one+" no-dispatch"));
+    hub.receive(1,parse("HMSG no-dispatch"));
     require(drain(hub,1).front().starts_with("ISTA 125 "), "Unimplemented dispatch claimed");
-    require(hub.output(2).empty(), "Chat was forwarded");
+    require(hub.output(2).empty(), "Unsupported hub command was forwarded");
     hub.disconnect(1);
     require(drain(hub,2)==std::vector<std::string>{"IQUI "+one+'\n'}, "Presence cleanup");
     hub.disconnect(2); hub.disconnect(2);

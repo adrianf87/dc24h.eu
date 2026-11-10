@@ -1,5 +1,7 @@
 # ADC MSG — alpha-0.4.1
 
+**Current increment — alpha-0.4.2:** [Chat Core](CHAT_CORE.md) adds a separate protocol-independent message engine and live public BMSG delivery, including sender echo and /me. Private/group/feature/hub chat, moderation and history remain separate increments.
+
 Branch alpha-0.4.1 starts directly from main `b528248dbe6984c6554821d758f0f5d0cbc285fb`, after the alpha-0.3.13 Statistics merge. Existing code/history and previous branches are preserved. Development/runtime default language is EN/US UTF-8; PL documentation and existing runtime catalogs remain available.
 
 ## Scope and protocol

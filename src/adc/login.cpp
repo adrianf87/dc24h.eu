@@ -1,6 +1,7 @@
 #include "dc24h/adc/login.hpp"
 #include "dc24h/adc/serializer.hpp"
 #include "dc24h/adc/status.hpp"
+#include "dc24h/adc/msg.hpp"
 
 #include <deque>
 #include <algorithm>
@@ -64,7 +65,7 @@ std::string_view status_description(std::string_view code) noexcept {
 }
 } // namespace
 
-LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
+LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), chat_(sessions_), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
     if (limits.connections == 0 || limits.connections > 65535 ||
         limits.output_per_client < 128 || limits.output_per_client > 16 * 1024 * 1024 ||
         limits.output_total < limits.output_per_client || limits.output_total > 256 * 1024 * 1024) {
@@ -195,7 +196,14 @@ void LoginHub::receive(Id id, const Message& message) {
         if (const auto& delta = std::get<AppliedInfUpdate>(*update).message) { relay(0,*delta); }
         return;
     }
-    if (const auto error = peer.session.observe(Direction::from_client, message)) {
+    ClientSessionResult observation;
+    try { observation=peer.session.observe(Direction::from_client,message); }
+    catch (const std::bad_alloc&) {
+        if (message.kind!=Command::msg) { throw; }
+        check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
+        return;
+    }
+    if (const auto error = observation) {
         const auto* state_error = std::get_if<StateError>(&*error);
         if (before == ConnectionState::normal && state_error && *state_error == StateError::unsupported_command) {
             (void)enqueue(peer, make_status(*StatusCode::parse("125"), "Command not implemented", offending));
@@ -255,11 +263,51 @@ void LoginHub::receive(Id id, const Message& message) {
             // commit. Subsequent FIFO joins/updates/quits follow own INF.
             relay(id, welcome->frames().back());
         }
+    } else if (message.kind == Command::msg) {
+        route_chat(id,message);
     } else if (message.kind == Command::sta) {
         if (message.type != MessageType::hub) { route_status(id, message); }
     } else if (before == ConnectionState::normal && message.kind != Command::sup) {
-        // Passing the state gate does not implement chat/search/transfers.
+        // Search and transfer handlers remain separate.
         (void)enqueue(peer, make_status(*StatusCode::parse("125"), "Command not implemented", offending));
+    }
+}
+void LoginHub::route_chat(Id id, const Message& message) {
+    auto& sender=*peers_.at(id);
+    try {
+        const auto validated=validate_msg(message);
+        const auto* view=std::get_if<MsgView>(&validated);
+        if (!view) { reject(sender,"240");return; }
+        // Never downgrade private/group intent to a public broadcast. Unknown
+        // extensions are not copied to outgoing public metadata.
+        if (message.type!=MessageType::broadcast || view->private_group) {
+            const std::string command=std::string(1,static_cast<char>(message.type))+"MSG";
+            (void)enqueue(sender,make_status(*StatusCode::parse("125"),"Command not implemented",command));
+            return;
+        }
+        auto prepared=chat_.prepare(sender.lifecycle.id(),*message.source,view->text,view->third_person);
+        const auto* plan=std::get_if<chat::Broadcast>(&prepared);
+        if (!plan) { reject(sender,"240", "BMSG");return; }
+        MsgOptions options;options.type=MessageType::broadcast;
+        options.source=Sid::parse(plan->source());options.third_person=plan->third_person();
+        // Complete validation/projection before any recipient queue changes.
+        const auto public_message=make_msg(plan->text(),std::move(options));
+        const auto result=chat_.dispatch(*plan,[&](users::SessionId recipient,const chat::Broadcast&) {
+            const auto found=peers_.find(recipient.value());
+            if (found==peers_.end()) { return false; }
+            try { return enqueue(*found->second,public_message); }
+            catch (const std::bad_alloc&) {
+                check_model(sessions_.force_close(recipient,users::CloseCause::internal_error,users::Clock::now()));
+                return false;
+            }
+        });
+        if (std::holds_alternative<chat::Error>(result)) {
+            check_model(sessions_.force_close(sender.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
+        }
+    } catch (const std::bad_alloc&) {
+        // Preparation failed before dispatch, or an unsupported-mode reply could
+        // not be allocated. Per-recipient queue faults are isolated above.
+        check_model(sessions_.force_close(sender.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
     }
 }
 void LoginHub::route_status(Id id, const Message& message) {

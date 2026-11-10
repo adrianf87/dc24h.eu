@@ -111,7 +111,8 @@ class LoginProcessTests(unittest.TestCase):
         replacement.login(b'renamed', 1)
         self.assertTrue(second.line().startswith(b'BINF ' + replacement.sid + b' '))
         replacement.send(b'BMSG ' + replacement.sid + b' PendingChat')
-        self.assertTrue(replacement.line().startswith(b'ISTA 125 '))
+        self.assertEqual(replacement.line(), b'BMSG '+replacement.sid+b' PendingChat')
+        self.assertEqual(second.line(), b'BMSG '+replacement.sid+b' PendingChat')
         hub.stop()
         self.assertEqual(hub.log.count(b'event=login_ready'), 3)
         for private in (b'PrivateUnknown', b'PendingChat', pair(1)[0], pair(2)[0]):

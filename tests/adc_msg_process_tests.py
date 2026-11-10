@@ -35,13 +35,16 @@ class MsgProcessTests(unittest.TestCase):
                 for byte in message:
                     peer.peer.sendall(bytes([byte]))
                 response = peer.line()
-                self.assertTrue(response.startswith(b'ISTA 125 '), response)
-                self.assertIn(b' FC'+prefix.split()[0], response)
+                if prefix.startswith(b'BMSG '):
+                    self.assertEqual(response, prefix+b' '+r'PrivateŻółw\s😀\nline\\path'.encode())
+                else:
+                    self.assertTrue(response.startswith(b'ISTA 125 '), response)
+                    self.assertIn(b' FC'+prefix.split()[0], response)
             for malformed in (b'BMSG '+peer.sid, b'BMSG '+peer.sid+b' Bad\\q',
                               b'BMSG '+peer.sid+b' hi bad', b'x'*16385):
                 peer.send(malformed)
                 peer.send(b'BMSG '+peer.sid+b' ValidAfterSyntax')
-                self.assertTrue(peer.line().startswith(b'ISTA 125 '))
+                self.assertEqual(peer.line(), b'BMSG '+peer.sid+b' ValidAfterSyntax')
             peer.peer.close()
         hub.stop()
         self.assertNotIn(b'Private', hub.log)

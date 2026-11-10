@@ -1,6 +1,8 @@
 # Testing
 
-**Current increment — alpha-0.4.1:** [ADC MSG](ADC_MSG.md) adds a dedicated MSG codec with typed PM/ME views, checked builders, bounded serialization and live state-machine validation. Chat delivery and conversation policy remain later increments.
+**Current increment — alpha-0.4.2:** [Chat Core](CHAT_CORE.md) adds a separate protocol-independent message engine and live public BMSG delivery, including sender echo and /me. Private/group/feature/hub chat, moderation and history remain separate increments.
+
+**Increment delivered in alpha-0.4.1:** [ADC MSG](ADC_MSG.md) adds a dedicated MSG codec with typed PM/ME views, checked builders, bounded serialization and live state-machine validation. Chat delivery and conversation policy remain later increments.
 
 **Increment delivered in alpha-0.3.13:** [Statistics](STATISTICS.md) adds constant-time lifecycle counts, online/peak users and completed-login totals, atomic transport statistics, authenticated API fields and bilingual WebAdmin metrics. Historical increments below retain their delivery scope.
 
@@ -252,3 +254,5 @@ Apache2/mod_ssl detection is optional and absence is reported; CI installs Apach
 alpha-0.3.13 local validation: 67/67 CTest suites passed in Debug, Release and ASan/UBSan, including ncdc ADC/ADCS, MariaDB and Apache HTTPS. WebAdmin production build, 4 Node tests, 3 Chromium tests and live C++ API integration passed. These results do not imply remote CI, OS-matrix or production-load coverage.
 
 alpha-0.4.1 local validation: 69/69 CTest suites passed in Debug, Release and ASan/UBSan, including MSG codec/process tests, actual ncdc ADC/ADCS, MariaDB and Apache HTTPS. WebAdmin production build, 4 Node tests, 3 Chromium tests and real C++ API integration passed. No remote CI, full OS matrix or production load coverage is claimed.
+
+alpha-0.4.2 local validation: 72/72 CTest suites passed in Debug, Release and ASan/UBSan, including Chat Core/ADC/process, real ncdc ADC/ADCS public chat, MariaDB and Apache HTTPS. WebAdmin production build, 4 Node tests, 3 Chromium tests and real C++ API integration passed. Final Chat/login checks cover the allocator instrumentation cleanup. Results do not claim remote CI, a full OS/client matrix or production-load validation.

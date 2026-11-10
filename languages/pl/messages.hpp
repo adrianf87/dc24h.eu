@@ -149,7 +149,8 @@ Program działa na pierwszym planie; stop przez SIGINT (Ctrl+C) lub SIGTERM.
 Limity użytkowników/sesji: 1..65535, domyślnie 65535; obowiązuje też limit połączeń.
 Domyślne limity: 128 klientów/IP, 256 przyjęć/IP/minutę, 1024 ramki/s/klienta,
 512 błędnych ramek/klienta, 10 sekund dla TLS i niedokończonej ramki.
-Działa logowanie gości ADC i publiczna lista; czat/wyszukiwanie/transfery są planowane.
+Działa logowanie gości ADC, publiczna lista i publiczny czat.
+Czat prywatny/grupowy, wyszukiwanie i transfery są planowane.
 Ustawienia bazy w sekcji INI [database]; domyślnie wyłączona.
 --check-database sprawdza połączenie; --migrate-database jawnie stosuje migracje metadanych.
 --check-config nie łączy z MariaDB ani nie odczytuje pliku hasła.

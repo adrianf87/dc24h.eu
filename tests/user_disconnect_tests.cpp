@@ -115,11 +115,11 @@ std::string connect(adc::LoginHub& hub,std::uint64_t owner,bool complete=true) {
     return sid;
 }
 void queue_reclamation_and_order() {
-    const auto status=std::get<std::string>(adc::serialize(adc::make_status(*adc::StatusCode::parse("125"),"Command not implemented","BMSG")));
+    const auto status=std::get<std::string>(adc::serialize(adc::make_status(*adc::StatusCode::parse("125"),"Command not implemented","HMSG")));
     adc::LoginHub hub({4,256,status.size()*6+8});
     const auto first=connect(hub,1),second=connect(hub,2);drain(hub,1);
     for (unsigned count=0;count<3;++count) {
-        hub.receive(1,parse("BMSG "+first+" Probe"));hub.receive(2,parse("BMSG "+second+" Probe"));
+        hub.receive(1,parse("HMSG Probe"));hub.receive(2,parse("HMSG Probe"));
     }
     require(hub.queued_bytes()==status.size()*6,"Queue fixture accounting wrong");
     const auto pinned=hub.output(2);const auto* pointer=pinned.data();
@@ -144,7 +144,7 @@ void allocation_failures() {
     bool success=false,isolated=false;
     for (long budget=0;budget<64 && !success;++budget) {
         adc::LoginHub hub;const auto first=connect(hub,1),second=connect(hub,2);drain(hub,1);
-        hub.receive(2,parse("BMSG "+second+" Pinned"));
+        hub.receive(2,parse("HMSG Pinned"));
         const auto pinned=hub.output(2);const auto* pointer=pinned.data();const auto saved=*hub.snapshot(1);
         allocation_budget=budget;hub.disconnect(1);allocation_budget=-1;
         require(!hub.snapshot(1) && !hub.sessions().by_sid(first) && !hub.sessions().by_cid(saved.identity->cid()) &&

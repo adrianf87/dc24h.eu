@@ -49,7 +49,7 @@ class NcdcNegotiationTest(unittest.TestCase):
                 scheme='adcs' if ENCRYPTED else 'adc'
                 os.write(master,f'/open security_test {scheme}://{endpoint[0]}:{endpoint[1]}/\r'.encode())
                 hub.wait_for(lambda:hub.log.count(b'event=login_ready')==1)
-                time.sleep(0.1);os.write(master,b'BudgetNormalProbe\r');wait_text(b'Command not implemented')
+                time.sleep(0.1);os.write(master,b'BudgetNormalProbe\r');wait_text(b'BudgetNormalProbe')
                 os.write(master,b'/reconnect\r');wait_text(b'Identity verification rate limit exceeded')
                 hub.wait_for(lambda:b'event=identity_limit' in hub.log)
                 self.assertEqual(hub.log.count(b'event=login_ready'),1)

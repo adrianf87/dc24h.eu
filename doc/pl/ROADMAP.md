@@ -1,6 +1,8 @@
 # Plan rozwoju
 
-**Bieżący etap — alpha-0.4.1:** [ADC MSG](ADC_MSG.md) dodaje kodek MSG z typowanymi polami PM/ME, sprawdzanym budowaniem komunikatów, ograniczoną serializacją i walidacją w maszynie stanów. Dostarczanie czatu i polityka rozmów pozostają kolejnymi etapami.
+**Bieżący etap — alpha-0.4.2:** [Chat Core](CHAT_CORE.md) dodaje osobny silnik wiadomości niezależny od protokołu oraz publiczne BMSG, z kopią dla nadawcy i /me. Czat prywatny/grupowy/feature/hub, moderacja i historia pozostają osobnymi etapami.
+
+**Etap dostarczony w alpha-0.4.1:** [ADC MSG](ADC_MSG.md) dodaje kodek MSG z typowanymi polami PM/ME, sprawdzanym budowaniem komunikatów, ograniczoną serializacją i walidacją w maszynie stanów. Dostarczanie czatu i polityka rozmów pozostają kolejnymi etapami.
 
 **Etap dostarczony w alpha-0.3.13:** [Statistics](STATISTICS.md) dodaje liczniki cyklu życia w czasie stałym, użytkowników online/szczyt i sumę logowań, atomowe statystyki transportu, pola chronionego API oraz metryki WebAdmin US/PL. Starsze etapy poniżej zachowują swój zakres historyczny.
 
@@ -58,6 +60,7 @@
 | alpha-0.3.12 Limits | Konfigurowalne limity połączeń/sesji/użytkowników i bezpieczne przyjęcie/zwalnianie |
 | alpha-0.3.13 Statistics | Liczniki cyklu życia, online/szczyt, połączenia, API i WebAdmin |
 | alpha-0.4.1 ADC MSG | Kodek MSG i walidacja stanów; rozsyłanie czatu pozostaje planem |
+| alpha-0.4.2 Chat Core | Publiczne BMSG i /me; polityka prywatna/grupowa i moderacja pozostają planem |
 
 ## Historyczny plan odbioru przed alpha-0.2.8
 
