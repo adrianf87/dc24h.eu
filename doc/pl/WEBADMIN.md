@@ -1,6 +1,8 @@
 # WebAdmin — alpha-0.1.10
 
-**Bieżący etap — alpha-0.3.13:** [Statistics](STATISTICS.md) dodaje liczniki cyklu życia w czasie stałym, użytkowników online/szczyt i sumę logowań, atomowe statystyki transportu, pola chronionego API oraz metryki WebAdmin US/PL. Starsze etapy poniżej zachowują swój zakres historyczny.
+**Bieżący etap — alpha-0.4.1:** [ADC MSG](ADC_MSG.md) dodaje kodek MSG z typowanymi polami PM/ME, sprawdzanym budowaniem komunikatów, ograniczoną serializacją i walidacją w maszynie stanów. Dostarczanie czatu i polityka rozmów pozostają kolejnymi etapami.
+
+**Etap dostarczony w alpha-0.3.13:** [Statistics](STATISTICS.md) dodaje liczniki cyklu życia w czasie stałym, użytkowników online/szczyt i sumę logowań, atomowe statystyki transportu, pola chronionego API oraz metryki WebAdmin US/PL. Starsze etapy poniżej zachowują swój zakres historyczny.
 
 Zaimplementowano projekt React 19 / TypeScript / Vite w `webadmin/`, responsywny panel tylko do odczytu, katalogi EN/US i PL, cztery widoki oparte na hash (przegląd, połączenia, bezpieczeństwo, baza), odświeżanie ręczne/co 5 sekund, ograniczoną historię obserwacji sesji oraz eksport JSON. Konfiguracja i logi są jawnie wyłączone jako przyszłe funkcje. Brak kont/logowania/ról, zmian administracyjnych, trwałych metryk i zmyślonych danych.
 

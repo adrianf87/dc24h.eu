@@ -1,6 +1,8 @@
 # WebAdmin — alpha-0.1.10
 
-**Current increment — alpha-0.3.13:** [Statistics](STATISTICS.md) adds constant-time lifecycle counts, online/peak users and completed-login totals, atomic transport statistics, authenticated API fields and bilingual WebAdmin metrics. Historical increments below retain their delivery scope.
+**Current increment — alpha-0.4.1:** [ADC MSG](ADC_MSG.md) adds a dedicated MSG codec with typed PM/ME views, checked builders, bounded serialization and live state-machine validation. Chat delivery and conversation policy remain later increments.
+
+**Increment delivered in alpha-0.3.13:** [Statistics](STATISTICS.md) adds constant-time lifecycle counts, online/peak users and completed-login totals, atomic transport statistics, authenticated API fields and bilingual WebAdmin metrics. Historical increments below retain their delivery scope.
 
 Implemented: a React 19 / TypeScript / Vite project in `webadmin/`, with a responsive read-only panel, EN/US and Polish catalogs, four hash-based views (overview, connections, security, database), manual/5-second refresh, bounded in-session observations and JSON snapshot export. Configuration and event-log controls are explicitly disabled as future work. No account/login/role UI, mutations, persistent metrics or fabricated dashboard values are included.
 

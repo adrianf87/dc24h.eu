@@ -1,6 +1,8 @@
 # Testowanie
 
-**Bieżący etap — alpha-0.3.13:** [Statistics](STATISTICS.md) dodaje liczniki cyklu życia w czasie stałym, użytkowników online/szczyt i sumę logowań, atomowe statystyki transportu, pola chronionego API oraz metryki WebAdmin US/PL. Starsze etapy poniżej zachowują swój zakres historyczny.
+**Bieżący etap — alpha-0.4.1:** [ADC MSG](ADC_MSG.md) dodaje kodek MSG z typowanymi polami PM/ME, sprawdzanym budowaniem komunikatów, ograniczoną serializacją i walidacją w maszynie stanów. Dostarczanie czatu i polityka rozmów pozostają kolejnymi etapami.
+
+**Etap dostarczony w alpha-0.3.13:** [Statistics](STATISTICS.md) dodaje liczniki cyklu życia w czasie stałym, użytkowników online/szczyt i sumę logowań, atomowe statystyki transportu, pola chronionego API oraz metryki WebAdmin US/PL. Starsze etapy poniżej zachowują swój zakres historyczny.
 
 ## Weryfikacja Limits — alpha-0.3.12
 
@@ -247,3 +249,5 @@ Lokalnie **21/21 zestawów CTest przeszło w Debug, Release i ASan/UBSan**, w ty
 Wykrywanie Apache2/mod_ssl jest opcjonalne, a brak raportowany; CI instaluje Apache2. Typecheck/build frontendu, 3 testy Node, 3 przeglądarkowe i rzeczywista integracja C++/Vite/Chromium także przeszły z alpha-0.1.11. Instalacje tymczasowe sprawdziły zgodność szablonu HTTPS z opcjonalnymi zasobami WebAdmin i bez nich oraz poprawność zainstalowanego INI. Sprawdzono UTF-8/linki/parzystość języków i białe znaki Git. Lokalnie Apache 2.4.69 / OpenSSL 3.5.7 na Debian 13; zdalne CI i pozostałe systemy nie są oznaczone jako zweryfikowane. Zobacz [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
 
 Lokalna weryfikacja alpha-0.3.13: 67/67 zestawów CTest w Debug, Release i ASan/UBSan, w tym ncdc ADC/ADCS, MariaDB i Apache HTTPS. Przeszły produkcyjne budowanie WebAdmin, 4 testy Node, 3 testy Chromium i integracja z rzeczywistym API C++. Wyniki nie oznaczają wykonania zdalnego CI, pełnej macierzy systemów ani testów obciążenia produkcyjnego.
+
+Lokalna weryfikacja alpha-0.4.1: 69/69 zestawów CTest w Debug, Release i ASan/UBSan, w tym kodek/proces MSG, prawdziwy ncdc ADC/ADCS, MariaDB i Apache HTTPS. Przeszły produkcyjne budowanie WebAdmin, 4 testy Node, 3 testy Chromium i integracja z rzeczywistym API C++. Bez deklaracji wykonania zdalnego CI, pełnej macierzy systemów ani obciążenia produkcyjnego.

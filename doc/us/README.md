@@ -1,8 +1,9 @@
 # dc24h.eu documentation
 
-alpha-0.3.13: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.4.1: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
 - [AUDIT_ALPHA_0.1.md](AUDIT_ALPHA_0.1.md)
+- [ADC MSG — alpha-0.4.1](ADC_MSG.md)
 - [ARCHITECTURE.md](ARCHITECTURE.md)
 - [LIMITS.md](LIMITS.md)
 - [USER_DISCONNECT.md](USER_DISCONNECT.md)

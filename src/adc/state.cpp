@@ -1,6 +1,7 @@
 #include "dc24h/adc/state.hpp"
 #include "dc24h/adc/sid.hpp"
 #include "dc24h/adc/status.hpp"
+#include "dc24h/adc/msg.hpp"
 
 #include <algorithm>
 #include <initializer_list>
@@ -71,6 +72,10 @@ StateResult ConnectionStateMachine::observe(Direction direction, const Message& 
         return StateError::wrong_source;
     }
     if (message.kind == Command::pas && !incoming) { return StateError::invalid_type; }
+
+    if (message.kind == Command::msg && !std::holds_alternative<MsgView>(validate_msg(message))) {
+        return StateError::invalid_message;
+    }
 
     // During login only HSTA/ISTA is meaningful; routed status requires NORMAL.
     if (message.kind == Command::sta) {

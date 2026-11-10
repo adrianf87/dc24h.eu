@@ -1,6 +1,8 @@
 # Testing
 
-**Current increment — alpha-0.3.13:** [Statistics](STATISTICS.md) adds constant-time lifecycle counts, online/peak users and completed-login totals, atomic transport statistics, authenticated API fields and bilingual WebAdmin metrics. Historical increments below retain their delivery scope.
+**Current increment — alpha-0.4.1:** [ADC MSG](ADC_MSG.md) adds a dedicated MSG codec with typed PM/ME views, checked builders, bounded serialization and live state-machine validation. Chat delivery and conversation policy remain later increments.
+
+**Increment delivered in alpha-0.3.13:** [Statistics](STATISTICS.md) adds constant-time lifecycle counts, online/peak users and completed-login totals, atomic transport statistics, authenticated API fields and bilingual WebAdmin metrics. Historical increments below retain their delivery scope.
 
 ## Limits validation — alpha-0.3.12
 
@@ -248,3 +250,5 @@ Local result: **21/21 CTest suites passed in Debug, Release and ASan/UBSan**, in
 Apache2/mod_ssl detection is optional and absence is reported; CI installs Apache2. The frontend typecheck/build, 3 Node unit tests, 3 browser tests and real C++/Vite/Chromium integration also passed with version alpha-0.1.11. Staged installs verified the unchanged HTTPS example both with and without optional WebAdmin assets and accepted the installed INI. UTF-8/local-link/language-parity and Git whitespace checks passed. Local Apache 2.4.69 / OpenSSL 3.5.7 on Debian 13; remote CI and remaining OS versions are not claimed as verified. See [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
 
 alpha-0.3.13 local validation: 67/67 CTest suites passed in Debug, Release and ASan/UBSan, including ncdc ADC/ADCS, MariaDB and Apache HTTPS. WebAdmin production build, 4 Node tests, 3 Chromium tests and live C++ API integration passed. These results do not imply remote CI, OS-matrix or production-load coverage.
+
+alpha-0.4.1 local validation: 69/69 CTest suites passed in Debug, Release and ASan/UBSan, including MSG codec/process tests, actual ncdc ADC/ADCS, MariaDB and Apache HTTPS. WebAdmin production build, 4 Node tests, 3 Chromium tests and real C++ API integration passed. No remote CI, full OS matrix or production load coverage is claimed.

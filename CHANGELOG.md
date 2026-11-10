@@ -1,5 +1,19 @@
 # Changelog
 
+## alpha-0.4.1 — 2026-11-10
+
+ADC MSG increment, based directly on main `b528248dbe6984c6554821d758f0f5d0cbc285fb` after the alpha-0.3.13 Statistics merge:
+
+- Added adc/msg.hpp and msg.cpp with parse_msg, validate_msg, serialize_msg, borrowed typed MsgView and checked make_msg/MsgOptions. Generic syntax errors retain ParseError; MSG semantic/wire failures use MsgError. The shared parser/serializer remain the single implementation of UTF-8/NFC, header syntax, escaping and encoded frame limits.
+- Supports B/D/E/F/H/I hub-context headers, required decoded text, optional typed PM group SID and optional ME boolean. ME accepts ADC decimal int64 spellings with value 0 or 1; the builder emits canonical ME0/ME1. Duplicate known flags, invalid/empty PM/ME, inconsistent hand-built headers/layouts and C/U contexts are rejected. Opaque unknown fields retain their values, order and repetitions for future extension policy. Text is never trimmed, normalized silently or truncated.
+- Bounds remain 16384 encoded body bytes plus final LF, 128 parameters and 128 feature selectors, including header/separator/escape expansion. Local builders return only valid complete objects or throw; serialization returns a complete owning frame or typed failure. Codec validation alone does not authorize a source, recipient, group or delivery.
+- Added MSG semantic validation after existing ConnectionStateMachine type/NORMAL/source gates. Invalid known fields use the existing fatal ISTA 240/own-IQUI bounded close path; pre-NORMAL remains 244. Generic malformed syntax retains discard/recovery behavior under existing quotas. Valid MSG still gets recoverable ISTA 125 because chat routing, PM group policy and public/private delivery are later increments. No user message or extension value is logged/exported.
+- Added adc.msg and adc.msg.process suites for official examples, all supported headers, PM/ME and unknown extensions, owning/borrowed values, checked builders, hostile objects, Unicode/escaping, exact wire/parameter boundaries, stream fragmentation, oversize/EOF recovery, source/state precedence, real mixed ADC/ADCS diagnostics, cleanup and observer/log privacy.
+- Extended real ncdc ADC/ADCS login/reconnect tests with /me and /msg. Captured plaintext public/action/private MSG frames pass the bounded codec roundtrip mode byte-for-byte; the encrypted path validates continued NORMAL operation without plaintext capture. Existing list, INF, statistics, quit and privacy regressions remain.
+- Updated server/WebAdmin metadata and executable fixtures to alpha-0.4.1, added mirrored doc/us/ADC_MSG.md and doc/pl/ADC_MSG.md, and refreshed module/navigation/roadmap/version context. No new dependency, SQL migration, configuration option, API JSON field or WebAdmin feature. Existing EN/US-default and PL runtime catalogs remain applicable.
+- Validation: all 69 CTest suites passed locally in Debug, Release and ASan/UBSan, including actual ncdc ADC/ADCS, MariaDB and Apache HTTPS. WebAdmin typecheck/production build, 4 Node tests, 3 Chromium tests and real C++ API integration passed with system Chromium. Metadata, UTF-8/language parity/local links and Git whitespace checks passed; builds emitted no compiler warnings. These are local results, not remote CI, all supported OS versions, every extension/client or production-load validation.
+- main and earlier alpha branches/history remain preserved; this branch does not merge itself into main or deploy production. Public/private chat delivery, moderation, history, permissions and rate policy remain future work.
+
 ## alpha-0.3.13 — 2026-11-10
 
 Statistics increment, based directly on main `59b7b3a048b6d00504038a6a0d0b6580f3c04907` after the alpha-0.3.12 Limits merge:

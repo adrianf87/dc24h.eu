@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.3.13 LANGUAGES CXX)
+project(dc24h VERSION 0.4.1 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -48,7 +48,7 @@ target_include_directories(dc24h_users PUBLIC include)
 target_link_libraries(dc24h_users PRIVATE dc24h_text)
 
 add_library(dc24h_adc src/adc/parser.cpp src/adc/state.cpp src/adc/sup.cpp src/adc/sid.cpp src/adc/sid_session.cpp
-    src/adc/identity_hash.cpp src/adc/tiger_identity.cpp src/adc/inf.cpp src/adc/serializer.cpp src/adc/login.cpp src/adc/status.cpp src/adc/user.cpp src/adc/user_login.cpp src/adc/user_list.cpp src/adc/inf_updates.cpp src/adc/user_disconnect.cpp)
+    src/adc/identity_hash.cpp src/adc/tiger_identity.cpp src/adc/inf.cpp src/adc/serializer.cpp src/adc/login.cpp src/adc/status.cpp src/adc/msg.cpp src/adc/user.cpp src/adc/user_login.cpp src/adc/user_list.cpp src/adc/inf_updates.cpp src/adc/user_disconnect.cpp)
 target_compile_features(dc24h_adc PUBLIC cxx_std_20)
 set_target_properties(dc24h_adc PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_adc PUBLIC include)
@@ -166,6 +166,14 @@ if(BUILD_TESTING)
     set_target_properties(adc_tests PROPERTIES CXX_EXTENSIONS OFF)
     target_compile_options(adc_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
     add_test(NAME adc.parser COMMAND adc_tests)
+    add_executable(adc_msg_tests tests/adc_msg_tests.cpp)
+    target_link_libraries(adc_msg_tests PRIVATE dc24h_adc)
+    target_compile_options(adc_msg_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(adc_msg_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME adc.msg COMMAND adc_msg_tests)
+    add_test(NAME adc.msg.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/adc_msg_process_tests.py" "$<TARGET_FILE:dc24h>")
+    set_tests_properties(adc.msg adc.msg.process PROPERTIES TIMEOUT 30)
     add_executable(adc_syntax_tests tests/adc_syntax_tests.cpp)
     target_link_libraries(adc_syntax_tests PRIVATE dc24h_adc)
     target_compile_options(adc_syntax_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
@@ -448,10 +456,10 @@ if(BUILD_TESTING)
         set_tests_properties(adc.sup.ncdc PROPERTIES TIMEOUT 30)
         add_test(NAME adc.ncdc COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
-            "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}")
+            "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>")
         add_test(NAME adcs.ncdc COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
-            "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" --tls)
+            "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>" --tls)
         set_tests_properties(adc.ncdc adcs.ncdc PROPERTIES TIMEOUT 30)
     elseif(DC24H_REQUIRE_INTEGRATION_TESTS)
         message(FATAL_ERROR "Required ncdc not found: adc.ncdc and adcs.ncdc smoke tests are unavailable")
