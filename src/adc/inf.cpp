@@ -1,14 +1,11 @@
 #include "dc24h/adc/inf.hpp"
+#include "dc24h/text/public_text.hpp"
 
 #include <arpa/inet.h>
-#include <utf8proc.h>
 
 #include <algorithm>
 #include <bitset>
-#include <cstdlib>
 #include <cstring>
-#include <memory>
-#include <new>
 #include <set>
 #include <stdexcept>
 #include <type_traits>
@@ -27,28 +24,6 @@ std::size_t text_limit(std::string_view name) noexcept {
     if (name == "AP" || name == "VE") { return 128; }
     if (name == "LO") { return 64; }
     return 0;
-}
-bool valid_text(std::string_view text, bool nickname) {
-    utf8proc_uint8_t* raw = nullptr;
-    const auto length = utf8proc_map(reinterpret_cast<const utf8proc_uint8_t*>(text.data()),
-        static_cast<utf8proc_ssize_t>(text.size()), &raw,
-        static_cast<utf8proc_option_t>(UTF8PROC_STABLE | UTF8PROC_COMPOSE));
-    const std::unique_ptr<utf8proc_uint8_t, decltype(&std::free)> normalized(raw, &std::free);
-    if (length == UTF8PROC_ERROR_NOMEM) { throw std::bad_alloc(); }
-    if (length < 0 || static_cast<std::size_t>(length) != text.size() ||
-        !std::equal(text.begin(), text.end(), reinterpret_cast<const char*>(raw))) { return false; }
-    std::size_t offset = 0;
-    while (offset < text.size()) {
-        utf8proc_int32_t codepoint = 0;
-        const auto count = utf8proc_iterate(reinterpret_cast<const utf8proc_uint8_t*>(text.data()+offset),
-            static_cast<utf8proc_ssize_t>(text.size()-offset), &codepoint);
-        if (count <= 0 || codepoint < (nickname ? 33 : 32)) { return false; }
-        const auto category = utf8proc_category(codepoint);
-        if (category == UTF8PROC_CATEGORY_CC || category == UTF8PROC_CATEGORY_CF ||
-            category == UTF8PROC_CATEGORY_ZL || category == UTF8PROC_CATEGORY_ZP) { return false; }
-        offset += static_cast<std::size_t>(count);
-    }
-    return true;
 }
 bool valid_features(std::string_view text) {
     std::set<std::string_view> seen;
@@ -185,7 +160,7 @@ std::variant<ClientInfo, InfError> InfValidator::validate(const Message& message
             const auto limit = text_limit(name);
             if (limit == 0) { continue; } // Unknown fields are ignored, never forwarded.
             if (value.size() > limit) { return InfError::field_limit; }
-            if (!value.empty() && !valid_text(value, name == "NI")) {
+            if (!value.empty() && !text::valid_public_text(value, name == "NI")) {
                 return name == "NI" ? InfError::invalid_nick : InfError::invalid_text;
             }
         }

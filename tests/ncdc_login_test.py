@@ -96,7 +96,8 @@ class NcdcLoginTest(unittest.TestCase):
 
             try:
                 wait_screen(b'Welcome')
-                os.write(master, b'/set nick dc24hLoginTest\r')
+                nickname = 'dc24hŻółw'.encode('utf-8')
+                os.write(master, b'/set nick ' + nickname + b'\r')
                 scheme = 'adcs' if ENCRYPTED else 'adc'
                 os.write(master, f'/open dc24h_login {scheme}://127.0.0.1:{listener.getsockname()[1]}/\r'.encode())
                 hub.wait_for(lambda: hub.log.count(b'event=login_ready') == 1)
@@ -119,6 +120,7 @@ class NcdcLoginTest(unittest.TestCase):
                     self.assertIn(b'BMSG ', wire)
                     self.assertIn(b'dc24hLoginProbe', wire)
                     self.assertIn(b'BINF ', replies)
+                    self.assertIn(b' NI' + nickname, replies)
                     self.assertNotIn(b' PD', replies)
                     self.assertEqual(replies.count(b'ISUP ADBASE ADTIGR\n'), 2)
                 os.write(master, b'/quit\r')
@@ -142,7 +144,7 @@ class NcdcLoginTest(unittest.TestCase):
                     self.assertEqual(events.count(b'tls_ready'), 1 if ENCRYPTED else 0)
                     self.assertEqual(len(events), 4 if ENCRYPTED else 3, 'Session cleanup missing or duplicated')
                 self.assertEqual(counters(self, hub)[2], 0)
-                self.assertNotIn(b'dc24hLoginTest', hub.log)
+                self.assertNotIn(nickname, hub.log)
                 self.assertNotIn(b'dc24hLoginProbe', hub.log)
                 self.assertNotIn(b'event=login_rejected', hub.log)
                 print(f'ncdc completed guest NORMAL and reconnect via {scheme.upper()} on the C++ hub')

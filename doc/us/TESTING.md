@@ -1,10 +1,16 @@
 # Testing
 
+## User Core validation — alpha-0.3.5
+
+The strict gate has **51 suites**, adding users.values to the integrated main baseline. All passed in Debug, Release and ASan/UBSan, including real ncdc ADC/ADCS login/reconnect as dc24hŻółw, existing registry/identity/provider/security/STA/terminal cases, mixed transports, MariaDB and Apache. WebAdmin typecheck/build, 3 Node tests, 3 Chromium tests and live C++ API integration passed. Reproduce with `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug -j 4` and `ctest --test-dir build-debug --output-on-failure -j 4`. Sanitizer flags remain as documented below. [User Core](USER_CORE.md) describes checked text, projection coverage and the limits of these local results.
+
+**Current increment — alpha-0.3.5:** [User Core](USER_CORE.md) adds checked UTF-8/NFC Nickname values, shared ADC/User text validation, immutable rename candidates and explicit projection from validated ClientInfo/VerifiedIdentity. Users now links the neutral dc24h_text library using the existing utf8proc package. Manager ownership/uniqueness remains unchanged. Earlier descriptions retain their historical scope.
+
 ## Session Manager validation — alpha-0.3.4
 
 The strict gate has **50 suites**, adding users.registry to the integrated main baseline. All passed in Debug, Release and ASan/UBSan, including real ncdc ADC/ADCS, mixed-transport duplicate/rename/reconnect cases, identity/provider/security/STA/terminal-output regressions, MariaDB and Apache. WebAdmin typecheck/build, 3 Node tests, 3 Chromium tests and live API integration passed. Reproduce with `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON`, `cmake --build build-debug -j 4` and `ctest --test-dir build-debug --output-on-failure -j 4`. Sanitizer flags remain as documented below. [Session Manager](SESSION_MANAGER.md) describes the new ownership/rollback assertions and exact limits of these local results.
 
-**Current increment — alpha-0.3.4:** [Session Manager](SESSION_MANAGER.md) owns SID/CID/nickname indexes together with live models. Const lookups and managed lifecycle/User mutations preserve uniqueness through admission, rename and cleanup. LoginHub retains protocol and output ownership. Earlier descriptions retain their historical delivery scope.
+**Increment delivered in alpha-0.3.4:** [Session Manager](SESSION_MANAGER.md) owns SID/CID/nickname indexes together with live models. Const lookups and managed lifecycle/User mutations preserve uniqueness through admission, rename and cleanup. LoginHub retains protocol and output ownership. Earlier descriptions retain their historical delivery scope.
 
 ## Main integration — alpha-0.3.2 then alpha-0.3.3
 

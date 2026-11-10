@@ -1,5 +1,7 @@
 # Session Manager — alpha-0.3.4
 
+**Bieżący etap — alpha-0.3.5:** [User Core](USER_CORE.md) dodaje typ Nickname sprawdzający UTF-8/NFC, wspólną walidację tekstu ADC/Users, samodzielnych kandydatów zmiany nicku i jawną projekcję ClientInfo/VerifiedIdentity. Users korzysta z neutralnego dc24h_text i istniejącego utf8proc. Własność/unikalność managera pozostają bez zmian. Starsze opisy dotyczą zakresu historycznego.
+
 Etap bazuje na main `6162f8a648b4e7b720d0417d0e829c521ea0e55d`, po uporządkowanym scaleniu Session Manager/User Core. Centralny rejestr czasu życia z alpha-0.3.2 przejmuje indeksy SID, CID i nicku z LoginHub. Łączy publiczną tożsamość/profil User ze zmianami cyklu życia, zamiast tworzyć kolejny magazyn sesji. Main i historyczne gałęzie są zachowane; ta gałąź nie scala się automatycznie.
 
 ## Własność i rejestracja

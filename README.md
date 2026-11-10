@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.3.4 (Session Manager).**
+**Current development version: alpha-0.3.5 (User Core).**
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.3.5 User Core**: checked UTF-8/NFC nickname values, shared ADC/User text rules, immutable rename candidates and explicit verified public INF-to-User projection. Real ncdc logs in and reconnects with a Polish nickname. See [User Core](doc/us/USER_CORE.md).
 
 - **alpha-0.3.4 Session Manager**: central SID/CID/nickname indexes, const model lookup and managed lifecycle/profile mutations. Identity reservations remain consistent through admission, rename, close and removal. See [Session Manager](doc/us/SESSION_MANAGER.md).
 

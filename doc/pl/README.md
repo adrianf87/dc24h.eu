@@ -1,6 +1,6 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.3.4: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.3.5: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
 - [AUDIT_ALPHA_0.1.md](AUDIT_ALPHA_0.1.md)
 - [ARCHITECTURE.md](ARCHITECTURE.md)

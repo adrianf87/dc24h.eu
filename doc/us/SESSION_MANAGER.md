@@ -1,5 +1,7 @@
 # Session Manager — alpha-0.3.4
 
+**Current increment — alpha-0.3.5:** [User Core](USER_CORE.md) adds checked UTF-8/NFC Nickname values, shared ADC/User text validation, immutable rename candidates and explicit projection from validated ClientInfo/VerifiedIdentity. Users now links the neutral dc24h_text library using the existing utf8proc package. Manager ownership/uniqueness remains unchanged. Earlier descriptions retain their historical scope.
+
 This increment starts from main `6162f8a648b4e7b720d0417d0e829c521ea0e55d`, after the ordered Session Manager/User Core merges. The central lifetime registry introduced in alpha-0.3.2 now owns the SID, CID and nickname indexes previously held by LoginHub. It integrates public User identity/profile with managed lifecycle mutations, rather than introducing another session store. Main and historical branches are preserved; this branch is not merged automatically.
 
 ## Ownership and registration
