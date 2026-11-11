@@ -2,10 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.5.2 (ADC SCH).**
+**Current development version: alpha-0.5.3 (Search Filters).**
 
 Completed increments (older bullets describe their original delivery scope):
 
+- **alpha-0.5.3 Search Filters**: compiled Unicode name/path, extension, size and type predicates over checked descriptors, filter-only Core queries and allocation-free matching. Routing/results remain later stages. See [Search Filters](doc/us/SEARCH_FILTERS.md).
 - **alpha-0.5.2 ADC SCH**: typed owning search-request parsing, field/selector/TR validation and real ADC/ADCS reception with bounded, payload-free diagnostics. Routing/results remain later stages. See [ADC SCH](doc/us/ADC_SCH.md).
 - **alpha-0.5.1 Search Core**: independent C++20 textual query validation, immutable lifetime-bound recipient plans, feature selection and bounded dispatch. Live SCH/RES adapters and search results remain future stages. See [Search Core](doc/us/SEARCH_CORE.md).
 - **alpha-0.4.12 WebAdmin**: dedicated Chat statistics page with all nine aggregate counters, message/recipient queue definitions, US/PL navigation, live refresh, honest unavailable states and safe snapshot export. See [WebAdmin chat statistics](doc/us/WEBADMIN_CHAT.md).

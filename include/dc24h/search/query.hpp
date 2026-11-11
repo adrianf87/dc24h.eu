@@ -8,7 +8,7 @@
 #include <vector>
 
 namespace dc24h::search {
-// Application bounds for this first textual-query model, not ADC wire limits.
+// Application bounds for textual/filter queries, not ADC wire limits.
 inline constexpr std::size_t max_terms = 32;
 inline constexpr std::size_t max_term_bytes = 256;
 inline constexpr std::size_t max_extensions = 16;
@@ -23,7 +23,7 @@ struct QueryData {
     std::optional<std::string> token;
     friend bool operator==(const QueryData&, const QueryData&) = default;
 };
-enum class QueryError { missing_term, too_many_terms, invalid_text, invalid_extension,
+enum class QueryError { no_criteria, too_many_terms, invalid_text, invalid_extension,
                         invalid_size, invalid_type, invalid_token, too_large };
 // Owning immutable criteria. No trimming, case folding, wildcard/regex execution,
 // file access or protocol parsing. Allocation failure propagates to the caller.

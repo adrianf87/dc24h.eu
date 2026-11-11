@@ -228,7 +228,7 @@ class NcdcLoginTest(unittest.TestCase):
                 # TLS proxy captures are encrypted, so synchronize with the
                 # private API and assert the refusal in ncdc's hub window.
                 before_search = fetch_status(api_path, token)['network']['adc_frames']
-                os.write(master, b'/search -hub SearchCoreSecret\r')
+                os.write(master, b'/search -hub -ge 1K -t archive SearchCoreSecret\r')
                 deadline = time.monotonic() + 3
                 while fetch_status(api_path, token)['network']['adc_frames'] <= before_search:
                     self.assertLess(time.monotonic(), deadline, 'ncdc did not submit its search')
@@ -242,6 +242,8 @@ class NcdcLoginTest(unittest.TestCase):
                     self.assertNotIn(b'SearchCoreSecret', wire)
                 else:
                     self.assertRegex(bytes(wire), rb'[BF]SCH ' + replacement_sid + rb' [^\n]*ANSearchCoreSecret')
+                    self.assertRegex(bytes(wire), rb'[BF]SCH [^\n]*GE1024')
+                    self.assertRegex(bytes(wire), rb'[BF]SCH [^\n]*EX(?:7z|7Z|zip|ZIP)')
                     self.assertRegex(bytes(replies), rb'ISTA 125 Search\\srouting\\snot\\simplemented FC[BF]SCH\n')
                 os.write(master, b'/quit\r')
                 deadline = time.monotonic() + 4

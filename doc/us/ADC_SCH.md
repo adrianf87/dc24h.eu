@@ -1,5 +1,7 @@
 # ADC SCH — alpha-0.5.2
 
+**Follow-up — alpha-0.5.3:** [Search Filters](SEARCH_FILTERS.md) adds compiled Unicode case-insensitive name/path predicates, extension alternatives, inclusive/exact byte limits and file/directory types over checked descriptors. Filter-only queries and opaque NFC tokens now project to Search Core. Matching is allocation-free; routing/results, indexes and search administration remain later increments.
+
 Based directly on main `0fd969bebfe399388f17fc14632cc72cb3f6ee3d`, after the Search Core merge. Code and wire diagnostics remain EN/US UTF-8; documentation is mirrored in US/PL. This release adds typed parsing and actual reception, while request fanout, results, quotas/history and search administration remain separate increments.
 
 ## Parser and owning request
@@ -31,7 +33,7 @@ Criteria may be filter-only, exclusion-only or hash-only. Empty, unknown-only an
 
 ## Bridge to Search Core
 
-`criteria()` and `selection()` expose const typed values. `to_core_query()` returns `variant<search::Query, search::QueryError, SchError>` and applies the narrower alpha-0.5.1 textual profile explicitly. A TR-bearing request returns `unsupported_hash_query`, so its hash is never silently discarded. A valid filter-only SCH can return Core's `missing_term`; a Unicode/spaced TO can return Core's `invalid_token`. Raw values are not rewritten to force acceptance. The method is a checked projection, not a delivery plan or permission grant.
+`criteria()` and `selection()` expose const typed values. `to_core_query()` returns `variant<search::Query, search::QueryError, SchError>` and applies the checked Search Core profile. As of alpha-0.5.3, filter-only requests and opaque NFC tokens with spaces/Unicode are accepted without inventing or rewriting fields. `to_filter()` compiles the same typed criteria into [Search Filters](SEARCH_FILTERS.md). A TR-bearing request returns `unsupported_hash_query` from either projection, so its hash is never silently discarded. Raw values are not rewritten to force acceptance. The method is a checked projection, not a delivery plan or permission grant.
 
 The ADC library now links to dc24h_search without introducing a reverse dependency. The receiver validates the SCH request but does not prepare/dispatch a Search Core fanout or retain it for later replay. Future integration must account for projection limits and preserve applicable extension semantics.
 

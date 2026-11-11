@@ -24,7 +24,7 @@ class LoggingProcessTests(unittest.TestCase):
         hub.stop(signal.SIGINT)
         self.assertEqual(counters(self, hub), (2, 0, 1, 0))
         log = bytes(hub.log)
-        self.assertRegex(log, rb"\[INFO\] Starting dc24h.eu alpha-0.5.2")
+        self.assertRegex(log, rb"\[INFO\] Starting dc24h.eu alpha-0.5.3")
         self.assertIn(b"Startup settings: adc_listeners=", log)
         self.assertRegex(log, rb"Connection id=\d+ transport=ADC event=accepted")
         self.assertRegex(log, rb"Connection id=\d+ transport=ADC event=login_rejected")

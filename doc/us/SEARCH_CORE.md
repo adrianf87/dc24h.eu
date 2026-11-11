@@ -1,5 +1,7 @@
 # Search Core — alpha-0.5.1
 
+**Follow-up — alpha-0.5.3:** [Search Filters](SEARCH_FILTERS.md) adds compiled Unicode case-insensitive name/path predicates, extension alternatives, inclusive/exact byte limits and file/directory types over checked descriptors. Filter-only queries and opaque NFC tokens now project to Search Core. Matching is allocation-free; routing/results, indexes and search administration remain later increments.
+
 **Follow-up — alpha-0.5.2:** [ADC SCH](ADC_SCH.md) now parses received requests and checks typed fields. The live response is now `125 Search routing not implemented`; routing and result exchange remain separate. The alpha-0.5.1 implementation and validation below describe their original delivery scope.
 
 Based directly on main `c6b34ea849ef808a0bfee4a27e0c8ae38cff4a6b`, after the alpha-0.4.12 WebAdmin merge. Code, typed errors and test diagnostics use EN/US UTF-8; documentation is mirrored in US and PL.
@@ -18,16 +20,16 @@ Production LoginHub does not call Search Core yet. Valid-state/source SCH/RES st
 
 | Input | Application rule |
 | --- | --- |
-| `include` | At least one term |
+| `include` | Optional as of alpha-0.5.3; at least one recognized name/extension/size/type criterion overall |
 | `include` + `exclude` | At most 32 terms combined; each nonempty, not ASCII-space-only and at most 256 UTF-8 bytes |
 | Text terms | Already-NFC UTF-8; controls, format characters and line/paragraph separators rejected by existing Text validation; internal/edge spaces are retained |
-| `extensions` | At most 16 nonempty values, each at most 32 bytes, with the same text validation and no slash, backslash or ASCII space |
+| `extensions` | At most 16 nonempty values, each at most 32 bytes, with the same text validation and no leading period, slash, backslash or ASCII space |
 | `min_bytes`, `max_bytes`, `exact_bytes` | Optional nonnegative signed 64-bit values; minimum must not exceed maximum, and exact must satisfy any supplied bounds; zero and INT64_MAX are valid |
 | `type` | Checked `ItemType::any`, `file` or `directory` enum |
-| `token` | Optional; if supplied, 1–128 visible ASCII bytes (33–126), preserved without interpretation |
+| `token` | Optional; if supplied, 1–128 already-NFC UTF-8 bytes, including spaces/Unicode, preserved without interpretation (alpha-0.5.3) |
 | Total owned input text | At most 4096 bytes across terms, extensions and token |
 
-Counts, per-field byte sizes, sizes/enums and total bytes are checked before UTF-8/NFC work or copying. Size addition is bounded by the prior field/count checks. The input already owns its storage; a future decoder must separately bound wire bytes/parameters before building it. Empty include is deliberately unsupported even when size/type filters exist; hash-only, match-all and richer query semantics need later model/codec work. `QueryError` distinguishes missing/too-many terms, invalid text/extension/size/type/token and aggregate size failure. No successful query object can be constructed from unchecked mutable data.
+Counts, per-field byte sizes, sizes/enums and total bytes are checked before UTF-8/NFC work or copying. Size addition is bounded by the prior field/count checks. The input already owns its storage; a future decoder must separately bound wire bytes/parameters before building it. As of alpha-0.5.3, include may be empty when another recognized criterion is present; token-only/empty input returns `no_criteria`. Hash-only matching remains unsupported. `QueryError` distinguishes absent criteria/too-many terms, invalid text/extension/size/type/token and aggregate size failure. No successful query object can be constructed from unchecked mutable data.
 
 ## Session selection and plan ownership
 

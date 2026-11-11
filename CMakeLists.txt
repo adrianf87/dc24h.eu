@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.5.2 LANGUAGES CXX)
+project(dc24h VERSION 0.5.3 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -53,11 +53,11 @@ set_target_properties(dc24h_chat PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_chat PUBLIC include)
 target_link_libraries(dc24h_chat PUBLIC dc24h_users PRIVATE dc24h_text)
 
-add_library(dc24h_search src/search/query.cpp src/search/core.cpp)
+add_library(dc24h_search src/search/query.cpp src/search/core.cpp src/search/filters.cpp)
 target_compile_features(dc24h_search PUBLIC cxx_std_20)
 set_target_properties(dc24h_search PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_search PUBLIC include)
-target_link_libraries(dc24h_search PUBLIC dc24h_users PRIVATE dc24h_text)
+target_link_libraries(dc24h_search PUBLIC dc24h_users PRIVATE dc24h_text UTF8Proc::UTF8Proc)
 
 add_library(dc24h_adc src/adc/parser.cpp src/adc/state.cpp src/adc/sup.cpp src/adc/sid.cpp src/adc/sid_session.cpp
     src/adc/identity_hash.cpp src/adc/tiger_identity.cpp src/adc/inf.cpp src/adc/serializer.cpp src/adc/login.cpp src/adc/status.cpp src/adc/msg.cpp src/adc/sch.cpp src/adc/msg_flags.cpp src/adc/chat_validation.cpp src/adc/public_chat.cpp src/adc/private_chat.cpp src/adc/message_routing.cpp src/adc/hub_messages.cpp src/adc/user.cpp src/adc/user_login.cpp src/adc/user_list.cpp src/adc/inf_updates.cpp src/adc/user_disconnect.cpp)
@@ -194,6 +194,12 @@ if(BUILD_TESTING)
     add_test(NAME search.core.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/search_core_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(search.core search.core.process PROPERTIES TIMEOUT 30)
+    add_executable(search_filters_tests tests/search_filters_tests.cpp)
+    target_link_libraries(search_filters_tests PRIVATE dc24h_adc)
+    target_compile_options(search_filters_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(search_filters_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME search.filters COMMAND search_filters_tests)
+    set_tests_properties(search.filters PROPERTIES TIMEOUT 30)
     add_executable(chat_logging_tests tests/chat_logging_tests.cpp)
     target_link_libraries(chat_logging_tests PRIVATE dc24h_adc)
     target_compile_options(chat_logging_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)

@@ -126,4 +126,10 @@ std::variant<search::Query, search::QueryError, SchError> SchRequest::to_core_qu
     if (auto* query = std::get_if<search::Query>(&result)) { return std::move(*query); }
     return std::get<search::QueryError>(result);
 }
+std::variant<search::Filter, search::QueryError, SchError> SchRequest::to_filter() const {
+    if (root_) { return SchError::unsupported_hash_query; }
+    auto result = search::Filter::create(criteria_);
+    if (auto* filter = std::get_if<search::Filter>(&result)) { return std::move(*filter); }
+    return std::get<search::QueryError>(result);
+}
 } // namespace dc24h::adc
