@@ -2,7 +2,8 @@
 #include "dc24h/text/public_text.hpp"
 
 namespace dc24h::adc {
-ChatValidationResult validate_chat(const chat::Core& core, users::SessionId sender, const Message& message) {
+ChatValidationResult validate_chat(const chat::Core& core, users::SessionId sender, const Message& message, const chat::Policy& policy) {
+    chat::validate_policy(policy);
     if (message.command != "MSG" || message.kind != Command::msg || message.parameters.empty() ||
         message.parameters.size() > max_parameters || (message.positional_count && *message.positional_count != 1)) {
         return ChatValidationError::invalid_message;
@@ -25,6 +26,10 @@ ChatValidationResult validate_chat(const chat::Core& core, users::SessionId send
         return *error == chat::Error::wrong_source ? ChatValidationError::wrong_source : ChatValidationError::invalid_state;
     }
     if (message.type == MessageType::feature) { return ChatValidationError::unsupported_type; }
+    if (view->text.size() > policy.max_text_bytes) { return ChatValidationError::text_limit; }
+    if ((message.type == MessageType::broadcast && !policy.public_enabled) ||
+        ((message.type == MessageType::direct || message.type == MessageType::echo) && !policy.private_enabled) ||
+        (view->third_person.value_or(false) && !policy.actions_enabled)) { return ChatValidationError::disabled; }
     return *view;
 }
 } // namespace dc24h::adc

@@ -20,6 +20,8 @@ namespace dc24h::configuration {
 namespace {
 namespace fs = std::filesystem;
 constexpr std::size_t max_file_bytes = 65536;
+constexpr std::size_t max_line_bytes = 4096;
+constexpr std::size_t max_welcome_line_bytes = 8192;
 
 std::string trim(std::string_view value) {
     // INI whitespace is deliberately ASCII and independent of the process locale.
@@ -159,7 +161,7 @@ void validate(const Settings& settings) {
     const auto& net = settings.network;
     security::validate(net.security);
     users::validate(net.users);
-    chat::validate(net.chat);
+    chat::validate_settings(net.chat);
     const auto count = net.listeners.size() + net.tls_listeners.size();
     if (count == 0 || count > 16 || net.max_connections == 0 || net.max_connections > 65535 ||
         net.idle_timeout.count() < 1 || net.idle_timeout.count() > 86400) {
@@ -215,8 +217,14 @@ Settings load_file(const std::string& filename) {
     std::size_t line_number = 0;
     while (std::getline(input, line)) {
         ++line_number;
-        if (line.size() > 4096) {
-            throw std::invalid_argument("Invalid configuration line " + std::to_string(line_number));
+        if (line.size() > max_line_bytes) {
+            // A maximum-size welcome also needs room for its key, whitespace
+            // and CR. Other physical lines retain their existing bound.
+            const auto equal = line.find('=');
+            if (line.size() > max_welcome_line_bytes || section != "chat" || equal == std::string::npos ||
+                trim(std::string_view(line).substr(0, equal)) != "welcome_message") {
+                throw std::invalid_argument("Invalid configuration line " + std::to_string(line_number));
+            }
         }
         if (!line.empty() && line.back() == '\r') { line.pop_back(); }
         if (line.find('\r') != std::string::npos) {
@@ -259,13 +267,25 @@ Settings load_file(const std::string& filename) {
             } else if (section == "users" && key == "max_users") {
                 settings.network.users.max_users = positive_number(value, 65535);
             } else if (section == "chat" && key == "max_messages_per_second") {
-                settings.network.chat.messages_per_second = positive_number(value, chat::max_message_rate);
+                settings.network.chat.flood.messages_per_second = positive_number(value, chat::max_message_rate);
             } else if (section == "chat" && key == "message_burst") {
-                settings.network.chat.message_burst = positive_number(value, chat::max_message_rate);
+                settings.network.chat.flood.message_burst = positive_number(value, chat::max_message_rate);
             } else if (section == "chat" && key == "max_bytes_per_second") {
-                settings.network.chat.bytes_per_second = positive_number(value, chat::max_byte_rate);
+                settings.network.chat.flood.bytes_per_second = positive_number(value, chat::max_byte_rate);
             } else if (section == "chat" && key == "byte_burst") {
-                settings.network.chat.byte_burst = positive_number(value, chat::max_byte_rate);
+                settings.network.chat.flood.byte_burst = positive_number(value, chat::max_byte_rate);
+            } else if (section == "chat" && key == "max_text_bytes") {
+                settings.network.chat.policy.max_text_bytes = positive_number(value, text::max_chat_text_bytes);
+            } else if (section == "chat" && key == "public_enabled") {
+                settings.network.chat.policy.public_enabled = connection_logging(value);
+            } else if (section == "chat" && key == "private_enabled") {
+                settings.network.chat.policy.private_enabled = connection_logging(value);
+            } else if (section == "chat" && key == "actions_enabled") {
+                settings.network.chat.policy.actions_enabled = connection_logging(value);
+            } else if (section == "chat" && key == "welcome_enabled") {
+                settings.network.chat.welcome_enabled = connection_logging(value);
+            } else if (section == "chat" && key == "welcome_message") {
+                settings.network.chat.welcome_message = value;
             } else if (section == "security" && key == "max_connections_per_ip") {
                 settings.network.security.max_connections_per_ip = positive_number(value, 65535);
             } else if (section == "security" && key == "max_accepts_per_minute") {

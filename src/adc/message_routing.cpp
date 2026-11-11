@@ -16,6 +16,8 @@ std::variant<RoutedMessage, RoutingError> MessageRouter::prepare(users::SessionI
         case PrivateChatError::unsupported_group: return RoutingError::unsupported_group;
         case PrivateChatError::recipient_unavailable: return RoutingError::recipient_unavailable;
         case PrivateChatError::invalid_message: return RoutingError::invalid_message;
+        case PrivateChatError::text_limit: return RoutingError::text_limit;
+        case PrivateChatError::disabled: return RoutingError::disabled;
         }
     } else {
         auto result=public_.prepare(sender,message);
@@ -26,6 +28,8 @@ std::variant<RoutedMessage, RoutingError> MessageRouter::prepare(users::SessionI
         case PublicChatError::unsupported_type: return RoutingError::unsupported_type;
         case PublicChatError::private_message: return RoutingError::private_broadcast;
         case PublicChatError::invalid_message: return RoutingError::invalid_message;
+        case PublicChatError::text_limit: return RoutingError::text_limit;
+        case PublicChatError::disabled: return RoutingError::disabled;
         }
     }
     return RoutingError::invalid_message;

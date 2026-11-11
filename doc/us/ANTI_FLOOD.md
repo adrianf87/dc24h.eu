@@ -1,5 +1,7 @@
 # Anti-Flood — alpha-0.4.9
 
+**Current increment — alpha-0.4.10:** [Chat Configuration](CHAT_CONFIGURATION.md) groups startup chat settings and adds decoded-text limits, independent public/private/action switches and optional/custom welcome. Defaults preserve previous behavior; recoverable policy refusals retain protocol validation and Anti-Flood.
+
 Based directly on main `162ba385ce9b03a870fe44846943727537c7a35c`, after the Chat Validation merge. Code and protocol descriptions use EN/US UTF-8; operator messages/help and documentation also support Polish. Earlier branches and history are preserved.
 
 ## Policy and scope

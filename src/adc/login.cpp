@@ -41,6 +41,13 @@ struct LoginHub::Peer {
     std::optional<chat::FloodGuard> anti_flood;
 };
 namespace {
+SharedHubMessageFrame welcome_packet(const std::optional<std::string>& text) {
+    if (!text) { return {}; }
+    chat::validate_welcome(*text);
+    auto prepared = make_hub_message(*text);
+    if (auto* frame = std::get_if<SharedHubMessageFrame>(&prepared)) { return std::move(*frame); }
+    throw std::invalid_argument("Invalid chat welcome message");
+}
 void check_model(users::MutationResult result) {
     if (result) { throw std::logic_error("Session lifecycle transition rejected"); }
 }
@@ -83,7 +90,7 @@ std::string_view status_description(std::string_view code) noexcept {
 }
 } // namespace
 
-LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), chat_(sessions_), message_router_(chat_), hub_messages_(sessions_), welcome_message_(std::get<SharedHubMessageFrame>(make_hub_message(hub_welcome_text))), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
+LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), chat_(sessions_), message_router_(chat_,limits.chat), hub_messages_(sessions_), welcome_message_(welcome_packet(limits.welcome_text)), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
     if (limits.anti_flood) { chat::validate(*limits.anti_flood); }
     if (limits.connections == 0 || limits.connections > 65535 ||
         limits.output_per_client < 128 || limits.output_per_client > 16 * 1024 * 1024 ||
@@ -269,7 +276,7 @@ void LoginHub::receive(Id id, const Message& message, chat::FloodClock::time_poi
             std::optional<InitialUserList> welcome;
             try {
                 const auto available = std::min(limits_.output_per_client - peer.queued, limits_.output_total - queued_);
-                const auto notice_bytes = welcome_message_->wire().size();
+                const auto notice_bytes = welcome_message_ ? welcome_message_->wire().size() : 0;
                 if (notice_bytes > available) {
                     check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::output_limit,users::Clock::now()));
                     return;
@@ -291,7 +298,7 @@ void LoginHub::receive(Id id, const Message& message, chat::FloodClock::time_poi
                 }
                 // Client sees its own INF before system chat. Queue before the
                 // registry commit/publication; readiness still ends at own INF.
-                if (!enqueue_shared(peer, welcome_message_)) { return; }
+                if (welcome_message_ && !enqueue_shared(peer, welcome_message_)) { return; }
                 if (const auto error = user_login_.register_guest(peer.lifecycle.id(), peer.session, users::Clock::now())) {
                     reject(peer, user_login_status(*error)); return;
                 }
@@ -339,6 +346,10 @@ void LoginHub::route_chat(Id id, const Message& message) {
         if (const auto* error=std::get_if<RoutingError>(&prepared)) {
             switch (*error) {
             case RoutingError::recipient_unavailable: unavailable();break;
+            case RoutingError::text_limit:
+                (void)enqueue(sender,make_status(*StatusCode::parse("100"),"Chat text limit exceeded",command));break;
+            case RoutingError::disabled:
+                (void)enqueue(sender,make_status(*StatusCode::parse("125"),"Chat operation is disabled",command));break;
             case RoutingError::unsupported_type: case RoutingError::private_broadcast: case RoutingError::unsupported_group:
                 (void)enqueue(sender,make_status(*StatusCode::parse("125"),"Command not implemented",command));break;
             case RoutingError::invalid_state: reject(sender,"244",command);break;

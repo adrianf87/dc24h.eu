@@ -3,13 +3,15 @@
 
 namespace dc24h::adc {
 std::variant<PrivateDelivery, PrivateChatError> PrivateChat::prepare(users::SessionId sender, const Message& message) const {
-    const auto checked=validate_chat(core_,sender,message);
+    const auto checked=validate_chat(core_,sender,message,policy_);
     const auto* view=std::get_if<MsgView>(&checked);
     if (!view) {
         switch (std::get<ChatValidationError>(checked)) {
         case ChatValidationError::invalid_state: return PrivateChatError::invalid_state;
         case ChatValidationError::wrong_source: return PrivateChatError::wrong_source;
         case ChatValidationError::unsupported_type: return PrivateChatError::unsupported_type;
+        case ChatValidationError::text_limit: return PrivateChatError::text_limit;
+        case ChatValidationError::disabled: return PrivateChatError::disabled;
         default: return PrivateChatError::invalid_message;
         }
     }

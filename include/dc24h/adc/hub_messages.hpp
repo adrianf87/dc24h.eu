@@ -2,9 +2,10 @@
 
 #include "dc24h/adc/msg.hpp"
 #include "dc24h/chat/core.hpp"
+#include "dc24h/chat/settings.hpp"
 
 namespace dc24h::adc {
-inline constexpr std::string_view hub_welcome_text = "Welcome to dc24h.eu. Guest access is enabled.";
+inline constexpr std::string_view hub_welcome_text = chat::default_welcome_message;
 enum class HubMessageError { invalid_text, frame_too_long, recipient_unavailable, missing_sink, foreign_plan, invalid_plan };
 
 // Only trusted hub code creates these packets. No client Message or source SID

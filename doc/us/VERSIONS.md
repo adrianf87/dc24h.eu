@@ -1,6 +1,8 @@
 # Versions
 
-**Current increment — alpha-0.4.9:** [Anti-Flood](ANTI_FLOOD.md) adds enabled per-connection B/D/E message and decoded-byte buckets, configurable in `[chat]`. Excess messages are dropped before fanout with bounded recoverable notices; existing validation and general resource limits remain.
+**Current increment — alpha-0.4.10:** [Chat Configuration](CHAT_CONFIGURATION.md) groups startup chat settings and adds decoded-text limits, independent public/private/action switches and optional/custom welcome. Defaults preserve previous behavior; recoverable policy refusals retain protocol validation and Anti-Flood.
+
+**Increment delivered in alpha-0.4.9:** [Anti-Flood](ANTI_FLOOD.md) adds enabled per-connection B/D/E message and decoded-byte buckets, configurable in `[chat]`. Excess messages are dropped before fanout with bounded recoverable notices; existing validation and general resource limits remain.
 
 **Increment delivered in alpha-0.4.8:** [Chat Validation](CHAT_VALIDATION.md) centralizes client text, SID and sender readiness/ownership checks in both adapters. Recipient lifetime selection and dispatch revalidation remain authoritative; system IMSG stays separate.
 
@@ -75,6 +77,7 @@
 | alpha-0.4.7 | alpha-0.4.7 | Hub Messages: trusted IMSG, ready recipients and ordered guest welcome |
 | alpha-0.4.8 | alpha-0.4.8 | Chat Validation: shared text/SID/session gate and direct adapter checks |
 | alpha-0.4.9 | alpha-0.4.9 | Anti-Flood: per-connection chat count/byte buckets, INI and bounded recovery |
+| alpha-0.4.10 | alpha-0.4.10 | Chat Configuration: checked startup policy, text/channel/action limits and optional/custom welcome |
 
 Identify an individual build with its version and Git commit SHA; compiling does not modify tracked source. Each significant change updates CHANGELOG.md. Alpha denotes development status, not complete hub functionality. Tags and production deployment are not created automatically.
 

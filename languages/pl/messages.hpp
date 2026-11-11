@@ -3,7 +3,9 @@
 #include <string_view>
 
 namespace dc24h::i18n::pl {
-inline constexpr std::array<std::string_view, 123> messages{{
+inline constexpr std::array<std::string_view, 125> messages{{
+    "Niepoprawna polityka czatu",
+    "Niepoprawna wiadomość powitalna czatu",
     "Niepoprawne limity anti-flood czatu",
     "Użytkownicy zakończeni; online=",
     "Uruchamianie dc24h.eu ",
@@ -156,6 +158,9 @@ Hub wysyła systemowe powitanie IMSG po własnym INF klienta; klienci nie mogą 
 Czat klientów sprawdza tekst UTF-8/NFC, własność SID źródła i gotowość sesji.
 Anti-flood [chat]: 5 wiadomości/s (seria 10), 32768 bajtów tekstu/s (seria 131072).
 Nadmiarowe B/D/E są odrzucane; odwracalny komunikat pojawia się najwyżej raz na sekundę.
+Czat [chat]: max_text_bytes=16384; public_enabled=on, private_enabled=on,
+actions_enabled=on, welcome_enabled=on. Przełączniki przyjmują tylko on/off.
+welcome_message to literalny tekst INI UTF-8/NFC (do 4096 bajtów); ustawienia wymagają restartu.
 Czat grupowy, wyszukiwanie i transfery są planowane.
 Ustawienia bazy w sekcji INI [database]; domyślnie wyłączona.
 --check-database sprawdza połączenie; --migrate-database jawnie stosuje migracje metadanych.

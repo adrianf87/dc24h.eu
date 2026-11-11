@@ -2,7 +2,7 @@
 
 #include "dc24h/security/limits.hpp"
 #include "dc24h/users/limits.hpp"
-#include "dc24h/chat/anti_flood.hpp"
+#include "dc24h/chat/settings.hpp"
 
 #include <atomic>
 #include <chrono>
@@ -33,7 +33,7 @@ struct Options {
     std::chrono::seconds idle_timeout{120};
     security::Limits security{};
     users::Limits users{};
-    chat::FloodLimits chat{};
+    chat::Settings chat{};
 };
 
 struct Statistics {

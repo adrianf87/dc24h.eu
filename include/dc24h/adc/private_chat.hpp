@@ -2,13 +2,14 @@
 
 #include "dc24h/adc/msg.hpp"
 #include "dc24h/chat/core.hpp"
+#include "dc24h/chat/settings.hpp"
 
 #include <memory>
 #include <utility>
 
 namespace dc24h::adc {
 enum class PrivateChatError {
-    invalid_message, unsupported_type, unsupported_group, invalid_state, wrong_source, recipient_unavailable
+    invalid_message, unsupported_type, unsupported_group, invalid_state, wrong_source, recipient_unavailable, text_limit, disabled
 };
 class PrivateChatFrame final {
 public:
@@ -42,12 +43,13 @@ private:
 class PrivateChat final {
 public:
     using Sink = std::function<bool(users::SessionId, const SharedPrivateChatFrame&)>;
-    explicit PrivateChat(const chat::Core& core) noexcept : core_(core) {}
+    explicit PrivateChat(const chat::Core& core, chat::Policy policy = {}) : core_(core), policy_(policy) { chat::validate_policy(policy_); }
     PrivateChat(const PrivateChat&) = delete;
     PrivateChat& operator=(const PrivateChat&) = delete;
     [[nodiscard]] std::variant<PrivateDelivery, PrivateChatError> prepare(users::SessionId sender, const Message& message) const;
     [[nodiscard]] std::variant<chat::DispatchReport, chat::Error> dispatch(const PrivateDelivery& message, const Sink& sink) const;
 private:
     const chat::Core& core_;
+    const chat::Policy policy_;
 };
 } // namespace dc24h::adc

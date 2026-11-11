@@ -6,7 +6,7 @@
 namespace dc24h::adc {
 enum class RoutingError {
     invalid_message, invalid_state, wrong_source, unsupported_type,
-    private_broadcast, unsupported_group, recipient_unavailable
+    private_broadcast, unsupported_group, recipient_unavailable, text_limit, disabled
 };
 using RoutedMessage = std::variant<PublicBroadcast, PrivateDelivery>;
 using RoutedFrame = std::variant<SharedPublicChatFrame, SharedPrivateChatFrame>;
@@ -17,7 +17,7 @@ using RoutedFrame = std::variant<SharedPublicChatFrame, SharedPrivateChatFrame>;
 class MessageRouter final {
 public:
     using Sink = std::function<bool(users::SessionId, const RoutedFrame&)>;
-    explicit MessageRouter(const chat::Core& core) noexcept : public_(core), private_(core) {}
+    explicit MessageRouter(const chat::Core& core, chat::Policy policy = {}) : public_(core,policy), private_(core,policy) {}
     MessageRouter(const MessageRouter&) = delete;
     MessageRouter& operator=(const MessageRouter&) = delete;
     [[nodiscard]] std::variant<RoutedMessage, RoutingError> prepare(users::SessionId sender, const Message& message) const;

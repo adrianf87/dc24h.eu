@@ -3,7 +3,9 @@
 #include <string_view>
 
 namespace dc24h::i18n::us {
-inline constexpr std::array<std::string_view, 123> messages{{
+inline constexpr std::array<std::string_view, 125> messages{{
+    "Invalid chat policy",
+    "Invalid chat welcome message",
     "Invalid chat anti-flood limits",
     "Users stopped; online=",
     "Starting dc24h.eu ",
@@ -156,6 +158,9 @@ The hub sends a system IMSG welcome after your own INF; clients cannot originate
 Client chat checks UTF-8/NFC text, source SID ownership and session readiness.
 Anti-flood [chat]: 5 messages/s (burst 10), 32768 text bytes/s (burst 131072).
 Excess B/D/E messages are dropped; the recoverable notice is limited to once per second.
+Chat [chat]: max_text_bytes=16384; public_enabled=on, private_enabled=on,
+actions_enabled=on, welcome_enabled=on. Switches accept only on/off.
+welcome_message is literal UTF-8/NFC INI text (up to 4096 bytes); restart to apply settings.
 Group chat, search and transfers remain planned.
 Database settings use [database] in INI; disabled by default.
 --check-database connects/pings; --migrate-database explicitly applies metadata migrations.

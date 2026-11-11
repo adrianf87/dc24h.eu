@@ -56,7 +56,7 @@ class Peer:
         pid, cid = pair(seed)
         return b'BINF ' + self.sid + b' NI' + nick + b' ID' + cid + b' PD' + pid + b' I40.0.0.0 DEHello\\sworld XXPrivateUnknown'
 
-    def login(self, nick, seed, fragmented=False):
+    def login(self, nick, seed, fragmented=False, welcome=HUB_WELCOME):
         self.handshake(fragmented)
         wire = self.identity(nick, seed) + b'\n'
         if fragmented:
@@ -69,8 +69,9 @@ class Peer:
         while not result[-1].startswith(b'BINF ' + self.sid + b' '):
             result.append(self.line())
             self.case.assertLess(len(result), 100)
-        result.append(self.line())
-        self.case.assertEqual(result[-1], HUB_WELCOME)
+        if welcome is not None:
+            result.append(self.line())
+            self.case.assertEqual(result[-1], welcome)
         for line in result:
             self.case.assertNotIn(b' PD', line)
             self.case.assertNotIn(b' XX', line)
