@@ -1,6 +1,8 @@
 # Testowanie
 
-**Bieżący etap — alpha-0.4.9:** [Anti-Flood](ANTI_FLOOD.md) dodaje włączone budżety liczby i odkodowanych bajtów B/D/E dla połączenia, konfigurowane w `[chat]`. Nadmiarowe wiadomości są odrzucane przed rozsyłaniem z ograniczoną odwracalną diagnostyką; walidacja i ogólne limity pozostają.
+**Bieżący etap — alpha-0.4.10:** [Chat Configuration](CHAT_CONFIGURATION.md) grupuje startowe ustawienia czatu i dodaje limit odkodowanego tekstu, niezależne przełączniki publicznego/prywatnego/akcji i opcjonalne własne powitanie. Domyślne wartości zachowują działanie; odwracalne odmowy nie omijają walidacji ani Anti-Flood.
+
+**Etap dostarczony w alpha-0.4.9:** [Anti-Flood](ANTI_FLOOD.md) dodaje włączone budżety liczby i odkodowanych bajtów B/D/E dla połączenia, konfigurowane w `[chat]`. Nadmiarowe wiadomości są odrzucane przed rozsyłaniem z ograniczoną odwracalną diagnostyką; walidacja i ogólne limity pozostają.
 
 **Etap dostarczony w alpha-0.4.8:** [Chat Validation](CHAT_VALIDATION.md) centralizuje sprawdzanie tekstu, SID i gotowości/własności nadawcy w obu adapterach. Wybór życia odbiorcy i ponowna kontrola dispatch pozostają obowiązkowe; systemowe IMSG jest oddzielone.
 
@@ -19,6 +21,10 @@
 **Etap dostarczony w alpha-0.4.1:** [ADC MSG](ADC_MSG.md) dodaje kodek MSG z typowanymi polami PM/ME, sprawdzanym budowaniem komunikatów, ograniczoną serializacją i walidacją w maszynie stanów. Dostarczanie czatu i polityka rozmów pozostają kolejnymi etapami.
 
 **Etap dostarczony w alpha-0.3.13:** [Statistics](STATISTICS.md) dodaje liczniki cyklu życia w czasie stałym, użytkowników online/szczyt i sumę logowań, atomowe statystyki transportu, pola chronionego API oraz metryki WebAdmin US/PL. Starsze etapy poniżej zachowują swój zakres historyczny.
+
+## Walidacja konfiguracji czatu — alpha-0.4.10
+
+Wszystkie **88/88 zestawów CTest** przeszły lokalnie w Debug, Release i ASan/UBSan przy wymaganych narzędziach integracyjnych i domyślnym wykrywaniu wycieków. Obejmuje to testy jednostkowe/procesowe konfiguracji czatu, wcześniejsze regresje czatu/bezpieczeństwa/kolejek, rzeczywisty ncdc ADC/ADCS z własnym powitaniem, MariaDB i Apache HTTPS. Przeszły też typecheck/budowanie produkcyjne WebAdmin, 4 testy Node, 3 testy Chromium i integracja z rzeczywistym API C++. Sprawdzono metadane, linki dokumentacji, przykładowy INI i pomoc US/PL. Wyniki są lokalne; zdalne CI, pełna macierz systemów/klientów i gwarancje obciążenia produkcyjnego wymagają osobnej walidacji.
 
 ## Weryfikacja Limits — alpha-0.3.12
 

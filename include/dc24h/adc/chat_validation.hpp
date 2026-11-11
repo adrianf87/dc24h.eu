@@ -2,9 +2,10 @@
 
 #include "dc24h/adc/msg.hpp"
 #include "dc24h/chat/core.hpp"
+#include "dc24h/chat/settings.hpp"
 
 namespace dc24h::adc {
-enum class ChatValidationError { invalid_message, invalid_text, invalid_sid, invalid_state, wrong_source, unsupported_type };
+enum class ChatValidationError { invalid_message, invalid_text, invalid_sid, invalid_state, wrong_source, unsupported_type, text_limit, disabled };
 using ChatValidationResult = std::variant<MsgView, ChatValidationError>;
 
 // Shared client-chat admission check for direct adapter callers and the router.
@@ -17,5 +18,5 @@ using ChatValidationResult = std::variant<MsgView, ChatValidationError>;
 // be cached across Message or session changes. No registry/queue mutation.
 // Allocation errors propagate before publication. Dispatch rechecks lifetimes.
 [[nodiscard]] ChatValidationResult validate_chat(const chat::Core& core,
-    users::SessionId sender, const Message& message);
+    users::SessionId sender, const Message& message, const chat::Policy& policy = {});
 } // namespace dc24h::adc

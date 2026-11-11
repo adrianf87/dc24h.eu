@@ -2,12 +2,13 @@
 
 #include "dc24h/adc/msg.hpp"
 #include "dc24h/chat/core.hpp"
+#include "dc24h/chat/settings.hpp"
 
 #include <memory>
 #include <utility>
 
 namespace dc24h::adc {
-enum class PublicChatError { invalid_message, unsupported_type, private_message, invalid_state, wrong_source };
+enum class PublicChatError { invalid_message, unsupported_type, private_message, invalid_state, wrong_source, text_limit, disabled };
 // One checked public frame per publication. Only PublicChat can construct it;
 // queues share immutable ownership and keep their own byte offsets/charges.
 class PublicChatFrame final {
@@ -41,7 +42,7 @@ private:
 class PublicChat final {
 public:
     using Sink = std::function<bool(users::SessionId, const SharedPublicChatFrame&)>;
-    explicit PublicChat(const chat::Core& core) noexcept : core_(core) {}
+    explicit PublicChat(const chat::Core& core, chat::Policy policy = {}) : core_(core), policy_(policy) { chat::validate_policy(policy_); }
     PublicChat(const PublicChat&) = delete;
     PublicChat& operator=(const PublicChat&) = delete;
     [[nodiscard]] std::variant<PublicBroadcast, PublicChatError> prepare(users::SessionId sender, const Message& message) const;
@@ -50,5 +51,6 @@ public:
     [[nodiscard]] std::variant<chat::DispatchReport, chat::Error> dispatch(const PublicBroadcast& message, const Sink& sink) const;
 private:
     const chat::Core& core_;
+    const chat::Policy policy_;
 };
 } // namespace dc24h::adc

@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.4.9 (Anti-Flood).**
+**Current development version: alpha-0.4.10 (Chat Configuration).**
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.4.10 Chat Configuration**: checked startup `[chat]` settings for decoded text size, independent public/private/actions and optional/custom welcome, alongside existing Anti-Flood limits. Defaults retain previous behavior; disabled/oversized legal chat gets recoverable refusals. See [Chat Configuration](doc/us/CHAT_CONFIGURATION.md).
 
 - **alpha-0.4.9 Anti-Flood**: enabled per-connection message/decoded-byte buckets for BMSG/DMSG/EMSG with configurable `[chat]` rates/bursts. Denied traffic has no fanout or echo; bounded recoverable notices permit later recovery. See [Anti-Flood](doc/us/ANTI_FLOOD.md).
 

@@ -232,12 +232,14 @@ void logger_file() {
 }
 void chat_limits() {
     Fixture fx;
+    require(dc24h::i18n::translate("Invalid chat policy",dc24h::i18n::Language::pl) == "Niepoprawna polityka czatu" &&
+        dc24h::i18n::translate("Invalid chat welcome message",dc24h::i18n::Language::pl) == "Niepoprawna wiadomość powitalna czatu", "Chat settings errors lack Polish translations");
     require(dc24h::i18n::translate("Invalid chat anti-flood limits",dc24h::i18n::Language::pl) ==
         "Niepoprawne limity anti-flood czatu", "Chat limit error lacks Polish translation");
     const auto path=fx.write("[chat]\nmax_messages_per_second=7\nmessage_burst=12\nmax_bytes_per_second=65536\nbyte_burst=262144\n");
     const auto settings=parse({"dc24h","--config",path.string(),"--check-config"}).settings;
-    require(settings.network.chat.messages_per_second == 7 && settings.network.chat.message_burst == 12 &&
-        settings.network.chat.bytes_per_second == 65536 && settings.network.chat.byte_burst == 262144, "INI chat limits not propagated");
+    require(settings.network.chat.flood.messages_per_second == 7 && settings.network.chat.flood.message_burst == 12 &&
+        settings.network.chat.flood.bytes_per_second == 65536 && settings.network.chat.flood.byte_burst == 262144, "INI chat limits not propagated");
     for (const auto key : {"max_messages_per_second","message_burst","max_bytes_per_second","byte_burst"}) {
         for (const auto value : {"0","-1","+1","18446744073709551616","999999999",""}) {
             const auto bad=fx.write("[chat]\n"+std::string(key)+"="+value+"\n");
@@ -248,6 +250,28 @@ void chat_limits() {
     }
     const auto too_small=fx.write("[chat]\nbyte_burst=16383\n");
     invalid([&] { (void)parse({"dc24h","--config",too_small.string()}); });
+    const auto policy=fx.write("[chat]\nmax_text_bytes=512\npublic_enabled=off\nprivate_enabled=on\nactions_enabled=off\nwelcome_enabled=on\nwelcome_message=Witaj Żółw PMAAAA ME1\\n\n");
+    const auto configured=parse({"dc24h","--config",policy.string(),"--check-config"}).settings.network.chat;
+    require(configured.policy.max_text_bytes == 512 && !configured.policy.public_enabled && configured.policy.private_enabled &&
+        !configured.policy.actions_enabled && configured.welcome_enabled && configured.welcome_message == "Witaj Żółw PMAAAA ME1\\n", "Chat policy/welcome INI not preserved");
+    for (const auto key : {"public_enabled","private_enabled","actions_enabled","welcome_enabled"}) {
+        for (const auto value : {"","true","false","1","ON"}) {
+            const auto bad=fx.write("[chat]\n"+std::string(key)+"="+value+"\n");
+            invalid([&] { (void)parse({"dc24h","--config",bad.string()}); });
+        }
+        const auto duplicate=fx.write("[chat]\n"+std::string(key)+"=on\n"+key+"=off\n");
+        invalid([&] { (void)parse({"dc24h","--config",duplicate.string()}); });
+    }
+    for (const auto value : {"0","16385","-1","18446744073709551616"}) {
+        const auto bad=fx.write("[chat]\nmax_text_bytes="+std::string(value)+"\n");
+        invalid([&] { (void)parse({"dc24h","--config",bad.string()}); });
+    }
+    for (const auto& value : {std::string(),std::string("e\xcc\x81"),std::string(4097,'x')}) {
+        const auto bad=fx.write("[chat]\nwelcome_message="+value+"\n");
+        invalid([&] { (void)parse({"dc24h","--config",bad.string()}); });
+    }
+    const auto no_welcome=fx.write("[chat]\nwelcome_enabled=off\nwelcome_message=\n");
+    require(!parse({"dc24h","--config",no_welcome.string()}).settings.network.chat.welcome_enabled, "Explicitly disabled empty welcome refused");
 }
 } // namespace
 

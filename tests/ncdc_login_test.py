@@ -37,13 +37,15 @@ class NcdcLoginTest(unittest.TestCase):
                 credentials(directory)
                 network = ('[network]\nadcs_listen=127.0.0.1:0\n[tls]\n'
                            'certificate=certificate.pem\nprivate_key=private.pem\n')
-            ini.write_text(network + '[users]\nmax_sessions=3\nmax_users=2\n'
+            welcome=b'IMSG Welcome\\sto\\sdc24h.eu.\\sConfigured\\sncdc\\schat.'
+            ini.write_text(network + '[chat]\nwelcome_message=Welcome to dc24h.eu. Configured ncdc chat.\n'
+                           '[users]\nmax_sessions=3\nmax_users=2\n'
                            '[security]\nmax_connections_per_ip=8\n')
             api_path, token = enable_api(ini, directory)
             options = {'ready_pattern': TLS_READY} if ENCRYPTED else {}
             hub = Hub(self, '--config', str(ini), '--log-connections', 'on', **options)
             observer = Peer(self, connect_tls(self, hub, str(pathlib.Path(directory) / 'certificate.pem')) if ENCRYPTED else hub.connect())
-            observer.login(b'ListObserver', 99)
+            observer.login(b'ListObserver', 99, welcome=welcome)
             wire, replies, errors = bytearray(), bytearray(), []
             finished = threading.Event()
             listener = socket.socket()
@@ -114,6 +116,7 @@ class NcdcLoginTest(unittest.TestCase):
                 # and public delivery.
                 wait_screen(b'2 users')
                 wait_screen(b'Welcome to dc24h.eu.')
+                wait_screen(b'Configured ncdc chat.')
                 observer.send(b'BMSG '+observer.sid+b' dc24hIncomingChat')
                 self.assertEqual(observer.line(), b'BMSG '+observer.sid+b' dc24hIncomingChat')
                 wait_screen(b'dc24hIncomingChat')
@@ -210,7 +213,7 @@ class NcdcLoginTest(unittest.TestCase):
                     self.assertEqual(checked.stdout, captured, 'MSG codec changed real ncdc frames')
                     self.assertIn(b'dc24hLoginProbe', wire)
                     self.assertIn(b'BINF ', replies)
-                    self.assertIn(b'IMSG Welcome\\sto\\sdc24h.eu.\\sGuest\\saccess\\sis\\senabled.\n', replies)
+                    self.assertIn(welcome+b'\n', replies)
                     self.assertIn(b' NI' + nickname, replies)
                     self.assertIn(b' NI' + renamed, replies)
                     self.assertNotIn(b' PD', replies)

@@ -24,6 +24,8 @@ struct LoginLimits {
     // Transport policy: Network always supplies its validated chat limits.
     // Trusted in-process callers may omit them, as with IP/frame admission.
     std::optional<chat::FloodLimits> anti_flood{};
+    chat::Policy chat{};
+    std::optional<std::string> welcome_text{std::string(chat::default_welcome_message)};
 };
 enum class CloseReason { login_timeout, idle_timeout, partial_frame_timeout, security_quota, negotiation_limit, identity_limit };
 

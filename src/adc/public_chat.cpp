@@ -3,13 +3,15 @@
 
 namespace dc24h::adc {
 std::variant<PublicBroadcast, PublicChatError> PublicChat::prepare(users::SessionId sender, const Message& message) const {
-    const auto validated=validate_chat(core_,sender,message);
+    const auto validated=validate_chat(core_,sender,message,policy_);
     const auto* view=std::get_if<MsgView>(&validated);
     if (!view) {
         switch (std::get<ChatValidationError>(validated)) {
         case ChatValidationError::invalid_state: return PublicChatError::invalid_state;
         case ChatValidationError::wrong_source: return PublicChatError::wrong_source;
         case ChatValidationError::unsupported_type: return PublicChatError::unsupported_type;
+        case ChatValidationError::text_limit: return PublicChatError::text_limit;
+        case ChatValidationError::disabled: return PublicChatError::disabled;
         default: return PublicChatError::invalid_message;
         }
     }

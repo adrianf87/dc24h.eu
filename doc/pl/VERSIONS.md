@@ -1,6 +1,8 @@
 # Wersjonowanie
 
-**Bieżący etap — alpha-0.4.9:** [Anti-Flood](ANTI_FLOOD.md) dodaje włączone budżety liczby i odkodowanych bajtów B/D/E dla połączenia, konfigurowane w `[chat]`. Nadmiarowe wiadomości są odrzucane przed rozsyłaniem z ograniczoną odwracalną diagnostyką; walidacja i ogólne limity pozostają.
+**Bieżący etap — alpha-0.4.10:** [Chat Configuration](CHAT_CONFIGURATION.md) grupuje startowe ustawienia czatu i dodaje limit odkodowanego tekstu, niezależne przełączniki publicznego/prywatnego/akcji i opcjonalne własne powitanie. Domyślne wartości zachowują działanie; odwracalne odmowy nie omijają walidacji ani Anti-Flood.
+
+**Etap dostarczony w alpha-0.4.9:** [Anti-Flood](ANTI_FLOOD.md) dodaje włączone budżety liczby i odkodowanych bajtów B/D/E dla połączenia, konfigurowane w `[chat]`. Nadmiarowe wiadomości są odrzucane przed rozsyłaniem z ograniczoną odwracalną diagnostyką; walidacja i ogólne limity pozostają.
 
 **Etap dostarczony w alpha-0.4.8:** [Chat Validation](CHAT_VALIDATION.md) centralizuje sprawdzanie tekstu, SID i gotowości/własności nadawcy w obu adapterach. Wybór życia odbiorcy i ponowna kontrola dispatch pozostają obowiązkowe; systemowe IMSG jest oddzielone.
 
@@ -75,6 +77,7 @@
 | alpha-0.4.7 | alpha-0.4.7 | Hub Messages: zaufane IMSG, gotowi odbiorcy i uporządkowane powitanie gościa |
 | alpha-0.4.8 | alpha-0.4.8 | Chat Validation: wspólna kontrola tekstu/SID/sesji i bezpośrednich adapterów |
 | alpha-0.4.9 | alpha-0.4.9 | Anti-Flood: budżety liczby/bajtów czatu połączenia, INI i ograniczona diagnostyka |
+| alpha-0.4.10 | alpha-0.4.10 | Chat Configuration: sprawdzona polityka startowa, tekst/kanały/akcje i opcjonalne własne powitanie |
 
 Dokładną kompilację identyfikuje wersja wraz z SHA commita. Budowanie nie zmienia plików źródłowych. Istotne zmiany trafiają do CHANGELOG.md. Alpha oznacza rozwój, nie pełną funkcjonalność huba. Tagi i wdrożenie nie powstają automatycznie.
 

@@ -1,6 +1,8 @@
 # Roadmap
 
-**Current increment — alpha-0.4.9:** [Anti-Flood](ANTI_FLOOD.md) adds enabled per-connection B/D/E message and decoded-byte buckets, configurable in `[chat]`. Excess messages are dropped before fanout with bounded recoverable notices; existing validation and general resource limits remain.
+**Current increment — alpha-0.4.10:** [Chat Configuration](CHAT_CONFIGURATION.md) groups startup chat settings and adds decoded-text limits, independent public/private/action switches and optional/custom welcome. Defaults preserve previous behavior; recoverable policy refusals retain protocol validation and Anti-Flood.
+
+**Increment delivered in alpha-0.4.9:** [Anti-Flood](ANTI_FLOOD.md) adds enabled per-connection B/D/E message and decoded-byte buckets, configurable in `[chat]`. Excess messages are dropped before fanout with bounded recoverable notices; existing validation and general resource limits remain.
 
 **Increment delivered in alpha-0.4.8:** [Chat Validation](CHAT_VALIDATION.md) centralizes client text, SID and sender readiness/ownership checks in both adapters. Recipient lifetime selection and dispatch revalidation remain authoritative; system IMSG stays separate.
 
@@ -82,6 +84,7 @@
 | alpha-0.4.7 Hub Messages | System IMSG preparation/dispatch, bounded shared output and guest welcome |
 | alpha-0.4.8 Chat Validation | Shared client text/SID/sender checks, recipient state and dispatch revalidation |
 | alpha-0.4.9 Anti-Flood | Enabled B/D/E count/byte limits, recoverable drops and INI policy |
+| alpha-0.4.10 Chat Configuration | Grouped INI settings, client policy and configurable greeting with unchanged readiness |
 
 ## Historical acceptance plan before alpha-0.2.8
 

@@ -1,6 +1,8 @@
 # Plan rozwoju
 
-**Bieżący etap — alpha-0.4.9:** [Anti-Flood](ANTI_FLOOD.md) dodaje włączone budżety liczby i odkodowanych bajtów B/D/E dla połączenia, konfigurowane w `[chat]`. Nadmiarowe wiadomości są odrzucane przed rozsyłaniem z ograniczoną odwracalną diagnostyką; walidacja i ogólne limity pozostają.
+**Bieżący etap — alpha-0.4.10:** [Chat Configuration](CHAT_CONFIGURATION.md) grupuje startowe ustawienia czatu i dodaje limit odkodowanego tekstu, niezależne przełączniki publicznego/prywatnego/akcji i opcjonalne własne powitanie. Domyślne wartości zachowują działanie; odwracalne odmowy nie omijają walidacji ani Anti-Flood.
+
+**Etap dostarczony w alpha-0.4.9:** [Anti-Flood](ANTI_FLOOD.md) dodaje włączone budżety liczby i odkodowanych bajtów B/D/E dla połączenia, konfigurowane w `[chat]`. Nadmiarowe wiadomości są odrzucane przed rozsyłaniem z ograniczoną odwracalną diagnostyką; walidacja i ogólne limity pozostają.
 
 **Etap dostarczony w alpha-0.4.8:** [Chat Validation](CHAT_VALIDATION.md) centralizuje sprawdzanie tekstu, SID i gotowości/własności nadawcy w obu adapterach. Wybór życia odbiorcy i ponowna kontrola dispatch pozostają obowiązkowe; systemowe IMSG jest oddzielone.
 
@@ -82,6 +84,7 @@
 | alpha-0.4.7 Hub Messages | Przygotowanie/rozsyłanie IMSG, ograniczone współdzielone wyjście i powitanie |
 | alpha-0.4.8 Chat Validation | Wspólne kontrole tekstu/SID/nadawcy, stan odbiorcy i ponowna kontrola dispatch |
 | alpha-0.4.9 Anti-Flood | Włączone limity liczby/bajtów B/D/E, odwracalne odmowy i polityka INI |
+| alpha-0.4.10 Chat Configuration | Zgrupowane INI, polityka klienta i własne powitanie bez zmiany gotowości |
 
 ## Historyczny plan odbioru przed alpha-0.2.8
 

@@ -1,6 +1,8 @@
 # Configuration — alpha-0.1.11
 
-**Current increment — alpha-0.4.9:** [Anti-Flood](ANTI_FLOOD.md) adds enabled per-connection B/D/E message and decoded-byte buckets, configurable in `[chat]`. Excess messages are dropped before fanout with bounded recoverable notices; existing validation and general resource limits remain.
+**Current increment — alpha-0.4.10:** [Chat Configuration](CHAT_CONFIGURATION.md) groups startup chat settings and adds decoded-text limits, independent public/private/action switches and optional/custom welcome. Defaults preserve previous behavior; recoverable policy refusals retain protocol validation and Anti-Flood.
+
+**Increment delivered in alpha-0.4.9:** [Anti-Flood](ANTI_FLOOD.md) adds enabled per-connection B/D/E message and decoded-byte buckets, configurable in `[chat]`. Excess messages are dropped before fanout with bounded recoverable notices; existing validation and general resource limits remain.
 
 **Increment delivered in alpha-0.3.12:** [Limits](LIMITS.md) adds configurable session/user ceilings shared by ADC/ADCS, bounded by the connection cap. SessionManager checks capacity transactionally; LoginHub rejects a full user registry before welcome/list preparation with ISTA 211 and own IQUI. Closing reservations count until cleanup. Earlier descriptions retain their historical scope.
 
@@ -125,3 +127,7 @@ message_burst = 10
 max_bytes_per_second = 32768
 byte_burst = 131072
 ```
+
+## Client chat policy and welcome — alpha-0.4.10
+
+The existing `[chat]` section now additionally accepts `max_text_bytes` (1–16384, default 16384), `public_enabled`, `private_enabled`, `actions_enabled` and `welcome_enabled` (strict on/off, all default on), plus literal `welcome_message` (UTF-8/NFC, at most 4096 bytes). Empty welcome text is valid only while disabled. Values are checked before startup and copied into immutable adapter policy; restart to apply changes. These settings do not add CLI overrides or WebAdmin editing. See [Chat Configuration](CHAT_CONFIGURATION.md) for the full ten-key example, scope, fixed recoverable diagnostics and custom/disabled welcome behavior.

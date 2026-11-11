@@ -1,6 +1,8 @@
 # Konfiguracja — alpha-0.1.11
 
-**Bieżący etap — alpha-0.4.9:** [Anti-Flood](ANTI_FLOOD.md) dodaje włączone budżety liczby i odkodowanych bajtów B/D/E dla połączenia, konfigurowane w `[chat]`. Nadmiarowe wiadomości są odrzucane przed rozsyłaniem z ograniczoną odwracalną diagnostyką; walidacja i ogólne limity pozostają.
+**Bieżący etap — alpha-0.4.10:** [Chat Configuration](CHAT_CONFIGURATION.md) grupuje startowe ustawienia czatu i dodaje limit odkodowanego tekstu, niezależne przełączniki publicznego/prywatnego/akcji i opcjonalne własne powitanie. Domyślne wartości zachowują działanie; odwracalne odmowy nie omijają walidacji ani Anti-Flood.
+
+**Etap dostarczony w alpha-0.4.9:** [Anti-Flood](ANTI_FLOOD.md) dodaje włączone budżety liczby i odkodowanych bajtów B/D/E dla połączenia, konfigurowane w `[chat]`. Nadmiarowe wiadomości są odrzucane przed rozsyłaniem z ograniczoną odwracalną diagnostyką; walidacja i ogólne limity pozostają.
 
 **Etap dostarczony w alpha-0.3.12:** [Limits](LIMITS.md) dodaje konfigurowalne limity sesji/użytkowników wspólne dla ADC/ADCS, ograniczone limitem połączeń. SessionManager transakcyjnie sprawdza pojemność; LoginHub odrzuca pełny rejestr przed przygotowaniem powitania/listy przez ISTA 211 i własne IQUI. Rezerwacje closing liczą się aż do sprzątania. Starsze opisy zachowują zakres historyczny.
 
@@ -119,3 +121,7 @@ message_burst = 10
 max_bytes_per_second = 32768
 byte_burst = 131072
 ```
+
+## Polityka klienta i powitanie — alpha-0.4.10
+
+Dotychczasowe `[chat]` przyjmuje dodatkowo `max_text_bytes` (1–16384, domyślnie 16384), `public_enabled`, `private_enabled`, `actions_enabled` i `welcome_enabled` (ściśle on/off, domyślnie on), oraz literalne `welcome_message` (UTF-8/NFC, do 4096 bajtów). Puste powitanie jest poprawne tylko przy wyłączeniu. Wartości są sprawdzane przed startem i kopiowane do niemutowalnej polityki adapterów; zmiana wymaga restartu. Nie dodano nadpisania CLI ani edycji WebAdmin. [Chat Configuration](CHAT_CONFIGURATION.md) opisuje komplet dziesięciu kluczy, zakres, stałą odwracalną diagnostykę i własne/wyłączone powitanie.

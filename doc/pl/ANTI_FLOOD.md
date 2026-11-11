@@ -1,5 +1,7 @@
 # Anti-Flood — alpha-0.4.9
 
+**Bieżący etap — alpha-0.4.10:** [Chat Configuration](CHAT_CONFIGURATION.md) grupuje startowe ustawienia czatu i dodaje limit odkodowanego tekstu, niezależne przełączniki publicznego/prywatnego/akcji i opcjonalne własne powitanie. Domyślne wartości zachowują działanie; odwracalne odmowy nie omijają walidacji ani Anti-Flood.
+
 Etap bazuje bezpośrednio na main `162ba385ce9b03a870fe44846943727537c7a35c`, po scaleniu Chat Validation. Kod i opisy protokołu używają EN/US UTF-8; komunikaty/pomoc operatora i dokumentacja obsługują też polski. Wcześniejsze gałęzie i historia są zachowane.
 
 ## Polityka i zakres
