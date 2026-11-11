@@ -1,4 +1,5 @@
 #include "dc24h/adc/login.hpp"
+#include "dc24h/adc/sch.hpp"
 #include "dc24h/adc/serializer.hpp"
 #include "dc24h/adc/status.hpp"
 #include "dc24h/adc/msg.hpp"
@@ -333,11 +334,27 @@ void LoginHub::receive(Id id, const Message& message, chat::FloodClock::time_poi
             }
         }
         route_chat(id,message,attempt);
+    } else if (message.kind == Command::sch) {
+        receive_search(id, message);
     } else if (message.kind == Command::sta) {
         if (message.type != MessageType::hub) { route_status(id, message); }
     } else if (before == ConnectionState::normal && message.kind != Command::sup) {
         // Search and transfer handlers remain separate.
         (void)enqueue(peer, make_status(*StatusCode::parse("125"), "Command not implemented", offending));
+    }
+}
+void LoginHub::receive_search(Id id, const Message& message) {
+    auto& peer = *peers_.at(id);
+    try {
+        const auto result = validate_sch(message);
+        const auto* error = std::get_if<SchError>(&result);
+        if (error && *error == SchError::no_criteria) { return; }
+        const auto command = std::string(1, static_cast<char>(message.type)) + "SCH";
+        // Parsing is delivered here; routing/results are separate increments.
+        (void)enqueue(peer, make_status(*StatusCode::parse(error ? "100" : "125"),
+            error ? "Invalid search query" : "Search routing not implemented", command));
+    } catch (const std::bad_alloc&) {
+        check_model(sessions_.force_close(peer.lifecycle.id(), users::CloseCause::internal_error, users::Clock::now()));
     }
 }
 void LoginHub::route_chat(Id id, const Message& message, chat::Attempt& attempt) {

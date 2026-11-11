@@ -1,5 +1,7 @@
 # Search Core — alpha-0.5.1
 
+**Kolejny etap — alpha-0.5.2:** [ADC SCH](ADC_SCH.md) parsuje teraz odbierane zapytania i sprawdza ich pola. Bieżąca odpowiedź to `125 Search routing not implemented`; routing i wymiana wyników są osobnymi etapami. Opis implementacji i weryfikacji alpha-0.5.1 poniżej zachowuje historyczny zakres.
+
 Gałąź utworzono bezpośrednio z main `c6b34ea849ef808a0bfee4a27e0c8ae38cff4a6b` po scaleniu alpha-0.4.12 WebAdmin. Kod, typowane błędy i diagnostyka testów pozostają EN/US UTF-8; dokumentacja ma wersje US i PL.
 
 ## Dostarczony zakres

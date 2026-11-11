@@ -1,4 +1,4 @@
-"""Search Core is staged: production SCH/RES stay explicitly unsupported/private."""
+"""Search Core is staged: SCH parsing and the RES boundary stay private."""
 import json
 import pathlib
 import tempfile
@@ -31,7 +31,8 @@ class SearchCoreProcessTests(unittest.TestCase):
                     if kind == b'FSCH': wire += b' +TCP4'
                     wire += b' ANSearchCoreSecret TOPrivateSearchToken' if kind != b'DRES' else b' FNSearchCoreSecret SI1 SL1 TOPrivateSearchToken'
                     source.send(wire)
-                    self.assertEqual(source.line(), b'ISTA 125 Command\\snot\\simplemented FC' + kind)
+                    self.assertEqual(source.line(), b'ISTA 125 ' +
+                                     (b'Command\\snot\\simplemented' if kind == b'DRES' else b'Search\\srouting\\snot\\simplemented') + b' FC' + kind)
                     # Ordered INF fence proves that no query/result was relayed.
                     fence = b'BINF ' + source.sid + b' DESearchFence'
                     source.send(fence)

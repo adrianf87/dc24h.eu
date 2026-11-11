@@ -1,5 +1,7 @@
 # Search Core — alpha-0.5.1
 
+**Follow-up — alpha-0.5.2:** [ADC SCH](ADC_SCH.md) now parses received requests and checks typed fields. The live response is now `125 Search routing not implemented`; routing and result exchange remain separate. The alpha-0.5.1 implementation and validation below describe their original delivery scope.
+
 Based directly on main `c6b34ea849ef808a0bfee4a27e0c8ae38cff4a6b`, after the alpha-0.4.12 WebAdmin merge. Code, typed errors and test diagnostics use EN/US UTF-8; documentation is mirrored in US and PL.
 
 ## Delivered scope
