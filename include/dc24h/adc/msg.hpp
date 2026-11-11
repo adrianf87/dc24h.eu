@@ -1,17 +1,13 @@
 #pragma once
 
-#include "dc24h/adc/parser.hpp"
-#include "dc24h/adc/sid.hpp"
+#include "dc24h/adc/msg_flags.hpp"
 
 namespace dc24h::adc {
-enum class MsgError {
-    invalid_message, invalid_type, duplicate_field, invalid_private_group,
-    invalid_third_person, frame_too_long
-};
 struct MsgView {
     std::string_view text; // Borrowed decoded UTF-8/NFC; escaped LF is allowed.
     std::optional<Sid> private_group;
     std::optional<bool> third_person; // Distinguishes absent ME from explicit ME0.
+    [[nodiscard]] MsgFlags flags() const noexcept { return {private_group, third_person}; }
 };
 using MsgParseResult = std::variant<Message, ParseError, MsgError>;
 using MsgWireResult = std::variant<std::string, MsgError>;

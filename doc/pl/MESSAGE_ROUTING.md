@@ -1,5 +1,7 @@
 # Message Routing — alpha-0.4.5
 
+**Bieżący etap — alpha-0.4.6:** [Message Flags](MESSAGE_FLAGS.md) centralizuje dekodowanie PM/ME i kanoniczne wyjście kodeka oraz obu adapterów czatu. Brak ME, ME0 i ME1 pozostają rozróżniane; PM nie nadaje uprawnień do dostarczania.
+
 Etap bazuje bezpośrednio na main `0c627eb1430ab0c750674a8463e64060c96c8a86`, po scaleniu alpha-0.4.4 Private Chat. Zachowano gałęzie alpha-0.4.1–alpha-0.4.4 i historię. Serwer oraz kod używają EN/US UTF-8; dokumentacja i katalogi komunikatów obsługują też polski.
 
 ## Zakres i odpowiedzialność

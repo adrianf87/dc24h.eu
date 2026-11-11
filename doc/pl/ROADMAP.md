@@ -1,6 +1,8 @@
 # Plan rozwoju
 
-**Bieżący etap — alpha-0.4.5:** [Message Routing](MESSAGE_ROUTING.md) centralizuje wybór zakresu MSG i dostarczanie do ograniczonych kolejek. Plany są powiązane z domeną macierzystego Chat Core i ID życia sesji; prywatne wiadomości nigdy nie trafiają zastępczo na czat publiczny.
+**Bieżący etap — alpha-0.4.6:** [Message Flags](MESSAGE_FLAGS.md) centralizuje dekodowanie PM/ME i kanoniczne wyjście kodeka oraz obu adapterów czatu. Brak ME, ME0 i ME1 pozostają rozróżniane; PM nie nadaje uprawnień do dostarczania.
+
+**Etap dostarczony w alpha-0.4.5:** [Message Routing](MESSAGE_ROUTING.md) centralizuje wybór zakresu MSG i dostarczanie do ograniczonych kolejek. Plany są powiązane z domeną macierzystego Chat Core i ID życia sesji; prywatne wiadomości nigdy nie trafiają zastępczo na czat publiczny.
 
 **Etap dostarczony w alpha-0.4.4:** [Private Chat](PRIVATE_CHAT.md) dodaje DMSG tylko do celu i EMSG do celu oraz nadawcy, pojedyncze wiadomości do siebie, powiązanie celu z ID życia i kontrolę PM. Czat publiczny pozostaje oddzielony; grupy/historia/moderacja to kolejne etapy.
 
@@ -70,6 +72,7 @@
 | alpha-0.4.3 Public Chat | Osobna polityka publicznego BMSG i wspólna ramka; czat prywatny/grupowy pozostaje planem |
 | alpha-0.4.4 Private Chat | Prywatne DMSG/EMSG; grupy, historia i moderacja pozostają planem |
 | alpha-0.4.5 Message Routing | Wspólny router MSG, domeny silnika i bezpieczne kierowanie do sesji/kolejek |
+| alpha-0.4.6 Message Flags | Wspólna typowana walidacja PM/ME i kanoniczna projekcja publiczna/prywatna |
 
 ## Historyczny plan odbioru przed alpha-0.2.8
 

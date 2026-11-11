@@ -18,8 +18,8 @@ std::variant<PublicBroadcast, PublicChatError> PublicChat::prepare(users::Sessio
     auto admission=std::get<chat::Broadcast>(std::move(prepared));
     // Build a fresh allowlisted frame; private/unknown data never reaches public
     // output. Only source, text and canonical ME remain.
-    Message safe{MessageType::broadcast,"MSG",Command::msg,admission.source(),{},{},{admission.text()},1};
-    if (view->third_person.has_value()) { safe.parameters.emplace_back(*view->third_person ? "ME1" : "ME0"); }
+    Message safe{MessageType::broadcast,"MSG",Command::msg,admission.source(),{},{},
+        make_msg_parameters(admission.text(), view->flags()),1};
     auto encoded=serialize_msg(safe);
     auto* wire=std::get_if<std::string>(&encoded);
     if (!wire) { return PublicChatError::invalid_message; }
