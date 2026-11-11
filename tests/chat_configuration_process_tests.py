@@ -91,6 +91,23 @@ class ChatConfigurationProcessTests(unittest.TestCase):
             self.assertNotIn('CFGSecret',json.dumps(fetch_status(endpoint,token)))
             hub.stop(); self.assertNotIn(b'CFGSecret',hub.log)
 
+    def test_full_size_welcome_is_escaped_and_delivered(self):
+        prefix=r'CFGSecret Żółw\n '
+        padding=4096-len(prefix.encode())-1
+        welcome_text=prefix+'\\ '*(padding//2)+'x'*(padding%2+1)
+        self.assertEqual(len(welcome_text.encode()),4096)
+        welcome=b'IMSG '+welcome_text.encode().replace(b'\\',b'\\\\').replace(b' ',b'\\s')
+        for encrypted in (False,True):
+            hub,cert,endpoint,token=self.hub('welcome_message = '+welcome_text+'\n')
+            peers=self.peers(hub,cert,encrypted,welcome)
+            source=peers[0]
+            frame=b'BMSG '+source.sid+b' ready'
+            source.send(frame)
+            for peer in peers: self.assertEqual(peer.line(),frame)
+            self.assertEqual(fetch_status(endpoint,token)['users']['online'],3)
+            self.assertNotIn('CFGSecret',json.dumps(fetch_status(endpoint,token)))
+            hub.stop(); self.assertNotIn(b'CFGSecret',hub.log)
+
 
 if __name__ == '__main__':
     unittest.main()

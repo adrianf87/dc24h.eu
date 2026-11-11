@@ -20,7 +20,7 @@ cp config/dc24h.ini.example config/dc24h.ini
 
 ## INI format
 
-UTF-8, optional BOM, LF or CRLF, maximum 65536 bytes in the actual bounded read and maximum 4096 bytes per physical line (including an optional CR). The final LF is optional. The opened file must be regular; a final-component symlink, FIFO or device is rejected. The parser validates UTF-8, rejects NUL/control characters (except line endings/tab) and reports line numbers without echoing values. Section/key names are case-sensitive. Full-line `#`/`;` comments and blank lines are ignored. ASCII spaces/tabs around keys/values are trimmed; inline comments, quoting and escape expansion are not supported. Paths may contain spaces and `#`/`;` literally. Unknown keys/sections and duplicate singular keys are errors. Only listener keys are repeatable.
+UTF-8, optional BOM, LF or CRLF, maximum 65536 bytes in the actual bounded read and maximum 4096 bytes per physical line (including an optional CR), except `[chat] welcome_message` lines, which allow 8192 bytes to accommodate the key/whitespace and a full 4096-byte value. The final LF is optional. The opened file must be regular; a final-component symlink, FIFO or device is rejected. The parser validates UTF-8, rejects NUL/control characters (except line endings/tab) and reports line numbers without echoing values. Section/key names are case-sensitive. Full-line `#`/`;` comments and blank lines are ignored. ASCII spaces/tabs around keys/values are trimmed; inline comments, quoting and escape expansion are not supported. Paths may contain spaces and `#`/`;` literally. Unknown keys/sections and duplicate singular keys are errors. Only listener keys are repeatable.
 
 | Section | Key | Default | Meaning |
 | --- | --- | --- | --- |

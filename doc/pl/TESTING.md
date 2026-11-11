@@ -24,6 +24,8 @@
 
 ## Walidacja konfiguracji czatu — alpha-0.4.10
 
+Ponowny przegląd wykrył i naprawił limit fizycznego wiersza INI odrzucający powitanie od 4081 bajtów. Tylko `[chat] welcome_message` dopuszcza teraz fizyczny wiersz 8192 bajtów; wartość zachowuje limit 4096 bajtów, pozostałe wiersze 4096, a plik 65536. Nowe regresje obejmują pełne wartości ASCII/UTF-8 z LF/CRLF/EOF, dokładne granice wiersza z białymi znakami, przekroczenia wartości/wiersza, duplikaty i błędne klucze/sekcje oraz dokładną dostawę pełnego powitania z escape przez ADC/ADCS i dalszy zwykły czat. Po poprawce ponownie przeszło 88/88 zestawów w Debug, Release i ASan/UBSan, bez ostrzeżeń kompilatora i przy domyślnym wykrywaniu wycieków; przeszły także testy WebAdmin i integracja z poprawionym serwerem C++.
+
 Wszystkie **88/88 zestawów CTest** przeszły lokalnie w Debug, Release i ASan/UBSan przy wymaganych narzędziach integracyjnych i domyślnym wykrywaniu wycieków. Obejmuje to testy jednostkowe/procesowe konfiguracji czatu, wcześniejsze regresje czatu/bezpieczeństwa/kolejek, rzeczywisty ncdc ADC/ADCS z własnym powitaniem, MariaDB i Apache HTTPS. Przeszły też typecheck/budowanie produkcyjne WebAdmin, 4 testy Node, 3 testy Chromium i integracja z rzeczywistym API C++. Sprawdzono metadane, linki dokumentacji, przykładowy INI i pomoc US/PL. Wyniki są lokalne; zdalne CI, pełna macierz systemów/klientów i gwarancje obciążenia produkcyjnego wymagają osobnej walidacji.
 
 ## Weryfikacja Limits — alpha-0.3.12

@@ -20,6 +20,8 @@ namespace dc24h::configuration {
 namespace {
 namespace fs = std::filesystem;
 constexpr std::size_t max_file_bytes = 65536;
+constexpr std::size_t max_line_bytes = 4096;
+constexpr std::size_t max_welcome_line_bytes = 8192;
 
 std::string trim(std::string_view value) {
     // INI whitespace is deliberately ASCII and independent of the process locale.
@@ -215,8 +217,14 @@ Settings load_file(const std::string& filename) {
     std::size_t line_number = 0;
     while (std::getline(input, line)) {
         ++line_number;
-        if (line.size() > 4096) {
-            throw std::invalid_argument("Invalid configuration line " + std::to_string(line_number));
+        if (line.size() > max_line_bytes) {
+            // A maximum-size welcome also needs room for its key, whitespace
+            // and CR. Other physical lines retain their existing bound.
+            const auto equal = line.find('=');
+            if (line.size() > max_welcome_line_bytes || section != "chat" || equal == std::string::npos ||
+                trim(std::string_view(line).substr(0, equal)) != "welcome_message") {
+                throw std::invalid_argument("Invalid configuration line " + std::to_string(line_number));
+            }
         }
         if (!line.empty() && line.back() == '\r') { line.pop_back(); }
         if (line.find('\r') != std::string::npos) {

@@ -20,7 +20,7 @@ cp config/dc24h.ini.example config/dc24h.ini
 
 ## Format INI
 
-UTF-8, opcjonalny BOM, LF lub CRLF. Faktyczny odczyt ograniczono do 65536 bajtów, wiersz do 4096 bajtów (razem z ewentualnym CR); ostatni LF jest opcjonalny. Otwarty plik musi być zwykłym plikiem. Końcowe dowiązanie symboliczne, FIFO i urządzenie są odrzucane. Parser sprawdza UTF-8, odrzuca NUL i znaki sterujące poza tab/końcami wierszy, podaje numer wiersza bez ujawniania wartości. Nazwy są rozróżniane wielkością liter. Puste wiersze i całe komentarze `#`/`;` są pomijane. Spacje/tab wokół kluczy i wartości są usuwane. Brak komentarzy po wartości, cytowania i escape; w ścieżce spacja, `#` i `;` są dosłowne. Nieznane klucze/sekcje i powtórzenia kluczy skalarnych są błędami. Powtarzalne są tylko listy nasłuchu.
+UTF-8, opcjonalny BOM, LF lub CRLF. Faktyczny odczyt ograniczono do 65536 bajtów, wiersz do 4096 bajtów (razem z ewentualnym CR), z wyjątkiem `[chat] welcome_message`: do 8192 bajtów, aby zmieścić klucz/białe znaki i pełne 4096 bajtów wartości; ostatni LF jest opcjonalny. Otwarty plik musi być zwykłym plikiem. Końcowe dowiązanie symboliczne, FIFO i urządzenie są odrzucane. Parser sprawdza UTF-8, odrzuca NUL i znaki sterujące poza tab/końcami wierszy, podaje numer wiersza bez ujawniania wartości. Nazwy są rozróżniane wielkością liter. Puste wiersze i całe komentarze `#`/`;` są pomijane. Spacje/tab wokół kluczy i wartości są usuwane. Brak komentarzy po wartości, cytowania i escape; w ścieżce spacja, `#` i `;` są dosłowne. Nieznane klucze/sekcje i powtórzenia kluczy skalarnych są błędami. Powtarzalne są tylko listy nasłuchu.
 
 | Sekcja | Klucz | Domyślnie | Znaczenie |
 | --- | --- | --- | --- |

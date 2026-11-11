@@ -273,6 +273,36 @@ void chat_limits() {
     const auto no_welcome=fx.write("[chat]\nwelcome_enabled=off\nwelcome_message=\n");
     require(!parse({"dc24h","--config",no_welcome.string()}).settings.network.chat.welcome_enabled, "Explicitly disabled empty welcome refused");
 }
+void chat_welcome_ini_bounds() {
+    Fixture fx;
+    std::string unicode;
+    for (int i=0; i<1024; ++i) { unicode += "😀"; }
+    for (const auto& welcome : {std::string(4081,'x'),std::string(4096,'x'),unicode}) {
+        for (const auto ending : {"\n","\r\n",""}) {
+            const auto path=fx.write("[chat]\nwelcome_message="+welcome+ending);
+            require(parse({"dc24h","--config",path.string(),"--check-config"}).settings.network.chat.welcome_message == welcome,
+                "Full-size welcome rejected or changed by INI line accounting");
+        }
+    }
+    // The extended physical-line cap includes whitespace, the key and optional CR.
+    const std::string maximum_line=std::string(4077,' ')+"welcome_message = "+std::string(4096,'x')+'\r';
+    require(maximum_line.size() == 8192,"Invalid welcome line boundary fixture");
+    const auto path=fx.write("[chat]\n"+maximum_line+'\n');
+    require(parse({"dc24h","--config",path.string()}).settings.network.chat.welcome_message == std::string(4096,'x'),
+        "Padded maximum welcome line rejected");
+    for (const auto& content : {
+            "[chat]\n "+maximum_line+'\n',
+            "[chat]\nwelcome_message="+std::string(4097,'x')+'\n',
+            "[chat]\nwelcome_enabled=off\nwelcome_message="+std::string(4097,'x')+'\n',
+            "[chat]\nwelcome_message_extra="+std::string(4096,'x')+'\n',
+            "[logging]\nwelcome_message="+std::string(4096,'x')+'\n',
+            "[chat]\n#"+std::string(4096,'x')+'\n',
+            "[chat]\n"+std::string(4097,' ')+'\n',
+            "[chat]\nwelcome_message="+unicode+"\nwelcome_message=Duplicate\n"}) {
+        const auto bad=fx.write(content);
+        invalid([&] { (void)parse({"dc24h","--config",bad.string()}); });
+    }
+}
 } // namespace
 
 int main() {
@@ -282,6 +312,7 @@ int main() {
         boundaries_and_precedence();
         user_limits();
         chat_limits();
+        chat_welcome_ini_bounds();
         logger_file();
         std::cout << "Configuration parsing, CLI overrides, limits and safe logging OK\n";
     } catch (const std::exception& e) {

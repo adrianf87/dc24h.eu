@@ -35,6 +35,8 @@ max_bytes_per_second = 32768
 byte_burst = 131072
 ```
 
+Fizyczny wiersz INI `[chat] welcome_message` ma limit 8192 bajtów, łącznie z kluczem, otaczającymi białymi znakami i opcjonalnym CR; sama wartość powitania nadal ma limit 4096 bajtów. Pozostałe wiersze zachowują limit 4096 bajtów, a cały plik 65536 bajtów.
+
 Klucze rozróżniają wielkość liter, są pojedyncze i nie dopuszczają duplikatów. Boolean przyjmuje tylko małe `on` i `off`; `true`, `1` i wielkie litery są błędne. Dotychczasowy parser INI usuwa otaczające białe znaki i zachowuje wewnętrzne spacje. Powitanie jest literalnym pojedynczym wierszem INI: cudzysłowy, backslash, `\n`, odwołania do zmiennych i tekst PM/ME nie są rozwijane. `\n` wyświetla więc backslash i literę n. Nie ma szablonów ani interpretera komend.
 
 Puste powitanie jest dozwolone tylko przy `welcome_enabled=off`. Inne niepuste wartości są sprawdzane także przy wyłączeniu: długość, UTF-8/NFC i znaki sterujące. `chat::validate_settings`, `validate_policy` i `validate_welcome` odrzucają błędną konfigurację przed otwarciem portów; wejście nie jest naprawiane ani obcinane. Przykładowe INI i pomoc US/PL zawierają wartości domyślne.
@@ -71,7 +73,7 @@ Wszystkie **88/88 zestawów CTest** przeszły lokalnie w Debug, Release i ASan/U
 
 `chat.configuration` obejmuje zgodne wartości domyślne, zakresy, wyłączone/puste/niepoprawne powitania, limity bajtów UTF-8, politykę bezpośrednich adapterów, niezależność publicznego/prywatnego, ME0/aliasy akcji, niemutowalne kopie, pierwszeństwo źródła, odwracalne odmowy, opcjonalne/własne powitanie, niezależność systemowych wiadomości i sprzątanie kolejek.
 
-`chat.configuration.process` używa obu transportów źródła: wszystkie przełączniki kanałów/akcji, logowanie bez powitania, dokładni odbiorcy/echo przyjętych wiadomości, uporządkowane znaczniki INF potwierdzające brak wycieku, granice Unicode/spacji, literalne własne powitanie, odzyskiwanie, fatalne podszywanie się i prywatność logów/API. Testy konfiguracji sprawdzają nowe klucze, ścisłe booleany, duplikaty, zakresy, literalny tekst INI, puste wyłączone powitanie i polski katalog błędów. Rzeczywisty ncdc ADC/ADCS wyświetla skonfigurowane powitanie przy zachowaniu testów czatu/akcji/flag/reconnect. Anti-Flood i ogólna walidacja nadal są testowane.
+`chat.configuration.process` używa obu transportów źródła: wszystkie przełączniki kanałów/akcji, logowanie bez powitania, dokładni odbiorcy/echo przyjętych wiadomości, uporządkowane znaczniki INF potwierdzające brak wycieku, granice Unicode/spacji, literalne własne powitanie, odzyskiwanie, fatalne podszywanie się i prywatność logów/API. Testy konfiguracji sprawdzają nowe klucze, ścisłe booleany, duplikaty, zakresy, literalny tekst INI, puste wyłączone powitanie i polski katalog błędów. Regresje graniczne dopuszczają 4081 bajtów oraz pełne 4096 bajtów ASCII/UTF-8 z LF, CRLF lub bez końcowego LF; odrzucają wartości 4097 bajtów i wiersze fizyczne 8193 bajtów; zachowują zwykłe limity wierszy i kontrolę duplikatów. Rzeczywiste ADC/ADCS sprawdza też dokładną dostawę pełnego powitania Unicode z escape i gotowość do dalszego czatu. Rzeczywisty ncdc ADC/ADCS wyświetla skonfigurowane powitanie przy zachowaniu testów czatu/akcji/flag/reconnect. Anti-Flood i ogólna walidacja nadal są testowane.
 
 ```sh
 cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON

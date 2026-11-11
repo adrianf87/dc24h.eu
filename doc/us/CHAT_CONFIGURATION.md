@@ -35,6 +35,8 @@ max_bytes_per_second = 32768
 byte_burst = 131072
 ```
 
+The physical INI line for `[chat] welcome_message` allows up to 8192 bytes, including its key, surrounding whitespace and optional CR; the welcome value itself is limited to 4096 bytes. Other physical lines retain their 4096-byte cap and the whole file retains its 65536-byte cap.
+
 Keys are case sensitive, singular and reject duplicates. Booleans accept only lowercase `on` and `off`; `true`, `1` and uppercase variants are invalid. The existing INI parser trims surrounding value whitespace and retains internal spaces. Welcome text is a literal single line in INI: quotes, backslashes, `\n`, variable references and PM/ME-like text have no special expansion. For example, `\n` displays as a literal backslash followed by n. There is no template or command interpreter.
 
 An empty welcome is permitted only with `welcome_enabled=off`. Other nonempty supplied welcome values are checked even while disabled, including length, UTF-8/NFC and control policy. `chat::validate_settings`, `validate_policy` and `validate_welcome` reject invalid configuration before listeners start; invalid input is not silently repaired or truncated. The shipped example and US/PL help include the defaults.
@@ -71,7 +73,7 @@ All **88/88 CTest suites** passed locally in Debug, Release and ASan/UBSan with 
 
 `chat.configuration` covers preserved defaults, settings bounds, disabled/empty/invalid welcomes, UTF-8 byte ceilings, direct adapter policy, independent public/private switches, ME0/action alias handling, immutable policy copies, invalid-source precedence, recoverable runtime refusals, optional/custom welcome, system-message independence and queue cleanup.
 
-`chat.configuration.process` tests both source transports for all channel/action switches, no-welcome login, exact allowed recipient/echo matrices, ordered INF fences proving no leaked packets, configured Unicode/whitespace boundaries, custom literal welcome, recovery, fatal spoof rejection and log/API privacy. Configuration unit tests cover all new keys, strict booleans, duplicates, ranges, literal INI text, empty-disabled welcome and PL error catalogs. Actual ncdc ADC/ADCS displays a configured greeting while retaining chat/action/flags/reconnect checks. Existing Anti-Flood and generic validation suites remain enabled.
+`chat.configuration.process` tests both source transports for all channel/action switches, no-welcome login, exact allowed recipient/echo matrices, ordered INF fences proving no leaked packets, configured Unicode/whitespace boundaries, custom literal welcome, recovery, fatal spoof rejection and log/API privacy. Configuration unit tests cover all new keys, strict booleans, duplicates, ranges, literal INI text, empty-disabled welcome and PL error catalogs. Boundary regressions accept 4081-byte and full 4096-byte ASCII/UTF-8 welcomes with LF, CRLF or no final LF; reject 4097-byte values and 8193-byte physical lines; and retain ordinary-line bounds and duplicate checks. Real ADC/ADCS also verifies exact escaped delivery of a full-size Unicode welcome and subsequent chat readiness. Actual ncdc ADC/ADCS displays a configured greeting while retaining chat/action/flags/reconnect checks. Existing Anti-Flood and generic validation suites remain enabled.
 
 ```sh
 cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON

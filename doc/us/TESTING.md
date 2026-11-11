@@ -24,6 +24,8 @@
 
 ## Chat Configuration validation — alpha-0.4.10
 
+A subsequent recheck found and fixed the physical INI line cap rejecting welcome values from 4081 bytes. Only `[chat] welcome_message` now permits an 8192-byte physical line; values remain capped at 4096 bytes, ordinary lines at 4096 and files at 65536. New regression cases cover full ASCII/UTF-8 values with LF/CRLF/EOF, exact padded-line boundaries, oversized values/lines, duplicate/wrong keys/sections and exact escaped full-size welcome delivery through both ADC/ADCS followed by normal chat. All 88/88 suites passed again in Debug, Release and ASan/UBSan after this fix, with no compiler warnings and default leak detection; WebAdmin tests and integration with the fixed C++ server also passed.
+
 All **88/88 CTest suites** passed locally in Debug, Release and ASan/UBSan with strict integration-tool detection and default leak detection. This includes configured-chat unit/process coverage, all earlier chat/security/queue regressions, actual ncdc ADC/ADCS with custom welcome, MariaDB and Apache HTTPS. WebAdmin typecheck/production build, 4 Node tests, 3 Chromium tests and real C++ API integration passed. Metadata, documentation links, shipped INI and US/PL help checks passed. Results are local; remote CI, the full OS/client matrix and production-load guarantees require separate validation.
 
 ## Limits validation — alpha-0.3.12
