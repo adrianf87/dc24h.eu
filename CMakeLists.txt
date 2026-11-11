@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.4.12 LANGUAGES CXX)
+project(dc24h VERSION 0.5.1 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -52,6 +52,12 @@ target_compile_features(dc24h_chat PUBLIC cxx_std_20)
 set_target_properties(dc24h_chat PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_chat PUBLIC include)
 target_link_libraries(dc24h_chat PUBLIC dc24h_users PRIVATE dc24h_text)
+
+add_library(dc24h_search src/search/query.cpp src/search/core.cpp)
+target_compile_features(dc24h_search PUBLIC cxx_std_20)
+set_target_properties(dc24h_search PROPERTIES CXX_EXTENSIONS OFF)
+target_include_directories(dc24h_search PUBLIC include)
+target_link_libraries(dc24h_search PUBLIC dc24h_users PRIVATE dc24h_text)
 
 add_library(dc24h_adc src/adc/parser.cpp src/adc/state.cpp src/adc/sup.cpp src/adc/sid.cpp src/adc/sid_session.cpp
     src/adc/identity_hash.cpp src/adc/tiger_identity.cpp src/adc/inf.cpp src/adc/serializer.cpp src/adc/login.cpp src/adc/status.cpp src/adc/msg.cpp src/adc/msg_flags.cpp src/adc/chat_validation.cpp src/adc/public_chat.cpp src/adc/private_chat.cpp src/adc/message_routing.cpp src/adc/hub_messages.cpp src/adc/user.cpp src/adc/user_login.cpp src/adc/user_list.cpp src/adc/inf_updates.cpp src/adc/user_disconnect.cpp)
@@ -120,7 +126,7 @@ add_executable(dc24h src/main.cpp)
 target_link_libraries(dc24h PRIVATE dc24h_core dc24h_configuration)
 set_target_properties(dc24h PROPERTIES CXX_EXTENSIONS OFF)
 
-foreach(target dc24h_text dc24h_chat dc24h_users dc24h_i18n dc24h_core dc24h_network dc24h_logging dc24h_adc dc24h_adcs dc24h_security dc24h_configuration dc24h_database dc24h_api dc24h)
+foreach(target dc24h_text dc24h_search dc24h_chat dc24h_users dc24h_i18n dc24h_core dc24h_network dc24h_logging dc24h_adc dc24h_adcs dc24h_security dc24h_configuration dc24h_database dc24h_api dc24h)
     target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 endforeach()
 
@@ -172,6 +178,14 @@ if(BUILD_TESTING)
     set_target_properties(adc_tests PROPERTIES CXX_EXTENSIONS OFF)
     target_compile_options(adc_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
     add_test(NAME adc.parser COMMAND adc_tests)
+    add_executable(search_core_tests tests/search_core_tests.cpp)
+    target_link_libraries(search_core_tests PRIVATE dc24h_search)
+    target_compile_options(search_core_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(search_core_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME search.core COMMAND search_core_tests)
+    add_test(NAME search.core.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/search_core_process_tests.py" "$<TARGET_FILE:dc24h>")
+    set_tests_properties(search.core search.core.process PROPERTIES TIMEOUT 30)
     add_executable(chat_logging_tests tests/chat_logging_tests.cpp)
     target_link_libraries(chat_logging_tests PRIVATE dc24h_adc)
     target_compile_options(chat_logging_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)

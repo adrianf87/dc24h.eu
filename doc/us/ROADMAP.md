@@ -1,6 +1,8 @@
 # Roadmap
 
-**Current increment — alpha-0.4.12:** [WebAdmin chat statistics](WEBADMIN_CHAT.md) adds a dedicated read-only Chat page showing all nine aggregate counters, separate message/recipient-queue sections, US/PL descriptions, refresh/error/restart behavior and safe export.
+**Current increment — alpha-0.5.1:** [Search Core](SEARCH_CORE.md) adds an independent C++20 library for bounded immutable textual queries, ready-session/feature selection and lifetime/domain-bound dispatch. Live SCH/RES parsing, serialization and transport attachment remain future increments; the running server still returns an explicit unsupported response.
+
+**Increment delivered in alpha-0.4.12:** [WebAdmin chat statistics](WEBADMIN_CHAT.md) adds a dedicated read-only Chat page showing all nine aggregate counters, separate message/recipient-queue sections, US/PL descriptions, refresh/error/restart behavior and safe export.
 
 **Increment delivered in alpha-0.4.11:** [Chat Logging](CHAT_LOGGING.md) adds payload-free, opt-in rate-limited outcome logs and saturating aggregate counters for client B/D/E MSG, published through the authenticated API and US/PL WebAdmin. Queue acceptance is distinct from transport delivery.
 
@@ -91,6 +93,7 @@
 | alpha-0.4.10 Chat Configuration | Grouped INI settings, client policy and configurable greeting with unchanged readiness |
 | alpha-0.4.11 Chat Logging | Payload-free bounded outcome logs and aggregate API/WebAdmin counters |
 | alpha-0.4.12 WebAdmin | Dedicated read-only chat statistics with all aggregate counters |
+| alpha-0.5.1 Search Core | Checked textual query model and ready-session dispatch library; live SCH/RES remain planned |
 
 ## Historical acceptance plan before alpha-0.2.8
 

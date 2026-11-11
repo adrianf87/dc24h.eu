@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.4.12: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.5.1: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [Search Core — alpha-0.5.1](SEARCH_CORE.md)
 - [AUDIT_ALPHA_0.1.md](AUDIT_ALPHA_0.1.md)
 - [Statystyki czatu WebAdmin — alpha-0.4.12](WEBADMIN_CHAT.md)
 - [Chat Logging — alpha-0.4.11](CHAT_LOGGING.md)
