@@ -22,18 +22,21 @@ try {
   });
   await page.goto(process.argv[2]);
   await expect(page.getByText("API connected", { exact: true })).toBeVisible();
-  await expect(page.getByText("alpha-0.4.11", { exact: true })).toHaveCount(2);
-  await expect(page.locator(".metric-value").nth(1)).toHaveText("1");
+  await expect(page.getByText("alpha-0.4.12", { exact: true })).toHaveCount(2);
+  await expect(page.locator(".metric-value").nth(1)).toHaveText("9");
   assert.ok(
-    Number(await page.locator(".metric-value").first().textContent()) >= 1,
+    Number(await page.locator(".metric-value").first().textContent()) >= 2,
   );
   const status = await page.request.get(
     new URL("admin-api/v1/status", process.argv[2]).href,
   );
   assert.equal(status.status(), 200);
   const snapshot = await status.json();
-  assert.deepEqual(snapshot.users, { online: 0, peak_online: 0, successful_logins: 0 });
-  await expect(page.getByTestId("user-statistics").locator(".metric-value")).toHaveText(["0", "0", "0", "0"]);
+  assert.deepEqual(snapshot.users, { online: 2, peak_online: 2, successful_logins: 2 });
+  await expect(page.getByTestId("user-statistics").locator(".metric-value")).toHaveText(["2", "2", "2", "0"]);
+  assert.deepEqual(snapshot.chat, { received: 5, public_dispatches: 1, private_dispatches: 2,
+    rejected: 2, flood_limited: 0, errors: 0, queued: 5, unavailable: 0, refused: 0 });
+  assert.ok(!(await status.text()).includes("WebChatSecret"));
   assert.ok(!(await status.text()).includes(secret));
   assert.ok(!(await page.content()).includes(secret));
   assert.equal(credentialLeak, false);
@@ -46,10 +49,15 @@ try {
     path: "test-results/live-desktop.png",
     fullPage: true,
   });
+  await page.getByRole("link", { name: "Chat", exact: true }).click();
+  await expect(page.getByTestId("chat-details").locator(".metric-value"))
+    .toHaveText(["5", "1", "2", "2", "0", "0", "5", "0", "0"]);
+  assert.ok(!(await page.content()).includes("WebChatSecret"));
+  await page.screenshot({ path: "test-results/live-chat-desktop.png", fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("combobox").selectOption("pl");
   await expect(
-    page.getByRole("heading", { name: "Przegląd huba" }),
+    page.getByRole("heading", { name: "Statystyki czatu" }),
   ).toBeVisible();
   assert.ok(
     await page.evaluate(
@@ -57,7 +65,7 @@ try {
     ),
   );
   await page.screenshot({
-    path: "test-results/live-mobile-pl.png",
+    path: "test-results/live-chat-mobile-pl.png",
     fullPage: true,
   });
   assert.deepEqual(errors, []);

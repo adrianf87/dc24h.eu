@@ -1,6 +1,8 @@
 # Plan rozwoju
 
-**Bieżący etap — alpha-0.4.11:** [Chat Logging](CHAT_LOGGING.md) dodaje opcjonalne logi wyników bez treści, z limitem tempa, oraz nasycane liczniki klienckiego B/D/E MSG w uwierzytelnionym API i WebAdmin US/PL. Przyjęcie do kolejki jest odróżnione od dostarczenia przez transport.
+**Bieżący etap — alpha-0.4.12:** [Statystyki czatu WebAdmin](WEBADMIN_CHAT.md) dodają osobny widok Czat z dziewięcioma licznikami zbiorczymi, sekcjami wiadomości/kolejek, opisami US/PL, odświeżaniem, obsługą błędów/restartu i bezpiecznym eksportem.
+
+**Etap dostarczony w alpha-0.4.11:** [Chat Logging](CHAT_LOGGING.md) dodaje opcjonalne logi wyników bez treści, z limitem tempa, oraz nasycane liczniki klienckiego B/D/E MSG w uwierzytelnionym API i WebAdmin US/PL. Przyjęcie do kolejki jest odróżnione od dostarczenia przez transport.
 
 **Etap dostarczony w alpha-0.4.10:** [Chat Configuration](CHAT_CONFIGURATION.md) grupuje startowe ustawienia czatu i dodaje limit odkodowanego tekstu, niezależne przełączniki publicznego/prywatnego/akcji i opcjonalne własne powitanie. Domyślne wartości zachowują działanie; odwracalne odmowy nie omijają walidacji ani Anti-Flood.
 
@@ -88,6 +90,7 @@
 | alpha-0.4.9 Anti-Flood | Włączone limity liczby/bajtów B/D/E, odwracalne odmowy i polityka INI |
 | alpha-0.4.10 Chat Configuration | Zgrupowane INI, polityka klienta i własne powitanie bez zmiany gotowości |
 | alpha-0.4.11 Chat Logging | Ograniczone logi wyników bez treści i liczniki zbiorcze API/WebAdmin |
+| alpha-0.4.12 WebAdmin | Osobny widok wszystkich zbiorczych statystyk czatu tylko do odczytu |
 
 ## Historyczny plan odbioru przed alpha-0.2.8
 
