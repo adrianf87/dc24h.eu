@@ -14,6 +14,7 @@ import {
   LayoutDashboard,
   LockKeyhole,
   Menu,
+  MessageSquare,
   Network,
   Radio,
   RefreshCw,
@@ -24,17 +25,18 @@ import {
   X,
   Users,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { us } from "./languages/us";
 import type { Copy } from "./languages/us";
 import { pl } from "./languages/pl";
 import { duration, WEBADMIN_VERSION } from "./lib/status";
 import type { HubSnapshot } from "./lib/status";
+import { Metric } from "./components/Metric";
+import { ChatStatistics } from "./components/ChatStatistics";
 import { useHub } from "./lib/useHub";
 import type { Sample } from "./lib/useHub";
 
-type Page = "overview" | "connections" | "security" | "database";
-const pages: Page[] = ["overview", "connections", "security", "database"];
+type Page = "overview" | "connections" | "chat" | "security" | "database";
+const pages: Page[] = ["overview", "connections", "chat", "security", "database"];
 const currentPage = (): Page =>
   pages.includes(location.hash.slice(1) as Page)
     ? (location.hash.slice(1) as Page)
@@ -51,32 +53,6 @@ function Badge({
       <i />
       {children}
     </span>
-  );
-}
-function Metric({
-  icon: Icon,
-  label,
-  value,
-  hint,
-  color = "blue",
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: string;
-  hint: string;
-  color?: string;
-}) {
-  return (
-    <article className="metric card">
-      <div className="metric-top">
-        <span>{label}</span>
-        <span className={`metric-icon ${color}`}>
-          <Icon size={18} />
-        </span>
-      </div>
-      <strong className="metric-value">{value}</strong>
-      <p>{hint}</p>
-    </article>
   );
 }
 function Chart({ samples, t }: { samples: Sample[]; t: Copy }) {
@@ -342,12 +318,14 @@ export default function App() {
   const navigation = [
     { page: "overview", icon: LayoutDashboard },
     { page: "connections", icon: Network },
+    { page: "chat", icon: MessageSquare },
     { page: "security", icon: ShieldCheck },
     { page: "database", icon: Database },
   ] as const;
   const titles = {
     overview: [t.overviewTitle, t.overviewSub],
     connections: [t.connectionsTitle, t.connectionsSub],
+    chat: [t.chatTitle, t.chatSub],
     security: [t.securityTitle, t.securitySub],
     database: [t.databaseTitle, t.databaseSub],
   };
@@ -617,7 +595,7 @@ export default function App() {
               </a>
             </section>
           )}
-          {page !== "database" && (
+          {(page === "overview" || page === "connections" || page === "security") && (
             <div className={`metrics-grid ${page === "security" ? "two" : ""}`}>
               <Metric
                 icon={page === "security" ? ShieldCheck : Network}
@@ -681,16 +659,25 @@ export default function App() {
             </div>
           )}
           {page === "overview" && (
-            <div className="metrics-grid" data-testid="chat-statistics">
-              <Metric icon={Activity} label={t.publicChat}
-                value={number(snapshot?.chat.public_dispatches)} hint={t.chatDispatchHint} />
-              <Metric icon={LockKeyhole} label={t.privateChat}
-                value={number(snapshot?.chat.private_dispatches)} hint={t.chatDispatchHint} color="violet" />
-              <Metric icon={ShieldCheck} label={t.chatRejected}
-                value={number(snapshot?.chat.rejected)} hint={t.chatRejectedHint} color="amber" />
-              <Metric icon={ShieldCheck} label={t.chatFlood}
-                value={number(snapshot?.chat.flood_limited)} hint={t.chatFloodHint} color="teal" />
-            </div>
+            <section aria-label={t.chatTitle}>
+              <div className="section-heading">
+                <h2>{t.chatTitle}</h2>
+                <a href="#chat">{t.chatDetails}<ArrowRight size={14} /></a>
+              </div>
+              <div className="metrics-grid" data-testid="chat-statistics">
+                <Metric icon={Activity} label={t.publicChat}
+                  value={number(snapshot?.chat.public_dispatches)} hint={t.chatDispatchHint} />
+                <Metric icon={LockKeyhole} label={t.privateChat}
+                  value={number(snapshot?.chat.private_dispatches)} hint={t.chatDispatchHint} color="violet" />
+                <Metric icon={ShieldCheck} label={t.chatRejected}
+                  value={number(snapshot?.chat.rejected)} hint={t.chatRejectedHint} color="amber" />
+                <Metric icon={ShieldCheck} label={t.chatFlood}
+                  value={number(snapshot?.chat.flood_limited)} hint={t.chatFloodHint} color="teal" />
+              </div>
+            </section>
+          )}
+          {page === "chat" && (
+            <ChatStatistics snapshot={snapshot} t={t} number={number} />
           )}
           {page === "connections" && (
             <div className="metrics-grid" data-testid="connection-statistics">

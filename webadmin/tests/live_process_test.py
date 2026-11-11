@@ -11,9 +11,13 @@ import subprocess
 import sys
 import tempfile
 import time
+import unittest
 
 binary = str(Path(sys.argv[1]).resolve())
 root = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(root.parent / 'tests'))
+from adc_login_process_tests import Peer
+
 with tempfile.TemporaryDirectory(prefix='dc24h-web-live-') as temp:
     folder = Path(temp)
     token = secrets.token_hex(32)
@@ -21,10 +25,10 @@ with tempfile.TemporaryDirectory(prefix='dc24h-web-live-') as temp:
     credential.write_text(token + '\n'); credential.chmod(0o600)
     endpoint = folder / 'admin.sock'
     config = folder / 'hub.ini'
-    config.write_text('[network]\nlisten=127.0.0.1:0\n[api]\nenabled=on\nsocket=admin.sock\ntoken_file=admin.token\n')
+    config.write_text('[network]\nlisten=127.0.0.1:0\n[chat]\nmax_text_bytes=64\n[api]\nenabled=on\nsocket=admin.sock\ntoken_file=admin.token\n')
     server = subprocess.Popen([binary, '--config', str(config)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
     vite = None
-    peer = None
+    peers = []
     try:
         log = bytearray(); deadline = time.monotonic() + 5
         with selectors.DefaultSelector() as ready:
@@ -34,8 +38,23 @@ with tempfile.TemporaryDirectory(prefix='dc24h-web-live-') as temp:
                 assert remaining > 0 and ready.select(remaining), 'C++ startup timed out'
                 chunk = os.read(server.stderr.fileno(), 8192); assert chunk, 'C++ startup failed'; log.extend(chunk)
         port = int(re.search(rb'Network listening on 127\.0\.0\.1:(\d+)', log)[1])
-        peer = socket.create_connection(('127.0.0.1', port), timeout=3)
-        peer.sendall(b'HSUP ADBASE ADTIGR\n')
+        case = unittest.TestCase()
+        for index in range(2):
+            peer = Peer(case, socket.create_connection(('127.0.0.1', port), timeout=3))
+            peers.append(peer)
+            peer.login(f'WebChatSecretUser{index}'.encode(), index + 1)
+            for earlier in peers[:-1]:
+                case.assertTrue(earlier.line().startswith(b'BINF ' + peer.sid + b' '))
+        source, target = peers
+        for kind in (b'BMSG', b'DMSG', b'EMSG'):
+            frame = kind + b' ' + source.sid + (b' ' + target.sid if kind != b'BMSG' else b'') + b' WebChatSecretBody'
+            source.send(frame)
+            for recipient in (peers if kind != b'DMSG' else [target]):
+                case.assertEqual(recipient.line(), frame)
+        source.send(b'DMSG ' + source.sid + b' ZZZZ WebChatSecretMissing')
+        case.assertTrue(source.line().startswith(b'ISTA 140 '))
+        source.send(b'BMSG ' + source.sid + b' ' + b'WebChatSecret' * 8)
+        case.assertTrue(source.line().startswith(b'ISTA 100 '))
         with socket.socket() as reserve:
             reserve.bind(('127.0.0.1', 0)); webport = reserve.getsockname()[1]
         with (folder / 'vite.log').open('w') as output:
@@ -58,8 +77,9 @@ with tempfile.TemporaryDirectory(prefix='dc24h-web-live-') as temp:
         server.send_signal(signal.SIGTERM); out, err = server.communicate(timeout=3)
         assert server.returncode == 0 and not endpoint.exists(), 'C++/API shutdown failed'
         assert token.encode() not in log + err + out, 'Credential leaked in C++ output'
+        assert b'WebChatSecret' not in log + err + out, 'Chat data leaked in C++ output'
     finally:
-        if peer is not None: peer.close()
+        for peer in peers: peer.peer.close()
         if vite is not None:
             vite.terminate()
             try: vite.wait(timeout=3)

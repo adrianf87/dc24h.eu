@@ -1,6 +1,8 @@
-# WebAdmin — alpha-0.1.10
+# WebAdmin — alpha-0.4.12
 
-**Bieżący etap — alpha-0.4.11:** [Chat Logging](CHAT_LOGGING.md) dodaje opcjonalne logi wyników bez treści, z limitem tempa, oraz nasycane liczniki klienckiego B/D/E MSG w uwierzytelnionym API i WebAdmin US/PL. Przyjęcie do kolejki jest odróżnione od dostarczenia przez transport.
+**Bieżący etap — alpha-0.4.12:** [Statystyki czatu WebAdmin](WEBADMIN_CHAT.md) dodają osobny widok Czat z dziewięcioma licznikami zbiorczymi, sekcjami wiadomości/kolejek, opisami US/PL, odświeżaniem, obsługą błędów/restartu i bezpiecznym eksportem.
+
+**Etap dostarczony w alpha-0.4.11:** [Chat Logging](CHAT_LOGGING.md) dodaje opcjonalne logi wyników bez treści, z limitem tempa, oraz nasycane liczniki klienckiego B/D/E MSG w uwierzytelnionym API i WebAdmin US/PL. Przyjęcie do kolejki jest odróżnione od dostarczenia przez transport.
 
 **Etap dostarczony w alpha-0.4.10:** [Chat Configuration](CHAT_CONFIGURATION.md) grupuje startowe ustawienia czatu i dodaje limit odkodowanego tekstu, niezależne przełączniki publicznego/prywatnego/akcji i opcjonalne własne powitanie. Domyślne wartości zachowują działanie; odwracalne odmowy nie omijają walidacji ani Anti-Flood.
 
@@ -24,9 +26,9 @@
 
 **Etap dostarczony w alpha-0.3.13:** [Statistics](STATISTICS.md) dodaje liczniki cyklu życia w czasie stałym, użytkowników online/szczyt i sumę logowań, atomowe statystyki transportu, pola chronionego API oraz metryki WebAdmin US/PL. Starsze etapy poniżej zachowują swój zakres historyczny.
 
-Zaimplementowano projekt React 19 / TypeScript / Vite w `webadmin/`, responsywny panel tylko do odczytu, katalogi EN/US i PL, cztery widoki oparte na hash (przegląd, połączenia, bezpieczeństwo, baza), odświeżanie ręczne/co 5 sekund, ograniczoną historię obserwacji sesji oraz eksport JSON. Konfiguracja i logi są jawnie wyłączone jako przyszłe funkcje. Brak kont/logowania/ról, zmian administracyjnych, trwałych metryk i zmyślonych danych.
+Zaimplementowano projekt React 19 / TypeScript / Vite w `webadmin/`, responsywny panel tylko do odczytu, katalogi EN/US i PL, pięć widoków opartych na hash (przegląd, połączenia, czat, bezpieczeństwo, baza), odświeżanie ręczne/co 5 sekund, ograniczoną historię obserwacji sesji oraz eksport JSON. Konfiguracja i logi są jawnie wyłączone jako przyszłe funkcje. Brak kont/logowania/ról, zmian administracyjnych, trwałych metryk i zmyślonych danych.
 
-Domyślny panel pokazuje oczekiwanie/brak połączenia/błędy, a niedostępne liczniki kreskami. Dane pojawiają się tylko po poprawnej odpowiedzi API; błąd odświeżenia czyści wyświetlany stan i wykres. Znacznik ostatniego odczytu dotyczy ostatniej udanej próbki. Flaga bazy określa konfigurację przy starcie, nie bieżącą dostępność SQL. Liczniki sieci są niezależnymi odczytami; pamięć przeglądarki przechowuje do 30 ostatnich udanych obserwacji i zeruje historię po wykryciu spadku uptime. Pełnego logowania ADC nadal nie zaimplementowano.
+Domyślny panel pokazuje oczekiwanie/brak połączenia/błędy, a niedostępne liczniki kreskami. Dane pojawiają się tylko po poprawnej odpowiedzi API; błąd odświeżenia czyści wyświetlany stan i wykres. Znacznik ostatniego odczytu dotyczy ostatniej udanej próbki. Flaga bazy określa konfigurację przy starcie, nie bieżącą dostępność SQL. Liczniki sieci są niezależnymi odczytami; pamięć przeglądarki przechowuje do 30 ostatnich udanych obserwacji i zeruje historię po wykryciu spadku uptime. Logowanie gości ADC jest zaimplementowane; uwierzytelnianie kont i administracyjne sesje przeglądarkowe pozostają osobnymi przyszłymi etapami.
 
 ## Wymagania i budowanie
 

@@ -1,7 +1,14 @@
-# dc24h.eu WebAdmin — alpha-0.1.11
+# dc24h.eu WebAdmin — alpha-0.4.12
 
 React + TypeScript + Vite, with a responsive EN/US and PL read-only panel.
 Unavailable data is shown explicitly; no fake live metrics or browser token storage.
+
+The Chat navigation item (`#chat`) shows all nine aggregate chat counters from the
+existing authenticated API, with US/PL labels and separate message/recipient queue
+sections. Overview keeps its four-counter summary and links to the full page.
+Totals are cumulative since server startup and reset on restart. A queued copy
+is not a delivery/read receipt. Missing or invalid API data clears values to dashes
+and disables export; live zeros remain zeros. See [chat statistics](../doc/us/WEBADMIN_CHAT.md).
 
 ```sh
 npm ci

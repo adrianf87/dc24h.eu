@@ -1,5 +1,15 @@
 # Changelog
 
+## alpha-0.4.12 — 2026-11-11
+
+WebAdmin chat statistics increment, based directly on main `be34e21e3ebad17b3f75cd5277a3dd6023c043d2` after the alpha-0.4.11 merge:
+
+- Added a dedicated read-only `#chat` page and monitoring navigation item, plus a link from Overview. All nine existing API counters are shown in separate message-attempt and recipient-queue sections. US/PL descriptions explain startup totals, restart reset, system-message exclusions and queue acceptance versus delivery/read. Existing Overview counters remain available through the shared Metric component.
+- Reused the validated, bounded local API snapshot, five-second auto/manual refresh and allowlisted export. Zero remains zero; failed/unconfigured/malformed/missing API data clears prior counters to dashes and disables export until recovery. No inferred rates/delivery percentages, user data, chat bodies, mutations or new API fields/endpoints were added. Responsive grids wrap maximum safe integers; mobile navigation closes on selection.
+- Expanded browser coverage for all nine values, locale formatting, direct/reload/mobile navigation, refresh, restart-to-zero, unavailable/invalid data, recovery and safe exported counters. Real C++ API integration now logs in two ADC clients, produces public/direct/echo traffic and target/text refusals, and verifies nonzero counters through the local adapter and desktop/mobile React view while checking private-marker/token omission.
+- Updated runtime/version fixtures and mirrored US/PL WebAdmin, API, testing, architecture, version, roadmap and navigation documentation. The server's chat logging/statistics model and protocol behavior are preserved.
+- Validation: 90/90 CTest suites passed locally in Debug, including ncdc ADC/ADCS, MariaDB and Apache HTTPS. WebAdmin typecheck/production build, 4 Node tests, 6 Chromium tests and real C++ API/adapter/React integration passed. Inspected desktop/mobile screenshots and rechecked chat navigation/export after the sidebar scrolling adjustment. Metadata, UTF-8, local documentation links, shipped INI and whitespace checks passed. Release/sanitizer suites were not rerun for this UI increment; remote CI, other OS/browser combinations and production load are unverified.
+
 ## alpha-0.4.11 — 2026-11-11
 
 Chat Logging increment, based directly on main `2ad82a2beeb5b8b0963b8908657971c4d011e6dc` after the alpha-0.4.10 merge:
