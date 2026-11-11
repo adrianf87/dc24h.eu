@@ -1,6 +1,8 @@
 # Hub Messages — alpha-0.4.7
 
-**Current increment — alpha-0.4.8:** [Chat Validation](CHAT_VALIDATION.md) centralizes client text, SID and sender readiness/ownership checks in both adapters. Recipient lifetime selection and dispatch revalidation remain authoritative; system IMSG stays separate.
+**Current increment — alpha-0.4.9:** [Anti-Flood](ANTI_FLOOD.md) adds enabled per-connection B/D/E message and decoded-byte buckets, configurable in `[chat]`. Excess messages are dropped before fanout with bounded recoverable notices; existing validation and general resource limits remain.
+
+**Increment delivered in alpha-0.4.8:** [Chat Validation](CHAT_VALIDATION.md) centralizes client text, SID and sender readiness/ownership checks in both adapters. Recipient lifetime selection and dispatch revalidation remain authoritative; system IMSG stays separate.
 
 Based directly on main `8d0da2516b007466828b00aafd4e7bf7a857b9f3`, after the Message Flags merge. Earlier branches and history are preserved. Code and system wire text use EN/US UTF-8; operator help and documentation also support Polish.
 

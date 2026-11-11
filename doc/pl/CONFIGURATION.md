@@ -1,5 +1,7 @@
 # Konfiguracja — alpha-0.1.11
 
+**Bieżący etap — alpha-0.4.9:** [Anti-Flood](ANTI_FLOOD.md) dodaje włączone budżety liczby i odkodowanych bajtów B/D/E dla połączenia, konfigurowane w `[chat]`. Nadmiarowe wiadomości są odrzucane przed rozsyłaniem z ograniczoną odwracalną diagnostyką; walidacja i ogólne limity pozostają.
+
 **Etap dostarczony w alpha-0.3.12:** [Limits](LIMITS.md) dodaje konfigurowalne limity sesji/użytkowników wspólne dla ADC/ADCS, ograniczone limitem połączeń. SessionManager transakcyjnie sprawdza pojemność; LoginHub odrzuca pełny rejestr przed przygotowaniem powitania/listy przez ISTA 211 i własne IQUI. Rezerwacje closing liczą się aż do sprzątania. Starsze opisy zachowują zakres historyczny.
 
 **Etap dostarczony w alpha-0.2.10:** [Bezpieczeństwo negocjacji](NEGOTIATION_SECURITY.md) dodaje limity oczekujących sesji, łączne budżety wejścia do gotowości i wspólne limity prób przed INF/Tiger. Opisy historyczne poniżej zachowują pierwotny zakres.
@@ -105,3 +107,15 @@ INI `[security] close_timeout=2` dopuszcza 1–3600 sekund. To bezwzględny term
 ## Limity sesji i użytkowników — alpha-0.3.12
 
 INI `[users] max_sessions` i `max_users` przyjmują 1..65535, domyślnie 65535. CLI `--max-sessions N` i `--max-users N` nadpisują te wartości. Efektywne sesje = min(max_connections, max_sessions); efektywni użytkownicy = min(efektywne sesje, max_users). Wyższe pułapy są poprawne i nie podnoszą niższych; zero nie wyłącza limitu. Każdy utrzymywany model liczy się jako sesja, także anonimowy TLS. Użytkownicy liczą się od identyfikacji przez closing/closed aż do usunięcia, także podczas powitania. Pełny limit sesji/połączeń zamyka nadmiarowe gniazdo przed alokacją TLS; pełny limit użytkowników daje ograniczone ISTA 211 → własne IQUI przed powitaniem/listą. Log startowy podaje efektywne wartości. [Limits](LIMITS.md) opisuje rozliczanie, typowane bramki i testy.
+
+## Anti-Flood czatu — alpha-0.4.9
+
+Rzeczywisty Network włącza te limity połączenia dla BMSG, DMSG i EMSG. Tempo odnawia budżet ciągle; liczba wiadomości i odkodowane bajty tekstu są obciążane razem. Nieznane/powtórzone klucze, zero i wartości poza zakresem kończą walidację błędem. Nie ma opcji wyłączenia ani nowej flagi CLI. Zakresy, odwracalne ISTA 100, ograniczanie powiadomień i reconnect opisuje [Anti-Flood](ANTI_FLOOD.md).
+
+```ini
+[chat]
+max_messages_per_second = 5
+message_burst = 10
+max_bytes_per_second = 32768
+byte_burst = 131072
+```

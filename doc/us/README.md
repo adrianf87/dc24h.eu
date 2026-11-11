@@ -1,8 +1,9 @@
 # dc24h.eu documentation
 
-alpha-0.4.8: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.4.9: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
 - [AUDIT_ALPHA_0.1.md](AUDIT_ALPHA_0.1.md)
+- [Anti-Flood — alpha-0.4.9](ANTI_FLOOD.md)
 - [Chat Validation — alpha-0.4.8](CHAT_VALIDATION.md)
 - [Hub Messages — alpha-0.4.7](HUB_MESSAGES.md)
 - [Message Flags — alpha-0.4.6](MESSAGE_FLAGS.md)

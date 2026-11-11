@@ -1,6 +1,8 @@
 # Plan rozwoju
 
-**Bieżący etap — alpha-0.4.8:** [Chat Validation](CHAT_VALIDATION.md) centralizuje sprawdzanie tekstu, SID i gotowości/własności nadawcy w obu adapterach. Wybór życia odbiorcy i ponowna kontrola dispatch pozostają obowiązkowe; systemowe IMSG jest oddzielone.
+**Bieżący etap — alpha-0.4.9:** [Anti-Flood](ANTI_FLOOD.md) dodaje włączone budżety liczby i odkodowanych bajtów B/D/E dla połączenia, konfigurowane w `[chat]`. Nadmiarowe wiadomości są odrzucane przed rozsyłaniem z ograniczoną odwracalną diagnostyką; walidacja i ogólne limity pozostają.
+
+**Etap dostarczony w alpha-0.4.8:** [Chat Validation](CHAT_VALIDATION.md) centralizuje sprawdzanie tekstu, SID i gotowości/własności nadawcy w obu adapterach. Wybór życia odbiorcy i ponowna kontrola dispatch pozostają obowiązkowe; systemowe IMSG jest oddzielone.
 
 **Etap dostarczony w alpha-0.4.7:** [Hub Messages](HUB_MESSAGES.md) dodaje zaufane systemowe IMSG powiązane z życiem sesji i stałe powitanie po własnym BINF. Klient nie może nadawać komunikatów systemowych; zachowano limity kolejek i gotowość przy końcowym LF.
 
@@ -79,6 +81,7 @@
 | alpha-0.4.6 Message Flags | Wspólna typowana walidacja PM/ME i kanoniczna projekcja publiczna/prywatna |
 | alpha-0.4.7 Hub Messages | Przygotowanie/rozsyłanie IMSG, ograniczone współdzielone wyjście i powitanie |
 | alpha-0.4.8 Chat Validation | Wspólne kontrole tekstu/SID/nadawcy, stan odbiorcy i ponowna kontrola dispatch |
+| alpha-0.4.9 Anti-Flood | Włączone limity liczby/bajtów B/D/E, odwracalne odmowy i polityka INI |
 
 ## Historyczny plan odbioru przed alpha-0.2.8
 

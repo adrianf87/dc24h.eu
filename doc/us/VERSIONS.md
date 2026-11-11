@@ -1,6 +1,8 @@
 # Versions
 
-**Current increment — alpha-0.4.8:** [Chat Validation](CHAT_VALIDATION.md) centralizes client text, SID and sender readiness/ownership checks in both adapters. Recipient lifetime selection and dispatch revalidation remain authoritative; system IMSG stays separate.
+**Current increment — alpha-0.4.9:** [Anti-Flood](ANTI_FLOOD.md) adds enabled per-connection B/D/E message and decoded-byte buckets, configurable in `[chat]`. Excess messages are dropped before fanout with bounded recoverable notices; existing validation and general resource limits remain.
+
+**Increment delivered in alpha-0.4.8:** [Chat Validation](CHAT_VALIDATION.md) centralizes client text, SID and sender readiness/ownership checks in both adapters. Recipient lifetime selection and dispatch revalidation remain authoritative; system IMSG stays separate.
 
 **Increment delivered in alpha-0.4.7:** [Hub Messages](HUB_MESSAGES.md) adds trusted, lifetime-bound system IMSG delivery and a fixed welcome after own BINF. Client text cannot originate system messages; existing queue bounds and final-LF readiness remain.
 
@@ -72,6 +74,7 @@
 | alpha-0.4.6 | alpha-0.4.6 | Message Flags: shared PM/ME codec and canonical chat projection |
 | alpha-0.4.7 | alpha-0.4.7 | Hub Messages: trusted IMSG, ready recipients and ordered guest welcome |
 | alpha-0.4.8 | alpha-0.4.8 | Chat Validation: shared text/SID/session gate and direct adapter checks |
+| alpha-0.4.9 | alpha-0.4.9 | Anti-Flood: per-connection chat count/byte buckets, INI and bounded recovery |
 
 Identify an individual build with its version and Git commit SHA; compiling does not modify tracked source. Each significant change updates CHANGELOG.md. Alpha denotes development status, not complete hub functionality. Tags and production deployment are not created automatically.
 

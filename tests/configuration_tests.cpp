@@ -230,6 +230,25 @@ void logger_file() {
     catch (const std::exception&) { blocked = true; }
     require(blocked, "symlink output must be rejected");
 }
+void chat_limits() {
+    Fixture fx;
+    require(dc24h::i18n::translate("Invalid chat anti-flood limits",dc24h::i18n::Language::pl) ==
+        "Niepoprawne limity anti-flood czatu", "Chat limit error lacks Polish translation");
+    const auto path=fx.write("[chat]\nmax_messages_per_second=7\nmessage_burst=12\nmax_bytes_per_second=65536\nbyte_burst=262144\n");
+    const auto settings=parse({"dc24h","--config",path.string(),"--check-config"}).settings;
+    require(settings.network.chat.messages_per_second == 7 && settings.network.chat.message_burst == 12 &&
+        settings.network.chat.bytes_per_second == 65536 && settings.network.chat.byte_burst == 262144, "INI chat limits not propagated");
+    for (const auto key : {"max_messages_per_second","message_burst","max_bytes_per_second","byte_burst"}) {
+        for (const auto value : {"0","-1","+1","18446744073709551616","999999999",""}) {
+            const auto bad=fx.write("[chat]\n"+std::string(key)+"="+value+"\n");
+            invalid([&] { (void)parse({"dc24h","--config",bad.string()}); });
+        }
+        const auto duplicate=fx.write("[chat]\n"+std::string(key)+"=16384\n"+key+"=16384\n");
+        invalid([&] { (void)parse({"dc24h","--config",duplicate.string()}); });
+    }
+    const auto too_small=fx.write("[chat]\nbyte_burst=16383\n");
+    invalid([&] { (void)parse({"dc24h","--config",too_small.string()}); });
+}
 } // namespace
 
 int main() {
@@ -238,6 +257,7 @@ int main() {
         invalid_configs();
         boundaries_and_precedence();
         user_limits();
+        chat_limits();
         logger_file();
         std::cout << "Configuration parsing, CLI overrides, limits and safe logging OK\n";
     } catch (const std::exception& e) {

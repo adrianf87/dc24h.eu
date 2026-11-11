@@ -159,6 +159,7 @@ void validate(const Settings& settings) {
     const auto& net = settings.network;
     security::validate(net.security);
     users::validate(net.users);
+    chat::validate(net.chat);
     const auto count = net.listeners.size() + net.tls_listeners.size();
     if (count == 0 || count > 16 || net.max_connections == 0 || net.max_connections > 65535 ||
         net.idle_timeout.count() < 1 || net.idle_timeout.count() > 86400) {
@@ -229,7 +230,7 @@ Settings load_file(const std::string& filename) {
                 throw std::invalid_argument("Invalid section at line " + std::to_string(line_number));
             }
             section = trim(std::string_view(text).substr(1, text.size() - 2));
-            if (section != "network" && section != "tls" && section != "logging" && section != "general" && section != "security" && section != "database" && section != "api" && section != "users") {
+            if (section != "network" && section != "tls" && section != "logging" && section != "general" && section != "security" && section != "database" && section != "api" && section != "users" && section != "chat") {
                 throw std::invalid_argument("Unknown configuration section at line " + std::to_string(line_number));
             }
             continue;
@@ -257,6 +258,14 @@ Settings load_file(const std::string& filename) {
                 settings.network.users.max_sessions = positive_number(value, 65535);
             } else if (section == "users" && key == "max_users") {
                 settings.network.users.max_users = positive_number(value, 65535);
+            } else if (section == "chat" && key == "max_messages_per_second") {
+                settings.network.chat.messages_per_second = positive_number(value, chat::max_message_rate);
+            } else if (section == "chat" && key == "message_burst") {
+                settings.network.chat.message_burst = positive_number(value, chat::max_message_rate);
+            } else if (section == "chat" && key == "max_bytes_per_second") {
+                settings.network.chat.bytes_per_second = positive_number(value, chat::max_byte_rate);
+            } else if (section == "chat" && key == "byte_burst") {
+                settings.network.chat.byte_burst = positive_number(value, chat::max_byte_rate);
             } else if (section == "security" && key == "max_connections_per_ip") {
                 settings.network.security.max_connections_per_ip = positive_number(value, 65535);
             } else if (section == "security" && key == "max_accepts_per_minute") {

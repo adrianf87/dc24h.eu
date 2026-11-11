@@ -1,6 +1,8 @@
 # Hub Messages — alpha-0.4.7
 
-**Bieżący etap — alpha-0.4.8:** [Chat Validation](CHAT_VALIDATION.md) centralizuje sprawdzanie tekstu, SID i gotowości/własności nadawcy w obu adapterach. Wybór życia odbiorcy i ponowna kontrola dispatch pozostają obowiązkowe; systemowe IMSG jest oddzielone.
+**Bieżący etap — alpha-0.4.9:** [Anti-Flood](ANTI_FLOOD.md) dodaje włączone budżety liczby i odkodowanych bajtów B/D/E dla połączenia, konfigurowane w `[chat]`. Nadmiarowe wiadomości są odrzucane przed rozsyłaniem z ograniczoną odwracalną diagnostyką; walidacja i ogólne limity pozostają.
+
+**Etap dostarczony w alpha-0.4.8:** [Chat Validation](CHAT_VALIDATION.md) centralizuje sprawdzanie tekstu, SID i gotowości/własności nadawcy w obu adapterach. Wybór życia odbiorcy i ponowna kontrola dispatch pozostają obowiązkowe; systemowe IMSG jest oddzielone.
 
 Etap bazuje bezpośrednio na main `8d0da2516b007466828b00aafd4e7bf7a857b9f3`, po scaleniu Message Flags. Wcześniejsze gałęzie i historia są zachowane. Kod i systemowe teksty protokołu używają EN/US UTF-8; pomoc operatora i dokumentacja obsługują też polski.
 

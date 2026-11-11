@@ -17,6 +17,9 @@ class PrivateChatProcessTests(unittest.TestCase):
             ini.write_text('[network]\nlisten=127.0.0.1:0\nadcs_listen=127.0.0.1:0\n'
                            '[tls]\ncertificate=certificate.pem\nprivate_key=private.pem\n')
             endpoint, token = enable_api(ini, directory)
+            # High chat budget isolates this suite's transport/ordering checks.
+            with ini.open('a') as config:
+                config.write('[chat]\nmax_messages_per_second=10000\nmessage_burst=10000\nmax_bytes_per_second=16777216\nbyte_burst=16777216\n')
             hub = Hub(self, '--config', str(ini), '--log-connections', 'on')
             first = Peer(self, hub.connect());first.login(b'First', 1)
             second = Peer(self, connect_tls(self, hub, cert));second.login(b'Second', 2);first.line()

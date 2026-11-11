@@ -29,14 +29,16 @@ struct LoginHub::Peer {
             }, content);
         }
     };
-    Peer(std::shared_ptr<SidPool> pool, std::string_view address, const users::Session& model)
-        : session(std::move(pool), address), lifecycle(model) {}
+    Peer(std::shared_ptr<SidPool> pool, std::string_view address, const users::Session& model,
+         const std::optional<chat::FloodLimits>& limits)
+        : session(std::move(pool), address), lifecycle(model) { if (limits) { anti_flood.emplace(*limits); } }
     ClientSession session;
     const users::Session& lifecycle;
     std::deque<Frame> output;
     std::size_t offset{0};
     std::size_t queued{0};
     bool quit_queued{false};
+    std::optional<chat::FloodGuard> anti_flood;
 };
 namespace {
 void check_model(users::MutationResult result) {
@@ -82,6 +84,7 @@ std::string_view status_description(std::string_view code) noexcept {
 } // namespace
 
 LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), chat_(sessions_), message_router_(chat_), hub_messages_(sessions_), welcome_message_(std::get<SharedHubMessageFrame>(make_hub_message(hub_welcome_text))), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
+    if (limits.anti_flood) { chat::validate(*limits.anti_flood); }
     if (limits.connections == 0 || limits.connections > 65535 ||
         limits.output_per_client < 128 || limits.output_per_client > 16 * 1024 * 1024 ||
         limits.output_total < limits.output_per_client || limits.output_total > 256 * 1024 * 1024) {
@@ -97,7 +100,7 @@ void LoginHub::connect(Id id, std::string_view address, users::Transport transpo
     const auto model = std::get_if<const users::Session*>(&registered);
     if (!model) { throw std::logic_error("Duplicate, reused or excess login connection"); }
     try {
-        auto peer = std::make_unique<Peer>(pool_, address, **model);
+        auto peer = std::make_unique<Peer>(pool_, address, **model, limits_.anti_flood);
         if (transport == users::Transport::adc) { check_model(sessions_.start_negotiation(peer->lifecycle.id(),accepted)); }
         peers_.emplace(id,std::move(peer));
     } catch (...) {
@@ -193,7 +196,7 @@ void LoginHub::relay(Id except, const Message& message) {
     }
 }
 
-void LoginHub::receive(Id id, const Message& message) {
+void LoginHub::receive(Id id, const Message& message, chat::FloodClock::time_point chat_now) {
     auto& peer = *peers_.at(id);
     if (peer.lifecycle.closing() || peer.lifecycle.immediate()) { return; }
     if (peer.lifecycle.phase() == users::Phase::accepted) {
@@ -303,6 +306,20 @@ void LoginHub::receive(Id id, const Message& message) {
             relay(id, welcome->frames().back());
         }
     } else if (message.kind == Command::msg) {
+        if (peer.anti_flood && (message.type == MessageType::broadcast || message.type == MessageType::direct || message.type == MessageType::echo)) {
+            // Direction/state/source/known-field checks above take precedence.
+            // Denied traffic never constructs a fanout plan or private echo.
+            const auto decision = peer.anti_flood->admit(message.parameters[0].size(), chat_now);
+            if (!decision.allowed) {
+                if (decision.notify) {
+                    try { (void)enqueue(peer, make_status(*StatusCode::parse("100"), "Chat message rate limit exceeded", offending)); }
+                    catch (const std::bad_alloc&) {
+                        check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
+                    }
+                }
+                return;
+            }
+        }
         route_chat(id,message);
     } else if (message.kind == Command::sta) {
         if (message.type != MessageType::hub) { route_status(id, message); }

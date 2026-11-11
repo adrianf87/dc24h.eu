@@ -208,6 +208,7 @@ TcpServer::TcpServer(logging::Logger& logger, Options options)
         throw std::invalid_argument("ADCS needs both TLS certificate and private key with a TLS listener");
     }
     security::validate(options_.security);
+    chat::validate(options_.chat);
     users::validate(options_.users);
     for (const auto& endpoint : options_.listeners) {
         socklen_t size{};
@@ -294,6 +295,7 @@ void TcpServer::run() {
     for (const auto& address : addresses) { logger_.info(address); }
     std::unordered_map<std::uint64_t, Connection> connections;
     adc::LoginLimits login_limits;
+    login_limits.anti_flood = options_.chat;
     login_limits.connections=options_.max_connections;
     login_limits.users=options_.users;
     adc::LoginHub login(login_limits);
