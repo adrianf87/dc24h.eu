@@ -2,7 +2,7 @@
 #include "dc24h/text/public_text.hpp"
 
 namespace dc24h::chat {
-std::optional<Error> Core::check_sender(users::SessionId sender, std::string_view source) const noexcept {
+std::optional<Error> Core::validate_sender(users::SessionId sender, std::string_view source) const noexcept {
     const auto* model=sessions_.find(sender);
     if (!model) { return Error::missing_sender; }
     if (!model->ready() || !model->identity()) { return Error::sender_not_ready; }
@@ -11,7 +11,7 @@ std::optional<Error> Core::check_sender(users::SessionId sender, std::string_vie
 }
 std::variant<Broadcast, Error> Core::prepare(users::SessionId sender, std::string_view source,
         std::string_view text, std::optional<bool> third_person) const {
-    if (const auto error=check_sender(sender,source)) { return *error; }
+    if (const auto error=validate_sender(sender,source)) { return *error; }
     if (!text::valid_chat_text(text)) { return Error::invalid_text; }
     std::vector<users::SessionId> recipients;
     recipients.reserve(sessions_.statistics().online());
@@ -25,10 +25,11 @@ std::variant<Broadcast, Error> Core::prepare(users::SessionId sender, std::strin
         }
         after=page.back().value();
     }
-    return Broadcast(sender,source,text,third_person,std::move(recipients));
+    return Broadcast(domain_,sender,source,text,third_person,std::move(recipients));
 }
 std::variant<DispatchReport, Error> Core::dispatch(const Broadcast& message, const Sink& sink) const {
-    if (const auto error=check_sender(message.sender(),message.source())) { return *error; }
+    if (message.domain_!=domain_) { return Error::foreign_plan; }
+    if (const auto error=validate_sender(message.sender(),message.source())) { return *error; }
     if (!sink) { return Error::missing_sink; }
     DispatchReport report;
     for (const auto id:message.recipients()) {
@@ -41,14 +42,15 @@ std::variant<DispatchReport, Error> Core::dispatch(const Broadcast& message, con
 }
 std::variant<Directed, Error> Core::prepare_direct(users::SessionId sender, std::string_view source,
         std::string_view target, std::string_view text, std::optional<bool> third_person, bool echo) const {
-    if (const auto error=check_sender(sender,source)) { return *error; }
+    if (const auto error=validate_sender(sender,source)) { return *error; }
     if (!text::valid_chat_text(text)) { return Error::invalid_text; }
     const auto* model=sessions_.by_sid(target);
     if (!model || !model->ready() || !model->identity()) { return Error::recipient_unavailable; }
-    return Directed(sender,model->id(),source,target,text,third_person,echo);
+    return Directed(domain_,sender,model->id(),source,target,text,third_person,echo);
 }
 std::variant<DispatchReport, Error> Core::dispatch(const Directed& message, const DirectedSink& sink) const {
-    if (const auto error=check_sender(message.sender(),message.source())) { return *error; }
+    if (message.domain_!=domain_) { return Error::foreign_plan; }
+    if (const auto error=validate_sender(message.sender(),message.source())) { return *error; }
     if (!sink) { return Error::missing_sink; }
     const auto* target=sessions_.find(message.target());
     if (!target || !target->ready() || !target->identity() || target->identity()->sid()!=message.target_key()) {

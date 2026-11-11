@@ -79,7 +79,7 @@ std::string_view status_description(std::string_view code) noexcept {
 }
 } // namespace
 
-LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), chat_(sessions_), public_chat_(chat_), private_chat_(chat_), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
+LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), chat_(sessions_), message_router_(chat_), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
     if (limits.connections == 0 || limits.connections > 65535 ||
         limits.output_per_client < 128 || limits.output_per_client > 16 * 1024 * 1024 ||
         limits.output_total < limits.output_per_client || limits.output_total > 256 * 1024 * 1024) {
@@ -304,63 +304,39 @@ void LoginHub::receive(Id id, const Message& message) {
 void LoginHub::route_chat(Id id, const Message& message) {
     auto& sender=*peers_.at(id);
     try {
-        if (message.type==MessageType::direct || message.type==MessageType::echo) {
-            route_private_chat(id,message);return;
-        }
-        auto prepared=public_chat_.prepare(sender.lifecycle.id(),message);
-        if (const auto* error=std::get_if<PublicChatError>(&prepared)) {
-            const std::string command=std::string(1,static_cast<char>(message.type))+"MSG";
-            if (*error==PublicChatError::unsupported_type || *error==PublicChatError::private_message) {
-                (void)enqueue(sender,make_status(*StatusCode::parse("125"),"Command not implemented",command));
-            } else { reject(sender,*error==PublicChatError::invalid_state ? "244" : "240",command); }
+        const std::string command=std::string(1,static_cast<char>(message.type))+"MSG";
+        const auto unavailable=[&] {
+            (void)enqueue(sender,make_status(*StatusCode::parse("140"),"Private message recipient unavailable",command));
+        };
+        auto prepared=message_router_.prepare(sender.lifecycle.id(),message);
+        if (const auto* error=std::get_if<RoutingError>(&prepared)) {
+            switch (*error) {
+            case RoutingError::recipient_unavailable: unavailable();break;
+            case RoutingError::unsupported_type: case RoutingError::private_broadcast: case RoutingError::unsupported_group:
+                (void)enqueue(sender,make_status(*StatusCode::parse("125"),"Command not implemented",command));break;
+            case RoutingError::invalid_state: reject(sender,"244",command);break;
+            case RoutingError::wrong_source: case RoutingError::invalid_message: reject(sender,"240",command);break;
+            }
             return;
         }
-        const auto& plan=std::get<PublicBroadcast>(prepared);
-        const auto result=public_chat_.dispatch(plan,[&](users::SessionId recipient,const SharedPublicChatFrame& frame) {
+        const auto& plan=std::get<RoutedMessage>(prepared);
+        const auto result=message_router_.dispatch(plan,[&](users::SessionId recipient,const RoutedFrame& frame) {
             const auto found=peers_.find(recipient.value());
             if (found==peers_.end()) { return false; }
-            try { return enqueue_shared(*found->second,frame); }
+            try { return std::visit([&](const auto& packet) { return enqueue_shared(*found->second,packet); },frame); }
             catch (const std::bad_alloc&) {
                 check_model(sessions_.force_close(recipient,users::CloseCause::internal_error,users::Clock::now()));
                 return false;
             }
         });
-        if (std::holds_alternative<chat::Error>(result)) {
-            check_model(sessions_.force_close(sender.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
+        if (const auto* error=std::get_if<chat::Error>(&result)) {
+            if (*error==chat::Error::recipient_unavailable) { unavailable(); }
+            else { check_model(sessions_.force_close(sender.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now())); }
         }
     } catch (const std::bad_alloc&) {
-        // Preparation failed before dispatch, or an unsupported-mode reply could
-        // not be allocated. Per-recipient queue faults are isolated above.
+        // Preparation/diagnostic failure cannot publish content. Queue failures
+        // are caught per recipient above; never retry a partially routed plan.
         check_model(sessions_.force_close(sender.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
-    }
-}
-void LoginHub::route_private_chat(Id id, const Message& message) {
-    auto& sender=*peers_.at(id);
-    const std::string command=std::string(1,static_cast<char>(message.type))+"MSG";
-    const auto unavailable=[&] {
-        (void)enqueue(sender,make_status(*StatusCode::parse("140"),"Private message recipient unavailable",command));
-    };
-    auto prepared=private_chat_.prepare(sender.lifecycle.id(),message);
-    if (const auto* error=std::get_if<PrivateChatError>(&prepared)) {
-        if (*error==PrivateChatError::recipient_unavailable) { unavailable(); }
-        else if (*error==PrivateChatError::unsupported_type || *error==PrivateChatError::unsupported_group) {
-            (void)enqueue(sender,make_status(*StatusCode::parse("125"),"Command not implemented",command));
-        } else { reject(sender,*error==PrivateChatError::invalid_state ? "244" : "240",command); }
-        return;
-    }
-    const auto& plan=std::get<PrivateDelivery>(prepared);
-    const auto result=private_chat_.dispatch(plan,[&](users::SessionId recipient,const SharedPrivateChatFrame& frame) {
-        const auto found=peers_.find(recipient.value());
-        if (found==peers_.end()) { return false; }
-        try { return enqueue_shared(*found->second,frame); }
-        catch (const std::bad_alloc&) {
-            check_model(sessions_.force_close(recipient,users::CloseCause::internal_error,users::Clock::now()));
-            return false;
-        }
-    });
-    if (const auto* error=std::get_if<chat::Error>(&result)) {
-        if (*error==chat::Error::recipient_unavailable) { unavailable(); }
-        else { check_model(sessions_.force_close(sender.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now())); }
     }
 }
 void LoginHub::route_status(Id id, const Message& message) {

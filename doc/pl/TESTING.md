@@ -1,6 +1,8 @@
 # Testowanie
 
-**Bieżący etap — alpha-0.4.4:** [Private Chat](PRIVATE_CHAT.md) dodaje DMSG tylko do celu i EMSG do celu oraz nadawcy, pojedyncze wiadomości do siebie, powiązanie celu z ID życia i kontrolę PM. Czat publiczny pozostaje oddzielony; grupy/historia/moderacja to kolejne etapy.
+**Bieżący etap — alpha-0.4.5:** [Message Routing](MESSAGE_ROUTING.md) centralizuje wybór zakresu MSG i dostarczanie do ograniczonych kolejek. Plany są powiązane z domeną macierzystego Chat Core i ID życia sesji; prywatne wiadomości nigdy nie trafiają zastępczo na czat publiczny.
+
+**Etap dostarczony w alpha-0.4.4:** [Private Chat](PRIVATE_CHAT.md) dodaje DMSG tylko do celu i EMSG do celu oraz nadawcy, pojedyncze wiadomości do siebie, powiązanie celu z ID życia i kontrolę PM. Czat publiczny pozostaje oddzielony; grupy/historia/moderacja to kolejne etapy.
 
 **Etap dostarczony w alpha-0.4.3:** [Public Chat](PUBLIC_CHAT.md) dodaje osobny adapter polityki i rozsyłania BMSG oraz jedną wspólną niemutowalną ramkę na publikację. Offsety i logiczne budżety odbiorców pozostają niezależne; zachowano bramki źródła/stanu/prywatności i FIFO.
 
@@ -263,3 +265,5 @@ Lokalna weryfikacja alpha-0.4.2: 72/72 zestawów CTest w Debug, Release i ASan/U
 Lokalna weryfikacja alpha-0.4.3: 74/74 zestawów CTest w Debug, Release i ASan/UBSan, w tym Public Chat unit/proces i prawdziwy ncdc ADC/ADCS. Powtórzone testy Public Chat przeszły po poprawce instrumentacji alokatora. Przeszły MariaDB, Apache HTTPS, budowanie WebAdmin, 4 testy Node, 3 testy Chromium i integracja API C++. Bez deklaracji zdalnego CI, pełnej macierzy systemów/klientów i benchmarku.
 
 Lokalna weryfikacja alpha-0.4.4: 76/76 zestawów CTest w Debug, Release i ASan/UBSan, w tym Private Chat unit/proces, prywatne rozmowy ncdc ADC/ADCS, regresje publiczne, MariaDB i Apache HTTPS. Przeszły budowanie WebAdmin, 4 testy Node, 3 testy Chromium i integracja API C++. Bez ostrzeżeń kompilatora. Wyniki lokalne nie oznaczają zdalnego CI, wszystkich systemów/klientów ani obciążenia produkcyjnego.
+
+Weryfikacja lokalna alpha-0.4.5 (2026-11-11): wszystkie 78/78 zestawów CTest przeszło w Debug, Release i ASan/UBSan bez wyłączania wykrywania wycieków, w tym Message Routing oraz rzeczywisty ncdc ADC/ADCS z czatem publicznym/prywatnym, akcjami i reconnect. Przeszły również tymczasowa MariaDB, Apache HTTPS, kompilacja produkcyjna WebAdmin, 4 testy Node, 3 testy Chromium oraz integracja z rzeczywistym API C++. Zakres i polecenia odtworzenia opisuje [Message Routing](MESSAGE_ROUTING.md). Zdalne CI, pełna macierz systemów/klientów i obciążenie produkcyjne pozostają osobnymi zadaniami.

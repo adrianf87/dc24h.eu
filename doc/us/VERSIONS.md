@@ -1,6 +1,8 @@
 # Versions
 
-**Current increment — alpha-0.4.4:** [Private Chat](PRIVATE_CHAT.md) adds DMSG target-only and EMSG target-plus-sender delivery, deduplicated self-messages, lifetime-bound targets and PM origin checks. Public chat remains isolated; groups/history/moderation remain separate stages.
+**Current increment — alpha-0.4.5:** [Message Routing](MESSAGE_ROUTING.md) centralizes MSG scope selection and bounded queue delivery. Plans are bound to their originating Chat Core domain and live session IDs; private intent never falls back to public delivery.
+
+**Increment delivered in alpha-0.4.4:** [Private Chat](PRIVATE_CHAT.md) adds DMSG target-only and EMSG target-plus-sender delivery, deduplicated self-messages, lifetime-bound targets and PM origin checks. Public chat remains isolated; groups/history/moderation remain separate stages.
 
 **Increment delivered in alpha-0.4.3:** [Public Chat](PUBLIC_CHAT.md) adds a dedicated BMSG policy/dispatch adapter and one immutable shared public frame per publication. Recipient offsets and logical queue charges remain independent; source/state/private-message gates and FIFO are preserved.
 
@@ -60,6 +62,7 @@
 | alpha-0.4.2 | alpha-0.4.2 | Chat Core: independent engine, lifecycle-bound public chat and bounded delivery |
 | alpha-0.4.3 | alpha-0.4.3 | Public Chat: dedicated BMSG adapter, shared immutable frames, independent queue accounting |
 | alpha-0.4.4 | alpha-0.4.4 | Private Chat: DMSG/EMSG, PM origin, lifetime-bound targets and isolated queues |
+| alpha-0.4.5 | alpha-0.4.5 | Message Routing: shared MSG policy, engine domains and lifetime-safe delivery |
 
 Identify an individual build with its version and Git commit SHA; compiling does not modify tracked source. Each significant change updates CHANGELOG.md. Alpha denotes development status, not complete hub functionality. Tags and production deployment are not created automatically.
 
