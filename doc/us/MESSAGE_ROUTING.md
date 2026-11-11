@@ -1,6 +1,8 @@
 # Message Routing — alpha-0.4.5
 
-**Current increment — alpha-0.4.6:** [Message Flags](MESSAGE_FLAGS.md) centralizes PM/ME decoding and canonical output for the codec and both chat adapters. Absent ME, ME0 and ME1 remain distinct; PM never grants delivery authority.
+**Current increment — alpha-0.4.7:** [Hub Messages](HUB_MESSAGES.md) adds trusted, lifetime-bound system IMSG delivery and a fixed welcome after own BINF. Client text cannot originate system messages; existing queue bounds and final-LF readiness remain.
+
+**Increment delivered in alpha-0.4.6:** [Message Flags](MESSAGE_FLAGS.md) centralizes PM/ME decoding and canonical output for the codec and both chat adapters. Absent ME, ME0 and ME1 remain distinct; PM never grants delivery authority.
 
 Based directly on main `0c627eb1430ab0c750674a8463e64060c96c8a86`, after the alpha-0.4.4 Private Chat merge. Existing alpha-0.4.1–alpha-0.4.4 branches and history are retained. The server and code use EN/US UTF-8; documentation and operator catalogs also support Polish.
 

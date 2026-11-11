@@ -8,6 +8,7 @@
 #include "dc24h/users/session_manager.hpp"
 #include "dc24h/chat/core.hpp"
 #include "dc24h/adc/message_routing.hpp"
+#include "dc24h/adc/hub_messages.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -63,6 +64,12 @@ public:
     [[nodiscard]] ConnectionState state(Id id) const;
     [[nodiscard]] std::size_t queued_bytes() const noexcept { return queued_; }
     [[nodiscard]] std::size_t users() const noexcept { return sessions_.identified_users(); }
+    // Trusted in-process API, never called with client-supplied text by receive.
+    // No target means current ready users; a target is a lifetime ID, not a SID.
+    // Preparation failures leave queues unchanged; per-recipient queue faults
+    // close that recipient only. Allocation before dispatch propagates.
+    [[nodiscard]] std::variant<chat::DispatchReport, HubMessageError> send_hub_message(
+        std::string_view text, std::optional<users::SessionId> target = {});
 private:
     struct Peer;
     enum class Completion { observe, support, welcome };
@@ -80,6 +87,8 @@ private:
     users::SessionManager sessions_; // Outlives the peers that borrow models.
     chat::Core chat_;
     MessageRouter message_router_;
+    HubMessages hub_messages_;
+    SharedHubMessageFrame welcome_message_;
     UserLogin user_login_;
     UserList user_list_;
     InfUpdates inf_updates_;

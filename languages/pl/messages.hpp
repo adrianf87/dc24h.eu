@@ -151,6 +151,7 @@ Domyślne limity: 128 klientów/IP, 256 przyjęć/IP/minutę, 1024 ramki/s/klien
 512 błędnych ramek/klienta, 10 sekund dla TLS i niedokończonej ramki.
 Działa logowanie gości ADC, publiczna lista oraz czat publiczny i prywatny.
 Flagi MSG: PM określa SID odpowiedzi prywatnej; ME1 oznacza akcję w trzeciej osobie.
+Hub wysyła systemowe powitanie IMSG po własnym INF klienta; klienci nie mogą nadawać IMSG.
 Czat grupowy, wyszukiwanie i transfery są planowane.
 Ustawienia bazy w sekcji INI [database]; domyślnie wyłączona.
 --check-database sprawdza połączenie; --migrate-database jawnie stosuje migracje metadanych.

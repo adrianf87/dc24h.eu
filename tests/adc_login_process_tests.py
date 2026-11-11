@@ -10,6 +10,8 @@ import unittest
 from network_process_tests import Hub
 from tls_support import credentials, connect_tls
 
+HUB_WELCOME = b'IMSG Welcome\\sto\\sdc24h.eu.\\sGuest\\saccess\\sis\\senabled.'
+
 
 def pair(seed):
     pid = bytes((i + seed) % 256 for i in range(24))
@@ -67,6 +69,8 @@ class Peer:
         while not result[-1].startswith(b'BINF ' + self.sid + b' '):
             result.append(self.line())
             self.case.assertLess(len(result), 100)
+        result.append(self.line())
+        self.case.assertEqual(result[-1], HUB_WELCOME)
         for line in result:
             self.case.assertNotIn(b' PD', line)
             self.case.assertNotIn(b' XX', line)
@@ -96,7 +100,7 @@ class LoginProcessTests(unittest.TestCase):
         second = self.peer(hub, cert, True)
         listing = second.login(b'Second', 2, True)
         self.assertNotEqual(first.sid, second.sid)
-        self.assertEqual(len(listing), 3)
+        self.assertEqual(len(listing), 4)
         self.assertTrue(listing[1].startswith(b'BINF ' + first.sid + b' '))
         self.assertTrue(first.line().startswith(b'BINF ' + second.sid + b' '))
         first.send(b'BINF ' + first.sid + b' NIrenamed DE XX')

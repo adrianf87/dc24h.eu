@@ -1,6 +1,8 @@
 # Testowanie
 
-**Bieżący etap — alpha-0.4.6:** [Message Flags](MESSAGE_FLAGS.md) centralizuje dekodowanie PM/ME i kanoniczne wyjście kodeka oraz obu adapterów czatu. Brak ME, ME0 i ME1 pozostają rozróżniane; PM nie nadaje uprawnień do dostarczania.
+**Bieżący etap — alpha-0.4.7:** [Hub Messages](HUB_MESSAGES.md) dodaje zaufane systemowe IMSG powiązane z życiem sesji i stałe powitanie po własnym BINF. Klient nie może nadawać komunikatów systemowych; zachowano limity kolejek i gotowość przy końcowym LF.
+
+**Etap dostarczony w alpha-0.4.6:** [Message Flags](MESSAGE_FLAGS.md) centralizuje dekodowanie PM/ME i kanoniczne wyjście kodeka oraz obu adapterów czatu. Brak ME, ME0 i ME1 pozostają rozróżniane; PM nie nadaje uprawnień do dostarczania.
 
 **Etap dostarczony w alpha-0.4.5:** [Message Routing](MESSAGE_ROUTING.md) centralizuje wybór zakresu MSG i dostarczanie do ograniczonych kolejek. Plany są powiązane z domeną macierzystego Chat Core i ID życia sesji; prywatne wiadomości nigdy nie trafiają zastępczo na czat publiczny.
 
@@ -271,3 +273,5 @@ Lokalna weryfikacja alpha-0.4.4: 76/76 zestawów CTest w Debug, Release i ASan/U
 Weryfikacja lokalna alpha-0.4.5 (2026-11-11): wszystkie 78/78 zestawów CTest przeszło w Debug, Release i ASan/UBSan bez wyłączania wykrywania wycieków, w tym Message Routing oraz rzeczywisty ncdc ADC/ADCS z czatem publicznym/prywatnym, akcjami i reconnect. Przeszły również tymczasowa MariaDB, Apache HTTPS, kompilacja produkcyjna WebAdmin, 4 testy Node, 3 testy Chromium oraz integracja z rzeczywistym API C++. Zakres i polecenia odtworzenia opisuje [Message Routing](MESSAGE_ROUTING.md). Zdalne CI, pełna macierz systemów/klientów i obciążenie produkcyjne pozostają osobnymi zadaniami.
 
 alpha-0.4.6: Weryfikacja lokalna z 2026-11-11: **80/80 zestawów CTest przeszło w Debug, Release i ASan/UBSan**, w tym rzeczywisty ncdc ADC/ADCS. Nie wyłączano wykrywania wycieków; kompilacje nie emitowały ostrzeżeń kompilatora. Przeszły kompilacja produkcyjna/typecheck WebAdmin, 4 testy Node, 3 testy Chromium i integracja z rzeczywistym API C++. Sprawdzono metadane, UTF-8, zgodność plików językowych, lokalne odnośniki, składnię Pythona, pomoc US/PL i białe znaki Git. Są to wyniki lokalne; nie potwierdzają zdalnego CI, pełnej macierzy systemów/klientów ani obciążenia produkcyjnego.
+
+alpha-0.4.7: Weryfikacja lokalna z 2026-11-11: **82/82 zestawów CTest przeszło w Debug, Release i ASan/UBSan**, z wymaganiem narzędzi integracyjnych i bez wyłączania wykrywania wycieków. Obejmuje to rzeczywisty ncdc ADC/ADCS, Hub Messages, regresje czatu/sesji/kolejek, tymczasową MariaDB i Apache HTTPS. Kompilacje nie emitowały ostrzeżeń kompilatora. Przeszły kompilacja/typecheck WebAdmin, 4 testy Node, 3 testy Chromium i integracja z rzeczywistym API C++. Sprawdzono metadane, UTF-8, zgodność plików językowych, lokalne odnośniki, składnię zmienionych testów Pythona, pomoc US/PL i białe znaki Git. Zdalne CI, pełna macierz systemów/klientów i obciążenie produkcyjne pozostają niezweryfikowane.

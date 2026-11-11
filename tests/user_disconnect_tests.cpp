@@ -116,12 +116,14 @@ std::string connect(adc::LoginHub& hub,std::uint64_t owner,bool complete=true) {
 }
 void queue_reclamation_and_order() {
     const auto status=std::get<std::string>(adc::serialize(adc::make_status(*adc::StatusCode::parse("125"),"Command not implemented","HMSG")));
-    adc::LoginHub hub({4,256,status.size()*6+8});
+    // Allow the new trailing IMSG in login while retaining only eight free
+    // aggregate bytes after the refusal fixtures have been queued.
+    adc::LoginHub hub({4,384,status.size()*10+8});
     const auto first=connect(hub,1),second=connect(hub,2);drain(hub,1);
-    for (unsigned count=0;count<3;++count) {
+    for (unsigned count=0;count<5;++count) {
         hub.receive(1,parse("HMSG Probe"));hub.receive(2,parse("HMSG Probe"));
     }
-    require(hub.queued_bytes()==status.size()*6,"Queue fixture accounting wrong");
+    require(hub.queued_bytes()==status.size()*10,"Queue fixture accounting wrong");
     const auto pinned=hub.output(2);const auto* pointer=pinned.data();
     const auto saved=*hub.snapshot(1);hub.disconnect(1);
     require(!hub.snapshot(1) && !hub.sessions().by_sid(first) && !hub.sessions().by_cid(saved.identity->cid()) &&
@@ -129,7 +131,7 @@ void queue_reclamation_and_order() {
         "Departure failed to reclaim capacity before QUI or changed pinned output");
     const auto after=hub.queued_bytes();hub.disconnect(1);require(hub.queued_bytes()==after,"Repeated disconnect duplicated QUI");
     const auto output=drain(hub,2);
-    require(output==std::vector<std::string>{status,status,status,"IQUI "+first+"\n"},"Public QUI order/reason isolation failed");
+    require(output==std::vector<std::string>{status,status,status,status,status,"IQUI "+first+"\n"},"Public QUI order/reason isolation failed");
     hub.disconnect(2,false);require(hub.users()==0 && hub.queued_bytes()==0,"Final queues/models leaked");
 
     adc::LoginHub pending;const auto observer=connect(pending,1);(void)observer;

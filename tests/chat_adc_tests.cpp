@@ -47,7 +47,7 @@ void pending_and_privacy() {
     const auto pending=hub.output(2);const auto* pointer=pending.data();
     hub.receive(1,parse("BMSG "+sid+" hello\\sŻółw ME01 XXPrivate PDPrivate"));
     require(drain(hub,1)==std::vector<std::string>{"BMSG "+sid+" hello\\sŻółw ME1\n"},"Public projection lost text/action or leaked fields");
-    require(hub.output(2).data()==pointer && hub.output(2)==pending && drain(hub,2).size()==3 && hub.ready(2),"Chat disturbed a pending welcome");
+    require(hub.output(2).data()==pointer && hub.output(2)==pending && drain(hub,2).size()==4 && hub.ready(2),"Chat disturbed a pending welcome");
     require(hub.output(2).empty(),"A pre-ready recipient received historical chat");
     hub.receive(1,parse("BMSG "+sid+" private PM"+sid));
     require(drain(hub,1).front().starts_with("ISTA 125 ") && hub.output(2).empty(),"PM-marked broadcast leaked publicly");
