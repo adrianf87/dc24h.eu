@@ -79,8 +79,8 @@ void guests() {
     // Both admissions before either welcome completes: no missing user lists.
     hub.receive(2, identity(two,2,"Second"));
     auto first = drain(hub,1,true), second = drain(hub,2,true);
-    require(first.size()==3 && second.size()==3 && hub.ready(1) && hub.ready(2), "Concurrent welcome/join");
-    require(first[1].starts_with("BINF "+one) && first[2].starts_with("BINF "+two), "First list ordering");
+    require(first.size()==4 && second.size()==4 && hub.ready(1) && hub.ready(2), "Concurrent welcome/join");
+    require(first[1].starts_with("BINF "+one) && first[2].starts_with("IMSG Welcome") && first[3].starts_with("BINF "+two), "First list ordering");
     require(second[1].starts_with("BINF "+one) && second[2].starts_with("BINF "+two), "Own INF is not last");
     for (const auto& list : {first,second}) {
         for (const auto& line : list) { require(line.find(" PD")==std::string::npos && line.find("XX")==std::string::npos, "Private field leaked"); }

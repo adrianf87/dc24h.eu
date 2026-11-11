@@ -132,7 +132,7 @@ void login_preflight() {
         hub.disconnect(owner); // Rejected/anonymous model emits no public QUI.
     }
     hub.disconnect(1,false);const auto fourth=identify(hub,4);const auto welcome=drain(hub,4);
-    require(hub.ready(4) && hub.users()==1 && welcome.size()==2 && welcome.back().starts_with("BINF "+fourth+" ") && fourth!=first,
+    require(hub.ready(4) && hub.users()==1 && welcome.size()==3 && welcome[1].starts_with("BINF "+fourth+" ") && welcome.back().starts_with("IMSG Welcome") && fourth!=first,
         "Post-cleanup admission failed or included a rejected/old user");
     hub.disconnect(4,false);require(hub.queued_bytes()==0 && hub.users()==0 && hub.sessions().size()==0,"Cleanup retained limits");
 }

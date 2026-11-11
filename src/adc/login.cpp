@@ -14,17 +14,19 @@ namespace dc24h::adc {
 struct LoginHub::Peer {
     struct Frame {
         struct Owned { Message message; std::string wire; };
-        std::variant<Owned,SharedPublicChatFrame,SharedPrivateChatFrame> content;
+        std::variant<Owned,SharedPublicChatFrame,SharedPrivateChatFrame,SharedHubMessageFrame> content;
         Completion completion;
         [[nodiscard]] const Message& message() const noexcept {
-            if (const auto* owned=std::get_if<Owned>(&content)) { return owned->message; }
-            if (const auto* packet=std::get_if<SharedPublicChatFrame>(&content)) { return (*packet)->message(); }
-            return std::get<SharedPrivateChatFrame>(content)->message();
+            return std::visit([](const auto& frame) -> const Message& {
+                if constexpr (std::is_same_v<std::decay_t<decltype(frame)>, Owned>) { return frame.message; }
+                else { return frame->message(); }
+            }, content);
         }
         [[nodiscard]] std::string_view wire() const noexcept {
-            if (const auto* owned=std::get_if<Owned>(&content)) { return owned->wire; }
-            if (const auto* packet=std::get_if<SharedPublicChatFrame>(&content)) { return (*packet)->wire(); }
-            return std::get<SharedPrivateChatFrame>(content)->wire();
+            return std::visit([](const auto& frame) -> std::string_view {
+                if constexpr (std::is_same_v<std::decay_t<decltype(frame)>, Owned>) { return frame.wire; }
+                else { return frame->wire(); }
+            }, content);
         }
     };
     Peer(std::shared_ptr<SidPool> pool, std::string_view address, const users::Session& model)
@@ -79,7 +81,7 @@ std::string_view status_description(std::string_view code) noexcept {
 }
 } // namespace
 
-LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), chat_(sessions_), message_router_(chat_), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
+LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), chat_(sessions_), message_router_(chat_), hub_messages_(sessions_), welcome_message_(std::get<SharedHubMessageFrame>(make_hub_message(hub_welcome_text))), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
     if (limits.connections == 0 || limits.connections > 65535 ||
         limits.output_per_client < 128 || limits.output_per_client > 16 * 1024 * 1024 ||
         limits.output_total < limits.output_per_client || limits.output_total > 256 * 1024 * 1024) {
@@ -264,11 +266,16 @@ void LoginHub::receive(Id id, const Message& message) {
             std::optional<InitialUserList> welcome;
             try {
                 const auto available = std::min(limits_.output_per_client - peer.queued, limits_.output_total - queued_);
+                const auto notice_bytes = welcome_message_->wire().size();
+                if (notice_bytes > available) {
+                    check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::output_limit,users::Clock::now()));
+                    return;
+                }
                 auto result = user_list_.prepare(peer.lifecycle.id(), peer.session,
                     [this](users::SessionId owner) -> const ClientInfo* {
                         const auto found = peers_.find(owner.value());
                         return found != peers_.end() && found->second->session.info() ? &*found->second->session.info() : nullptr;
-                    }, available);
+                    }, available - notice_bytes);
                 if (const auto* error = std::get_if<UserListError>(&result)) {
                     const auto cause = *error == UserListError::output_limit ? users::CloseCause::output_limit : users::CloseCause::internal_error;
                     check_model(sessions_.force_close(peer.lifecycle.id(),cause,users::Clock::now()));
@@ -279,6 +286,9 @@ void LoginHub::receive(Id id, const Message& message) {
                 for (std::size_t i = 0; i < frames.size(); ++i) {
                     if (!enqueue(peer, frames[i], i + 1 == frames.size() ? Completion::welcome : Completion::observe)) { return; }
                 }
+                // Client sees its own INF before system chat. Queue before the
+                // registry commit/publication; readiness still ends at own INF.
+                if (!enqueue_shared(peer, welcome_message_)) { return; }
                 if (const auto error = user_login_.register_guest(peer.lifecycle.id(), peer.session, users::Clock::now())) {
                     reject(peer, user_login_status(*error)); return;
                 }
@@ -338,6 +348,20 @@ void LoginHub::route_chat(Id id, const Message& message) {
         // are caught per recipient above; never retry a partially routed plan.
         check_model(sessions_.force_close(sender.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
     }
+}
+std::variant<chat::DispatchReport, HubMessageError> LoginHub::send_hub_message(
+        std::string_view text, std::optional<users::SessionId> target) {
+    auto prepared = hub_messages_.prepare(text, target);
+    if (const auto* error = std::get_if<HubMessageError>(&prepared)) { return *error; }
+    return hub_messages_.dispatch(std::get<HubDelivery>(prepared), [&](users::SessionId recipient, const SharedHubMessageFrame& frame) {
+        const auto found = peers_.find(recipient.value());
+        if (found == peers_.end()) { return false; }
+        try { return enqueue_shared(*found->second, frame); }
+        catch (const std::bad_alloc&) {
+            check_model(sessions_.force_close(recipient,users::CloseCause::internal_error,users::Clock::now()));
+            return false;
+        }
+    });
 }
 void LoginHub::route_status(Id id, const Message& message) {
     const auto safe = public_status(message);

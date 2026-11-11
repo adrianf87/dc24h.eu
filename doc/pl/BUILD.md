@@ -1,6 +1,8 @@
 # Budowanie
 
-**Bieżący etap — alpha-0.4.6:** [Message Flags](MESSAGE_FLAGS.md) centralizuje dekodowanie PM/ME i kanoniczne wyjście kodeka oraz obu adapterów czatu. Brak ME, ME0 i ME1 pozostają rozróżniane; PM nie nadaje uprawnień do dostarczania.
+**Bieżący etap — alpha-0.4.7:** [Hub Messages](HUB_MESSAGES.md) dodaje zaufane systemowe IMSG powiązane z życiem sesji i stałe powitanie po własnym BINF. Klient nie może nadawać komunikatów systemowych; zachowano limity kolejek i gotowość przy końcowym LF.
+
+**Etap dostarczony w alpha-0.4.6:** [Message Flags](MESSAGE_FLAGS.md) centralizuje dekodowanie PM/ME i kanoniczne wyjście kodeka oraz obu adapterów czatu. Brak ME, ME0 i ME1 pozostają rozróżniane; PM nie nadaje uprawnień do dostarczania.
 
 **Etap dostarczony w alpha-0.4.5:** [Message Routing](MESSAGE_ROUTING.md) centralizuje wybór zakresu MSG i dostarczanie do ograniczonych kolejek. Plany są powiązane z domeną macierzystego Chat Core i ID życia sesji; prywatne wiadomości nigdy nie trafiają zastępczo na czat publiczny.
 
@@ -44,7 +46,7 @@ cmake --build build-release --parallel 2
 ctest --test-dir build-release --output-on-failure
 ```
 
-`-DBUILD_TESTING=OFF` wyłącza testy i wymaganie Pythona. `cmake --install build-release --prefix /usr/local` instaluje sam program (może wymagać sudo). Katalogi językowe są wkompilowane. Wersja pochodzi z CMake; `--version` zwraca alpha-0.4.6. Dokładną kompilację identyfikuje także `git rev-parse HEAD`. Nie edytuj plików generowanych. Wymagane są biblioteki Connector/C MariaDB; działający serwer SQL jest opcjonalny. Node.js i Apache2 nie są wymagane do budowania C++; frontend ma osobne wymagania.
+`-DBUILD_TESTING=OFF` wyłącza testy i wymaganie Pythona. `cmake --install build-release --prefix /usr/local` instaluje sam program (może wymagać sudo). Katalogi językowe są wkompilowane. Wersja pochodzi z CMake; `--version` zwraca alpha-0.4.7. Dokładną kompilację identyfikuje także `git rev-parse HEAD`. Nie edytuj plików generowanych. Wymagane są biblioteki Connector/C MariaDB; działający serwer SQL jest opcjonalny. Node.js i Apache2 nie są wymagane do budowania C++; frontend ma osobne wymagania.
 
 Pełne polecenia konfiguracji AddressSanitizer/UndefinedBehaviorSanitizer: [BUILD US](../us/BUILD.md). Osobne budowanie frontendu: [WEBADMIN.md](WEBADMIN.md).
 

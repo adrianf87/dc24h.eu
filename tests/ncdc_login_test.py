@@ -113,6 +113,7 @@ class NcdcLoginTest(unittest.TestCase):
                 # list. The observer and own echo now prove client-side NORMAL
                 # and public delivery.
                 wait_screen(b'2 users')
+                wait_screen(b'Welcome to dc24h.eu.')
                 observer.send(b'BMSG '+observer.sid+b' dc24hIncomingChat')
                 self.assertEqual(observer.line(), b'BMSG '+observer.sid+b' dc24hIncomingChat')
                 wait_screen(b'dc24hIncomingChat')
@@ -206,6 +207,7 @@ class NcdcLoginTest(unittest.TestCase):
                     self.assertEqual(checked.stdout, captured, 'MSG codec changed real ncdc frames')
                     self.assertIn(b'dc24hLoginProbe', wire)
                     self.assertIn(b'BINF ', replies)
+                    self.assertIn(b'IMSG Welcome\\sto\\sdc24h.eu.\\sGuest\\saccess\\sis\\senabled.\n', replies)
                     self.assertIn(b' NI' + nickname, replies)
                     self.assertIn(b' NI' + renamed, replies)
                     self.assertNotIn(b' PD', replies)

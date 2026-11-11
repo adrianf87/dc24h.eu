@@ -1,5 +1,7 @@
 # Message Flags — alpha-0.4.6
 
+**Current increment — alpha-0.4.7:** [Hub Messages](HUB_MESSAGES.md) adds trusted, lifetime-bound system IMSG delivery and a fixed welcome after own BINF. Client text cannot originate system messages; existing queue bounds and final-LF readiness remain.
+
 Based directly on main `1e83114eb613dc59b10c6956025f14e5467f24a8`, after the alpha-0.4.5 Message Routing merge. Earlier branches and history are preserved. The server uses EN/US UTF-8 with Polish operator messages and mirrored documentation.
 
 ## PM and ME contract

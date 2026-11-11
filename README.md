@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.4.6 (Message Flags).**
+**Current development version: alpha-0.4.7 (Hub Messages).**
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.4.7 Hub Messages**: trusted system IMSG preparation and ready-session delivery, shared bounded output and a fixed guest welcome after own BINF. Clients cannot originate system messages. See [Hub Messages](doc/us/HUB_MESSAGES.md).
 
 - **alpha-0.4.6 Message Flags**: shared typed PM/ME decoding and canonical parameter construction across the codec and public/private chat. Distinct absent/ME0/ME1 values, duplicate rejection and private-reply SID policy are covered by dedicated tests. See [Message Flags](doc/us/MESSAGE_FLAGS.md).
 

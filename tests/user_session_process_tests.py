@@ -27,6 +27,7 @@ class UserSessionProcessTests(unittest.TestCase):
             first.send(first.identity(b'SameIdentity',1))
             self.assertTrue(first.line().startswith(b'IINF '))
             self.assertTrue(first.line().startswith(b'BINF '+first.sid+b' '))
+            self.assertTrue(first.line().startswith(b'IMSG Welcome\\sto\\sdc24h.eu.'))
             second=Peer(self,connect_tls(self,hub,cert));second.login(b'TLSUser',2)
             self.assertTrue(first.line().startswith(b'BINF '+second.sid+b' '))
             old_sid=first.sid;first.peer.close()
