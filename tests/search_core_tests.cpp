@@ -41,7 +41,8 @@ void query_validation() {
         require(std::holds_alternative<Query>(Query::create(candidate)), "Valid item type refused");
     }
     auto bad = data; bad.include.clear();
-    require(std::get<QueryError>(Query::create(bad)) == QueryError::missing_term, "Empty positive criteria accepted");
+    require(std::get<Query>(Query::create(bad)).data() == bad, "Filter-only criteria refused");
+    require(std::get<QueryError>(Query::create({})) == QueryError::no_criteria, "Unrestricted query accepted");
     for (const auto& text : std::vector<std::string>{"", "   ", "bad\ntext", "bad\rtext", "bad\ttext", std::string("bad\0text",8),
         "e\xcc\x81", std::string(1, char(0xff)), "bad\xe2\x80\xae", std::string(max_term_bytes+1, 'x')}) {
         bad = data; bad.include = {text};
@@ -59,18 +60,20 @@ void query_validation() {
     require(std::holds_alternative<Query>(Query::create(bad)), "Exact aggregate byte bound rejected");
     bad.token = "x";
     require(std::get<QueryError>(Query::create(bad)) == QueryError::too_large, "Token not charged to byte bound");
-    for (const auto& extension : std::vector<std::string>{"", "/iso", "a\\b", "two words", "bad\t", "e\xcc\x81", std::string(max_extension_bytes+1,'x')}) {
+    for (const auto& extension : std::vector<std::string>{"", ".iso", "/iso", "a\\b", "two words", "bad\t", "e\xcc\x81", std::string(max_extension_bytes+1,'x')}) {
         bad = data; bad.extensions = {extension};
         require(std::get<QueryError>(Query::create(bad)) == QueryError::invalid_extension, "Invalid extension accepted");
     }
     bad = data; bad.extensions = std::vector<std::string>(max_extensions+1,"iso");
     require(std::get<QueryError>(Query::create(bad)) == QueryError::too_many_terms, "Extension count not bounded");
-    for (const auto& token : std::vector<std::string>{"", "two words", "bad\n", "Żółw", std::string(max_token_bytes+1,'x')}) {
+    for (const auto& token : std::vector<std::string>{"", "bad\n", "e\xcc\x81", std::string(max_token_bytes+1,'x')}) {
         bad = data; bad.token = token;
         require(std::get<QueryError>(Query::create(bad)) == QueryError::invalid_token, "Invalid opaque token accepted");
     }
     bad = data; bad.token = std::string(max_token_bytes, '~');
     require(std::holds_alternative<Query>(Query::create(bad)), "Exact token bound rejected");
+    bad.token = "Żółw token";
+    require(std::get<Query>(Query::create(bad)).data() == bad, "Opaque NFC token was restricted or rewritten");
     bad = data; bad.type = static_cast<ItemType>(99);
     require(std::get<QueryError>(Query::create(bad)) == QueryError::invalid_type, "Invalid enum accepted");
     for (int which = 0; which < 3; ++which) {

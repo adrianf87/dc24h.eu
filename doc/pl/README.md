@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.5.2: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.5.3: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [Search Filters — alpha-0.5.3](SEARCH_FILTERS.md)
 - [ADC SCH — alpha-0.5.2](ADC_SCH.md)
 - [Search Core — alpha-0.5.1](SEARCH_CORE.md)
 - [AUDIT_ALPHA_0.1.md](AUDIT_ALPHA_0.1.md)

@@ -46,10 +46,10 @@ void fields_and_projection() {
             result.criteria().token=="a\\b","Decoded Unicode, escapes or type differ");
     }
     const auto unicode=checked("BSCH AAAB ANx TOŻółw\\stoken");
-    require(unicode.criteria().token=="Żółw token" && std::get<search::QueryError>(unicode.to_core_query())==search::QueryError::invalid_token,
-        "Wider ADC token was rewritten or silently projected");
+    require(unicode.criteria().token=="Żółw token" && std::get<search::Query>(unicode.to_core_query()).data()==unicode.criteria(),
+        "Opaque ADC token was rewritten or refused");
     const auto filters=checked("BSCH AAAB EXiso GE0 TY1");
-    require(std::get<search::QueryError>(filters.to_core_query())==search::QueryError::missing_term,"Filter-only query fabricated a term");
+    require(std::get<search::Query>(filters.to_core_query()).data()==filters.criteria(),"Filter-only query was changed or refused");
     const auto hash=checked("BSCH AAAB TR"+std::string(39,'A')+" ANx TOhash");
     require(hash.root()==TigerDigest{} && std::get<SchError>(hash.to_core_query())==SchError::unsupported_hash_query,"TR was silently discarded");
     require(checked("BSCH AAAB TR"+std::string(39,'A')).root().has_value(),"Hash-only query refused");

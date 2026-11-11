@@ -3,6 +3,7 @@
 #include "dc24h/adc/parser.hpp"
 #include "dc24h/adc/identity_hash.hpp"
 #include "dc24h/search/core.hpp"
+#include "dc24h/search/filters.hpp"
 
 namespace dc24h::adc {
 // Local decoded payload bound, including two-byte field names and unknown fields.
@@ -20,9 +21,9 @@ public:
     [[nodiscard]] const search::QueryData& criteria() const noexcept { return criteria_; }
     [[nodiscard]] const search::Selection& selection() const noexcept { return selection_; }
     [[nodiscard]] const std::optional<TigerDigest>& root() const noexcept { return root_; }
-    // Core's first textual profile is narrower than SCH. Never discard TR or
-    // fabricate positive terms when projecting hash/filter-only requests.
+    // Hash requests cannot be projected to textual filters: never discard TR.
     [[nodiscard]] std::variant<search::Query, search::QueryError, SchError> to_core_query() const;
+    [[nodiscard]] std::variant<search::Filter, search::QueryError, SchError> to_filter() const;
 private:
     friend std::variant<SchRequest, SchError> validate_sch(const Message& message);
     friend std::variant<SchRequest, ParseError, SchError> parse_sch(std::string_view body);

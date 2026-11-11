@@ -1,5 +1,7 @@
 # ADC SCH — alpha-0.5.2
 
+**Aktualizacja — alpha-0.5.3:** [Search Filters](SEARCH_FILTERS.md) dodaje skompilowane filtry nazw/ścieżek Unicode bez rozróżniania wielkości liter, alternatywy rozszerzeń, domknięte/dokładne limity bajtów i typ plik/katalog dla sprawdzonych opisów. Zapytania z samymi filtrami i nieprzezroczyste tokeny NFC przechodzą do Search Core. Dopasowanie nie alokuje pamięci; routing/wyniki, indeksy i administracja wyszukiwaniem pozostają kolejnymi etapami.
+
 Gałąź utworzono bezpośrednio z main `0fd969bebfe399388f17fc14632cc72cb3f6ee3d` po scaleniu Search Core. Kod i diagnostyka protokołu pozostają EN/US UTF-8; dokumentacja ma wersje US/PL. Etap dodaje typowane parsowanie i rzeczywisty odbiór; rozsyłanie, wyniki, limity/historia wyszukiwań i administracja pozostają osobnymi etapami.
 
 ## Parser i własność zapytania
@@ -31,7 +33,7 @@ Dopuszczono same filtry, wykluczenia lub hash. Puste zapytania, same nieznane po
 
 ## Powiązanie z Search Core
 
-`criteria()` i `selection()` udostępniają stałe dane. `to_core_query()` zwraca `variant<search::Query, search::QueryError, SchError>` i jawnie stosuje węższy tekstowy profil alpha-0.5.1. Zapytanie z TR zwraca `unsupported_hash_query`, więc hash nigdy nie jest po cichu usuwany. Poprawne SCH z samymi filtrami może zwrócić `missing_term` Core; TO ze spacją/Unicode może zwrócić `invalid_token` Core. Dane nie są przepisywane dla wymuszenia akceptacji. Metoda jest sprawdzaną projekcją, a nie planem dostarczenia ani uprawnieniem.
+`criteria()` i `selection()` udostępniają stałe dane. `to_core_query()` zwraca `variant<search::Query, search::QueryError, SchError>` i stosuje sprawdzony profil Search Core. Od alpha-0.5.3 akceptowane są same filtry i nieprzezroczyste tokeny NFC ze spacjami/Unicode, bez tworzenia ani przepisywania pól. `to_filter()` kompiluje te same kryteria do [Search Filters](SEARCH_FILTERS.md). Zapytanie z TR zwraca `unsupported_hash_query` w obu projekcjach, więc hash nigdy nie jest po cichu usuwany. Dane nie są przepisywane dla wymuszenia akceptacji. Metoda jest sprawdzaną projekcją, a nie planem dostarczenia ani uprawnieniem.
 
 Biblioteka ADC łączy się teraz z dc24h_search bez zależności odwrotnej. Odbiornik sprawdza SCH, ale nie tworzy/nie wykonuje fanout Core i nie odkłada zapytań do późniejszego odtwarzania. Przyszła integracja musi uwzględnić granice projekcji i zachować odpowiednią semantykę rozszerzeń.
 

@@ -5,7 +5,10 @@
 
 namespace dc24h::search {
 std::variant<Query, QueryError> Query::create(const QueryData& input) {
-    if (input.include.empty()) { return QueryError::missing_term; }
+    if (input.include.empty() && input.exclude.empty() && input.extensions.empty() &&
+        !input.min_bytes && !input.max_bytes && !input.exact_bytes && input.type == ItemType::any) {
+        return QueryError::no_criteria;
+    }
     if (input.include.size() > max_terms || input.exclude.size() > max_terms - input.include.size() ||
         input.extensions.size() > max_extensions) { return QueryError::too_many_terms; }
     if (input.type != ItemType::any && input.type != ItemType::file && input.type != ItemType::directory) {
@@ -32,13 +35,12 @@ std::variant<Query, QueryError> Query::create(const QueryData& input) {
         }
     }
     for (const auto& extension : input.extensions) {
-        if (extension.empty() || extension.size() > max_extension_bytes ||
+        if (extension.empty() || extension.size() > max_extension_bytes || extension.front() == '.' ||
             extension.find_first_of("/\\ ") != std::string::npos) { return QueryError::invalid_extension; }
         bytes += extension.size();
     }
     if (input.token) {
-        if (input.token->empty() || input.token->size() > max_token_bytes ||
-            !std::all_of(input.token->begin(), input.token->end(), [](unsigned char c) { return c >= 33 && c <= 126; })) {
+        if (input.token->empty() || input.token->size() > max_token_bytes) {
             return QueryError::invalid_token;
         }
         bytes += input.token->size();
@@ -53,6 +55,7 @@ std::variant<Query, QueryError> Query::create(const QueryData& input) {
     for (const auto& extension : input.extensions) {
         if (!text::valid_public_text(extension)) { return QueryError::invalid_extension; }
     }
+    if (input.token && !text::valid_public_text(*input.token)) { return QueryError::invalid_token; }
     return Query(input);
 }
 } // namespace dc24h::search

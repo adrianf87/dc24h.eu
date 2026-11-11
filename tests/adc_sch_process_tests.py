@@ -38,7 +38,8 @@ class SchProcessTests(unittest.TestCase):
             before = fetch_status(endpoint, token)['chat']
             valid = [b'ANSchPrivateSecret ANlinux NOgentoo EXISO EXIMG GE0 LE9223372036854775807 EQ0 TY01 TOtoken XXfuture XX',
                      'ANSchPrivateSecret\\sŻółw\\s😀 TOtoken\\sŻółw'.encode(),
-                     b'EXiso GE0 TY2', b'TR' + b'A' * 39,
+                     b'EXiso GE0 TY2', b'EXiso', b'NOtmp', b'GE0', b'LE0', b'EQ0', b'TY1', b'TY2',
+                     'EXŻÓŁW GE0 LE1 TOtoken\\sŻółw'.encode(), b'TR' + b'A' * 39,
                      b'ANSchPrivateSecret TR' + b'A' * 39]
             for kind in (b'BSCH', b'FSCH', b'DSCH', b'ESCH'):
                 header = kind + b' ' + source.sid

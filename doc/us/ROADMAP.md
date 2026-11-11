@@ -1,6 +1,8 @@
 # Roadmap
 
-**Current increment — alpha-0.5.2:** [ADC SCH](ADC_SCH.md) adds owning typed SCH parsing and live ADC/ADCS reception after state/source checks. Known fields, selectors, limits and canonical TR are checked; valid requests receive an explicit routing-not-implemented response, malformed semantic requests are recoverably refused, and criterion-free requests are ignored. Routing/results remain later increments.
+**Current increment — alpha-0.5.3:** [Search Filters](SEARCH_FILTERS.md) adds compiled Unicode case-insensitive name/path predicates, extension alternatives, inclusive/exact byte limits and file/directory types over checked descriptors. Filter-only queries and opaque NFC tokens now project to Search Core. Matching is allocation-free; routing/results, indexes and search administration remain later increments.
+
+**Increment delivered in alpha-0.5.2:** [ADC SCH](ADC_SCH.md) adds owning typed SCH parsing and live ADC/ADCS reception after state/source checks. Known fields, selectors, limits and canonical TR are checked; valid requests receive an explicit routing-not-implemented response, malformed semantic requests are recoverably refused, and criterion-free requests are ignored. Routing/results remain later increments.
 
 **Increment delivered in alpha-0.5.1:** [Search Core](SEARCH_CORE.md) adds an independent C++20 library for bounded immutable textual queries, ready-session/feature selection and lifetime/domain-bound dispatch. Live SCH/RES parsing, serialization and transport attachment remain future increments; the running server still returns an explicit unsupported response.
 
@@ -97,6 +99,7 @@
 | alpha-0.4.12 WebAdmin | Dedicated read-only chat statistics with all aggregate counters |
 | alpha-0.5.1 Search Core | Checked textual query model and ready-session dispatch library; live SCH/RES remain planned |
 | alpha-0.5.2 ADC SCH | Typed field parsing and ADC/ADCS reception; routing/results remain planned |
+| alpha-0.5.3 Search Filters | Unicode name/path, extension, size and type predicates; routing/results remain planned |
 
 ## Historical acceptance plan before alpha-0.2.8
 
