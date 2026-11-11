@@ -1,5 +1,18 @@
 # Changelog
 
+## alpha-0.4.8 — 2026-11-11
+
+Chat Validation increment, based directly on main `b20cc83fa46a48642e6939a8ceb11a354339a4dd` after the alpha-0.4.7 Hub Messages merge:
+
+- Added shared adc::validate_chat, ChatValidationResult and typed ChatValidationError in chat_validation.hpp/cpp. Both public/private adapters validate bounded decoded UTF-8/NFC text, guarded source/target SID syntax, reserved source AAAA, complete MSG headers/flags/encoded limits and current ready sender/source ownership before plan creation. Direct adapter callers receive the same gate as routing. Results borrow Message storage and never act as cached permission.
+- Removed duplicate pre-adapter MSG serialization/validation and the extra Core reference from MessageRouter. Safe scope comparison selects the adapter; existing routing/adapter errors remain compatible. Source-bearing unsupported FMSG retains source checks; H/I never acquire client-sender authority. System IMSG remains separate. Private PM policy still precedes target selection; Core retains ready-recipient admission, owning lifetime plans, domain binding and dispatch-time sender/target/recipient rechecks.
+- Added chat.validation for invalid/valid text, exact encoded limits, complete hostile objects, source/target SID and missing-optionals cases, reserved origin, source spoofing, every sender phase, non-ready target phases, direct adapter/router checks, unsupported-scope precedence, rename, allocation rollback and validation followed by source close/dispatch refusal. Existing chat/PM/ME/domain/queue/fault tests remain enabled.
+- Added chat.validation.process for both real source transports: generic malformed text/UTF-8/NFC/SID recovery with ordered observer fences, exact Unicode/whitespace/newline preservation, exact/oversized frames, pre-NORMAL B/D/E and forged-source rejection, log/API privacy. Extended real ncdc ADC/ADCS with an incoming Unicode/newline/ME0 message while retaining public/private/action/welcome/flags/reconnect checks.
+- Updated server/WebAdmin metadata/fixtures to alpha-0.4.8, US/PL help and mirrored validation documentation/navigation/architecture/protocol/security/API/testing/version context. No new dependency, configuration, migration, HTTP endpoint, API JSON field, history or moderation. Message bodies remain absent from logs, storage and administrative exports; validation is not Unicode presentation filtering or content moderation.
+- Validation: all 84/84 CTest suites passed locally in Debug, Release and ASan/UBSan with strict integration-tool detection and without disabling leak detection. This includes new Chat Validation unit/process checks, real ncdc ADC/ADCS text/action/flags/welcome/reconnect traffic, chat/domain/session/queue regressions, disposable MariaDB, Apache HTTPS and authenticated API. Builds emitted no compiler warnings.
+- WebAdmin typecheck/production build, 4 Node tests, 3 Chromium browser tests and real C++ API integration passed using system Chromium. Metadata, UTF-8/language file parity, local Markdown targets, modified Python syntax, US/PL help and Git whitespace checks passed. Results are local; remote CI, the full OS/client matrix, production load and long-running fuzzing remain separate work.
+- The branch starts directly from main and preserves earlier branches/history. No main merge or production deployment is part of this increment.
+
 ## alpha-0.4.7 — 2026-11-11
 
 Hub Messages increment, based directly on main `8d0da2516b007466828b00aafd4e7bf7a857b9f3` after the alpha-0.4.6 Message Flags merge:

@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.4.7 (Hub Messages).**
+**Current development version: alpha-0.4.8 (Chat Validation).**
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.4.8 Chat Validation**: shared text/SID/session validation for direct public/private adapter calls and routing. Ready sender ownership, bounded UTF-8/NFC text and complete message checks precede delivery plans; recipient and dispatch lifetime checks remain. See [Chat Validation](doc/us/CHAT_VALIDATION.md).
 
 - **alpha-0.4.7 Hub Messages**: trusted system IMSG preparation and ready-session delivery, shared bounded output and a fixed guest welcome after own BINF. Clients cannot originate system messages. See [Hub Messages](doc/us/HUB_MESSAGES.md).
 

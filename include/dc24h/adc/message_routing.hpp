@@ -17,7 +17,7 @@ using RoutedFrame = std::variant<SharedPublicChatFrame, SharedPrivateChatFrame>;
 class MessageRouter final {
 public:
     using Sink = std::function<bool(users::SessionId, const RoutedFrame&)>;
-    explicit MessageRouter(const chat::Core& core) noexcept : core_(core), public_(core), private_(core) {}
+    explicit MessageRouter(const chat::Core& core) noexcept : public_(core), private_(core) {}
     MessageRouter(const MessageRouter&) = delete;
     MessageRouter& operator=(const MessageRouter&) = delete;
     [[nodiscard]] std::variant<RoutedMessage, RoutingError> prepare(users::SessionId sender, const Message& message) const;
@@ -25,7 +25,6 @@ public:
     // throw or retry partially dispatched plans. No allocation after sink setup.
     [[nodiscard]] std::variant<chat::DispatchReport, chat::Error> dispatch(const RoutedMessage& message, const Sink& sink) const;
 private:
-    const chat::Core& core_;
     PublicChat public_;
     PrivateChat private_;
 };

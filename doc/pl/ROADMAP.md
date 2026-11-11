@@ -1,6 +1,8 @@
 # Plan rozwoju
 
-**Bieżący etap — alpha-0.4.7:** [Hub Messages](HUB_MESSAGES.md) dodaje zaufane systemowe IMSG powiązane z życiem sesji i stałe powitanie po własnym BINF. Klient nie może nadawać komunikatów systemowych; zachowano limity kolejek i gotowość przy końcowym LF.
+**Bieżący etap — alpha-0.4.8:** [Chat Validation](CHAT_VALIDATION.md) centralizuje sprawdzanie tekstu, SID i gotowości/własności nadawcy w obu adapterach. Wybór życia odbiorcy i ponowna kontrola dispatch pozostają obowiązkowe; systemowe IMSG jest oddzielone.
+
+**Etap dostarczony w alpha-0.4.7:** [Hub Messages](HUB_MESSAGES.md) dodaje zaufane systemowe IMSG powiązane z życiem sesji i stałe powitanie po własnym BINF. Klient nie może nadawać komunikatów systemowych; zachowano limity kolejek i gotowość przy końcowym LF.
 
 **Etap dostarczony w alpha-0.4.6:** [Message Flags](MESSAGE_FLAGS.md) centralizuje dekodowanie PM/ME i kanoniczne wyjście kodeka oraz obu adapterów czatu. Brak ME, ME0 i ME1 pozostają rozróżniane; PM nie nadaje uprawnień do dostarczania.
 
@@ -76,6 +78,7 @@
 | alpha-0.4.5 Message Routing | Wspólny router MSG, domeny silnika i bezpieczne kierowanie do sesji/kolejek |
 | alpha-0.4.6 Message Flags | Wspólna typowana walidacja PM/ME i kanoniczna projekcja publiczna/prywatna |
 | alpha-0.4.7 Hub Messages | Przygotowanie/rozsyłanie IMSG, ograniczone współdzielone wyjście i powitanie |
+| alpha-0.4.8 Chat Validation | Wspólne kontrole tekstu/SID/nadawcy, stan odbiorcy i ponowna kontrola dispatch |
 
 ## Historyczny plan odbioru przed alpha-0.2.8
 

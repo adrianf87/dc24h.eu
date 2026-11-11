@@ -1,6 +1,8 @@
 # Message Flags — alpha-0.4.6
 
-**Bieżący etap — alpha-0.4.7:** [Hub Messages](HUB_MESSAGES.md) dodaje zaufane systemowe IMSG powiązane z życiem sesji i stałe powitanie po własnym BINF. Klient nie może nadawać komunikatów systemowych; zachowano limity kolejek i gotowość przy końcowym LF.
+**Bieżący etap — alpha-0.4.8:** [Chat Validation](CHAT_VALIDATION.md) centralizuje sprawdzanie tekstu, SID i gotowości/własności nadawcy w obu adapterach. Wybór życia odbiorcy i ponowna kontrola dispatch pozostają obowiązkowe; systemowe IMSG jest oddzielone.
+
+**Etap dostarczony w alpha-0.4.7:** [Hub Messages](HUB_MESSAGES.md) dodaje zaufane systemowe IMSG powiązane z życiem sesji i stałe powitanie po własnym BINF. Klient nie może nadawać komunikatów systemowych; zachowano limity kolejek i gotowość przy końcowym LF.
 
 Etap bazuje bezpośrednio na main `1e83114eb613dc59b10c6956025f14e5467f24a8`, po scaleniu alpha-0.4.5 Message Routing. Wcześniejsze gałęzie i historia są zachowane. Serwer używa EN/US UTF-8, polskich komunikatów operatora oraz dokumentacji US/PL.
 
