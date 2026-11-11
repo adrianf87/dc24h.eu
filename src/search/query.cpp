@@ -6,7 +6,7 @@
 namespace dc24h::search {
 std::variant<Query, QueryError> Query::create(const QueryData& input) {
     if (input.include.empty() && input.exclude.empty() && input.extensions.empty() &&
-        !input.min_bytes && !input.max_bytes && !input.exact_bytes && input.type == ItemType::any) {
+        !input.min_bytes && !input.max_bytes && !input.exact_bytes && input.type == ItemType::any && !input.tth) {
         return QueryError::no_criteria;
     }
     if (input.include.size() > max_terms || input.exclude.size() > max_terms - input.include.size() ||

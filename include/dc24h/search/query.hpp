@@ -1,5 +1,7 @@
 #pragma once
 
+#include "dc24h/search/tth.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -8,7 +10,7 @@
 #include <vector>
 
 namespace dc24h::search {
-// Application bounds for textual/filter queries, not ADC wire limits.
+// Application bounds for textual/filter/TTH queries, not ADC wire limits.
 inline constexpr std::size_t max_terms = 32;
 inline constexpr std::size_t max_term_bytes = 256;
 inline constexpr std::size_t max_extensions = 16;
@@ -21,6 +23,7 @@ struct QueryData {
     std::optional<std::int64_t> min_bytes, max_bytes, exact_bytes;
     ItemType type{ItemType::any};
     std::optional<std::string> token;
+    std::optional<TthRoot> tth{};
     friend bool operator==(const QueryData&, const QueryData&) = default;
 };
 enum class QueryError { no_criteria, too_many_terms, invalid_text, invalid_extension,

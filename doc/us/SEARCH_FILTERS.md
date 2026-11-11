@@ -1,5 +1,7 @@
 # Search Filters — alpha-0.5.3
 
+**Follow-up — alpha-0.5.4:** [TTH Search](TTH_SEARCH.md) carries the full 192-bit file root from SCH into immutable Core queries/plans, descriptors and compiled filters. Hash-only and combined queries use exact equality and retain all additional criteria. Real ncdc ADC/ADCS TTH searches are tested; live request/result routing remains a later increment.
+
 Based directly on main `dd2a968469c3db21ada4e469afc85b7a3415eeab` after the alpha-0.5.2 merge. The earlier Search Core and ADC SCH stages are preserved. Code and diagnostics use EN/US UTF-8; documentation is mirrored in US/PL.
 
 ## Scope and API
@@ -38,11 +40,11 @@ Size zero is a real value; unknown size is `nullopt`. Any size predicate refuses
 
 ## Query and SCH integration
 
-At least one recognized criterion is required: an AN, NO, EX, GE/LE/EQ or concrete TY. Positive AN terms are now optional, so exclusion-only, extension-only, size-only and type-only requests project into Core without fabricated text. Empty and token-only QueryData returns `QueryError::no_criteria` (replacing the old `missing_term` case). This permits broad explicit predicates such as GE0/TY1; request quotas and routing admission remain future work, not a property of matching.
+At least one recognized criterion is required: an AN, NO, EX, GE/LE/EQ, concrete TY or (as of alpha-0.5.4) TTH root. Positive AN terms are now optional, so exclusion-only, extension-only, size-only and type-only requests project into Core without fabricated text. Empty and token-only QueryData returns `QueryError::no_criteria` (replacing the old `missing_term` case). This permits broad explicit predicates such as GE0/TY1; request quotas and routing admission remain future work, not a property of matching.
 
 Existing bounds remain: 32 combined AN/NO terms, 256 bytes per term, 16 extensions of at most 32 bytes, 128 token bytes and 4096 aggregate text bytes. Extension validation now consistently rejects a leading period in both SCH and Query. Tokens accept opaque already-NFC text including spaces/Unicode, matching the SCH profile; invalid text is refused and TO alone still is not a criterion. Input is bounded before text normalization/copying. Internal case-folded strings may expand but derive only from these bounded inputs. Matching work is bounded by the candidate name, term and extension limits; compilation/descriptor preparation allocates, repeated matching does not.
 
-TR-bearing requests return `SchError::unsupported_hash_query` from both projection methods, including combined TR/text/filter requests. A Tiger root cannot be silently lost or treated as a text-only filter. Original checked SCH fields/order/unknown parameters/numeric spellings remain in the owning Message. Unknown fields keep the existing ADC ignore-and-preserve policy; ASCH/SEGA groups are not interpreted or advertised by this module.
+As of alpha-0.5.4, TR-bearing requests project their full root into both Core and Filter, including combined TR/text/filter requests. Hash-only queries require exact file-root equality; extra filters remain AND constraints. See [TTH Search](TTH_SEARCH.md). A Tiger root cannot be silently lost or treated as a text-only filter. Original checked SCH fields/order/unknown parameters/numeric spellings remain in the owning Message. Unknown fields keep the existing ADC ignore-and-preserve policy; ASCH/SEGA groups are not interpreted or advertised by this module.
 
 Live ADC/ADCS reception retains the alpha-0.5.2 behavior: state/source/readiness checks precede SCH parsing; valid requests receive recoverable `125 Search routing not implemented`, semantic failures receive `100 Invalid search query`, and criterion-free input is ignored. The receiver does not run descriptors through Filter or prepare a fanout. Query/token/filename data is not echoed into diagnostics, chat counters, logs, database, API or WebAdmin. There is no new SQL migration, configuration setting, dependency or UI control; release metadata advances to alpha-0.5.3.
 
@@ -60,4 +62,4 @@ cmake --build build-debug --parallel 4
 ctest --test-dir build-debug --output-on-failure -j 4
 ```
 
-Repeat in Release and ASan/UBSan as described in [TESTING.md](TESTING.md). See [Search Core](SEARCH_CORE.md), [ADC SCH](ADC_SCH.md), [ROADMAP.md](ROADMAP.md) and [CHANGELOG.md](../../CHANGELOG.md). Request/result routing, a file index, hash matching, search-specific quotas/history, remote CI, the full supported OS matrix and production load need separate work/evidence.
+Repeat in Release and ASan/UBSan as described in [TESTING.md](TESTING.md). See [Search Core](SEARCH_CORE.md), [ADC SCH](ADC_SCH.md), [ROADMAP.md](ROADMAP.md) and [CHANGELOG.md](../../CHANGELOG.md). Request/result routing, a file index, search-specific quotas/history, remote CI, the full supported OS matrix and production load need separate work/evidence.

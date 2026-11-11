@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.5.3 LANGUAGES CXX)
+project(dc24h VERSION 0.5.4 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -200,6 +200,12 @@ if(BUILD_TESTING)
     set_target_properties(search_filters_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME search.filters COMMAND search_filters_tests)
     set_tests_properties(search.filters PROPERTIES TIMEOUT 30)
+    add_executable(search_tth_tests tests/search_tth_tests.cpp)
+    target_link_libraries(search_tth_tests PRIVATE dc24h_adc)
+    target_compile_options(search_tth_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(search_tth_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME search.tth COMMAND search_tth_tests)
+    set_tests_properties(search.tth PROPERTIES TIMEOUT 30)
     add_executable(chat_logging_tests tests/chat_logging_tests.cpp)
     target_link_libraries(chat_logging_tests PRIVATE dc24h_adc)
     target_compile_options(chat_logging_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
@@ -582,6 +588,13 @@ if(BUILD_TESTING)
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
             "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>" --tls)
         set_tests_properties(adc.ncdc adcs.ncdc PROPERTIES TIMEOUT 30)
+        add_test(NAME adc.tth.ncdc COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
+            "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>" --tth)
+        add_test(NAME adcs.tth.ncdc COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
+            "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>" --tth --tls)
+        set_tests_properties(adc.tth.ncdc adcs.tth.ncdc PROPERTIES TIMEOUT 30)
     elseif(DC24H_REQUIRE_INTEGRATION_TESTS)
         message(FATAL_ERROR "Required ncdc not found: adc.ncdc and adcs.ncdc smoke tests are unavailable")
     else()
