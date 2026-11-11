@@ -1,7 +1,8 @@
 # dc24h.eu documentation
 
-alpha-0.5.1: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.5.2: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
+- [ADC SCH — alpha-0.5.2](ADC_SCH.md)
 - [Search Core — alpha-0.5.1](SEARCH_CORE.md)
 - [AUDIT_ALPHA_0.1.md](AUDIT_ALPHA_0.1.md)
 - [WebAdmin chat statistics — alpha-0.4.12](WEBADMIN_CHAT.md)

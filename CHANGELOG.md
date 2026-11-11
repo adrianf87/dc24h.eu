@@ -1,5 +1,16 @@
 # Changelog
 
+## alpha-0.5.2 — 2026-11-11
+
+ADC SCH increment, based directly on main `0fd969bebfe399388f17fc14632cc72cb3f6ee3d` after the alpha-0.5.1 merge:
+
+- Added owning SchRequest and parse_sch/validate_sch APIs with typed BASE field decoding (AN/NO/EX, GE/LE/EQ, TY, TO), canonical TIGR TR and feature selectors. Preserve unknown fields/order/numeric spellings in the checked original Message. Enforce bounded decoded payload, fields, text, counts, duplicates, integers, hashes and hostile local-object consistency through shared wire validation.
+- Added explicit checked projection to the narrower Search Core textual model; TR is never silently discarded and filter-only or wider opaque tokens can receive typed Core refusals. This is not routing or result exchange.
+- Connected SCH reception to real LoginHub ADC/ADCS after state/source/readiness validation. Valid requests receive recoverable 125 Search routing not implemented; semantic failures receive fixed 100 Invalid search query; criterion-free inputs are silently ignored. No query content/token is echoed, forwarded, retained or exported. Per-peer allocation failure is isolated; existing frame/output budgets and chat counters remain unchanged. RES/routing/search quotas remain later increments.
+- Added adc.sch unit/process coverage for field families, escapes/Unicode, scalar duplicates, integer/hash/selector limits, unknown fields, ownership, raw/semantic failures, Core projection and allocation isolation. Updated Search Core process tests and actual ncdc ADC/ADCS searches for the new validated-request response.
+- Updated runtime version fixtures and mirrored US/PL ADC SCH, protocol, Search Core scope, architecture, build, security, API, testing, versions and roadmap documentation. No new endpoint, database migration, WebAdmin search control, UDP receiver or successful-search acknowledgment is introduced.
+- Validation: all 94/94 CTest suites passed locally in Debug, Release and ASan/UBSan with required integration tools and default leak detection, including actual ncdc ADC/ADCS SCH parsing, MariaDB and Apache HTTPS. Final builds emitted no compiler warnings after correcting a copied loop variable in the new test. WebAdmin production build/typecheck, 4 Node tests, 6 Chromium tests and real C++ API integration passed. Metadata, UTF-8, local links, shipped INI and whitespace checks passed. Remote CI, the full OS/client matrix and production load remain unverified.
+
 ## alpha-0.5.1 — 2026-11-11
 
 Search Core increment, based directly on main `c6b34ea849ef808a0bfee4a27e0c8ae38cff4a6b` after the alpha-0.4.12 merge:

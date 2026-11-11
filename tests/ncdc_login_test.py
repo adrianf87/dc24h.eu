@@ -224,7 +224,7 @@ class NcdcLoginTest(unittest.TestCase):
                     self.assertNotEqual(initial[0].split()[1], initial[1].split()[1], 'Reconnect reused its ADC SID')
                     cids = [re.search(rb'(?:^| )ID([A-Z2-7]+)(?: |$)', line)[1] for line in initial]
                     self.assertEqual(cids[0], cids[1], 'Reconnect changed its public CID')
-                # The first Search Core release has no live SCH adapter.
+                # SCH is now parsed; routing/results remain a later stage.
                 # TLS proxy captures are encrypted, so synchronize with the
                 # private API and assert the refusal in ncdc's hub window.
                 before_search = fetch_status(api_path, token)['network']['adc_frames']
@@ -237,12 +237,12 @@ class NcdcLoginTest(unittest.TestCase):
                 wait_screen(b'SearchCoreSecret')
                 # Search results use list key bindings, not the chat input.
                 os.write(master, b'\x1b2')  # Alt+2 selects the hub tab.
-                wait_screen(b'Command not implemented')
+                wait_screen(b'Search routing not implemented')
                 if ENCRYPTED:
                     self.assertNotIn(b'SearchCoreSecret', wire)
                 else:
                     self.assertRegex(bytes(wire), rb'[BF]SCH ' + replacement_sid + rb' [^\n]*ANSearchCoreSecret')
-                    self.assertRegex(bytes(replies), rb'ISTA 125 Command\\snot\\simplemented FC[BF]SCH\n')
+                    self.assertRegex(bytes(replies), rb'ISTA 125 Search\\srouting\\snot\\simplemented FC[BF]SCH\n')
                 os.write(master, b'/quit\r')
                 deadline = time.monotonic() + 4
                 while process.poll() is None and time.monotonic() < deadline:
