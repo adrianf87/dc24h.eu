@@ -4,11 +4,13 @@
 
 #include <functional>
 #include <array>
+#include <memory>
 #include <span>
 #include <utility>
 
 namespace dc24h::chat {
-enum class Error { missing_sender, sender_not_ready, wrong_source, invalid_text, missing_sink, recipient_unavailable };
+namespace detail { struct RoutingDomain final {}; }
+enum class Error { missing_sender, sender_not_ready, wrong_source, invalid_text, missing_sink, recipient_unavailable, foreign_plan };
 // Owned immutable admission snapshot. Lifetime IDs, never fd numbers or SIDs,
 // identify recipients; no nicknames, credentials or private metadata are copied.
 class Broadcast final {
@@ -20,9 +22,10 @@ public:
     [[nodiscard]] const std::vector<users::SessionId>& recipients() const noexcept { return recipients_; }
 private:
     friend class Core;
-    Broadcast(users::SessionId sender, std::string_view source, std::string_view text,
+    Broadcast(std::shared_ptr<const detail::RoutingDomain> domain, users::SessionId sender, std::string_view source, std::string_view text,
               std::optional<bool> third_person, std::vector<users::SessionId> recipients)
-        : sender_(sender), source_(source), text_(text), third_person_(third_person), recipients_(std::move(recipients)) {}
+        : domain_(std::move(domain)), sender_(sender), source_(source), text_(text), third_person_(third_person), recipients_(std::move(recipients)) {}
+    std::shared_ptr<const detail::RoutingDomain> domain_;
     users::SessionId sender_;
     std::string source_, text_;
     std::optional<bool> third_person_;
@@ -41,10 +44,11 @@ public:
     [[nodiscard]] std::span<const users::SessionId> recipients() const noexcept { return {recipients_.data(),count_}; }
 private:
     friend class Core;
-    Directed(users::SessionId sender, users::SessionId target, std::string_view source,
+    Directed(std::shared_ptr<const detail::RoutingDomain> domain, users::SessionId sender, users::SessionId target, std::string_view source,
              std::string_view target_key, std::string_view text, std::optional<bool> third_person, bool echo)
-        : sender_(sender), source_(source), target_key_(target_key), text_(text), third_person_(third_person),
+        : domain_(std::move(domain)), sender_(sender), source_(source), target_key_(target_key), text_(text), third_person_(third_person),
           recipients_{target,sender}, count_(echo && target!=sender ? 2U : 1U) {}
+    std::shared_ptr<const detail::RoutingDomain> domain_;
     users::SessionId sender_;
     std::string source_,target_key_,text_;
     std::optional<bool> third_person_;
@@ -62,9 +66,10 @@ class Core final {
 public:
     using Sink = std::function<bool(users::SessionId, const Broadcast&)>;
     using DirectedSink = std::function<bool(users::SessionId, const Directed&)>;
-    explicit Core(const users::SessionManager& sessions) noexcept : sessions_(sessions) {}
+    explicit Core(const users::SessionManager& sessions) : sessions_(sessions) {}
     Core(const Core&) = delete;
     Core& operator=(const Core&) = delete;
+    [[nodiscard]] std::optional<Error> validate_sender(users::SessionId sender, std::string_view source) const noexcept;
     [[nodiscard]] std::variant<Broadcast, Error> prepare(users::SessionId sender,
         std::string_view source, std::string_view text, std::optional<bool> third_person = {}) const;
     // Rechecks the sender and each recipient lifetime before calling the sink.
@@ -77,7 +82,9 @@ public:
         std::optional<bool> third_person = {}, bool echo = false) const;
     [[nodiscard]] std::variant<DispatchReport, Error> dispatch(const Directed& message, const DirectedSink& sink) const;
 private:
-    [[nodiscard]] std::optional<Error> check_sender(users::SessionId sender, std::string_view source) const noexcept;
     const users::SessionManager& sessions_;
+    // A retained token prevents cross-engine dispatch, even after an old Core
+    // address is reused. Plans do not extend the registry or engine lifetime.
+    const std::shared_ptr<const detail::RoutingDomain> domain_{std::make_shared<const detail::RoutingDomain>()};
 };
 } // namespace dc24h::chat

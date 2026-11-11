@@ -7,8 +7,7 @@
 #include "dc24h/adc/user_disconnect.hpp"
 #include "dc24h/users/session_manager.hpp"
 #include "dc24h/chat/core.hpp"
-#include "dc24h/adc/public_chat.hpp"
-#include "dc24h/adc/private_chat.hpp"
+#include "dc24h/adc/message_routing.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -74,15 +73,13 @@ private:
                 users::TimePoint now = users::Clock::now());
     void route_status(Id id, const Message& message);
     void route_chat(Id id, const Message& message);
-    void route_private_chat(Id id, const Message& message);
     void relay(Id except, const Message& message);
     void announce_departure(const Departure& departure);
     LoginLimits limits_;
     std::shared_ptr<SidPool> pool_;
     users::SessionManager sessions_; // Outlives the peers that borrow models.
     chat::Core chat_;
-    PublicChat public_chat_;
-    PrivateChat private_chat_;
+    MessageRouter message_router_;
     UserLogin user_login_;
     UserList user_list_;
     InfUpdates inf_updates_;

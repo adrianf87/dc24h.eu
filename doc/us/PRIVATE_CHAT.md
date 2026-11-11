@@ -1,5 +1,7 @@
 # Private Chat — alpha-0.4.4
 
+**Current increment — alpha-0.4.5:** [Message Routing](MESSAGE_ROUTING.md) centralizes MSG scope selection and bounded queue delivery. Plans are bound to their originating Chat Core domain and live session IDs; private intent never falls back to public delivery.
+
 Built directly from main `b7aff0bb6a886b96e31dbf63321271861b351d88`, after alpha-0.4.3 Public Chat. Earlier branches/history and working public chat remain preserved. EN/US UTF-8 remains the server default, with mirrored PL documentation and updated US/PL operator help.
 
 ## DMSG, EMSG and PM policy

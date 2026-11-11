@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.4.4 (Private Chat).**
+**Current development version: alpha-0.4.5 (Message Routing).**
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.4.5 Message Routing**: central MSG scope selection and queue delivery, engine-bound plans and live session checks. Private/group/unsupported scopes cannot become public messages. See [Message Routing](doc/us/MESSAGE_ROUTING.md).
 
 - **alpha-0.4.4 Private Chat**: DMSG target-only and EMSG target/sender delivery, deduplicated self-messages, source/PM checks and target lifetime binding. Private frames share immutable storage only between selected queues and never fall back to public delivery. See [Private Chat](doc/us/PRIVATE_CHAT.md).
 

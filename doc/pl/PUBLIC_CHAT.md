@@ -1,6 +1,8 @@
 # Public Chat — alpha-0.4.3
 
-**Bieżący etap — alpha-0.4.4:** [Private Chat](PRIVATE_CHAT.md) dodaje DMSG tylko do celu i EMSG do celu oraz nadawcy, pojedyncze wiadomości do siebie, powiązanie celu z ID życia i kontrolę PM. Czat publiczny pozostaje oddzielony; grupy/historia/moderacja to kolejne etapy.
+**Bieżący etap — alpha-0.4.5:** [Message Routing](MESSAGE_ROUTING.md) centralizuje wybór zakresu MSG i dostarczanie do ograniczonych kolejek. Plany są powiązane z domeną macierzystego Chat Core i ID życia sesji; prywatne wiadomości nigdy nie trafiają zastępczo na czat publiczny.
+
+**Etap dostarczony w alpha-0.4.4:** [Private Chat](PRIVATE_CHAT.md) dodaje DMSG tylko do celu i EMSG do celu oraz nadawcy, pojedyncze wiadomości do siebie, powiązanie celu z ID życia i kontrolę PM. Czat publiczny pozostaje oddzielony; grupy/historia/moderacja to kolejne etapy.
 
 Gałąź pochodzi bezpośrednio z main `165c3596d7b2488599bbe6b8297f16cd35825f28`, po scaleniu Chat Core. Kodek MSG i podstawowe publiczne dostarczanie już istniały; ten etap wyodrębnia adapter BMSG i usuwa kopiowanie/serializowanie kolejkowanej ramki osobno dla każdego odbiorcy. Historia i gałęzie są zachowane. Domyślny język serwera to EN/US UTF-8; dostępna jest dokumentacja PL.
 

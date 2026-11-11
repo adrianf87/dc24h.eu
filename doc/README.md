@@ -1,6 +1,6 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.4.4. Default language: EN/US UTF-8.
+Current development version: alpha-0.4.5. Default language: EN/US UTF-8.
 
 - [English (US)](us/README.md)
 - [Polski](pl/README.md)

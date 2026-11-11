@@ -1,5 +1,7 @@
 # Private Chat — alpha-0.4.4
 
+**Bieżący etap — alpha-0.4.5:** [Message Routing](MESSAGE_ROUTING.md) centralizuje wybór zakresu MSG i dostarczanie do ograniczonych kolejek. Plany są powiązane z domeną macierzystego Chat Core i ID życia sesji; prywatne wiadomości nigdy nie trafiają zastępczo na czat publiczny.
+
 Etap pochodzi bezpośrednio z main `b7aff0bb6a886b96e31dbf63321271861b351d88`, po Public Chat. Wcześniejsze gałęzie/historia i publiczny czat są zachowane. Domyślny język serwera pozostaje EN/US UTF-8; dodano dokumentację PL i zaktualizowano pomoc US/PL.
 
 ## DMSG, EMSG i PM
