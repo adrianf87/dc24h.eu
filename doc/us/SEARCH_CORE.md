@@ -1,5 +1,7 @@
 # Search Core — alpha-0.5.1
 
+**Follow-up — alpha-0.5.4:** [TTH Search](TTH_SEARCH.md) carries the full 192-bit file root from SCH into immutable Core queries/plans, descriptors and compiled filters. Hash-only and combined queries use exact equality and retain all additional criteria. Real ncdc ADC/ADCS TTH searches are tested; live request/result routing remains a later increment.
+
 **Follow-up — alpha-0.5.3:** [Search Filters](SEARCH_FILTERS.md) adds compiled Unicode case-insensitive name/path predicates, extension alternatives, inclusive/exact byte limits and file/directory types over checked descriptors. Filter-only queries and opaque NFC tokens now project to Search Core. Matching is allocation-free; routing/results, indexes and search administration remain later increments.
 
 **Follow-up — alpha-0.5.2:** [ADC SCH](ADC_SCH.md) now parses received requests and checks typed fields. The live response is now `125 Search routing not implemented`; routing and result exchange remain separate. The alpha-0.5.1 implementation and validation below describe their original delivery scope.
@@ -20,7 +22,7 @@ Production LoginHub does not call Search Core yet. Valid-state/source SCH/RES st
 
 | Input | Application rule |
 | --- | --- |
-| `include` | Optional as of alpha-0.5.3; at least one recognized name/extension/size/type criterion overall |
+| `include` | Optional as of alpha-0.5.3; at least one recognized name/extension/size/type/TTH criterion overall |
 | `include` + `exclude` | At most 32 terms combined; each nonempty, not ASCII-space-only and at most 256 UTF-8 bytes |
 | Text terms | Already-NFC UTF-8; controls, format characters and line/paragraph separators rejected by existing Text validation; internal/edge spaces are retained |
 | `extensions` | At most 16 nonempty values, each at most 32 bytes, with the same text validation and no leading period, slash, backslash or ASCII space |
@@ -29,7 +31,7 @@ Production LoginHub does not call Search Core yet. Valid-state/source SCH/RES st
 | `token` | Optional; if supplied, 1–128 already-NFC UTF-8 bytes, including spaces/Unicode, preserved without interpretation (alpha-0.5.3) |
 | Total owned input text | At most 4096 bytes across terms, extensions and token |
 
-Counts, per-field byte sizes, sizes/enums and total bytes are checked before UTF-8/NFC work or copying. Size addition is bounded by the prior field/count checks. The input already owns its storage; a future decoder must separately bound wire bytes/parameters before building it. As of alpha-0.5.3, include may be empty when another recognized criterion is present; token-only/empty input returns `no_criteria`. Hash-only matching remains unsupported. `QueryError` distinguishes absent criteria/too-many terms, invalid text/extension/size/type/token and aggregate size failure. No successful query object can be constructed from unchecked mutable data.
+Counts, per-field byte sizes, sizes/enums and total bytes are checked before UTF-8/NFC work or copying. Size addition is bounded by the prior field/count checks. The input already owns its storage; a future decoder must separately bound wire bytes/parameters before building it. As of alpha-0.5.3, include may be empty when another recognized criterion is present; token-only/empty input returns `no_criteria`. As of alpha-0.5.4, an optional fixed 24-byte `tth` root is also a criterion, including hash-only queries; it survives copying and plan dispatch without a protocol dependency. `QueryError` distinguishes absent criteria/too-many terms, invalid text/extension/size/type/token and aggregate size failure. No successful query object can be constructed from unchecked mutable data.
 
 ## Session selection and plan ownership
 

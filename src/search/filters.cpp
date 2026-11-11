@@ -28,10 +28,12 @@ struct Filter::Compiled {
     std::vector<std::string> include, exclude, extensions;
     std::optional<std::int64_t> min_bytes, max_bytes, exact_bytes;
     ItemType type{ItemType::any};
+    std::optional<TthRoot> tth;
 };
 std::variant<Item, ItemError> Item::create(const ItemData& input) {
     if (input.type != ItemType::file && input.type != ItemType::directory) { return ItemError::invalid_type; }
     if (input.bytes && *input.bytes < 0) { return ItemError::invalid_size; }
+    if (input.tth && input.type != ItemType::file) { return ItemError::invalid_hash; }
     if (input.name.empty() || input.name.size() > max_item_name_bytes ||
         std::all_of(input.name.begin(), input.name.end(), [](char c) { return c == ' '; }) ||
         (input.type == ItemType::file && input.name.back() == '/') || !text::valid_public_text(input.name)) {
@@ -46,6 +48,7 @@ std::variant<Filter, QueryError> Filter::create(const QueryData& input) {
     auto result = std::make_shared<Compiled>();
     result->min_bytes = data.min_bytes; result->max_bytes = data.max_bytes; result->exact_bytes = data.exact_bytes;
     result->type = data.type;
+    result->tth = data.tth;
     for (const auto& term : data.include) { result->include.push_back(fold(term)); }
     for (const auto& term : data.exclude) { result->exclude.push_back(fold(term)); }
     for (const auto& extension : data.extensions) { result->extensions.push_back("." + fold(extension)); }
@@ -55,6 +58,9 @@ bool Filter::matches(const Item& item) const noexcept {
     // Moved-from values cannot become an unrestricted predicate/candidate.
     if (!compiled_ || item.folded_.empty()) { return false; }
     const auto& filter = *compiled_;
+    // Exact equality of all 192 bits. Missing hashes never stand in for zero;
+    // extra name/extension/size/type criteria continue to constrain the match.
+    if (filter.tth && (item.data_.type != ItemType::file || item.data_.tth != filter.tth)) { return false; }
     if (filter.type != ItemType::any && filter.type != item.data_.type) { return false; }
     if (filter.min_bytes || filter.max_bytes || filter.exact_bytes) {
         if (!item.data_.bytes) { return false; }

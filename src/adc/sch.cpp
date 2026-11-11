@@ -11,7 +11,6 @@ namespace {
 struct Decoded {
     search::QueryData criteria;
     search::Selection selection;
-    std::optional<TigerDigest> root;
 };
 std::optional<SchError> preflight(const Message& message) noexcept {
     if (message.kind != Command::sch || message.command != "SCH" ||
@@ -86,8 +85,8 @@ std::variant<Decoded, SchError> decode(const Message& message) {
                 if (value.empty() || value.size() > search::max_token_bytes || !text::valid_public_text(value)) { return SchError::invalid_token; }
                 data.token = std::string(value);
             } else {
-                result.root = parse_tiger_base32(value);
-                if (!result.root) { return SchError::invalid_hash; }
+                data.tth = parse_tiger_base32(value);
+                if (!data.tth) { return SchError::invalid_hash; }
                 criterion = true;
             }
         }
@@ -108,7 +107,7 @@ SchParseResult parse_sch(std::string_view body) {
     auto fields = decode(*message);
     if (const auto* error = std::get_if<SchError>(&fields)) { return *error; }
     auto& data = std::get<Decoded>(fields);
-    return SchRequest(std::move(*message), std::move(data.criteria), std::move(data.selection), data.root);
+    return SchRequest(std::move(*message), std::move(data.criteria), std::move(data.selection));
 }
 std::variant<SchRequest, SchError> validate_sch(const Message& message) {
     if (const auto error = preflight(message)) { return *error; }
@@ -118,16 +117,14 @@ std::variant<SchRequest, SchError> validate_sch(const Message& message) {
     auto fields = decode(message);
     if (const auto* error = std::get_if<SchError>(&fields)) { return *error; }
     auto& data = std::get<Decoded>(fields);
-    return SchRequest(message, std::move(data.criteria), std::move(data.selection), data.root);
+    return SchRequest(message, std::move(data.criteria), std::move(data.selection));
 }
 std::variant<search::Query, search::QueryError, SchError> SchRequest::to_core_query() const {
-    if (root_) { return SchError::unsupported_hash_query; }
     auto result = search::Query::create(criteria_);
     if (auto* query = std::get_if<search::Query>(&result)) { return std::move(*query); }
     return std::get<search::QueryError>(result);
 }
 std::variant<search::Filter, search::QueryError, SchError> SchRequest::to_filter() const {
-    if (root_) { return SchError::unsupported_hash_query; }
     auto result = search::Filter::create(criteria_);
     if (auto* filter = std::get_if<search::Filter>(&result)) { return std::move(*filter); }
     return std::get<search::QueryError>(result);

@@ -1,5 +1,16 @@
 # Changelog
 
+## alpha-0.5.4 — 2026-11-11
+
+TTH Search increment, based directly on main `edb702ada4fea04d7854a18370a052fc96035ea7` after the alpha-0.5.3 merge:
+
+- Added protocol-independent fixed 24-byte TthRoot criteria to QueryData, ItemData and compiled Filters. Hash-only queries are valid without fabricated name terms. Exact comparison uses all 192 bits, requires a file descriptor with a known equal root and retains all additional name/extension/size/type constraints. Absence is distinct from zero; directory descriptors cannot carry a file root. Public roots are metadata, not authentication or proof of file contents.
+- SCH places decoded canonical TR directly in QueryData; root() reads that single owning representation. Both Core and Filter projections now preserve hash-only/combined requests instead of returning unsupported_hash_query; the legacy enumerator and projection return types remain for compatibility. Reuse the existing 39-character canonical Tiger Base32 codec and preserve original Message fields/order/unknown parameters, duplicate rejection, bounds and source/state/readiness checks.
+- Root criteria survive immutable copies, moves, Core plans and source/lifetime/domain-bound dispatch. Matching remains allocation-free/noexcept with no file access or hash calculation. Existing bounded Unicode/text behavior remains; the optional fixed-size root does not weaken the aggregate text budget. No TTH tree generator, file index, live SCH/RES routing, UDP exchange, search-specific quota/history, SQL migration, configuration/API endpoint or WebAdmin control is introduced. Valid live requests retain the explicit routing-not-implemented response without leaking root/query/token data.
+- Added search.tth checks for the empty-file root versus plain Tiger, all 192 single-bit mismatches, missing/zero/all-ones roots, combined filters, directory/size semantics, canonical and duplicate TR, B/F/D/E projection, ownership, Core source checks and C++ allocation rollback/no-allocation matching and dispatch. Extended real ADC/ADCS SCH privacy/recovery fixtures and added separate adc.tth.ncdc/adcs.tth.ncdc hash-only searches while retaining earlier ncdc filter searches.
+- Updated runtime/WebAdmin release metadata, CHANGELOG and mirrored US/PL TTH, SCH/Core/filter contracts, navigation, architecture, protocol, API/security, build/testing and version/roadmap documentation. Earlier branches/history are preserved; this branch is not merged into main automatically.
+- Validation: all 98/98 CTest suites passed locally in Debug, Release and ASan/UBSan with required integration tools and default leak detection, including real hash-only ncdc ADC/ADCS, MariaDB and Apache HTTPS. No compiler warnings. WebAdmin build/typecheck, 4 Node tests, 6 Chromium tests and real C++ API integration passed. Metadata, UTF-8, documentation parity/links, Python syntax, shipped INI and whitespace checks passed. Remote CI, the full supported OS/client matrix and production load remain unverified.
+
 ## alpha-0.5.3 — 2026-11-11
 
 Search Filters increment, based directly on main `dd2a968469c3db21ada4e469afc85b7a3415eeab` after the alpha-0.5.2 merge:

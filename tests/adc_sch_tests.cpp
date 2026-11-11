@@ -51,7 +51,7 @@ void fields_and_projection() {
     const auto filters=checked("BSCH AAAB EXiso GE0 TY1");
     require(std::get<search::Query>(filters.to_core_query()).data()==filters.criteria(),"Filter-only query was changed or refused");
     const auto hash=checked("BSCH AAAB TR"+std::string(39,'A')+" ANx TOhash");
-    require(hash.root()==TigerDigest{} && std::get<SchError>(hash.to_core_query())==SchError::unsupported_hash_query,"TR was silently discarded");
+    require(hash.root()==TigerDigest{} && std::get<search::Query>(hash.to_core_query()).data()==hash.criteria(),"TR was silently discarded");
     require(checked("BSCH AAAB TR"+std::string(39,'A')).root().has_value(),"Hash-only query refused");
     auto source=parse("BSCH AAAB ANOriginal TOtoken"); auto owning=std::get<SchRequest>(validate_sch(source));
     source.parameters[0]="ANChanged"; auto copy=owning; auto moved=std::move(copy);

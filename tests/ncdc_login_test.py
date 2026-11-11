@@ -26,6 +26,10 @@ MSG_CODEC = sys.argv.pop(1)
 ENCRYPTED = '--tls' in sys.argv
 if ENCRYPTED:
     sys.argv.remove('--tls')
+TTH_SEARCH = '--tth' in sys.argv
+if TTH_SEARCH:
+    sys.argv.remove('--tth')
+TEST_TTH = b'LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHHHZWCLNQ'
 
 
 class NcdcLoginTest(unittest.TestCase):
@@ -228,18 +232,27 @@ class NcdcLoginTest(unittest.TestCase):
                 # TLS proxy captures are encrypted, so synchronize with the
                 # private API and assert the refusal in ncdc's hub window.
                 before_search = fetch_status(api_path, token)['network']['adc_frames']
-                os.write(master, b'/search -hub -ge 1K -t archive SearchCoreSecret\r')
+                command = (b'/search -hub -tth ' + TEST_TTH + b'\r' if TTH_SEARCH else
+                           b'/search -hub -ge 1K -t archive SearchCoreSecret\r')
+                os.write(master, command)
                 deadline = time.monotonic() + 3
                 while fetch_status(api_path, token)['network']['adc_frames'] <= before_search:
                     self.assertLess(time.monotonic(), deadline, 'ncdc did not submit its search')
                     if select.select([master], [], [], 0.05)[0]:
                         screen.extend(os.read(master, 65536))
-                wait_screen(b'SearchCoreSecret')
+                wait_screen(TEST_TTH if TTH_SEARCH else b'SearchCoreSecret')
                 # Search results use list key bindings, not the chat input.
                 os.write(master, b'\x1b2')  # Alt+2 selects the hub tab.
                 wait_screen(b'Search routing not implemented')
                 if ENCRYPTED:
                     self.assertNotIn(b'SearchCoreSecret', wire)
+                    self.assertNotIn(TEST_TTH, wire)
+                elif TTH_SEARCH:
+                    frame = re.search(rb'[BF]SCH ' + replacement_sid + rb' [^\n]*\n', bytes(wire))
+                    self.assertIsNotNone(frame, 'ncdc did not emit a TTH SCH')
+                    self.assertIn(b'TR' + TEST_TTH, frame[0])
+                    self.assertNotRegex(frame[0], rb' (?:AN|EX)')
+                    self.assertRegex(bytes(replies), rb'ISTA 125 Search\\srouting\\snot\\simplemented FC[BF]SCH\n')
                 else:
                     self.assertRegex(bytes(wire), rb'[BF]SCH ' + replacement_sid + rb' [^\n]*ANSearchCoreSecret')
                     self.assertRegex(bytes(wire), rb'[BF]SCH [^\n]*GE1024')
@@ -291,6 +304,7 @@ class NcdcLoginTest(unittest.TestCase):
                 self.assertNotIn(b'dc24hPrivateReply', hub.log)
                 self.assertNotIn(b'dc24hPrivateAction', hub.log)
                 self.assertNotIn(b'SearchCoreSecret', hub.log)
+                self.assertNotIn(TEST_TTH, hub.log)
                 self.assertNotIn(b'dc24hIncomingChat', hub.log)
                 self.assertNotIn(b'dc24hPublic', hub.log)
                 self.assertNotIn(b'dc24hValidated', hub.log)

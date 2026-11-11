@@ -1,5 +1,7 @@
 # Search Core — alpha-0.5.1
 
+**Aktualizacja — alpha-0.5.4:** [TTH Search](TTH_SEARCH.md) przekazuje pełny 192-bitowy hash pliku z SCH do niezmiennych zapytań/planów Core, opisów i filtrów. Zapytania z samym hashem lub łączone używają dokładnej równości i zachowują dodatkowe kryteria. Testowane są rzeczywiste zapytania TTH ncdc ADC/ADCS; routing zapytań/wyników pozostaje kolejnym etapem.
+
 **Aktualizacja — alpha-0.5.3:** [Search Filters](SEARCH_FILTERS.md) dodaje skompilowane filtry nazw/ścieżek Unicode bez rozróżniania wielkości liter, alternatywy rozszerzeń, domknięte/dokładne limity bajtów i typ plik/katalog dla sprawdzonych opisów. Zapytania z samymi filtrami i nieprzezroczyste tokeny NFC przechodzą do Search Core. Dopasowanie nie alokuje pamięci; routing/wyniki, indeksy i administracja wyszukiwaniem pozostają kolejnymi etapami.
 
 **Kolejny etap — alpha-0.5.2:** [ADC SCH](ADC_SCH.md) parsuje teraz odbierane zapytania i sprawdza ich pola. Bieżąca odpowiedź to `125 Search routing not implemented`; routing i wymiana wyników są osobnymi etapami. Opis implementacji i weryfikacji alpha-0.5.1 poniżej zachowuje historyczny zakres.
@@ -20,7 +22,7 @@ Produkcyjny LoginHub jeszcze nie wywołuje Search Core. SCH/RES z poprawnym stan
 
 | Wejście | Reguła aplikacji |
 | --- | --- |
-| `include` | Opcjonalne od alpha-0.5.3; łącznie wymagane co najmniej jedno kryterium nazwy/rozszerzenia/rozmiaru/typu |
+| `include` | Opcjonalne od alpha-0.5.3; łącznie wymagane co najmniej jedno kryterium nazwy/rozszerzenia/rozmiaru/typu/TTH |
 | `include` + `exclude` | Łącznie do 32 terminów, każdy niepusty, nie z samych spacji ASCII i do 256 bajtów UTF-8 |
 | Tekst terminów | Wymagane gotowe NFC UTF-8; Text odrzuca znaki sterujące/formatujące i separatory wierszy/akapitów; zachowuje spacje wewnętrzne i brzegowe |
 | `extensions` | Do 16 niepustych wartości, każda do 32 bajtów; ta sama walidacja tekstu, bez początkowej kropki, ukośnika, odwrotnego ukośnika i spacji ASCII |
@@ -29,7 +31,7 @@ Produkcyjny LoginHub jeszcze nie wywołuje Search Core. SCH/RES z poprawnym stan
 | `token` | Opcjonalny; jeśli podano, 1–128 bajtów gotowego NFC UTF-8 ze spacjami/Unicode, bez interpretacji (alpha-0.5.3) |
 | Łączny tekst wejścia | Do 4096 bajtów terminów, rozszerzeń i tokena |
 
-Liczby pól, rozmiary poszczególnych wartości, liczby/enum i suma bajtów są sprawdzane przed pracą UTF-8/NFC i kopiowaniem. Sumowanie jest ograniczone wcześniejszymi limitami. Wejście ma już własną pamięć; przyszły dekoder musi osobno ograniczać ramki/parametry przed zbudowaniem wejścia. Od alpha-0.5.3 include może być puste przy obecności innego rozpoznanego kryterium; brak kryteriów i sam token zwracają `no_criteria`. Dopasowanie hash-only pozostaje nieobsługiwane. `QueryError` rozróżnia brak kryteriów/nadmiar terminów, błędny tekst/rozszerzenie/rozmiar/typ/token i przekroczenie sumy bajtów. Publiczny konstruktor nie pozwala pominąć sprawdzenia danych.
+Liczby pól, rozmiary poszczególnych wartości, liczby/enum i suma bajtów są sprawdzane przed pracą UTF-8/NFC i kopiowaniem. Sumowanie jest ograniczone wcześniejszymi limitami. Wejście ma już własną pamięć; przyszły dekoder musi osobno ograniczać ramki/parametry przed zbudowaniem wejścia. Od alpha-0.5.3 include może być puste przy obecności innego rozpoznanego kryterium; brak kryteriów i sam token zwracają `no_criteria`. Od alpha-0.5.4 opcjonalny stały 24-bajtowy hash `tth` także stanowi kryterium, w tym przy samym hashu; jest zachowany w kopiach i dispatch planu bez zależności od protokołu. `QueryError` rozróżnia brak kryteriów/nadmiar terminów, błędny tekst/rozszerzenie/rozmiar/typ/token i przekroczenie sumy bajtów. Publiczny konstruktor nie pozwala pominąć sprawdzenia danych.
 
 ## Wybór sesji i własność planu
 

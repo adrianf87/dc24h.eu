@@ -10,6 +10,9 @@ from network_process_tests import Hub, drain_until_eof
 from tls_support import credentials, connect_tls
 
 
+TEST_TTH = b'LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHHHZWCLNQ'
+
+
 class SchProcessTests(unittest.TestCase):
     def fixture(self, encrypted):
         directory = tempfile.TemporaryDirectory(prefix='dc24h-sch-')
@@ -40,7 +43,8 @@ class SchProcessTests(unittest.TestCase):
                      'ANSchPrivateSecret\\sŻółw\\s😀 TOtoken\\sŻółw'.encode(),
                      b'EXiso GE0 TY2', b'EXiso', b'NOtmp', b'GE0', b'LE0', b'EQ0', b'TY1', b'TY2',
                      'EXŻÓŁW GE0 LE1 TOtoken\\sŻółw'.encode(), b'TR' + b'A' * 39,
-                     b'ANSchPrivateSecret TR' + b'A' * 39]
+                     b'ANSchPrivateSecret TR' + b'A' * 39, b'TR' + TEST_TTH,
+                     b'TR' + TEST_TTH + b' ANSchPrivateSecret EXiso GE0 LE1 EQ0 TY1']
             for kind in (b'BSCH', b'FSCH', b'DSCH', b'ESCH'):
                 header = kind + b' ' + source.sid
                 if kind in (b'DSCH', b'ESCH'): header += b' ' + observer.sid
@@ -55,7 +59,8 @@ class SchProcessTests(unittest.TestCase):
             invalid = [b'AN', b'AN\\s', b'ANbad\\ntext', b'ANx NO', b'ANx EX.iso', b'ANx EXa/b',
                        b'ANx GE-1', b'ANx LE+1', b'ANx EQ9223372036854775808', b'ANx GE2 LE1',
                        b'ANx TY0', b'ANx TY3', b'ANx TY1 TY1', b'ANx TO', b'ANx TOa TOb',
-                       b'ANx TRinvalid', b'AN' + b'x' * 257,
+                       b'ANx TRinvalid', b'TR' + TEST_TTH + b' TR' + TEST_TTH,
+                       b'TR' + TEST_TTH + b'=', b'TR' + TEST_TTH.lower(), b'TR' + b'A' * 38 + b'B', b'AN' + b'x' * 257,
                        b'ANx ' + b'NOx ' * 32, b'ANx ' + b'EXiso ' * 17,
                        b'ANx XX' + b'x' * 4092, b'ANx TO' + b'x' * 129]
             for fields in invalid:
@@ -82,9 +87,9 @@ class SchProcessTests(unittest.TestCase):
             self.assertTrue(terminal.startswith(b'ISTA 240 ')); self.assertNotIn(b'GEbad', terminal)
             self.assertEqual(observer.line(), b'IQUI ' + source.sid)
             snapshot = json.dumps(fetch_status(endpoint, token))
-            self.assertNotIn('SchPrivateSecret', snapshot); self.assertNotIn('PrivateSchToken', snapshot)
+            self.assertNotIn('SchPrivateSecret', snapshot); self.assertNotIn('PrivateSchToken', snapshot); self.assertNotIn(TEST_TTH.decode(), snapshot)
             hub.stop()
-            for private in (b'SchPrivateSecret', b'PrivateSchToken', b'GEbad', token.encode()):
+            for private in (b'SchPrivateSecret', b'PrivateSchToken', b'GEbad', TEST_TTH, token.encode()):
                 self.assertNotIn(private, hub.log)
 
 

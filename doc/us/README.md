@@ -1,7 +1,8 @@
 # dc24h.eu documentation
 
-alpha-0.5.3: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.5.4: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
+- [TTH Search — alpha-0.5.4](TTH_SEARCH.md)
 - [Search Filters — alpha-0.5.3](SEARCH_FILTERS.md)
 - [ADC SCH — alpha-0.5.2](ADC_SCH.md)
 - [Search Core — alpha-0.5.1](SEARCH_CORE.md)

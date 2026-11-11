@@ -1,5 +1,7 @@
 # Search Filters — alpha-0.5.3
 
+**Aktualizacja — alpha-0.5.4:** [TTH Search](TTH_SEARCH.md) przekazuje pełny 192-bitowy hash pliku z SCH do niezmiennych zapytań/planów Core, opisów i filtrów. Zapytania z samym hashem lub łączone używają dokładnej równości i zachowują dodatkowe kryteria. Testowane są rzeczywiste zapytania TTH ncdc ADC/ADCS; routing zapytań/wyników pozostaje kolejnym etapem.
+
 Etap oparty bezpośrednio na main `dd2a968469c3db21ada4e469afc85b7a3415eeab` po scaleniu alpha-0.5.2. Zachowano wcześniejsze Search Core i ADC SCH. Kod i komunikaty pozostają EN/US UTF-8; dokumentacja ma wersje US/PL.
 
 ## Zakres i API
@@ -38,11 +40,11 @@ Rozmiar zero jest rzeczywistą wartością; nieznany to `nullopt`. Każdy filtr 
 
 ## Integracja Query i SCH
 
-Wymagane jest co najmniej jedno rozpoznane kryterium: AN, NO, EX, GE/LE/EQ albo konkretny TY. Dodatnie AN są teraz opcjonalne, więc same wykluczenia, rozszerzenia, rozmiary lub typ przechodzą do Core bez tworzenia sztucznych terminów. Puste QueryData i sam token zwracają `QueryError::no_criteria` zamiast starego `missing_term`. Dopuszcza to szerokie jawne kryteria, np. GE0/TY1; limity tempa i przyjęcia routingu pozostają przyszłym etapem, nie właściwością dopasowania.
+Wymagane jest co najmniej jedno rozpoznane kryterium: AN, NO, EX, GE/LE/EQ, konkretny TY albo (od alpha-0.5.4) hash TTH. Dodatnie AN są teraz opcjonalne, więc same wykluczenia, rozszerzenia, rozmiary lub typ przechodzą do Core bez tworzenia sztucznych terminów. Puste QueryData i sam token zwracają `QueryError::no_criteria` zamiast starego `missing_term`. Dopuszcza to szerokie jawne kryteria, np. GE0/TY1; limity tempa i przyjęcia routingu pozostają przyszłym etapem, nie właściwością dopasowania.
 
 Zachowano limity: 32 łączne AN/NO, 256 bajtów terminu, 16 rozszerzeń do 32 bajtów, 128 bajtów tokena i 4096 łącznych bajtów tekstu. Walidacja rozszerzeń spójnie odrzuca początkową kropkę w SCH i Query. Tokeny przyjmują nieprzezroczysty gotowy tekst NFC ze spacjami/Unicode zgodnie z SCH; błędny tekst jest odrzucany, a sam TO nadal nie stanowi kryterium. Limity obowiązują przed normalizacją/kopiowaniem. Wewnętrzne napisy po case folding mogą się wydłużyć, ale pochodzą tylko z ograniczonych wejść. Pracę dopasowania ograniczają limity nazwy, terminów i rozszerzeń; kompilacja/przygotowanie opisu alokują, powtarzane dopasowanie nie.
 
-Zapytania z TR zwracają `SchError::unsupported_hash_query` w obu projekcjach, także przy połączeniu TR z tekstem/filtrami. Hash Tiger nie może zniknąć ani stać się filtrem tekstowym. Sprawdzone pola SCH, kolejność, nieznane parametry i zapis liczb pozostają w oryginalnym Message. Nieznane pola zachowują politykę ADC ignorowania i zachowania; moduł nie interpretuje ani nie ogłasza grup ASCH/SEGA.
+Od alpha-0.5.4 zapytania z TR przekazują pełny hash do Core i Filter, także przy połączeniu TR z tekstem/filtrami. Sam hash wymaga dokładnej równości hasha pliku; pozostałe filtry są dodatkowymi warunkami AND. Zobacz [TTH Search](TTH_SEARCH.md). Hash Tiger nie może zniknąć ani stać się filtrem tekstowym. Sprawdzone pola SCH, kolejność, nieznane parametry i zapis liczb pozostają w oryginalnym Message. Nieznane pola zachowują politykę ADC ignorowania i zachowania; moduł nie interpretuje ani nie ogłasza grup ASCH/SEGA.
 
 Rzeczywisty odbiór ADC/ADCS zachowuje zachowanie alpha-0.5.2: stan/źródło/gotowość są sprawdzane przed SCH; poprawne zapytania otrzymują odwracalne `125 Search routing not implemented`, błędy semantyczne `100 Invalid search query`, a brak kryteriów jest pomijany. Odbiornik nie uruchamia dopasowania opisów i nie tworzy fanout. Treść zapytań/tokenów/nazw plików nie trafia do diagnostyki, liczników czatu, logów, bazy, API ani WebAdmin. Nie ma nowej migracji SQL, ustawienia, zależności ani kontrolki UI; metadane wydania przechodzą na alpha-0.5.3.
 
@@ -60,4 +62,4 @@ cmake --build build-debug --parallel 4
 ctest --test-dir build-debug --output-on-failure -j 4
 ```
 
-Powtórz dla Release i ASan/UBSan zgodnie z [TESTING.md](TESTING.md). Zobacz [Search Core](SEARCH_CORE.md), [ADC SCH](ADC_SCH.md), [ROADMAP.md](ROADMAP.md) i [CHANGELOG.md](../../CHANGELOG.md). Routing zapytań/wyników, indeks plików, dopasowanie hashy, limity/historia wyszukiwania, zdalne CI, pełna macierz systemów i obciążenie produkcyjne wymagają osobnej pracy i dowodów.
+Powtórz dla Release i ASan/UBSan zgodnie z [TESTING.md](TESTING.md). Zobacz [Search Core](SEARCH_CORE.md), [ADC SCH](ADC_SCH.md), [ROADMAP.md](ROADMAP.md) i [CHANGELOG.md](../../CHANGELOG.md). Routing zapytań/wyników, indeks plików, limity/historia wyszukiwania, zdalne CI, pełna macierz systemów i obciążenie produkcyjne wymagają osobnej pracy i dowodów.

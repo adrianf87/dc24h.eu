@@ -133,7 +133,7 @@ void bridge_and_core() {
     require(std::get<Filter>(sch("EXiso").to_filter()).matches(item("/a.iso")), "Filter-only SCH refused");
     require(std::get<Filter>(sch("NOtmp").to_filter()).matches(item("/a.iso")), "Exclusion-only SCH refused");
     const auto hash = sch("TR" + std::string(39,'A') + " EXiso");
-    require(std::get<adc::SchError>(hash.to_filter()) == adc::SchError::unsupported_hash_query, "TR silently became text-only matching");
+    require(!std::get<Filter>(hash.to_filter()).matches(item("/a.iso")), "Missing descriptor TTH silently became text-only matching");
     users::SessionManager sessions(1); const auto id = *users::SessionId::from_value(1);
     require(std::holds_alternative<const users::Session*>(sessions.add(id,users::Transport::adc,{})), "Session add failed");
     require(!sessions.start_negotiation(id,{}), "Session negotiation failed");

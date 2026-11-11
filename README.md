@@ -2,10 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.5.3 (Search Filters).**
+**Current development version: alpha-0.5.4 (TTH Search).**
 
 Completed increments (older bullets describe their original delivery scope):
 
+- **alpha-0.5.4 TTH Search**: exact 192-bit file-root predicates, hash-only and combined queries, lossless SCH/Core/descriptor projection and actual ncdc ADC/ADCS TTH tests. Live request/result routing remains a later stage. See [TTH Search](doc/us/TTH_SEARCH.md).
 - **alpha-0.5.3 Search Filters**: compiled Unicode name/path, extension, size and type predicates over checked descriptors, filter-only Core queries and allocation-free matching. Routing/results remain later stages. See [Search Filters](doc/us/SEARCH_FILTERS.md).
 - **alpha-0.5.2 ADC SCH**: typed owning search-request parsing, field/selector/TR validation and real ADC/ADCS reception with bounded, payload-free diagnostics. Routing/results remain later stages. See [ADC SCH](doc/us/ADC_SCH.md).
 - **alpha-0.5.1 Search Core**: independent C++20 textual query validation, immutable lifetime-bound recipient plans, feature selection and bounded dispatch. Live SCH/RES adapters and search results remain future stages. See [Search Core](doc/us/SEARCH_CORE.md).

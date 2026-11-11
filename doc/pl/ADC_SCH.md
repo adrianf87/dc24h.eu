@@ -1,5 +1,7 @@
 # ADC SCH — alpha-0.5.2
 
+**Aktualizacja — alpha-0.5.4:** [TTH Search](TTH_SEARCH.md) przekazuje pełny 192-bitowy hash pliku z SCH do niezmiennych zapytań/planów Core, opisów i filtrów. Zapytania z samym hashem lub łączone używają dokładnej równości i zachowują dodatkowe kryteria. Testowane są rzeczywiste zapytania TTH ncdc ADC/ADCS; routing zapytań/wyników pozostaje kolejnym etapem.
+
 **Aktualizacja — alpha-0.5.3:** [Search Filters](SEARCH_FILTERS.md) dodaje skompilowane filtry nazw/ścieżek Unicode bez rozróżniania wielkości liter, alternatywy rozszerzeń, domknięte/dokładne limity bajtów i typ plik/katalog dla sprawdzonych opisów. Zapytania z samymi filtrami i nieprzezroczyste tokeny NFC przechodzą do Search Core. Dopasowanie nie alokuje pamięci; routing/wyniki, indeksy i administracja wyszukiwaniem pozostają kolejnymi etapami.
 
 Gałąź utworzono bezpośrednio z main `0fd969bebfe399388f17fc14632cc72cb3f6ee3d` po scaleniu Search Core. Kod i diagnostyka protokołu pozostają EN/US UTF-8; dokumentacja ma wersje US/PL. Etap dodaje typowane parsowanie i rzeczywisty odbiór; rozsyłanie, wyniki, limity/historia wyszukiwań i administracja pozostają osobnymi etapami.
@@ -33,7 +35,7 @@ Dopuszczono same filtry, wykluczenia lub hash. Puste zapytania, same nieznane po
 
 ## Powiązanie z Search Core
 
-`criteria()` i `selection()` udostępniają stałe dane. `to_core_query()` zwraca `variant<search::Query, search::QueryError, SchError>` i stosuje sprawdzony profil Search Core. Od alpha-0.5.3 akceptowane są same filtry i nieprzezroczyste tokeny NFC ze spacjami/Unicode, bez tworzenia ani przepisywania pól. `to_filter()` kompiluje te same kryteria do [Search Filters](SEARCH_FILTERS.md). Zapytanie z TR zwraca `unsupported_hash_query` w obu projekcjach, więc hash nigdy nie jest po cichu usuwany. Dane nie są przepisywane dla wymuszenia akceptacji. Metoda jest sprawdzaną projekcją, a nie planem dostarczenia ani uprawnieniem.
+`criteria()` i `selection()` udostępniają stałe dane. `to_core_query()` zwraca `variant<search::Query, search::QueryError, SchError>` i stosuje sprawdzony profil Search Core. Od alpha-0.5.3 akceptowane są same filtry i nieprzezroczyste tokeny NFC ze spacjami/Unicode, bez tworzenia ani przepisywania pól. `to_filter()` kompiluje te same kryteria do [Search Filters](SEARCH_FILTERS.md). Od alpha-0.5.4 TR pozostaje w `criteria().tth`, `root()` czyta tę samą pamięć, a obie projekcje obsługują dokładne [TTH Search](TTH_SEARCH.md), także z samym hashem. Stare `unsupported_hash_query` zachowano dla zgodności kodu, lecz nie jest już zwracane. Dane nie są przepisywane dla wymuszenia akceptacji. Metoda jest sprawdzaną projekcją, a nie planem dostarczenia ani uprawnieniem.
 
 Biblioteka ADC łączy się teraz z dc24h_search bez zależności odwrotnej. Odbiornik sprawdza SCH, ale nie tworzy/nie wykonuje fanout Core i nie odkłada zapytań do późniejszego odtwarzania. Przyszła integracja musi uwzględnić granice projekcji i zachować odpowiednią semantykę rozszerzeń.
 

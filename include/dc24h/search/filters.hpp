@@ -7,13 +7,14 @@
 
 namespace dc24h::search {
 inline constexpr std::size_t max_item_name_bytes = 4096;
-enum class ItemError { invalid_name, invalid_type, invalid_size };
+enum class ItemError { invalid_name, invalid_type, invalid_size, invalid_hash };
 // Decoded virtual name including the share path, never an OS path to open.
 // Unknown size is distinct from zero, including for directory descriptors.
 struct ItemData {
     std::string name;
     ItemType type{ItemType::file};
     std::optional<std::int64_t> bytes;
+    std::optional<TthRoot> tth{};
 };
 class Filter;
 class Item final {
