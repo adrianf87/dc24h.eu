@@ -52,6 +52,14 @@ bool path_text(const std::string& value) {
     return value.size() <= 4096 && std::none_of(value.begin(), value.end(), [](unsigned char c) { return c < 32 || c == 127; });
 }
 std::string status_json(const Snapshot& value) {
+    std::string chat_json{"{"};
+    // Names are a fixed allowlist; values contain aggregate counters only.
+    for (std::size_t i = 0; i < chat::statistic_names.size(); ++i) {
+        if (i != 0) { chat_json += ','; }
+        chat_json += '\"'; chat_json += chat::statistic_names[i]; chat_json += "\":";
+        chat_json += std::to_string(value.chat.values[i]);
+    }
+    chat_json += '}';
     return "{\"api_version\":\"v1\",\"server\":{\"name\":\"dc24h.eu\",\"version\":\"" +
         std::string(dc24h::version) + "\",\"core_running\":" + (value.core_running ? "true" : "false") +
         ",\"uptime_seconds\":" + std::to_string(value.uptime_seconds) + "},\"network\":{\"active_connections\":" +
@@ -63,7 +71,7 @@ std::string status_json(const Snapshot& value) {
         ",\"received_bytes\":" + std::to_string(value.received_bytes) + ",\"sent_bytes\":" + std::to_string(value.sent_bytes) +
         ",\"peak_connections\":" + std::to_string(value.peak_connections) + "},\"users\":{\"online\":" +
         std::to_string(value.online_users) + ",\"peak_online\":" + std::to_string(value.peak_online_users) +
-        ",\"successful_logins\":" + std::to_string(value.successful_logins) + "},\"database\":{\"enabled\":" +
+        ",\"successful_logins\":" + std::to_string(value.successful_logins) + "},\"chat\":" + chat_json + ",\"database\":{\"enabled\":" +
         (value.database_enabled ? "true" : "false") + "}}\n";
 }
 } // namespace

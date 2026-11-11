@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dc24h/i18n/messages.hpp"
+#include "dc24h/chat/statistics.hpp"
 
 #include <chrono>
 #include <cstddef>
@@ -25,6 +26,7 @@ struct Options {
     std::string file_path;
     i18n::Language language{i18n::Language::us};
     bool connections{false};
+    bool chat{false};
 };
 
 // Synchronized best-effort UTC logger. New files are created with mode 0600.
@@ -42,6 +44,8 @@ public:
     void error(std::string_view message) noexcept;
     // At most 64 emitted lifecycle events per one-second steady-clock window.
     void connection(ConnectionEvent event, std::uint64_t id, bool secure) noexcept;
+    // Independent budget: at most 32 fixed chat outcome records per second.
+    void chat_event(chat::Event event) noexcept;
     [[nodiscard]] bool connection_enabled() const noexcept {
         return connections_ && level_ == Level::info;
     }
@@ -50,12 +54,18 @@ private:
     void write(const char* level, std::string_view message) noexcept;
     void write_unlocked(const char* severity, std::string_view message);
     void report_suppressed_unlocked();
+    void report_chat_suppressed_unlocked();
     std::mutex mutex_;
     Level level_;
     i18n::Language language_;
     int fd_{2};
     bool owned_{false};
     bool connections_;
+    bool chat_;
+    std::chrono::steady_clock::time_point chat_window_{};
+    bool chat_window_started_{false};
+    std::size_t chat_emitted_{};
+    std::uint64_t chat_suppressed_{};
     std::chrono::steady_clock::time_point connection_window_{};
     bool window_started_{false};
     std::size_t connection_emitted_{0};

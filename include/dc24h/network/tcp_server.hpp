@@ -3,6 +3,7 @@
 #include "dc24h/security/limits.hpp"
 #include "dc24h/users/limits.hpp"
 #include "dc24h/chat/settings.hpp"
+#include "dc24h/chat/statistics.hpp"
 
 #include <atomic>
 #include <chrono>
@@ -55,6 +56,7 @@ struct Statistics {
     std::size_t online_users{};
     std::size_t peak_online_users{};
     std::uint64_t successful_logins{};
+    chat::Statistics chat{};
 };
 
 class TcpServer final {
@@ -93,6 +95,7 @@ private:
     std::atomic<std::uint64_t> closed_{0}, sent_bytes_{0};
     std::atomic<std::size_t> peak_connections_{0}, online_users_{0}, peak_online_users_{0};
     std::atomic<std::uint64_t> successful_logins_{0};
+    std::array<std::atomic<std::uint64_t>, chat::statistic_names.size()> chat_statistics_{};
 };
 
 } // namespace dc24h::network

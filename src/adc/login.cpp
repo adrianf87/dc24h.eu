@@ -206,6 +206,9 @@ void LoginHub::relay(Id except, const Message& message) {
 void LoginHub::receive(Id id, const Message& message, chat::FloodClock::time_point chat_now) {
     auto& peer = *peers_.at(id);
     if (peer.lifecycle.closing() || peer.lifecycle.immediate()) { return; }
+    chat::Attempt attempt(message.kind == Command::msg &&
+        (message.type == MessageType::broadcast || message.type == MessageType::direct || message.type == MessageType::echo)
+        ? &chat_statistics_ : nullptr);
     if (peer.lifecycle.phase() == users::Phase::accepted) {
         throw std::logic_error("Application input before transport readiness");
     }
@@ -241,6 +244,7 @@ void LoginHub::receive(Id id, const Message& message, chat::FloodClock::time_poi
     try { observation=peer.session.observe(Direction::from_client,message); }
     catch (const std::bad_alloc&) {
         if (message.kind!=Command::msg) { throw; }
+        attempt.outcome(chat::Event::internal_error);
         check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
         return;
     }
@@ -318,6 +322,7 @@ void LoginHub::receive(Id id, const Message& message, chat::FloodClock::time_poi
             // Denied traffic never constructs a fanout plan or private echo.
             const auto decision = peer.anti_flood->admit(message.parameters[0].size(), chat_now);
             if (!decision.allowed) {
+                attempt.outcome(chat::Event::flood_limited);
                 if (decision.notify) {
                     try { (void)enqueue(peer, make_status(*StatusCode::parse("100"), "Chat message rate limit exceeded", offending)); }
                     catch (const std::bad_alloc&) {
@@ -327,7 +332,7 @@ void LoginHub::receive(Id id, const Message& message, chat::FloodClock::time_poi
                 return;
             }
         }
-        route_chat(id,message);
+        route_chat(id,message,attempt);
     } else if (message.kind == Command::sta) {
         if (message.type != MessageType::hub) { route_status(id, message); }
     } else if (before == ConnectionState::normal && message.kind != Command::sup) {
@@ -335,7 +340,7 @@ void LoginHub::receive(Id id, const Message& message, chat::FloodClock::time_poi
         (void)enqueue(peer, make_status(*StatusCode::parse("125"), "Command not implemented", offending));
     }
 }
-void LoginHub::route_chat(Id id, const Message& message) {
+void LoginHub::route_chat(Id id, const Message& message, chat::Attempt& attempt) {
     auto& sender=*peers_.at(id);
     try {
         const std::string command=std::string(1,static_cast<char>(message.type))+"MSG";
@@ -369,9 +374,16 @@ void LoginHub::route_chat(Id id, const Message& message) {
         });
         if (const auto* error=std::get_if<chat::Error>(&result)) {
             if (*error==chat::Error::recipient_unavailable) { unavailable(); }
-            else { check_model(sessions_.force_close(sender.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now())); }
+            else {
+                attempt.outcome(chat::Event::internal_error);
+                check_model(sessions_.force_close(sender.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
+            }
+        } else {
+            const auto& report = std::get<chat::DispatchReport>(result);
+            attempt.dispatched(message.type == MessageType::broadcast, report.queued, report.unavailable, report.refused);
         }
     } catch (const std::bad_alloc&) {
+        attempt.outcome(chat::Event::internal_error);
         // Preparation/diagnostic failure cannot publish content. Queue failures
         // are caught per recipient above; never retry a partially routed plan.
         check_model(sessions_.force_close(sender.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));

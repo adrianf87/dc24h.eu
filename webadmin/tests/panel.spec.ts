@@ -4,7 +4,7 @@ const data = {
   api_version: "v1",
   server: {
     name: "dc24h.eu",
-    version: "alpha-0.4.10",
+    version: "alpha-0.4.11",
     core_running: true,
     uptime_seconds: 3661,
   },
@@ -22,6 +22,7 @@ const data = {
     peak_connections: 9,
   },
   users: { online: 4, peak_online: 6, successful_logins: 23 },
+  chat: { received: 12, public_dispatches: 5, private_dispatches: 3, rejected: 2, flood_limited: 1, errors: 1, queued: 21, unavailable: 0, refused: 0 },
   database: { enabled: false },
 };
 test("unconfigured panel stays honest, readable and bilingual with working navigation", async ({
@@ -88,8 +89,10 @@ test("renders real API-shaped values, exports a safe snapshot and clears unavail
   await expect(page.locator(".metric-value").nth(1)).toHaveText("144");
   await expect(page.getByText("1h 1m", { exact: true })).toBeVisible();
   await expect(page.getByTestId("user-statistics").locator(".metric-value")).toHaveText(["4", "6", "23", "41"]);
+  await expect(page.getByTestId("chat-statistics").locator(".metric-value")).toHaveText(["5", "3", "2", "1"]);
   await page.getByRole("combobox").selectOption("pl");
   await expect(page.getByText("Użytkownicy online", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("chat-statistics").getByText("Czat prywatny", { exact: true })).toBeVisible();
   await page.getByRole("combobox").selectOption("us");
   await page.getByRole("switch").click();
   const download = page.waitForEvent("download");

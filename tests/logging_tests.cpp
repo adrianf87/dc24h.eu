@@ -1,5 +1,6 @@
 #include "dc24h/logging/logger.hpp"
 #include <sys/stat.h>
+#include <cerrno>
 #include <unistd.h>
 #include <utf8proc.h>
 #include <chrono>
@@ -12,6 +13,13 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+
+namespace { bool fail_log_writes = false; }
+extern "C" ssize_t __real_write(int, const void*, size_t);
+extern "C" ssize_t __wrap_write(int fd, const void* data, size_t bytes) {
+    if (fail_log_writes) { errno=ENOSPC; return -1; }
+    return __real_write(fd,data,bytes);
+}
 
 namespace {
 namespace fs = std::filesystem;
@@ -200,6 +208,55 @@ void concurrent_peer_budget() {
     require(occurrences(data, "\n") == 65, "concurrent records interleaved");
 }
 
+void chat_budget_levels_and_localization() {
+    Fixture f;
+    for (const auto level : {dc24h::logging::Level::info, dc24h::logging::Level::warning,
+                             dc24h::logging::Level::error, dc24h::logging::Level::off}) {
+        const auto name="chat"+std::to_string(static_cast<int>(level))+".log";
+        {
+            dc24h::logging::Logger logger({level,(f.dir/name).string(),Language::us,true,true});
+            logger.chat_event(static_cast<dc24h::chat::Event>(999));
+            std::vector<std::jthread> threads;
+            for (int thread=0;thread<4;++thread) {
+                threads.emplace_back([&logger] {
+                    for (int i=0;i<30;++i) { logger.chat_event(dc24h::chat::Event::private_dispatch); }
+                });
+            }
+            for (auto& thread:threads) { thread.join(); }
+            logger.connection(Event::accepted,1,false); // Independent budget.
+        }
+        const auto text=f.contents(name);
+        if (level==dc24h::logging::Level::info) {
+            require(occurrences(text,"Chat event=private_dispatch")==32,"Concurrent chat budget bypassed");
+            require(occurrences(text,"Chat log events suppressed=88")==1,"Chat suppression count missing");
+            require(occurrences(text,"event=accepted")==1,"Chat consumed connection budget");
+        } else { require(text.empty(),"Chat logging bypassed severity"); }
+    }
+    {
+        dc24h::logging::Logger logger({dc24h::logging::Level::info,(f.dir/"default.log").string()});
+        logger.chat_event(dc24h::chat::Event::rejected);
+    }
+    require(f.contents("default.log").empty(),"Chat logging not opt-in");
+    {
+        dc24h::logging::Logger logger({dc24h::logging::Level::info,(f.dir/"chat-pl.log").string(),Language::pl,false,true});
+        for (int i=0;i<33;++i) { logger.chat_event(dc24h::chat::Event::rejected); }
+        std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+        logger.chat_event(dc24h::chat::Event::public_dispatch);
+    }
+    {
+        dc24h::logging::Logger logger({dc24h::logging::Level::info,(f.dir/"failed.log").string(),Language::us,false,true});
+        fail_log_writes=true;
+        logger.chat_event(dc24h::chat::Event::private_dispatch);
+        fail_log_writes=false;
+        logger.chat_event(dc24h::chat::Event::public_dispatch);
+    }
+    require(f.contents("failed.log").find("Chat event=public_dispatch")!=std::string::npos &&
+        f.contents("failed.log").find("private_dispatch")==std::string::npos,"Log sink failure stopped subsequent events");
+    const auto pl=f.contents("chat-pl.log");
+    require(occurrences(pl,"Czat zdarzenie=rejected")==32 && occurrences(pl,"Czat zdarzenie=public_dispatch")==1 &&
+        occurrences(pl,"Pominięte zdarzenia logu czatu=1")==1,"Chat localization/window rollover differs");
+}
+
 }
 int main() {
     if (dc24h::i18n::translate("Users stopped; online=0", dc24h::i18n::Language::pl) !=
@@ -211,6 +268,7 @@ int main() {
         unicode_bounds_and_single_records();
         window_rollover_and_polish();
         concurrent_peer_budget();
+        chat_budget_levels_and_localization();
         std::cout << "Logging levels, sanitization, connection events and rate budget OK\n";
     } catch (const std::exception& error) {
         std::cerr << "FAIL: " << error.what() << '\n';

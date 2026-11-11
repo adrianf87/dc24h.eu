@@ -43,7 +43,7 @@ class NcdcLoginTest(unittest.TestCase):
                            '[security]\nmax_connections_per_ip=8\n')
             api_path, token = enable_api(ini, directory)
             options = {'ready_pattern': TLS_READY} if ENCRYPTED else {}
-            hub = Hub(self, '--config', str(ini), '--log-connections', 'on', **options)
+            hub = Hub(self, '--config', str(ini), '--log-connections', 'on', '--log-chat', 'on', **options)
             observer = Peer(self, connect_tls(self, hub, str(pathlib.Path(directory) / 'certificate.pem')) if ENCRYPTED else hub.connect())
             observer.login(b'ListObserver', 99, welcome=welcome)
             wire, replies, errors = bytearray(), bytearray(), []
@@ -244,7 +244,11 @@ class NcdcLoginTest(unittest.TestCase):
                     self.assertLess(time.monotonic(), deadline, stats)
                     time.sleep(0.01)
                 observer.peer.close()
+                self.assertGreater(stats['chat']['public_dispatches'], 0)
+                self.assertGreater(stats['chat']['private_dispatches'], 0)
                 hub.stop()
+                self.assertIn(b'Chat event=public_dispatch', hub.log)
+                self.assertIn(b'Chat event=private_dispatch', hub.log)
                 self.assertIn(b'Users stopped; online=0 peak_online=2 successful_logins=3', hub.log)
                 self.assertEqual(hub.log.count(b'event=login_ready'), 3)
                 records = re.findall(rb'Connection id=(\d+) transport=(ADC|ADCS) event=([a-z_]+)', hub.log)

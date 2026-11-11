@@ -86,7 +86,7 @@ std::string_view event_name(ConnectionEvent event) noexcept {
 Logger::Logger(i18n::Language language) : Logger(Options{Level::info, {}, language}) {}
 
 Logger::Logger(Options options)
-    : level_(options.level), language_(options.language), connections_(options.connections) {
+    : level_(options.level), language_(options.language), connections_(options.connections), chat_(options.chat) {
     if (level_ != Level::info && level_ != Level::warning && level_ != Level::error && level_ != Level::off) {
         throw std::invalid_argument("Invalid log level");
     }
@@ -112,6 +112,7 @@ Logger::~Logger() {
     try {
         const std::lock_guard lock(mutex_);
         report_suppressed_unlocked();
+        report_chat_suppressed_unlocked();
     } catch (...) { /* Best effort during shutdown too. */ }
     if (owned_) { ::close(fd_); }
 }
@@ -192,4 +193,26 @@ void Logger::connection(ConnectionEvent event, std::uint64_t id, bool secure) no
     } catch (...) { /* Peer logging must not stop the reactor. */ }
 }
 
+void Logger::report_chat_suppressed_unlocked() {
+    if (chat_suppressed_ == 0) { return; }
+    const auto count = std::exchange(chat_suppressed_, 0);
+    write_unlocked("WARN", "Chat log events suppressed=" + std::to_string(count));
+}
+void Logger::chat_event(chat::Event event) noexcept {
+    const auto index = static_cast<std::size_t>(event);
+    if (!chat_ || level_ != Level::info || index >= chat::event_names.size()) { return; }
+    try {
+        const std::lock_guard lock(mutex_);
+        const auto now = std::chrono::steady_clock::now();
+        if (!chat_window_started_ || now - chat_window_ >= std::chrono::seconds(1)) {
+            report_chat_suppressed_unlocked();
+            chat_window_ = now;
+            chat_window_started_ = true;
+            chat_emitted_ = 0;
+        }
+        if (chat_emitted_ == 32) { chat::add_saturating(chat_suppressed_); return; }
+        ++chat_emitted_;
+        write_unlocked("INFO", "Chat event=" + std::string(chat::event_names[index]));
+    } catch (...) { /* Best effort; accounting and dispatch never depend on I/O. */ }
+}
 } // namespace dc24h::logging

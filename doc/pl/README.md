@@ -1,8 +1,9 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.4.10: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.4.11: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
 - [AUDIT_ALPHA_0.1.md](AUDIT_ALPHA_0.1.md)
+- [Chat Logging — alpha-0.4.11](CHAT_LOGGING.md)
 - [Chat Configuration — alpha-0.4.10](CHAT_CONFIGURATION.md)
 - [Anti-Flood — alpha-0.4.9](ANTI_FLOOD.md)
 - [Chat Validation — alpha-0.4.8](CHAT_VALIDATION.md)

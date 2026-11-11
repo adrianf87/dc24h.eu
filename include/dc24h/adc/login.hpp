@@ -10,6 +10,7 @@
 #include "dc24h/adc/message_routing.hpp"
 #include "dc24h/adc/hub_messages.hpp"
 #include "dc24h/chat/anti_flood.hpp"
+#include "dc24h/chat/statistics.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -62,6 +63,7 @@ public:
     [[nodiscard]] const users::Session& session_model(Id id) const;
     [[nodiscard]] std::optional<users::Snapshot> snapshot(Id id) const;
     [[nodiscard]] const users::SessionManager& sessions() const noexcept { return sessions_; }
+    [[nodiscard]] chat::Statistics chat_statistics() const noexcept { return chat_statistics_; }
     [[nodiscard]] bool closing(Id id) const;
     [[nodiscard]] bool must_close(Id id) const;
     [[nodiscard]] bool overloaded(Id id) const;
@@ -85,7 +87,7 @@ private:
                 std::string_view description = {}, users::CloseCause cause = users::CloseCause::protocol_rejected,
                 users::TimePoint now = users::Clock::now());
     void route_status(Id id, const Message& message);
-    void route_chat(Id id, const Message& message);
+    void route_chat(Id id, const Message& message, chat::Attempt& attempt);
     void relay(Id except, const Message& message);
     void announce_departure(const Departure& departure);
     LoginLimits limits_;
@@ -101,5 +103,6 @@ private:
     UserDisconnect user_disconnect_;
     std::unordered_map<Id, std::unique_ptr<Peer>> peers_;
     std::size_t queued_{0};
+    chat::Statistics chat_statistics_{};
 };
 } // namespace dc24h::adc

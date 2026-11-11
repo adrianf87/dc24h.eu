@@ -1,5 +1,16 @@
 # Changelog
 
+## alpha-0.4.11 — 2026-11-11
+
+Chat Logging increment, based directly on main `2ad82a2beeb5b8b0963b8908657971c4d011e6dc` after the alpha-0.4.10 merge:
+
+- Added no-allocation reactor-owned chat telemetry with one saturating outcome per decoded client B/D/E MSG attempt after closing checks: public/private dispatch, rejection, Anti-Flood refusal (including silent refusals) or internal failure. Successful dispatch reports separately sum recipient queue acceptances, unavailable lifetimes and refusals. Accounted attempts do not imply transport delivery; system IMSG, raw parser failures and pre-hub transport denials are outside this scope.
+- Added opt-in `[logging] chat=on|off` and `--log-chat on|off`, with CLI precedence, default off and INFO severity. Fixed event tokens carry no content, greeting, user/session/recipient identifiers or credentials. Each Logger has an independent synchronized 32/s steady-clock budget and saturating suppression summary at rollover/shutdown. Allocation/write failure remains best effort; existing file protections and connection-log budget are preserved.
+- Published nine aggregate atomic counters in authenticated `/api/v1/status.chat`, preserving owner-thread model isolation and final publication. Added strict WebAdmin validation/allowlisting/export and US/PL overview metrics. Server and WebAdmin must be upgraded together; client validation requires the new fields. Independent atomic fields are not a transactional snapshot.
+- Added chat.logging unit/process suites covering exact routing/self totals, rejected policy/source/target, silent flooding, no-allocation/saturation, failed preparation, refused queues, mixed ADC/ADCS private isolation and log/API privacy. Extended logger tests for severity/opt-in, invalid events, concurrency, independent budgets, PL, rollover/destruction and failed writes. Actual ncdc ADC/ADCS verifies chat logs/statistics and retains body-omission checks. Configuration and WebAdmin contract/browser fixtures cover the new settings/fields.
+- Updated runtime metadata to alpha-0.4.11, shipped configuration, US/PL catalogs/help and mirrored documentation/navigation. No protocol response, chat history, database migration, new dependency, log rotation, live configuration editing or system-message accounting is introduced.
+- Validation: all 90/90 CTest suites verified locally in Debug, Release and ASan/UBSan with required integration tools and default leak detection, including ncdc ADC/ADCS, MariaDB and Apache HTTPS. An initial metadata failure from outdated README introduction versions passed after the documentation update in all three builds; final logger tests also passed after write-failure instrumentation. No compiler warnings. WebAdmin typecheck/production build, 4 Node tests, 3 Chromium tests and real C++ API integration passed. Shipped INI, US/PL help, metadata, UTF-8, local documentation links and whitespace checks passed. Remote CI, full OS/client coverage and production load remain unverified.
+
 ## alpha-0.4.10 — 2026-11-11
 
 Chat Configuration increment, based directly on main `6d61edfdd2057a77f8c4722a1495cfa37bea7b19` after the alpha-0.4.9 Anti-Flood merge:

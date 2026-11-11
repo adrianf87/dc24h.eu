@@ -3,7 +3,9 @@
 #include <string_view>
 
 namespace dc24h::i18n::us {
-inline constexpr std::array<std::string_view, 125> messages{{
+inline constexpr std::array<std::string_view, 127> messages{{
+    "Chat event=",
+    "Chat log events suppressed=",
     "Invalid chat policy",
     "Invalid chat welcome message",
     "Invalid chat anti-flood limits",
@@ -136,7 +138,7 @@ inline constexpr std::string_view help = R"HELP(Usage: dc24h [--config FILE] [--
              [--tls-cert CHAIN.pem --tls-key KEY.pem]
              [--max-connections N] [--max-sessions N] [--max-users N] [--idle-timeout SECONDS]
              [--log-level info|warning|error|off] [--log-file PATH|-] [--language us|pl]
-             [--log-connections on|off]
+             [--log-connections on|off] [--log-chat on|off]
              [--max-per-ip N] [--accepts-per-minute N]
              [--frames-per-second N] [--max-invalid-frames N]
              [--tls-handshake-timeout SECONDS] [--partial-frame-timeout SECONDS]

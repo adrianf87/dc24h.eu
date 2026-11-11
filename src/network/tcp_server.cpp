@@ -232,11 +232,13 @@ void TcpServer::request_stop() noexcept {
 }
 
 Statistics TcpServer::statistics() const noexcept {
-    return {active_.load(), accepted_.load(), rejected_.load(), received_bytes_.load(),
+    Statistics result{active_.load(), accepted_.load(), rejected_.load(), received_bytes_.load(),
             adc_frames_.load(), adc_unknown_.load(), adc_invalid_.load(), adc_keepalives_.load(),
             adcs_handshakes_.load(), adcs_incomplete_.load(),
             security_rejected_.load(), security_closed_.load(), closed_.load(), sent_bytes_.load(),
             peak_connections_.load(), online_users_.load(), peak_online_users_.load(), successful_logins_.load()};
+    for (std::size_t i = 0; i < chat_statistics_.size(); ++i) { result.chat.values[i] = chat_statistics_[i].load(); }
+    return result;
 }
 
 void TcpServer::run() {
@@ -306,6 +308,8 @@ void TcpServer::run() {
         online_users_.store(value.online());
         peak_online_users_.store(value.peak_online);
         successful_logins_.store(value.successful_logins);
+        const auto chat = login.chat_statistics();
+        for (std::size_t i = 0; i < chat_statistics_.size(); ++i) { chat_statistics_[i].store(chat.values[i]); }
     };
     // Publish the final committed model totals before LoginHub destruction,
     // including an exceptional reactor exit. Never expose models to API threads.
@@ -580,7 +584,14 @@ void TcpServer::run() {
                         connection.security_violation = connection.identity_violation = true;
                         return; // No INF validation/Tiger work on a denied attempt.
                     }
+                    const auto before_chat = login.chat_statistics();
                     login.receive(token, *message);
+                    const auto after_chat = login.chat_statistics();
+                    for (std::size_t i = 0; i < chat::event_names.size(); ++i) {
+                        if (before_chat.values[i+1] != after_chat.values[i+1]) {
+                            logger_.chat_event(static_cast<chat::Event>(i));
+                        }
+                    }
                 } else if (std::holds_alternative<adc::KeepAlive>(result)) {
                     adc_keepalives_.fetch_add(1);
                 } else {

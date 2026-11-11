@@ -1,6 +1,10 @@
 # Testowanie
 
-**Bieżący etap — alpha-0.4.10:** [Chat Configuration](CHAT_CONFIGURATION.md) grupuje startowe ustawienia czatu i dodaje limit odkodowanego tekstu, niezależne przełączniki publicznego/prywatnego/akcji i opcjonalne własne powitanie. Domyślne wartości zachowują działanie; odwracalne odmowy nie omijają walidacji ani Anti-Flood.
+Weryfikacja lokalna z 2026-11-11: wszystkie **90/90 zestawów CTest** przeszły w Debug, Release i ASan/UBSan z wymaganymi narzędziami integracyjnymi i domyślnym wykrywaniem wycieków, w tym rzeczywisty ncdc ADC/ADCS, tymczasowa MariaDB i Apache HTTPS. Początkowa kontrola metadanych wykryła stare wersje we wstępach README; po aktualizacji dokumentacji przeszła we wszystkich trzech konfiguracjach. Kompilacje nie emitowały ostrzeżeń kompilatora. Przeszły typecheck/budowanie produkcyjne WebAdmin, 4 testy Node, 3 testy Chromium (także dwujęzyczne metryki czatu) i integracja z rzeczywistym API C++. Sprawdzono przykładowy INI, pomoc US/PL, metadane, UTF-8 i lokalne linki dokumentacji. Są to wyniki lokalne; nie potwierdzają zdalnego CI, pełnej macierzy systemów/klientów ani gwarancji obciążenia produkcyjnego.
+
+**Bieżący etap — alpha-0.4.11:** [Chat Logging](CHAT_LOGGING.md) dodaje opcjonalne logi wyników bez treści, z limitem tempa, oraz nasycane liczniki klienckiego B/D/E MSG w uwierzytelnionym API i WebAdmin US/PL. Przyjęcie do kolejki jest odróżnione od dostarczenia przez transport.
+
+**Etap dostarczony w alpha-0.4.10:** [Chat Configuration](CHAT_CONFIGURATION.md) grupuje startowe ustawienia czatu i dodaje limit odkodowanego tekstu, niezależne przełączniki publicznego/prywatnego/akcji i opcjonalne własne powitanie. Domyślne wartości zachowują działanie; odwracalne odmowy nie omijają walidacji ani Anti-Flood.
 
 **Etap dostarczony w alpha-0.4.9:** [Anti-Flood](ANTI_FLOOD.md) dodaje włączone budżety liczby i odkodowanych bajtów B/D/E dla połączenia, konfigurowane w `[chat]`. Nadmiarowe wiadomości są odrzucane przed rozsyłaniem z ograniczoną odwracalną diagnostyką; walidacja i ogólne limity pozostają.
 

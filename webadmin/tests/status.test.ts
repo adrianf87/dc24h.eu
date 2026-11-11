@@ -10,6 +10,7 @@ test("accepts the C++ status contract and strips unrecognized fields", () => {
       server: { ...snapshot.server, private_path: "never-forward" },
       users: { ...snapshot.users, cid: "never-forward" },
       network: { ...snapshot.network, peer_ip: "never-forward" },
+      chat: { ...snapshot.chat, text: "never-forward", sid: "never-forward" },
     }),
     snapshot,
   );
@@ -43,7 +44,7 @@ test("rejects incompatible schema, absent counters and imprecise or unsafe numbe
 });
 
 test("validates every new statistics counter without fabricating absent values", () => {
-  for (const group of ["network", "users"] as const) {
+  for (const group of ["network", "users", "chat"] as const) {
     for (const field of Object.keys(snapshot[group])) {
       for (const value of [-1, 1.5, Number.MAX_SAFE_INTEGER + 1, undefined, "0"]) {
         assert.throws(() => parseSnapshot({
