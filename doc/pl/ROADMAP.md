@@ -1,6 +1,8 @@
 # Plan rozwoju
 
-**Bieżący etap — alpha-0.4.12:** [Statystyki czatu WebAdmin](WEBADMIN_CHAT.md) dodają osobny widok Czat z dziewięcioma licznikami zbiorczymi, sekcjami wiadomości/kolejek, opisami US/PL, odświeżaniem, obsługą błędów/restartu i bezpiecznym eksportem.
+**Bieżący etap — alpha-0.5.1:** [Search Core](SEARCH_CORE.md) dodaje niezależną bibliotekę C++20 dla ograniczonych, niezmiennych zapytań tekstowych, wyboru gotowych sesji/funkcji oraz dispatch związanego z czasem życia i domeną silnika. Parser, serializacja i podłączenie SCH/RES do transportu pozostają kolejnymi etapami; działający serwer nadal zwraca jawną odmowę nieobsługiwanej komendy.
+
+**Etap dostarczony w alpha-0.4.12:** [Statystyki czatu WebAdmin](WEBADMIN_CHAT.md) dodają osobny widok Czat z dziewięcioma licznikami zbiorczymi, sekcjami wiadomości/kolejek, opisami US/PL, odświeżaniem, obsługą błędów/restartu i bezpiecznym eksportem.
 
 **Etap dostarczony w alpha-0.4.11:** [Chat Logging](CHAT_LOGGING.md) dodaje opcjonalne logi wyników bez treści, z limitem tempa, oraz nasycane liczniki klienckiego B/D/E MSG w uwierzytelnionym API i WebAdmin US/PL. Przyjęcie do kolejki jest odróżnione od dostarczenia przez transport.
 
@@ -91,6 +93,7 @@
 | alpha-0.4.10 Chat Configuration | Zgrupowane INI, polityka klienta i własne powitanie bez zmiany gotowości |
 | alpha-0.4.11 Chat Logging | Ograniczone logi wyników bez treści i liczniki zbiorcze API/WebAdmin |
 | alpha-0.4.12 WebAdmin | Osobny widok wszystkich zbiorczych statystyk czatu tylko do odczytu |
+| alpha-0.5.1 Search Core | Sprawdzany model zapytania tekstowego i biblioteka dispatch gotowych sesji; sieciowe SCH/RES są planowane |
 
 ## Historyczny plan odbioru przed alpha-0.2.8
 

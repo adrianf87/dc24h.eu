@@ -1,5 +1,16 @@
 # Changelog
 
+## alpha-0.5.1 — 2026-11-11
+
+Search Core increment, based directly on main `c6b34ea849ef808a0bfee4a27e0c8ae38cff4a6b` after the alpha-0.4.12 merge:
+
+- Added independent C++20 dc24h_search library with checked owning textual QueryData/Query, typed failures and explicit application count/UTF-8/NFC/aggregate-byte/token/type/size bounds. Criteria remain literal and unchanged; empty positive criteria are unsupported. No file index, local file matcher, ADC codec or live SCH/RES handler is implied.
+- Added reactor-owned Core preparation with ready sender/source ownership, validated required/excluded feature selection, ordered multipage ready-lifetime snapshots and immutable domain-bound plans. Later joins and reused SIDs cannot replace recipients; foreign or reused-address Core instances cannot dispatch retained plans.
+- Added allocation-free dispatch after sink setup, sender/recipient/feature rechecks, independent queue refusal accounting and cancellation of remaining recipients when sender closes mid-dispatch. Trusted sinks own queues and fault isolation; exceptions propagate after possible partial acceptance without retry. Preparation failure leaves registry/queues unchanged.
+- Added search.core unit coverage for bounds/Unicode/size conflicts, immutable ownership, state/source precedence, feature updates, multipage/empty plans, SID/domain/address reuse, cancellation and allocation failures. New mixed ADC/ADCS process tests preserve the production unsupported SCH/RES boundary, source/state priority, chat availability and query/token privacy. Actual ncdc ADC/ADCS now submits a search and verifies the current unsupported response.
+- Updated server/WebAdmin runtime metadata, version fixtures and mirrored US/PL Search Core, protocol, architecture, build, testing, security, API, version and roadmap documentation. Search parsing/serialization, result correlation/routing, hash searches, quotas, live integration and administration remain later increments.
+- Validation: all 92/92 CTest suites passed locally in Debug, Release and ASan/UBSan with required integration tools and default leak detection, including actual ncdc ADC/ADCS search refusal, MariaDB and Apache HTTPS. The ncdc harness was corrected to synchronize encrypted proxy traffic through the API and return from the search-results list with Alt+2. Builds emitted no compiler warnings. WebAdmin production build/typecheck, 4 Node tests, 6 Chromium tests and real C++ API integration passed. Metadata, UTF-8, local documentation links, shipped INI and whitespace checks passed. Remote CI, the full OS/client matrix and production load remain unverified.
+
 ## alpha-0.4.12 — 2026-11-11
 
 WebAdmin chat statistics increment, based directly on main `be34e21e3ebad17b3f75cd5277a3dd6023c043d2` after the alpha-0.4.11 merge:

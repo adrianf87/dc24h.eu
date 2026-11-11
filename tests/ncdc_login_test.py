@@ -224,6 +224,25 @@ class NcdcLoginTest(unittest.TestCase):
                     self.assertNotEqual(initial[0].split()[1], initial[1].split()[1], 'Reconnect reused its ADC SID')
                     cids = [re.search(rb'(?:^| )ID([A-Z2-7]+)(?: |$)', line)[1] for line in initial]
                     self.assertEqual(cids[0], cids[1], 'Reconnect changed its public CID')
+                # The first Search Core release has no live SCH adapter.
+                # TLS proxy captures are encrypted, so synchronize with the
+                # private API and assert the refusal in ncdc's hub window.
+                before_search = fetch_status(api_path, token)['network']['adc_frames']
+                os.write(master, b'/search -hub SearchCoreSecret\r')
+                deadline = time.monotonic() + 3
+                while fetch_status(api_path, token)['network']['adc_frames'] <= before_search:
+                    self.assertLess(time.monotonic(), deadline, 'ncdc did not submit its search')
+                    if select.select([master], [], [], 0.05)[0]:
+                        screen.extend(os.read(master, 65536))
+                wait_screen(b'SearchCoreSecret')
+                # Search results use list key bindings, not the chat input.
+                os.write(master, b'\x1b2')  # Alt+2 selects the hub tab.
+                wait_screen(b'Command not implemented')
+                if ENCRYPTED:
+                    self.assertNotIn(b'SearchCoreSecret', wire)
+                else:
+                    self.assertRegex(bytes(wire), rb'[BF]SCH ' + replacement_sid + rb' [^\n]*ANSearchCoreSecret')
+                    self.assertRegex(bytes(replies), rb'ISTA 125 Command\\snot\\simplemented FC[BF]SCH\n')
                 os.write(master, b'/quit\r')
                 deadline = time.monotonic() + 4
                 while process.poll() is None and time.monotonic() < deadline:
@@ -269,6 +288,7 @@ class NcdcLoginTest(unittest.TestCase):
                 self.assertNotIn(b'dc24hPrivateProbe', hub.log)
                 self.assertNotIn(b'dc24hPrivateReply', hub.log)
                 self.assertNotIn(b'dc24hPrivateAction', hub.log)
+                self.assertNotIn(b'SearchCoreSecret', hub.log)
                 self.assertNotIn(b'dc24hIncomingChat', hub.log)
                 self.assertNotIn(b'dc24hPublic', hub.log)
                 self.assertNotIn(b'dc24hValidated', hub.log)
