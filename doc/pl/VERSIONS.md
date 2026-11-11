@@ -1,6 +1,8 @@
 # Wersjonowanie
 
-**Bieżący etap — alpha-0.4.8:** [Chat Validation](CHAT_VALIDATION.md) centralizuje sprawdzanie tekstu, SID i gotowości/własności nadawcy w obu adapterach. Wybór życia odbiorcy i ponowna kontrola dispatch pozostają obowiązkowe; systemowe IMSG jest oddzielone.
+**Bieżący etap — alpha-0.4.9:** [Anti-Flood](ANTI_FLOOD.md) dodaje włączone budżety liczby i odkodowanych bajtów B/D/E dla połączenia, konfigurowane w `[chat]`. Nadmiarowe wiadomości są odrzucane przed rozsyłaniem z ograniczoną odwracalną diagnostyką; walidacja i ogólne limity pozostają.
+
+**Etap dostarczony w alpha-0.4.8:** [Chat Validation](CHAT_VALIDATION.md) centralizuje sprawdzanie tekstu, SID i gotowości/własności nadawcy w obu adapterach. Wybór życia odbiorcy i ponowna kontrola dispatch pozostają obowiązkowe; systemowe IMSG jest oddzielone.
 
 **Etap dostarczony w alpha-0.4.7:** [Hub Messages](HUB_MESSAGES.md) dodaje zaufane systemowe IMSG powiązane z życiem sesji i stałe powitanie po własnym BINF. Klient nie może nadawać komunikatów systemowych; zachowano limity kolejek i gotowość przy końcowym LF.
 
@@ -72,6 +74,7 @@
 | alpha-0.4.6 | alpha-0.4.6 | Message Flags: wspólny kodek PM/ME i kanoniczna projekcja czatu |
 | alpha-0.4.7 | alpha-0.4.7 | Hub Messages: zaufane IMSG, gotowi odbiorcy i uporządkowane powitanie gościa |
 | alpha-0.4.8 | alpha-0.4.8 | Chat Validation: wspólna kontrola tekstu/SID/sesji i bezpośrednich adapterów |
+| alpha-0.4.9 | alpha-0.4.9 | Anti-Flood: budżety liczby/bajtów czatu połączenia, INI i ograniczona diagnostyka |
 
 Dokładną kompilację identyfikuje wersja wraz z SHA commita. Budowanie nie zmienia plików źródłowych. Istotne zmiany trafiają do CHANGELOG.md. Alpha oznacza rozwój, nie pełną funkcjonalność huba. Tagi i wdrożenie nie powstają automatycznie.
 

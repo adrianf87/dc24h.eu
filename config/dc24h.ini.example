@@ -1,4 +1,4 @@
-# dc24h.eu alpha-0.4.4 configuration (UTF-8, no secrets committed)
+# dc24h.eu alpha-0.4.9 configuration (UTF-8, no secrets committed)
 # Section names and keys are case-sensitive; duplicate singular keys are errors.
 [general]
 language = us
@@ -17,6 +17,14 @@ idle_timeout = 120
 max_sessions = 65535
 # Identified/welcome-pending, ready and closing users count until cleanup.
 max_users = 65535
+
+[chat]
+# Per connection lifetime, shared by public/private messages and ME actions.
+# Burst credits refill continuously; bytes count decoded message text, not fanout.
+max_messages_per_second = 5
+message_burst = 10
+max_bytes_per_second = 32768
+byte_burst = 131072
 
 [security]
 max_connections_per_ip = 128

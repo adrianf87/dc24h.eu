@@ -9,6 +9,7 @@
 #include "dc24h/chat/core.hpp"
 #include "dc24h/adc/message_routing.hpp"
 #include "dc24h/adc/hub_messages.hpp"
+#include "dc24h/chat/anti_flood.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -20,6 +21,9 @@ struct LoginLimits {
     std::size_t output_per_client{256 * 1024};
     std::size_t output_total{16 * 1024 * 1024};
     users::Limits users{};
+    // Transport policy: Network always supplies its validated chat limits.
+    // Trusted in-process callers may omit them, as with IP/frame admission.
+    std::optional<chat::FloodLimits> anti_flood{};
 };
 enum class CloseReason { login_timeout, idle_timeout, partial_frame_timeout, security_quota, negotiation_limit, identity_limit };
 
@@ -36,7 +40,7 @@ public:
     void connect(Id id, std::string_view numeric_peer, users::Transport transport = users::Transport::adc,
                  users::TimePoint accepted = users::Clock::now());
     void transport_ready(Id id, users::TimePoint now = users::Clock::now());
-    void receive(Id id, const Message& message);
+    void receive(Id id, const Message& message, chat::FloodClock::time_point chat_now = chat::FloodClock::now());
     [[nodiscard]] bool needs_identity_check(Id id, const Message& message) const;
     // Sanitized terminal notification; idempotent and bounded by existing output
     // caps. Assigned clients receive ISTA then a final own IQUI. No clocks here.

@@ -1,5 +1,7 @@
 # Configuration — alpha-0.1.11
 
+**Current increment — alpha-0.4.9:** [Anti-Flood](ANTI_FLOOD.md) adds enabled per-connection B/D/E message and decoded-byte buckets, configurable in `[chat]`. Excess messages are dropped before fanout with bounded recoverable notices; existing validation and general resource limits remain.
+
 **Increment delivered in alpha-0.3.12:** [Limits](LIMITS.md) adds configurable session/user ceilings shared by ADC/ADCS, bounded by the connection cap. SessionManager checks capacity transactionally; LoginHub rejects a full user registry before welcome/list preparation with ISTA 211 and own IQUI. Closing reservations count until cleanup. Earlier descriptions retain their historical scope.
 
 **Increment delivered in alpha-0.2.10:** [Negotiation security](NEGOTIATION_SECURITY.md) adds pending admission caps, cumulative pre-readiness input budgets and shared pre-INF/Tiger attempt limits. Earlier release descriptions below retain their original scope.
@@ -111,3 +113,15 @@ INI `[security] close_timeout=2` accepts 1–3600 seconds. It is the absolute te
 ## Session and user capacity — alpha-0.3.12
 
 INI `[users] max_sessions` and `max_users` accept 1..65535, defaulting to 65535. CLI `--max-sessions N` and `--max-users N` override them. Effective sessions = min(max_connections, max_sessions); effective users = min(effective sessions, max_users). Larger ceilings are valid and do not raise smaller caps; zero never disables a cap. Every retained model counts as a session, including anonymous TLS. Registered users count from identification through closing/closed until removal, including pending welcome. A full session/connection cap closes the excess socket before TLS allocation; a full user cap sends bounded ISTA 211 → own IQUI before any welcome/user list. Startup logs report effective limits. See [Limits](LIMITS.md) for accounting, typed gates and tests.
+
+## Chat Anti-Flood — alpha-0.4.9
+
+The actual Network enables these per-connection limits for BMSG, DMSG and EMSG. Rates use continuous token refill; count and decoded-text-byte credits are debited together. Unknown/duplicate keys, zero and out-of-range values fail validation. There is no disable setting or new CLI flag. See [Anti-Flood](ANTI_FLOOD.md) for ranges, scope, recoverable ISTA 100, notice suppression and reconnect semantics.
+
+```ini
+[chat]
+max_messages_per_second = 5
+message_burst = 10
+max_bytes_per_second = 32768
+byte_burst = 131072
+```

@@ -1,5 +1,7 @@
 # Chat Validation — alpha-0.4.8
 
+**Current increment — alpha-0.4.9:** [Anti-Flood](ANTI_FLOOD.md) adds enabled per-connection B/D/E message and decoded-byte buckets, configurable in `[chat]`. Excess messages are dropped before fanout with bounded recoverable notices; existing validation and general resource limits remain.
+
 Based directly on main `b20cc83fa46a48642e6939a8ceb11a354339a4dd`, after the Hub Messages merge. Earlier branches/history remain intact. Code and protocol text use EN/US UTF-8; operator help and documentation also support Polish.
 
 ## Shared admission gate

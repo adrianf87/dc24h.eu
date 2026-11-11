@@ -3,7 +3,8 @@
 #include <string_view>
 
 namespace dc24h::i18n::pl {
-inline constexpr std::array<std::string_view, 122> messages{{
+inline constexpr std::array<std::string_view, 123> messages{{
+    "Niepoprawne limity anti-flood czatu",
     "Użytkownicy zakończeni; online=",
     "Uruchamianie dc24h.eu ",
     "Core działa",
@@ -153,6 +154,8 @@ Działa logowanie gości ADC, publiczna lista oraz czat publiczny i prywatny.
 Flagi MSG: PM określa SID odpowiedzi prywatnej; ME1 oznacza akcję w trzeciej osobie.
 Hub wysyła systemowe powitanie IMSG po własnym INF klienta; klienci nie mogą nadawać IMSG.
 Czat klientów sprawdza tekst UTF-8/NFC, własność SID źródła i gotowość sesji.
+Anti-flood [chat]: 5 wiadomości/s (seria 10), 32768 bajtów tekstu/s (seria 131072).
+Nadmiarowe B/D/E są odrzucane; odwracalny komunikat pojawia się najwyżej raz na sekundę.
 Czat grupowy, wyszukiwanie i transfery są planowane.
 Ustawienia bazy w sekcji INI [database]; domyślnie wyłączona.
 --check-database sprawdza połączenie; --migrate-database jawnie stosuje migracje metadanych.

@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.4.8 (Chat Validation).**
+**Current development version: alpha-0.4.9 (Anti-Flood).**
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.4.9 Anti-Flood**: enabled per-connection message/decoded-byte buckets for BMSG/DMSG/EMSG with configurable `[chat]` rates/bursts. Denied traffic has no fanout or echo; bounded recoverable notices permit later recovery. See [Anti-Flood](doc/us/ANTI_FLOOD.md).
 
 - **alpha-0.4.8 Chat Validation**: shared text/SID/session validation for direct public/private adapter calls and routing. Ready sender ownership, bounded UTF-8/NFC text and complete message checks precede delivery plans; recipient and dispatch lifetime checks remain. See [Chat Validation](doc/us/CHAT_VALIDATION.md).
 

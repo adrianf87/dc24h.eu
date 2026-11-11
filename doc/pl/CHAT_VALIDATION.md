@@ -1,5 +1,7 @@
 # Chat Validation — alpha-0.4.8
 
+**Bieżący etap — alpha-0.4.9:** [Anti-Flood](ANTI_FLOOD.md) dodaje włączone budżety liczby i odkodowanych bajtów B/D/E dla połączenia, konfigurowane w `[chat]`. Nadmiarowe wiadomości są odrzucane przed rozsyłaniem z ograniczoną odwracalną diagnostyką; walidacja i ogólne limity pozostają.
+
 Etap bazuje bezpośrednio na main `b20cc83fa46a48642e6939a8ceb11a354339a4dd`, po scaleniu Hub Messages. Wcześniejsze gałęzie/historia są zachowane. Kod i teksty protokołu używają EN/US UTF-8; pomoc operatora i dokumentacja obsługują też polski.
 
 ## Wspólna kontrola przyjęcia
