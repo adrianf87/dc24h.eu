@@ -1,6 +1,8 @@
 # Testowanie
 
-**Bieżący etap — alpha-0.4.5:** [Message Routing](MESSAGE_ROUTING.md) centralizuje wybór zakresu MSG i dostarczanie do ograniczonych kolejek. Plany są powiązane z domeną macierzystego Chat Core i ID życia sesji; prywatne wiadomości nigdy nie trafiają zastępczo na czat publiczny.
+**Bieżący etap — alpha-0.4.6:** [Message Flags](MESSAGE_FLAGS.md) centralizuje dekodowanie PM/ME i kanoniczne wyjście kodeka oraz obu adapterów czatu. Brak ME, ME0 i ME1 pozostają rozróżniane; PM nie nadaje uprawnień do dostarczania.
+
+**Etap dostarczony w alpha-0.4.5:** [Message Routing](MESSAGE_ROUTING.md) centralizuje wybór zakresu MSG i dostarczanie do ograniczonych kolejek. Plany są powiązane z domeną macierzystego Chat Core i ID życia sesji; prywatne wiadomości nigdy nie trafiają zastępczo na czat publiczny.
 
 **Etap dostarczony w alpha-0.4.4:** [Private Chat](PRIVATE_CHAT.md) dodaje DMSG tylko do celu i EMSG do celu oraz nadawcy, pojedyncze wiadomości do siebie, powiązanie celu z ID życia i kontrolę PM. Czat publiczny pozostaje oddzielony; grupy/historia/moderacja to kolejne etapy.
 
@@ -267,3 +269,5 @@ Lokalna weryfikacja alpha-0.4.3: 74/74 zestawów CTest w Debug, Release i ASan/U
 Lokalna weryfikacja alpha-0.4.4: 76/76 zestawów CTest w Debug, Release i ASan/UBSan, w tym Private Chat unit/proces, prywatne rozmowy ncdc ADC/ADCS, regresje publiczne, MariaDB i Apache HTTPS. Przeszły budowanie WebAdmin, 4 testy Node, 3 testy Chromium i integracja API C++. Bez ostrzeżeń kompilatora. Wyniki lokalne nie oznaczają zdalnego CI, wszystkich systemów/klientów ani obciążenia produkcyjnego.
 
 Weryfikacja lokalna alpha-0.4.5 (2026-11-11): wszystkie 78/78 zestawów CTest przeszło w Debug, Release i ASan/UBSan bez wyłączania wykrywania wycieków, w tym Message Routing oraz rzeczywisty ncdc ADC/ADCS z czatem publicznym/prywatnym, akcjami i reconnect. Przeszły również tymczasowa MariaDB, Apache HTTPS, kompilacja produkcyjna WebAdmin, 4 testy Node, 3 testy Chromium oraz integracja z rzeczywistym API C++. Zakres i polecenia odtworzenia opisuje [Message Routing](MESSAGE_ROUTING.md). Zdalne CI, pełna macierz systemów/klientów i obciążenie produkcyjne pozostają osobnymi zadaniami.
+
+alpha-0.4.6: Weryfikacja lokalna z 2026-11-11: **80/80 zestawów CTest przeszło w Debug, Release i ASan/UBSan**, w tym rzeczywisty ncdc ADC/ADCS. Nie wyłączano wykrywania wycieków; kompilacje nie emitowały ostrzeżeń kompilatora. Przeszły kompilacja produkcyjna/typecheck WebAdmin, 4 testy Node, 3 testy Chromium i integracja z rzeczywistym API C++. Sprawdzono metadane, UTF-8, zgodność plików językowych, lokalne odnośniki, składnię Pythona, pomoc US/PL i białe znaki Git. Są to wyniki lokalne; nie potwierdzają zdalnego CI, pełnej macierzy systemów/klientów ani obciążenia produkcyjnego.

@@ -143,6 +143,14 @@ class NcdcLoginTest(unittest.TestCase):
                 private_reply = b'EMSG '+observer.sid+b' '+initial_sid+b' dc24hPrivateReply PM'+observer.sid
                 observer.send(private_reply);self.assertEqual(observer.line(), private_reply)
                 wait_screen(b'dc24hPrivateReply')
+                # PM routes the reply tab; explicit ME0 remains a plain message,
+                # while ME01 is canonicalized to an action with the same origin.
+                for flag, canonical, marker in ((b'ME-0', b'ME0', b'dc24hPrivatePlainFlag'),
+                                                (b'ME01', b'ME1', b'dc24hPrivateActionFlag')):
+                    reply = b'EMSG '+observer.sid+b' '+initial_sid+b' '+marker
+                    observer.send(reply+b' '+flag+b' PM'+observer.sid)
+                    self.assertEqual(observer.line(), reply+b' PM'+observer.sid+b' '+canonical)
+                    wait_screen(marker)
                 os.write(master, b'/me dc24hPrivateAction\r')
                 self.assertEqual(observer.line(), b'EMSG '+initial_sid+b' '+observer.sid+b' dc24hPrivateAction PM'+initial_sid+b' ME1')
                 os.write(master, b'/open dc24h_login\r')

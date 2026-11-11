@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.4.5 (Message Routing).**
+**Current development version: alpha-0.4.6 (Message Flags).**
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.4.6 Message Flags**: shared typed PM/ME decoding and canonical parameter construction across the codec and public/private chat. Distinct absent/ME0/ME1 values, duplicate rejection and private-reply SID policy are covered by dedicated tests. See [Message Flags](doc/us/MESSAGE_FLAGS.md).
 
 - **alpha-0.4.5 Message Routing**: central MSG scope selection and queue delivery, engine-bound plans and live session checks. Private/group/unsupported scopes cannot become public messages. See [Message Routing](doc/us/MESSAGE_ROUTING.md).
 

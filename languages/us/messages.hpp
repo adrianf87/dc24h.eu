@@ -150,6 +150,7 @@ Run dc24h.eu in the foreground; stop with SIGINT (Ctrl+C) or SIGTERM.
 Security defaults: 128 peers/IP, 256 admissions/IP/minute, 1024 frames/s/peer,
 512 invalid frames/peer, 10 seconds for TLS and each unfinished frame.
 ADC guest login, public presence, public and private chat are implemented.
+MSG flags: PM selects the private reply SID; ME1 marks a third-person action.
 Group chat, search and transfers remain planned.
 Database settings use [database] in INI; disabled by default.
 --check-database connects/pings; --migrate-database explicitly applies metadata migrations.

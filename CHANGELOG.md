@@ -1,5 +1,18 @@
 # Changelog
 
+## alpha-0.4.6 — 2026-11-11
+
+Message Flags increment, based directly on main `1e83114eb613dc59b10c6956025f14e5467f24a8` after the alpha-0.4.5 Message Routing merge:
+
+- Extracted shared adc::MsgFlags, allocation-free parse_msg_flags and owning make_msg_parameters into adc/msg_flags.hpp and msg_flags.cpp. The MSG codec, local builder and public/private output projections share the same PM/ME implementation. Existing MsgView/MsgOptions fields remain available; MsgView::flags returns owned values. Component helpers do not authorize routing or replace full-frame validation.
+- Preserved absent/ME0/ME1 distinctions, decimal zero/one spellings, checked PM SIDs and duplicate rejection. Raw codec round trips preserve valid field order/spellings and unknown extensions; local/routed output includes only canonical known fields in PM-then-ME order. Flags cannot be inherited from previous messages, interpret positional text or add recipients. PM-marked public messages and unsupported groups retain recoverable 125; malformed known flags retain fatal 240, state/source gates and bounded own-QUI cleanup.
+- Added adc.msg.flags for typed values/ownership, no-allocation parsing, duplicate/error and field bounds, opaque/positional text, full-codec UTF-8/NFC checks, exact plain/escaped wire limits and B/D/E PM/ME recipient/projection combinations. Added adc.msg.flags.process for both source transports, interleaved fields/canonical output, absent/zero/action combinations, ordered recipient privacy fences, unsupported PM and isolated fatal cleanup, log/API privacy. Existing preparation/queue allocation campaigns and routing/domain/transport regressions remain enabled.
+- Extended real ncdc ADC/ADCS to receive explicit plain/action private messages (ME-0/ME01 canonicalized to ME0/ME1), retain the PM reply tab and send a private action. Existing public/private/action/reconnect and plaintext codec round-trip checks remain. Updated US/PL help, documentation/navigation/version/roadmap context and server/WebAdmin metadata/fixtures to alpha-0.4.6.
+- No new external dependency, SQL migration, configuration setting, API JSON field or WebAdmin feature. Existing source/domain/lifetime checks, shared immutable output, per-recipient FIFO/logical bounds and fault isolation remain. Group chat, moderation/history, offline messages and registered-account permissions remain separate work.
+- Validation: all 80/80 CTest suites passed locally in Debug, Release and ASan/UBSan with strict integration-tool detection and without disabling leak detection. This includes new Message Flags unit/process checks, real ncdc ADC/ADCS flag/private-action/reconnect traffic, existing chat/domain/lifetime/queue regressions, disposable MariaDB, Apache HTTPS and authenticated API. Builds emitted no compiler warnings.
+- WebAdmin typecheck/production build, 4 Node tests, 3 Chromium browser tests and real C++ API integration passed using system Chromium. Metadata, UTF-8/language file parity, local Markdown targets, modified Python syntax, US/PL help and Git whitespace checks passed. These are local results; remote CI, all supported OS/client combinations and production-load validation remain separate work.
+- The branch starts directly from main and preserves earlier branches/history. No main merge or production deployment is part of this increment.
+
 ## alpha-0.4.5 — 2026-11-11
 
 Message Routing increment, based directly on main `0c627eb1430ab0c750674a8463e64060c96c8a86` after the alpha-0.4.4 Private Chat merge:

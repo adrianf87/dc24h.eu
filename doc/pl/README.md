@@ -1,8 +1,9 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.4.5: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.4.6: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
 - [AUDIT_ALPHA_0.1.md](AUDIT_ALPHA_0.1.md)
+- [Message Flags — alpha-0.4.6](MESSAGE_FLAGS.md)
 - [Message Routing — alpha-0.4.5](MESSAGE_ROUTING.md)
 - [Private Chat — alpha-0.4.4](PRIVATE_CHAT.md)
 - [Public Chat — alpha-0.4.3](PUBLIC_CHAT.md)

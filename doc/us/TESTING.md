@@ -1,6 +1,8 @@
 # Testing
 
-**Current increment — alpha-0.4.5:** [Message Routing](MESSAGE_ROUTING.md) centralizes MSG scope selection and bounded queue delivery. Plans are bound to their originating Chat Core domain and live session IDs; private intent never falls back to public delivery.
+**Current increment — alpha-0.4.6:** [Message Flags](MESSAGE_FLAGS.md) centralizes PM/ME decoding and canonical output for the codec and both chat adapters. Absent ME, ME0 and ME1 remain distinct; PM never grants delivery authority.
+
+**Increment delivered in alpha-0.4.5:** [Message Routing](MESSAGE_ROUTING.md) centralizes MSG scope selection and bounded queue delivery. Plans are bound to their originating Chat Core domain and live session IDs; private intent never falls back to public delivery.
 
 **Increment delivered in alpha-0.4.4:** [Private Chat](PRIVATE_CHAT.md) adds DMSG target-only and EMSG target-plus-sender delivery, deduplicated self-messages, lifetime-bound targets and PM origin checks. Public chat remains isolated; groups/history/moderation remain separate stages.
 
@@ -268,3 +270,5 @@ alpha-0.4.3 local validation: 74/74 CTest suites passed in Debug, Release and AS
 alpha-0.4.4 local validation: 76/76 CTest suites passed in Debug, Release and ASan/UBSan, including Private Chat unit/process, real ncdc ADC/ADCS private conversations, public-chat regressions, MariaDB and Apache HTTPS. WebAdmin production build, 4 Node tests, 3 Chromium tests and live C++ API integration passed. Builds emitted no compiler warnings. These are local checks, not remote CI, all OS/client combinations or production-load validation.
 
 alpha-0.4.5 local validation (2026-11-11): all 78/78 CTest suites passed in Debug, Release and ASan/UBSan without disabling leak detection, including Message Routing and real ncdc ADC/ADCS public/private/action/reconnect traffic. Disposable MariaDB, Apache HTTPS, WebAdmin production build, 4 Node tests, 3 Chromium tests and live C++ API integration passed. See [Message Routing](MESSAGE_ROUTING.md) for scope and reproduction commands. Remote CI, the full OS/client matrix and production-load validation remain separate work.
+
+alpha-0.4.6: Local validation on 2026-11-11: **80/80 CTest suites passed in Debug, Release and ASan/UBSan**, including real ncdc ADC/ADCS. Leak detection was not disabled; builds emitted no compiler warnings. WebAdmin production build/typecheck, 4 Node tests, 3 Chromium tests and live C++ API integration passed. Metadata, UTF-8/language parity, local links, Python syntax, US/PL help and Git whitespace checks passed. These results are local and do not establish remote CI, full OS/client coverage or production-load behavior.

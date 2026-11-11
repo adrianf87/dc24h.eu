@@ -18,9 +18,8 @@ std::variant<PrivateDelivery, PrivateChatError> PrivateChat::prepare(users::Sess
         }
     }
     auto admission=std::get<chat::Directed>(std::move(prepared));
-    Message safe{message.type,"MSG",Command::msg,admission.source(),admission.target_key(),{},{admission.text()},1};
-    if (view->private_group) { safe.parameters.emplace_back("PM"+view->private_group->str()); }
-    if (view->third_person.has_value()) { safe.parameters.emplace_back(*view->third_person ? "ME1" : "ME0"); }
+    Message safe{message.type,"MSG",Command::msg,admission.source(),admission.target_key(),{},
+        make_msg_parameters(admission.text(), view->flags()),1};
     auto encoded=serialize_msg(safe);
     auto* wire=std::get_if<std::string>(&encoded);
     if (!wire) { return PrivateChatError::invalid_message; }
