@@ -1,6 +1,10 @@
 # Testing
 
-**Current increment — alpha-0.4.10:** [Chat Configuration](CHAT_CONFIGURATION.md) groups startup chat settings and adds decoded-text limits, independent public/private/action switches and optional/custom welcome. Defaults preserve previous behavior; recoverable policy refusals retain protocol validation and Anti-Flood.
+Local verification on 2026-11-11: all **90/90 CTest suites** passed in Debug, Release and ASan/UBSan with required integration tools and default leak detection, including real ncdc ADC/ADCS, disposable MariaDB and Apache HTTPS. The initial metadata check found outdated README introduction versions; after the documentation update it passed in all three configurations. Builds emitted no compiler warnings. WebAdmin typecheck/production build, 4 Node tests, 3 Chromium tests (including bilingual chat metrics) and real C++ API integration passed. The shipped INI, US/PL help, metadata, UTF-8 and local documentation links were checked. These are local results; remote CI, the full supported OS/client matrix and production-load guarantees are not claimed.
+
+**Current increment — alpha-0.4.11:** [Chat Logging](CHAT_LOGGING.md) adds payload-free, opt-in rate-limited outcome logs and saturating aggregate counters for client B/D/E MSG, published through the authenticated API and US/PL WebAdmin. Queue acceptance is distinct from transport delivery.
+
+**Increment delivered in alpha-0.4.10:** [Chat Configuration](CHAT_CONFIGURATION.md) groups startup chat settings and adds decoded-text limits, independent public/private/action switches and optional/custom welcome. Defaults preserve previous behavior; recoverable policy refusals retain protocol validation and Anti-Flood.
 
 **Increment delivered in alpha-0.4.9:** [Anti-Flood](ANTI_FLOOD.md) adds enabled per-connection B/D/E message and decoded-byte buckets, configurable in `[chat]`. Excess messages are dropped before fanout with bounded recoverable notices; existing validation and general resource limits remain.
 

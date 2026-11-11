@@ -324,6 +324,8 @@ Settings load_file(const std::string& filename) {
                 settings.logging.level = level(value);
             } else if (section == "logging" && key == "file") {
                 settings.logging.file_path = value == "stderr" ? "" : resolve_path(value, path.parent_path());
+            } else if (section == "logging" && key == "chat") {
+                settings.logging.chat = connection_logging(value);
             } else if (section == "logging" && key == "connections") {
                 settings.logging.connections = connection_logging(value);
             } else if (section == "api" && key == "enabled") {
@@ -376,7 +378,7 @@ CommandLine parse_arguments(int argc, char* const argv[]) {
         }
         if (key == "--listen" || key == "--adcs-listen" || key == "--tls-cert" || key == "--tls-key" ||
             key == "--max-connections" || key == "--max-sessions" || key == "--max-users" || key == "--idle-timeout" || key == "--log-file" ||
-            key == "--log-level" || key == "--log-connections" || key == "--language" ||
+            key == "--log-level" || key == "--log-chat" || key == "--log-connections" || key == "--language" ||
             key == "--max-per-ip" || key == "--accepts-per-minute" || key == "--frames-per-second" ||
             key == "--max-invalid-frames" || key == "--tls-handshake-timeout" || key == "--partial-frame-timeout") {
             if (i + 1 == argc) { throw std::invalid_argument("Missing option value"); }
@@ -425,6 +427,7 @@ CommandLine parse_arguments(int argc, char* const argv[]) {
         } else if (key == "--partial-frame-timeout") {
             result.settings.network.security.partial_frame_timeout = std::chrono::seconds(positive_number(value, 3600));
         } else if (key == "--log-level") { result.settings.logging.level = level(value); }
+        else if (key == "--log-chat") { result.settings.logging.chat = connection_logging(value); }
         else if (key == "--log-connections") { result.settings.logging.connections = connection_logging(value); }
         else if (key == "--log-file") {
             path_text(value); result.settings.logging.file_path = value == "-" ? "" : std::string(value);

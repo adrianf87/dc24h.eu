@@ -47,7 +47,7 @@ void load_and_override() {
         "[network]\nlisten = 127.0.0.1:411\nlisten = [::1]:0\n"
         "adcs_listen = 127.0.0.1:1512\nmax_connections = 42\nidle_timeout = 6\n"
         "[tls]\ncertificate = certs/chain.pem\nprivate_key = certs/secret.key\n"
-        "[logging]\nlevel = error\nfile = logs/hub.log\n");
+        "[logging]\nlevel = error\nfile = logs/hub.log\nchat = on\n");
     const auto loaded = dc24h::configuration::load_file(path.string());
     require(loaded.network.listeners.size() == 2, "Plain listeners missing");
     require(loaded.network.tls_listeners.size() == 1, "TLS listener missing");
@@ -56,6 +56,7 @@ void load_and_override() {
     require(loaded.network.idle_timeout.count() == 6, "Timeout invalid");
     require(loaded.network.tls_certificate == (fx.dir / "certs/chain.pem").string(),
             "Relative certificate path not resolved against INI directory");
+    require(loaded.logging.chat, "INI chat logging missing");
     require(loaded.logging.level == dc24h::logging::Level::error, "Log level invalid");
     require(loaded.logging.file_path == (fx.dir / "logs/hub.log").string(),
             "Relative log path not resolved against INI directory");
@@ -63,7 +64,7 @@ void load_and_override() {
     auto str = path.string();
     std::vector<std::string> options{"dc24h", "--max-connections", "19", "--config", str,
                                       "--listen", "127.0.0.1:0", "--log-file", "-",
-                                      "--log-level", "info"};
+                                      "--log-level", "info", "--log-chat", "off"};
     std::vector<char*> argv;
     for (auto& item : options) { argv.push_back(item.data()); }
     const auto parsed = dc24h::configuration::parse_arguments(
@@ -72,6 +73,7 @@ void load_and_override() {
     require(parsed.settings.network.listeners.front().port == 0, "CLI listener port invalid");
     require(parsed.settings.network.max_connections == 19, "CLI does not win over configuration");
     require(parsed.settings.logging.file_path.empty(), "CLI stderr override failed");
+    require(!parsed.settings.logging.chat, "CLI chat logging override missing");
     require(parsed.settings.logging.level == dc24h::logging::Level::info, "CLI log level override failed");
 }
 
@@ -83,6 +85,8 @@ void invalid_configs() {
         "[network]\nmax_connections = 0\n",
         "[network]\nidle_timeout = 86401\n",
         "[logging]\nlevel = debug\n",
+        "[logging]\nchat = yes\n",
+        "[logging]\nchat = on\nchat = off\n",
         "[logging]\nlevel = info\nlevel = error\n",
         "[unknown]\nkey = value\n",
         "[tls]\nunknown = value\n",

@@ -680,6 +680,18 @@ export default function App() {
                 value={number(snapshot?.network.closed_connections)} hint={t.closedHint} color="amber" />
             </div>
           )}
+          {page === "overview" && (
+            <div className="metrics-grid" data-testid="chat-statistics">
+              <Metric icon={Activity} label={t.publicChat}
+                value={number(snapshot?.chat.public_dispatches)} hint={t.chatDispatchHint} />
+              <Metric icon={LockKeyhole} label={t.privateChat}
+                value={number(snapshot?.chat.private_dispatches)} hint={t.chatDispatchHint} color="violet" />
+              <Metric icon={ShieldCheck} label={t.chatRejected}
+                value={number(snapshot?.chat.rejected)} hint={t.chatRejectedHint} color="amber" />
+              <Metric icon={ShieldCheck} label={t.chatFlood}
+                value={number(snapshot?.chat.flood_limited)} hint={t.chatFloodHint} color="teal" />
+            </div>
+          )}
           {page === "connections" && (
             <div className="metrics-grid" data-testid="connection-statistics">
               <Metric icon={Network} label={t.peakConnections}

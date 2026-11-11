@@ -1,6 +1,8 @@
 # Roadmap
 
-**Current increment — alpha-0.4.10:** [Chat Configuration](CHAT_CONFIGURATION.md) groups startup chat settings and adds decoded-text limits, independent public/private/action switches and optional/custom welcome. Defaults preserve previous behavior; recoverable policy refusals retain protocol validation and Anti-Flood.
+**Current increment — alpha-0.4.11:** [Chat Logging](CHAT_LOGGING.md) adds payload-free, opt-in rate-limited outcome logs and saturating aggregate counters for client B/D/E MSG, published through the authenticated API and US/PL WebAdmin. Queue acceptance is distinct from transport delivery.
+
+**Increment delivered in alpha-0.4.10:** [Chat Configuration](CHAT_CONFIGURATION.md) groups startup chat settings and adds decoded-text limits, independent public/private/action switches and optional/custom welcome. Defaults preserve previous behavior; recoverable policy refusals retain protocol validation and Anti-Flood.
 
 **Increment delivered in alpha-0.4.9:** [Anti-Flood](ANTI_FLOOD.md) adds enabled per-connection B/D/E message and decoded-byte buckets, configurable in `[chat]`. Excess messages are dropped before fanout with bounded recoverable notices; existing validation and general resource limits remain.
 
@@ -85,6 +87,7 @@
 | alpha-0.4.8 Chat Validation | Shared client text/SID/sender checks, recipient state and dispatch revalidation |
 | alpha-0.4.9 Anti-Flood | Enabled B/D/E count/byte limits, recoverable drops and INI policy |
 | alpha-0.4.10 Chat Configuration | Grouped INI settings, client policy and configurable greeting with unchanged readiness |
+| alpha-0.4.11 Chat Logging | Payload-free bounded outcome logs and aggregate API/WebAdmin counters |
 
 ## Historical acceptance plan before alpha-0.2.8
 

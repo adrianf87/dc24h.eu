@@ -3,7 +3,9 @@
 #include <string_view>
 
 namespace dc24h::i18n::pl {
-inline constexpr std::array<std::string_view, 125> messages{{
+inline constexpr std::array<std::string_view, 127> messages{{
+    "Czat zdarzenie=",
+    "Pominięte zdarzenia logu czatu=",
     "Niepoprawna polityka czatu",
     "Niepoprawna wiadomość powitalna czatu",
     "Niepoprawne limity anti-flood czatu",
@@ -136,7 +138,7 @@ inline constexpr std::string_view help = R"HELP(Użycie: dc24h [--config PLIK] [
               [--tls-cert ŁAŃCUCH.pem --tls-key KLUCZ.pem]
               [--max-connections N] [--max-sessions N] [--max-users N] [--idle-timeout SEKUNDY]
               [--log-level info|warning|error|off] [--log-file ŚCIEŻKA|-] [--language us|pl]
-              [--log-connections on|off]
+              [--log-connections on|off] [--log-chat on|off]
              [--max-per-ip N] [--accepts-per-minute N]
              [--frames-per-second N] [--max-invalid-frames N]
              [--tls-handshake-timeout SECONDS] [--partial-frame-timeout SECONDS]

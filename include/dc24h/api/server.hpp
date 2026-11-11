@@ -1,5 +1,7 @@
 #pragma once
 
+#include "dc24h/chat/statistics.hpp"
+
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -29,6 +31,7 @@ struct Snapshot {
     bool database_enabled{};
     std::uint64_t rejected_connections{}, closed_connections{}, received_bytes{}, sent_bytes{};
     std::uint64_t peak_connections{}, online_users{}, peak_online_users{}, successful_logins{};
+    chat::Statistics chat{};
 };
 using StatusProvider = std::function<Snapshot()>;
 using FailureHandler = std::function<void()>;

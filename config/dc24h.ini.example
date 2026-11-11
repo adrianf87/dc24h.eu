@@ -59,6 +59,8 @@ close_timeout = 2
 level = info
 # Levels: info, warning, error, off. Per-client lifecycle records are opt-in.
 connections = off
+# Aggregate outcomes only; no chat text or user IDs. Independent 32 events/s cap.
+chat = off
 file = stderr
 # file = /var/log/dc24h/hub.log
 

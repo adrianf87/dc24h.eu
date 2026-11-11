@@ -2,7 +2,7 @@ export const snapshot = {
   api_version: "v1",
   server: {
     name: "dc24h.eu",
-    version: "alpha-0.4.10",
+    version: "alpha-0.4.11",
     core_running: true,
     uptime_seconds: 3661,
   },
@@ -20,5 +20,6 @@ export const snapshot = {
     peak_connections: 9,
   },
   users: { online: 4, peak_online: 6, successful_logins: 23 },
+  chat: { received: 12, public_dispatches: 5, private_dispatches: 3, rejected: 2, flood_limited: 1, errors: 1, queued: 21, unavailable: 0, refused: 0 },
   database: { enabled: false },
 };
