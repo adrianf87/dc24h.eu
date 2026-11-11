@@ -1,6 +1,8 @@
 # Message Routing — alpha-0.4.5
 
-**Current increment — alpha-0.4.7:** [Hub Messages](HUB_MESSAGES.md) adds trusted, lifetime-bound system IMSG delivery and a fixed welcome after own BINF. Client text cannot originate system messages; existing queue bounds and final-LF readiness remain.
+**Current increment — alpha-0.4.8:** [Chat Validation](CHAT_VALIDATION.md) centralizes client text, SID and sender readiness/ownership checks in both adapters. Recipient lifetime selection and dispatch revalidation remain authoritative; system IMSG stays separate.
+
+**Increment delivered in alpha-0.4.7:** [Hub Messages](HUB_MESSAGES.md) adds trusted, lifetime-bound system IMSG delivery and a fixed welcome after own BINF. Client text cannot originate system messages; existing queue bounds and final-LF readiness remain.
 
 **Increment delivered in alpha-0.4.6:** [Message Flags](MESSAGE_FLAGS.md) centralizes PM/ME decoding and canonical output for the codec and both chat adapters. Absent ME, ME0 and ME1 remain distinct; PM never grants delivery authority.
 
@@ -10,7 +12,7 @@ Based directly on main `0c627eb1430ab0c750674a8463e64060c96c8a86`, after the alp
 
 `adc::MessageRouter` in `adc/message_routing.hpp` and `message_routing.cpp` is the common admission/dispatch entry point for client MSG. It composes the existing [Public Chat](PUBLIC_CHAT.md), [Private Chat](PRIVATE_CHAT.md), [MSG codec](ADC_MSG.md) and protocol-independent [Chat Core](CHAT_CORE.md). LoginHub owns one router and a single chat output adapter. TCP/TLS sockets, output caps, offsets, deadlines and fault cleanup remain with their existing owners. STA routing, presence/INF/QUI, search and transfer handling do not pass through this MSG service.
 
-The complete message object is validated before accessing its header. Source-bearing scopes then require a ready sender and exact session/source ownership before scope selection. The live connection state machine still runs first and enforces direction, NORMAL, source and malformed-field rules. Source-less H/I scopes cannot be distributed by the router.
+The router compares the enum scope to choose an adapter. Both adapters call shared validate_chat before preparing an owning plan: guarded optional SID access, bounded text, complete MSG syntax and ready sender/source ownership. Direct adapter callers receive the same checks. The live connection state machine still runs first and enforces direction, NORMAL, source and malformed-field rules. Source-less H/I scopes cannot be distributed by the client router. See [Chat Validation](CHAT_VALIDATION.md).
 
 | Input | Selection / outcome |
 | --- | --- |

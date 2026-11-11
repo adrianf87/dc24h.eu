@@ -152,6 +152,7 @@ Security defaults: 128 peers/IP, 256 admissions/IP/minute, 1024 frames/s/peer,
 ADC guest login, public presence, public and private chat are implemented.
 MSG flags: PM selects the private reply SID; ME1 marks a third-person action.
 The hub sends a system IMSG welcome after your own INF; clients cannot originate IMSG.
+Client chat checks UTF-8/NFC text, source SID ownership and session readiness.
 Group chat, search and transfers remain planned.
 Database settings use [database] in INI; disabled by default.
 --check-database connects/pings; --migrate-database explicitly applies metadata migrations.

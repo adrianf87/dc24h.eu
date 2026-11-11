@@ -1,6 +1,8 @@
 # Versions
 
-**Current increment — alpha-0.4.7:** [Hub Messages](HUB_MESSAGES.md) adds trusted, lifetime-bound system IMSG delivery and a fixed welcome after own BINF. Client text cannot originate system messages; existing queue bounds and final-LF readiness remain.
+**Current increment — alpha-0.4.8:** [Chat Validation](CHAT_VALIDATION.md) centralizes client text, SID and sender readiness/ownership checks in both adapters. Recipient lifetime selection and dispatch revalidation remain authoritative; system IMSG stays separate.
+
+**Increment delivered in alpha-0.4.7:** [Hub Messages](HUB_MESSAGES.md) adds trusted, lifetime-bound system IMSG delivery and a fixed welcome after own BINF. Client text cannot originate system messages; existing queue bounds and final-LF readiness remain.
 
 **Increment delivered in alpha-0.4.6:** [Message Flags](MESSAGE_FLAGS.md) centralizes PM/ME decoding and canonical output for the codec and both chat adapters. Absent ME, ME0 and ME1 remain distinct; PM never grants delivery authority.
 
@@ -69,6 +71,7 @@
 | alpha-0.4.5 | alpha-0.4.5 | Message Routing: shared MSG policy, engine domains and lifetime-safe delivery |
 | alpha-0.4.6 | alpha-0.4.6 | Message Flags: shared PM/ME codec and canonical chat projection |
 | alpha-0.4.7 | alpha-0.4.7 | Hub Messages: trusted IMSG, ready recipients and ordered guest welcome |
+| alpha-0.4.8 | alpha-0.4.8 | Chat Validation: shared text/SID/session gate and direct adapter checks |
 
 Identify an individual build with its version and Git commit SHA; compiling does not modify tracked source. Each significant change updates CHANGELOG.md. Alpha denotes development status, not complete hub functionality. Tags and production deployment are not created automatically.
 

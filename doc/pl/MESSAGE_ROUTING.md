@@ -1,6 +1,8 @@
 # Message Routing — alpha-0.4.5
 
-**Bieżący etap — alpha-0.4.7:** [Hub Messages](HUB_MESSAGES.md) dodaje zaufane systemowe IMSG powiązane z życiem sesji i stałe powitanie po własnym BINF. Klient nie może nadawać komunikatów systemowych; zachowano limity kolejek i gotowość przy końcowym LF.
+**Bieżący etap — alpha-0.4.8:** [Chat Validation](CHAT_VALIDATION.md) centralizuje sprawdzanie tekstu, SID i gotowości/własności nadawcy w obu adapterach. Wybór życia odbiorcy i ponowna kontrola dispatch pozostają obowiązkowe; systemowe IMSG jest oddzielone.
+
+**Etap dostarczony w alpha-0.4.7:** [Hub Messages](HUB_MESSAGES.md) dodaje zaufane systemowe IMSG powiązane z życiem sesji i stałe powitanie po własnym BINF. Klient nie może nadawać komunikatów systemowych; zachowano limity kolejek i gotowość przy końcowym LF.
 
 **Etap dostarczony w alpha-0.4.6:** [Message Flags](MESSAGE_FLAGS.md) centralizuje dekodowanie PM/ME i kanoniczne wyjście kodeka oraz obu adapterów czatu. Brak ME, ME0 i ME1 pozostają rozróżniane; PM nie nadaje uprawnień do dostarczania.
 
@@ -10,7 +12,7 @@ Etap bazuje bezpośrednio na main `0c627eb1430ab0c750674a8463e64060c96c8a86`, po
 
 `adc::MessageRouter` w `adc/message_routing.hpp` i `message_routing.cpp` jest wspólnym wejściem walidacji i rozsyłania MSG klientów. Łączy istniejące [Public Chat](PUBLIC_CHAT.md), [Private Chat](PRIVATE_CHAT.md), [kodek MSG](ADC_MSG.md) i niezależny od protokołu [Chat Core](CHAT_CORE.md). LoginHub posiada jeden router i wspólny adapter wyjściowy czatu. Gniazda TCP/TLS, limity, offsety, terminy i sprzątanie błędów pozostają u dotychczasowych właścicieli. Routing STA, obecność/INF/QUI, wyszukiwanie i transfery nie przechodzą przez tę usługę MSG.
 
-Przed odczytem nagłówka sprawdzany jest cały obiekt komunikatu. Zakres ze źródłem wymaga następnie gotowego nadawcy i dokładnego powiązania źródła z sesją. W działającym serwerze wcześniej działa maszyna stanów sprawdzająca kierunek, NORMAL, źródło i poprawność znanych pól. Zakresy H/I bez źródła nie mogą być rozsyłane przez router.
+Router porównuje zakres enum, aby wybrać adapter. Oba adaptery wywołują wspólne validate_chat przed utworzeniem własnego planu: chroniony dostęp do opcjonalnego SID, ograniczony tekst, pełna składnia MSG i własność źródła przez gotowego nadawcę. Bezpośredni użytkownik adaptera otrzymuje te same kontrole. W działającym serwerze wcześniej działa maszyna stanów sprawdzająca kierunek, NORMAL, źródło i znane pola. Zakresy H/I bez źródła nie mogą być rozsyłane przez router klientów. Zobacz [Chat Validation](CHAT_VALIDATION.md).
 
 | Wejście | Wybór / wynik |
 | --- | --- |

@@ -1,10 +1,18 @@
 #include "dc24h/adc/public_chat.hpp"
+#include "dc24h/adc/chat_validation.hpp"
 
 namespace dc24h::adc {
 std::variant<PublicBroadcast, PublicChatError> PublicChat::prepare(users::SessionId sender, const Message& message) const {
-    const auto validated=validate_msg(message);
+    const auto validated=validate_chat(core_,sender,message);
     const auto* view=std::get_if<MsgView>(&validated);
-    if (!view) { return PublicChatError::invalid_message; }
+    if (!view) {
+        switch (std::get<ChatValidationError>(validated)) {
+        case ChatValidationError::invalid_state: return PublicChatError::invalid_state;
+        case ChatValidationError::wrong_source: return PublicChatError::wrong_source;
+        case ChatValidationError::unsupported_type: return PublicChatError::unsupported_type;
+        default: return PublicChatError::invalid_message;
+        }
+    }
     if (message.type!=MessageType::broadcast) { return PublicChatError::unsupported_type; }
     if (view->private_group) { return PublicChatError::private_message; }
     auto prepared=core_.prepare(sender,*message.source,view->text,view->third_person);

@@ -4,13 +4,8 @@
 
 namespace dc24h::adc {
 std::variant<RoutedMessage, RoutingError> MessageRouter::prepare(users::SessionId sender, const Message& message) const {
-    // Check the complete object before dereferencing source or choosing a scope.
-    if (!std::holds_alternative<MsgView>(validate_msg(message))) { return RoutingError::invalid_message; }
-    // Source-less scopes are unsupported and never enter a delivery adapter.
-    if (!message.source) { return RoutingError::unsupported_type; }
-    if (const auto error=core_.validate_sender(sender,*message.source)) {
-        return *error==chat::Error::wrong_source ? RoutingError::wrong_source : RoutingError::invalid_state;
-    }
+    // Comparing the scope does not inspect optional headers. Each adapter calls
+    // the shared validator before dereferencing or preparing a delivery plan.
     if (message.type==MessageType::direct || message.type==MessageType::echo) {
         auto result=private_.prepare(sender,message);
         if (auto* plan=std::get_if<PrivateDelivery>(&result)) { return RoutedMessage(std::move(*plan)); }
