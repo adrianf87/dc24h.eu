@@ -1,4 +1,4 @@
-"""Search Core is staged: SCH parsing and the RES boundary stay private."""
+"""Search Core is staged: SCH routing and the RES boundary remain explicit."""
 import json
 import pathlib
 import tempfile
@@ -29,11 +29,13 @@ class SearchCoreProcessTests(unittest.TestCase):
                     wire = kind + b' ' + source.sid
                     if kind in (b'DSCH', b'ESCH', b'DRES'): wire += b' ' + observer.sid
                     if kind == b'FSCH': wire += b' +TCP4'
-                    wire += b' ANSearchCoreSecret TOPrivateSearchToken' if kind != b'DRES' else b' FNSearchCoreSecret SI1 SL1 TOPrivateSearchToken'
+                    wire += b' ANSearchCoreSecret TOPrivateSearchToken' + kind if kind != b'DRES' else b' FNSearchCoreSecret SI1 SL1 TOPrivateSearchToken'
                     source.send(wire)
-                    self.assertEqual(source.line(), b'ISTA 125 ' +
-                                     (b'Command\\snot\\simplemented' if kind == b'DRES' else b'Search\\srouting\\snot\\simplemented') + b' FC' + kind)
-                    # Ordered INF fence proves that no query/result was relayed.
+                    if kind == b'DRES': self.assertEqual(source.line(), b'ISTA 125 Command\\snot\\simplemented FCDRES')
+                    else:
+                        recipients = (source, observer) if kind in (b'BSCH', b'ESCH') else ((observer,) if kind == b'DSCH' else ())
+                        for peer in recipients: self.assertEqual(peer.line(), wire)
+                    # Ordered INF fence proves that only the intended query copies were relayed.
                     fence = b'BINF ' + source.sid + b' DESearchFence'
                     source.send(fence)
                     for peer in (source, observer): self.assertEqual(peer.line(), fence)

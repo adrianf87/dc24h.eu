@@ -1,5 +1,7 @@
 # ADC SCH — alpha-0.5.2
 
+**Aktualizacja — alpha-0.5.6:** [Search Routing](SEARCH_ROUTING.md) przekazuje sprawdzone SCH przez rzeczywiste ADC/ADCS: broadcast B/F i D/E związane z życiem celu współdzielą jeden niezmienny pakiet z oddzielnymi ograniczonymi kolejkami. Podane TO jest rejestrowane w Search Core; brak TO nadal jest poprawny. Obowiązują kontrole źródła/stanu/funkcji, jednokrotny dispatch i sprzątanie tokenów. RES/routing wyników pozostaje kolejnym etapem.
+
 **Aktualizacja — alpha-0.5.5:** [Search Tokens](SEARCH_TOKENS.md) dodaje ograniczony rejestr życia sesji/TO, lokalne generacje wyszukiwań, terminy ważności, anulowanie i jawne API aktywnych wyszukiwań Core. Nadal można przygotować plan bez rejestracji; odrzucone rzeczywiste SCH nie rezerwuje tokenów. Korelacja/routing wyników i administracja wyszukiwaniem pozostają kolejnymi etapami.
 
 **Aktualizacja — alpha-0.5.4:** [TTH Search](TTH_SEARCH.md) przekazuje pełny 192-bitowy hash pliku z SCH do niezmiennych zapytań/planów Core, opisów i filtrów. Zapytania z samym hashem lub łączone używają dokładnej równości i zachowują dodatkowe kryteria. Testowane są rzeczywiste zapytania TTH ncdc ADC/ADCS; routing zapytań/wyników pozostaje kolejnym etapem.
@@ -39,7 +41,7 @@ Dopuszczono same filtry, wykluczenia lub hash. Puste zapytania, same nieznane po
 
 `criteria()` i `selection()` udostępniają stałe dane. `to_core_query()` zwraca `variant<search::Query, search::QueryError, SchError>` i stosuje sprawdzony profil Search Core. Od alpha-0.5.3 akceptowane są same filtry i nieprzezroczyste tokeny NFC ze spacjami/Unicode, bez tworzenia ani przepisywania pól. `to_filter()` kompiluje te same kryteria do [Search Filters](SEARCH_FILTERS.md). Od alpha-0.5.4 TR pozostaje w `criteria().tth`, `root()` czyta tę samą pamięć, a obie projekcje obsługują dokładne [TTH Search](TTH_SEARCH.md), także z samym hashem. Stare `unsupported_hash_query` zachowano dla zgodności kodu, lecz nie jest już zwracane. Dane nie są przepisywane dla wymuszenia akceptacji. Metoda jest sprawdzaną projekcją, a nie planem dostarczenia ani uprawnieniem.
 
-Biblioteka ADC łączy się teraz z dc24h_search bez zależności odwrotnej. Odbiornik sprawdza SCH, ale nie tworzy/nie wykonuje fanout Core i nie odkłada zapytań do późniejszego odtwarzania. Przyszła integracja musi uwzględnić granice projekcji i zachować odpowiednią semantykę rozszerzeń.
+Biblioteka ADC łączy się teraz z dc24h_search bez zależności odwrotnej. Od alpha-0.5.6 odbiornik używa sprawdzonego SCH do przygotowania/wykonania fanout Core przez [Search Routing](SEARCH_ROUTING.md); zachowuje pola, a kopie planu współdzielą jedną próbę. Przyszła integracja musi uwzględnić granice projekcji i zachować odpowiednią semantykę rozszerzeń.
 
 ## Rzeczywisty odbiór ADC/ADCS
 
@@ -47,13 +49,13 @@ LoginHub obsługuje SCH po walidacji stanu/źródła ClientSession i gotowości 
 
 | Wejście | Zachowanie |
 | --- | --- |
-| Poprawne SCH tego profilu | Odwracalne `ISTA 125 Search\srouting\snot\simplemented FC<FOURCC>` |
+| Poprawne SCH tego profilu | Dostawa do wybranych odbiorców B/F/D/E, bez potwierdzenia sukcesu |
 | Semantyczny błąd SCH | Odwracalne `ISTA 100 Invalid\ssearch\squery FC<FOURCC>` |
 | Puste/same nieznane/sam token | Bez odpowiedzi i przekazania |
 | Surowy błąd ogólnego parsera | Dotychczasowa ograniczona obsługa błędnych ramek przed odbiornikiem SCH |
 | Błędne źródło/stan | Dotychczasowe fatalne `240` / `244` przed analizą pól |
 
-Opis i FOURCC są stałe; nie cytują kryteriów, tokena, korzenia, nazwy pliku ani pól dowolnych. Odmowa zachowuje gotowość i uporządkowane kolejki; kolejne zapytania i czat mogą działać. Ani poprawne, ani błędne zapytanie nie trafia do innego klienta. RES pozostaje dotychczasowo nieobsługiwane. SCH nie zwiększa liczników czatu, nie dodaje pól API i nie ujawnia tekstu WebAdmin. Dane wyszukiwania są przejściowe, bez historii/bazy zapytań.
+Opis i FOURCC są stałe; nie cytują kryteriów, tokena, korzenia, nazwy pliku ani pól dowolnych. Odmowa zachowuje gotowość i uporządkowane kolejki; kolejne zapytania i czat mogą działać. Od alpha-0.5.6 poprawne zapytania trafiają tylko do wybranych odbiorców B/F/D/E; błędne nigdy nie są rozsyłane. Duplikat aktywnego TO i przekroczenie limitu aktywnych wpisów otrzymują stałe komunikaty 100; brak celu kierowanego zwraca 140. Zobacz [Search Routing](SEARCH_ROUTING.md). RES pozostaje dotychczasowo nieobsługiwane. SCH nie zwiększa liczników czatu, nie dodaje pól API i nie ujawnia tekstu WebAdmin. Dane wyszukiwania są przejściowe, bez historii/bazy zapytań.
 
 Błąd alokacji parsera/diagnostyki jest przechwytywany dla danego klienta i wymusza tylko jego natychmiastowe zamknięcie internal-error. Inne sesje i kolejki pozostają dostępne. Nadal obowiązują ogólne limity ramek/bezpieczeństwa/wyjścia. Nie dodano limitera wyszukiwań, potwierdzenia sukcesu, zegara, rejestru żądań ani korelacji wyników. Język operatora nie tłumaczy opisów protokołu.
 

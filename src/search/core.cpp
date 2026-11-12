@@ -37,12 +37,27 @@ std::optional<Error> Core::validate_sender(users::SessionId sender, std::string_
     if (model->identity()->sid() != source) { return Error::wrong_source; }
     return {};
 }
-Preparation Core::prepare(users::SessionId sender, std::string_view source, const QueryData& data, const Selection& selection) const {
+std::optional<users::SessionId> Core::resolve_target(std::string_view source) const noexcept {
+    const auto* model = sessions_.by_sid(source);
+    return model && model->ready() ? std::optional{model->id()} : std::nullopt;
+}
+Preparation Core::prepare(users::SessionId sender, std::string_view source, const QueryData& data, const Selection& selection, const Audience& audience) const {
     if (const auto error = validate_sender(sender, source)) { return *error; }
     if (!valid_selection(selection)) { return Error::invalid_selection; }
+    if ((audience.scope != Scope::broadcast && audience.scope != Scope::direct && audience.scope != Scope::echo) ||
+        (audience.scope != Scope::broadcast) != audience.target.has_value()) { return Error::invalid_audience; }
     auto query = Query::create(data);
     if (const auto* error = std::get_if<QueryError>(&query)) { return *error; }
     std::vector<users::SessionId> recipients;
+    if (audience.target) {
+        const auto* target = sessions_.find(*audience.target);
+        if (!target || !eligible(*target,selection)) { return Error::recipient_unavailable; }
+        recipients.push_back(*audience.target);
+        if (audience.scope == Scope::echo && sender != *audience.target && eligible(*sessions_.find(sender),selection)) {
+            recipients.push_back(sender);
+        }
+        return Plan(domain_,sender,source,std::get<Query>(std::move(query)),selection,std::move(recipients));
+    }
     recipients.reserve(sessions_.statistics().online());
     std::uint64_t after = 0;
     for (;;) {
@@ -72,10 +87,10 @@ std::variant<DispatchReport, Error> Core::dispatch(const Plan& plan, const Sink&
     return report;
 }
 StartResult Core::start(users::SessionId sender, std::string_view source, const QueryData& data,
-                        users::TimePoint now, const Selection& selection) {
+                        users::TimePoint now, const Selection& selection, const Audience& audience) {
     if (const auto error = validate_sender(sender,source)) { return *error; }
     if (!data.token) { return TokenError::missing_token; }
-    auto prepared = prepare(sender,source,data,selection);
+    auto prepared = prepare(sender,source,data,selection,audience);
     if (const auto* error = std::get_if<Error>(&prepared)) { return *error; }
     if (const auto* error = std::get_if<QueryError>(&prepared)) { return *error; }
     auto handle = tokens_.activate(sender,*data.token,now);

@@ -1,5 +1,7 @@
 # ADC SCH — alpha-0.5.2
 
+**Follow-up — alpha-0.5.6:** [Search Routing](SEARCH_ROUTING.md) forwards checked SCH over real ADC/ADCS: B/F broadcasts and lifetime-bound D/E delivery share one immutable packet with independent bounded queues. Supplied TO is registered in Search Core; absent TO remains valid. Source/state/feature checks, one-attempt dispatch and token cleanup are enforced. RES/result routing remains a later increment.
+
 **Follow-up — alpha-0.5.5:** [Search Tokens](SEARCH_TOKENS.md) adds bounded session-lifetime/TO registration, local search generations, deadlines, cancellation and explicit active-search APIs in Core. Stateless preparation stays available; refused live SCH requests do not reserve tokens. Result correlation/routing and search administration remain later increments.
 
 **Follow-up — alpha-0.5.4:** [TTH Search](TTH_SEARCH.md) carries the full 192-bit file root from SCH into immutable Core queries/plans, descriptors and compiled filters. Hash-only and combined queries use exact equality and retain all additional criteria. Real ncdc ADC/ADCS TTH searches are tested; live request/result routing remains a later increment.
@@ -39,7 +41,7 @@ Criteria may be filter-only, exclusion-only or hash-only. Empty, unknown-only an
 
 `criteria()` and `selection()` expose const typed values. `to_core_query()` returns `variant<search::Query, search::QueryError, SchError>` and applies the checked Search Core profile. As of alpha-0.5.3, filter-only requests and opaque NFC tokens with spaces/Unicode are accepted without inventing or rewriting fields. `to_filter()` compiles the same typed criteria into [Search Filters](SEARCH_FILTERS.md). As of alpha-0.5.4, TR is retained in `criteria().tth`, `root()` reads that same storage, and both projections support exact [TTH Search](TTH_SEARCH.md), including hash-only requests. The legacy `unsupported_hash_query` enumerator is retained for source compatibility but is no longer emitted. Raw values are not rewritten to force acceptance. The method is a checked projection, not a delivery plan or permission grant.
 
-The ADC library now links to dc24h_search without introducing a reverse dependency. The receiver validates the SCH request but does not prepare/dispatch a Search Core fanout or retain it for later replay. Future integration must account for projection limits and preserve applicable extension semantics.
+The ADC library now links to dc24h_search without introducing a reverse dependency. As of alpha-0.5.6, the receiver uses the checked SCH request to prepare/dispatch Search Core fanout through [Search Routing](SEARCH_ROUTING.md); original fields are preserved and copied plans share one attempt. Future integration must account for projection limits and preserve applicable extension semantics.
 
 ## Actual ADC/ADCS reception
 
@@ -47,13 +49,13 @@ LoginHub handles SCH after ClientSession state/source validation and final-welco
 
 | Received input | Behavior |
 | --- | --- |
-| Valid in-profile SCH | Recoverable `ISTA 125 Search\srouting\snot\simplemented FC<FOURCC>` |
+| Valid in-profile SCH | Routed to eligible B/F/D/E recipients; no success acknowledgment |
 | Semantic SCH failure | Recoverable `ISTA 100 Invalid\ssearch\squery FC<FOURCC>` |
 | Empty/unknown-only/token-only | No reply and no forwarding |
 | Raw generic parser failure | Existing bounded invalid-frame handling before the SCH receiver |
 | Invalid source/state | Existing fatal `240` / `244` behavior before field work |
 
-Descriptions and FOURCC are fixed; no query, token, root, filename or arbitrary field is echoed. Refusals preserve readiness and ordered queues; later valid queries/chat can proceed. Neither a valid request nor a rejected one is forwarded to another client. RES keeps the prior unsupported behavior. SCH does not increment chat counters, add API fields or expose search text to WebAdmin. Search data is transient; no query/history database is added.
+Descriptions and FOURCC are fixed; no query, token, root, filename or arbitrary field is echoed. Refusals preserve readiness and ordered queues; later valid queries/chat can proceed. As of alpha-0.5.6, valid requests reach only their eligible B/F/D/E recipients; rejected requests never fan out. Duplicate active TO and active-cap refusals return fixed 100 diagnostics; an unavailable directed target returns 140. See [Search Routing](SEARCH_ROUTING.md). RES keeps the prior unsupported behavior. SCH does not increment chat counters, add API fields or expose search text to WebAdmin. Search data is transient; no query/history database is added.
 
 Parser/status allocation failure is caught at the receiving peer and forces only that peer into immediate internal-error close. Other sessions and queues remain available. The existing global frame/security/output budgets still apply. This stage does not add a search-specific rate limiter, success acknowledgment, timer, request registry or result correlation. Operator language does not translate wire descriptions.
 

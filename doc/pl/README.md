@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.5.5: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.5.6: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [Search Routing — alpha-0.5.6](SEARCH_ROUTING.md)
 - [Search Tokens — alpha-0.5.5](SEARCH_TOKENS.md)
 - [TTH Search — alpha-0.5.4](TTH_SEARCH.md)
 - [Search Filters — alpha-0.5.3](SEARCH_FILTERS.md)

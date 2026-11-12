@@ -1,5 +1,7 @@
 # Search Core — alpha-0.5.1
 
+**Aktualizacja — alpha-0.5.6:** [Search Routing](SEARCH_ROUTING.md) przekazuje sprawdzone SCH przez rzeczywiste ADC/ADCS: broadcast B/F i D/E związane z życiem celu współdzielą jeden niezmienny pakiet z oddzielnymi ograniczonymi kolejkami. Podane TO jest rejestrowane w Search Core; brak TO nadal jest poprawny. Obowiązują kontrole źródła/stanu/funkcji, jednokrotny dispatch i sprzątanie tokenów. RES/routing wyników pozostaje kolejnym etapem.
+
 **Aktualizacja — alpha-0.5.5:** [Search Tokens](SEARCH_TOKENS.md) dodaje ograniczony rejestr życia sesji/TO, lokalne generacje wyszukiwań, terminy ważności, anulowanie i jawne API aktywnych wyszukiwań Core. Nadal można przygotować plan bez rejestracji; odrzucone rzeczywiste SCH nie rezerwuje tokenów. Korelacja/routing wyników i administracja wyszukiwaniem pozostają kolejnymi etapami.
 
 **Aktualizacja — alpha-0.5.4:** [TTH Search](TTH_SEARCH.md) przekazuje pełny 192-bitowy hash pliku z SCH do niezmiennych zapytań/planów Core, opisów i filtrów. Zapytania z samym hashem lub łączone używają dokładnej równości i zachowują dodatkowe kryteria. Testowane są rzeczywiste zapytania TTH ncdc ADC/ADCS; routing zapytań/wyników pozostaje kolejnym etapem.
@@ -16,7 +18,7 @@ Gałąź utworzono bezpośrednio z main `c6b34ea849ef808a0bfee4a27e0c8ae38cff4a6
 
 [Specyfikacja ADC](https://adc.sourceforge.io/ADC.html) rozdziela zapytania SCH, wyniki RES i routing według funkcji. Ten etap dostarcza podległy model ogólny, nie kodek ADC ani sieciowy handler wyszukiwania. `QueryData` jest wewnętrznym kontraktem C++; opisane limity i walidacja są polityką aplikacji, a nie opisem wszystkich poprawnych zapytań ADC. Wartości enum nie są wartościami liczbowymi protokołu.
 
-Produkcyjny LoginHub nadal nie wywołuje Search Core: poprawne SCH otrzymuje `125 Search routing not implemented`, a RES `125 Command not implemented`, po dotychczasowych kontrolach źródła/stanu/gotowości. Od alpha-0.5.4 Core/Filter obsługuje TTH; od alpha-0.5.5 jawne API biblioteki aktywnych wyszukiwań udostępnia ograniczony [rejestr tokenów](SEARCH_TOKENS.md) i terminy. Rzeczywista ścieżka odmowy nigdy nie rezerwuje tokena. Wymiana wyników, endpointy UDP, sieciowy limiter wyszukiwań, historia, migracje bazy i statystyki/kontrolki wyszukiwania API/UI pozostają kolejnymi etapami. Metadane odpowiadają bieżącej wersji.
+Od alpha-0.5.6 produkcyjny LoginHub używa [Search Routing](SEARCH_ROUTING.md) i Search Core do przekazywania poprawnych SCH po kontroli źródła/stanu/gotowości. Podane TO używa przyjęcia aktywnego wyszukiwania; brak TO używa przygotowania bez rejestracji. Obsługiwane są B/F i D/E związane z życiem celu. Poprawny routing nie wysyła potwierdzenia sukcesu/odmowy; błędy semantyczne, duplikaty/limity i brak celu dostają stałe komunikaty. RES pozostaje nieobsługiwane. Korelacja wyników, odpowiedzi UDP, osobny limiter/historia i administracja wyszukiwaniem są kolejnymi etapami.
 
 ## Niezmienne kryteria
 

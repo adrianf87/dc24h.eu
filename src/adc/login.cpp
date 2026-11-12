@@ -15,7 +15,7 @@ namespace dc24h::adc {
 struct LoginHub::Peer {
     struct Frame {
         struct Owned { Message message; std::string wire; };
-        std::variant<Owned,SharedPublicChatFrame,SharedPrivateChatFrame,SharedHubMessageFrame> content;
+        std::variant<Owned,SharedPublicChatFrame,SharedPrivateChatFrame,SharedHubMessageFrame,SharedSearchFrame> content;
         Completion completion;
         [[nodiscard]] const Message& message() const noexcept {
             return std::visit([](const auto& frame) -> const Message& {
@@ -91,7 +91,7 @@ std::string_view status_description(std::string_view code) noexcept {
 }
 } // namespace
 
-LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), chat_(sessions_), message_router_(chat_,limits.chat), hub_messages_(sessions_), welcome_message_(welcome_packet(limits.welcome_text)), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
+LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), search_(sessions_,limits.search_tokens), search_router_(search_), chat_(sessions_), message_router_(chat_,limits.chat), hub_messages_(sessions_), welcome_message_(welcome_packet(limits.welcome_text)), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
     if (limits.anti_flood) { chat::validate(*limits.anti_flood); }
     if (limits.connections == 0 || limits.connections > 65535 ||
         limits.output_per_client < 128 || limits.output_per_client > 16 * 1024 * 1024 ||
@@ -335,25 +335,48 @@ void LoginHub::receive(Id id, const Message& message, chat::FloodClock::time_poi
         }
         route_chat(id,message,attempt);
     } else if (message.kind == Command::sch) {
-        receive_search(id, message);
+        receive_search(id, message, chat_now);
     } else if (message.kind == Command::sta) {
         if (message.type != MessageType::hub) { route_status(id, message); }
     } else if (before == ConnectionState::normal && message.kind != Command::sup) {
-        // Search and transfer handlers remain separate.
+        // Search results and transfer handlers remain separate.
         (void)enqueue(peer, make_status(*StatusCode::parse("125"), "Command not implemented", offending));
     }
 }
-void LoginHub::receive_search(Id id, const Message& message) {
+void LoginHub::receive_search(Id id, const Message& message, users::TimePoint now) {
     auto& peer = *peers_.at(id);
     try {
-        const auto result = validate_sch(message);
-        const auto* error = std::get_if<SchError>(&result);
-        if (error && *error == SchError::no_criteria) { return; }
+        auto result = search_router_.prepare(peer.lifecycle.id(),message,now);
         const auto command = std::string(1, static_cast<char>(message.type)) + "SCH";
-        // Parsing is delivered here; routing/results are separate increments.
-        (void)enqueue(peer, make_status(*StatusCode::parse(error ? "100" : "125"),
-            error ? "Invalid search query" : "Search routing not implemented", command));
+        if (const auto* error = std::get_if<SearchRoutingError>(&result)) {
+            switch (*error) {
+            case SearchRoutingError::no_criteria: return;
+            case SearchRoutingError::invalid_state: reject(peer,"244",command); return;
+            case SearchRoutingError::wrong_source: reject(peer,"240",command); return;
+            case SearchRoutingError::recipient_unavailable:
+                (void)enqueue(peer,make_status(*StatusCode::parse("140"),"Search recipient unavailable",command)); return;
+            case SearchRoutingError::duplicate_token:
+                (void)enqueue(peer,make_status(*StatusCode::parse("100"),"Search token already active",command)); return;
+            case SearchRoutingError::search_limit:
+                (void)enqueue(peer,make_status(*StatusCode::parse("100"),"Active search limit reached",command)); return;
+            default: (void)enqueue(peer,make_status(*StatusCode::parse("100"),"Invalid search query",command)); return;
+            }
+        }
+        const auto& routed = std::get<RoutedSearch>(result);
+        const auto report = search_router_.dispatch(routed,[&](users::SessionId recipient,const SharedSearchFrame& frame) {
+            const auto found = peers_.find(recipient.value());
+            if (found == peers_.end()) { return false; }
+            try { return enqueue_shared(*found->second,frame); }
+            catch (const std::bad_alloc&) {
+                check_model(sessions_.force_close(recipient,users::CloseCause::internal_error,users::Clock::now())); return false;
+            }
+        },now);
+        if (std::holds_alternative<SearchRoutingError>(report)) {
+            (void)search_router_.cancel(routed);
+            check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
+        }
     } catch (const std::bad_alloc&) {
+        (void)search_.forget_searches(peer.lifecycle.id());
         check_model(sessions_.force_close(peer.lifecycle.id(), users::CloseCause::internal_error, users::Clock::now()));
     }
 }
@@ -495,6 +518,7 @@ void LoginHub::disconnect(Id id, bool announce, users::CloseCause cause, users::
     const auto result = user_disconnect_.begin(peer.lifecycle.id(),cause,now);
     const auto* departure = std::get_if<Departure>(&result);
     if (!departure) { throw std::logic_error("User disconnect lifecycle rejected"); }
+    (void)search_.forget_searches(peer.lifecycle.id());
     // Reclaim all source resources before any allocating public notification.
     // This also releases global queue capacity for the surviving peers' QUI.
     queued_ -= peer.queued;

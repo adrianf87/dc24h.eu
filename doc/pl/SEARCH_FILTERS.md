@@ -1,5 +1,7 @@
 # Search Filters — alpha-0.5.3
 
+**Aktualizacja — alpha-0.5.6:** [Search Routing](SEARCH_ROUTING.md) przekazuje sprawdzone SCH przez rzeczywiste ADC/ADCS: broadcast B/F i D/E związane z życiem celu współdzielą jeden niezmienny pakiet z oddzielnymi ograniczonymi kolejkami. Podane TO jest rejestrowane w Search Core; brak TO nadal jest poprawny. Obowiązują kontrole źródła/stanu/funkcji, jednokrotny dispatch i sprzątanie tokenów. RES/routing wyników pozostaje kolejnym etapem.
+
 **Aktualizacja — alpha-0.5.5:** [Search Tokens](SEARCH_TOKENS.md) dodaje ograniczony rejestr życia sesji/TO, lokalne generacje wyszukiwań, terminy ważności, anulowanie i jawne API aktywnych wyszukiwań Core. Nadal można przygotować plan bez rejestracji; odrzucone rzeczywiste SCH nie rezerwuje tokenów. Korelacja/routing wyników i administracja wyszukiwaniem pozostają kolejnymi etapami.
 
 **Aktualizacja — alpha-0.5.4:** [TTH Search](TTH_SEARCH.md) przekazuje pełny 192-bitowy hash pliku z SCH do niezmiennych zapytań/planów Core, opisów i filtrów. Zapytania z samym hashem lub łączone używają dokładnej równości i zachowują dodatkowe kryteria. Testowane są rzeczywiste zapytania TTH ncdc ADC/ADCS; routing zapytań/wyników pozostaje kolejnym etapem.
@@ -48,7 +50,7 @@ Zachowano limity: 32 łączne AN/NO, 256 bajtów terminu, 16 rozszerzeń do 32 b
 
 Od alpha-0.5.4 zapytania z TR przekazują pełny hash do Core i Filter, także przy połączeniu TR z tekstem/filtrami. Sam hash wymaga dokładnej równości hasha pliku; pozostałe filtry są dodatkowymi warunkami AND. Zobacz [TTH Search](TTH_SEARCH.md). Hash Tiger nie może zniknąć ani stać się filtrem tekstowym. Sprawdzone pola SCH, kolejność, nieznane parametry i zapis liczb pozostają w oryginalnym Message. Nieznane pola zachowują politykę ADC ignorowania i zachowania; moduł nie interpretuje ani nie ogłasza grup ASCH/SEGA.
 
-Rzeczywisty odbiór ADC/ADCS zachowuje zachowanie alpha-0.5.2: stan/źródło/gotowość są sprawdzane przed SCH; poprawne zapytania otrzymują odwracalne `125 Search routing not implemented`, błędy semantyczne `100 Invalid search query`, a brak kryteriów jest pomijany. Odbiornik nie uruchamia dopasowania opisów i nie tworzy fanout. Treść zapytań/tokenów/nazw plików nie trafia do diagnostyki, liczników czatu, logów, bazy, API ani WebAdmin. Nie ma nowej migracji SQL, ustawienia, zależności ani kontrolki UI; metadane wydania przechodzą na alpha-0.5.3.
+Od alpha-0.5.6 [Search Routing](SEARCH_ROUTING.md) przekazuje poprawne B/F/D/E przez współdzielone ograniczone kolejki po walidacji źródła/stanu/gotowości i semantyki. Podane TO jest rejestrowane, brak TO zachowany, a wyniki pozostają nieobsługiwane. Predykaty filtrów są logiką biblioteki, nie indeksem plików huba; klienci wykonują własne wyszukiwanie. Treść/token/nazwa nie jest eksportowana do logów, magazynu, API ani WebAdmin.
 
 ## Weryfikacja
 

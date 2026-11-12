@@ -1,5 +1,7 @@
 # TTH Search — alpha-0.5.4
 
+**Follow-up — alpha-0.5.6:** [Search Routing](SEARCH_ROUTING.md) forwards checked SCH over real ADC/ADCS: B/F broadcasts and lifetime-bound D/E delivery share one immutable packet with independent bounded queues. Supplied TO is registered in Search Core; absent TO remains valid. Source/state/feature checks, one-attempt dispatch and token cleanup are enforced. RES/result routing remains a later increment.
+
 **Follow-up — alpha-0.5.5:** [Search Tokens](SEARCH_TOKENS.md) adds bounded session-lifetime/TO registration, local search generations, deadlines, cancellation and explicit active-search APIs in Core. Stateless preparation stays available; refused live SCH requests do not reserve tokens. Result correlation/routing and search administration remain later increments.
 
 Based directly on main `edb702ada4fea04d7854a18370a052fc96035ea7` after the alpha-0.5.3 merge. Earlier Search Core, SCH and filters are preserved. Code and diagnostics remain EN/US UTF-8, with mirrored US/PL documentation.
@@ -34,7 +36,7 @@ The original Message retains raw checked fields, order, numeric spellings and un
 
 ## Live transport boundary
 
-Real ADC/ADCS reception continues to validate state/source/readiness before parsing SCH. A valid TTH request still receives recoverable `125 Search routing not implemented`; malformed semantic input receives `100 Invalid search query`. This increment implements TTH criteria, projection and matching over supplied descriptors. It does not forward SCH, accept/correlate RES, send UDP responses or publish search results. Raw TCP/TLS tests and real ncdc prove parsed TTH reception and this explicit boundary, not completed remote result exchange.
+As of alpha-0.5.6, [Search Routing](SEARCH_ROUTING.md) forwards valid hash-only and combined SCH requests to eligible clients after source/state/readiness checks. Roots/criteria/tokens retain their wire representation. Actual ncdc tests verify another client receives the request over ADC and ADCS. RES/result routing, UDP response handling and successful result exchange remain later stages.
 
 No hub file index, share traversal, Tiger tree computation, file-content verification, request registry, search-specific quota/history or new configuration/API/UI is added. The existing `adc::tiger192` hashes a byte sequence for identity-related code; it must not be substituted for a whole file's Merkle-tree root. Unit tests distinguish the empty-file TTH (Tiger of the leaf prefix byte 0x00) from Tiger of an empty byte sequence; a general TTH generator is not claimed.
 
