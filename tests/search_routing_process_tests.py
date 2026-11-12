@@ -74,7 +74,7 @@ class RoutingProcessTests(unittest.TestCase):
                 peers = [source, second, third]
                 route(b'BSCH ' + source.sid + common + b' TOPrivateFeat', peers)
                 source.send(b'DRES ' + source.sid + b' ' + second.sid + b' FNSearchRoutingPrivate SI0 SL1 TOPrivateFeat')
-                self.assertEqual(source.line(), b'ISTA 125 Command\\snot\\simplemented FCDRES'); fence()
+                self.assertEqual(source.line(), b'ISTA 100 Invalid\\ssearch\\sresult FCDRES'); fence()
                 self.assertEqual(fetch_status(endpoint, secret)['chat'], before)
                 source.send(b'BSCH ' + second.sid + b' GEbad')
                 self.assertTrue(drain_until_eof(source.peer).startswith(b'ISTA 240 '))

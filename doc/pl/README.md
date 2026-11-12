@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.5.7: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.5.8: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [ADC RES — alpha-0.5.8](ADC_RES.md)
 - [Feature Routing — alpha-0.5.7](FEATURE_ROUTING.md)
 - [Search Routing — alpha-0.5.6](SEARCH_ROUTING.md)
 - [Search Tokens — alpha-0.5.5](SEARCH_TOKENS.md)

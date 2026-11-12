@@ -1,5 +1,16 @@
 # Changelog
 
+## alpha-0.5.8 — 2026-11-13
+
+ADC RES increment, based directly on main `f5c80aa0142b4ae6aa751ccde9a9b9e95dad1a9b` after the alpha-0.5.7 merge:
+
+- Added owning immutable ResRequest with parse_res/validate_res and typed file/directory ItemData, optional slots/token and canonical 192-bit TTH. The initial profile supports DRES only. Preserve original checked fields, unknown extension fields/repeats, ordering and numeric spellings through the shared serializer; no borrowed storage survives copies/moves. Raw syntax failures retain ParseError; semantic failures have typed ResError values.
+- Validate required FN/SI and file TR, virtual-name components and directory semantics, nonnegative 64-bit sizes/slots, opaque optional TO, duplicate scalar fields and canonical Tiger padding. Apply 4096-byte names, 128-byte tokens and an 8192-byte aggregate decoded budget including unknown fields, alongside existing shared frame/parameter limits. Hostile local objects pass bounded serialization/reparse; no advertised name is opened as an OS path. Token absence remains compatible with tokenless SCH; token correlation is not claimed.
+- Connected result reception to real LoginHub ADC/ADCS after existing readiness/state/source checks. Semantic failures receive fixed recoverable 100 Invalid search result; valid results explicitly receive 125 Search result routing not implemented. Allocation failure closes only the source. No result reaches a target, registry, database, log, API, WebAdmin or chat counters. Correlation, result routing/eligibility/count limits, UDP and transfer coordination remain future increments.
+- Added adc.res unit/fault/boundary/ownership checks and fragmented adc.res.process TCP/TLS recovery, authorization and privacy coverage. Actual ncdc ADC/ADCS feature-search tests now require the validated-result diagnostic after an indexed file produces DRES. Updated earlier malformed-result regressions for the new semantic rejection. Existing Search Core/SCH/filter/TTH/token/routing/feature modules and branches remain preserved.
+- Updated server/WebAdmin release metadata and mirrored US/PL ADC_RES documentation, navigation, architecture/protocol/network, API/security, build/testing and roadmap/version notes. Runtime catalogs remain in languages/us and languages/pl. No dependency, setting, SQL migration, endpoint or WebAdmin search control is added. This branch is published separately and is not automatically merged into main.
+- Validation: all **108/108 CTest suites** passed locally in Debug, Release and ASan/UBSan with required integration tools and default leak detection, including real ncdc ADC/ADCS, MariaDB and Apache HTTPS. No compiler warnings. WebAdmin build/typecheck, 4 Node tests, 6 Chromium tests and real C++ API integration passed. Metadata, UTF-8, documentation language parity/local links, modified Python syntax, shipped INI and whitespace checks passed. Remote CI, the full supported OS/client matrix and production load remain unverified.
+
 ## alpha-0.5.7 — 2026-11-12
 
 Feature Routing increment, based directly on main `029559af12fa67fb9c9eb94ec3196737b3360a7b` after the alpha-0.5.6 merge:

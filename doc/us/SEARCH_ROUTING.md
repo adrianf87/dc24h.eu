@@ -1,6 +1,8 @@
 # Search Routing — alpha-0.5.6
 
-**Current increment — alpha-0.5.7:** [Feature Routing](FEATURE_ROUTING.md) compiles checked FSCH selectors once and uses current public INF SU for all-required/no-excluded matching. SUP negotiation is independent. Live capability changes, issuer membership, unknown revisions and limits are covered over ADC/ADCS and real ncdc. RES/result routing remains a later increment.
+**Current increment — alpha-0.5.8:** [ADC RES](ADC_RES.md) adds owning typed DRES parsing and live ADC/ADCS validation of names, sizes, slots, opaque tokens and canonical TTH roots after session/source checks. Semantic errors are recoverable and private; valid results explicitly report pending result routing. Token correlation, result delivery and UDP remain future increments.
+
+**Increment delivered in alpha-0.5.7:** [Feature Routing](FEATURE_ROUTING.md) compiles checked FSCH selectors once and uses current public INF SU for all-required/no-excluded matching. SUP negotiation is independent. Live capability changes, issuer membership, unknown revisions and limits are covered over ADC/ADCS and real ncdc. RES/result routing remains a later increment.
 
 Based directly on main `a5824cbc2a5d4ab1c8d6ddf99e5af87bfafe30cb` after the alpha-0.5.5 merge. Earlier Search Core, SCH, filters, TTH and tokens are preserved. Code/wire diagnostics remain EN/US UTF-8, with mirrored US/PL documentation.
 

@@ -31,7 +31,7 @@ class SearchCoreProcessTests(unittest.TestCase):
                     if kind == b'FSCH': wire += b' +TCP4'
                     wire += b' ANSearchCoreSecret TOPrivateSearchToken' + kind if kind != b'DRES' else b' FNSearchCoreSecret SI1 SL1 TOPrivateSearchToken'
                     source.send(wire)
-                    if kind == b'DRES': self.assertEqual(source.line(), b'ISTA 125 Command\\snot\\simplemented FCDRES')
+                    if kind == b'DRES': self.assertEqual(source.line(), b'ISTA 100 Invalid\\ssearch\\sresult FCDRES')
                     else:
                         recipients = (source, observer) if kind in (b'BSCH', b'ESCH') else ((observer,) if kind == b'DSCH' else ())
                         for peer in recipients: self.assertEqual(peer.line(), wire)
