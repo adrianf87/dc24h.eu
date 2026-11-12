@@ -145,7 +145,7 @@ void receive_isolation() {
     const auto source=join(hub,1,welcome), target=join(hub,2,welcome); (void)drain(hub,1);
     const auto body="DRES "+source+" "+target+" FN/share/file SI0 TR"+hash+" TOprivate";
     hub.receive(1,parse(body));
-    require(drain(hub,1)=="ISTA 125 Search\\sresult\\srouting\\snot\\simplemented FCDRES\n" && hub.output(2).empty(),"Valid result implied routing");
+    require(drain(hub,1)=="ISTA 100 Search\\sresult\\stoken\\sis\\snot\\sactive FCDRES\n" && hub.output(2).empty(),"Unknown result token was forwarded");
     const auto message=parse(body);
     allocation_budget=0; hub.receive(1,message); allocation_budget=-1;
     require(hub.must_close(1) && hub.ready(2) && hub.output(2).empty(),"RES allocation failure escaped or affected another peer");

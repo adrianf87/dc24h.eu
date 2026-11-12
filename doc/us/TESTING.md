@@ -1,6 +1,8 @@
 # Testing
 
-**Current increment — alpha-0.5.8:** [ADC RES](ADC_RES.md) adds owning typed DRES parsing and live ADC/ADCS validation of names, sizes, slots, opaque tokens and canonical TTH roots after session/source checks. Semantic errors are recoverable and private; valid results explicitly report pending result routing. Token correlation, result delivery and UDP remain future increments.
+**Current increment — alpha-0.5.9:** [Result Routing](RESULT_ROUTING.md) forwards checked DRES only to its ready target over ADC/ADCS. Plans bind session lifetimes and, when TO is present, the target owner’s active search generation. Tokenless results remain supported. Shared bounded queues preserve original fields without public fanout, sender echo or administration payloads.
+
+**Increment delivered in alpha-0.5.8:** [ADC RES](ADC_RES.md) adds owning typed DRES parsing and live ADC/ADCS validation of names, sizes, slots, opaque tokens and canonical TTH roots after session/source checks. Semantic errors are recoverable and private; valid results explicitly report pending result routing. Token correlation, result delivery and UDP remain future increments.
 
 Local verification for **alpha-0.5.7** on 2026-11-12: all **106/106 CTest suites** passed in Debug, Release and ASan/UBSan with required integration tools and default leak detection, including compiled-feature/fault tests, mixed ADC/ADCS SU/SUP fanout, real ncdc feature/name/filter/TTH interoperability, MariaDB and Apache HTTPS. Builds emitted no compiler warnings. WebAdmin production build/typecheck, 4 Node tests, 6 Chromium tests and real C++ API integration passed. Metadata, UTF-8, documentation language parity/local links, modified Python syntax, shipped INI and whitespace checks passed. These results are local; remote CI is tracked in GitHub Actions. The full supported OS/client matrix and production load remain unverified.
 
