@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.5.6 (Search Routing).**
+**Current development version: alpha-0.5.7 (Feature Routing).**
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.5.7 Feature Routing**: compiled exact FSCH selectors, current public INF SU matching, SUP independence, live capability changes and positive/negative fanout verified with ADC/ADCS and ncdc. See [Feature Routing](doc/us/FEATURE_ROUTING.md).
 
 - **alpha-0.5.6 Search Routing**: real ADC/ADCS B/F/D/E SCH delivery, feature/lifetime checks, immutable shared packets, bounded queues and active-token lifecycle. Actual ncdc tests verify delivery to another client. RES/result routing remains a later stage. See [Search Routing](doc/us/SEARCH_ROUTING.md).
 - **alpha-0.5.5 Search Tokens**: bounded session-lifetime/TO registration, local generations, expiration/cancellation and active-search Core APIs with rollback and allocation-free lookup/dispatch. Live result correlation/routing remains a later stage. See [Search Tokens](doc/us/SEARCH_TOKENS.md).

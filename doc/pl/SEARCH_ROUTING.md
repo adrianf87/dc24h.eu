@@ -1,5 +1,7 @@
 # Search Routing — alpha-0.5.6
 
+**Bieżący etap — alpha-0.5.7:** [Feature Routing](FEATURE_ROUTING.md) kompiluje selektory FSCH raz i korzysta z aktualnego publicznego INF SU: wszystkie wymagane, żadna wykluczająca. Negocjacja SUP jest niezależna. Zmiany możliwości, udział źródła, nieznane rewizje i limity sprawdzono przez ADC/ADCS i rzeczywisty ncdc. RES/routing wyników pozostaje kolejnym etapem.
+
 Etap oparty bezpośrednio na main `a5824cbc2a5d4ab1c8d6ddf99e5af87bfafe30cb` po scaleniu alpha-0.5.5. Zachowano Search Core, SCH, filtry, TTH i tokeny. Kod/diagnostyka protokołu pozostają EN/US UTF-8, z dokumentacją US/PL.
 
 ## Rzeczywista dostawa zapytań

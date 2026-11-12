@@ -1,0 +1,31 @@
+# Feature Routing — alpha-0.5.7
+
+Weryfikacja lokalna **alpha-0.5.7** z 2026-11-12: wszystkie **106/106 zestawów CTest** przeszły w Debug, Release i ASan/UBSan z wymaganymi narzędziami integracyjnymi i domyślnym wykrywaniem wycieków, w tym filtry funkcji/awarie, mieszany ADC/ADCS fanout SU/SUP, rzeczywisty ncdc z funkcjami/nazwami/filtrami/TTH, MariaDB i Apache HTTPS. Kompilacje nie emitowały ostrzeżeń. Przeszły produkcyjne budowanie/typecheck WebAdmin, 4 testy Node, 6 testów Chromium i integracja z rzeczywistym API C++. Sprawdzono metadane, UTF-8, zgodność plików językowych/linki dokumentacji, składnię zmienionych skryptów Python, przykładowy INI i białe znaki. Wyniki są lokalne; zdalne CI jest śledzone w GitHub Actions. Pełna macierz systemów/klientów i obciążenie produkcyjne pozostają niezweryfikowane.
+
+Etap oparto bezpośrednio na main `029559af12fa67fb9c9eb94ec3196737b3360a7b` po scaleniu alpha-0.5.6. Zachowano wcześniejszy Search Routing; teraz wybór funkcji otrzymuje własny sprawdzany moduł i rozszerzone testy współpracy klientów.
+
+## Kontrakt wyboru
+
+`search/features.hpp` definiuje Selection, FeatureCode, FeatureError i FeatureFilter. Identyfikator składa się z trzech wielkich liter ASCII oraz końcowej wielkiej litery lub cyfry. Porównanie jest dokładne, rozróżnia wielkość liter i rewizje: ADC0 i ADC1 to różne funkcje. Nieznane poprawne identyfikatory są dozwolone bez białej listy rozszerzeń. Kodowanie czterech bajtów do wartości 32-bitowej jest jednoznaczne, bez haszowania, ustawień regionalnych i normalizacji Unicode.
+
+Selection zawiera funkcje wymagane i wykluczające. Publiczne INF SU odbiorcy musi zawierać wszystkie wymagane i żadnej wykluczonej. Działają wybory tylko dodatnie, tylko ujemne i mieszane. Pusty Selection dopasowuje wszystkich gotowych użytkowników dla zwykłego routingu B/D/E. Sam FSCH nadal wymaga niepustego nagłówka selektorów. Wspólny limit aplikacyjny to 32; duplikaty, sprzeczne wymagania i niepoprawne nazwy są odrzucane przed kopiowaniem tekstu. Błędne obiekty lokalne i nadmiernie długie nazwy nie powodują częściowej kompilacji ani rejestracji tokenu. Plan posiada sprawdzoną oryginalną kolejność i pisownię.
+
+Filtr kompiluje selektory raz, zachowuje ograniczoną tablicę dokładnych kodów i porównuje zbiór ogłoszony przez klienta za pomocą 64-bitowej maski wymagań. Dopasowanie nie alokuje pamięci. Powtórzone ogłoszone nazwy mają semantykę zbioru; niepowiązana niepoprawna nazwa nie spełni selektora. Publiczne profile zachowują dotychczasową walidację i limit 128 funkcji; moduł nie osłabia tych reguł ani nie interpretuje tekstu profilu ponownie.
+
+## Integracja sesji i protokołu
+
+Przygotowanie w Core oraz dispatch bezstanowy i z tokenem używają tego samego niezmiennego FeatureFilter. Wybór pochodzi z FSCH; możliwości odbiorcy wyłącznie z aktualnego User/profilu SessionManager utworzonego ze sprawdzonego publicznego INF. HSUP AD... / RM... negocjuje możliwości z hubem i nie dodaje ani nie usuwa publicznego SU. Klient może ogłaszać różne funkcje tymi mechanizmami zgodnie ze [specyfikacją ADC](https://adc.sourceforge.io/ADC.html).
+
+Odbiorcami nadal są gotowe sesje z migawki identyfikatorów życia. Źródło otrzymuje własne F tylko przy dopasowaniu. Puste/anulowane SU spełnia selektory wyłącznie ujemne, ale żadnego dodatniego. Poprawne BINF ... SU... natychmiast wpływa na następne zapytanie; dispatch ponownie sprawdza każdego odbiorcę, więc utrata wymaganej lub dodanie wykluczającej funkcji wstrzymuje wysłanie. Zyskanie funkcji i nowe logowania nie rozszerzają przygotowanej migawki. Negocjujący są pomijani; kontrole źródła/gotowości, rozłączenia/ponownego użycia SID i anulowania pozostają bez zmian.
+
+Walidacja SCH korzysta ze wspólnego parsera FeatureCode. Jeden niezmienny współdzielony SearchFrame zachowuje nagłówek F, kolejność selektorów, kryteria, TO/TR, nieznane pola i pisownię liczb. Brak dopasowania nie przepisuje F na B ani nie rozszerza odbiorców. Pusty fanout od razu zwalnia TO. Błędne selektory nie rezerwują TO i nie kolejkują żądania; stałe odzyskiwalne błędy nie zawierają zapytania. Obowiązuje izolacja awarii kolejek/transportu i limity tokenów. Zobacz [Search Routing](SEARCH_ROUTING.md), [Search Core](SEARCH_CORE.md), [ADC SCH](ADC_SCH.md) i [INF Updates](INF_UPDATES.md).
+
+## Weryfikacja i zakres
+
+Zestaw search.features sprawdza walidację, własność, awarie alokacji, wszystkie kombinacje wymagań/wykluczeń dla reprezentatywnych funkcji i podzbiory ogłoszeń, granicę 32 bitów, nieznane rewizje i brak alokacji. Fanout FSCH dla 270 użytkowników weryfikuje stronicowanie, aktualne wymagania/wykluczenia, późniejsze zyskanie możliwości, nowe sesje, współdzielenie ramek i sprzątanie tokenu. search.features.process testuje fragmentowany mieszany ADC/ADCS, aktualizacje/anulowanie SU, niezależność SUP, udział źródła, 32 selektory, błędy/sprzeczności, zwalnianie tokenów pustych zapytań, źródło/stan i prywatność logów/API/liczników czatu.
+
+adc.feature.ncdc i adcs.feature.ncdc używają małego rzeczywistego udziału ncdc, czekają na indeksowanie i wysyłają FSCH ... -TCP4 ... od niedopasowanego klienta. ADC sprawdza ramkę FSCH oraz DRES wygenerowane przez ncdc ze ścieżką pliku i nieinterpretowanym tokenem. ADCS sprawdza odpowiedź w oknie huba ncdc przy zaszyfrowanym przechwyceniu pakietów. Niedopasowany nadawca nie otrzymuje echa. Dotychczasowe testy nazw/filtrów/TTH, logowania/czatu/ponownego łączenia pozostają włączone.
+
+Dostarczono wyłącznie routing funkcji żądań. RES nadal otrzymuje jawną odmowę 125; wygenerowanie DRES przez ncdc potwierdza współpracę, nie oznacza przekazywania wyników. Nie dodano indeksu plików w hubie, transferów klientów, UDP wyników, osobnej polityki flood/historii wyszukiwań, migracji SQL, endpointu, ustawienia ani strony wyszukiwania WebAdmin. Kod i diagnostyka protokołu pozostają EN/US UTF-8; dokumentacja jest lustrzana US/PL. Gałąź zachowuje historię i jest publikowana oddzielnie od main.
+
+Zainstalowany [ncdc 1.23.1](https://dev.yorhel.nl/download/ncdc-1.23.1.tar.gz), filtr adc_handle w src/hub.c, ogłasza publiczne ADC0, lecz jego własny filtr przychodzących nagłówków F rozpoznaje tylko TCP4. Test współpracy używa więc wyłącznie ujemnego -TCP4; dodatnie/mieszane/nieznane selektory sprawdzają klienci protokołu i zestawy C++. To ograniczenie klienta nie zmienia dopasowania SU po stronie serwera.
