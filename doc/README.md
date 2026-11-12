@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.5.6. Default language: EN/US UTF-8.
+[Feature Routing / routing funkcji — alpha-0.5.7](us/FEATURE_ROUTING.md) · [PL](pl/FEATURE_ROUTING.md)
+
+Current development version: alpha-0.5.7. Default language: EN/US UTF-8.
 
 - [English (US)](us/README.md)
 - [Polski](pl/README.md)

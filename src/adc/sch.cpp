@@ -31,8 +31,7 @@ std::optional<SchError> preflight(const Message& message) noexcept {
     }
     for (std::size_t i = 0; i < message.features.size(); ++i) {
         const auto& name = message.features[i].name;
-        if (name.size() != 4 || !std::all_of(name.begin(), name.begin()+3, [](char c) { return c >= 'A' && c <= 'Z'; }) ||
-            !((name[3] >= 'A' && name[3] <= 'Z') || (name[3] >= '0' && name[3] <= '9'))) { return SchError::invalid_features; }
+        if (!search::FeatureCode::parse(name)) { return SchError::invalid_features; }
         for (std::size_t j = 0; j < i; ++j) {
             if (message.features[j].name == name) { return SchError::invalid_features; }
         }

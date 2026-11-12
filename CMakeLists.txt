@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.5.6 LANGUAGES CXX)
+project(dc24h VERSION 0.5.7 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -53,7 +53,7 @@ set_target_properties(dc24h_chat PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_chat PUBLIC include)
 target_link_libraries(dc24h_chat PUBLIC dc24h_users PRIVATE dc24h_text)
 
-add_library(dc24h_search src/search/query.cpp src/search/core.cpp src/search/filters.cpp src/search/tokens.cpp)
+add_library(dc24h_search src/search/query.cpp src/search/core.cpp src/search/features.cpp src/search/filters.cpp src/search/tokens.cpp)
 target_compile_features(dc24h_search PUBLIC cxx_std_20)
 set_target_properties(dc24h_search PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_search PUBLIC include)
@@ -214,6 +214,14 @@ if(BUILD_TESTING)
     add_test(NAME search.tokens.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/search_tokens_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(search.tokens search.tokens.process PROPERTIES TIMEOUT 30)
+    add_executable(search_features_tests tests/search_features_tests.cpp)
+    target_link_libraries(search_features_tests PRIVATE dc24h_adc)
+    target_compile_options(search_features_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(search_features_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME search.features COMMAND search_features_tests)
+    add_test(NAME search.features.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/search_features_process_tests.py" "$<TARGET_FILE:dc24h>")
+    set_tests_properties(search.features search.features.process PROPERTIES TIMEOUT 45)
     add_executable(search_routing_tests tests/search_routing_tests.cpp)
     target_link_libraries(search_routing_tests PRIVATE dc24h_adc)
     target_compile_options(search_routing_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
@@ -611,6 +619,13 @@ if(BUILD_TESTING)
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
             "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>" --tth --tls)
         set_tests_properties(adc.tth.ncdc adcs.tth.ncdc PROPERTIES TIMEOUT 30)
+        add_test(NAME adc.feature.ncdc COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
+            "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>" --feature)
+        add_test(NAME adcs.feature.ncdc COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
+            "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>" --feature --tls)
+        set_tests_properties(adc.feature.ncdc adcs.feature.ncdc PROPERTIES TIMEOUT 45)
     elseif(DC24H_REQUIRE_INTEGRATION_TESTS)
         message(FATAL_ERROR "Required ncdc not found: adc.ncdc and adcs.ncdc smoke tests are unavailable")
     else()

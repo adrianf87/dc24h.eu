@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dc24h/search/query.hpp"
+#include "dc24h/search/features.hpp"
 #include "dc24h/search/tokens.hpp"
 #include "dc24h/users/session_manager.hpp"
 
@@ -10,11 +11,6 @@
 #include <utility>
 
 namespace dc24h::search {
-inline constexpr std::size_t max_selectors = 32;
-struct Selection {
-    std::vector<std::string> required_features, excluded_features;
-    friend bool operator==(const Selection&, const Selection&) = default;
-};
 enum class Scope { broadcast, direct, echo };
 struct Audience {
     Scope scope{Scope::broadcast};
@@ -28,19 +24,19 @@ public:
     [[nodiscard]] users::SessionId sender() const noexcept { return sender_; }
     [[nodiscard]] const std::string& source() const noexcept { return source_; }
     [[nodiscard]] const Query& query() const noexcept { return query_; }
-    [[nodiscard]] const Selection& selection() const noexcept { return selection_; }
+    [[nodiscard]] const Selection& selection() const noexcept { return features_.selection(); }
     [[nodiscard]] const std::vector<users::SessionId>& recipients() const noexcept { return recipients_; }
 private:
     friend class Core;
     Plan(std::shared_ptr<const detail::Domain> domain, users::SessionId sender, std::string_view source,
-         Query query, Selection selection, std::vector<users::SessionId> recipients)
+         Query query, FeatureFilter features, std::vector<users::SessionId> recipients)
         : domain_(std::move(domain)), sender_(sender), source_(source), query_(std::move(query)),
-          selection_(std::move(selection)), recipients_(std::move(recipients)) {}
+          features_(std::move(features)), recipients_(std::move(recipients)) {}
     std::shared_ptr<const detail::Domain> domain_;
     users::SessionId sender_;
     std::string source_;
     Query query_;
-    Selection selection_;
+    FeatureFilter features_;
     std::vector<users::SessionId> recipients_;
 };
 struct DispatchReport {

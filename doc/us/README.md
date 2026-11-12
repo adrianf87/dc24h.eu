@@ -1,7 +1,8 @@
 # dc24h.eu documentation
 
-alpha-0.5.6: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.5.7: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
+- [Feature Routing — alpha-0.5.7](FEATURE_ROUTING.md)
 - [Search Routing — alpha-0.5.6](SEARCH_ROUTING.md)
 - [Search Tokens — alpha-0.5.5](SEARCH_TOKENS.md)
 - [TTH Search — alpha-0.5.4](TTH_SEARCH.md)

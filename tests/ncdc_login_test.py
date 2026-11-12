@@ -1,4 +1,5 @@
 """Real ncdc completes guest login/reconnect on the C++ TCP/OpenSSL reactor."""
+from contextlib import closing
 import fcntl
 import os
 import pathlib
@@ -6,6 +7,7 @@ import pty
 import re
 import select
 import socket
+import sqlite3
 import struct
 import subprocess
 import sys
@@ -29,6 +31,9 @@ if ENCRYPTED:
 TTH_SEARCH = '--tth' in sys.argv
 if TTH_SEARCH:
     sys.argv.remove('--tth')
+FEATURE_SEARCH = '--feature' in sys.argv
+if FEATURE_SEARCH:
+    sys.argv.remove('--feature')
 TEST_TTH = b'LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHHHZWCLNQ'
 
 
@@ -105,6 +110,13 @@ class NcdcLoginTest(unittest.TestCase):
                     self.assertIsNone(process.poll(), repr(screen[-3000:]))
                     self.assertLess(time.monotonic(), deadline, repr(screen[-5000:]))
                     if select.select([master], [], [], 0.1)[0]:
+                        screen.extend(os.read(master, 65536))
+
+            def wait_capture(buffer, expected):
+                deadline = time.monotonic() + 3
+                while expected not in buffer:
+                    self.assertLess(time.monotonic(), deadline, 'Proxy did not capture expected frame')
+                    if select.select([master], [], [], 0.05)[0]:
                         screen.extend(os.read(master, 65536))
 
             try:
@@ -230,9 +242,33 @@ class NcdcLoginTest(unittest.TestCase):
                     self.assertNotEqual(initial[0].split()[1], initial[1].split()[1], 'Reconnect reused its ADC SID')
                     cids = [re.search(rb'(?:^| )ID([A-Z2-7]+)(?: |$)', line)[1] for line in initial]
                     self.assertEqual(cids[0], cids[1], 'Reconnect changed its public CID')
-                # SCH is now parsed; routing/results remain a later stage.
-                # TLS proxy captures are encrypted, so synchronize with the
-                # private API and assert the refusal in ncdc's hub window.
+                if FEATURE_SEARCH:
+                    # A real indexed share lets ncdc prove that it processed the
+                    # routed FSCH by producing a result. RES routing is separate.
+                    share = pathlib.Path(directory) / 'shared'
+                    share.mkdir()
+                    (share / 'FeatureRoutingProbe.txt').write_text('Feature routing interoperability probe.\n')
+                    os.write(master, b'/share FeatureShare ' + str(share).encode() + b'\r')
+                    deadline = time.monotonic() + 10
+                    while True:
+                        with closing(sqlite3.connect(pathlib.Path(directory) / 'session/db.sqlite3')) as database:
+                            indexed = database.execute('SELECT 1 FROM hashfiles WHERE filename=?',
+                                                       (str(share / 'FeatureRoutingProbe.txt'),)).fetchone()
+                        if indexed:
+                            break
+                        self.assertLess(time.monotonic(), deadline, 'ncdc did not index its share')
+                        if select.select([master], [], [], 0.05)[0]:
+                            screen.extend(os.read(master, 65536))
+                    # Force a normal INF delta after hashing rather than waiting
+                    # for ncdc's periodic public-share update timer.
+                    os.write(master, b'/hset description dc24hFeatureIndexReady\r')
+                    while True:
+                        delta = observer.line()
+                        self.assertTrue(delta.startswith(b'BINF ' + replacement_sid + b' '), delta)
+                        if b'DEdc24hFeatureIndexReady' in delta:
+                            break
+                # Actual SCH delivery is checked at the observer. TLS proxy
+                # captures remain encrypted; the private API fences submission.
                 before_search = fetch_status(api_path, token)['network']['adc_frames']
                 command = (b'/search -hub -tth ' + TEST_TTH + b'\r' if TTH_SEARCH else
                            b'/search -hub -ge 1K -t archive SearchCoreSecret\r')
@@ -249,6 +285,8 @@ class NcdcLoginTest(unittest.TestCase):
                 self.assertRegex(routed_search, rb'^[BF]SCH ' + replacement_sid + rb' ')
                 self.assertIn(b'TR' + TEST_TTH if TTH_SEARCH else b'ANSearchCoreSecret', routed_search)
                 self.assertNotIn(b'Search routing not implemented', screen)
+                if not ENCRYPTED and routed_search.startswith(b'BSCH '):
+                    wait_capture(replies, routed_search + b'\n')
                 if ENCRYPTED:
                     self.assertNotIn(b'SearchCoreSecret', wire)
                     self.assertNotIn(TEST_TTH, wire)
@@ -263,6 +301,32 @@ class NcdcLoginTest(unittest.TestCase):
                     self.assertRegex(bytes(wire), rb'[BF]SCH [^\n]*GE1024')
                     self.assertRegex(bytes(wire), rb'[BF]SCH [^\n]*EX(?:7z|7Z|zip|ZIP)')
                     if routed_search.startswith(b'BSCH '): self.assertIn(routed_search + b'\n', replies)
+                if FEATURE_SEARCH:
+                    public_features = re.search(rb'(?:^| )SU([^ ]+)', replacement_join)
+                    self.assertIsNotNone(public_features, replacement_join)
+                    self.assertIn(b'ADC0', public_features[1].split(b','))
+                    self.assertNotIn(b'TCP4', public_features[1].split(b','))
+                    feature_query = (b'FSCH ' + observer.sid +
+                                     b' -TCP4 ANFeatureRoutingProbe EXtxt TOFeatureRoutingProbeToken')
+                    observer.send(feature_query)
+                    wait_screen(b'Command not implemented')
+                    # ncdc emitted DRES only after receiving and matching FSCH.
+                    # The hub still explicitly refuses RES at this increment.
+                    if ENCRYPTED:
+                        self.assertNotIn(b'FeatureRoutingProbe', wire)
+                        self.assertNotIn(b'FeatureRoutingProbe', replies)
+                    else:
+                        self.assertIn(feature_query + b'\n', replies)
+                        result = re.search(rb'DRES ' + replacement_sid + b' ' + observer.sid + rb' [^\n]*\n', bytes(wire))
+                        self.assertIsNotNone(result, bytes(wire)[-2500:])
+                        self.assertIn(b'/FeatureShare/FeatureRoutingProbe.txt', result[0])
+                        self.assertIn(b'TOFeatureRoutingProbeToken', result[0])
+                        self.assertIn(b'ISTA 125 Command\\snot\\simplemented FCDRES\n', replies)
+                    # The nonmatching issuer receives neither its FSCH echo nor
+                    # a result (the result router is not implemented yet).
+                    marker = b'BINF ' + observer.sid + b' DEFeatureRoutingFence'
+                    observer.send(marker)
+                    self.assertEqual(observer.line(), marker)
                 os.write(master, b'/quit\r')
                 deadline = time.monotonic() + 4
                 while process.poll() is None and time.monotonic() < deadline:
@@ -310,6 +374,7 @@ class NcdcLoginTest(unittest.TestCase):
                 self.assertNotIn(b'dc24hPrivateAction', hub.log)
                 self.assertNotIn(b'SearchCoreSecret', hub.log)
                 self.assertNotIn(TEST_TTH, hub.log)
+                self.assertNotIn(b'FeatureRoutingProbe', hub.log)
                 self.assertNotIn(b'dc24hIncomingChat', hub.log)
                 self.assertNotIn(b'dc24hPublic', hub.log)
                 self.assertNotIn(b'dc24hValidated', hub.log)

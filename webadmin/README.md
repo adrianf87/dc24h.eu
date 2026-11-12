@@ -1,4 +1,4 @@
-# dc24h.eu WebAdmin — alpha-0.5.6
+# dc24h.eu WebAdmin — alpha-0.5.7
 
 React + TypeScript + Vite, with a responsive EN/US and PL read-only panel.
 Unavailable data is shown explicitly; no fake live metrics or browser token storage.
