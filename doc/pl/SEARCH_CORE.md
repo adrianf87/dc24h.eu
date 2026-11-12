@@ -1,5 +1,7 @@
 # Search Core — alpha-0.5.1
 
+**Aktualizacja — alpha-0.5.5:** [Search Tokens](SEARCH_TOKENS.md) dodaje ograniczony rejestr życia sesji/TO, lokalne generacje wyszukiwań, terminy ważności, anulowanie i jawne API aktywnych wyszukiwań Core. Nadal można przygotować plan bez rejestracji; odrzucone rzeczywiste SCH nie rezerwuje tokenów. Korelacja/routing wyników i administracja wyszukiwaniem pozostają kolejnymi etapami.
+
 **Aktualizacja — alpha-0.5.4:** [TTH Search](TTH_SEARCH.md) przekazuje pełny 192-bitowy hash pliku z SCH do niezmiennych zapytań/planów Core, opisów i filtrów. Zapytania z samym hashem lub łączone używają dokładnej równości i zachowują dodatkowe kryteria. Testowane są rzeczywiste zapytania TTH ncdc ADC/ADCS; routing zapytań/wyników pozostaje kolejnym etapem.
 
 **Aktualizacja — alpha-0.5.3:** [Search Filters](SEARCH_FILTERS.md) dodaje skompilowane filtry nazw/ścieżek Unicode bez rozróżniania wielkości liter, alternatywy rozszerzeń, domknięte/dokładne limity bajtów i typ plik/katalog dla sprawdzonych opisów. Zapytania z samymi filtrami i nieprzezroczyste tokeny NFC przechodzą do Search Core. Dopasowanie nie alokuje pamięci; routing/wyniki, indeksy i administracja wyszukiwaniem pozostają kolejnymi etapami.
@@ -14,7 +16,7 @@ Gałąź utworzono bezpośrednio z main `c6b34ea849ef808a0bfee4a27e0c8ae38cff4a6
 
 [Specyfikacja ADC](https://adc.sourceforge.io/ADC.html) rozdziela zapytania SCH, wyniki RES i routing według funkcji. Ten etap dostarcza podległy model ogólny, nie kodek ADC ani sieciowy handler wyszukiwania. `QueryData` jest wewnętrznym kontraktem C++; opisane limity i walidacja są polityką aplikacji, a nie opisem wszystkich poprawnych zapytań ADC. Wartości enum nie są wartościami liczbowymi protokołu.
 
-Produkcyjny LoginHub jeszcze nie wywołuje Search Core. SCH/RES z poprawnym stanem/źródłem nadal otrzymuje `ISTA 125 Command\snot\simplemented FC<FOURCC>`; walidacja stanu i źródła ma pierwszeństwo. Nie ma niekontrolowanego forwardowania podczas etapowego rozwoju. Nie dodano wymiany wyników na żywo, zapytań TTH, endpointu UDP, timeoutów/limitera wyszukiwań, rejestru tokenów, historii, migracji, statystyk API ani sterowania wyszukiwaniem w WebAdmin. Zachowano działanie Chat/WebAdmin, aktualizując ich metadane do alpha-0.5.1.
+Produkcyjny LoginHub nadal nie wywołuje Search Core: poprawne SCH otrzymuje `125 Search routing not implemented`, a RES `125 Command not implemented`, po dotychczasowych kontrolach źródła/stanu/gotowości. Od alpha-0.5.4 Core/Filter obsługuje TTH; od alpha-0.5.5 jawne API biblioteki aktywnych wyszukiwań udostępnia ograniczony [rejestr tokenów](SEARCH_TOKENS.md) i terminy. Rzeczywista ścieżka odmowy nigdy nie rezerwuje tokena. Wymiana wyników, endpointy UDP, sieciowy limiter wyszukiwań, historia, migracje bazy i statystyki/kontrolki wyszukiwania API/UI pozostają kolejnymi etapami. Metadane odpowiadają bieżącej wersji.
 
 ## Niezmienne kryteria
 

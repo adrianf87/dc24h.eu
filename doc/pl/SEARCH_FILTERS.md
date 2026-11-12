@@ -1,5 +1,7 @@
 # Search Filters — alpha-0.5.3
 
+**Aktualizacja — alpha-0.5.5:** [Search Tokens](SEARCH_TOKENS.md) dodaje ograniczony rejestr życia sesji/TO, lokalne generacje wyszukiwań, terminy ważności, anulowanie i jawne API aktywnych wyszukiwań Core. Nadal można przygotować plan bez rejestracji; odrzucone rzeczywiste SCH nie rezerwuje tokenów. Korelacja/routing wyników i administracja wyszukiwaniem pozostają kolejnymi etapami.
+
 **Aktualizacja — alpha-0.5.4:** [TTH Search](TTH_SEARCH.md) przekazuje pełny 192-bitowy hash pliku z SCH do niezmiennych zapytań/planów Core, opisów i filtrów. Zapytania z samym hashem lub łączone używają dokładnej równości i zachowują dodatkowe kryteria. Testowane są rzeczywiste zapytania TTH ncdc ADC/ADCS; routing zapytań/wyników pozostaje kolejnym etapem.
 
 Etap oparty bezpośrednio na main `dd2a968469c3db21ada4e469afc85b7a3415eeab` po scaleniu alpha-0.5.2. Zachowano wcześniejsze Search Core i ADC SCH. Kod i komunikaty pozostają EN/US UTF-8; dokumentacja ma wersje US/PL.
