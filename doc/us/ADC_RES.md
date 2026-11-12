@@ -1,5 +1,7 @@
 # ADC RES — alpha-0.5.8
 
+**Current increment — alpha-0.5.9:** [Result Routing](RESULT_ROUTING.md) forwards checked DRES only to its ready target over ADC/ADCS. Plans bind session lifetimes and, when TO is present, the target owner’s active search generation. Tokenless results remain supported. Shared bounded queues preserve original fields without public fanout, sender echo or administration payloads.
+
 Local verification on 2026-11-13: **108/108 CTest suites passed in each of Debug, Release and ASan/UBSan**, with required integration tools and default sanitizer leak detection. This includes real ncdc ADC/ADCS, MariaDB and Apache HTTPS. No compiler warnings. WebAdmin production build/typecheck, 4 Node tests, 6 Chromium tests and the real C++ API → adapter → React integration passed. Release metadata, UTF-8, documentation language parity/local links, modified Python syntax, shipped INI and whitespace checks passed. These are local results; remote CI, the full supported OS/client matrix and production load remain unverified.
 
 Based directly on main `f5c80aa0142b4ae6aa751ccde9a9b9e95dad1a9b` (alpha-0.5.7 already merged). Existing branches alpha-0.5.1–alpha-0.5.7 and their history are preserved. This increment receives and validates results; result forwarding is deliberately a separate future increment.

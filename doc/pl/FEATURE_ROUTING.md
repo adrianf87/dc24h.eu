@@ -1,5 +1,7 @@
 # Feature Routing — alpha-0.5.7
 
+**Bieżący etap — alpha-0.5.9:** [Result Routing](RESULT_ROUTING.md) przekazuje sprawdzone DRES wyłącznie do gotowego celu przez ADC/ADCS. Plan wiąże czas życia sesji oraz — gdy podano TO — generację aktywnego wyszukiwania właściciela celu. Nadal obsługiwane są wyniki bez tokenu. Współdzielone ograniczone kolejki zachowują oryginalne pola bez rozsyłania publicznego, echa do nadawcy i treści w administracji.
+
 Weryfikacja lokalna **alpha-0.5.7** z 2026-11-12: wszystkie **106/106 zestawów CTest** przeszły w Debug, Release i ASan/UBSan z wymaganymi narzędziami integracyjnymi i domyślnym wykrywaniem wycieków, w tym filtry funkcji/awarie, mieszany ADC/ADCS fanout SU/SUP, rzeczywisty ncdc z funkcjami/nazwami/filtrami/TTH, MariaDB i Apache HTTPS. Kompilacje nie emitowały ostrzeżeń. Przeszły produkcyjne budowanie/typecheck WebAdmin, 4 testy Node, 6 testów Chromium i integracja z rzeczywistym API C++. Sprawdzono metadane, UTF-8, zgodność plików językowych/linki dokumentacji, składnię zmienionych skryptów Python, przykładowy INI i białe znaki. Wyniki są lokalne; zdalne CI jest śledzone w GitHub Actions. Pełna macierz systemów/klientów i obciążenie produkcyjne pozostają niezweryfikowane.
 
 Etap oparto bezpośrednio na main `029559af12fa67fb9c9eb94ec3196737b3360a7b` po scaleniu alpha-0.5.6. Zachowano wcześniejszy Search Routing; teraz wybór funkcji otrzymuje własny sprawdzany moduł i rozszerzone testy współpracy klientów.

@@ -1,10 +1,12 @@
 # dc24h.eu technical documentation
 
+[Result Routing — alpha-0.5.9](us/RESULT_ROUTING.md) · [PL](pl/RESULT_ROUTING.md)
+
 [ADC RES — alpha-0.5.8](us/ADC_RES.md) · [PL](pl/ADC_RES.md)
 
 [Feature Routing / routing funkcji — alpha-0.5.7](us/FEATURE_ROUTING.md) · [PL](pl/FEATURE_ROUTING.md)
 
-Current development version: alpha-0.5.8. Default language: EN/US UTF-8.
+Current development version: alpha-0.5.9. Default language: EN/US UTF-8.
 
 - [English (US)](us/README.md)
 - [Polski](pl/README.md)

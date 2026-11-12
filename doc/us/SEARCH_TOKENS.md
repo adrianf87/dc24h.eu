@@ -1,5 +1,7 @@
 # Search Tokens — alpha-0.5.5
 
+**Current increment — alpha-0.5.9:** [Result Routing](RESULT_ROUTING.md) forwards checked DRES only to its ready target over ADC/ADCS. Plans bind session lifetimes and, when TO is present, the target owner’s active search generation. Tokenless results remain supported. Shared bounded queues preserve original fields without public fanout, sender echo or administration payloads.
+
 **Follow-up — alpha-0.5.6:** [Search Routing](SEARCH_ROUTING.md) forwards checked SCH over real ADC/ADCS: B/F broadcasts and lifetime-bound D/E delivery share one immutable packet with independent bounded queues. Supplied TO is registered in Search Core; absent TO remains valid. Source/state/feature checks, one-attempt dispatch and token cleanup are enforced. RES/result routing remains a later increment.
 
 Based directly on main `c9b020c0842550862a86988bdcf9b6cb97e6b6b9` after the alpha-0.5.4 merge. Earlier Search Core, SCH, filters and TTH are preserved. Code/diagnostics remain EN/US UTF-8, with mirrored US/PL documentation.

@@ -12,6 +12,7 @@
 #include "dc24h/chat/anti_flood.hpp"
 #include "dc24h/chat/statistics.hpp"
 #include "dc24h/adc/search_routing.hpp"
+#include "dc24h/adc/result_routing.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -34,7 +35,7 @@ enum class CloseReason { login_timeout, idle_timeout, partial_frame_timeout, sec
 
 // Single reactor-thread owner of guest admission, public presence and ordered
 // output. IDs are transport tokens, never fd numbers. No socket/SQL/logger I/O.
-// Chat delegates to typed adapters and Chat Core. Accounts, search results and transfers remain separate.
+// Chat delegates to typed adapters and Chat Core. Accounts and transfers remain separate.
 class LoginHub final {
 public:
     using Id = std::uint64_t;
@@ -88,7 +89,7 @@ private:
     void reject(Peer& peer, std::string_view status, std::optional<std::string_view> command = {},
                 std::string_view description = {}, users::CloseCause cause = users::CloseCause::protocol_rejected,
                 users::TimePoint now = users::Clock::now());
-    void receive_result(Id id, const Message& message);
+    void receive_result(Id id, const Message& message, users::TimePoint now);
     void receive_search(Id id, const Message& message, users::TimePoint now);
     void route_status(Id id, const Message& message);
     void route_chat(Id id, const Message& message, chat::Attempt& attempt);
@@ -99,6 +100,7 @@ private:
     users::SessionManager sessions_; // Outlives the peers that borrow models.
     search::Core search_;
     SearchRouter search_router_;
+    ResultRouter result_router_;
     chat::Core chat_;
     MessageRouter message_router_;
     HubMessages hub_messages_;

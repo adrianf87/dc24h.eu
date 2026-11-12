@@ -2,10 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.5.8 (ADC RES).**
+**Current development version: alpha-0.5.9 (Result Routing).**
 
 Completed increments (older bullets describe their original delivery scope):
 
+- **alpha-0.5.9 Result Routing**: target-only ADC/ADCS DRES delivery with ready session lifetimes, active owner-token/generation checks, tokenless compatibility and bounded output queues. Real ncdc interoperability covers both receiving and producing results. See [Result Routing](doc/us/RESULT_ROUTING.md).
 - **alpha-0.5.8 ADC RES**: typed DRES parser and live ADC/ADCS validation, bounded names/sizes/slots/tokens/TTH, recoverable private errors and real ncdc compatibility. Result routing and correlation remain future stages. See [ADC RES](doc/us/ADC_RES.md).
 - **alpha-0.5.7 Feature Routing**: compiled exact FSCH selectors, current public INF SU matching, SUP independence, live capability changes and positive/negative fanout verified with ADC/ADCS and ncdc. See [Feature Routing](doc/us/FEATURE_ROUTING.md).
 

@@ -26,6 +26,8 @@ class ResProcessTests(unittest.TestCase):
                 source.login(b'ResSource', 1); target.login(b'ResTarget', 2)
                 self.assertTrue(source.line().startswith(b'BINF ' + target.sid + b' '))
                 before = fetch_status(endpoint, secret)['chat']
+                query = b'DSCH ' + target.sid + b' ' + source.sid + b' ANResPrivate TOResPrivateToken'
+                target.send(query); self.assertEqual(source.line(), query)
                 root = b'LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHHHZWCLNQ'
                 prefix = b'DRES ' + source.sid + b' ' + target.sid + b' '
 
@@ -37,10 +39,11 @@ class ResProcessTests(unittest.TestCase):
                 def result(fields, valid):
                     wire = (prefix + fields).rstrip(b' ') + b'\n'
                     source.peer.sendall(wire[:11]); source.peer.sendall(wire[11:])
-                    expected = (b'ISTA 125 Search\\sresult\\srouting\\snot\\simplemented FCDRES' if valid
-                                else b'ISTA 100 Invalid\\ssearch\\sresult FCDRES')
-                    self.assertEqual(source.line(), expected)
-                    fence()  # The target received no result; the source remains usable.
+                    if valid:
+                        self.assertEqual(target.line(), wire[:-1])
+                    else:
+                        self.assertEqual(source.line(), b'ISTA 100 Invalid\\ssearch\\sresult FCDRES')
+                    fence()  # No source echo; malformed results never reach the target.
 
                 valid = 'FN/ResPrivate/Żółw\\s😀.txt SI00042 SL-0 TOResPrivateToken'.encode() + b' TR' + root
                 result(valid + b' XXunknown XXagain', True)

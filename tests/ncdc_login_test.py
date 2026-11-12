@@ -244,7 +244,7 @@ class NcdcLoginTest(unittest.TestCase):
                     self.assertEqual(cids[0], cids[1], 'Reconnect changed its public CID')
                 if FEATURE_SEARCH:
                     # A real indexed share lets ncdc prove that it processed the
-                    # routed FSCH by producing a result. RES routing is separate.
+                    # routed FSCH by producing a result that reaches its issuer.
                     share = pathlib.Path(directory) / 'shared'
                     share.mkdir()
                     (share / 'FeatureRoutingProbe.txt').write_text('Feature routing interoperability probe.\n')
@@ -280,10 +280,21 @@ class NcdcLoginTest(unittest.TestCase):
                         screen.extend(os.read(master, 65536))
                 wait_screen(TEST_TTH if TTH_SEARCH else b'SearchCoreSecret')
                 # Search results use list key bindings, not the chat input.
-                os.write(master, b'\x1b2')  # Alt+2 selects the hub tab.
                 routed_search = observer.line()
                 self.assertRegex(routed_search, rb'^[BF]SCH ' + replacement_sid + rb' ')
                 self.assertIn(b'TR' + TEST_TTH if TTH_SEARCH else b'ANSearchCoreSecret', routed_search)
+                if FEATURE_SEARCH:
+                    search_token = re.search(rb'(?:^| )TO([^ ]+)', routed_search)
+                    probe = (b'DRES ' + observer.sid + b' ' + replacement_sid +
+                             b' FN/ResultProbe/SearchCoreSecretNcdcResultProbe.zip SI2048 SL1 TR' +
+                             TEST_TTH + (b' TO' + search_token[1] if search_token else b''))
+                    observer.send(probe)
+                    wait_screen(b'NcdcResultProbe.zip')
+                    if ENCRYPTED:
+                        self.assertNotIn(b'NcdcResultProbe', replies)
+                    else:
+                        wait_capture(replies, probe + b'\n')
+                os.write(master, b'\x1b2')  # Alt+2 selects the hub tab.
                 self.assertNotIn(b'Search routing not implemented', screen)
                 if not ENCRYPTED and routed_search.startswith(b'BSCH '):
                     wait_capture(replies, routed_search + b'\n')
@@ -309,21 +320,20 @@ class NcdcLoginTest(unittest.TestCase):
                     feature_query = (b'FSCH ' + observer.sid +
                                      b' -TCP4 ANFeatureRoutingProbe EXtxt TOFeatureRoutingProbeToken')
                     observer.send(feature_query)
-                    wait_screen(b'Search result routing not implemented')
-                    # ncdc emitted DRES only after receiving and matching FSCH.
-                    # The hub validates RES and explicitly reports routing as pending.
+                    received_result = observer.line()
+                    self.assertTrue(received_result.startswith(b'DRES ' + replacement_sid + b' ' + observer.sid + b' '))
+                    self.assertIn(b'/FeatureShare/FeatureRoutingProbe.txt', received_result)
+                    self.assertIn(b'TOFeatureRoutingProbeToken', received_result)
+                    self.assertRegex(received_result, rb' TR[A-Z2-7]{39}(?: |$)')
                     if ENCRYPTED:
                         self.assertNotIn(b'FeatureRoutingProbe', wire)
                         self.assertNotIn(b'FeatureRoutingProbe', replies)
                     else:
+                        wait_capture(wire, received_result + b'\n')
                         self.assertIn(feature_query + b'\n', replies)
-                        result = re.search(rb'DRES ' + replacement_sid + b' ' + observer.sid + rb' [^\n]*\n', bytes(wire))
-                        self.assertIsNotNone(result, bytes(wire)[-2500:])
-                        self.assertIn(b'/FeatureShare/FeatureRoutingProbe.txt', result[0])
-                        self.assertIn(b'TOFeatureRoutingProbeToken', result[0])
-                        self.assertIn(b'ISTA 125 Search\\sresult\\srouting\\snot\\simplemented FCDRES\n', replies)
-                    # The nonmatching issuer receives neither its FSCH echo nor
-                    # a result (the result router is not implemented yet).
+                        self.assertIn(received_result + b'\n', wire)
+                        self.assertNotIn(b'Search\\sresult\\srouting\\snot\\simplemented', replies)
+                    # The issuer receives one result, with no FSCH echo.
                     marker = b'BINF ' + observer.sid + b' DEFeatureRoutingFence'
                     observer.send(marker)
                     self.assertEqual(observer.line(), marker)

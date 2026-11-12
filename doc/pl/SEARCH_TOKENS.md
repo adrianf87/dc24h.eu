@@ -1,5 +1,7 @@
 # Search Tokens — alpha-0.5.5
 
+**Bieżący etap — alpha-0.5.9:** [Result Routing](RESULT_ROUTING.md) przekazuje sprawdzone DRES wyłącznie do gotowego celu przez ADC/ADCS. Plan wiąże czas życia sesji oraz — gdy podano TO — generację aktywnego wyszukiwania właściciela celu. Nadal obsługiwane są wyniki bez tokenu. Współdzielone ograniczone kolejki zachowują oryginalne pola bez rozsyłania publicznego, echa do nadawcy i treści w administracji.
+
 **Aktualizacja — alpha-0.5.6:** [Search Routing](SEARCH_ROUTING.md) przekazuje sprawdzone SCH przez rzeczywiste ADC/ADCS: broadcast B/F i D/E związane z życiem celu współdzielą jeden niezmienny pakiet z oddzielnymi ograniczonymi kolejkami. Podane TO jest rejestrowane w Search Core; brak TO nadal jest poprawny. Obowiązują kontrole źródła/stanu/funkcji, jednokrotny dispatch i sprzątanie tokenów. RES/routing wyników pozostaje kolejnym etapem.
 
 Etap oparty bezpośrednio na main `c9b020c0842550862a86988bdcf9b6cb97e6b6b9` po scaleniu alpha-0.5.4. Zachowano wcześniejsze Search Core, SCH, filtry i TTH. Kod/diagnostyka pozostają EN/US UTF-8, z dokumentacją US/PL.
