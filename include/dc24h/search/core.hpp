@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dc24h/search/query.hpp"
+#include "dc24h/search/tokens.hpp"
 #include "dc24h/users/session_manager.hpp"
 
 #include <functional>
@@ -41,13 +42,24 @@ struct DispatchReport {
     friend bool operator==(const DispatchReport&, const DispatchReport&) = default;
 };
 using Preparation = std::variant<Plan, Error, QueryError>;
+class ActivePlan final {
+public:
+    [[nodiscard]] const Plan& plan() const noexcept { return plan_; }
+    [[nodiscard]] const TokenHandle& handle() const noexcept { return handle_; }
+private:
+    friend class Core;
+    ActivePlan(Plan plan, TokenHandle handle) : plan_(std::move(plan)), handle_(std::move(handle)) {}
+    Plan plan_;
+    TokenHandle handle_;
+};
+using StartResult = std::variant<ActivePlan, Error, QueryError, TokenError>;
 // Single owner-thread, session-bound hub search coordination. Files remain owned
 // by clients. No file index, SCH/RES parser, sockets, timers, history or logger I/O.
 // SessionManager must outlive this Core and its dispatch calls.
 class Core final {
 public:
     using Sink = std::function<bool(users::SessionId, const Plan&)>;
-    explicit Core(const users::SessionManager& sessions) : sessions_(sessions) {}
+    explicit Core(const users::SessionManager& sessions, TokenLimits limits = {}) : sessions_(sessions), tokens_(sessions,limits) {}
     Core(const Core&) = delete;
     Core& operator=(const Core&) = delete;
     [[nodiscard]] std::optional<Error> validate_sender(users::SessionId sender, std::string_view source) const noexcept;
@@ -61,8 +73,19 @@ public:
     // Trusted sinks may close sessions, but must not reenter dispatch or throw.
     // Exceptions propagate after possible partial dispatch: never blindly retry.
     [[nodiscard]] std::variant<DispatchReport, Error> dispatch(const Plan& plan, const Sink& sink) const;
+    // Explicit accepted-search lifecycle. Stateless prepare/dispatch above does
+    // not register tokens. The running SCH refusal path never calls start().
+    [[nodiscard]] StartResult start(users::SessionId sender, std::string_view source, const QueryData& query,
+                                    users::TimePoint now, const Selection& selection = {});
+    [[nodiscard]] std::variant<DispatchReport, Error, TokenError> dispatch(const ActivePlan& search, const Sink& sink, users::TimePoint now);
+    [[nodiscard]] bool complete(const ActivePlan& search) noexcept;
+    [[nodiscard]] std::optional<ActiveSearch> find_search(users::SessionId owner, std::string_view token, users::TimePoint now) noexcept {
+        return tokens_.find(owner,token,now);
+    }
+    std::size_t prune_searches(users::TimePoint now) noexcept { return tokens_.prune(now); }
 private:
     const users::SessionManager& sessions_;
+    Tokens tokens_;
     const std::shared_ptr<const detail::Domain> domain_{std::make_shared<const detail::Domain>()};
 };
 } // namespace dc24h::search

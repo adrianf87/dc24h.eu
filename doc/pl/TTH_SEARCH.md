@@ -1,5 +1,7 @@
 # TTH Search — alpha-0.5.4
 
+**Aktualizacja — alpha-0.5.5:** [Search Tokens](SEARCH_TOKENS.md) dodaje ograniczony rejestr życia sesji/TO, lokalne generacje wyszukiwań, terminy ważności, anulowanie i jawne API aktywnych wyszukiwań Core. Nadal można przygotować plan bez rejestracji; odrzucone rzeczywiste SCH nie rezerwuje tokenów. Korelacja/routing wyników i administracja wyszukiwaniem pozostają kolejnymi etapami.
+
 Etap oparty bezpośrednio na main `edb702ada4fea04d7854a18370a052fc96035ea7` po scaleniu alpha-0.5.3. Zachowano wcześniejsze Search Core, SCH i filtry. Kod i komunikaty pozostają EN/US UTF-8, z dokumentacją US/PL.
 
 ## Dostarczone zachowanie

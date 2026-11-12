@@ -1,5 +1,7 @@
 # TTH Search — alpha-0.5.4
 
+**Follow-up — alpha-0.5.5:** [Search Tokens](SEARCH_TOKENS.md) adds bounded session-lifetime/TO registration, local search generations, deadlines, cancellation and explicit active-search APIs in Core. Stateless preparation stays available; refused live SCH requests do not reserve tokens. Result correlation/routing and search administration remain later increments.
+
 Based directly on main `edb702ada4fea04d7854a18370a052fc96035ea7` after the alpha-0.5.3 merge. Earlier Search Core, SCH and filters are preserved. Code and diagnostics remain EN/US UTF-8, with mirrored US/PL documentation.
 
 ## Delivered behavior

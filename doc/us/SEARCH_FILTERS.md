@@ -1,5 +1,7 @@
 # Search Filters — alpha-0.5.3
 
+**Follow-up — alpha-0.5.5:** [Search Tokens](SEARCH_TOKENS.md) adds bounded session-lifetime/TO registration, local search generations, deadlines, cancellation and explicit active-search APIs in Core. Stateless preparation stays available; refused live SCH requests do not reserve tokens. Result correlation/routing and search administration remain later increments.
+
 **Follow-up — alpha-0.5.4:** [TTH Search](TTH_SEARCH.md) carries the full 192-bit file root from SCH into immutable Core queries/plans, descriptors and compiled filters. Hash-only and combined queries use exact equality and retain all additional criteria. Real ncdc ADC/ADCS TTH searches are tested; live request/result routing remains a later increment.
 
 Based directly on main `dd2a968469c3db21ada4e469afc85b7a3415eeab` after the alpha-0.5.2 merge. The earlier Search Core and ADC SCH stages are preserved. Code and diagnostics use EN/US UTF-8; documentation is mirrored in US/PL.

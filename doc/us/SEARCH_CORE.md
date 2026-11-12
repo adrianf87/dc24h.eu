@@ -1,5 +1,7 @@
 # Search Core — alpha-0.5.1
 
+**Follow-up — alpha-0.5.5:** [Search Tokens](SEARCH_TOKENS.md) adds bounded session-lifetime/TO registration, local search generations, deadlines, cancellation and explicit active-search APIs in Core. Stateless preparation stays available; refused live SCH requests do not reserve tokens. Result correlation/routing and search administration remain later increments.
+
 **Follow-up — alpha-0.5.4:** [TTH Search](TTH_SEARCH.md) carries the full 192-bit file root from SCH into immutable Core queries/plans, descriptors and compiled filters. Hash-only and combined queries use exact equality and retain all additional criteria. Real ncdc ADC/ADCS TTH searches are tested; live request/result routing remains a later increment.
 
 **Follow-up — alpha-0.5.3:** [Search Filters](SEARCH_FILTERS.md) adds compiled Unicode case-insensitive name/path predicates, extension alternatives, inclusive/exact byte limits and file/directory types over checked descriptors. Filter-only queries and opaque NFC tokens now project to Search Core. Matching is allocation-free; routing/results, indexes and search administration remain later increments.
@@ -14,7 +16,7 @@ Based directly on main `c6b34ea849ef808a0bfee4a27e0c8ae38cff4a6b`, after the alp
 
 The [ADC specification](https://adc.sourceforge.io/ADC.html) distinguishes search requests (SCH), results (RES) and feature-based routing. This release supplies the underlying generic model, not an ADC codec or network search handler. `QueryData` is an internal C++ contract; field bounds and validation below are application policy, not a claim about all legal ADC searches. The enum values are not wire numeric values.
 
-Production LoginHub does not call Search Core yet. Valid-state/source SCH/RES still gets `ISTA 125 Command\snot\simplemented FC<FOURCC>`; state and source validation retain precedence. This prevents accidental unvalidated forwarding while protocol work is staged. There is no live result exchange, TTH query, UDP response endpoint, search timeout/rate quota, token registry, history, database migration, API/search statistics or WebAdmin search control. Existing Chat/WebAdmin behavior is preserved; their runtime version metadata advances to alpha-0.5.1.
+Production LoginHub still does not call Search Core: valid SCH receives `125 Search routing not implemented`, while RES receives `125 Command not implemented`, after existing source/state/readiness checks. Since alpha-0.5.4 Core/Filter supports TTH; since alpha-0.5.5 the explicit active-search library APIs provide a bounded [token registry](SEARCH_TOKENS.md) and deadlines. The refused live path never reserves a token. Result exchange, UDP response endpoints, network search-rate policy, history, database migrations, search statistics/API/UI controls remain future increments. Runtime metadata follows the current development version.
 
 ## Immutable criteria
 
