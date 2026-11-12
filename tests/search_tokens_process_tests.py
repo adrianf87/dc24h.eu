@@ -56,7 +56,7 @@ class TokensProcessTests(unittest.TestCase):
                 source = again
                 request(again, token)
                 again.send(b'DRES ' + again.sid + b' ' + observer.sid + b' FNPrivateTokenQuery SI0 SL1 TO' + token)
-                self.assertEqual(again.line(), b'ISTA 125 Command\\snot\\simplemented FCDRES')
+                self.assertEqual(again.line(), b'ISTA 100 Invalid\\ssearch\\sresult FCDRES')
                 self.assertEqual(fetch_status(endpoint, secret)['chat'], before)
                 frame = b'BMSG ' + again.sid + b' ChatAfterTokenRefusal'
                 again.send(frame)

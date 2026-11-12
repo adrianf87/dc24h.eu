@@ -309,9 +309,9 @@ class NcdcLoginTest(unittest.TestCase):
                     feature_query = (b'FSCH ' + observer.sid +
                                      b' -TCP4 ANFeatureRoutingProbe EXtxt TOFeatureRoutingProbeToken')
                     observer.send(feature_query)
-                    wait_screen(b'Command not implemented')
+                    wait_screen(b'Search result routing not implemented')
                     # ncdc emitted DRES only after receiving and matching FSCH.
-                    # The hub still explicitly refuses RES at this increment.
+                    # The hub validates RES and explicitly reports routing as pending.
                     if ENCRYPTED:
                         self.assertNotIn(b'FeatureRoutingProbe', wire)
                         self.assertNotIn(b'FeatureRoutingProbe', replies)
@@ -321,7 +321,7 @@ class NcdcLoginTest(unittest.TestCase):
                         self.assertIsNotNone(result, bytes(wire)[-2500:])
                         self.assertIn(b'/FeatureShare/FeatureRoutingProbe.txt', result[0])
                         self.assertIn(b'TOFeatureRoutingProbeToken', result[0])
-                        self.assertIn(b'ISTA 125 Command\\snot\\simplemented FCDRES\n', replies)
+                        self.assertIn(b'ISTA 125 Search\\sresult\\srouting\\snot\\simplemented FCDRES\n', replies)
                     # The nonmatching issuer receives neither its FSCH echo nor
                     # a result (the result router is not implemented yet).
                     marker = b'BINF ' + observer.sid + b' DEFeatureRoutingFence'
