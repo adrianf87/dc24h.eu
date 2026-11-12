@@ -1,5 +1,7 @@
 # Search Tokens — alpha-0.5.5
 
+**Aktualizacja — alpha-0.5.6:** [Search Routing](SEARCH_ROUTING.md) przekazuje sprawdzone SCH przez rzeczywiste ADC/ADCS: broadcast B/F i D/E związane z życiem celu współdzielą jeden niezmienny pakiet z oddzielnymi ograniczonymi kolejkami. Podane TO jest rejestrowane w Search Core; brak TO nadal jest poprawny. Obowiązują kontrole źródła/stanu/funkcji, jednokrotny dispatch i sprzątanie tokenów. RES/routing wyników pozostaje kolejnym etapem.
+
 Etap oparty bezpośrednio na main `c9b020c0842550862a86988bdcf9b6cb97e6b6b9` po scaleniu alpha-0.5.4. Zachowano wcześniejsze Search Core, SCH, filtry i TTH. Kod/diagnostyka pozostają EN/US UTF-8, z dokumentacją US/PL.
 
 ## Rejestr i tożsamość
@@ -41,9 +43,9 @@ Dotychczasowe `prepare()` / `dispatch(Plan, sink)` nadal przygotowują/wykonują
 
 ## Granica rzeczywistego ADC/ADCS
 
-[Specyfikacja ADC SCH](https://adc.sourceforge.io/ADC.html) definiuje TO jako opcjonalny tekst korelacji klienta, kopiowany do wyników, gdy podano. Etap nie wymusza TO w protokole, nie tworzy go dla klientów bez TO i nie ogłasza gotowej wymiany wyników. Obecny LoginHub odrzuca poprawne SCH przez `125 Search routing not implemented`, pomija brak kryteriów i odrzuca błędną semantykę jak wcześniej. Nigdy nie wywołuje `Core::start()`, więc odrzucone zapytania nie stają się aktywne ani nie zajmują miejsc tokenów. RES nadal pozostaje jawnie nieobsługiwane.
+[Specyfikacja ADC SCH](https://adc.sourceforge.io/ADC.html) definiuje opcjonalne TO. Od alpha-0.5.6 [Search Routing](SEARCH_ROUTING.md) wywołuje Core::start dla poprawnych zapytań z TO, a brak TO obsługuje bez rejestracji i tworzenia sztucznego tokena. Odmowy duplikatu/limitu nie są rozsyłane, dispatch bez przyjętych kopii/pustej selekcji kończy token, a disconnect usuwa wpisy właściciela. Poprawny routing nie wysyła potwierdzenia. RES pozostaje nieobsługiwane; generacje nie rozwiązują niejednoznaczności spóźnionych wyników z ponownie użytym TO.
 
-Nie dodano rzeczywistego routingu, odpowiedzi UDP, historii bazy, sterowania wyszukiwaniem API/UI, komunikatu operatora ani konfiguracji. Klucze/metadane rejestru pozostają tymczasowe; kryteria istnieją tylko w Query/Plan należących do wywołującego. Token, ID wyszukiwania, treść, nazwa pliku i TTH nie są eksportowane do logów, liczników czatu, magazynu, API ani WebAdmin. Zachowano istniejące `languages/us` i `languages/pl`. Metadane serwera/WebAdmin przechodzą razem na alpha-0.5.5.
+Nie dodano routingu wyników, odpowiedzi UDP, historii bazy, sterowania wyszukiwaniem API/UI, komunikatu operatora ani konfiguracji. Klucze/metadane rejestru pozostają tymczasowe; kryteria istnieją tylko w Query/Plan należących do wywołującego. Token, ID wyszukiwania, treść, nazwa pliku i TTH nie są eksportowane do logów, liczników czatu, magazynu, API ani WebAdmin. Zachowano istniejące `languages/us` i `languages/pl`. Metadane serwera/WebAdmin przechodzą razem na alpha-0.5.5.
 
 ## Weryfikacja
 

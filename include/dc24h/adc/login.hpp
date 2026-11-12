@@ -11,6 +11,7 @@
 #include "dc24h/adc/hub_messages.hpp"
 #include "dc24h/chat/anti_flood.hpp"
 #include "dc24h/chat/statistics.hpp"
+#include "dc24h/adc/search_routing.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -27,12 +28,13 @@ struct LoginLimits {
     std::optional<chat::FloodLimits> anti_flood{};
     chat::Policy chat{};
     std::optional<std::string> welcome_text{std::string(chat::default_welcome_message)};
+    search::TokenLimits search_tokens{};
 };
 enum class CloseReason { login_timeout, idle_timeout, partial_frame_timeout, security_quota, negotiation_limit, identity_limit };
 
 // Single reactor-thread owner of guest admission, public presence and ordered
 // output. IDs are transport tokens, never fd numbers. No socket/SQL/logger I/O.
-// Chat delegates to typed adapters and Chat Core. Accounts/search/transfers remain separate.
+// Chat delegates to typed adapters and Chat Core. Accounts, search results and transfers remain separate.
 class LoginHub final {
 public:
     using Id = std::uint64_t;
@@ -86,7 +88,7 @@ private:
     void reject(Peer& peer, std::string_view status, std::optional<std::string_view> command = {},
                 std::string_view description = {}, users::CloseCause cause = users::CloseCause::protocol_rejected,
                 users::TimePoint now = users::Clock::now());
-    void receive_search(Id id, const Message& message);
+    void receive_search(Id id, const Message& message, users::TimePoint now);
     void route_status(Id id, const Message& message);
     void route_chat(Id id, const Message& message, chat::Attempt& attempt);
     void relay(Id except, const Message& message);
@@ -94,6 +96,8 @@ private:
     LoginLimits limits_;
     std::shared_ptr<SidPool> pool_;
     users::SessionManager sessions_; // Outlives the peers that borrow models.
+    search::Core search_;
+    SearchRouter search_router_;
     chat::Core chat_;
     MessageRouter message_router_;
     HubMessages hub_messages_;

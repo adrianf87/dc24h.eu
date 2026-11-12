@@ -1,6 +1,8 @@
 # Roadmap
 
-**Current increment — alpha-0.5.5:** [Search Tokens](SEARCH_TOKENS.md) adds bounded session-lifetime/TO registration, local search generations, deadlines, cancellation and explicit active-search APIs in Core. Stateless preparation stays available; refused live SCH requests do not reserve tokens. Result correlation/routing and search administration remain later increments.
+**Current increment — alpha-0.5.6:** [Search Routing](SEARCH_ROUTING.md) forwards checked SCH over real ADC/ADCS: B/F broadcasts and lifetime-bound D/E delivery share one immutable packet with independent bounded queues. Supplied TO is registered in Search Core; absent TO remains valid. Source/state/feature checks, one-attempt dispatch and token cleanup are enforced. RES/result routing remains a later increment.
+
+**Increment delivered in alpha-0.5.5:** [Search Tokens](SEARCH_TOKENS.md) adds bounded session-lifetime/TO registration, local search generations, deadlines, cancellation and explicit active-search APIs in Core. Stateless preparation stays available; refused live SCH requests do not reserve tokens. Result correlation/routing and search administration remain later increments.
 
 **Increment delivered in alpha-0.5.4:** [TTH Search](TTH_SEARCH.md) carries the full 192-bit file root from SCH into immutable Core queries/plans, descriptors and compiled filters. Hash-only and combined queries use exact equality and retain all additional criteria. Real ncdc ADC/ADCS TTH searches are tested; live request/result routing remains a later increment.
 
@@ -106,6 +108,7 @@
 | alpha-0.5.3 Search Filters | Unicode name/path, extension, size and type predicates; routing/results remain planned |
 | alpha-0.5.4 TTH Search | Exact file-root predicates, owning SCH/Core/descriptor projection and hash-only queries; routing/results remain planned |
 | alpha-0.5.5 Search Tokens | Bounded lifetime/TO registry, deadlines and generation-bound active Core plans; live result correlation/routing remains planned |
+| alpha-0.5.6 Search Routing | Live B/F/D/E SCH delivery over ADC/ADCS, shared bounded queues and active TO; RES remains planned |
 
 ## Historical acceptance plan before alpha-0.2.8
 

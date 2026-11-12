@@ -15,7 +15,13 @@ struct Selection {
     std::vector<std::string> required_features, excluded_features;
     friend bool operator==(const Selection&, const Selection&) = default;
 };
-enum class Error { missing_sender, sender_not_ready, wrong_source, invalid_selection, foreign_plan, missing_sink };
+enum class Scope { broadcast, direct, echo };
+struct Audience {
+    Scope scope{Scope::broadcast};
+    std::optional<users::SessionId> target{};
+};
+enum class Error { missing_sender, sender_not_ready, wrong_source, invalid_selection, foreign_plan, missing_sink,
+                   invalid_audience, recipient_unavailable };
 namespace detail { struct Domain final {}; }
 class Plan final {
 public:
@@ -63,10 +69,12 @@ public:
     Core(const Core&) = delete;
     Core& operator=(const Core&) = delete;
     [[nodiscard]] std::optional<Error> validate_sender(users::SessionId sender, std::string_view source) const noexcept;
+    [[nodiscard]] std::optional<users::SessionId> resolve_target(std::string_view source) const noexcept;
+    [[nodiscard]] bool owns(const Plan& plan) const noexcept { return plan.domain_ == domain_; }
     // Ready lifetime IDs in increasing order, including the sender when selected.
     // No user-profile copies. Allocation failure leaves all models unchanged.
     [[nodiscard]] Preparation prepare(users::SessionId sender, std::string_view source,
-                                      const QueryData& query, const Selection& selection = {}) const;
+                                      const QueryData& query, const Selection& selection = {}, const Audience& audience = {}) const;
     // One dispatch attempt, acceptance means queued, never delivered/read. No
     // allocation after sink construction. Rechecks source and each lifetime and
     // current feature set. Sender closure during a sink cancels the remainder.
@@ -74,15 +82,16 @@ public:
     // Exceptions propagate after possible partial dispatch: never blindly retry.
     [[nodiscard]] std::variant<DispatchReport, Error> dispatch(const Plan& plan, const Sink& sink) const;
     // Explicit accepted-search lifecycle. Stateless prepare/dispatch above does
-    // not register tokens. The running SCH refusal path never calls start().
+    // not register tokens. Accepted live SCH with TO uses start().
     [[nodiscard]] StartResult start(users::SessionId sender, std::string_view source, const QueryData& query,
-                                    users::TimePoint now, const Selection& selection = {});
+                                    users::TimePoint now, const Selection& selection = {}, const Audience& audience = {});
     [[nodiscard]] std::variant<DispatchReport, Error, TokenError> dispatch(const ActivePlan& search, const Sink& sink, users::TimePoint now);
     [[nodiscard]] bool complete(const ActivePlan& search) noexcept;
     [[nodiscard]] std::optional<ActiveSearch> find_search(users::SessionId owner, std::string_view token, users::TimePoint now) noexcept {
         return tokens_.find(owner,token,now);
     }
     std::size_t prune_searches(users::TimePoint now) noexcept { return tokens_.prune(now); }
+    std::size_t forget_searches(users::SessionId owner) noexcept { return tokens_.forget(owner); }
 private:
     const users::SessionManager& sessions_;
     Tokens tokens_;

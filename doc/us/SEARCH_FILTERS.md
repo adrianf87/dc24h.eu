@@ -1,5 +1,7 @@
 # Search Filters — alpha-0.5.3
 
+**Follow-up — alpha-0.5.6:** [Search Routing](SEARCH_ROUTING.md) forwards checked SCH over real ADC/ADCS: B/F broadcasts and lifetime-bound D/E delivery share one immutable packet with independent bounded queues. Supplied TO is registered in Search Core; absent TO remains valid. Source/state/feature checks, one-attempt dispatch and token cleanup are enforced. RES/result routing remains a later increment.
+
 **Follow-up — alpha-0.5.5:** [Search Tokens](SEARCH_TOKENS.md) adds bounded session-lifetime/TO registration, local search generations, deadlines, cancellation and explicit active-search APIs in Core. Stateless preparation stays available; refused live SCH requests do not reserve tokens. Result correlation/routing and search administration remain later increments.
 
 **Follow-up — alpha-0.5.4:** [TTH Search](TTH_SEARCH.md) carries the full 192-bit file root from SCH into immutable Core queries/plans, descriptors and compiled filters. Hash-only and combined queries use exact equality and retain all additional criteria. Real ncdc ADC/ADCS TTH searches are tested; live request/result routing remains a later increment.
@@ -48,7 +50,7 @@ Existing bounds remain: 32 combined AN/NO terms, 256 bytes per term, 16 extensio
 
 As of alpha-0.5.4, TR-bearing requests project their full root into both Core and Filter, including combined TR/text/filter requests. Hash-only queries require exact file-root equality; extra filters remain AND constraints. See [TTH Search](TTH_SEARCH.md). A Tiger root cannot be silently lost or treated as a text-only filter. Original checked SCH fields/order/unknown parameters/numeric spellings remain in the owning Message. Unknown fields keep the existing ADC ignore-and-preserve policy; ASCH/SEGA groups are not interpreted or advertised by this module.
 
-Live ADC/ADCS reception retains the alpha-0.5.2 behavior: state/source/readiness checks precede SCH parsing; valid requests receive recoverable `125 Search routing not implemented`, semantic failures receive `100 Invalid search query`, and criterion-free input is ignored. The receiver does not run descriptors through Filter or prepare a fanout. Query/token/filename data is not echoed into diagnostics, chat counters, logs, database, API or WebAdmin. There is no new SQL migration, configuration setting, dependency or UI control; release metadata advances to alpha-0.5.3.
+As of alpha-0.5.6, [Search Routing](SEARCH_ROUTING.md) forwards valid B/F/D/E requests through shared bounded queues after source/state/readiness and semantic validation. Present TO is registered, absent TO is preserved, and result handling remains unsupported. Filter predicates are reusable library logic, not a hub file index; clients perform their own searches. No query/token/name data is exported to logs, storage, API or WebAdmin.
 
 ## Verification
 

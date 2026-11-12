@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.5.5 LANGUAGES CXX)
+project(dc24h VERSION 0.5.6 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -60,7 +60,7 @@ target_include_directories(dc24h_search PUBLIC include)
 target_link_libraries(dc24h_search PUBLIC dc24h_users PRIVATE dc24h_text UTF8Proc::UTF8Proc)
 
 add_library(dc24h_adc src/adc/parser.cpp src/adc/state.cpp src/adc/sup.cpp src/adc/sid.cpp src/adc/sid_session.cpp
-    src/adc/identity_hash.cpp src/adc/tiger_identity.cpp src/adc/inf.cpp src/adc/serializer.cpp src/adc/login.cpp src/adc/status.cpp src/adc/msg.cpp src/adc/sch.cpp src/adc/msg_flags.cpp src/adc/chat_validation.cpp src/adc/public_chat.cpp src/adc/private_chat.cpp src/adc/message_routing.cpp src/adc/hub_messages.cpp src/adc/user.cpp src/adc/user_login.cpp src/adc/user_list.cpp src/adc/inf_updates.cpp src/adc/user_disconnect.cpp)
+    src/adc/identity_hash.cpp src/adc/tiger_identity.cpp src/adc/inf.cpp src/adc/serializer.cpp src/adc/login.cpp src/adc/status.cpp src/adc/msg.cpp src/adc/sch.cpp src/adc/search_routing.cpp src/adc/msg_flags.cpp src/adc/chat_validation.cpp src/adc/public_chat.cpp src/adc/private_chat.cpp src/adc/message_routing.cpp src/adc/hub_messages.cpp src/adc/user.cpp src/adc/user_login.cpp src/adc/user_list.cpp src/adc/inf_updates.cpp src/adc/user_disconnect.cpp)
 target_compile_features(dc24h_adc PUBLIC cxx_std_20)
 set_target_properties(dc24h_adc PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_adc PUBLIC include)
@@ -214,6 +214,14 @@ if(BUILD_TESTING)
     add_test(NAME search.tokens.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/search_tokens_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(search.tokens search.tokens.process PROPERTIES TIMEOUT 30)
+    add_executable(search_routing_tests tests/search_routing_tests.cpp)
+    target_link_libraries(search_routing_tests PRIVATE dc24h_adc)
+    target_compile_options(search_routing_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(search_routing_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME search.routing COMMAND search_routing_tests)
+    add_test(NAME search.routing.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/search_routing_process_tests.py" "$<TARGET_FILE:dc24h>")
+    set_tests_properties(search.routing search.routing.process PROPERTIES TIMEOUT 45)
     add_executable(chat_logging_tests tests/chat_logging_tests.cpp)
     target_link_libraries(chat_logging_tests PRIVATE dc24h_adc)
     target_compile_options(chat_logging_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)

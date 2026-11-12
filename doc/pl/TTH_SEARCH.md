@@ -1,5 +1,7 @@
 # TTH Search — alpha-0.5.4
 
+**Aktualizacja — alpha-0.5.6:** [Search Routing](SEARCH_ROUTING.md) przekazuje sprawdzone SCH przez rzeczywiste ADC/ADCS: broadcast B/F i D/E związane z życiem celu współdzielą jeden niezmienny pakiet z oddzielnymi ograniczonymi kolejkami. Podane TO jest rejestrowane w Search Core; brak TO nadal jest poprawny. Obowiązują kontrole źródła/stanu/funkcji, jednokrotny dispatch i sprzątanie tokenów. RES/routing wyników pozostaje kolejnym etapem.
+
 **Aktualizacja — alpha-0.5.5:** [Search Tokens](SEARCH_TOKENS.md) dodaje ograniczony rejestr życia sesji/TO, lokalne generacje wyszukiwań, terminy ważności, anulowanie i jawne API aktywnych wyszukiwań Core. Nadal można przygotować plan bez rejestracji; odrzucone rzeczywiste SCH nie rezerwuje tokenów. Korelacja/routing wyników i administracja wyszukiwaniem pozostają kolejnymi etapami.
 
 Etap oparty bezpośrednio na main `edb702ada4fea04d7854a18370a052fc96035ea7` po scaleniu alpha-0.5.3. Zachowano wcześniejsze Search Core, SCH i filtry. Kod i komunikaty pozostają EN/US UTF-8, z dokumentacją US/PL.
@@ -34,7 +36,7 @@ Oryginalny Message zachowuje sprawdzone pola, kolejność, zapis liczb i nieznan
 
 ## Granica rzeczywistego transportu
 
-Rzeczywisty odbiór ADC/ADCS nadal sprawdza stan/źródło/gotowość przed parserem SCH. Poprawne zapytanie TTH nadal otrzymuje odwracalne `125 Search routing not implemented`; błędna semantyka otrzymuje `100 Invalid search query`. Etap implementuje kryteria TTH, projekcję i dopasowanie dostarczanych opisów. Nie przekazuje SCH, nie przyjmuje/koreluje RES, nie wysyła odpowiedzi UDP ani nie publikuje wyników. Testy surowego TCP/TLS i rzeczywisty ncdc potwierdzają sparsowany odbiór TTH i tę jawną granicę, nie zakończoną wymianę zdalnych wyników.
+Od alpha-0.5.6 [Search Routing](SEARCH_ROUTING.md) przekazuje poprawne SCH z samym hashem i łączone do wybranych klientów po kontroli źródła/stanu/gotowości. Hashe/kryteria/tokeny zachowują postać protokołu. Rzeczywiste testy ncdc potwierdzają odbiór zapytania przez drugiego klienta przez ADC i ADCS. RES/routing wyników, odpowiedzi UDP i pełna wymiana wyników pozostają kolejnymi etapami.
 
 Nie dodano indeksu plików huba, przeglądania zasobów, obliczania drzewa Tiger, weryfikacji treści pliku, rejestru zapytań, limitów/historii wyszukiwania ani konfiguracji/API/UI. Istniejące `adc::tiger192` hashuje ciąg bajtów dla kodu związanego z tożsamością; nie wolno zastępować nim hasha drzewa Merkle całego pliku. Testy odróżniają TTH pustego pliku (Tiger bajtu prefiksu liścia 0x00) od Tiger pustego ciągu bajtów; nie deklaruje się ogólnego generatora TTH.
 

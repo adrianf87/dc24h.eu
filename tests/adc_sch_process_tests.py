@@ -1,4 +1,4 @@
-"""Real SCH parsing over ADC/ADCS: semantic refusals, recovery and privacy."""
+"""Real SCH parsing over ADC/ADCS: routing, semantic refusals, recovery and privacy."""
 import json
 import pathlib
 import tempfile
@@ -42,7 +42,7 @@ class SchProcessTests(unittest.TestCase):
             valid = [b'ANSchPrivateSecret ANlinux NOgentoo EXISO EXIMG GE0 LE9223372036854775807 EQ0 TY01 TOtoken XXfuture XX',
                      'ANSchPrivateSecret\\sŻółw\\s😀 TOtoken\\sŻółw'.encode(),
                      b'EXiso GE0 TY2', b'EXiso', b'NOtmp', b'GE0', b'LE0', b'EQ0', b'TY1', b'TY2',
-                     'EXŻÓŁW GE0 LE1 TOtoken\\sŻółw'.encode(), b'TR' + b'A' * 39,
+                     'EXŻÓŁW GE0 LE1 TOextension\\sŻółw'.encode(), b'TR' + b'A' * 39,
                      b'ANSchPrivateSecret TR' + b'A' * 39, b'TR' + TEST_TTH,
                      b'TR' + TEST_TTH + b' ANSchPrivateSecret EXiso GE0 LE1 EQ0 TY1']
             for kind in (b'BSCH', b'FSCH', b'DSCH', b'ESCH'):
@@ -50,11 +50,13 @@ class SchProcessTests(unittest.TestCase):
                 if kind in (b'DSCH', b'ESCH'): header += b' ' + observer.sid
                 if kind == b'FSCH': header += b' +TCP4-UDP4'
                 for fields in valid:
-                    frame = header + b' ' + fields + b' TOPrivateSchToken' if b' TO' not in fields else header + b' ' + fields
-                    # Fragmented transport must produce one semantic response.
+                    if kind != b'BSCH': fields = b' '.join(field for field in fields.split(b' ') if not field.startswith(b'TO'))
+                    frame = header + b' ' + fields
+                    # Fragmented transport produces one unchanged routed frame per eligible peer.
                     wire = frame + b'\n'
                     source.peer.sendall(wire[:7]); source.peer.sendall(wire[7:])
-                    self.assertEqual(source.line(), b'ISTA 125 Search\\srouting\\snot\\simplemented FC' + kind)
+                    recipients = (source, observer) if kind in (b'BSCH', b'ESCH') else ((observer,) if kind == b'DSCH' else ())
+                    for peer in recipients: self.assertEqual(peer.line(), frame)
                     self.fence(source, observer)
             invalid = [b'AN', b'AN\\s', b'ANbad\\ntext', b'ANx NO', b'ANx EX.iso', b'ANx EXa/b',
                        b'ANx GE-1', b'ANx LE+1', b'ANx EQ9223372036854775808', b'ANx GE2 LE1',

@@ -50,6 +50,8 @@ class NcdcLoginTest(unittest.TestCase):
             hub = Hub(self, '--config', str(ini), '--log-connections', 'on', '--log-chat', 'on', **options)
             observer = Peer(self, connect_tls(self, hub, str(pathlib.Path(directory) / 'certificate.pem')) if ENCRYPTED else hub.connect())
             observer.login(b'ListObserver', 99, welcome=welcome)
+            feature_update = b'BINF ' + observer.sid + b' SUTCP4'
+            observer.send(feature_update); self.assertEqual(observer.line(), feature_update)
             wire, replies, errors = bytearray(), bytearray(), []
             finished = threading.Event()
             listener = socket.socket()
@@ -243,7 +245,10 @@ class NcdcLoginTest(unittest.TestCase):
                 wait_screen(TEST_TTH if TTH_SEARCH else b'SearchCoreSecret')
                 # Search results use list key bindings, not the chat input.
                 os.write(master, b'\x1b2')  # Alt+2 selects the hub tab.
-                wait_screen(b'Search routing not implemented')
+                routed_search = observer.line()
+                self.assertRegex(routed_search, rb'^[BF]SCH ' + replacement_sid + rb' ')
+                self.assertIn(b'TR' + TEST_TTH if TTH_SEARCH else b'ANSearchCoreSecret', routed_search)
+                self.assertNotIn(b'Search routing not implemented', screen)
                 if ENCRYPTED:
                     self.assertNotIn(b'SearchCoreSecret', wire)
                     self.assertNotIn(TEST_TTH, wire)
@@ -252,12 +257,12 @@ class NcdcLoginTest(unittest.TestCase):
                     self.assertIsNotNone(frame, 'ncdc did not emit a TTH SCH')
                     self.assertIn(b'TR' + TEST_TTH, frame[0])
                     self.assertNotRegex(frame[0], rb' (?:AN|EX)')
-                    self.assertRegex(bytes(replies), rb'ISTA 125 Search\\srouting\\snot\\simplemented FC[BF]SCH\n')
+                    if routed_search.startswith(b'BSCH '): self.assertIn(routed_search + b'\n', replies)
                 else:
                     self.assertRegex(bytes(wire), rb'[BF]SCH ' + replacement_sid + rb' [^\n]*ANSearchCoreSecret')
                     self.assertRegex(bytes(wire), rb'[BF]SCH [^\n]*GE1024')
                     self.assertRegex(bytes(wire), rb'[BF]SCH [^\n]*EX(?:7z|7Z|zip|ZIP)')
-                    self.assertRegex(bytes(replies), rb'ISTA 125 Search\\srouting\\snot\\simplemented FC[BF]SCH\n')
+                    if routed_search.startswith(b'BSCH '): self.assertIn(routed_search + b'\n', replies)
                 os.write(master, b'/quit\r')
                 deadline = time.monotonic() + 4
                 while process.poll() is None and time.monotonic() < deadline:

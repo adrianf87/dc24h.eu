@@ -1,5 +1,7 @@
 # Search Core — alpha-0.5.1
 
+**Follow-up — alpha-0.5.6:** [Search Routing](SEARCH_ROUTING.md) forwards checked SCH over real ADC/ADCS: B/F broadcasts and lifetime-bound D/E delivery share one immutable packet with independent bounded queues. Supplied TO is registered in Search Core; absent TO remains valid. Source/state/feature checks, one-attempt dispatch and token cleanup are enforced. RES/result routing remains a later increment.
+
 **Follow-up — alpha-0.5.5:** [Search Tokens](SEARCH_TOKENS.md) adds bounded session-lifetime/TO registration, local search generations, deadlines, cancellation and explicit active-search APIs in Core. Stateless preparation stays available; refused live SCH requests do not reserve tokens. Result correlation/routing and search administration remain later increments.
 
 **Follow-up — alpha-0.5.4:** [TTH Search](TTH_SEARCH.md) carries the full 192-bit file root from SCH into immutable Core queries/plans, descriptors and compiled filters. Hash-only and combined queries use exact equality and retain all additional criteria. Real ncdc ADC/ADCS TTH searches are tested; live request/result routing remains a later increment.
@@ -16,7 +18,7 @@ Based directly on main `c6b34ea849ef808a0bfee4a27e0c8ae38cff4a6b`, after the alp
 
 The [ADC specification](https://adc.sourceforge.io/ADC.html) distinguishes search requests (SCH), results (RES) and feature-based routing. This release supplies the underlying generic model, not an ADC codec or network search handler. `QueryData` is an internal C++ contract; field bounds and validation below are application policy, not a claim about all legal ADC searches. The enum values are not wire numeric values.
 
-Production LoginHub still does not call Search Core: valid SCH receives `125 Search routing not implemented`, while RES receives `125 Command not implemented`, after existing source/state/readiness checks. Since alpha-0.5.4 Core/Filter supports TTH; since alpha-0.5.5 the explicit active-search library APIs provide a bounded [token registry](SEARCH_TOKENS.md) and deadlines. The refused live path never reserves a token. Result exchange, UDP response endpoints, network search-rate policy, history, database migrations, search statistics/API/UI controls remain future increments. Runtime metadata follows the current development version.
+Since alpha-0.5.6, production LoginHub uses [Search Routing](SEARCH_ROUTING.md) and Search Core to forward valid SCH after source/state/readiness checks. Supplied TO uses active-search admission; absent TO uses stateless preparation. B/F fanout and lifetime-bound D/E are supported. Valid routing emits no success/refusal acknowledgment; malformed, duplicate/cap and unavailable-target requests receive fixed errors. RES remains unsupported. Result correlation, UDP responses, search-specific rate policy/history and search administration remain later increments.
 
 ## Immutable criteria
 

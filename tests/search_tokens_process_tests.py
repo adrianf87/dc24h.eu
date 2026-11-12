@@ -1,4 +1,4 @@
-"""Refused SCH never starts an active token or leaks TO over ADC/ADCS."""
+"""Routed SCH registers opaque TO without leaking it to administration."""
 import json
 import pathlib
 import tempfile
@@ -11,7 +11,7 @@ from tls_support import credentials, connect_tls
 
 
 class TokensProcessTests(unittest.TestCase):
-    def test_refused_reused_tokens_remain_private_across_owners_and_reconnect(self):
+    def test_active_tokens_remain_private_across_owners_and_reconnect(self):
         for encrypted in (False, True):
             with tempfile.TemporaryDirectory(prefix='dc24h-tokens-') as directory:
                 cert, _ = credentials(directory)
@@ -28,16 +28,21 @@ class TokensProcessTests(unittest.TestCase):
                 before = fetch_status(endpoint, secret)['chat']
                 token = 'PrivateTokenŻółw\\sopaque'.encode()
 
-                def request(peer, value, criteria=b'ANPrivateTokenQuery'):
-                    peer.send(b'BSCH ' + peer.sid + b' ' + criteria + b' TO' + value)
-                    self.assertEqual(peer.line(), b'ISTA 125 Search\\srouting\\snot\\simplemented FCBSCH')
+                def request(peer, value, criteria=b'ANPrivateTokenQuery', duplicate=False):
+                    frame = b'BSCH ' + peer.sid + b' ' + criteria + b' TO' + value
+                    peer.send(frame)
+                    if duplicate:
+                        self.assertEqual(peer.line(), b'ISTA 100 Search\\stoken\\salready\\sactive FCBSCH')
+                    else:
+                        for receiver in (source, observer): self.assertEqual(receiver.line(), frame)
 
+                request(source, token)
                 for _ in range(12):
-                    request(source, token)
+                    request(source, token, duplicate=True)
                 request(observer, token)
                 source.send(b'BSCH ' + source.sid + b' ANx TOa TOb')
                 self.assertEqual(source.line(), b'ISTA 100 Invalid\\ssearch\\squery FCBSCH')
-                request(source, token, b'TR' + b'A' * 39)
+                request(source, token + b'hash', b'TR' + b'A' * 39)
                 for fields in (b'', b' TO' + token):
                     source.send(b'BSCH ' + source.sid + fields)
                     fence = b'BINF ' + source.sid + b' DETokenFence'
@@ -48,6 +53,7 @@ class TokensProcessTests(unittest.TestCase):
                 again = Peer(self, connect_tls(self, hub, cert) if encrypted else hub.connect())
                 again.login(b'TokenSource', 1)
                 self.assertTrue(observer.line().startswith(b'BINF ' + again.sid + b' '))
+                source = again
                 request(again, token)
                 again.send(b'DRES ' + again.sid + b' ' + observer.sid + b' FNPrivateTokenQuery SI0 SL1 TO' + token)
                 self.assertEqual(again.line(), b'ISTA 125 Command\\snot\\simplemented FCDRES')

@@ -1,5 +1,7 @@
 # Search Tokens — alpha-0.5.5
 
+**Follow-up — alpha-0.5.6:** [Search Routing](SEARCH_ROUTING.md) forwards checked SCH over real ADC/ADCS: B/F broadcasts and lifetime-bound D/E delivery share one immutable packet with independent bounded queues. Supplied TO is registered in Search Core; absent TO remains valid. Source/state/feature checks, one-attempt dispatch and token cleanup are enforced. RES/result routing remains a later increment.
+
 Based directly on main `c9b020c0842550862a86988bdcf9b6cb97e6b6b9` after the alpha-0.5.4 merge. Earlier Search Core, SCH, filters and TTH are preserved. Code/diagnostics remain EN/US UTF-8, with mirrored US/PL documentation.
 
 ## Registry and identity
@@ -41,9 +43,9 @@ Existing `prepare()` / `dispatch(Plan, sink)` remain stateless coordination APIs
 
 ## Actual ADC/ADCS boundary
 
-The [ADC SCH specification](https://adc.sourceforge.io/ADC.html) defines TO as optional client correlation text, copied into results when supplied. This stage does not make TO mandatory on the wire, fabricate it for clients that omit it, or advertise completed result exchange. Current LoginHub refuses valid SCH with `125 Search routing not implemented`, ignores criterion-free input and refuses malformed semantics as before. It never calls `Core::start()`, so refused requests do not become active searches or consume token slots. RES remains explicitly unsupported.
+The [ADC SCH specification](https://adc.sourceforge.io/ADC.html) defines optional TO. As of alpha-0.5.6, [Search Routing](SEARCH_ROUTING.md) calls Core::start for valid requests with TO and routes requests without TO statelessly without fabricating a token. Duplicate/active-cap refusals do not fan out, zero-queue/empty-selection dispatch completes the token, and disconnect forgets the owner. Valid routing emits no acknowledgment. RES remains unsupported; generations do not solve reused-wire-token late-result ambiguity.
 
-No live routing, UDP response handling, database history, search API/UI control, new operator message or configuration is added. Registry keys/metadata remain transient; criteria live only in caller-owned Query/Plan objects. No token, search ID, query text, filename or TTH is exported to logs, chat counters, storage, API or WebAdmin. Existing `languages/us` and `languages/pl` behavior is retained. Server/WebAdmin release metadata advance together to alpha-0.5.5.
+No result routing, UDP response handling, database history, search API/UI control, new operator message or configuration is added. Registry keys/metadata remain transient; criteria live only in caller-owned Query/Plan objects. No token, search ID, query text, filename or TTH is exported to logs, chat counters, storage, API or WebAdmin. Existing `languages/us` and `languages/pl` behavior is retained. Server/WebAdmin release metadata advance together to alpha-0.5.5.
 
 ## Verification
 
