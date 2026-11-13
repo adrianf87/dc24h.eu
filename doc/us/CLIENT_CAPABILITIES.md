@@ -1,5 +1,7 @@
 # Client Capabilities — alpha-0.6.6
 
+**Current increment — alpha-0.6.7:** [Transfer Tokens](TRANSFER_TOKENS.md) unifies bounded opaque token validation and owning values across Core, CTM/RCM and peer errors. Token bytes, including Unicode/edge spaces/backslashes, survive immutable routing and real ncdc boundary handshakes. Independent requests may reuse tokens; no token registry or inferred correlation is added.
+
 **alpha-0.6.6 local validation (2026-11-13):** All 147/147 CTest tests passed in Debug, Release and ASan/UBSan, including real ncdc mode changes and plaintext/TLS peer handshakes. WebAdmin build/typecheck, 12 Node tests, 10 Chromium tests and real C++ API integration passed; no compiler warnings. Metadata, UTF-8, language parity/local links, changed Python syntax, example INI and whitespace checks passed. GitHub Actions completion is not awaited. Full supported OS coverage and production load remain unverified.
 
 Based directly on main `1aacfbd` after alpha-0.6.5. This increment unifies public TCP capabilities, per-family connection roles and originator path selection. Existing code and history are preserved; the numbered branch is published separately from main.

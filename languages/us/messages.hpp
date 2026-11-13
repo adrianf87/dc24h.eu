@@ -175,6 +175,7 @@ Peer protocols: ADC/1.0 means plaintext; ADCS/1.0 requires TLS between clients.
 The hub preserves explicit requests and opaque failure tokens; peer TLS is independent of hub TLS.
 Peers preserve protocol/token in CTM replies; the hub never supplies their listener port.
 Client capabilities track TCP4/TCP6 separately; UDP and hub TLS do not grant TCP activity.
+Connection tokens: 1..128 decoded NFC UTF-8 bytes; exact case, spaces and backslashes preserved.
 Pending negotiation correlation and file-data handling remain planned.
 Group chat remains planned.
 Database settings use [database] in INI; disabled by default.

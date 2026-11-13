@@ -3,7 +3,6 @@
 #include "dc24h/adc/parser.hpp"
 #include "dc24h/adc/sid.hpp"
 #include "dc24h/transfers/request.hpp"
-#include "dc24h/text/public_text.hpp"
 #include <algorithm>
 
 namespace dc24h::adc::detail {
@@ -31,6 +30,6 @@ inline bool connection_protocol(std::string_view value) noexcept {
         std::all_of(value.begin(), value.end(), [](unsigned char c) { return c >= 33 && c <= 126; });
 }
 inline bool connection_token(std::string_view value) {
-    return !value.empty() && value.size() <= transfers::max_token_bytes && text::valid_public_text(value);
+    return !transfers::validate_token(value);
 }
 } // namespace dc24h::adc::detail

@@ -1,5 +1,16 @@
 # Changelog
 
+## alpha-0.6.7 — 2026-11-14
+
+Transfer Tokens increment, based directly on main `9df87da184aab7376de0587bbb76121eccc9fe4b` after Client Capabilities:
+
+- Added transfers::Token, TokenError and validate_token with a single shared 1..128 decoded-byte, already-NFC UTF-8 connection-token policy. Empty, oversized and invalid-text errors are typed; bounds precede text processing/copies, allocation errors propagate, and accepted bytes are never trimmed, normalized, case-folded, interpreted by prefix or replaced. Factory values own their strings and compare exact bytes.
+- Request now owns Token and exposes token_value() while preserving its token() string accessor and request.hpp access to max_token_bytes. CTM/RCM and peer STA 41/42 use the same validator through their shared wire-field helper. ConnectionFrame exposes allocation-free access to its immutable positional token. Existing wire/error precedence, protocol/port spelling, named TO extensions, duplicate-status rejection, ready SID audiences, one-attempt dispatch, queues and privacy remain. Native protocol factory validation no longer runs twice.
+- Added transfers.tokens typed/boundary/Unicode/ownership/fault/codec/forwarding/reuse tests and transfers.tokens.process fragmented IPv4/IPv6 mixed ADC/ADCS tests. Parallel pairs intentionally share tokens; scopes, RCM-to-CTM replies, peer error TO, extension separation, recoverable invalid tokens, SID reconnect isolation, duplicate status rejection and API/log privacy are checked. Four new real ncdc suites preserve a 128-byte decoded token with edge spaces, Polish text, backslash and emoji through RCM-to-CTM, actual plaintext/certificate-checked TLS CSUP/CINF and an unsupported-protocol DSTA on both hub transports.
+- Updated server/WebAdmin metadata/fixtures, example INI, EN/US and PL CLI help, mirrored Transfer Tokens documentation and module navigation. No new dependency, configuration key, permission, SQL migration, endpoint, metric/page, pending-token registry, uniqueness rule, inferred reply correlation, deadline or peer/file handling is added. Independent requests may reuse opaque token bytes. Published separately from main with history preserved.
+
+- Validation: All **153/153 CTest tests** passed in each of Debug, Release and ASan/UBSan with required integration tools and default leak detection, including all four new real ncdc boundary-token suites, prior capability/CTM/RCM/TLS/plaintext suites, Search/UDP, MariaDB and Apache HTTPS. No compiler warnings. WebAdmin build/typecheck, **12 Node tests**, **10 Chromium tests** and real C++ API integration passed. Release metadata, UTF-8, mirrored language files/local links, changed Python syntax, example INI and whitespace checks passed. Full supported OS coverage and production load remain unverified. GitHub Actions completion is not awaited, as requested.
+
 ## alpha-0.6.6 — 2026-11-13
 
 Client Capabilities increment, based directly on main `1aacfbd1008b66a747b81c168714ccad36b4274d` after Protocol Negotiation:

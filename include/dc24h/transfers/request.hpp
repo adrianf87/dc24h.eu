@@ -2,13 +2,13 @@
 
 #include "dc24h/users/connectivity.hpp"
 #include "dc24h/transfers/protocol.hpp"
+#include "dc24h/transfers/token.hpp"
 #include <variant>
 
 namespace dc24h::transfers {
 using AddressFamily = users::AddressFamily;
 enum class Kind { connect_to_me, reverse_connect };
 enum class RequestError { invalid_kind, invalid_family, invalid_protocol, invalid_port, invalid_token };
-inline constexpr std::size_t max_token_bytes = 128;
 struct RequestData {
     Kind kind{Kind::connect_to_me};
     AddressFamily family{AddressFamily::ipv4};
@@ -27,13 +27,14 @@ public:
     [[nodiscard]] const std::string& protocol() const noexcept { return protocol_.name(); }
     [[nodiscard]] const Protocol& protocol_value() const noexcept { return protocol_; }
     [[nodiscard]] std::optional<std::uint16_t> port() const noexcept { return port_; }
-    [[nodiscard]] const std::string& token() const noexcept { return token_; }
+    [[nodiscard]] const std::string& token() const noexcept { return token_.value(); }
+    [[nodiscard]] const Token& token_value() const noexcept { return token_; }
 private:
-    Request(const RequestData& data, Protocol protocol);
+    Request(const RequestData& data, Protocol protocol, Token token);
     Kind kind_;
     AddressFamily family_;
     Protocol protocol_;
-    std::string token_;
+    Token token_;
     std::optional<std::uint16_t> port_;
 };
 } // namespace dc24h::transfers
