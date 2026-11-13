@@ -17,6 +17,11 @@ std::optional<users::SessionId> Core::resolve_target(std::string_view source) co
     const auto* model = sessions_.by_sid(source);
     return model && model->ready() ? std::optional{model->id()} : std::nullopt;
 }
+std::optional<ReplyPaths> Core::reply_paths(users::SessionId owner) const noexcept {
+    const auto* model = sessions_.find(owner);
+    if (!model || !model->ready() || !model->user()) { return {}; }
+    return search::reply_paths(model->user()->profile());
+}
 Preparation Core::prepare(users::SessionId sender, std::string_view source, const QueryData& data, const Selection& selection, const Audience& audience) const {
     if (const auto error = validate_sender(sender, source)) { return *error; }
     auto compiled = FeatureFilter::create(selection);
@@ -26,6 +31,8 @@ Preparation Core::prepare(users::SessionId sender, std::string_view source, cons
         (audience.scope != Scope::broadcast) != audience.target.has_value()) { return Error::invalid_audience; }
     auto query = Query::create(data);
     if (const auto* error = std::get_if<QueryError>(&query)) { return *error; }
+    const auto paths = reply_paths(sender);
+    if (!paths) { return Error::sender_not_ready; }
     std::vector<users::SessionId> recipients;
     if (audience.target) {
         const auto* target = sessions_.find(*audience.target);
@@ -34,7 +41,7 @@ Preparation Core::prepare(users::SessionId sender, std::string_view source, cons
         if (audience.scope == Scope::echo && sender != *audience.target && eligible(*sessions_.find(sender),features)) {
             recipients.push_back(sender);
         }
-        return Plan(domain_,sender,source,std::get<Query>(std::move(query)),std::move(features),std::move(recipients));
+        return Plan(domain_,sender,source,std::get<Query>(std::move(query)),std::move(features),std::move(recipients),*paths);
     }
     recipients.reserve(sessions_.statistics().online());
     std::uint64_t after = 0;
@@ -47,7 +54,7 @@ Preparation Core::prepare(users::SessionId sender, std::string_view source, cons
         }
         after = page.back().value();
     }
-    return Plan(domain_, sender, source, std::get<Query>(std::move(query)), std::move(features), std::move(recipients));
+    return Plan(domain_, sender, source, std::get<Query>(std::move(query)), std::move(features), std::move(recipients), *paths);
 }
 std::variant<DispatchReport, Error> Core::dispatch(const Plan& plan, const Sink& sink) const {
     if (plan.domain_ != domain_) { return Error::foreign_plan; }

@@ -50,6 +50,10 @@ struct ProfileData {
     std::string description, email, application, version, locale;
     std::optional<std::int64_t> shared_bytes, shared_files, slots;
     std::vector<std::string> features;
+    // Numeric public endpoint declarations, checked by the protocol adapter
+    // against the kernel peer address. Zero UDP ports explicitly disable UDP.
+    std::string ipv4, ipv6;
+    std::optional<std::int64_t> udp4_port, udp6_port;
     friend bool operator==(const ProfileData&, const ProfileData&) = default;
 };
 class Profile final {

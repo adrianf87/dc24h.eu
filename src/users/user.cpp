@@ -2,6 +2,8 @@
 #include "dc24h/text/public_text.hpp"
 
 #include <algorithm>
+#include <arpa/inet.h>
+#include <array>
 #include <utility>
 
 namespace dc24h::users {
@@ -11,6 +13,12 @@ bool bounded(std::string_view value, std::size_t maximum) noexcept {
 }
 bool public_text(std::string_view value, std::size_t maximum) {
     return value.size() <= maximum && text::valid_public_text(value);
+}
+bool numeric_address(const std::string& value, int family) noexcept {
+    if (value.empty()) { return true; }
+    if (value.size() >= INET6_ADDRSTRLEN || value.find('\0') != std::string::npos) { return false; }
+    std::array<unsigned char,16> address{};
+    return inet_pton(family,value.c_str(),address.data()) == 1;
 }
 bool feature(std::string_view name) noexcept {
     return name.size()==4 && name[0]>='A' && name[0]<='Z' &&
@@ -41,7 +49,11 @@ std::optional<Profile> Profile::create(ProfileData data) {
     for (const auto number : {data.shared_bytes,data.shared_files,data.slots}) {
         if (number && *number<0) { return std::nullopt; }
     }
-    auto bytes=data.description.size()+data.email.size()+data.application.size()+data.version.size()+data.locale.size();
+    if (!numeric_address(data.ipv4,AF_INET) || !numeric_address(data.ipv6,AF_INET6)) { return std::nullopt; }
+    for (const auto port : {data.udp4_port,data.udp6_port}) {
+        if (port && (*port < 0 || *port > 65535)) { return std::nullopt; }
+    }
+    auto bytes=data.ipv4.size()+data.ipv6.size()+data.description.size()+data.email.size()+data.application.size()+data.version.size()+data.locale.size();
     for (std::size_t i=0;i<data.features.size();++i) {
         if (!feature(data.features[i]) || std::find(data.features.begin(),data.features.begin()+static_cast<std::ptrdiff_t>(i),data.features[i])!=data.features.begin()+static_cast<std::ptrdiff_t>(i)) { return std::nullopt; }
         bytes+=data.features[i].size();

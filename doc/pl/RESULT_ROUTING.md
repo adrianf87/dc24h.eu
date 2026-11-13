@@ -1,5 +1,7 @@
 # Result Routing — alpha-0.5.9
 
+**Bieżący etap — alpha-0.5.10:** [Active/Passive](ACTIVE_PASSIVE.md) przenosi sprawdzone I4/I6/U4/U6 do publicznego modelu Users i dodaje metadane dróg odpowiedzi TCP/UDP dla każdej rodziny do Search Core oraz niezmiennych planów. Pasywne DRES nadal przechodzi przez hub, a aktywne URES bezpośrednio między klientami. Testowane są zmiany INF, własność adresów i rzeczywiste wysyłanie/odbieranie UDP przez ncdc.
+
 Weryfikacja lokalna 2026-11-13: **110/110 zestawów CTest przeszło w każdej konfiguracji Debug, Release i ASan/UBSan**, z wymaganymi narzędziami integracyjnymi i domyślną kontrolą wycieków. Obejmuje mieszane ADC/ADCS, awarie alokacji, rzeczywiste odbieranie/generowanie wyników ncdc, MariaDB i Apache HTTPS. Brak ostrzeżeń kompilatora. Przeszły build/typecheck WebAdmin, 4 testy Node, 6 testów Chromium i integracja rzeczywistego API C++. Sprawdzono metadane, UTF-8, zgodność plików językowych/linków dokumentacji, składnię zmienionych plików Python, przykładowe INI i białe znaki. Są to wyniki lokalne; zdalne CI, pełna macierz systemów/klientów i obciążenie produkcyjne pozostają niezweryfikowane.
 
 Gałąź utworzono bezpośrednio z main `c837ecaec3d803953c083e23d78dd621c346c19f`, po scaleniu alpha-0.5.8. Zachowano kod, wcześniejsze gałęzie i historię. Ten etap dodaje rzeczywiste przekazywanie wyników przez hub; gałąź publikowana jest osobno od main.

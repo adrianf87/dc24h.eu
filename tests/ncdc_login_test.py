@@ -20,7 +20,7 @@ import unittest
 from network_process_tests import Hub
 from api_support import enable_api, fetch_status
 from adc_process_tests import counters
-from adc_login_process_tests import Peer
+from adc_login_process_tests import Peer, pair
 from tls_support import credentials, TLS_READY, connect_tls
 
 NCDC = sys.argv.pop(1)
@@ -31,9 +31,13 @@ if ENCRYPTED:
 TTH_SEARCH = '--tth' in sys.argv
 if TTH_SEARCH:
     sys.argv.remove('--tth')
+ACTIVE_PASSIVE = '--active-passive' in sys.argv
+if ACTIVE_PASSIVE:
+    sys.argv.remove('--active-passive')
 FEATURE_SEARCH = '--feature' in sys.argv
 if FEATURE_SEARCH:
     sys.argv.remove('--feature')
+FEATURE_SEARCH = FEATURE_SEARCH or ACTIVE_PASSIVE
 TEST_TTH = b'LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHHHZWCLNQ'
 
 
@@ -337,6 +341,56 @@ class NcdcLoginTest(unittest.TestCase):
                     marker = b'BINF ' + observer.sid + b' DEFeatureRoutingFence'
                     observer.send(marker)
                     self.assertEqual(observer.line(), marker)
+                if ACTIVE_PASSIVE:
+                    udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    self.addCleanup(udp.close)
+                    udp.bind(('127.0.0.1', 0)); udp.settimeout(3)
+                    udp_port = str(udp.getsockname()[1]).encode()
+                    normalized = b'BINF ' + observer.sid + b' SUTCP4,UDP4 I4127.0.0.1 U4' + udp_port
+                    observer.send(b'BINF ' + observer.sid + b' SUTCP4,UDP4 I40.0.0.0 U4' + udp_port)
+                    self.assertEqual(observer.line(), normalized)
+                    udp_query = (b'FSCH ' + observer.sid +
+                                 b' -TCP4 ANFeatureRoutingProbe EXtxt TOActivePassiveUdpToken')
+                    observer.send(udp_query)
+                    packet, _ = udp.recvfrom(16384)
+                    cid = re.search(rb'(?:^| )ID([A-Z2-7]{39})(?: |$)', replacement_join)[1]
+                    self.assertTrue(packet.startswith(b'URES ' + cid + b' '), packet)
+                    self.assertIn(b'TOActivePassiveUdpToken', packet)
+                    self.assertIn(b'/FeatureShare/FeatureRoutingProbe.txt', packet)
+                    self.assertRegex(packet, rb' TR[A-Z2-7]{39}(?: |\n)')
+                    # A fence proves no duplicate DRES or source echo reached the hub path.
+                    marker = b'BINF ' + observer.sid + b' DEActivePassiveUdpFence'
+                    observer.send(marker); self.assertEqual(observer.line(), marker)
+                    # A zero port switches ncdc back to hub delivery, even with UDP4 advertised.
+                    observer.send(b'BINF ' + observer.sid + b' U40')
+                    self.assertEqual(observer.line(), b'BINF ' + observer.sid + b' U40')
+                    observer.send(udp_query.replace(b'ActivePassiveUdpToken', b'ActivePassiveHubToken'))
+                    fallback = observer.line()
+                    self.assertTrue(fallback.startswith(b'DRES ' + replacement_sid + b' ' + observer.sid + b' '))
+                    self.assertIn(b'TOActivePassiveHubToken', fallback)
+                    # Turn ncdc itself active and verify actual UDP receipt in its search UI.
+                    os.write(master, b'/set sudp_policy disabled\r/hset active_ip 127.0.0.1\r/hset active_port 0\r/hset active_udp_port 0\r/hset active true\r')
+                    advertised = {}
+                    for _ in range(12):
+                        delta = observer.line()
+                        self.assertTrue(delta.startswith(b'BINF ' + replacement_sid + b' '), delta)
+                        for field in delta.split()[2:]: advertised[field[:2]] = field[2:]
+                        if b'UDP4' in advertised.get(b'SU', b'').split(b',') and int(advertised.get(b'U4', b'0') or b'0') > 0:
+                            break
+                    else:
+                        self.fail('ncdc did not publish an active UDP endpoint')
+                    os.write(master, b'/search -hub -ge 1K -t archive ActivePassiveNcdcSecret\r')
+                    active_query = observer.line()
+                    self.assertIn(b'ANActivePassiveNcdcSecret', active_query)
+                    active_token = re.search(rb'(?:^| )TO([^ ]+)', active_query)
+                    self.assertIsNotNone(active_token, 'Active ncdc search omitted TO')
+                    probe = (b'URES ' + pair(99)[1] +
+                             b' FN/ActivePassiveNcdcSecretUdpProbe.zip SI2048 SL1 TR' + TEST_TTH +
+                             b' TO' + active_token[1] + b'\n')
+                    udp.sendto(probe, ('127.0.0.1', int(advertised[b'U4'])))
+                    wait_screen(b'ActivePassiveNcdcSecretUdpProbe.zip')
+                    os.write(master, b'\x1b2')
+                    self.assertNotIn(b'ActivePassiveNcdcSecretUdpProbe', replies)
                 os.write(master, b'/quit\r')
                 deadline = time.monotonic() + 4
                 while process.poll() is None and time.monotonic() < deadline:

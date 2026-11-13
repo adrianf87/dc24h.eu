@@ -1,6 +1,8 @@
 # Feature Routing — alpha-0.5.7
 
-**Current increment — alpha-0.5.9:** [Result Routing](RESULT_ROUTING.md) forwards checked DRES only to its ready target over ADC/ADCS. Plans bind session lifetimes and, when TO is present, the target owner’s active search generation. Tokenless results remain supported. Shared bounded queues preserve original fields without public fanout, sender echo or administration payloads.
+**Current increment — alpha-0.5.10:** [Active/Passive](ACTIVE_PASSIVE.md) projects checked I4/I6/U4/U6 into public Users and adds allocation-free per-family TCP/UDP reply-path metadata to Search Core and immutable plans. Passive DRES remains hub-routed; active URES travels directly between clients. Dynamic INF changes, endpoint ownership and real ncdc UDP sending/receiving are tested.
+
+**Increment delivered in alpha-0.5.9:** [Result Routing](RESULT_ROUTING.md) forwards checked DRES only to its ready target over ADC/ADCS. Plans bind session lifetimes and, when TO is present, the target owner’s active search generation. Tokenless results remain supported. Shared bounded queues preserve original fields without public fanout, sender echo or administration payloads.
 
 Local verification for **alpha-0.5.7** on 2026-11-12: all **106/106 CTest suites** passed in Debug, Release and ASan/UBSan with required integration tools and default leak detection, including compiled-feature/fault tests, mixed ADC/ADCS SU/SUP fanout, real ncdc feature/name/filter/TTH interoperability, MariaDB and Apache HTTPS. Builds emitted no compiler warnings. WebAdmin production build/typecheck, 4 Node tests, 6 Chromium tests and real C++ API integration passed. Metadata, UTF-8, documentation language parity/local links, modified Python syntax, shipped INI and whitespace checks passed. These results are local; remote CI is tracked in GitHub Actions. The full supported OS/client matrix and production load remain unverified.
 

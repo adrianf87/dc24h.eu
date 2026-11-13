@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dc24h/search/query.hpp"
+#include "dc24h/search/connectivity.hpp"
 #include "dc24h/search/features.hpp"
 #include "dc24h/search/tokens.hpp"
 #include "dc24h/users/session_manager.hpp"
@@ -24,20 +25,22 @@ public:
     [[nodiscard]] users::SessionId sender() const noexcept { return sender_; }
     [[nodiscard]] const std::string& source() const noexcept { return source_; }
     [[nodiscard]] const Query& query() const noexcept { return query_; }
+    [[nodiscard]] const ReplyPaths& reply_paths() const noexcept { return reply_paths_; }
     [[nodiscard]] const Selection& selection() const noexcept { return features_.selection(); }
     [[nodiscard]] const std::vector<users::SessionId>& recipients() const noexcept { return recipients_; }
 private:
     friend class Core;
     Plan(std::shared_ptr<const detail::Domain> domain, users::SessionId sender, std::string_view source,
-         Query query, FeatureFilter features, std::vector<users::SessionId> recipients)
+         Query query, FeatureFilter features, std::vector<users::SessionId> recipients, ReplyPaths paths)
         : domain_(std::move(domain)), sender_(sender), source_(source), query_(std::move(query)),
-          features_(std::move(features)), recipients_(std::move(recipients)) {}
+          features_(std::move(features)), recipients_(std::move(recipients)), reply_paths_(paths) {}
     std::shared_ptr<const detail::Domain> domain_;
     users::SessionId sender_;
     std::string source_;
     Query query_;
     FeatureFilter features_;
     std::vector<users::SessionId> recipients_;
+    ReplyPaths reply_paths_;
 };
 struct DispatchReport {
     std::size_t queued{}, unavailable{}, refused{}, canceled{};
@@ -66,6 +69,9 @@ public:
     Core& operator=(const Core&) = delete;
     [[nodiscard]] std::optional<Error> validate_sender(users::SessionId sender, std::string_view source) const noexcept;
     [[nodiscard]] std::optional<users::SessionId> resolve_target(std::string_view source) const noexcept;
+    // Current ready-owner snapshot. This predicts available reply paths only;
+    // clients use current public INF and exchange UDP results directly.
+    [[nodiscard]] std::optional<ReplyPaths> reply_paths(users::SessionId owner) const noexcept;
     [[nodiscard]] bool owns(const Plan& plan) const noexcept { return plan.domain_ == domain_; }
     // Ready lifetime IDs in increasing order, including the sender when selected.
     // No user-profile copies. Allocation failure leaves all models unchanged.

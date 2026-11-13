@@ -1,5 +1,7 @@
 # Result Routing — alpha-0.5.9
 
+**Current increment — alpha-0.5.10:** [Active/Passive](ACTIVE_PASSIVE.md) projects checked I4/I6/U4/U6 into public Users and adds allocation-free per-family TCP/UDP reply-path metadata to Search Core and immutable plans. Passive DRES remains hub-routed; active URES travels directly between clients. Dynamic INF changes, endpoint ownership and real ncdc UDP sending/receiving are tested.
+
 Local verification on 2026-11-13: **110/110 CTest suites passed in each of Debug, Release and ASan/UBSan**, with required integration tools and default leak detection. This includes mixed ADC/ADCS result delivery, allocation faults, actual ncdc receiving/producing results, MariaDB and Apache HTTPS. No compiler warnings. WebAdmin production build/typecheck, 4 Node tests, 6 Chromium tests and real C++ API integration passed. Release metadata, UTF-8, language file parity/local documentation links, changed Python syntax, shipped INI and whitespace checks passed. These are local results; remote CI, the full supported OS/client matrix and production load remain unverified.
 
 Based directly on main `c837ecaec3d803953c083e23d78dd621c346c19f`, after the alpha-0.5.8 merge. Existing code, branches and history remain preserved. This branch adds actual result delivery through the hub and is published separately from main.

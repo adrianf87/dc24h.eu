@@ -80,13 +80,16 @@ void projection() {
     const auto& data=value->profile().data();
     require(data.description=="Zażółć gęślą" && data.email=="public@example.test" && data.application=="Klient" &&
         data.version=="1.0" && data.locale=="pl_PL" && data.shared_bytes==0 && data.shared_files==7 && data.slots==2 &&
-        data.features==std::vector<std::string>{"TCP4","ADC0"},"Projection changed public fields");
+        data.features==std::vector<std::string>{"TCP4","ADC0"} && data.ipv4=="127.0.0.1" && data.ipv6.empty() && !data.udp4_port && !data.udp6_port,"Projection changed public fields");
     require(!adc::user_from_info(info,*adc::Sid::from_value(0)),"Reserved zero SID projected as user");
     const auto update=validator.validate(parse("BINF AAAB NINowy DE EM AP VE LO SS SF SL SU"),sid,adc::SessionHash::tiger192,&info);
     require(std::holds_alternative<adc::ClientInfo>(update),"Cancellation rejected");
     const auto newer=adc::user_from_info(std::get<adc::ClientInfo>(update),sid);
+    users::ProfileData remaining;remaining.ipv4="127.0.0.1";
     require(newer && newer->identity().cid()==cid && newer->identity().nickname()=="Nowy" &&
-        newer->profile()==users::Profile{} && value->identity().nickname()=="Żółw" && data.description=="Zażółć gęślą","Projection aliases/cancels incorrectly");
+        newer->profile()==*users::Profile::create(remaining) && value->identity().nickname()=="Żółw" && data.description=="Zażółć gęślą","Projection aliases/cancels incorrectly");
+    const auto cleared=validator.validate(parse("BINF AAAB I4"),sid,adc::SessionHash::tiger192,&std::get<adc::ClientInfo>(update));
+    require(adc::user_from_info(std::get<adc::ClientInfo>(cleared),sid)->profile()==users::Profile{},"Explicit address cancellation left endpoint metadata");
     auto bad=parse("BINF AAAB NINext DEChanged");bad.parameters[0]="NIe\xcc\x81";
     const auto invalid=validator.validate(bad,sid,adc::SessionHash::tiger192,&info);
     require(std::get<adc::InfError>(invalid)==adc::InfError::invalid_nick && adc::user_from_info(info,sid)==value,"ADC/User NFC policy differs or rejected update mutated source");
