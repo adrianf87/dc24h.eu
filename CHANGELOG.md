@@ -1,5 +1,13 @@
 # Changelog
 
+## alpha-0.6.4 — CI follow-up (2026-11-13)
+
+- Fix ncdc harness backpressure: pump PTY output while awaiting observer TCP/TLS frames, preserving the three-second reply deadline, complete-frame assertions, pending-buffer bound and original socket timeout. This prevents a full terminal from blocking ncdc's event thread during active INF/RCM negotiation.
+- Add adcs.rcm.terminal.ncdc with bounded nonblocking PTY saturation and real ncdc active INF, reverse/CTM peer handshake, chat recovery and shutdown. The same test with the old blocking observer reader reproduces the timeout.
+- Disable fail-fast for the CI server matrix so an individual failure does not cancel another OS/build's result. No server protocol, dependency or release-version change. Document the regression in US/PL testing guides.
+
+- Validation: Local follow-up validation: **135/135 Release CTest tests**, **25/25 Debug ncdc tests**, and **5/5 ASan/UBSan CTM/RCM tests** passed. The normal ADCS RCM test and terminal-pressure regression each passed **10 consecutive Debug runs**. The regression with terminal pumping disabled failed with the original activation-read timeout. Python syntax, release metadata, mirrored UTF-8 documentation/local links and whitespace checks passed.
+
 ## alpha-0.6.4 — 2026-11-13
 
 Connection Routing increment, based directly on main `79b7c1ffa82d6a5389ddc92bd13e3ffa61eb95a1` after the ADC RCM merge:

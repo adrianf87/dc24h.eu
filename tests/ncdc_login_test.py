@@ -28,6 +28,9 @@ MSG_CODEC = sys.argv.pop(1)
 ENCRYPTED = '--tls' in sys.argv
 if ENCRYPTED:
     sys.argv.remove('--tls')
+TERMINAL_PRESSURE = '--terminal-pressure' in sys.argv
+if TERMINAL_PRESSURE:
+    sys.argv.remove('--terminal-pressure')
 RCM_TEST = '--rcm' in sys.argv
 if RCM_TEST:
     sys.argv.remove('--rcm')
@@ -115,12 +118,39 @@ class NcdcLoginTest(unittest.TestCase):
             thread = threading.Thread(target=forward, daemon=True)
             thread.start()
             master, slave = pty.openpty()
+            terminal = os.ttyname(slave)
             fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack('HHHH', 30, 140, 0, 0))
             process = subprocess.Popen([NCDC, '-c', directory + '/session', '-n'],
                 stdin=slave, stdout=slave, stderr=slave, start_new_session=True,
                 env={**os.environ, 'TERM': 'xterm', 'LC_ALL': 'C.UTF-8'})
             os.close(slave)
             screen = bytearray()
+
+            def observer_line():
+                # ncdc draws its UI on the same thread that handles commands
+                # and network events. A full PTY must not prevent the reply
+                # whose arrival this test is waiting for. Keep the original
+                # three-second reply budget, including fragmented TLS reads.
+                deadline = time.monotonic() + 3
+                old_timeout = observer.peer.gettimeout()
+                try:
+                    while b'\n' not in observer.pending:
+                        if process.poll() is None and select.select([master], [], [], 0)[0]:
+                            screen.extend(os.read(master, 65536))
+                        remaining = deadline - time.monotonic()
+                        self.assertGreater(remaining, 0, 'Timed out waiting for ncdc observer reply: ' + repr(screen[-3000:]))
+                        observer.peer.settimeout(min(0.05, remaining))
+                        try:
+                            chunk = observer.peer.recv(4096)
+                        except socket.timeout:
+                            continue
+                        self.assertTrue(chunk, 'Hub closed before a complete ncdc observer reply')
+                        observer.pending += chunk
+                        self.assertLessEqual(len(observer.pending), 256 * 1024)
+                    line, observer.pending = observer.pending.split(b'\n', 1)
+                    return line
+                finally:
+                    observer.peer.settimeout(old_timeout)
 
             def wait_screen(expected, timeout=6):
                 deadline = time.monotonic() + timeout
@@ -144,7 +174,7 @@ class NcdcLoginTest(unittest.TestCase):
                 scheme = 'adcs' if ENCRYPTED else 'adc'
                 os.write(master, f'/open dc24h_login {scheme}://127.0.0.1:{listener.getsockname()[1]}/\r'.encode())
                 hub.wait_for(lambda: hub.log.count(b'event=login_ready') == 2)
-                initial_join = observer.line()
+                initial_join = observer_line()
                 self.assertTrue(initial_join.startswith(b'BINF '))
                 initial_sid = initial_join.split()[1]
                 # ncdc refuses chat until its own INF completed the initial user
@@ -154,17 +184,17 @@ class NcdcLoginTest(unittest.TestCase):
                 wait_screen(b'Welcome to dc24h.eu.')
                 wait_screen(b'Configured ncdc chat.')
                 observer.send(b'BMSG '+observer.sid+b' dc24hIncomingChat')
-                self.assertEqual(observer.line(), b'BMSG '+observer.sid+b' dc24hIncomingChat')
+                self.assertEqual(observer_line(), b'BMSG '+observer.sid+b' dc24hIncomingChat')
                 wait_screen(b'dc24hIncomingChat')
                 os.write(master, b'dc24hLoginProbe\r')
-                self.assertEqual(observer.line(), b'BMSG '+initial_sid+b' dc24hLoginProbe')
+                self.assertEqual(observer_line(), b'BMSG '+initial_sid+b' dc24hLoginProbe')
                 wait_screen(b'dc24hLoginProbe')
                 public_text='dc24hPublicŻółw 😀 path\\folder'.encode()
                 os.write(master, public_text+b'\r')
-                self.assertEqual(observer.line(), b'BMSG '+initial_sid+b' '+r'dc24hPublicŻółw\s😀\spath\\folder'.encode())
+                self.assertEqual(observer_line(), b'BMSG '+initial_sid+b' '+r'dc24hPublicŻółw\s😀\spath\\folder'.encode())
                 wait_screen('dc24hPublicŻółw'.encode())
                 validated = b'BMSG '+observer.sid+b' '+r'dc24hValidatedŻółw\s😀\nsecond\\line'.encode()+b' ME0'
-                observer.send(validated); self.assertEqual(observer.line(),validated)
+                observer.send(validated); self.assertEqual(observer_line(),validated)
                 wait_screen('dc24hValidatedŻółw'.encode())
                 for command in (b'/me dc24hActionProbe likes cats', b'/msg ListObserver dc24hPrivateProbe'):
                     before_frames = fetch_status(api_path, token)['network']['adc_frames']
@@ -178,13 +208,13 @@ class NcdcLoginTest(unittest.TestCase):
                         time.sleep(0.01)
                     self.assertEqual(probe['users']['online'], 2)
                     if command.startswith(b'/me '):
-                        self.assertEqual(observer.line(), b'BMSG '+initial_sid+b' dc24hActionProbe\\slikes\\scats ME1')
+                        self.assertEqual(observer_line(), b'BMSG '+initial_sid+b' dc24hActionProbe\\slikes\\scats ME1')
                     else:
                         expected = b'EMSG '+initial_sid+b' '+observer.sid+b' dc24hPrivateProbe PM'+initial_sid
-                        self.assertEqual(observer.line(), expected)
+                        self.assertEqual(observer_line(), expected)
                         wait_screen(b'dc24hPrivateProbe')
                 private_reply = b'EMSG '+observer.sid+b' '+initial_sid+b' dc24hPrivateReply PM'+observer.sid
-                observer.send(private_reply);self.assertEqual(observer.line(), private_reply)
+                observer.send(private_reply);self.assertEqual(observer_line(), private_reply)
                 wait_screen(b'dc24hPrivateReply')
                 # PM routes the reply tab; explicit ME0 remains a plain message,
                 # while ME01 is canonicalized to an action with the same origin.
@@ -192,17 +222,17 @@ class NcdcLoginTest(unittest.TestCase):
                                                 (b'ME01', b'ME1', b'dc24hPrivateActionFlag')):
                     reply = b'EMSG '+observer.sid+b' '+initial_sid+b' '+marker
                     observer.send(reply+b' '+flag+b' PM'+observer.sid)
-                    self.assertEqual(observer.line(), reply+b' PM'+observer.sid+b' '+canonical)
+                    self.assertEqual(observer_line(), reply+b' PM'+observer.sid+b' '+canonical)
                     wait_screen(marker)
                 os.write(master, b'/me dc24hPrivateAction\r')
-                self.assertEqual(observer.line(), b'EMSG '+initial_sid+b' '+observer.sid+b' dc24hPrivateAction PM'+initial_sid+b' ME1')
+                self.assertEqual(observer_line(), b'EMSG '+initial_sid+b' '+observer.sid+b' dc24hPrivateAction PM'+initial_sid+b' ME1')
                 os.write(master, b'/open dc24h_login\r')
                 wait_screen(b'2 users')
                 status = fetch_status(api_path, token)
                 self.assertGreaterEqual(status['network']['adc_frames'], 3)
                 self.assertEqual(status['users'], {'online': 2, 'peak_online': 2, 'successful_logins': 2})
                 os.write(master, b'/hset description dc24hINFUpdate\r')
-                live_update = observer.line()
+                live_update = observer_line()
                 self.assertEqual(live_update.split()[:2], [b'BINF', initial_sid])
                 # ncdc may also flush its changed HN count with description.
                 self.assertIn(b'DEdc24hINFUpdate', live_update.split()[2:])
@@ -213,8 +243,8 @@ class NcdcLoginTest(unittest.TestCase):
                 os.write(master, b'/nick ' + renamed + b'\r')
                 os.write(master, b'/reconnect\r')
                 hub.wait_for(lambda: hub.log.count(b'event=login_ready') == 3)
-                self.assertEqual(observer.line(), b'IQUI ' + initial_sid)
-                replacement_join = observer.line()
+                self.assertEqual(observer_line(), b'IQUI ' + initial_sid)
+                replacement_join = observer_line()
                 self.assertTrue(replacement_join.startswith(b'BINF '))
                 replacement_sid = replacement_join.split()[1]
                 self.assertNotEqual(initial_sid, replacement_sid)
@@ -231,7 +261,7 @@ class NcdcLoginTest(unittest.TestCase):
                 wait_screen(renamed + b' @ ')
                 screen.clear()
                 os.write(master, b'dc24hRenamedProbe\r')
-                self.assertEqual(observer.line(), b'BMSG '+replacement_sid+b' dc24hRenamedProbe')
+                self.assertEqual(observer_line(), b'BMSG '+replacement_sid+b' dc24hRenamedProbe')
                 wait_screen(b'dc24hRenamedProbe')
                 if ENCRYPTED:
                     self.assertTrue(wire.startswith(b'\x16\x03'))
@@ -264,15 +294,15 @@ class NcdcLoginTest(unittest.TestCase):
                     # A passive/passive request is explicitly refused; the
                     # connection and chat remain usable after policy admission.
                     observer.send(b'BINF ' + observer.sid + b' SU')
-                    self.assertEqual(observer.line(), b'BINF ' + observer.sid + b' SU')
+                    self.assertEqual(observer_line(), b'BINF ' + observer.sid + b' SU')
                     screen.clear()
                     os.write(master, b'/browse ListObserver\r')
                     wait_screen(b'RCM requires passive sender and active recipient')
                     os.write(master, b'/open dc24h_login\r')
                     os.write(master, b'dc24hTransferBoundaryRecovery\r')
-                    self.assertEqual(observer.line(), b'BMSG ' + replacement_sid + b' dc24hTransferBoundaryRecovery')
+                    self.assertEqual(observer_line(), b'BMSG ' + replacement_sid + b' dc24hTransferBoundaryRecovery')
                     observer.send(b'BINF ' + observer.sid + b' SUTCP4')
-                    self.assertEqual(observer.line(), b'BINF ' + observer.sid + b' SUTCP4')
+                    self.assertEqual(observer_line(), b'BINF ' + observer.sid + b' SUTCP4')
                 if FEATURE_SEARCH:
                     # A real indexed share lets ncdc prove that it processed the
                     # routed FSCH by producing a result that reaches its issuer.
@@ -294,7 +324,7 @@ class NcdcLoginTest(unittest.TestCase):
                     # for ncdc's periodic public-share update timer.
                     os.write(master, b'/hset description dc24hFeatureIndexReady\r')
                     while True:
-                        delta = observer.line()
+                        delta = observer_line()
                         self.assertTrue(delta.startswith(b'BINF ' + replacement_sid + b' '), delta)
                         if b'DEdc24hFeatureIndexReady' in delta:
                             break
@@ -303,9 +333,9 @@ class NcdcLoginTest(unittest.TestCase):
                     os.write(master, b'\x1b2')
                     wait_screen(b'Search operation not permitted')
                     marker = b'BINF ' + observer.sid + b' DESecurityDeniedFence'
-                    observer.send(marker); self.assertEqual(observer.line(), marker)
+                    observer.send(marker); self.assertEqual(observer_line(), marker)
                     os.write(master, b'/say SecurityRecoveryProbe\r')
-                    recovered = observer.line()
+                    recovered = observer_line()
                     self.assertTrue(recovered.startswith(b'BMSG ' + replacement_sid + b' '))
                     self.assertIn(b'SecurityRecoveryProbe', recovered)
                 else:
@@ -322,7 +352,7 @@ class NcdcLoginTest(unittest.TestCase):
                             screen.extend(os.read(master, 65536))
                     wait_screen(TEST_TTH if TTH_SEARCH else b'SearchCoreSecret')
                     # Search results use list key bindings, not the chat input.
-                    routed_search = observer.line()
+                    routed_search = observer_line()
                     self.assertRegex(routed_search, rb'^[BF]SCH ' + replacement_sid + rb' ')
                     self.assertIn(b'TR' + TEST_TTH if TTH_SEARCH else b'ANSearchCoreSecret', routed_search)
                     if FEATURE_SEARCH:
@@ -362,7 +392,7 @@ class NcdcLoginTest(unittest.TestCase):
                         feature_query = (b'FSCH ' + observer.sid +
                                          b' -TCP4 ANFeatureRoutingProbe EXtxt TOFeatureRoutingProbeToken')
                         observer.send(feature_query)
-                        received_result = observer.line()
+                        received_result = observer_line()
                         self.assertTrue(received_result.startswith(b'DRES ' + replacement_sid + b' ' + observer.sid + b' '))
                         self.assertIn(b'/FeatureShare/FeatureRoutingProbe.txt', received_result)
                         self.assertIn(b'TOFeatureRoutingProbeToken', received_result)
@@ -378,7 +408,7 @@ class NcdcLoginTest(unittest.TestCase):
                         # The issuer receives one result, with no FSCH echo.
                         marker = b'BINF ' + observer.sid + b' DEFeatureRoutingFence'
                         observer.send(marker)
-                        self.assertEqual(observer.line(), marker)
+                        self.assertEqual(observer_line(), marker)
                     if ACTIVE_PASSIVE:
                         udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                         self.addCleanup(udp.close)
@@ -386,7 +416,7 @@ class NcdcLoginTest(unittest.TestCase):
                         udp_port = str(udp.getsockname()[1]).encode()
                         normalized = b'BINF ' + observer.sid + b' SUTCP4,UDP4 I4127.0.0.1 U4' + udp_port
                         observer.send(b'BINF ' + observer.sid + b' SUTCP4,UDP4 I40.0.0.0 U4' + udp_port)
-                        self.assertEqual(observer.line(), normalized)
+                        self.assertEqual(observer_line(), normalized)
                         udp_query = (b'FSCH ' + observer.sid +
                                      b' -TCP4 ANFeatureRoutingProbe EXtxt TOActivePassiveUdpToken')
                         observer.send(udp_query)
@@ -398,19 +428,19 @@ class NcdcLoginTest(unittest.TestCase):
                         self.assertRegex(packet, rb' TR[A-Z2-7]{39}(?: |\n)')
                         # A fence proves no duplicate DRES or source echo reached the hub path.
                         marker = b'BINF ' + observer.sid + b' DEActivePassiveUdpFence'
-                        observer.send(marker); self.assertEqual(observer.line(), marker)
+                        observer.send(marker); self.assertEqual(observer_line(), marker)
                         # A zero port switches ncdc back to hub delivery, even with UDP4 advertised.
                         observer.send(b'BINF ' + observer.sid + b' U40')
-                        self.assertEqual(observer.line(), b'BINF ' + observer.sid + b' U40')
+                        self.assertEqual(observer_line(), b'BINF ' + observer.sid + b' U40')
                         observer.send(udp_query.replace(b'ActivePassiveUdpToken', b'ActivePassiveHubToken'))
-                        fallback = observer.line()
+                        fallback = observer_line()
                         self.assertTrue(fallback.startswith(b'DRES ' + replacement_sid + b' ' + observer.sid + b' '))
                         self.assertIn(b'TOActivePassiveHubToken', fallback)
                         # Turn ncdc itself active and verify actual UDP receipt in its search UI.
                         os.write(master, b'/set sudp_policy disabled\r/hset active_ip 127.0.0.1\r/hset active_port 0\r/hset active_udp_port 0\r/hset active true\r')
                         advertised = {}
                         for _ in range(12):
-                            delta = observer.line()
+                            delta = observer_line()
                             self.assertTrue(delta.startswith(b'BINF ' + replacement_sid + b' '), delta)
                             for field in delta.split()[2:]: advertised[field[:2]] = field[2:]
                             if b'UDP4' in advertised.get(b'SU', b'').split(b',') and int(advertised.get(b'U4', b'0') or b'0') > 0:
@@ -418,7 +448,7 @@ class NcdcLoginTest(unittest.TestCase):
                         else:
                             self.fail('ncdc did not publish an active UDP endpoint')
                         os.write(master, b'/search -hub -ge 1K -t archive ActivePassiveNcdcSecret\r')
-                        active_query = observer.line()
+                        active_query = observer_line()
                         self.assertIn(b'ANActivePassiveNcdcSecret', active_query)
                         active_token = re.search(rb'(?:^| )TO([^ ]+)', active_query)
                         self.assertIsNotNone(active_token, 'Active ncdc search omitted TO')
@@ -431,7 +461,7 @@ class NcdcLoginTest(unittest.TestCase):
                         self.assertNotIn(b'ActivePassiveNcdcSecretUdpProbe', replies)
                 if RCM_TEST:
                     os.write(master, b'/open dc24h_login\r/browse ListObserver\r')
-                    reverse = observer.line()
+                    reverse = observer_line()
                     self.assertTrue(reverse.startswith(b'DRCM ' + replacement_sid + b' ' + observer.sid + b' '), reverse)
                     words = reverse.split(); self.assertEqual(words[3], b'ADC/1.0'); self.assertTrue(words[4])
                     with socket.socket() as listener_cc:
@@ -462,19 +492,36 @@ class NcdcLoginTest(unittest.TestCase):
                             self.assertTrue(client_line().startswith(b'CGET '))
                     # Reverse direction: real ncdc receives RCM as active target,
                     # emits CTM preserving the requested protocol and token.
+                    if TERMINAL_PRESSURE:
+                        # Saturate terminal output without risking a blocking
+                        # writer or filling ncdc's input queue. Its next UI
+                        # redraw must wait for the harness to read the PTY.
+                        terminal_fd = os.open(terminal, os.O_WRONLY | os.O_NONBLOCK | os.O_NOCTTY)
+                        try:
+                            for _ in range(64):
+                                try:
+                                    os.write(terminal_fd, b'TerminalPressure' * 256)
+                                except BlockingIOError:
+                                    break
+                            else:
+                                self.fail('Could not saturate ncdc terminal output')
+                        finally:
+                            os.close(terminal_fd)
+                        os.write(master, b'/help\r')
+                        time.sleep(0.2)  # Let ncdc reach its blocked UI redraw.
                     os.write(master, b'/hset active_ip 127.0.0.1\r/hset active_port 0\r/hset active_udp_port 0\r/hset active true\r')
                     advertised = {}
                     for _ in range(12):
-                        delta = observer.line()
+                        delta = observer_line()
                         self.assertTrue(delta.startswith(b'BINF ' + replacement_sid + b' '), delta)
                         for field in delta.split()[2:]: advertised[field[:2]] = field[2:]
                         if b'TCP4' in advertised.get(b'SU', b'').split(b',') and advertised.get(b'I4') == b'127.0.0.1': break
                     else: self.fail('ncdc did not become active for RCM')
                     observer.send(b'BINF ' + observer.sid + b' SU')
-                    self.assertEqual(observer.line(), b'BINF ' + observer.sid + b' SU')
+                    self.assertEqual(observer_line(), b'BINF ' + observer.sid + b' SU')
                     token_rcm = b'RcmNcdcIncomingPrivate'
                     observer.send(b'DRCM ' + observer.sid + b' ' + replacement_sid + b' ADC/1.0 ' + token_rcm)
-                    reply = observer.line().split()
+                    reply = observer_line().split()
                     self.assertEqual(reply[:4], [b'DCTM', replacement_sid, observer.sid, b'ADC/1.0'])
                     self.assertEqual(reply[5], token_rcm); self.assertTrue(1 <= int(reply[4]) <= 65535)
                     with socket.create_connection(('127.0.0.1', int(reply[4])), timeout=3) as cc:
@@ -487,20 +534,20 @@ class NcdcLoginTest(unittest.TestCase):
                         cc.sendall(b'CINF ID' + pair(99)[1] + b' TO' + token_rcm + b'\n')
                         self.assertTrue(server_line().startswith(b'CINF '))
                     observer.send(b'BMSG ' + observer.sid + b' RcmNcdcHandshakeRecovery')
-                    self.assertEqual(observer.line(), b'BMSG ' + observer.sid + b' RcmNcdcHandshakeRecovery')
+                    self.assertEqual(observer_line(), b'BMSG ' + observer.sid + b' RcmNcdcHandshakeRecovery')
                     wait_screen(b'RcmNcdcHandshakeRecovery')
                     self.assertNotIn(token_rcm, hub.log)
                 if CTM_TEST:
                     os.write(master, b'/hset active_ip 127.0.0.1\r/hset active_port 0\r/hset active_udp_port 0\r/hset active true\r')
                     advertised = {}
                     for _ in range(12):
-                        delta = observer.line()
+                        delta = observer_line()
                         self.assertTrue(delta.startswith(b'BINF ' + replacement_sid + b' '), delta)
                         for field in delta.split()[2:]: advertised[field[:2]] = field[2:]
                         if b'TCP4' in advertised.get(b'SU', b'').split(b',') and advertised.get(b'I4') == b'127.0.0.1': break
                     else: self.fail('ncdc did not become TCP active')
                     os.write(master, b'/open dc24h_login\r/browse ListObserver\r')
-                    offer = observer.line()
+                    offer = observer_line()
                     self.assertTrue(offer.startswith(b'DCTM ' + replacement_sid + b' ' + observer.sid + b' '), offer)
                     words = offer.split(); self.assertEqual(words[3], b'ADC/1.0')
                     self.assertTrue(1 <= int(words[4]) <= 65535); self.assertTrue(words[5])
@@ -521,7 +568,7 @@ class NcdcLoginTest(unittest.TestCase):
                         request = cc_line()
                         self.assertTrue(request.startswith(b'CGET '), request)
                     observer.send(b'BMSG ' + observer.sid + b' CtmNcdcHandshakeRecovery')
-                    self.assertEqual(observer.line(), b'BMSG ' + observer.sid + b' CtmNcdcHandshakeRecovery')
+                    self.assertEqual(observer_line(), b'BMSG ' + observer.sid + b' CtmNcdcHandshakeRecovery')
                     wait_screen(b'CtmNcdcHandshakeRecovery')
                     if not ENCRYPTED:
                         wait_capture(wire, offer+b'\n'); self.assertIn(offer+b'\n', wire)
@@ -535,9 +582,9 @@ class NcdcLoginTest(unittest.TestCase):
                         except OSError:
                             break
                 self.assertEqual(process.wait(timeout=2), 0)
-                self.assertEqual(observer.line(), b'IQUI ' + replacement_sid)
+                self.assertEqual(observer_line(), b'IQUI ' + replacement_sid)
                 observer.send(b'DSTA ' + observer.sid + b' ' + replacement_sid + b' 100 Departed')
-                self.assertTrue(observer.line().startswith(b'ISTA 140 '))
+                self.assertTrue(observer_line().startswith(b'ISTA 140 '))
                 deadline = time.monotonic() + 3
                 while True:
                     stats = fetch_status(api_path, token)

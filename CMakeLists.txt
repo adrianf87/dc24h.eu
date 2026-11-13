@@ -739,6 +739,10 @@ if(BUILD_TESTING)
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
             "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>" --rcm --tls)
         set_tests_properties(adc.rcm.ncdc adcs.rcm.ncdc PROPERTIES TIMEOUT 45)
+        add_test(NAME adcs.rcm.terminal.ncdc COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
+            "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>" --rcm --tls --terminal-pressure)
+        set_tests_properties(adcs.rcm.terminal.ncdc PROPERTIES TIMEOUT 45)
 
 
 

@@ -5,6 +5,7 @@ permissions:
 jobs:
   server:
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04]
         build_type: [Debug, Release]
