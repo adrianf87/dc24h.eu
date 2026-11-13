@@ -17,6 +17,8 @@ public:
     ConnectionFrame& operator=(ConnectionFrame&&) = delete;
     [[nodiscard]] const Message& message() const noexcept { return message_; }
     [[nodiscard]] const std::string& wire() const noexcept { return wire_; }
+    [[nodiscard]] transfers::ProtocolKind protocol_kind() const noexcept { return transfers::classify_protocol(message_.parameters[0]); }
+    [[nodiscard]] transfers::Encryption encryption() const noexcept { return transfers::encryption(protocol_kind()); }
 private:
     friend class ConnectionRouter;
     ConnectionFrame(Message message, std::string wire) : message_(std::move(message)), wire_(std::move(wire)) {}

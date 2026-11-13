@@ -1,5 +1,7 @@
 # Connection Routing — alpha-0.6.4
 
+**Bieżący etap — alpha-0.6.5:** [Protocol Negotiation](PROTOCOL_NEGOTIATION.md) dodaje do Transfer Core własne wartości protokołu i jawne rozróżnienie zwykłego ADC/1.0 oraz wymagającego TLS ADCS/1.0. Czysty wybór preferencji/możliwości nie obniża wymaganego TLS. CTM/RCM zachowują wybraną nazwę i zgodność rozszerzeń, a odpowiedzi błędów klientów zachowują tokeny. Rzeczywisty ncdc sprawdza TLS klientów z weryfikacją certyfikatu przez oba transporty huba; zachowano regresję pełnego terminala.
+
 **Lokalna walidacja alpha-0.6.4 (2026-11-13):** Wszystkie **134/134 testy CTest** przeszły osobno w Debug, Release i ASan/UBSan z wymaganymi narzędziami integracji i domyślnym wykrywaniem wycieków, w tym wspólna macierz SID/błędy/czasy życia, równoległe pary mieszanych ADC/ADCS IPv4/IPv6 z tym samym tokenem, rzeczywisty ncdc CTM/RCM i handshake klientów, wcześniejsze Search/UDP, MariaDB i Apache HTTPS. Brak ostrzeżeń kompilatora. Przeszły build/typecheck WebAdmin, **12 testów Node**, **10 testów Chromium** i integracja API C++. Poprawne są metadane, UTF-8, zgodność języków/linków, składnia zmienionych plików Python, przykładowy INI i białe znaki. Zdalne CI, pełna macierz systemów/klientów i obciążenie produkcyjne pozostają niesprawdzone.
 
 Etap rozpoczyna się z main `79b7c1ffa82d6a5389ddc92bd13e3ffa61eb95a1` po alpha-0.6.3. Łączy istniejące implementacje routingu CTM i RCM. Gałąź funkcji zachowuje historię i jest publikowana oddzielnie od main.

@@ -171,6 +171,8 @@ Transfer Core koordynuje sprawdzone DCTM do celu / ECTM do celu i nadawcy.
 CTM wymaga aktywnego źródła TCP; protokół/port/token klienta są zachowane.
 RCM kieruje żądanie pasywnego klienta do aktywnego TCP: D do celu / E do celu i nadawcy.
 Wspólny Connection Router wybiera odbiorców CTM/RCM według życia gotowego SID, nigdy tokenu.
+Protokoły klientów: ADC/1.0 oznacza zwykły TCP, ADCS/1.0 wymaga TLS między klientami.
+Hub zachowuje jawne żądania i tokeny błędów; TLS klientów jest niezależny od TLS huba.
 Klienci zachowują protokół/token odpowiedzi CTM; hub nie podaje za nich portu.
 Korelacja oczekujących negocjacji i obsługa danych plików pozostają planowane.
 Czat grupowy pozostaje planowany.

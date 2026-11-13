@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.6.4 LANGUAGES CXX)
+project(dc24h VERSION 0.6.5 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -59,7 +59,7 @@ set_target_properties(dc24h_search PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_search PUBLIC include)
 target_link_libraries(dc24h_search PUBLIC dc24h_users PRIVATE dc24h_text UTF8Proc::UTF8Proc)
 
-add_library(dc24h_transfers src/transfers/request.cpp src/transfers/core.cpp)
+add_library(dc24h_transfers src/transfers/protocol.cpp src/transfers/request.cpp src/transfers/core.cpp)
 target_compile_features(dc24h_transfers PUBLIC cxx_std_20)
 set_target_properties(dc24h_transfers PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_transfers PUBLIC include)
@@ -232,6 +232,14 @@ if(BUILD_TESTING)
     add_test(NAME transfers.routing.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/connection_routing_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(transfers.routing transfers.routing.process PROPERTIES TIMEOUT 45)
+    add_executable(protocol_negotiation_tests tests/protocol_negotiation_tests.cpp)
+    target_link_libraries(protocol_negotiation_tests PRIVATE dc24h_adc)
+    target_compile_options(protocol_negotiation_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(protocol_negotiation_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME transfers.protocol COMMAND protocol_negotiation_tests)
+    add_test(NAME transfers.protocol.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/protocol_negotiation_process_tests.py" "$<TARGET_FILE:dc24h>")
+    set_tests_properties(transfers.protocol transfers.protocol.process PROPERTIES TIMEOUT 45)
     add_executable(adc_rcm_tests tests/adc_rcm_tests.cpp)
     target_link_libraries(adc_rcm_tests PRIVATE dc24h_adc)
     target_compile_options(adc_rcm_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
@@ -743,6 +751,15 @@ if(BUILD_TESTING)
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
             "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>" --rcm --tls --terminal-pressure)
         set_tests_properties(adcs.rcm.terminal.ncdc PROPERTIES TIMEOUT 45)
+        foreach(command ctm rcm)
+            add_test(NAME adc.${command}.adcs.ncdc COMMAND "${Python3_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
+                "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>" --${command} --peer-tls)
+            add_test(NAME adcs.${command}.adcs.ncdc COMMAND "${Python3_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
+                "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>" --${command} --peer-tls --tls)
+            set_tests_properties(adc.${command}.adcs.ncdc adcs.${command}.adcs.ncdc PROPERTIES TIMEOUT 45)
+        endforeach()
 
 
 
