@@ -1,5 +1,7 @@
 # Search Security — alpha-0.5.11
 
+**Bieżący etap — alpha-0.5.12:** [Konfiguracja i statystyki wyszukiwania](SEARCH_CONFIGURATION.md) udostępnia 19 liczników SCH/RES huba, wskaźnik przechowywanych okien tokenów z leniwym sprzątaniem i 16 efektywnych ustawień startowych przez uwierzytelnione API tylko do odczytu oraz dwujęzyczną stronę Search WebAdmin. Zakolejkowanie jest odrębne od dostarczenia; UDP między klientami jest wyłączone. Bez treści/historii i API zapisu konfiguracji.
+
 Weryfikacja lokalna 2026-11-13: **118/118 zestawów CTest przeszło w każdej konfiguracji Debug, Release i ASan/UBSan**, z wymaganymi narzędziami i domyślną kontrolą wycieków. Obejmuje limity nadawcy/odbiorcy, bajty, uprawnienia/cofnięcie, granice obiektów, konfigurację, rzeczywiste odmowy w ncdc i dotychczasowe ADC/ADCS/UDP, MariaDB oraz Apache HTTPS. Brak ostrzeżeń kompilatora. Przeszły build/typecheck WebAdmin, 4 testy Node, 6 testów Chromium i integracja rzeczywistego API C++. Sprawdzono metadane, UTF-8, zgodność języków/linków dokumentacji, składnię zmienionych plików Python, przykładowe INI i białe znaki. Zdalne CI, pełna macierz systemów/klientów i obciążenie produkcyjne pozostają niezweryfikowane.
 
 Gałąź utworzono bezpośrednio z main `c20b6d4bdbcf1b2fcdb7f2ded1f814988a37446a`, po scaleniu alpha-0.5.10. Zachowano wcześniejszy kod i historię; gałąź publikowana jest osobno od main.

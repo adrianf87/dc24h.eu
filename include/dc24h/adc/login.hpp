@@ -14,6 +14,7 @@
 #include "dc24h/adc/search_routing.hpp"
 #include "dc24h/adc/result_routing.hpp"
 #include "dc24h/search/security.hpp"
+#include "dc24h/search/statistics.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -71,6 +72,9 @@ public:
     [[nodiscard]] const users::Session& session_model(Id id) const;
     [[nodiscard]] std::optional<users::Snapshot> snapshot(Id id) const;
     [[nodiscard]] const users::SessionManager& sessions() const noexcept { return sessions_; }
+    [[nodiscard]] search::Statistics search_statistics() const noexcept {
+        auto value=search_statistics_;value.tracked_searches=search_.tracked_searches();return value;
+    }
     [[nodiscard]] chat::Statistics chat_statistics() const noexcept { return chat_statistics_; }
     [[nodiscard]] bool closing(Id id) const;
     [[nodiscard]] bool must_close(Id id) const;
@@ -94,9 +98,9 @@ private:
     void reject(Peer& peer, std::string_view status, std::optional<std::string_view> command = {},
                 std::string_view description = {}, users::CloseCause cause = users::CloseCause::protocol_rejected,
                 users::TimePoint now = users::Clock::now());
-    bool admit_search(Peer& peer, const Message& message, search::Operation operation, users::TimePoint now);
-    void receive_result(Id id, const Message& message, users::TimePoint now);
-    void receive_search(Id id, const Message& message, users::TimePoint now);
+    bool admit_search(Peer& peer, const Message& message, search::Operation operation, users::TimePoint now, search::Attempt& attempt);
+    void receive_result(Id id, const Message& message, users::TimePoint now, search::Attempt& attempt);
+    void receive_search(Id id, const Message& message, users::TimePoint now, search::Attempt& attempt);
     void route_status(Id id, const Message& message);
     void route_chat(Id id, const Message& message, chat::Attempt& attempt);
     void relay(Id except, const Message& message);
@@ -118,5 +122,6 @@ private:
     std::unordered_map<Id, std::unique_ptr<Peer>> peers_;
     std::size_t queued_{0};
     chat::Statistics chat_statistics_{};
+    search::Statistics search_statistics_{};
 };
 } // namespace dc24h::adc

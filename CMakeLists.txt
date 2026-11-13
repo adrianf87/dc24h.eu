@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.5.11 LANGUAGES CXX)
+project(dc24h VERSION 0.5.12 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -218,6 +218,14 @@ if(BUILD_TESTING)
     add_test(NAME search.security.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/search_security_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(search.security search.security.process PROPERTIES TIMEOUT 60)
+    add_executable(search_statistics_tests tests/search_statistics_tests.cpp)
+    target_link_libraries(search_statistics_tests PRIVATE dc24h_adc)
+    target_compile_options(search_statistics_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(search_statistics_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME search.statistics COMMAND search_statistics_tests)
+    add_test(NAME search.statistics.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/search_statistics_process_tests.py" "$<TARGET_FILE:dc24h>")
+    set_tests_properties(search.statistics search.statistics.process PROPERTIES TIMEOUT 45)
     add_executable(search_core_tests tests/search_core_tests.cpp)
     target_link_libraries(search_core_tests PRIVATE dc24h_search)
     target_compile_options(search_core_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)

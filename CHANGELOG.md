@@ -1,5 +1,16 @@
 # Changelog
 
+## alpha-0.5.12 — 2026-11-13
+
+Search Configuration and Statistics increment, created from main `c20b6d4bdbcf1b2fcdb7f2ded1f814988a37446a` and incorporating completed alpha-0.5.11 `a17009447b9375feca932be58ba39e555937931d` before this commit. Main remains unchanged.
+
+- Added allocation-free saturating aggregate accounting for decoded hub SCH/RES: 19 counters cover mutually exclusive routing/rejection/sender quota/ignored or recipient quota/internal outcomes, plus queued/unavailable/refused/canceled copies. One attempt records one received and one outcome, including early source/state and silent denials. Target queue failure remains a refusal. Queued means output acceptance, not delivery; raw codec errors, closing traffic, direct Core calls and external client URES are excluded. A separate tracked token-window gauge honestly preserves lazy expiry. Counters reset with the hub process.
+- Published reactor counters through atomics to the existing authenticated read-only status API. Added allowlisted `search.statistics` and all 16 effective checked startup `search.configuration` settings from Search Security, preserving defaults/bounds and independent incoming/outgoing result budgets. No cross-counter transactional snapshot is claimed; polling does not sweep token expiry. No payloads, identities, tokens, per-session grants, secrets, logs/history, database changes, configuration writes or hot reload.
+- Added the WebAdmin Search page with 20 metrics, 16 read-only settings, EN/US and PL, responsive layout and safe snapshot export. Older APIs without the extension show unavailable data; malformed present data invalidates the snapshot. Unknown fields are stripped and unsafe JavaScript integers are rejected. Existing credential isolation and refresh/disconnection behavior remain.
+- Added exact unit/fault/allocation and ADC/ADCS process statistics coverage, restart/config/privacy checks, ncdc hub-versus-UDP accounting, frontend parser/browser tests and actual C++ API-to-React search traffic. Updated version metadata, example INI, US/PL CLI help and mirrored documentation. No new dependency or migration. This feature branch preserves previous history and is published separately from main.
+
+- Validation: **120/120 CTest suites passed in each of Debug, Release and ASan/UBSan**, with required integration tools and default leak detection, including real ncdc ADC/ADCS/UDP, MariaDB and Apache HTTPS. No compiler warnings. WebAdmin build/typecheck, 6 Node tests, 8 Chromium tests and real C++ API integration passed. Metadata, UTF-8, documentation language parity/local links, changed Python syntax, shipped INI and whitespace checks passed. Remote CI, the full OS/client matrix and production load remain unverified.
+
 ## alpha-0.5.11 — 2026-11-13
 
 Search Security increment, based directly on main `c20b6d4bdbcf1b2fcdb7f2ded1f814988a37446a` after the alpha-0.5.10 merge:

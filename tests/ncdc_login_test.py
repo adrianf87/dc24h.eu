@@ -426,6 +426,11 @@ class NcdcLoginTest(unittest.TestCase):
                         break
                     self.assertLess(time.monotonic(), deadline, stats)
                     time.sleep(0.01)
+                search_stats=stats['search']['statistics']
+                self.assertGreaterEqual(search_stats['queries_received'],1)
+                self.assertGreaterEqual(search_stats['queries_rejected' if SEARCH_SECURITY else 'queries_routed'],1)
+                if ACTIVE_PASSIVE:
+                    self.assertEqual(search_stats['results_received'],3, 'Direct UDP entered hub result counters')
                 observer.peer.close()
                 self.assertGreater(stats['chat']['public_dispatches'], 0)
                 self.assertGreater(stats['chat']['private_dispatches'], 0)

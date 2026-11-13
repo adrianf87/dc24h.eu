@@ -1,5 +1,7 @@
 # Search Security — alpha-0.5.11
 
+**Current increment — alpha-0.5.12:** [Search Configuration and Statistics](SEARCH_CONFIGURATION.md) exposes 19 cumulative hub SCH/RES counters, a lazy stored-token-window gauge and all 16 effective startup search settings through the authenticated read-only API and bilingual WebAdmin Search page. Queue acceptance is distinct from delivery; direct client UDP is excluded. No payload/history or configuration write endpoint is added.
+
 Local verification on 2026-11-13: **118/118 CTest suites passed in each of Debug, Release and ASan/UBSan**, with required integration tools and default leak detection. This includes search sender/recipient count/byte limits, permissions/revocation, native bounds, startup validation, real ncdc security denials and prior ADC/ADCS/UDP interoperability, MariaDB and Apache HTTPS. No compiler warnings. WebAdmin build/typecheck, 4 Node tests, 6 Chromium tests and real C++ API integration passed. Metadata, UTF-8, language parity/local documentation links, changed Python syntax, shipped INI and whitespace checks passed. Remote CI, the full OS/client matrix and production load remain unverified.
 
 Based directly on main `c20b6d4bdbcf1b2fcdb7f2ded1f814988a37446a`, after the alpha-0.5.10 merge. Existing branches/history are preserved; this branch is published separately from main.

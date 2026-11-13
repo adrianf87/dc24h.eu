@@ -1,4 +1,6 @@
-export const WEBADMIN_VERSION = "alpha-0.5.11";
+import { parseSearch } from "./search-status.ts";
+import type { SearchSnapshot } from "./search-status.ts";
+export const WEBADMIN_VERSION = "alpha-0.5.12";
 export interface HubSnapshot {
   api_version: "v1";
   server: {
@@ -32,6 +34,7 @@ export interface HubSnapshot {
     unavailable: number;
     refused: number;
   };
+  search?: SearchSnapshot;
   database: { enabled: boolean };
 }
 const record = (value: unknown): Record<string, unknown> => {
@@ -100,6 +103,7 @@ export function parseSnapshot(value: unknown): HubSnapshot {
       refused: counter(chat.refused),
     },
     database: { enabled: database.enabled },
+    ...(root.search === undefined ? {} : { search: parseSearch(root.search) }),
   };
 }
 export function duration(seconds: number): string {

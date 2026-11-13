@@ -163,7 +163,11 @@ Excess B/D/E messages are dropped; the recoverable notice is limited to once per
 Chat [chat]: max_text_bytes=16384; public_enabled=on, private_enabled=on,
 actions_enabled=on, welcome_enabled=on. Switches accept only on/off.
 welcome_message is literal UTF-8/NFC INI text (up to 4096 bytes); restart to apply settings.
-Group chat, search and transfers remain planned.
+Search [search]: checked startup policy, count/byte quotas and token-window limits.
+SCH routing and hub DRES are implemented; client-direct UDP is outside hub counters.
+The authenticated status API exposes aggregate search statistics and effective settings.
+Restart to apply search configuration; WebAdmin Search is read-only.
+Group chat and transfers remain planned.
 Database settings use [database] in INI; disabled by default.
 --check-database connects/pings; --migrate-database explicitly applies metadata migrations.
 --check-config never connects to MariaDB or reads the password file.

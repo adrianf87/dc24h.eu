@@ -55,3 +55,26 @@ test("validates every new statistics counter without fabricating absent values",
   }
   assert.throws(() => parseSnapshot({ ...snapshot, users: undefined }));
 });
+
+test("search extension is allowlisted and older snapshots remain compatible", async () => {
+  const { searchSnapshot } = await import("./fixtures.ts");
+  const parsed = parseSnapshot({ ...snapshot, search: { ...searchSnapshot,
+    token: "SearchPrivate", statistics: { ...searchSnapshot.statistics, filename: "SearchPrivate" },
+    configuration: { ...searchSnapshot.configuration, credential: "SearchPrivate" } } });
+  assert.deepEqual(parsed.search, searchSnapshot);
+  assert.ok(!JSON.stringify(parsed).includes("SearchPrivate"));
+  assert.equal(parseSnapshot(snapshot).search, undefined);
+});
+test("search counters and settings reject malformed or unsafe values", async () => {
+  const { searchSnapshot } = await import("./fixtures.ts");
+  for (const key of Object.keys(searchSnapshot.statistics)) {
+    for (const value of [-1, 1.5, Number.MAX_SAFE_INTEGER + 1, undefined, "0"]) {
+      assert.throws(() => parseSnapshot({ ...snapshot, search: { ...searchSnapshot, statistics: { ...searchSnapshot.statistics, [key]: value } } }));
+    }
+  }
+  for (const change of [{ queries_enabled: "true" }, { max_active_searches: 0 }, { max_active_searches: 1, max_active_per_user: 2 },
+    { search_lifetime_seconds: 3601 }, { query_byte_burst: 16383 }, { result_rate: 1000001 }, { result_byte_rate: 0 }]) {
+    assert.throws(() => parseSnapshot({ ...snapshot, search: { ...searchSnapshot, configuration: { ...searchSnapshot.configuration, ...change } } }));
+  }
+  for (const value of [null, {}, { statistics: searchSnapshot.statistics }]) assert.throws(() => parseSnapshot({ ...snapshot, search: value }));
+});

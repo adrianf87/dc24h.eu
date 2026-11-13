@@ -163,7 +163,11 @@ Nadmiarowe B/D/E są odrzucane; odwracalny komunikat pojawia się najwyżej raz 
 Czat [chat]: max_text_bytes=16384; public_enabled=on, private_enabled=on,
 actions_enabled=on, welcome_enabled=on. Przełączniki przyjmują tylko on/off.
 welcome_message to literalny tekst INI UTF-8/NFC (do 4096 bajtów); ustawienia wymagają restartu.
-Czat grupowy, wyszukiwanie i transfery są planowane.
+Wyszukiwanie [search]: sprawdzana polityka startowa, limity liczby/bajtów i okien tokenów.
+Działa routing SCH i DRES przez hub; UDP między klientami jest poza licznikami huba.
+Uwierzytelnione API stanu pokazuje zbiorcze statystyki i efektywne ustawienia wyszukiwania.
+Zmiana konfiguracji wymaga restartu; strona Search WebAdmin jest tylko do odczytu.
+Czat grupowy i transfery są planowane.
 Ustawienia bazy w sekcji INI [database]; domyślnie wyłączona.
 --check-database sprawdza połączenie; --migrate-database jawnie stosuje migracje metadanych.
 --check-config nie łączy z MariaDB ani nie odczytuje pliku hasła.

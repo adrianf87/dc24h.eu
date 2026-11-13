@@ -1,6 +1,8 @@
 #pragma once
 
 #include "dc24h/chat/statistics.hpp"
+#include "dc24h/search/statistics.hpp"
+#include "dc24h/search/security.hpp"
 
 #include <cstdint>
 #include <functional>
@@ -32,6 +34,8 @@ struct Snapshot {
     std::uint64_t rejected_connections{}, closed_connections{}, received_bytes{}, sent_bytes{};
     std::uint64_t peak_connections{}, online_users{}, peak_online_users{}, successful_logins{};
     chat::Statistics chat{};
+    search::Statistics search{};
+    search::SecuritySettings search_settings{};
 };
 using StatusProvider = std::function<Snapshot()>;
 using FailureHandler = std::function<void()>;

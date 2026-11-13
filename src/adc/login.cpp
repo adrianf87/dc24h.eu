@@ -212,6 +212,8 @@ void LoginHub::relay(Id except, const Message& message) {
 void LoginHub::receive(Id id, const Message& message, chat::FloodClock::time_point chat_now) {
     auto& peer = *peers_.at(id);
     if (peer.lifecycle.closing() || peer.lifecycle.immediate()) { return; }
+    search::Attempt search_attempt(message.kind==Command::sch || message.kind==Command::res ? &search_statistics_ : nullptr,
+        message.kind==Command::res ? search::Kind::result : search::Kind::query);
     chat::Attempt attempt(message.kind == Command::msg &&
         (message.type == MessageType::broadcast || message.type == MessageType::direct || message.type == MessageType::echo)
         ? &chat_statistics_ : nullptr);
@@ -249,6 +251,10 @@ void LoginHub::receive(Id id, const Message& message, chat::FloodClock::time_poi
     ClientSessionResult observation;
     try { observation=peer.session.observe(Direction::from_client,message); }
     catch (const std::bad_alloc&) {
+        if (message.kind==Command::sch || message.kind==Command::res) {
+            search_attempt.outcome(search::Outcome::error);
+            check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));return;
+        }
         if (message.kind!=Command::msg) { throw; }
         attempt.outcome(chat::Event::internal_error);
         check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
@@ -340,9 +346,9 @@ void LoginHub::receive(Id id, const Message& message, chat::FloodClock::time_poi
         }
         route_chat(id,message,attempt);
     } else if (message.kind == Command::sch) {
-        receive_search(id, message, chat_now);
+        receive_search(id, message, chat_now, search_attempt);
     } else if (message.kind == Command::res) {
-        receive_result(id, message, chat_now);
+        receive_result(id, message, chat_now, search_attempt);
     } else if (message.kind == Command::sta) {
         if (message.type != MessageType::hub) { route_status(id, message); }
     } else if (before == ConnectionState::normal && message.kind != Command::sup) {
@@ -372,13 +378,14 @@ std::size_t search_bytes(const Message& message) noexcept {
     return bytes == cap ? std::numeric_limits<std::size_t>::max() : bytes;
 }
 }
-bool LoginHub::admit_search(Peer& peer, const Message& message, search::Operation operation, users::TimePoint now) {
+bool LoginHub::admit_search(Peer& peer, const Message& message, search::Operation operation, users::TimePoint now, search::Attempt& attempt) {
     std::string_view code = "100", description;
     if (const auto error = search::authorize(limits_.search,peer.search_permissions,operation)) {
         code = "125";
         description = *error == search::PermissionError::disabled ? "Search operation is disabled" : "Search operation not permitted";
     } else if (!peer.search_guard.admit(operation,search_bytes(message),now)) {
         description = "Search rate limit exceeded";
+        attempt.outcome(search::Outcome::rate_limited);
     } else if (operation == search::Operation::result && limits_.search.require_result_token &&
         std::none_of(message.parameters.begin(),message.parameters.end(),[](const auto& value){return value.starts_with("TO");})) {
         description = "Search result token required";
@@ -389,7 +396,7 @@ bool LoginHub::admit_search(Peer& peer, const Message& message, search::Operatio
     }
     return false;
 }
-void LoginHub::receive_result(Id id, const Message& message, users::TimePoint now) {
+void LoginHub::receive_result(Id id, const Message& message, users::TimePoint now, search::Attempt& attempt) {
     auto& peer = *peers_.at(id);
     try {
         const auto command = std::string(1, static_cast<char>(message.type)) + "RES";
@@ -398,16 +405,18 @@ void LoginHub::receive_result(Id id, const Message& message, users::TimePoint no
             case ResultRoutingError::invalid_state: reject(peer,"244",command); break;
             case ResultRoutingError::wrong_source: reject(peer,"240",command); break;
             case ResultRoutingError::recipient_unavailable:
+                attempt.delivery(0,1,0);
                 (void)enqueue(peer,make_status(*StatusCode::parse("140"),"Search result recipient unavailable",command)); break;
             case ResultRoutingError::inactive_search:
                 (void)enqueue(peer,make_status(*StatusCode::parse("100"),"Search result token is not active",command)); break;
             case ResultRoutingError::invalid_message:
                 (void)enqueue(peer,make_status(*StatusCode::parse("100"),"Invalid search result",command)); break;
             default:
+                attempt.outcome(search::Outcome::error);
                 check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now())); break;
             }
         };
-        if (!admit_search(peer,message,search::Operation::result,now)) { return; }
+        if (!admit_search(peer,message,search::Operation::result,now,attempt)) { return; }
         auto prepared = result_router_.prepare(peer.lifecycle.id(),message,now);
         if (const auto* error = std::get_if<ResultRoutingError>(&prepared)) { refuse(*error); return; }
         bool recipient_limited = false;
@@ -422,25 +431,32 @@ void LoginHub::receive_result(Id id, const Message& message, users::TimePoint no
             }
         },now);
         if (const auto* error = std::get_if<ResultRoutingError>(&report)) { refuse(*error); }
-        else if (recipient_limited && peer.search_guard.notice(now)) {
-            (void)enqueue(peer,make_status(*StatusCode::parse("100"),"Search recipient rate limit exceeded",command));
+        else {
+            const auto& count=std::get<search::DispatchReport>(report);
+            attempt.outcome(recipient_limited?search::Outcome::recipient_limited:search::Outcome::routed);
+            attempt.delivery(count.queued,count.unavailable,count.refused);
+            if(recipient_limited && peer.search_guard.notice(now)) {
+                (void)enqueue(peer,make_status(*StatusCode::parse("100"),"Search recipient rate limit exceeded",command));
+            }
         }
     } catch (const std::bad_alloc&) {
+        attempt.outcome(search::Outcome::error);
         check_model(sessions_.force_close(peer.lifecycle.id(), users::CloseCause::internal_error, users::Clock::now()));
     }
 }
-void LoginHub::receive_search(Id id, const Message& message, users::TimePoint now) {
+void LoginHub::receive_search(Id id, const Message& message, users::TimePoint now, search::Attempt& attempt) {
     auto& peer = *peers_.at(id);
     try {
-        if (!admit_search(peer,message,search::Operation::query,now)) { return; }
+        if (!admit_search(peer,message,search::Operation::query,now,attempt)) { return; }
         auto result = search_router_.prepare(peer.lifecycle.id(),message,now);
         const auto command = std::string(1, static_cast<char>(message.type)) + "SCH";
         if (const auto* error = std::get_if<SearchRoutingError>(&result)) {
             switch (*error) {
-            case SearchRoutingError::no_criteria: return;
+            case SearchRoutingError::no_criteria: attempt.outcome(search::Outcome::ignored);return;
             case SearchRoutingError::invalid_state: reject(peer,"244",command); return;
             case SearchRoutingError::wrong_source: reject(peer,"240",command); return;
             case SearchRoutingError::recipient_unavailable:
+                attempt.delivery(0,1,0);
                 (void)enqueue(peer,make_status(*StatusCode::parse("140"),"Search recipient unavailable",command)); return;
             case SearchRoutingError::duplicate_token:
                 (void)enqueue(peer,make_status(*StatusCode::parse("100"),"Search token already active",command)); return;
@@ -459,10 +475,16 @@ void LoginHub::receive_search(Id id, const Message& message, users::TimePoint no
             }
         },now);
         if (std::holds_alternative<SearchRoutingError>(report)) {
+            attempt.outcome(search::Outcome::error);
             (void)search_router_.cancel(routed);
             check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
+        } else {
+            const auto& count=std::get<search::DispatchReport>(report);
+            attempt.outcome(search::Outcome::routed);
+            attempt.delivery(count.queued,count.unavailable,count.refused,count.canceled);
         }
     } catch (const std::bad_alloc&) {
+        attempt.outcome(search::Outcome::error);
         (void)search_.forget_searches(peer.lifecycle.id());
         check_model(sessions_.force_close(peer.lifecycle.id(), users::CloseCause::internal_error, users::Clock::now()));
     }

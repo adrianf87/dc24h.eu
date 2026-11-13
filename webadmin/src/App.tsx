@@ -20,6 +20,7 @@ import {
   RefreshCw,
   ScrollText,
   Server,
+  Search,
   Settings2,
   ShieldCheck,
   X,
@@ -31,12 +32,13 @@ import { pl } from "./languages/pl";
 import { duration, WEBADMIN_VERSION } from "./lib/status";
 import type { HubSnapshot } from "./lib/status";
 import { Metric } from "./components/Metric";
+import { SearchStatistics } from "./components/SearchStatistics";
 import { ChatStatistics } from "./components/ChatStatistics";
 import { useHub } from "./lib/useHub";
 import type { Sample } from "./lib/useHub";
 
-type Page = "overview" | "connections" | "chat" | "security" | "database";
-const pages: Page[] = ["overview", "connections", "chat", "security", "database"];
+type Page = "overview" | "connections" | "chat" | "search" | "security" | "database";
+const pages: Page[] = ["overview", "connections", "chat", "search", "security", "database"];
 const currentPage = (): Page =>
   pages.includes(location.hash.slice(1) as Page)
     ? (location.hash.slice(1) as Page)
@@ -319,6 +321,7 @@ export default function App() {
     { page: "overview", icon: LayoutDashboard },
     { page: "connections", icon: Network },
     { page: "chat", icon: MessageSquare },
+    { page: "search", icon: Search },
     { page: "security", icon: ShieldCheck },
     { page: "database", icon: Database },
   ] as const;
@@ -326,6 +329,7 @@ export default function App() {
     overview: [t.overviewTitle, t.overviewSub],
     connections: [t.connectionsTitle, t.connectionsSub],
     chat: [t.chatTitle, t.chatSub],
+    search: [t.searchTitle, t.searchSub],
     security: [t.securityTitle, t.securitySub],
     database: [t.databaseTitle, t.databaseSub],
   };
@@ -676,6 +680,7 @@ export default function App() {
               </div>
             </section>
           )}
+          {page === "search" && <SearchStatistics snapshot={snapshot} t={t} number={number} />}
           {page === "chat" && (
             <ChatStatistics snapshot={snapshot} t={t} number={number} />
           )}
