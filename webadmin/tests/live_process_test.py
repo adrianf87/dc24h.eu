@@ -28,6 +28,7 @@ with tempfile.TemporaryDirectory(prefix='dc24h-web-live-') as temp:
     config.write_text('[network]\nlisten=127.0.0.1:0\n[chat]\nmax_text_bytes=64\n[api]\nenabled=on\nsocket=admin.sock\ntoken_file=admin.token\n')
     server = subprocess.Popen([binary, '--config', str(config)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
     vite = None
+    live = None
     peers = []
     try:
         log = bytearray(); deadline = time.monotonic() + 5
@@ -74,16 +75,31 @@ with tempfile.TemporaryDirectory(prefix='dc24h-web-live-') as temp:
                         break
                 except OSError:
                     time.sleep(0.05)
-            result = subprocess.run(['node', 'tests/live-panel.mjs', 'http://127.0.0.1:' + str(webport) + '/', str(credential)], cwd=root,
-                input=token + '\n', text=True, capture_output=True, timeout=40)
-            assert result.returncode == 0, result.stderr.replace(token, '[redacted]')
-            print(result.stdout.strip())
+            live = subprocess.Popen(['node', 'tests/live-panel.mjs', 'http://127.0.0.1:' + str(webport) + '/', str(credential)], cwd=root,
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            live.stdin.write(token + '\n'); live.stdin.close(); live.stdin = None
+            with selectors.DefaultSelector() as ready:
+                ready.register(live.stdout, selectors.EVENT_READ)
+                assert ready.select(30), 'Browser baseline timed out'
+                marker = live.stdout.readline().strip()
+                assert marker == 'SEARCH_MONITOR_READY', 'Browser did not establish its search baseline'
+            for index in range(2):
+                window = b'WebSearchSecretToken' + str(index).encode()
+                query = b'DSCH ' + source.sid + b' ' + target.sid + b' ANWebSearchSecret TO' + window
+                source.send(query); case.assertEqual(target.line(), query)
+                result = b'DRES ' + target.sid + b' ' + source.sid + b' FN/WebSearchSecret SI0 TR' + b'A'*39 + b' TO' + window
+                target.send(result); case.assertEqual(source.line(), result)
+            live_out, live_err = live.communicate(timeout=40)
+            assert live.returncode == 0, live_err.replace(token, '[redacted]')
+            print(live_out.strip())
         server.send_signal(signal.SIGTERM); out, err = server.communicate(timeout=3)
         assert server.returncode == 0 and not endpoint.exists(), 'C++/API shutdown failed'
         assert token.encode() not in log + err + out, 'Credential leaked in C++ output'
         assert b'WebSearchSecret' not in log + err + out, 'Search data leaked in C++ output'
         assert b'WebChatSecret' not in log + err + out, 'Chat data leaked in C++ output'
     finally:
+        if live is not None and live.poll() is None:
+            live.kill(); live.communicate(timeout=3)
         for peer in peers: peer.peer.close()
         if vite is not None:
             vite.terminate()

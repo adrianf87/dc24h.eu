@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { parseSnapshot } from "./status";
 import type { HubSnapshot } from "./status";
+import { observeSearch } from "./search-monitoring";
+import type { SearchObservation } from "./search-monitoring";
 export type Connection = "connecting" | "live" | "unconfigured" | "offline";
 export interface Sample {
   time: number;
@@ -12,6 +14,7 @@ export function useHub(autoRefresh: boolean) {
   const [refreshing, setRefreshing] = useState(false);
   const [checked, setChecked] = useState<number | null>(null);
   const [samples, setSamples] = useState<Sample[]>([]);
+  const [searchSamples, setSearchSamples] = useState<SearchObservation[]>([]);
   const active = useRef<AbortController | null>(null);
   const previousUptime = useRef(0);
   const refresh = useCallback(async () => {
@@ -27,10 +30,12 @@ export function useHub(autoRefresh: boolean) {
         credentials: "same-origin",
         redirect: "error",
       });
+      if (controller.signal.aborted || active.current !== controller) return;
       if (!response.ok) {
         setConnection(response.status === 503 ? "unconfigured" : "offline");
         setSnapshot(null);
         setSamples([]);
+        setSearchSamples([]);
         return;
       }
       if (!response.headers.get("content-type")?.startsWith("application/json"))
@@ -60,6 +65,8 @@ export function useHub(autoRefresh: boolean) {
       setSnapshot(value);
       setConnection("live");
       setChecked(now);
+      const observedAt = performance.now();
+      setSearchSamples(previous => observeSearch(previous, value, observedAt));
       setSamples((previous) =>
         [
           ...(restarted ? [] : previous),
@@ -77,6 +84,7 @@ export function useHub(autoRefresh: boolean) {
         setConnection("offline");
         setSnapshot(null);
         setSamples([]);
+        setSearchSamples([]);
       }
     } finally {
       clearTimeout(timer);
@@ -85,13 +93,13 @@ export function useHub(autoRefresh: boolean) {
   }, []);
   useEffect(() => {
     void refresh();
-    const timer = autoRefresh
-      ? setInterval(() => void refresh(), 5000)
-      : undefined;
-    return () => {
-      clearInterval(timer);
-      active.current?.abort();
-    };
+    return () => active.current?.abort();
+  }, [refresh]);
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const timer = setInterval(() => void refresh(), 5000);
+    return () => clearInterval(timer);
   }, [autoRefresh, refresh]);
-  return { connection, snapshot, refreshing, checked, samples, refresh };
+  const clearSearchSamples = useCallback(() => setSearchSamples([]), []);
+  return { connection, snapshot, refreshing, checked, samples, searchSamples, clearSearchSamples, refresh };
 }

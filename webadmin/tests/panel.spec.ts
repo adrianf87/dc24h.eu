@@ -6,7 +6,7 @@ const data = {
   api_version: "v1",
   server: {
     name: "dc24h.eu",
-    version: "alpha-0.5.12",
+    version: "alpha-0.5.13",
     core_running: true,
     uptime_seconds: 3661,
   },
@@ -231,7 +231,7 @@ test("search statistics and effective configuration are bilingual and safe to ex
   await page.route("**/admin-api/v1/status", route => route.fulfill({ json: { ...data,
     search: { ...searchSnapshot, token: "SearchPrivate", configuration: { ...searchSnapshot.configuration, password: "SearchPrivate" } } } }));
   await page.goto("/#search");
-  await expect(page.getByRole("heading", { name: "Search statistics", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Search monitoring", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Search", exact: true })).toHaveAttribute("aria-current", "page");
   await expect(page.getByTestId("search-query-statistics").locator(".metric-value")).toHaveText(Array.from({ length: 10 }, (_, i) => String(i + 1)));
   await expect(page.getByTestId("search-result-statistics").locator(".metric-value")).toHaveText(Array.from({ length: 9 }, (_, i) => String(i + 11)));
@@ -245,7 +245,7 @@ test("search statistics and effective configuration are bilingual and safe to ex
   await page.screenshot({ path: testInfo.outputPath("search-desktop.png"), fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("combobox").selectOption("pl");
-  await expect(page.getByRole("heading", { name: "Statystyki wyszukiwania", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Monitoring wyszukiwań", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Efektywna konfiguracja", exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath("search-mobile-pl.png"), fullPage: true });
@@ -268,4 +268,90 @@ test("search refresh handles restart, old APIs and invalid data honestly", async
   await page.getByRole("button", { name: "Refresh now", exact: true }).click();
   await expect(page.getByText("Connection lost", { exact: true })).toBeVisible();
   await expect(values).toHaveText(Array(20).fill("—")); await expect(page.locator('[data-setting="query_rate"]')).toHaveText("—");
+});
+
+test("search monitoring samples real poll deltas, pauses, clears locally and keeps export cumulative", async ({ page }, testInfo) => {
+  await page.clock.install({ time: new Date("2026-11-13T12:00:00Z") });
+  await page.clock.pauseAt(new Date("2026-11-13T12:00:01Z"));
+  let current = { ...data, search: structuredClone(searchSnapshot) };
+  let requests = 0;
+  await page.route("**/admin-api/v1/status", route => { requests++; return route.fulfill({ json: current }); });
+  await page.goto("/#search");
+  await expect(page.getByText("API connected", { exact: true })).toBeVisible();
+  const rates = page.getByTestId("search-rates").locator(".metric-value");
+  await expect(rates).toHaveText(["—", "—", "—", "—"]);
+  await expect(page.getByText("Waiting for two observations", { exact: true })).toHaveCount(2);
+  current.search.statistics.queries_received += 10;
+  current.search.statistics.results_received += 20;
+  current.search.statistics.queries_rejected += 5;
+  current.search.statistics.query_queued += 5;
+  current.search.statistics.result_queued += 10;
+  await page.clock.runFor(5000);
+  await expect(rates).toHaveText(["2", "4", "1", "3"]);
+  await expect(page.getByTestId("search-monitoring").locator("polyline")).toHaveCount(2);
+  await page.getByText("Recent intervals", { exact: true }).click();
+  await expect(page.getByTestId("search-monitoring").locator("tbody tr")).toHaveCount(1);
+  await expect(page.getByTestId("search-monitoring").locator("tbody td")).toHaveText(["5", "2", "4", "1", "3"]);
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export snapshot", exact: true }).click();
+  const exported = JSON.parse(await readFile((await (await download).path())!, "utf8"));
+  expect(exported.search).toEqual(current.search);
+  expect(exported).not.toHaveProperty("searchSamples");
+  await page.getByRole("switch").click();
+  await expect(page.getByText(/Automatic polling paused/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Refresh now", exact: true })).toBeEnabled();
+  const count = requests;
+  await page.clock.runFor(10000);
+  expect(requests).toBe(count);
+  await expect(rates).toHaveText(["2", "4", "1", "3"]);
+  await page.getByRole("button", { name: "Clear local observations", exact: true }).click();
+  await expect(rates).toHaveText(["—", "—", "—", "—"]);
+  await expect(page.getByTestId("search-query-statistics").locator(".metric-value").first()).toHaveText("11");
+  await page.getByRole("button", { name: "Refresh now", exact: true }).click();
+  await expect(rates).toHaveText(["—", "—", "—", "—"]);
+  await page.clock.runFor(5000);
+  await page.getByRole("button", { name: "Refresh now", exact: true }).click();
+  await expect(rates).toHaveText(["0", "0", "0", "0"]);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("combobox").selectOption("pl");
+  await expect(page.getByRole("heading", { name: "Monitoring wyszukiwań", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expect(page.getByText(/Automatyczne odpytywanie wstrzymane/)).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("monitoring-mobile-pl.png"), fullPage: true, animations: "disabled" });
+});
+
+test("search monitor drops stale baselines after errors, missing search, resets and long gaps", async ({ page }) => {
+  await page.clock.install({ time: new Date("2026-11-13T12:00:00Z") });
+  await page.clock.pauseAt(new Date("2026-11-13T12:00:01Z"));
+  let current: unknown = { ...data, search: structuredClone(searchSnapshot) }, status = 200;
+  await page.route("**/admin-api/v1/status", route => route.fulfill({ status, json: current }));
+  await page.goto("/#search");
+  await expect(page.getByText("API connected", { exact: true })).toBeVisible();
+  const rates = page.getByTestId("search-rates").locator(".metric-value");
+  await page.clock.runFor(5000);
+  await expect(rates).toHaveText(["0", "0", "0", "0"]);
+  await page.getByRole("switch").click();
+  for (const next of [
+    { ...data, server: { ...data.server, uptime_seconds: 1 }, search: searchSnapshot },
+    { ...data, search: { ...searchSnapshot, statistics: { ...searchSnapshot.statistics, query_canceled: 0 } } },
+    data,
+    { ...data, search: { ...searchSnapshot, statistics: { ...searchSnapshot.statistics, results_received: -1 } } },
+  ]) {
+    current = next;
+    await page.clock.runFor(5000);
+    await page.getByRole("button", { name: "Refresh now", exact: true }).click();
+    await expect(rates).toHaveText(["—", "—", "—", "—"]);
+  }
+  status = 502;
+  await page.getByRole("button", { name: "Refresh now", exact: true }).click();
+  await expect(page.getByText("Connection lost", { exact: true })).toBeVisible();
+  status = 200; current = { ...data, search: searchSnapshot };
+  await page.getByRole("button", { name: "Refresh now", exact: true }).click();
+  await expect(rates).toHaveText(["—", "—", "—", "—"]);
+  await page.clock.runFor(5000);
+  await page.getByRole("button", { name: "Refresh now", exact: true }).click();
+  await expect(rates).toHaveText(["0", "0", "0", "0"]);
+  await page.clock.runFor(16000);
+  await page.getByRole("button", { name: "Refresh now", exact: true }).click();
+  await expect(rates).toHaveText(["—", "—", "—", "—"]);
 });

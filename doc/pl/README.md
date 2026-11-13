@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.5.12: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.5.13: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [Monitoring wyszukiwań WebAdmin — alpha-0.5.13](WEBADMIN_SEARCH.md)
 - [Konfiguracja i statystyki wyszukiwania — alpha-0.5.12](SEARCH_CONFIGURATION.md)
 - [Search Security — alpha-0.5.11](SEARCH_SECURITY.md)
 - [Active/Passive — alpha-0.5.10](ACTIVE_PASSIVE.md)

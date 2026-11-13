@@ -1,5 +1,7 @@
 # dc24h.eu technical documentation
 
+[WebAdmin Search Monitoring — alpha-0.5.13](us/WEBADMIN_SEARCH.md) · [PL](pl/WEBADMIN_SEARCH.md)
+
 [Search Configuration and Statistics — alpha-0.5.12](us/SEARCH_CONFIGURATION.md) · [PL](pl/SEARCH_CONFIGURATION.md)
 
 [Search Security — alpha-0.5.11](us/SEARCH_SECURITY.md) · [PL](pl/SEARCH_SECURITY.md)
@@ -12,7 +14,7 @@
 
 [Feature Routing / routing funkcji — alpha-0.5.7](us/FEATURE_ROUTING.md) · [PL](pl/FEATURE_ROUTING.md)
 
-Current development version: alpha-0.5.12. Default language: EN/US UTF-8.
+Current development version: alpha-0.5.13. Default language: EN/US UTF-8.
 
 - [English (US)](us/README.md)
 - [Polski](pl/README.md)

@@ -1,5 +1,7 @@
 # Konfiguracja i statystyki wyszukiwania — alpha-0.5.12
 
+**Bieżący etap — alpha-0.5.13:** [Monitoring wyszukiwań WebAdmin](WEBADMIN_SEARCH.md) dodaje lokalne tempo zapytań/wyników/odmów/kolejek, ograniczony wykres i dostępną tabelę przedziałów. Pierwszy odczyt, przerwy, wykryte zerowanie i błędy rozpoczynają nowy pomiar; pauza/ręczne odświeżanie i lokalne czyszczenie zachowują liczniki łączne. API/ustawienia i izolacja sekretu pozostają.
+
 Weryfikacja lokalna 2026-11-13: **120/120 zestawów CTest przeszło osobno w Debug, Release i ASan/UBSan**, z wymaganymi narzędziami integracyjnymi i domyślnym wykrywaniem wycieków, w tym rzeczywistym ncdc ADC/ADCS/UDP, MariaDB i Apache HTTPS. Bez ostrzeżeń kompilatora. Przeszły build/typecheck WebAdmin, 6 testów Node, 8 testów Chromium i integracja z API C++. Poprawne są metadane, UTF-8, zgodność plików językowych i linków dokumentacji, składnia zmienionych plików Python, przykładowy INI i białe znaki. Zdalne CI, pełna macierz systemów/klientów i obciążenie produkcyjne nie zostały zweryfikowane.
 
 Gałąź alpha-0.5.12 utworzono z main `c20b6d4bdbcf1b2fcdb7f2ded1f814988a37446a`, a przed tym etapem włączono ukończoną gałąź Search Security `a17009447b9375feca932be58ba39e555937931d`. Main pozostaje bez zmian; zachowano istniejący kod i historię.
