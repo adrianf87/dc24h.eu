@@ -1,5 +1,7 @@
 # Active/Passive — alpha-0.5.10
 
+**Current increment — alpha-0.5.11:** [Search Security](SEARCH_SECURITY.md) adds connection-lifetime query/sent-result/received-result count and byte quotas, bounded denial notices, guest/global permission policy, trusted session grants and configurable active-search limits. Admission precedes routing/token publication. Optional strict result-token policy supplements existing owner/generation checks; direct client UDP remains outside hub enforcement.
+
 Local verification on 2026-11-13: **114/114 CTest suites passed in each of Debug, Release and ASan/UBSan**, with required integration tools and default leak detection. Coverage includes independent reply modes, atomic endpoint projection, IPv4/IPv6 ADC/ADCS scenarios, real ncdc UDP sending/receiving and hub fallback, MariaDB and Apache HTTPS. No compiler warnings. WebAdmin build/typecheck, 4 Node tests, 6 Chromium tests and real C++ API integration passed. Metadata, UTF-8, documentation language parity/local links, changed Python syntax, shipped INI and whitespace checks passed. These are local results; remote CI, the full OS/client matrix and production load remain unverified.
 
 Based directly on main `3655cf9175de72fac1ef2e4e3bfdd5ff023469a5`, after the alpha-0.5.9 merge. Earlier branches and code remain preserved; this increment is published separately from main.

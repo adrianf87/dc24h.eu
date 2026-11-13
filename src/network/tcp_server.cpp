@@ -209,6 +209,7 @@ TcpServer::TcpServer(logging::Logger& logger, Options options)
     }
     security::validate(options_.security);
     chat::validate_settings(options_.chat);
+    search::validate_security(options_.search);
     users::validate(options_.users);
     for (const auto& endpoint : options_.listeners) {
         socklen_t size{};
@@ -299,6 +300,7 @@ void TcpServer::run() {
     adc::LoginLimits login_limits;
     login_limits.anti_flood = options_.chat.flood;
     login_limits.chat = options_.chat.policy;
+    login_limits.search = options_.search;
     login_limits.welcome_text = options_.chat.welcome_enabled ? std::optional<std::string>(options_.chat.welcome_message) : std::nullopt;
     login_limits.connections=options_.max_connections;
     login_limits.users=options_.users;

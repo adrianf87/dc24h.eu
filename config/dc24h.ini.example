@@ -1,4 +1,4 @@
-# dc24h.eu alpha-0.4.10 configuration (UTF-8, no secrets committed)
+# dc24h.eu alpha-0.5.11 configuration (UTF-8, no secrets committed)
 # Section names and keys are case-sensitive; duplicate singular keys are errors.
 [general]
 language = us
@@ -33,6 +33,28 @@ max_messages_per_second = 5
 message_burst = 10
 max_bytes_per_second = 32768
 byte_burst = 131072
+
+[search]
+# Global switches override trusted per-session grants. Guests have these defaults.
+queries_enabled = on
+results_enabled = on
+guest_queries = on
+guest_results = on
+# off preserves passive ncdc/tokenless SCH compatibility; on rejects tokenless DRES.
+require_result_token = off
+max_active_searches = 4096
+max_active_per_user = 8
+search_lifetime_seconds = 60
+# Per connection: separate request, sent-result and received-result buckets.
+# Byte costs include decoded headers, selectors, fields and separators (not fanout).
+query_rate = 10
+query_burst = 32
+query_byte_rate = 32768
+query_byte_burst = 131072
+result_rate = 64
+result_burst = 128
+result_byte_rate = 262144
+result_byte_burst = 1048576
 
 [security]
 max_connections_per_ip = 128

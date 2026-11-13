@@ -3,6 +3,7 @@
 #include "dc24h/security/limits.hpp"
 #include "dc24h/users/limits.hpp"
 #include "dc24h/chat/settings.hpp"
+#include "dc24h/search/security.hpp"
 #include "dc24h/chat/statistics.hpp"
 
 #include <atomic>
@@ -35,6 +36,7 @@ struct Options {
     security::Limits security{};
     users::Limits users{};
     chat::Settings chat{};
+    search::SecuritySettings search{};
 };
 
 struct Statistics {

@@ -14,6 +14,7 @@ struct TokenLimits {
     std::size_t total{4096}, per_owner{8};
     std::chrono::seconds lifetime{60};
 };
+void validate_token_limits(const TokenLimits& limits);
 enum class TokenError { missing_token, invalid_token, missing_owner, owner_not_ready, duplicate_token,
                         total_limit, owner_limit, id_exhausted, time_exhausted, inactive_search };
 struct ActiveSearch {

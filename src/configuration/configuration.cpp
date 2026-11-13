@@ -162,6 +162,7 @@ void validate(const Settings& settings) {
     security::validate(net.security);
     users::validate(net.users);
     chat::validate_settings(net.chat);
+    search::validate_security(net.search);
     const auto count = net.listeners.size() + net.tls_listeners.size();
     if (count == 0 || count > 16 || net.max_connections == 0 || net.max_connections > 65535 ||
         net.idle_timeout.count() < 1 || net.idle_timeout.count() > 86400) {
@@ -238,7 +239,7 @@ Settings load_file(const std::string& filename) {
                 throw std::invalid_argument("Invalid section at line " + std::to_string(line_number));
             }
             section = trim(std::string_view(text).substr(1, text.size() - 2));
-            if (section != "network" && section != "tls" && section != "logging" && section != "general" && section != "security" && section != "database" && section != "api" && section != "users" && section != "chat") {
+            if (section != "network" && section != "tls" && section != "logging" && section != "general" && section != "security" && section != "database" && section != "api" && section != "users" && section != "chat" && section != "search") {
                 throw std::invalid_argument("Unknown configuration section at line " + std::to_string(line_number));
             }
             continue;
@@ -286,6 +287,38 @@ Settings load_file(const std::string& filename) {
                 settings.network.chat.welcome_enabled = connection_logging(value);
             } else if (section == "chat" && key == "welcome_message") {
                 settings.network.chat.welcome_message = value;
+            } else if (section == "search" && key == "queries_enabled") {
+                settings.network.search.queries_enabled = connection_logging(value);
+            } else if (section == "search" && key == "results_enabled") {
+                settings.network.search.results_enabled = connection_logging(value);
+            } else if (section == "search" && key == "guest_queries") {
+                settings.network.search.guests.queries = connection_logging(value);
+            } else if (section == "search" && key == "guest_results") {
+                settings.network.search.guests.results = connection_logging(value);
+            } else if (section == "search" && key == "require_result_token") {
+                settings.network.search.require_result_token = connection_logging(value);
+            } else if (section == "search" && key == "max_active_searches") {
+                settings.network.search.tokens.total = positive_number(value, 65535);
+            } else if (section == "search" && key == "max_active_per_user") {
+                settings.network.search.tokens.per_owner = positive_number(value, 64);
+            } else if (section == "search" && key == "search_lifetime_seconds") {
+                settings.network.search.tokens.lifetime = std::chrono::seconds(positive_number(value, 3600));
+            } else if (section == "search" && key == "query_rate") {
+                settings.network.search.queries.rate = positive_number(value, search::max_operation_rate);
+            } else if (section == "search" && key == "query_burst") {
+                settings.network.search.queries.burst = positive_number(value, search::max_operation_rate);
+            } else if (section == "search" && key == "query_byte_rate") {
+                settings.network.search.queries.byte_rate = positive_number(value, search::max_security_byte_rate);
+            } else if (section == "search" && key == "query_byte_burst") {
+                settings.network.search.queries.byte_burst = positive_number(value, search::max_security_byte_rate);
+            } else if (section == "search" && key == "result_rate") {
+                settings.network.search.results.rate = positive_number(value, search::max_operation_rate);
+            } else if (section == "search" && key == "result_burst") {
+                settings.network.search.results.burst = positive_number(value, search::max_operation_rate);
+            } else if (section == "search" && key == "result_byte_rate") {
+                settings.network.search.results.byte_rate = positive_number(value, search::max_security_byte_rate);
+            } else if (section == "search" && key == "result_byte_burst") {
+                settings.network.search.results.byte_burst = positive_number(value, search::max_security_byte_rate);
             } else if (section == "security" && key == "max_connections_per_ip") {
                 settings.network.security.max_connections_per_ip = positive_number(value, 65535);
             } else if (section == "security" && key == "max_accepts_per_minute") {

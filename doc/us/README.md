@@ -1,7 +1,8 @@
 # dc24h.eu documentation
 
-alpha-0.5.10: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.5.11: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
+- [Search Security — alpha-0.5.11](SEARCH_SECURITY.md)
 - [Active/Passive — alpha-0.5.10](ACTIVE_PASSIVE.md)
 - [Result Routing — alpha-0.5.9](RESULT_ROUTING.md)
 - [ADC RES — alpha-0.5.8](ADC_RES.md)

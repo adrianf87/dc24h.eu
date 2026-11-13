@@ -14,13 +14,16 @@ bool before(users::SessionId a, std::string_view at, users::SessionId b, std::st
 bool Tokens::Less::operator()(const Key& a, const Key& b) const noexcept { return before(a.owner,a.token,b.owner,b.token); }
 bool Tokens::Less::operator()(const Key& a, const View& b) const noexcept { return before(a.owner,a.token,b.owner,b.token); }
 bool Tokens::Less::operator()(const View& a, const Key& b) const noexcept { return before(a.owner,a.token,b.owner,b.token); }
+void validate_token_limits(const TokenLimits& limits) {
+    if (!limits.total || limits.total > 65535 || !limits.per_owner || limits.per_owner > 64 || limits.per_owner > limits.total ||
+        limits.lifetime < std::chrono::seconds{1} || limits.lifetime > std::chrono::hours{1}) {
+        throw std::invalid_argument("Invalid search token limits");
+    }
+}
 Tokens::Tokens(const users::SessionManager& sessions, TokenLimits limits, std::uint64_t first_id)
     : sessions_(sessions), limits_(limits), next_id_(first_id) {
-    if (!first_id || !limits.total || limits.total > 65535 || !limits.per_owner ||
-        limits.per_owner > 64 || limits.per_owner > limits.total ||
-        limits.lifetime < std::chrono::seconds{1} || limits.lifetime > std::chrono::hours{1}) {
-        throw std::invalid_argument("Invalid search token limits or ID seed");
-    }
+    validate_token_limits(limits);
+    if (!first_id) { throw std::invalid_argument("Invalid search token ID seed"); }
 }
 users::TimePoint Tokens::observe(users::TimePoint now) noexcept {
     last_time_ = std::max(now,last_time_); return last_time_;

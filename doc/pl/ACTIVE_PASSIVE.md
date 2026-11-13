@@ -1,5 +1,7 @@
 # Active/Passive — alpha-0.5.10
 
+**Bieżący etap — alpha-0.5.11:** [Search Security](SEARCH_SECURITY.md) dodaje limity liczby i bajtów zapytań oraz wysyłanych/odbieranych wyników na czas życia połączenia, ograniczone powiadomienia, politykę gości/globalną, zaufane uprawnienia sesji i konfigurowalne limity aktywnych wyszukiwań. Kontrola poprzedza routing/rejestrację tokenu. Opcjonalny wymagany token uzupełnia kontrolę właściciela/generacji; bezpośrednie UDP klientów jest poza kontrolą huba.
+
 Weryfikacja lokalna 2026-11-13: **114/114 zestawów CTest przeszło w każdej konfiguracji Debug, Release i ASan/UBSan**, z wymaganymi narzędziami i domyślną kontrolą wycieków. Zakres obejmuje niezależne tryby odpowiedzi, atomową projekcję adresów, IPv4/IPv6 ADC/ADCS, rzeczywiste wysyłanie/odbieranie UDP i powrót do huba w ncdc, MariaDB oraz Apache HTTPS. Brak ostrzeżeń kompilatora. Przeszły build/typecheck WebAdmin, 4 testy Node, 6 testów Chromium i integracja rzeczywistego API C++. Sprawdzono metadane, UTF-8, zgodność języków/linków dokumentacji, składnię zmienionych plików Python, przykładowe INI i białe znaki. Wyniki są lokalne; zdalne CI, pełna macierz systemów/klientów i obciążenie produkcyjne pozostają niezweryfikowane.
 
 Gałąź utworzono bezpośrednio z main `3655cf9175de72fac1ef2e4e3bfdd5ff023469a5`, po scaleniu alpha-0.5.9. Zachowano poprzedni kod i gałęzie; ten etap publikowany jest osobno od main.

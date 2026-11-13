@@ -28,6 +28,9 @@ MSG_CODEC = sys.argv.pop(1)
 ENCRYPTED = '--tls' in sys.argv
 if ENCRYPTED:
     sys.argv.remove('--tls')
+SEARCH_SECURITY = '--search-security' in sys.argv
+if SEARCH_SECURITY:
+    sys.argv.remove('--search-security')
 TTH_SEARCH = '--tth' in sys.argv
 if TTH_SEARCH:
     sys.argv.remove('--tth')
@@ -54,6 +57,8 @@ class NcdcLoginTest(unittest.TestCase):
             ini.write_text(network + '[chat]\nwelcome_message=Welcome to dc24h.eu. Configured ncdc chat.\n'
                            '[users]\nmax_sessions=3\nmax_users=2\n'
                            '[security]\nmax_connections_per_ip=8\n')
+            if SEARCH_SECURITY:
+                ini.write_text(ini.read_text() + '[search]\nguest_queries=off\n')
             api_path, token = enable_api(ini, directory)
             options = {'ready_pattern': TLS_READY} if ENCRYPTED else {}
             hub = Hub(self, '--config', str(ini), '--log-connections', 'on', '--log-chat', 'on', **options)
@@ -271,126 +276,137 @@ class NcdcLoginTest(unittest.TestCase):
                         self.assertTrue(delta.startswith(b'BINF ' + replacement_sid + b' '), delta)
                         if b'DEdc24hFeatureIndexReady' in delta:
                             break
-                # Actual SCH delivery is checked at the observer. TLS proxy
-                # captures remain encrypted; the private API fences submission.
-                before_search = fetch_status(api_path, token)['network']['adc_frames']
-                command = (b'/search -hub -tth ' + TEST_TTH + b'\r' if TTH_SEARCH else
-                           b'/search -hub -ge 1K -t archive SearchCoreSecret\r')
-                os.write(master, command)
-                deadline = time.monotonic() + 3
-                while fetch_status(api_path, token)['network']['adc_frames'] <= before_search:
-                    self.assertLess(time.monotonic(), deadline, 'ncdc did not submit its search')
-                    if select.select([master], [], [], 0.05)[0]:
-                        screen.extend(os.read(master, 65536))
-                wait_screen(TEST_TTH if TTH_SEARCH else b'SearchCoreSecret')
-                # Search results use list key bindings, not the chat input.
-                routed_search = observer.line()
-                self.assertRegex(routed_search, rb'^[BF]SCH ' + replacement_sid + rb' ')
-                self.assertIn(b'TR' + TEST_TTH if TTH_SEARCH else b'ANSearchCoreSecret', routed_search)
-                if FEATURE_SEARCH:
-                    search_token = re.search(rb'(?:^| )TO([^ ]+)', routed_search)
-                    probe = (b'DRES ' + observer.sid + b' ' + replacement_sid +
-                             b' FN/ResultProbe/SearchCoreSecretNcdcResultProbe.zip SI2048 SL1 TR' +
-                             TEST_TTH + (b' TO' + search_token[1] if search_token else b''))
-                    observer.send(probe)
-                    wait_screen(b'NcdcResultProbe.zip')
-                    if ENCRYPTED:
-                        self.assertNotIn(b'NcdcResultProbe', replies)
-                    else:
-                        wait_capture(replies, probe + b'\n')
-                os.write(master, b'\x1b2')  # Alt+2 selects the hub tab.
-                self.assertNotIn(b'Search routing not implemented', screen)
-                if not ENCRYPTED and routed_search.startswith(b'BSCH '):
-                    wait_capture(replies, routed_search + b'\n')
-                if ENCRYPTED:
-                    self.assertNotIn(b'SearchCoreSecret', wire)
-                    self.assertNotIn(TEST_TTH, wire)
-                elif TTH_SEARCH:
-                    frame = re.search(rb'[BF]SCH ' + replacement_sid + rb' [^\n]*\n', bytes(wire))
-                    self.assertIsNotNone(frame, 'ncdc did not emit a TTH SCH')
-                    self.assertIn(b'TR' + TEST_TTH, frame[0])
-                    self.assertNotRegex(frame[0], rb' (?:AN|EX)')
-                    if routed_search.startswith(b'BSCH '): self.assertIn(routed_search + b'\n', replies)
-                else:
-                    self.assertRegex(bytes(wire), rb'[BF]SCH ' + replacement_sid + rb' [^\n]*ANSearchCoreSecret')
-                    self.assertRegex(bytes(wire), rb'[BF]SCH [^\n]*GE1024')
-                    self.assertRegex(bytes(wire), rb'[BF]SCH [^\n]*EX(?:7z|7Z|zip|ZIP)')
-                    if routed_search.startswith(b'BSCH '): self.assertIn(routed_search + b'\n', replies)
-                if FEATURE_SEARCH:
-                    public_features = re.search(rb'(?:^| )SU([^ ]+)', replacement_join)
-                    self.assertIsNotNone(public_features, replacement_join)
-                    self.assertIn(b'ADC0', public_features[1].split(b','))
-                    self.assertNotIn(b'TCP4', public_features[1].split(b','))
-                    feature_query = (b'FSCH ' + observer.sid +
-                                     b' -TCP4 ANFeatureRoutingProbe EXtxt TOFeatureRoutingProbeToken')
-                    observer.send(feature_query)
-                    received_result = observer.line()
-                    self.assertTrue(received_result.startswith(b'DRES ' + replacement_sid + b' ' + observer.sid + b' '))
-                    self.assertIn(b'/FeatureShare/FeatureRoutingProbe.txt', received_result)
-                    self.assertIn(b'TOFeatureRoutingProbeToken', received_result)
-                    self.assertRegex(received_result, rb' TR[A-Z2-7]{39}(?: |$)')
-                    if ENCRYPTED:
-                        self.assertNotIn(b'FeatureRoutingProbe', wire)
-                        self.assertNotIn(b'FeatureRoutingProbe', replies)
-                    else:
-                        wait_capture(wire, received_result + b'\n')
-                        self.assertIn(feature_query + b'\n', replies)
-                        self.assertIn(received_result + b'\n', wire)
-                        self.assertNotIn(b'Search\\sresult\\srouting\\snot\\simplemented', replies)
-                    # The issuer receives one result, with no FSCH echo.
-                    marker = b'BINF ' + observer.sid + b' DEFeatureRoutingFence'
-                    observer.send(marker)
-                    self.assertEqual(observer.line(), marker)
-                if ACTIVE_PASSIVE:
-                    udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                    self.addCleanup(udp.close)
-                    udp.bind(('127.0.0.1', 0)); udp.settimeout(3)
-                    udp_port = str(udp.getsockname()[1]).encode()
-                    normalized = b'BINF ' + observer.sid + b' SUTCP4,UDP4 I4127.0.0.1 U4' + udp_port
-                    observer.send(b'BINF ' + observer.sid + b' SUTCP4,UDP4 I40.0.0.0 U4' + udp_port)
-                    self.assertEqual(observer.line(), normalized)
-                    udp_query = (b'FSCH ' + observer.sid +
-                                 b' -TCP4 ANFeatureRoutingProbe EXtxt TOActivePassiveUdpToken')
-                    observer.send(udp_query)
-                    packet, _ = udp.recvfrom(16384)
-                    cid = re.search(rb'(?:^| )ID([A-Z2-7]{39})(?: |$)', replacement_join)[1]
-                    self.assertTrue(packet.startswith(b'URES ' + cid + b' '), packet)
-                    self.assertIn(b'TOActivePassiveUdpToken', packet)
-                    self.assertIn(b'/FeatureShare/FeatureRoutingProbe.txt', packet)
-                    self.assertRegex(packet, rb' TR[A-Z2-7]{39}(?: |\n)')
-                    # A fence proves no duplicate DRES or source echo reached the hub path.
-                    marker = b'BINF ' + observer.sid + b' DEActivePassiveUdpFence'
-                    observer.send(marker); self.assertEqual(observer.line(), marker)
-                    # A zero port switches ncdc back to hub delivery, even with UDP4 advertised.
-                    observer.send(b'BINF ' + observer.sid + b' U40')
-                    self.assertEqual(observer.line(), b'BINF ' + observer.sid + b' U40')
-                    observer.send(udp_query.replace(b'ActivePassiveUdpToken', b'ActivePassiveHubToken'))
-                    fallback = observer.line()
-                    self.assertTrue(fallback.startswith(b'DRES ' + replacement_sid + b' ' + observer.sid + b' '))
-                    self.assertIn(b'TOActivePassiveHubToken', fallback)
-                    # Turn ncdc itself active and verify actual UDP receipt in its search UI.
-                    os.write(master, b'/set sudp_policy disabled\r/hset active_ip 127.0.0.1\r/hset active_port 0\r/hset active_udp_port 0\r/hset active true\r')
-                    advertised = {}
-                    for _ in range(12):
-                        delta = observer.line()
-                        self.assertTrue(delta.startswith(b'BINF ' + replacement_sid + b' '), delta)
-                        for field in delta.split()[2:]: advertised[field[:2]] = field[2:]
-                        if b'UDP4' in advertised.get(b'SU', b'').split(b',') and int(advertised.get(b'U4', b'0') or b'0') > 0:
-                            break
-                    else:
-                        self.fail('ncdc did not publish an active UDP endpoint')
-                    os.write(master, b'/search -hub -ge 1K -t archive ActivePassiveNcdcSecret\r')
-                    active_query = observer.line()
-                    self.assertIn(b'ANActivePassiveNcdcSecret', active_query)
-                    active_token = re.search(rb'(?:^| )TO([^ ]+)', active_query)
-                    self.assertIsNotNone(active_token, 'Active ncdc search omitted TO')
-                    probe = (b'URES ' + pair(99)[1] +
-                             b' FN/ActivePassiveNcdcSecretUdpProbe.zip SI2048 SL1 TR' + TEST_TTH +
-                             b' TO' + active_token[1] + b'\n')
-                    udp.sendto(probe, ('127.0.0.1', int(advertised[b'U4'])))
-                    wait_screen(b'ActivePassiveNcdcSecretUdpProbe.zip')
+                if SEARCH_SECURITY:
+                    os.write(master, b'/search -hub SecurityDeniedSecret\r')
                     os.write(master, b'\x1b2')
-                    self.assertNotIn(b'ActivePassiveNcdcSecretUdpProbe', replies)
+                    wait_screen(b'Search operation not permitted')
+                    marker = b'BINF ' + observer.sid + b' DESecurityDeniedFence'
+                    observer.send(marker); self.assertEqual(observer.line(), marker)
+                    os.write(master, b'/say SecurityRecoveryProbe\r')
+                    recovered = observer.line()
+                    self.assertTrue(recovered.startswith(b'BMSG ' + replacement_sid + b' '))
+                    self.assertIn(b'SecurityRecoveryProbe', recovered)
+                else:
+                    # Actual SCH delivery is checked at the observer. TLS proxy
+                    # captures remain encrypted; the private API fences submission.
+                    before_search = fetch_status(api_path, token)['network']['adc_frames']
+                    command = (b'/search -hub -tth ' + TEST_TTH + b'\r' if TTH_SEARCH else
+                               b'/search -hub -ge 1K -t archive SearchCoreSecret\r')
+                    os.write(master, command)
+                    deadline = time.monotonic() + 3
+                    while fetch_status(api_path, token)['network']['adc_frames'] <= before_search:
+                        self.assertLess(time.monotonic(), deadline, 'ncdc did not submit its search')
+                        if select.select([master], [], [], 0.05)[0]:
+                            screen.extend(os.read(master, 65536))
+                    wait_screen(TEST_TTH if TTH_SEARCH else b'SearchCoreSecret')
+                    # Search results use list key bindings, not the chat input.
+                    routed_search = observer.line()
+                    self.assertRegex(routed_search, rb'^[BF]SCH ' + replacement_sid + rb' ')
+                    self.assertIn(b'TR' + TEST_TTH if TTH_SEARCH else b'ANSearchCoreSecret', routed_search)
+                    if FEATURE_SEARCH:
+                        search_token = re.search(rb'(?:^| )TO([^ ]+)', routed_search)
+                        probe = (b'DRES ' + observer.sid + b' ' + replacement_sid +
+                                 b' FN/ResultProbe/SearchCoreSecretNcdcResultProbe.zip SI2048 SL1 TR' +
+                                 TEST_TTH + (b' TO' + search_token[1] if search_token else b''))
+                        observer.send(probe)
+                        wait_screen(b'NcdcResultProbe.zip')
+                        if ENCRYPTED:
+                            self.assertNotIn(b'NcdcResultProbe', replies)
+                        else:
+                            wait_capture(replies, probe + b'\n')
+                    os.write(master, b'\x1b2')  # Alt+2 selects the hub tab.
+                    self.assertNotIn(b'Search routing not implemented', screen)
+                    if not ENCRYPTED and routed_search.startswith(b'BSCH '):
+                        wait_capture(replies, routed_search + b'\n')
+                    if ENCRYPTED:
+                        self.assertNotIn(b'SearchCoreSecret', wire)
+                        self.assertNotIn(TEST_TTH, wire)
+                    elif TTH_SEARCH:
+                        frame = re.search(rb'[BF]SCH ' + replacement_sid + rb' [^\n]*\n', bytes(wire))
+                        self.assertIsNotNone(frame, 'ncdc did not emit a TTH SCH')
+                        self.assertIn(b'TR' + TEST_TTH, frame[0])
+                        self.assertNotRegex(frame[0], rb' (?:AN|EX)')
+                        if routed_search.startswith(b'BSCH '): self.assertIn(routed_search + b'\n', replies)
+                    else:
+                        self.assertRegex(bytes(wire), rb'[BF]SCH ' + replacement_sid + rb' [^\n]*ANSearchCoreSecret')
+                        self.assertRegex(bytes(wire), rb'[BF]SCH [^\n]*GE1024')
+                        self.assertRegex(bytes(wire), rb'[BF]SCH [^\n]*EX(?:7z|7Z|zip|ZIP)')
+                        if routed_search.startswith(b'BSCH '): self.assertIn(routed_search + b'\n', replies)
+                    if FEATURE_SEARCH:
+                        public_features = re.search(rb'(?:^| )SU([^ ]+)', replacement_join)
+                        self.assertIsNotNone(public_features, replacement_join)
+                        self.assertIn(b'ADC0', public_features[1].split(b','))
+                        self.assertNotIn(b'TCP4', public_features[1].split(b','))
+                        feature_query = (b'FSCH ' + observer.sid +
+                                         b' -TCP4 ANFeatureRoutingProbe EXtxt TOFeatureRoutingProbeToken')
+                        observer.send(feature_query)
+                        received_result = observer.line()
+                        self.assertTrue(received_result.startswith(b'DRES ' + replacement_sid + b' ' + observer.sid + b' '))
+                        self.assertIn(b'/FeatureShare/FeatureRoutingProbe.txt', received_result)
+                        self.assertIn(b'TOFeatureRoutingProbeToken', received_result)
+                        self.assertRegex(received_result, rb' TR[A-Z2-7]{39}(?: |$)')
+                        if ENCRYPTED:
+                            self.assertNotIn(b'FeatureRoutingProbe', wire)
+                            self.assertNotIn(b'FeatureRoutingProbe', replies)
+                        else:
+                            wait_capture(wire, received_result + b'\n')
+                            self.assertIn(feature_query + b'\n', replies)
+                            self.assertIn(received_result + b'\n', wire)
+                            self.assertNotIn(b'Search\\sresult\\srouting\\snot\\simplemented', replies)
+                        # The issuer receives one result, with no FSCH echo.
+                        marker = b'BINF ' + observer.sid + b' DEFeatureRoutingFence'
+                        observer.send(marker)
+                        self.assertEqual(observer.line(), marker)
+                    if ACTIVE_PASSIVE:
+                        udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                        self.addCleanup(udp.close)
+                        udp.bind(('127.0.0.1', 0)); udp.settimeout(3)
+                        udp_port = str(udp.getsockname()[1]).encode()
+                        normalized = b'BINF ' + observer.sid + b' SUTCP4,UDP4 I4127.0.0.1 U4' + udp_port
+                        observer.send(b'BINF ' + observer.sid + b' SUTCP4,UDP4 I40.0.0.0 U4' + udp_port)
+                        self.assertEqual(observer.line(), normalized)
+                        udp_query = (b'FSCH ' + observer.sid +
+                                     b' -TCP4 ANFeatureRoutingProbe EXtxt TOActivePassiveUdpToken')
+                        observer.send(udp_query)
+                        packet, _ = udp.recvfrom(16384)
+                        cid = re.search(rb'(?:^| )ID([A-Z2-7]{39})(?: |$)', replacement_join)[1]
+                        self.assertTrue(packet.startswith(b'URES ' + cid + b' '), packet)
+                        self.assertIn(b'TOActivePassiveUdpToken', packet)
+                        self.assertIn(b'/FeatureShare/FeatureRoutingProbe.txt', packet)
+                        self.assertRegex(packet, rb' TR[A-Z2-7]{39}(?: |\n)')
+                        # A fence proves no duplicate DRES or source echo reached the hub path.
+                        marker = b'BINF ' + observer.sid + b' DEActivePassiveUdpFence'
+                        observer.send(marker); self.assertEqual(observer.line(), marker)
+                        # A zero port switches ncdc back to hub delivery, even with UDP4 advertised.
+                        observer.send(b'BINF ' + observer.sid + b' U40')
+                        self.assertEqual(observer.line(), b'BINF ' + observer.sid + b' U40')
+                        observer.send(udp_query.replace(b'ActivePassiveUdpToken', b'ActivePassiveHubToken'))
+                        fallback = observer.line()
+                        self.assertTrue(fallback.startswith(b'DRES ' + replacement_sid + b' ' + observer.sid + b' '))
+                        self.assertIn(b'TOActivePassiveHubToken', fallback)
+                        # Turn ncdc itself active and verify actual UDP receipt in its search UI.
+                        os.write(master, b'/set sudp_policy disabled\r/hset active_ip 127.0.0.1\r/hset active_port 0\r/hset active_udp_port 0\r/hset active true\r')
+                        advertised = {}
+                        for _ in range(12):
+                            delta = observer.line()
+                            self.assertTrue(delta.startswith(b'BINF ' + replacement_sid + b' '), delta)
+                            for field in delta.split()[2:]: advertised[field[:2]] = field[2:]
+                            if b'UDP4' in advertised.get(b'SU', b'').split(b',') and int(advertised.get(b'U4', b'0') or b'0') > 0:
+                                break
+                        else:
+                            self.fail('ncdc did not publish an active UDP endpoint')
+                        os.write(master, b'/search -hub -ge 1K -t archive ActivePassiveNcdcSecret\r')
+                        active_query = observer.line()
+                        self.assertIn(b'ANActivePassiveNcdcSecret', active_query)
+                        active_token = re.search(rb'(?:^| )TO([^ ]+)', active_query)
+                        self.assertIsNotNone(active_token, 'Active ncdc search omitted TO')
+                        probe = (b'URES ' + pair(99)[1] +
+                                 b' FN/ActivePassiveNcdcSecretUdpProbe.zip SI2048 SL1 TR' + TEST_TTH +
+                                 b' TO' + active_token[1] + b'\n')
+                        udp.sendto(probe, ('127.0.0.1', int(advertised[b'U4'])))
+                        wait_screen(b'ActivePassiveNcdcSecretUdpProbe.zip')
+                        os.write(master, b'\x1b2')
+                        self.assertNotIn(b'ActivePassiveNcdcSecretUdpProbe', replies)
                 os.write(master, b'/quit\r')
                 deadline = time.monotonic() + 4
                 while process.poll() is None and time.monotonic() < deadline:
@@ -437,6 +453,8 @@ class NcdcLoginTest(unittest.TestCase):
                 self.assertNotIn(b'dc24hPrivateReply', hub.log)
                 self.assertNotIn(b'dc24hPrivateAction', hub.log)
                 self.assertNotIn(b'SearchCoreSecret', hub.log)
+                self.assertNotIn(b'SecurityDeniedSecret', hub.log)
+                self.assertNotIn(b'SecurityRecoveryProbe', hub.log)
                 self.assertNotIn(TEST_TTH, hub.log)
                 self.assertNotIn(b'FeatureRoutingProbe', hub.log)
                 self.assertNotIn(b'dc24hIncomingChat', hub.log)
