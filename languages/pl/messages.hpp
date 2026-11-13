@@ -167,7 +167,8 @@ Wyszukiwanie [search]: sprawdzana polityka startowa, limity liczby/bajtów i oki
 Działa routing SCH i DRES przez hub; UDP między klientami jest poza licznikami huba.
 Uwierzytelnione API stanu pokazuje zbiorcze statystyki i efektywne ustawienia wyszukiwania.
 Zmiana konfiguracji wymaga restartu; strona Search WebAdmin jest tylko do odczytu.
-Czat grupowy i transfery są planowane.
+Transfer Core modeluje koordynację połączeń; routing CTM/RCM i transfery plików są planowane.
+Czat grupowy pozostaje planowany.
 Ustawienia bazy w sekcji INI [database]; domyślnie wyłączona.
 --check-database sprawdza połączenie; --migrate-database jawnie stosuje migracje metadanych.
 --check-config nie łączy z MariaDB ani nie odczytuje pliku hasła.

@@ -1,6 +1,8 @@
 # Konfiguracja i statystyki wyszukiwania — alpha-0.5.12
 
-**Bieżący etap — alpha-0.5.13:** [Monitoring wyszukiwań WebAdmin](WEBADMIN_SEARCH.md) dodaje lokalne tempo zapytań/wyników/odmów/kolejek, ograniczony wykres i dostępną tabelę przedziałów. Pierwszy odczyt, przerwy, wykryte zerowanie i błędy rozpoczynają nowy pomiar; pauza/ręczne odświeżanie i lokalne czyszczenie zachowują liczniki łączne. API/ustawienia i izolacja sekretu pozostają.
+**Bieżący etap — alpha-0.6.1:** [Transfer Core](TRANSFER_CORE.md) dodaje niezależny silnik C++20 koordynacji połączeń: ograniczone własne żądania, role aktywne/pasywne IPv4/IPv6 i niezmienne plany jednej próby związane z sesjami, anulowaniem i ponownymi kontrolami. Wspólna klasyfikacja adresów Users zachowuje Search. Routing CTM/RCM i dane plików pozostają kolejnymi etapami.
+
+**Etap dostarczony w alpha-0.5.13:** [Monitoring wyszukiwań WebAdmin](WEBADMIN_SEARCH.md) dodaje lokalne tempo zapytań/wyników/odmów/kolejek, ograniczony wykres i dostępną tabelę przedziałów. Pierwszy odczyt, przerwy, wykryte zerowanie i błędy rozpoczynają nowy pomiar; pauza/ręczne odświeżanie i lokalne czyszczenie zachowują liczniki łączne. API/ustawienia i izolacja sekretu pozostają.
 
 Weryfikacja lokalna 2026-11-13: **120/120 zestawów CTest przeszło osobno w Debug, Release i ASan/UBSan**, z wymaganymi narzędziami integracyjnymi i domyślnym wykrywaniem wycieków, w tym rzeczywistym ncdc ADC/ADCS/UDP, MariaDB i Apache HTTPS. Bez ostrzeżeń kompilatora. Przeszły build/typecheck WebAdmin, 6 testów Node, 8 testów Chromium i integracja z API C++. Poprawne są metadane, UTF-8, zgodność plików językowych i linków dokumentacji, składnia zmienionych plików Python, przykładowy INI i białe znaki. Zdalne CI, pełna macierz systemów/klientów i obciążenie produkcyjne nie zostały zweryfikowane.
 
