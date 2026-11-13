@@ -1,5 +1,7 @@
 # ADC RCM — alpha-0.6.3
 
+**Current increment — alpha-0.6.4:** [Connection Routing](CONNECTION_ROUTING.md) consolidates D/E CTM and RCM admission and delivery into one SID router, one immutable packet type and one bounded queue path. Recipients are fixed ready-session lifetimes: D targets only, E targets then independently echoes to the source. Tokens never select recipients; existing roles, wire validation, errors and privacy remain. Mixed-pair tests use the same token without crossing audiences.
+
 **alpha-0.6.3 local validation (2026-11-13):** All **132/132 CTest suites** passed in Debug, Release and ASan/UBSan with required integration tools and default leak detection, including RCM native/fault/queue/lifetime checks, fragmented IPv4/IPv6 ADC/ADCS, real ncdc RCM→CTM and peer handshakes in both roles, previous CTM/Search/UDP, MariaDB and Apache HTTPS. No compiler warnings. WebAdmin build/typecheck, **12 Node tests**, **10 Chromium tests** and real C++ API integration passed. Metadata, UTF-8, language parity/local links, changed Python syntax, example INI and whitespace checks passed. Remote CI, the full OS/client matrix and production load remain unverified.
 
 Based directly on main `4f86b20c407047ae89c537e2c77b7dad7d833633`, after the ADC CTM merge. Existing code/history are preserved; this feature branch is published separately from main.

@@ -1,5 +1,17 @@
 # Changelog
 
+## alpha-0.6.4 — 2026-11-13
+
+Connection Routing increment, based directly on main `79b7c1ffa82d6a5389ddc92bd13e3ffa61eb95a1` after the ADC RCM merge:
+
+- Added one ConnectionRouter for D/E CTM and RCM over Transfer Core. Source/target SIDs resolve to exact ready session lifetimes; immutable bounded target-first audiences never expand to bystanders, replacement logins or users sharing the token. D delivers only to the target; E independently rechecks source echo after the target attempt. Source/state/error precedence, per-family roles, address checks and existing codecs remain intact.
+- Replaced duplicated CTM/RCM admission/dispatch and LoginHub handlers/queue alternatives with one common path and immutable ConnectionFrame. Core/router domains, shared one-attempt copies/cancel, lifetime/endpoint revalidation, queue refusal and exception consumption prevent retargeting or replay. Retained frame and echo metadata also withstand callback replacement of the caller's routed value across command types. Dispatch allocates nothing after sink construction; source/recipient allocation isolation and bounded pinned TCP/TLS output remain.
+- Retained CtmRouter/RcmRouter command-restricted facades and public names as aliases to the common frame/plan/report/error types. Earlier native suites compile unchanged. Type identities are unified: external overloads/variants containing both old types may need consolidation, and dependent C++ code must rebuild. No stable binary ABI is promised.
+- Added transfers.routing matrix/native/fault tests for every distinct pair of four SIDs, scopes and commands, exact audiences, command allowlisting, foreign/reused domains, cancel/replay, forced SID reuse, source replacement, cross-command callback replacement and maximum-sized allocation faults. Added transfers.routing.process with mixed ADC/ADCS IPv4/IPv6 peers, parallel CTM/RCM pairs deliberately sharing a token, client replies, reconnect, private source rejection, chat recovery and API/log privacy assertions. Existing CTM/RCM real ncdc peer handshakes remain enabled.
+- Updated server/WebAdmin metadata, example INI, US/PL CLI help and mirrored connection/module/navigation documentation. No dependency, configuration key, migration, endpoint, transfer counter/page, pending-token registry/correlation/deadline, new permission policy, peer socket or file-data handling is added. Token/protocol bytes are preserved and connection payloads remain outside logs, SQL, API/WebAdmin and Chat/Search counters. Published separately from main, preserving history.
+
+- Validation: All **134/134 CTest tests** passed in each of Debug, Release and ASan/UBSan with required integration tools and default leak detection, including the common SID matrix/fault/lifetime checks, same-token parallel mixed ADC/ADCS IPv4/IPv6 pairs, real ncdc CTM/RCM peer handshakes, previous Search/UDP, MariaDB and Apache HTTPS. No compiler warnings. WebAdmin build/typecheck, **12 Node tests**, **10 Chromium tests** and real C++ API integration passed. Metadata, UTF-8, language parity/local links, changed Python syntax, example INI and whitespace checks passed. Remote CI, the full OS/client matrix and production load remain unverified.
+
 ## alpha-0.6.3 — 2026-11-13
 
 ADC RCM increment, based directly on main `4f86b20c407047ae89c537e2c77b7dad7d833633` after the ADC CTM merge:
