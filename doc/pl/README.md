@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.6.7: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.6.8: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [Connection Security — alpha-0.6.8](CONNECTION_SECURITY.md)
 - [Transfer Tokens — alpha-0.6.7](TRANSFER_TOKENS.md)
 - [Client Capabilities — alpha-0.6.6](CLIENT_CAPABILITIES.md)
 - [Protocol Negotiation — alpha-0.6.5](PROTOCOL_NEGOTIATION.md)

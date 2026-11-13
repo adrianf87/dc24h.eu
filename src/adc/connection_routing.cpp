@@ -16,6 +16,8 @@ ConnectionRoutingError convert(transfers::Error error, transfers::Kind kind) noe
     case foreign_plan: return ConnectionRoutingError::foreign_plan;
     case missing_sink: return ConnectionRoutingError::missing_sink;
     case already_consumed: return ConnectionRoutingError::already_dispatched;
+    case disabled: return ConnectionRoutingError::disabled;
+    case forbidden: return ConnectionRoutingError::forbidden;
     default: return ConnectionRoutingError::invalid_message;
     }
 }
@@ -80,7 +82,7 @@ ConnectionDispatch ConnectionRouter::dispatch(const RoutedConnection& routed, co
     if (echo) {
         const auto path = core_.tcp_address(sender, family);
         const bool changed = kind == transfers::Kind::connect_to_me ? path != address : path.has_value();
-        if (core_.validate_sender(sender, *frame->message().source) || changed) { ++report.canceled; }
+        if (core_.validate_sender(sender, *frame->message().source) || changed || core_.authorize_sender(sender, kind)) { ++report.canceled; }
         else if (sink(sender, frame)) { ++report.queued; } else { ++report.refused; }
     }
     return report;

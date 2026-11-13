@@ -1,5 +1,7 @@
 # Transfer Tokens — alpha-0.6.7
 
+**Bieżący etap — alpha-0.6.8:** [Connection Security](CONNECTION_SECURITY.md) dodaje startową politykę CTM/RCM/gości, zaufane nadania gotowych sesji i ponowną autoryzację przygotowania/wysyłki/echa. Wspólne kontrole IP i portu zachowują działanie zarządzanych profili. Testy natywne, mieszane ADC/ADCS i ncdc obejmują odmowy, podszywanie i dalszą komunikację.
+
 **Weryfikacja lokalna alpha-0.6.7 (2026-11-14):** Przeszły wszystkie 153/153 testów CTest w Debug, Release i ASan/UBSan, w tym cztery scenariusze rzeczywistego ncdc z tokenem granicznej długości przez oba transporty huba i zwykłe/TLS połączenia klientów. Brak ostrzeżeń kompilatora. Poprawne są build/typecheck WebAdmin, 12 testów Node, 10 testów Chromium i integracja z API C++. Przeszły kontrole metadanych, UTF-8, zgodności języków/linków, składni zmienionych plików Python, przykładowego INI i białych znaków. Nie oczekiwano na koniec GitHub Actions; pełna macierz wspieranych systemów i obciążenie produkcyjne pozostają niesprawdzone.
 
 Etap oparty bezpośrednio na main `9df87da184aab7376de0587bbb76121eccc9fe4b` po Client Capabilities. Wydziela wspólną politykę tokena połączenia i własny typ wartości oraz sprawdza dokładne przekazywanie tokenów. Gałąź numerowana jest publikowana osobno od main, z zachowaniem kodu i historii.

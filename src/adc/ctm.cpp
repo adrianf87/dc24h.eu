@@ -1,6 +1,7 @@
 #include "dc24h/adc/ctm.hpp"
 #include "dc24h/adc/serializer.hpp"
 #include "connection_fields.hpp"
+#include "dc24h/transfers/security.hpp"
 
 namespace dc24h::adc {
 namespace {
@@ -11,7 +12,7 @@ std::variant<std::uint16_t, CtmError> fields(const Message& message) {
     const auto& p = message.parameters;
     if (!detail::connection_protocol(p[0])) { return CtmError::invalid_protocol; }
     const auto port = parse_integer(p[1]);
-    if (!port || *port < 1 || *port > 65535) { return CtmError::invalid_port; }
+    if (!port || !transfers::valid_connection_port(*port)) { return CtmError::invalid_port; }
     if (!detail::connection_token(p[2])) { return CtmError::invalid_token; }
     return static_cast<std::uint16_t>(*port);
 }

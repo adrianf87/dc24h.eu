@@ -303,6 +303,7 @@ void TcpServer::run() {
     login_limits.anti_flood = options_.chat.flood;
     login_limits.chat = options_.chat.policy;
     login_limits.search = options_.search;
+    login_limits.transfers = options_.transfers;
     login_limits.welcome_text = options_.chat.welcome_enabled ? std::optional<std::string>(options_.chat.welcome_message) : std::nullopt;
     login_limits.connections=options_.max_connections;
     login_limits.users=options_.users;

@@ -33,8 +33,10 @@ struct LoginHub::Peer {
         }
     };
     Peer(std::shared_ptr<SidPool> pool, std::string_view address, const users::Session& model,
-         const std::optional<chat::FloodLimits>& limits, const search::SecuritySettings& search_settings)
-        : session(std::move(pool), address), lifecycle(model), search_guard(search_settings), search_permissions(search_settings.guests) { if (limits) { anti_flood.emplace(*limits); } }
+         const std::optional<chat::FloodLimits>& limits, const search::SecuritySettings& search_settings,
+         const transfers::SecuritySettings& transfer_settings)
+        : session(std::move(pool), address), lifecycle(model), search_guard(search_settings), search_permissions(search_settings.guests),
+          transfer_permissions(transfer_settings.guests) { if (limits) { anti_flood.emplace(*limits); } }
     ClientSession session;
     const users::Session& lifecycle;
     std::deque<Frame> output;
@@ -44,6 +46,7 @@ struct LoginHub::Peer {
     std::optional<chat::FloodGuard> anti_flood;
     search::SearchGuard search_guard;
     search::Permissions search_permissions;
+    transfers::Permissions transfer_permissions;
 };
 namespace {
 SharedHubMessageFrame welcome_packet(const std::optional<std::string>& text) {
@@ -95,7 +98,7 @@ std::string_view status_description(std::string_view code) noexcept {
 }
 } // namespace
 
-LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), search_(sessions_,limits.search.tokens), search_router_(search_), result_router_(search_), transfers_(sessions_), connection_router_(transfers_), chat_(sessions_), message_router_(chat_,limits.chat), hub_messages_(sessions_), welcome_message_(welcome_packet(limits.welcome_text)), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
+LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), search_(sessions_,limits.search.tokens), search_router_(search_), result_router_(search_), transfers_(sessions_,limits.transfers,this), connection_router_(transfers_), chat_(sessions_), message_router_(chat_,limits.chat), hub_messages_(sessions_), welcome_message_(welcome_packet(limits.welcome_text)), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
     search::validate_security(limits.search);
     if (limits.anti_flood) { chat::validate(*limits.anti_flood); }
     if (limits.connections == 0 || limits.connections > 65535 ||
@@ -113,7 +116,7 @@ void LoginHub::connect(Id id, std::string_view address, users::Transport transpo
     const auto model = std::get_if<const users::Session*>(&registered);
     if (!model) { throw std::logic_error("Duplicate, reused or excess login connection"); }
     try {
-        auto peer = std::make_unique<Peer>(pool_, address, **model, limits_.anti_flood, limits_.search);
+        auto peer = std::make_unique<Peer>(pool_, address, **model, limits_.anti_flood, limits_.search, limits_.transfers);
         if (transport == users::Transport::adc) { check_model(sessions_.start_negotiation(peer->lifecycle.id(),accepted)); }
         peers_.emplace(id,std::move(peer));
     } catch (...) {
@@ -378,6 +381,10 @@ void LoginHub::receive_connection(Id id, const Message& message) {
                 (void)enqueue(peer, make_status(*StatusCode::parse("100"), "RCM requires passive sender and active recipient", command)); break;
             case ConnectionRoutingError::invalid_message:
                 (void)enqueue(peer, make_status(*StatusCode::parse("100"), "Invalid connection request", command)); break;
+            case ConnectionRoutingError::disabled:
+                (void)enqueue(peer, make_status(*StatusCode::parse("125"), "Connection operation is disabled", command)); break;
+            case ConnectionRoutingError::forbidden:
+                (void)enqueue(peer, make_status(*StatusCode::parse("125"), "Connection operation not permitted", command)); break;
             default:
                 check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now())); break;
             }
@@ -396,6 +403,17 @@ void LoginHub::receive_connection(Id id, const Message& message) {
     } catch (const std::bad_alloc&) {
         check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
     }
+}
+std::optional<transfers::Permissions> LoginHub::connection_permissions(users::SessionId id) const noexcept {
+    const auto found = peers_.find(id.value());
+    if (found == peers_.end() || !found->second->lifecycle.ready()) { return {}; }
+    return found->second->transfer_permissions;
+}
+bool LoginHub::set_transfer_permissions(Id id, transfers::Permissions permissions) noexcept {
+    const auto found = peers_.find(id);
+    if (found == peers_.end() || !found->second->lifecycle.ready()) { return false; }
+    found->second->transfer_permissions = permissions;
+    return true;
 }
 bool LoginHub::set_search_permissions(Id id, search::Permissions permissions) noexcept {
     const auto found = peers_.find(id);

@@ -1,6 +1,24 @@
 #include "dc24h/transfers/core.hpp"
 
 namespace dc24h::transfers {
+namespace {
+Error permission_error(PermissionError error) noexcept { return error == PermissionError::disabled ? Error::disabled : Error::forbidden; }
+}
+std::optional<Permissions> Core::permissions(users::SessionId id) const noexcept {
+    const auto* session = sessions_.find(id);
+    if (!session || !session->ready() || !session->user()) { return {}; }
+    return authority_ ? authority_->connection_permissions(id) : std::optional{settings_.guests};
+}
+std::optional<PermissionError> Core::authorize_sender(users::SessionId sender, Kind kind) const noexcept {
+    const auto origin = permissions(sender);
+    if (!origin) { return PermissionError::forbidden; }
+    return authorize(settings_, *origin, {}, kind);
+}
+std::optional<PermissionError> Core::authorize_pair(users::SessionId sender, users::SessionId target, Kind kind) const noexcept {
+    const auto origin = permissions(sender), recipient = permissions(target);
+    if (!origin || !recipient) { return PermissionError::forbidden; }
+    return authorize(settings_, *origin, *recipient, kind);
+}
 Plan::Plan(std::shared_ptr<const detail::Domain> domain, users::SessionId sender, users::SessionId target,
            std::string_view source, std::string_view target_key, Request request, users::AddressBytes address)
     : domain_(std::move(domain)), sender_(sender), target_(target), source_(source), target_key_(target_key),
@@ -39,6 +57,7 @@ Preparation Core::prepare(users::SessionId sender, std::string_view source, std:
     auto request = std::get<Request>(std::move(validated));
     const auto endpoint = address(*sessions_.find(sender), *destination, request);
     if (!endpoint) { return Error::incompatible_connectivity; }
+    if (const auto error = authorize_pair(sender, destination->id(), request.kind())) { return permission_error(*error); }
     return Plan(domain_, sender, destination->id(), source, target, std::move(request), *endpoint);
 }
 std::variant<State, Error> Core::dispatch(const Plan& plan, const Sink& sink) const {
@@ -54,6 +73,7 @@ std::variant<State, Error> Core::dispatch(const Plan& plan, const Sink& sink) co
     }
     const auto endpoint = address(*sessions_.find(plan.sender()), *destination, plan.request());
     if (!endpoint || *endpoint != plan.listener_address()) { return Error::incompatible_connectivity; }
+    if (const auto error = authorize_pair(plan.sender(), plan.target(), plan.request().kind())) { return permission_error(*error); }
     attempt->state = State::dispatching;
     try {
         attempt->state = sink(plan.target(), plan) ? State::queued : State::refused;

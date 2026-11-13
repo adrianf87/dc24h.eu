@@ -1,5 +1,7 @@
 # Transfer Tokens — alpha-0.6.7
 
+**Current increment — alpha-0.6.8:** [Connection Security](CONNECTION_SECURITY.md) adds startup CTM/RCM and guest permissions, trusted ready-lifetime grants and preparation/dispatch/echo authorization rechecks. Shared binary IP and port validation preserve managed-profile behavior. Native, mixed ADC/ADCS and real ncdc cases cover denials, spoofing and recovery.
+
 **alpha-0.6.7 local validation (2026-11-14):** All 153/153 CTest tests passed in Debug, Release and ASan/UBSan, including four real ncdc boundary-token scenarios over both hub transports and plaintext/TLS peer handshakes. No compiler warnings. WebAdmin build/typecheck, 12 Node tests, 10 Chromium tests and real C++ API integration passed. Metadata, UTF-8, language parity/local links, changed Python syntax, example INI and whitespace checks passed. GitHub Actions completion is not awaited; the full supported OS matrix and production load remain unverified.
 
 Based directly on main `9df87da184aab7376de0587bbb76121eccc9fe4b` after Client Capabilities. This increment extracts a single connection-token policy and an owning typed value, and verifies exact token forwarding end to end. The numbered branch is published separately from main, preserving existing code/history.
