@@ -1,5 +1,7 @@
 # dc24h.eu technical documentation
 
+[Client Capabilities — alpha-0.6.6](us/CLIENT_CAPABILITIES.md) · [PL](pl/CLIENT_CAPABILITIES.md)
+
 [Protocol Negotiation — alpha-0.6.5](us/PROTOCOL_NEGOTIATION.md) · [PL](pl/PROTOCOL_NEGOTIATION.md)
 
 [Connection Routing — alpha-0.6.4](us/CONNECTION_ROUTING.md) · [PL](pl/CONNECTION_ROUTING.md)
@@ -24,7 +26,7 @@
 
 [Feature Routing / routing funkcji — alpha-0.5.7](us/FEATURE_ROUTING.md) · [PL](pl/FEATURE_ROUTING.md)
 
-Current development version: alpha-0.6.5. Default language: EN/US UTF-8.
+Current development version: alpha-0.6.6. Default language: EN/US UTF-8.
 
 - [English (US)](us/README.md)
 - [Polski](pl/README.md)

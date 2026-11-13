@@ -2,10 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.6.5 (Protocol Negotiation).**
+**Current development version: alpha-0.6.6 (Client Capabilities).**
 
 Completed increments (older bullets describe their original delivery scope):
 
+- **alpha-0.6.6 Client Capabilities**: owning per-family TCP modes and advisory peer protocols, shared CTM/RCM admission, pure originator path selection and live INF mode changes with real ncdc. See [Client Capabilities](doc/us/CLIENT_CAPABILITIES.md).
 - **alpha-0.6.5 Protocol Negotiation**: typed ADC/1.0 and ADCS/1.0 intent, capability/preference selection with required-TLS refusal, lossless peer negotiation errors and real ncdc TLS peer handshakes. See [Protocol Negotiation](doc/us/PROTOCOL_NEGOTIATION.md).
 - **alpha-0.6.4 Connection Routing**: one CTM/RCM SID router with immutable fixed recipient lifetimes, shared packets and queues; parallel pairs sharing a token stay isolated. See [Connection Routing](doc/us/CONNECTION_ROUTING.md).
 - **alpha-0.6.3 ADC RCM**: owning Reverse Connect To Me validation and live DRCM/ERCM routing, per-family passive/active roles, shared queues and real ncdc RCM→CTM peer handshakes. See [ADC RCM](doc/us/ADC_RCM.md).

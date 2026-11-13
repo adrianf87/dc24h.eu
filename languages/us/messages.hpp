@@ -174,6 +174,7 @@ One Connection Router selects CTM/RCM recipients by ready SID lifetime, never by
 Peer protocols: ADC/1.0 means plaintext; ADCS/1.0 requires TLS between clients.
 The hub preserves explicit requests and opaque failure tokens; peer TLS is independent of hub TLS.
 Peers preserve protocol/token in CTM replies; the hub never supplies their listener port.
+Client capabilities track TCP4/TCP6 separately; UDP and hub TLS do not grant TCP activity.
 Pending negotiation correlation and file-data handling remain planned.
 Group chat remains planned.
 Database settings use [database] in INI; disabled by default.
