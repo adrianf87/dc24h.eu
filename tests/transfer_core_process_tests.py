@@ -1,4 +1,4 @@
-"""Transfer Core regression: passive CTM fails validation; RCM remains staged."""
+"""Transfer Core regression: invalid active/passive coordination fails closed."""
 import json
 import pathlib
 import tempfile
@@ -29,7 +29,7 @@ class TransferCoreProcessTests(unittest.TestCase):
                     frame = kind + b' ' + source.sid + b' ' + target.sid + b' ADC/1.0 '
                     if kind.endswith(b'CTM'): frame += b'1515 '
                     source.send(frame + b'CoordinationPrivateToken')
-                    expected = (b'ISTA 100 CTM\\ssender\\sis\\snot\\sTCP\\sactive FC' if kind.endswith(b'CTM') else b'ISTA 125 Command\\snot\\simplemented FC')
+                    expected = (b'ISTA 100 CTM\\ssender\\sis\\snot\\sTCP\\sactive FC' if kind.endswith(b'CTM') else b'ISTA 100 RCM\\srequires\\spassive\\ssender\\sand\\sactive\\srecipient FC')
                     self.assertEqual(source.line(), expected + kind)
                     fence = b'BINF ' + source.sid + b' DETransferFence'
                     source.send(fence)

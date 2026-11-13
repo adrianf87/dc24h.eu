@@ -14,6 +14,7 @@
 #include "dc24h/adc/search_routing.hpp"
 #include "dc24h/adc/result_routing.hpp"
 #include "dc24h/adc/ctm_routing.hpp"
+#include "dc24h/adc/rcm_routing.hpp"
 #include "dc24h/search/security.hpp"
 #include "dc24h/search/statistics.hpp"
 
@@ -103,6 +104,7 @@ private:
     void receive_result(Id id, const Message& message, users::TimePoint now, search::Attempt& attempt);
     void receive_search(Id id, const Message& message, users::TimePoint now, search::Attempt& attempt);
     void receive_ctm(Id id, const Message& message);
+    void receive_rcm(Id id, const Message& message);
     void route_status(Id id, const Message& message);
     void route_chat(Id id, const Message& message, chat::Attempt& attempt);
     void relay(Id except, const Message& message);
@@ -115,6 +117,7 @@ private:
     ResultRouter result_router_;
     transfers::Core transfers_;
     CtmRouter ctm_router_;
+    RcmRouter rcm_router_;
     chat::Core chat_;
     MessageRouter message_router_;
     HubMessages hub_messages_;

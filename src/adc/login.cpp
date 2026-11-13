@@ -17,7 +17,7 @@ namespace dc24h::adc {
 struct LoginHub::Peer {
     struct Frame {
         struct Owned { Message message; std::string wire; };
-        std::variant<Owned,SharedPublicChatFrame,SharedPrivateChatFrame,SharedHubMessageFrame,SharedSearchFrame,SharedResultFrame,SharedCtmFrame> content;
+        std::variant<Owned,SharedPublicChatFrame,SharedPrivateChatFrame,SharedHubMessageFrame,SharedSearchFrame,SharedResultFrame,SharedCtmFrame,SharedRcmFrame> content;
         Completion completion;
         [[nodiscard]] const Message& message() const noexcept {
             return std::visit([](const auto& frame) -> const Message& {
@@ -95,7 +95,7 @@ std::string_view status_description(std::string_view code) noexcept {
 }
 } // namespace
 
-LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), search_(sessions_,limits.search.tokens), search_router_(search_), result_router_(search_), transfers_(sessions_), ctm_router_(transfers_), chat_(sessions_), message_router_(chat_,limits.chat), hub_messages_(sessions_), welcome_message_(welcome_packet(limits.welcome_text)), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
+LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), search_(sessions_,limits.search.tokens), search_router_(search_), result_router_(search_), transfers_(sessions_), ctm_router_(transfers_), rcm_router_(transfers_), chat_(sessions_), message_router_(chat_,limits.chat), hub_messages_(sessions_), welcome_message_(welcome_packet(limits.welcome_text)), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
     search::validate_security(limits.search);
     if (limits.anti_flood) { chat::validate(*limits.anti_flood); }
     if (limits.connections == 0 || limits.connections > 65535 ||
@@ -255,7 +255,7 @@ void LoginHub::receive(Id id, const Message& message, chat::FloodClock::time_poi
             search_attempt.outcome(search::Outcome::error);
             check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));return;
         }
-        if (message.kind==Command::ctm) {
+        if (message.kind==Command::ctm || message.kind==Command::rcm) {
             check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));return;
         }
         if (message.kind!=Command::msg) { throw; }
@@ -354,6 +354,8 @@ void LoginHub::receive(Id id, const Message& message, chat::FloodClock::time_poi
         receive_result(id, message, chat_now, search_attempt);
     } else if (message.kind == Command::ctm) {
         receive_ctm(id, message);
+    } else if (message.kind == Command::rcm) {
+        receive_rcm(id, message);
     } else if (message.kind == Command::sta) {
         if (message.type != MessageType::hub) { route_status(id, message); }
     } else if (before == ConnectionState::normal && message.kind != Command::sup) {
@@ -390,6 +392,39 @@ void LoginHub::receive_ctm(Id id, const Message& message) {
             }
         });
         if (const auto* error = std::get_if<CtmRoutingError>(&result)) { refuse(*error); }
+    } catch (const std::bad_alloc&) {
+        check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
+    }
+}
+void LoginHub::receive_rcm(Id id, const Message& message) {
+    auto& peer = *peers_.at(id);
+    try {
+        const auto command = std::string(1, static_cast<char>(message.type)) + "RCM";
+        const auto refuse = [&](RcmRoutingError error) {
+            switch (error) {
+            case RcmRoutingError::invalid_state: reject(peer, "244", command); break;
+            case RcmRoutingError::wrong_source: reject(peer, "240", command); break;
+            case RcmRoutingError::recipient_unavailable:
+                (void)enqueue(peer, make_status(*StatusCode::parse("140"), "RCM recipient unavailable", command)); break;
+            case RcmRoutingError::incompatible_connectivity:
+                (void)enqueue(peer, make_status(*StatusCode::parse("100"), "RCM requires passive sender and active recipient", command)); break;
+            case RcmRoutingError::invalid_message:
+                (void)enqueue(peer, make_status(*StatusCode::parse("100"), "Invalid connection request", command)); break;
+            default:
+                check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now())); break;
+            }
+        };
+        auto prepared = rcm_router_.prepare(peer.lifecycle.id(), message);
+        if (const auto* error = std::get_if<RcmRoutingError>(&prepared)) { refuse(*error); return; }
+        const auto result = rcm_router_.dispatch(std::get<RoutedRcm>(prepared), [&](users::SessionId recipient, const SharedRcmFrame& frame) {
+            const auto found = peers_.find(recipient.value());
+            if (found == peers_.end()) { return false; }
+            try { return enqueue_shared(*found->second, frame); }
+            catch (const std::bad_alloc&) {
+                check_model(sessions_.force_close(recipient,users::CloseCause::internal_error,users::Clock::now())); return false;
+            }
+        });
+        if (const auto* error = std::get_if<RcmRoutingError>(&result)) { refuse(*error); }
     } catch (const std::bad_alloc&) {
         check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
     }

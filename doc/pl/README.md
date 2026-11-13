@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.6.2: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.6.3: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [ADC RCM — alpha-0.6.3](ADC_RCM.md)
 - [ADC CTM — alpha-0.6.2](ADC_CTM.md)
 - [Transfer Core — alpha-0.6.1](TRANSFER_CORE.md)
 - [Monitoring wyszukiwań WebAdmin — alpha-0.5.13](WEBADMIN_SEARCH.md)

@@ -17,6 +17,10 @@ std::optional<users::AddressBytes> Core::tcp_address(users::SessionId owner, Add
     if (!model || !model->ready() || !model->user() || !users::tcp_active(model->user()->profile(), family)) { return {}; }
     return users::public_address(model->user()->profile(), family);
 }
+std::optional<users::SessionId> Core::resolve_target(std::string_view target) const noexcept {
+    const auto* model = sessions_.by_sid(target);
+    return model && model->ready() && model->user() ? std::optional{model->id()} : std::nullopt;
+}
 std::optional<users::AddressBytes> Core::address(const users::Session& sender, const users::Session& target, const Request& request) const noexcept {
     const auto& origin = sender.user()->profile();
     const auto& recipient = target.user()->profile();

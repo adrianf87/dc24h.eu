@@ -1,5 +1,17 @@
 # Changelog
 
+## alpha-0.6.3 — 2026-11-13
+
+ADC RCM increment, based directly on main `4f86b20c407047ae89c537e2c77b7dad7d833633` after the ADC CTM merge:
+
+- Added owning RcmRequest with parse_rcm/validate_rcm for DRCM/ERCM, preserving ParseError versus semantic RcmError. Check two positional fields with no port, required visible-ASCII protocol (1..32 bytes), NFC opaque token (1..128), aggregate/parameter/frame ceilings and native serialization/reparse boundaries. Preserve unknown named fields/order/repeats, protocol/token and canonical escapes. Shared private connection_fields validation now keeps CTM/RCM header/text/bounds aligned while CTM retains its independent port semantics.
+- Added RcmRouter/RoutedRcm and immutable shared RcmFrame over Transfer Core reverse intents. Resolve ready target lifetimes without allocations; prefer an eligible IPv4, then IPv6, where source is passive and target has a usable TCP-active public address. UDP does not grant TCP activity and per-family roles remain independent. Bind target address/lifetimes, consume one attempt across copies, reject foreign/replayed/stale plans, support cancel and target-first independent E echo, and cancel echo on source closure/activation. Dispatch/lookup allocate nothing after sink creation.
+- Connected D/E RCM to LoginHub's shared bounded FIFO without port fabrication, CTM synthesis, broadcast or bystander delivery. Preserve source/state fatal precedence, fixed recoverable semantic/connectivity/target diagnostics, pinned partial output and source-versus-recipient failure isolation. Existing CTM handles client replies unchanged. No token/protocol rewriting or hub peer-socket/file I/O; payloads stay outside logs, SQL, API/WebAdmin and Chat/Search counters. Transport/IP/frame/output limits remain.
+- Added adc.rcm native/fault/role/lifetime/queue tests and fragmented IPv4/IPv6 ADC/ADCS process coverage with client CTM replies, INF transitions, reconnect and privacy. Real adc.rcm.ncdc/adcs.rcm.ncdc exercise passive ncdc RCM→CTM→CSUP/CINF/CGET and active ncdc RCM reception→matching CTM→peer handshake. Bounded informational CSTA referrer frames are accepted in the peer test harness. Earlier transfer/CTM boundaries now expect incompatible-role refusal and working chat; prior interoperability remains enabled.
+- Updated server/WebAdmin release metadata, example INI, US/PL CLI help and mirrored RCM/module/navigation documentation. Existing history is preserved; this branch is published separately from main. No dependency, INI setting, endpoint, transfer metric/history/page, pending-token registry/correlation/deadline, new permission/quota policy or migration is added. Client file-data transfer remains outside the hub.
+
+- Validation: All **132/132 CTest suites** passed in Debug, Release and ASan/UBSan with required integration tools and default leak detection, including RCM native/fault/queue/lifetime checks, fragmented IPv4/IPv6 ADC/ADCS, real ncdc RCM→CTM and peer handshakes in both roles, previous CTM/Search/UDP, MariaDB and Apache HTTPS. No compiler warnings. WebAdmin build/typecheck, **12 Node tests**, **10 Chromium tests** and real C++ API integration passed. Metadata, UTF-8, language parity/local links, changed Python syntax, example INI and whitespace checks passed. Remote CI, the full OS/client matrix and production load remain unverified.
+
 ## alpha-0.6.2 — 2026-11-13
 
 ADC CTM increment, based directly on main `4513c4c6fda20269a78b2ad711ea16d204f412a9` after the Transfer Core merge:

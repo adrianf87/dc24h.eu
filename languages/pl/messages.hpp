@@ -169,7 +169,9 @@ Uwierzytelnione API stanu pokazuje zbiorcze statystyki i efektywne ustawienia wy
 Zmiana konfiguracji wymaga restartu; strona Search WebAdmin jest tylko do odczytu.
 Transfer Core koordynuje sprawdzone DCTM do celu / ECTM do celu i nadawcy.
 CTM wymaga aktywnego źródła TCP; protokół/port/token klienta są zachowane.
-Routing RCM i obsługa danych plików pozostają planowane.
+RCM kieruje żądanie pasywnego klienta do aktywnego TCP: D do celu / E do celu i nadawcy.
+Klienci zachowują protokół/token odpowiedzi CTM; hub nie podaje za nich portu.
+Korelacja oczekujących negocjacji i obsługa danych plików pozostają planowane.
 Czat grupowy pozostaje planowany.
 Ustawienia bazy w sekcji INI [database]; domyślnie wyłączona.
 --check-database sprawdza połączenie; --migrate-database jawnie stosuje migracje metadanych.

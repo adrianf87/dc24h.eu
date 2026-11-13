@@ -1,4 +1,4 @@
-# dc24h.eu alpha-0.6.2 configuration (UTF-8, no secrets committed)
+# dc24h.eu alpha-0.6.3 configuration (UTF-8, no secrets committed)
 # Section names and keys are case-sensitive; duplicate singular keys are errors.
 [general]
 language = us

@@ -169,7 +169,9 @@ The authenticated status API exposes aggregate search statistics and effective s
 Restart to apply search configuration; WebAdmin Search is read-only.
 Transfer Core coordinates checked DCTM target / ECTM target+sender delivery.
 Only TCP-active sources may send CTM; peer protocol/port/token are preserved.
-RCM routing and file-data handling remain planned.
+RCM routes passive requests to active TCP peers, with D target / E target+sender delivery.
+Peers preserve protocol/token in CTM replies; the hub never supplies their listener port.
+Pending negotiation correlation and file-data handling remain planned.
 Group chat remains planned.
 Database settings use [database] in INI; disabled by default.
 --check-database connects/pings; --migrate-database explicitly applies metadata migrations.
