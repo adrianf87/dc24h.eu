@@ -1,5 +1,7 @@
 # ADC CTM — alpha-0.6.2
 
+**Current increment — alpha-0.6.3:** [ADC RCM](ADC_RCM.md) adds owning D/E reverse-request validation and live target/echo routing through Transfer Core, with per-family passive-source/active-target checks, stable lifetime/address admission and shared bounded queues. CTM/RCM share wire-field validation. Real ncdc covers RCM→CTM and peer handshakes in both roles; no pending-token registry or file-data handling is claimed.
+
 **alpha-0.6.2 local validation (2026-11-13):** All **128/128 CTest suites** passed in Debug, Release and ASan/UBSan with required integration tools and default leak detection, including typed/native CTM faults/queues/lifetimes, fragmented IPv4/IPv6 ADC/ADCS, actual ncdc CTM-to-CSUP/CINF/CGET peer handshakes, prior Search/UDP, MariaDB and Apache HTTPS. No compiler warnings. WebAdmin build/typecheck, **12 Node tests**, **10 Chromium tests** and real C++ API integration passed. Metadata, UTF-8, language parity/local links, changed Python syntax, example INI and whitespace checks passed. Remote CI, full OS/client coverage and production load remain unverified.
 
 Based directly on main `4513c4c6fda20269a78b2ad711ea16d204f412a9`, after the Transfer Core merge. Existing history/code are preserved; this feature branch is published separately from main.

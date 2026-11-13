@@ -28,6 +28,9 @@ MSG_CODEC = sys.argv.pop(1)
 ENCRYPTED = '--tls' in sys.argv
 if ENCRYPTED:
     sys.argv.remove('--tls')
+RCM_TEST = '--rcm' in sys.argv
+if RCM_TEST:
+    sys.argv.remove('--rcm')
 CTM_TEST = '--ctm' in sys.argv
 if CTM_TEST:
     sys.argv.remove('--ctm')
@@ -258,14 +261,18 @@ class NcdcLoginTest(unittest.TestCase):
                     cids = [re.search(rb'(?:^| )ID([A-Z2-7]+)(?: |$)', line)[1] for line in initial]
                     self.assertEqual(cids[0], cids[1], 'Reconnect changed its public CID')
                 if TRANSFER_CORE:
-                    # ncdc requests a peer file list using CTM/RCM. The new Core
-                    # is not connected to wire handlers in this architecture stage.
+                    # A passive/passive request is explicitly refused; the
+                    # connection and chat remain usable after policy admission.
+                    observer.send(b'BINF ' + observer.sid + b' SU')
+                    self.assertEqual(observer.line(), b'BINF ' + observer.sid + b' SU')
                     screen.clear()
                     os.write(master, b'/browse ListObserver\r')
-                    wait_screen(b'Command not implemented')
+                    wait_screen(b'RCM requires passive sender and active recipient')
                     os.write(master, b'/open dc24h_login\r')
                     os.write(master, b'dc24hTransferBoundaryRecovery\r')
                     self.assertEqual(observer.line(), b'BMSG ' + replacement_sid + b' dc24hTransferBoundaryRecovery')
+                    observer.send(b'BINF ' + observer.sid + b' SUTCP4')
+                    self.assertEqual(observer.line(), b'BINF ' + observer.sid + b' SUTCP4')
                 if FEATURE_SEARCH:
                     # A real indexed share lets ncdc prove that it processed the
                     # routed FSCH by producing a result that reaches its issuer.
@@ -422,6 +429,67 @@ class NcdcLoginTest(unittest.TestCase):
                         wait_screen(b'ActivePassiveNcdcSecretUdpProbe.zip')
                         os.write(master, b'\x1b2')
                         self.assertNotIn(b'ActivePassiveNcdcSecretUdpProbe', replies)
+                if RCM_TEST:
+                    os.write(master, b'/open dc24h_login\r/browse ListObserver\r')
+                    reverse = observer.line()
+                    self.assertTrue(reverse.startswith(b'DRCM ' + replacement_sid + b' ' + observer.sid + b' '), reverse)
+                    words = reverse.split(); self.assertEqual(words[3], b'ADC/1.0'); self.assertTrue(words[4])
+                    with socket.socket() as listener_cc:
+                        listener_cc.bind(('127.0.0.1', 0)); listener_cc.listen(1); listener_cc.settimeout(3)
+                        offer = (b'DCTM ' + observer.sid + b' ' + replacement_sid + b' ' + words[3] + b' ' +
+                                 str(listener_cc.getsockname()[1]).encode() + b' ' + words[4])
+                        observer.send(offer)
+                        cc, _ = listener_cc.accept()
+                        with cc:
+                            cc.settimeout(3); pending = bytearray()
+                            def client_line():
+                                while b'\n' not in pending:
+                                    chunk = cc.recv(16384); self.assertTrue(chunk, 'Passive ncdc closed its peer connection'); pending.extend(chunk)
+                                line, tail = bytes(pending).split(b'\n', 1); pending[:] = tail; return line
+                            self.assertTrue(client_line().startswith(b'CSUP '))
+                            cc.sendall(b'CSUP ADBASE ADTIGR\n')
+                            client_inf = client_line()
+                            # An initiating ncdc may announce its hub referrer
+                            # with informational CSTA before client identity.
+                            for _ in range(4):
+                                if client_inf.startswith(b'CINF '): break
+                                self.assertTrue(client_inf.startswith(b'CSTA 000 '), client_inf)
+                                client_inf = client_line()
+                            self.assertTrue(client_inf.startswith(b'CINF '), client_inf)
+                            self.assertIn(b'ID' + public_cid(replacement_join), client_inf)
+                            self.assertIn(b'TO' + words[4], client_inf)
+                            cc.sendall(b'CINF ID' + pair(99)[1] + b'\n')
+                            self.assertTrue(client_line().startswith(b'CGET '))
+                    # Reverse direction: real ncdc receives RCM as active target,
+                    # emits CTM preserving the requested protocol and token.
+                    os.write(master, b'/hset active_ip 127.0.0.1\r/hset active_port 0\r/hset active_udp_port 0\r/hset active true\r')
+                    advertised = {}
+                    for _ in range(12):
+                        delta = observer.line()
+                        self.assertTrue(delta.startswith(b'BINF ' + replacement_sid + b' '), delta)
+                        for field in delta.split()[2:]: advertised[field[:2]] = field[2:]
+                        if b'TCP4' in advertised.get(b'SU', b'').split(b',') and advertised.get(b'I4') == b'127.0.0.1': break
+                    else: self.fail('ncdc did not become active for RCM')
+                    observer.send(b'BINF ' + observer.sid + b' SU')
+                    self.assertEqual(observer.line(), b'BINF ' + observer.sid + b' SU')
+                    token_rcm = b'RcmNcdcIncomingPrivate'
+                    observer.send(b'DRCM ' + observer.sid + b' ' + replacement_sid + b' ADC/1.0 ' + token_rcm)
+                    reply = observer.line().split()
+                    self.assertEqual(reply[:4], [b'DCTM', replacement_sid, observer.sid, b'ADC/1.0'])
+                    self.assertEqual(reply[5], token_rcm); self.assertTrue(1 <= int(reply[4]) <= 65535)
+                    with socket.create_connection(('127.0.0.1', int(reply[4])), timeout=3) as cc:
+                        cc.sendall(b'CSUP ADBASE ADTIGR\n'); pending = bytearray()
+                        def server_line():
+                            while b'\n' not in pending:
+                                chunk = cc.recv(16384); self.assertTrue(chunk, 'Active ncdc closed its RCM listener'); pending.extend(chunk)
+                            line, tail = bytes(pending).split(b'\n', 1); pending[:] = tail; return line
+                        self.assertTrue(server_line().startswith(b'CSUP '))
+                        cc.sendall(b'CINF ID' + pair(99)[1] + b' TO' + token_rcm + b'\n')
+                        self.assertTrue(server_line().startswith(b'CINF '))
+                    observer.send(b'BMSG ' + observer.sid + b' RcmNcdcHandshakeRecovery')
+                    self.assertEqual(observer.line(), b'BMSG ' + observer.sid + b' RcmNcdcHandshakeRecovery')
+                    wait_screen(b'RcmNcdcHandshakeRecovery')
+                    self.assertNotIn(token_rcm, hub.log)
                 if CTM_TEST:
                     os.write(master, b'/hset active_ip 127.0.0.1\r/hset active_port 0\r/hset active_udp_port 0\r/hset active true\r')
                     advertised = {}

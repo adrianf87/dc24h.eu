@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.6.2 LANGUAGES CXX)
+project(dc24h VERSION 0.6.3 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -66,7 +66,7 @@ target_include_directories(dc24h_transfers PUBLIC include)
 target_link_libraries(dc24h_transfers PUBLIC dc24h_users PRIVATE dc24h_text)
 
 add_library(dc24h_adc src/adc/parser.cpp src/adc/state.cpp src/adc/sup.cpp src/adc/sid.cpp src/adc/sid_session.cpp
-    src/adc/identity_hash.cpp src/adc/tiger_identity.cpp src/adc/inf.cpp src/adc/serializer.cpp src/adc/login.cpp src/adc/status.cpp src/adc/msg.cpp src/adc/sch.cpp src/adc/res.cpp src/adc/ctm.cpp src/adc/ctm_routing.cpp src/adc/result_routing.cpp src/adc/search_routing.cpp src/adc/msg_flags.cpp src/adc/chat_validation.cpp src/adc/public_chat.cpp src/adc/private_chat.cpp src/adc/message_routing.cpp src/adc/hub_messages.cpp src/adc/user.cpp src/adc/user_login.cpp src/adc/user_list.cpp src/adc/inf_updates.cpp src/adc/user_disconnect.cpp)
+    src/adc/identity_hash.cpp src/adc/tiger_identity.cpp src/adc/inf.cpp src/adc/serializer.cpp src/adc/login.cpp src/adc/status.cpp src/adc/msg.cpp src/adc/sch.cpp src/adc/res.cpp src/adc/ctm.cpp src/adc/ctm_routing.cpp src/adc/rcm.cpp src/adc/rcm_routing.cpp src/adc/result_routing.cpp src/adc/search_routing.cpp src/adc/msg_flags.cpp src/adc/chat_validation.cpp src/adc/public_chat.cpp src/adc/private_chat.cpp src/adc/message_routing.cpp src/adc/hub_messages.cpp src/adc/user.cpp src/adc/user_login.cpp src/adc/user_list.cpp src/adc/inf_updates.cpp src/adc/user_disconnect.cpp)
 target_compile_features(dc24h_adc PUBLIC cxx_std_20)
 set_target_properties(dc24h_adc PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_adc PUBLIC include)
@@ -224,6 +224,14 @@ if(BUILD_TESTING)
     add_test(NAME search.security.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/search_security_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(search.security search.security.process PROPERTIES TIMEOUT 60)
+    add_executable(adc_rcm_tests tests/adc_rcm_tests.cpp)
+    target_link_libraries(adc_rcm_tests PRIVATE dc24h_adc)
+    target_compile_options(adc_rcm_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(adc_rcm_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME adc.rcm COMMAND adc_rcm_tests)
+    add_test(NAME adc.rcm.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/adc_rcm_process_tests.py" "$<TARGET_FILE:dc24h>")
+    set_tests_properties(adc.rcm adc.rcm.process PROPERTIES TIMEOUT 45)
     add_executable(adc_ctm_tests tests/adc_ctm_tests.cpp)
     target_link_libraries(adc_ctm_tests PRIVATE dc24h_adc)
     target_compile_options(adc_ctm_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
@@ -716,6 +724,14 @@ if(BUILD_TESTING)
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
             "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>" --ctm --tls)
         set_tests_properties(adc.ctm.ncdc adcs.ctm.ncdc PROPERTIES TIMEOUT 45)
+        add_test(NAME adc.rcm.ncdc COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
+            "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>" --rcm)
+        add_test(NAME adcs.rcm.ncdc COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
+            "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>" --rcm --tls)
+        set_tests_properties(adc.rcm.ncdc adcs.rcm.ncdc PROPERTIES TIMEOUT 45)
+
 
 
     elseif(DC24H_REQUIRE_INTEGRATION_TESTS)

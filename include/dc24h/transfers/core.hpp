@@ -47,6 +47,7 @@ public:
     Core& operator=(Core&&) = delete;
     [[nodiscard]] std::optional<Error> validate_sender(users::SessionId sender, std::string_view source) const noexcept;
     [[nodiscard]] std::optional<users::AddressBytes> tcp_address(users::SessionId owner, AddressFamily family) const noexcept;
+    [[nodiscard]] std::optional<users::SessionId> resolve_target(std::string_view target) const noexcept;
     [[nodiscard]] bool owns(const Plan& plan) const noexcept { return plan.domain_ == domain_; }
     [[nodiscard]] Preparation prepare(users::SessionId sender, std::string_view source,
                                       std::string_view target, const RequestData& data) const;

@@ -67,7 +67,7 @@ class CtmProcessTests(unittest.TestCase):
                         source.send(wire); self.assertTrue(source.line().startswith(b'ISTA 100 Invalid\\sconnection\\srequest FC')); fence()
                     source.send(ctm(b'ECTM', recipient=b'ZZZZ')); self.assertEqual(source.line(), b'ISTA 140 CTM\\srecipient\\sunavailable FCECTM'); fence()
                     source.send(b'DRCM '+source.sid+b' '+target.sid+b' ADC/1.0 CtmSecret')
-                    self.assertEqual(source.line(), b'ISTA 125 Command\\snot\\simplemented FCDRCM'); fence()
+                    self.assertEqual(source.line(), b'ISTA 100 RCM\\srequires\\spassive\\ssender\\sand\\sactive\\srecipient FCDRCM'); fence()
                     after = fetch_status(endpoint, secret)
                     self.assertEqual(after['chat'], before['chat']); self.assertEqual(after['search'], before['search'])
                     self.assertNotIn('transfers', after)
