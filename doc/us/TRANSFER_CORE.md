@@ -1,5 +1,7 @@
 # Transfer Core — alpha-0.6.1
 
+**Current increment — alpha-0.6.2:** [ADC CTM](ADC_CTM.md) adds owning D/E CTM validation and live target/echo routing over Transfer Core, with checked source TCP activity, lifetime/endpoint rechecks, shared bounded queues and real ncdc client-handshake interoperability. Protocol/port/token/extensions retain their checked spelling and privacy. RCM and file-data handling remain later stages.
+
 **alpha-0.6.1 local validation (2026-11-13):** All **124/124 CTest suites** passed in Debug, Release and ASan/UBSan with required integration tools and default leak detection, including native Transfer Core faults/lifetimes, live ADC/ADCS boundaries, real ncdc file-list refusal/chat recovery, existing Search/UDP interoperability, MariaDB and Apache HTTPS. The final attempt-retention/moved-plan regression also passed again in Debug and Release. No compiler warnings. WebAdmin production build/typecheck, **12 Node tests**, **10 Chromium tests** and real C++ API integration passed. Metadata, UTF-8, language parity/local links, changed Python syntax, example INI and whitespace checks passed. Remote CI, the full OS/client matrix and production load remain unverified.
 
 Based directly on main `9e6d320bfebd4d95ec7da5d896f9ad71f8e33c16`, after alpha-0.5.13 was merged. The feature branch preserves previous code/history and is published separately; main is unchanged.

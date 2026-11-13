@@ -167,7 +167,9 @@ Search [search]: checked startup policy, count/byte quotas and token-window limi
 SCH routing and hub DRES are implemented; client-direct UDP is outside hub counters.
 The authenticated status API exposes aggregate search statistics and effective settings.
 Restart to apply search configuration; WebAdmin Search is read-only.
-Transfer Core models connection coordination; live CTM/RCM routing and file transfers remain planned.
+Transfer Core coordinates checked DCTM target / ECTM target+sender delivery.
+Only TCP-active sources may send CTM; peer protocol/port/token are preserved.
+RCM routing and file-data handling remain planned.
 Group chat remains planned.
 Database settings use [database] in INI; disabled by default.
 --check-database connects/pings; --migrate-database explicitly applies metadata migrations.

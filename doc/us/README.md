@@ -1,7 +1,8 @@
 # dc24h.eu documentation
 
-alpha-0.6.1: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.6.2: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
+- [ADC CTM — alpha-0.6.2](ADC_CTM.md)
 - [Transfer Core — alpha-0.6.1](TRANSFER_CORE.md)
 - [WebAdmin Search Monitoring — alpha-0.5.13](WEBADMIN_SEARCH.md)
 - [Search Configuration and Statistics — alpha-0.5.12](SEARCH_CONFIGURATION.md)
