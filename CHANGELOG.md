@@ -1,5 +1,16 @@
 # Changelog
 
+## alpha-0.5.13 — 2026-11-13
+
+WebAdmin Search Monitoring increment, based directly on main `dbd5f74dacdb409c073c99df805ff419975894d0` after the alpha-0.5.12 merge:
+
+- Added four observed interval-rate cards (queries, results, refused attempts and queued copies), a two-series traffic chart and accessible last-six-interval table above existing cumulative search metrics/settings. EN/US and PL, desktop/mobile, localized one-decimal estimates and an explicit paused-polling state are supported. Queue acceptance and direct client UDP boundaries remain explicit.
+- Added shared-hook bounded history of 30 owned, allowlisted aggregate observations using a monotonic browser clock. First samples show unavailable rates; idle intervals show zero. Sub-second refreshes retain the baseline, gaps over 15 seconds, version/uptime/cumulative counter resets and failed/missing/malformed API data start fresh windows. Gauge decreases do not reset rates. Superseded aborted requests cannot overwrite newer state. No invented gap data or cross-counter sum assumptions.
+- Added local observation clearing without server mutation; manual refresh and existing five-second automatic polling share one request path. History survives page/language navigation in memory and is discarded on reload. Cumulative snapshot export and server API/configuration contracts are unchanged. No query/result/identity history, persistent browser storage, extra endpoint, dependency or migration.
+- Added exact sampling/reset/boundary/ownership/retention tests, browser chart/table/refresh/pause/clear/export/recovery scenarios and real C++ socket traffic after a browser baseline to verify positive rates in React. Updated release metadata and mirrored US/PL documentation. Published as a separate feature branch; main remains unchanged.
+
+- Validation: Debug server build and all **120/120 CTest suites** passed with required integration tools, including real ncdc ADC/ADCS/UDP, MariaDB and Apache HTTPS. WebAdmin production build/typecheck, **12 Node tests**, **10 Chromium tests** and real C++ API-to-React integration with positive search rates passed. Desktop and mobile PL views were inspected. Metadata, UTF-8, language parity/local links, changed Python syntax, shipped INI and whitespace checks passed; no compiler warnings. This increment changes frontend monitoring and release metadata, with no C++ search algorithm/API change. Remote CI, the full OS/client matrix and production load remain unverified.
+
 ## alpha-0.5.12 — 2026-11-13
 
 Search Configuration and Statistics increment, created from main `c20b6d4bdbcf1b2fcdb7f2ded1f814988a37446a` and incorporating completed alpha-0.5.11 `a17009447b9375feca932be58ba39e555937931d` before this commit. Main remains unchanged.

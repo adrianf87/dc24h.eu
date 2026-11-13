@@ -33,6 +33,7 @@ import { duration, WEBADMIN_VERSION } from "./lib/status";
 import type { HubSnapshot } from "./lib/status";
 import { Metric } from "./components/Metric";
 import { SearchStatistics } from "./components/SearchStatistics";
+import { SearchMonitoring } from "./components/SearchMonitoring";
 import { ChatStatistics } from "./components/ChatStatistics";
 import { useHub } from "./lib/useHub";
 import type { Sample } from "./lib/useHub";
@@ -680,7 +681,10 @@ export default function App() {
               </div>
             </section>
           )}
-          {page === "search" && <SearchStatistics snapshot={snapshot} t={t} number={number} />}
+          {page === "search" && <>
+            <SearchMonitoring samples={hub.searchSamples} autoRefresh={autoRefresh} clear={hub.clearSearchSamples} t={t} locale={language === "pl" ? "pl-PL" : "en-US"} />
+            <SearchStatistics snapshot={snapshot} t={t} number={number} />
+          </>}
           {page === "chat" && (
             <ChatStatistics snapshot={snapshot} t={t} number={number} />
           )}

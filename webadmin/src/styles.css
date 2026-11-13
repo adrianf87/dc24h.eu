@@ -1468,3 +1468,29 @@ th {
 .search-setting dt { min-width: 0; font-size: 13px; }
 .search-setting code { display: block; font-size: 11px; color: #7a8396; overflow-wrap: anywhere; margin-top: 5px; }
 .search-setting dd { margin: 0; flex-shrink: 0; font-size: 14px; font-variant-numeric: tabular-nums; }
+
+.search-monitoring { margin-bottom: 28px; min-width: 0; }
+.search-monitoring .mini-label { display: block; font-size: 12px; line-height: 1.6; white-space: normal; max-width: 100%; }
+.search-monitoring .metrics-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.search-monitoring .metric-value { overflow-wrap: anywhere; }
+.search-activity { margin-top: 20px; min-width: 0; }
+.search-activity .card-heading { flex-wrap: wrap; gap: 16px; }
+.search-activity h3 { font-size: 16px; margin: 0; }
+.search-clear { border: 1px solid #dce2ed; background: white; color: #435fae; border-radius: 7px; padding: 9px 12px; font-size: 12px; }
+.search-clear:disabled { opacity: .55; cursor: default; }
+.search-clear:focus-visible, .search-observations summary:focus-visible { outline: 2px solid #5574eb; outline-offset: 3px; }
+.search-series-queries { stroke: #5574eb; fill: #5574eb; }
+.search-series-results { stroke: #008579; fill: #008579; }
+.search-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
+.search-legend .legend-dot { margin: 0; }
+.search-legend .results { background: #008579; }
+.search-activity .plot-footer { gap: 12px; flex-wrap: wrap; }
+.search-observations { padding: 0 24px 20px; font-size: 12px; }
+.search-observations summary { cursor: pointer; color: #435fae; padding: 8px 0; }
+.search-table-scroll { overflow-x: auto; max-width: 100%; }
+.search-observations table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.search-observations caption { text-align: left; color: #66758b; padding: 12px 0; }
+.search-observations th, .search-observations td { padding: 10px; text-align: right; border-bottom: 1px solid #e8ebf2; }
+.search-observations th { font-weight: 500; }
+@media (max-width: 1100px) { .search-monitoring .metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 480px) { .search-monitoring .metrics-grid { grid-template-columns: minmax(0, 1fr); } }

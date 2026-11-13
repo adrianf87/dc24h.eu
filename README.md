@@ -2,10 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.5.12 (Search Configuration and Statistics).**
+**Current development version: alpha-0.5.13 (WebAdmin Search Monitoring).**
 
 Completed increments (older bullets describe their original delivery scope):
 
+- **alpha-0.5.13 WebAdmin**: browser-local search traffic rates, a bounded chart and accessible interval table, with pause/manual refresh, local clear and restart/outage recovery. See [WebAdmin Search Monitoring](doc/us/WEBADMIN_SEARCH.md).
 - **alpha-0.5.12 Configuration**: 19 aggregate SCH/RES counters, tracked token windows and all 16 effective search settings in the authenticated read-only API and US/PL WebAdmin Search page. See [Search Configuration and Statistics](doc/us/SEARCH_CONFIGURATION.md).
 - **alpha-0.5.11 Search Security**: independent query/result/recipient count and byte quotas, bounded denials, guest/global permissions and trusted session grants, configurable active-search windows and optional strict result tokens. See [Search Security](doc/us/SEARCH_SECURITY.md).
 - **alpha-0.5.10 Active/Passive**: checked public endpoint projection, independent IPv4/IPv6 TCP/UDP modes and reply paths in Search Core/plans, dynamic INF transitions, passive hub fallback and actual ncdc UDP interoperability. See [Active/Passive](doc/us/ACTIVE_PASSIVE.md).
