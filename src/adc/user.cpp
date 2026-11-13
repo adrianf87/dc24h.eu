@@ -17,6 +17,10 @@ std::optional<users::User> user_from_info(const ClientInfo& info, Sid sid) {
     data.shared_bytes=info.integer("SS");
     data.shared_files=info.integer("SF");
     data.slots=info.integer("SL");
+    data.ipv4=info.field("I4").value_or("");
+    data.ipv6=info.field("I6").value_or("");
+    data.udp4_port=info.integer("U4");
+    data.udp6_port=info.integer("U6");
     auto features=info.field("SU").value_or("");
     while (!features.empty()) {
         const auto comma=features.find(',');

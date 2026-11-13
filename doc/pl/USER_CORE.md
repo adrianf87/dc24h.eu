@@ -1,5 +1,7 @@
 # User Core — alpha-0.3.5
 
+**Bieżący etap — alpha-0.5.10:** [Active/Passive](ACTIVE_PASSIVE.md) przenosi sprawdzone I4/I6/U4/U6 do publicznego modelu Users i dodaje metadane dróg odpowiedzi TCP/UDP dla każdej rodziny do Search Core oraz niezmiennych planów. Pasywne DRES nadal przechodzi przez hub, a aktywne URES bezpośrednio między klientami. Testowane są zmiany INF, własność adresów i rzeczywiste wysyłanie/odbieranie UDP przez ncdc.
+
 **Etap dostarczony w alpha-0.3.12:** [Limits](LIMITS.md) dodaje konfigurowalne limity sesji/użytkowników wspólne dla ADC/ADCS, ograniczone limitem połączeń. SessionManager transakcyjnie sprawdza pojemność; LoginHub odrzuca pełny rejestr przed przygotowaniem powitania/listy przez ISTA 211 i własne IQUI. Rezerwacje closing liczą się aż do sprzątania. Starsze opisy zachowują zakres historyczny.
 
 Etap bazuje na main `ba12aa3a96ea70e2b64ca3b11a519bd862e7f2f4`, po scaleniu alpha-0.3.4 Session Manager. Rozwija publiczny model gościa z alpha-0.3.3: sprawdzony typ nicku, wspólne reguły Unicode i jawną projekcję ADC. Manager nadal posiada zarejestrowane sesje i indeksy unikalności. Main i historyczne gałęzie są zachowane; ta gałąź nie scala się automatycznie.
