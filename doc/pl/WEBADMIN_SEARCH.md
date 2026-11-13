@@ -1,5 +1,7 @@
 # Monitoring wyszukiwań WebAdmin — alpha-0.5.13
 
+**Bieżący etap — alpha-0.6.1:** [Transfer Core](TRANSFER_CORE.md) dodaje niezależny silnik C++20 koordynacji połączeń: ograniczone własne żądania, role aktywne/pasywne IPv4/IPv6 i niezmienne plany jednej próby związane z sesjami, anulowaniem i ponownymi kontrolami. Wspólna klasyfikacja adresów Users zachowuje Search. Routing CTM/RCM i dane plików pozostają kolejnymi etapami.
+
 **Lokalna walidacja alpha-0.5.13 (2026-11-13):** Przeszły build serwera Debug i wszystkie **120/120 zestawów CTest** z wymaganymi narzędziami, w tym rzeczywistym ncdc ADC/ADCS/UDP, MariaDB i Apache HTTPS. Przeszły build/typecheck WebAdmin, **12 testów Node**, **10 testów Chromium** oraz integracja API C++ z React potwierdzająca dodatnie tempo wyszukiwań. Sprawdzono widoki desktop i telefon PL. Poprawne są metadane, UTF-8, zgodność języków/linków, składnia zmienionych plików Python, przykładowy INI i białe znaki; brak ostrzeżeń kompilatora. Etap zmienia monitoring w panelu i metadane wydania, bez zmiany algorytmu wyszukiwania/API C++. Zdalne CI, pełna macierz systemów/klientów i obciążenie produkcyjne nie zostały zweryfikowane.
 
 Etap powstał bezpośrednio z main `dbd5f74dacdb409c073c99df805ff419975894d0` po scaleniu alpha-0.5.12. Zachowano kod, historię i katalogi US/PL. Gałąź funkcji jest publikowana oddzielnie; main pozostaje bez zmian.

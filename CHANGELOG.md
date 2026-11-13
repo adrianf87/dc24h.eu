@@ -1,5 +1,17 @@
 # Changelog
 
+## alpha-0.6.1 — 2026-11-13
+
+Transfer Core increment, based directly on main `9e6d320bfebd4d95ec7da5d896f9ad71f8e33c16` after the alpha-0.5.13 merge:
+
+- Added independent dc24h_transfers C++20 library with immutable owning Request/RequestData for explicit connect/reverse and IPv4/IPv6 intent. Check native enums, connect ports 1..65535, absent reverse ports, required bounded NFC protocol/token text (32/128 bytes), invalid UTF-8/controls and byte limits before copies. Unknown protocol strings and opaque token content remain intact; Core neither authenticates tokens nor negotiates protocol/TLS support.
+- Added Core preparation bound to ready source/target lifetimes and exact public keys, with self-connection refusal, active/passive TCP roles and fixed owning listener-address snapshots. Plans share one dispatch attempt across copies and retain an engine-domain token to prevent foreign/address-reuse dispatch. Dispatch rechecks current sessions/connectivity/address before calling only the target queue sink. Cancel, replay/reentrancy, queue refusal and throwing-sink states are explicit; queued means coordination acceptance, not a peer handshake or file delivery. Preparation failure leaves sessions unchanged; dispatch/cancel allocate nothing after sink creation.
+- Moved existing usable numeric address classification into Users with public_address/tcp_active and a shared AddressFamily alias. Search preserves ReplyPaths/UDP semantics through the shared helper; Transfers has no Search dependency. No DNS, socket probing, arbitrary peer address trust or TCP/UDP conflation. ADC continues to establish public peer-address ownership.
+- Added native/fault/lifetime/role/connectivity tests and real ADC/ADCS process boundary tests. Actual ncdc requests a peer file list, sees the existing recoverable pending-handler diagnostic and keeps working chat. Live CTM/RCM remain explicitly unimplemented: no forwarding/echo/bystander leak, transfer payload logging/API/UI/counters or file handling. Pending token correlation/deadlines, wire adapters, security policy and actual negotiation remain later stages.
+- Updated server/WebAdmin release metadata, example INI, US/PL CLI help and mirrored Transfer Core/module/navigation/build/testing documentation. Existing history and runtime languages remain. No new dependency, configuration setting, endpoint or migration. Published separately from main.
+
+- Validation: All **124/124 CTest suites** passed in Debug, Release and ASan/UBSan with required integration tools and default leak detection, including native Transfer Core faults/lifetimes, live ADC/ADCS boundaries, real ncdc file-list refusal/chat recovery, existing Search/UDP interoperability, MariaDB and Apache HTTPS. The final attempt-retention/moved-plan regression also passed again in Debug and Release. No compiler warnings. WebAdmin production build/typecheck, **12 Node tests**, **10 Chromium tests** and real C++ API integration passed. Metadata, UTF-8, language parity/local links, changed Python syntax, example INI and whitespace checks passed. Remote CI, the full OS/client matrix and production load remain unverified.
+
 ## alpha-0.5.13 — 2026-11-13
 
 WebAdmin Search Monitoring increment, based directly on main `dbd5f74dacdb409c073c99df805ff419975894d0` after the alpha-0.5.12 merge:

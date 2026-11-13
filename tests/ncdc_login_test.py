@@ -28,6 +28,9 @@ MSG_CODEC = sys.argv.pop(1)
 ENCRYPTED = '--tls' in sys.argv
 if ENCRYPTED:
     sys.argv.remove('--tls')
+TRANSFER_CORE = '--transfer-core' in sys.argv
+if TRANSFER_CORE:
+    sys.argv.remove('--transfer-core')
 SEARCH_SECURITY = '--search-security' in sys.argv
 if SEARCH_SECURITY:
     sys.argv.remove('--search-security')
@@ -251,6 +254,15 @@ class NcdcLoginTest(unittest.TestCase):
                     self.assertNotEqual(initial[0].split()[1], initial[1].split()[1], 'Reconnect reused its ADC SID')
                     cids = [re.search(rb'(?:^| )ID([A-Z2-7]+)(?: |$)', line)[1] for line in initial]
                     self.assertEqual(cids[0], cids[1], 'Reconnect changed its public CID')
+                if TRANSFER_CORE:
+                    # ncdc requests a peer file list using CTM/RCM. The new Core
+                    # is not connected to wire handlers in this architecture stage.
+                    screen.clear()
+                    os.write(master, b'/browse ListObserver\r')
+                    wait_screen(b'Command not implemented')
+                    os.write(master, b'/open dc24h_login\r')
+                    os.write(master, b'dc24hTransferBoundaryRecovery\r')
+                    self.assertEqual(observer.line(), b'BMSG ' + replacement_sid + b' dc24hTransferBoundaryRecovery')
                 if FEATURE_SEARCH:
                     # A real indexed share lets ncdc prove that it processed the
                     # routed FSCH by producing a result that reaches its issuer.

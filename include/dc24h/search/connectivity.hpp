@@ -1,10 +1,10 @@
 #pragma once
 
-#include "dc24h/users/user.hpp"
+#include "dc24h/users/connectivity.hpp"
 #include <array>
 
 namespace dc24h::search {
-enum class AddressFamily { ipv4, ipv6 };
+using AddressFamily = users::AddressFamily;
 enum class ReplyRoute { hub, udp4, udp6 };
 struct UdpEndpoint {
     AddressFamily family;

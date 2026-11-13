@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.5.13 LANGUAGES CXX)
+project(dc24h VERSION 0.6.1 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -40,7 +40,7 @@ set_target_properties(dc24h_text PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_text PUBLIC include)
 target_link_libraries(dc24h_text PRIVATE UTF8Proc::UTF8Proc)
 
-add_library(dc24h_users src/users/session.cpp src/users/session_manager.cpp src/users/user.cpp
+add_library(dc24h_users src/users/session.cpp src/users/session_manager.cpp src/users/user.cpp src/users/connectivity.cpp
     src/users/nick_manager.cpp src/users/user_registry.cpp src/users/limits.cpp)
 target_compile_features(dc24h_users PUBLIC cxx_std_20)
 set_target_properties(dc24h_users PROPERTIES CXX_EXTENSIONS OFF)
@@ -58,6 +58,12 @@ target_compile_features(dc24h_search PUBLIC cxx_std_20)
 set_target_properties(dc24h_search PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_search PUBLIC include)
 target_link_libraries(dc24h_search PUBLIC dc24h_users PRIVATE dc24h_text UTF8Proc::UTF8Proc)
+
+add_library(dc24h_transfers src/transfers/request.cpp src/transfers/core.cpp)
+target_compile_features(dc24h_transfers PUBLIC cxx_std_20)
+set_target_properties(dc24h_transfers PROPERTIES CXX_EXTENSIONS OFF)
+target_include_directories(dc24h_transfers PUBLIC include)
+target_link_libraries(dc24h_transfers PUBLIC dc24h_users PRIVATE dc24h_text)
 
 add_library(dc24h_adc src/adc/parser.cpp src/adc/state.cpp src/adc/sup.cpp src/adc/sid.cpp src/adc/sid_session.cpp
     src/adc/identity_hash.cpp src/adc/tiger_identity.cpp src/adc/inf.cpp src/adc/serializer.cpp src/adc/login.cpp src/adc/status.cpp src/adc/msg.cpp src/adc/sch.cpp src/adc/res.cpp src/adc/result_routing.cpp src/adc/search_routing.cpp src/adc/msg_flags.cpp src/adc/chat_validation.cpp src/adc/public_chat.cpp src/adc/private_chat.cpp src/adc/message_routing.cpp src/adc/hub_messages.cpp src/adc/user.cpp src/adc/user_login.cpp src/adc/user_list.cpp src/adc/inf_updates.cpp src/adc/user_disconnect.cpp)
@@ -119,14 +125,14 @@ add_library(dc24h_core
 target_compile_features(dc24h_core PUBLIC cxx_std_20)
 set_target_properties(dc24h_core PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_core PUBLIC include "${CMAKE_CURRENT_BINARY_DIR}/generated")
-target_link_libraries(dc24h_core PUBLIC Threads::Threads dc24h_network dc24h_logging)
+target_link_libraries(dc24h_core PUBLIC Threads::Threads dc24h_network dc24h_logging dc24h_transfers)
 target_compile_definitions(dc24h_core PRIVATE _POSIX_C_SOURCE=200809L)
 
 add_executable(dc24h src/main.cpp)
 target_link_libraries(dc24h PRIVATE dc24h_core dc24h_configuration)
 set_target_properties(dc24h PROPERTIES CXX_EXTENSIONS OFF)
 
-foreach(target dc24h_text dc24h_search dc24h_chat dc24h_users dc24h_i18n dc24h_core dc24h_network dc24h_logging dc24h_adc dc24h_adcs dc24h_security dc24h_configuration dc24h_database dc24h_api dc24h)
+foreach(target dc24h_transfers dc24h_text dc24h_search dc24h_chat dc24h_users dc24h_i18n dc24h_core dc24h_network dc24h_logging dc24h_adc dc24h_adcs dc24h_security dc24h_configuration dc24h_database dc24h_api dc24h)
     target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 endforeach()
 
@@ -218,6 +224,14 @@ if(BUILD_TESTING)
     add_test(NAME search.security.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/search_security_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(search.security search.security.process PROPERTIES TIMEOUT 60)
+    add_executable(transfer_core_tests tests/transfer_core_tests.cpp)
+    target_link_libraries(transfer_core_tests PRIVATE dc24h_transfers dc24h_search)
+    target_compile_options(transfer_core_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(transfer_core_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME transfers.core COMMAND transfer_core_tests)
+    add_test(NAME transfers.core.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/transfer_core_process_tests.py" "$<TARGET_FILE:dc24h>")
+    set_tests_properties(transfers.core transfers.core.process PROPERTIES TIMEOUT 45)
     add_executable(search_statistics_tests tests/search_statistics_tests.cpp)
     target_link_libraries(search_statistics_tests PRIVATE dc24h_adc)
     target_compile_options(search_statistics_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
@@ -680,6 +694,14 @@ if(BUILD_TESTING)
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
             "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>" --search-security --tls)
         set_tests_properties(adc.searchsecurity.ncdc adcs.searchsecurity.ncdc PROPERTIES TIMEOUT 45)
+        add_test(NAME adc.transfercore.ncdc COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
+            "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>" --transfer-core)
+        add_test(NAME adcs.transfercore.ncdc COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
+            "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>" --transfer-core --tls)
+        set_tests_properties(adc.transfercore.ncdc adcs.transfercore.ncdc PROPERTIES TIMEOUT 45)
+
     elseif(DC24H_REQUIRE_INTEGRATION_TESTS)
         message(FATAL_ERROR "Required ncdc not found: adc.ncdc and adcs.ncdc smoke tests are unavailable")
     else()
