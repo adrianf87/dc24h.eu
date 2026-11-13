@@ -1,5 +1,17 @@
 # Changelog
 
+## alpha-0.6.6 — 2026-11-13
+
+Client Capabilities increment, based directly on main `1aacfbd1008b66a747b81c168714ccad36b4274d` after Protocol Negotiation:
+
+- Added fixed-size owning ClientCapabilities snapshots for independently active/passive TCP IPv4/IPv6 paths and advisory ADC/ADCS peer protocols. Exact public SU TCP4/TCP6 plus a usable numeric address grant listener activity; UDP ports/features, legacy ADC0, SUP and hub TLS do not. Core exposes snapshots only for ready session lifetimes; retained snapshots survive profile changes without allocation or borrowed state.
+- Added shared connection_address and select_connection helpers. Explicit command selection preserves CTM/RCM and prefers IPv4 then IPv6; a separate trusted-originator helper prefers CTM on either active family, then eligible RCM, and refuses passive/passive. Invalid native kinds/families have no path. Existing protocol negotiation remains independent and required ADCS cannot silently downgrade.
+- Unified live Connection Router admission and Transfer Core preparation/dispatch around the same capability rules. Existing source/state/error precedence, listener/address rechecks, immutable one-attempt plans, D/E audience, explicit protocol/port/token bytes and queue behavior remain. Live accepted INF changes affect new requests; an old selected path cannot silently migrate families when its listener disappears or an RCM source becomes active. Family selection remains admission metadata, not an outbound reachability claim.
+- Added transfers.capabilities with all 32×32 TCP4/TCP6/UDP4/UDP6/ADCS pairs, per-family command roles, originator ordering, invalid enums/addresses, snapshot ownership, readiness, no-allocation checks and stale/fresh plans. Added transfers.capabilities.process over IPv4/IPv6 and mixed ADC/ADCS with both scopes/directions/commands, fragmented headers, SU cancellation, address removal/restoration, privacy and recovery. Four new real ncdc suites switch passive→active→passive→active without reconnecting, verify a private passive/passive RCM refusal, restore RCM→CTM and complete actual plaintext or certificate-checked TLS peer handshakes on both hub transports.
+- Updated server/WebAdmin versions, fixtures, example INI, EN/US and PL CLI help, mirrored Client Capabilities documentation and module navigation. No new dependency, configuration key, permission policy, SQL migration, endpoint, metric/page, pending-token registry, passive relay, NAT traversal or server-side peer/file handling. Published separately from main with history preserved.
+
+- Validation: All **147/147 CTest tests** passed in each of Debug, Release and ASan/UBSan with required integration tools and default leak detection, including all four new real ncdc mode-transition suites, existing TLS/plaintext peer handshakes, Search/UDP, MariaDB and Apache HTTPS. No compiler warnings. WebAdmin build/typecheck, **12 Node tests**, **10 Chromium tests** and real C++ API integration passed. Release metadata, UTF-8, mirrored language files/local links, changed Python syntax, example INI and whitespace checks passed. Full supported OS coverage and production load remain unverified. GitHub Actions completion is not awaited, as requested.
+
 ## alpha-0.6.5 — 2026-11-13
 
 Protocol Negotiation increment, based directly on main `9a041df4a65090580f5b009acdcd6758cadbf1dd`, including the alpha-0.6.4 terminal-backpressure CI repair:

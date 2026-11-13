@@ -13,23 +13,21 @@ std::optional<Error> Core::validate_sender(users::SessionId sender, std::string_
     return {};
 }
 std::optional<users::AddressBytes> Core::tcp_address(users::SessionId owner, AddressFamily family) const noexcept {
+    const auto snapshot = capabilities(owner);
+    return snapshot ? snapshot->listener(family) : std::nullopt;
+}
+std::optional<ClientCapabilities> Core::capabilities(users::SessionId owner) const noexcept {
     const auto* model = sessions_.find(owner);
-    if (!model || !model->ready() || !model->user() || !users::tcp_active(model->user()->profile(), family)) { return {}; }
-    return users::public_address(model->user()->profile(), family);
+    if (!model || !model->ready() || !model->user()) { return {}; }
+    return client_capabilities(model->user()->profile());
 }
 std::optional<users::SessionId> Core::resolve_target(std::string_view target) const noexcept {
     const auto* model = sessions_.by_sid(target);
     return model && model->ready() && model->user() ? std::optional{model->id()} : std::nullopt;
 }
 std::optional<users::AddressBytes> Core::address(const users::Session& sender, const users::Session& target, const Request& request) const noexcept {
-    const auto& origin = sender.user()->profile();
-    const auto& recipient = target.user()->profile();
-    if (request.kind() == Kind::connect_to_me) {
-        if (!users::tcp_active(origin, request.family())) { return {}; }
-        return users::public_address(origin, request.family());
-    }
-    if (users::tcp_active(origin, request.family()) || !users::tcp_active(recipient, request.family())) { return {}; }
-    return users::public_address(recipient, request.family());
+    return connection_address(client_capabilities(sender.user()->profile()), client_capabilities(target.user()->profile()),
+        request.kind(), request.family());
 }
 Preparation Core::prepare(users::SessionId sender, std::string_view source, std::string_view target, const RequestData& data) const {
     if (const auto error = validate_sender(sender, source)) { return *error; }

@@ -29,12 +29,10 @@ ConnectionPreparation ConnectionRouter::prepare(users::SessionId sender, const M
         auto checked = validate_ctm(message);
         const auto* request = std::get_if<CtmRequest>(&checked);
         if (!request) { return ConnectionRoutingError::invalid_message; }
-        auto family = transfers::AddressFamily::ipv4;
-        if (!core_.tcp_address(sender, family)) {
-            family = transfers::AddressFamily::ipv6;
-            if (!core_.tcp_address(sender, family)) { return ConnectionRoutingError::inactive_sender; }
-        }
-        const transfers::RequestData data{transfers::Kind::connect_to_me, family, request->protocol(), request->port(), request->token()};
+        const auto source = core_.capabilities(sender);
+        const auto path = transfers::select_connection(*source, {}, transfers::Kind::connect_to_me);
+        if (!path) { return ConnectionRoutingError::inactive_sender; }
+        const transfers::RequestData data{transfers::Kind::connect_to_me, path->family, request->protocol(), request->port(), request->token()};
         return admit(sender, request->message(), data);
     }
     if (message.kind == Command::rcm) {
@@ -44,13 +42,10 @@ ConnectionPreparation ConnectionRouter::prepare(users::SessionId sender, const M
         const auto target = core_.resolve_target(*message.target);
         if (!target) { return ConnectionRoutingError::recipient_unavailable; }
         if (*target == sender) { return ConnectionRoutingError::invalid_message; }
-        auto family = transfers::AddressFamily::ipv4;
-        const auto eligible = [&](auto f) { return !core_.tcp_address(sender, f) && core_.tcp_address(*target, f).has_value(); };
-        if (!eligible(family)) {
-            family = transfers::AddressFamily::ipv6;
-            if (!eligible(family)) { return ConnectionRoutingError::incompatible_connectivity; }
-        }
-        const transfers::RequestData data{transfers::Kind::reverse_connect, family, request->protocol(), std::nullopt, request->token()};
+        const auto source = core_.capabilities(sender), recipient = core_.capabilities(*target);
+        const auto path = transfers::select_connection(*source, *recipient, transfers::Kind::reverse_connect);
+        if (!path) { return ConnectionRoutingError::incompatible_connectivity; }
+        const transfers::RequestData data{transfers::Kind::reverse_connect, path->family, request->protocol(), std::nullopt, request->token()};
         return admit(sender, request->message(), data);
     }
     return ConnectionRoutingError::invalid_message;

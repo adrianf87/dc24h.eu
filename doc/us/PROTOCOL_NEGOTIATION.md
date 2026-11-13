@@ -1,5 +1,7 @@
 # Protocol Negotiation — alpha-0.6.5
 
+**Current increment — alpha-0.6.6:** [Client Capabilities](CLIENT_CAPABILITIES.md) unifies owning IPv4/IPv6 TCP modes and advisory peer protocols. Shared explicit CTM/RCM selection preserves wire intent; a separate trusted-originator helper chooses CTM or RCM and refuses passive/passive. Live INF changes, stale-plan rechecks and real ncdc mode transitions are covered.
+
 **alpha-0.6.5 local validation (2026-11-13):** All **141/141 CTest tests** passed in each of Debug, Release and ASan/UBSan with required integration tools and default leak detection. Coverage includes protocol selection/ownership/faults, explicit known/extension routing, fragmented IPv4/IPv6 mixed ADC/ADCS peer failures, four certificate-checked real ncdc TLS peer suites, earlier plaintext and terminal-pressure ncdc, Search/UDP, MariaDB and Apache HTTPS. All 11 active ncdc scenarios also passed three consecutive ASan/UBSan runs (33 passes) with reserved ports. No compiler warnings. WebAdmin build/typecheck, **12 Node tests**, **10 Chromium tests** and real C++ API integration passed. Metadata, UTF-8, language parity/local links, changed Python syntax, example INI and whitespace checks passed. The full Debian/Ubuntu support matrix and production load remain unverified; remote CI results are reported separately by GitHub Actions.
 
 This increment starts from main `9a041df4a65090580f5b009acdcd6758cadbf1dd`, including the alpha-0.6.4 CI repair. The feature branch preserves history and is published separately from main.

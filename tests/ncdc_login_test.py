@@ -39,6 +39,10 @@ if TERMINAL_PRESSURE:
 RCM_TEST = '--rcm' in sys.argv
 if RCM_TEST:
     sys.argv.remove('--rcm')
+CLIENT_CAPABILITIES = '--client-capabilities' in sys.argv
+if CLIENT_CAPABILITIES:
+    sys.argv.remove('--client-capabilities')
+RCM_TEST = RCM_TEST or CLIENT_CAPABILITIES
 CTM_TEST = '--ctm' in sys.argv
 if CTM_TEST:
     sys.argv.remove('--ctm')
@@ -598,6 +602,45 @@ class NcdcLoginTest(unittest.TestCase):
                     self.assertEqual(observer_line(), b'BMSG ' + observer.sid + b' RcmNcdcHandshakeRecovery')
                     wait_screen(b'RcmNcdcHandshakeRecovery')
                     self.assertNotIn(token_rcm, hub.log)
+                if CLIENT_CAPABILITIES:
+                    # Change the real client's live mode without reconnecting.
+                    # Both peers passive must yield a private recoverable refusal.
+                    os.write(master, b'/hset active false\r')
+                    for _ in range(12):
+                        delta = observer_line()
+                        self.assertTrue(delta.startswith(b'BINF ' + replacement_sid + b' '), delta)
+                        declared = next((field[2:].split(b',') for field in delta.split()[2:] if field.startswith(b'SU')), None)
+                        if declared is not None and b'TCP4' not in declared:
+                            break
+                    else:
+                        self.fail('ncdc did not cancel its TCP4 declaration')
+                    denied = b'DRCM ' + observer.sid + b' ' + replacement_sid + b' ' + PEER_PROTOCOL + b' CapabilityNcdcPrivate'
+                    observer.send(denied)
+                    self.assertEqual(observer_line(), b'ISTA 100 RCM\\srequires\\spassive\\ssender\\sand\\sactive\\srecipient FCDRCM')
+                    _, active_tcp_port = activate_ncdc()
+                    observer.send(denied)
+                    reply = observer_line().split()
+                    self.assertEqual(reply[:4], [b'DCTM', replacement_sid, observer.sid, PEER_PROTOCOL])
+                    self.assertEqual(int(reply[4]), active_tcp_port)
+                    self.assertEqual(reply[5], b'CapabilityNcdcPrivate')
+                    with peer_connect(active_tcp_port) as cc:
+                        cc.sendall(b'CSUP ADBASE ADTIGR\n')
+                        pending = bytearray()
+                        def capability_line():
+                            while b'\n' not in pending:
+                                chunk = cc.recv(16384)
+                                self.assertTrue(chunk, 'Reactivated ncdc closed its listener')
+                                pending.extend(chunk)
+                            line, tail = bytes(pending).split(b'\n', 1)
+                            pending[:] = tail
+                            return line
+                        self.assertTrue(capability_line().startswith(b'CSUP '))
+                        cc.sendall(b'CINF ID' + pair(99)[1] + b' TOCapabilityNcdcPrivate\n')
+                        self.assertTrue(capability_line().startswith(b'CINF '))
+                    observer.send(b'BMSG ' + observer.sid + b' CapabilityNcdcRecovery')
+                    self.assertEqual(observer_line(), b'BMSG ' + observer.sid + b' CapabilityNcdcRecovery')
+                    wait_screen(b'CapabilityNcdcRecovery')
+                    self.assertNotIn(b'CapabilityNcdcPrivate', hub.log)
                 if CTM_TEST:
                     _, active_tcp_port = activate_ncdc()
                     os.write(master, b'/open dc24h_login\r/browse ListObserver\r')
