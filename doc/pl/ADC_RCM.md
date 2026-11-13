@@ -1,5 +1,7 @@
 # ADC RCM — alpha-0.6.3
 
+**Bieżący etap — alpha-0.6.4:** [Connection Routing](CONNECTION_ROUTING.md) łączy przyjmowanie i dostarczanie D/E CTM oraz RCM we wspólnym routerze SID, jednym typie niezmiennego pakietu i jednej ścieżce ograniczonych kolejek. Odbiorcami są ustalone okresy życia gotowych sesji: D tylko cel, E cel i niezależne echo źródła. Token nie wybiera odbiorców; zachowano role, walidację, błędy i prywatność. Testy równoległych par używają tego samego tokenu bez mieszania odbiorców.
+
 **Lokalna walidacja alpha-0.6.3 (2026-11-13):** Wszystkie **132/132 zestawy CTest** przeszły w Debug, Release i ASan/UBSan z wymaganymi narzędziami i domyślnym wykrywaniem wycieków, w tym błędy/kolejki/czasy życia RCM, fragmentowane IPv4/IPv6 ADC/ADCS, rzeczywisty ncdc RCM→CTM i handshake obu ról, wcześniejsze CTM/Search/UDP, MariaDB i Apache HTTPS. Brak ostrzeżeń kompilatora. Przeszły build/typecheck WebAdmin, **12 testów Node**, **10 testów Chromium** i integracja API C++. Poprawne są metadane, UTF-8, języki/linki, składnia zmienionych plików Python, INI i białe znaki. Zdalne CI, pełna macierz systemów/klientów i obciążenie pozostają niesprawdzone.
 
 Etap powstał bezpośrednio z main `4f86b20c407047ae89c537e2c77b7dad7d833633` po scaleniu ADC CTM. Zachowano kod/historię; gałąź jest publikowana oddzielnie od main.

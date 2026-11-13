@@ -170,6 +170,7 @@ Restart to apply search configuration; WebAdmin Search is read-only.
 Transfer Core coordinates checked DCTM target / ECTM target+sender delivery.
 Only TCP-active sources may send CTM; peer protocol/port/token are preserved.
 RCM routes passive requests to active TCP peers, with D target / E target+sender delivery.
+One Connection Router selects CTM/RCM recipients by ready SID lifetime, never by token.
 Peers preserve protocol/token in CTM replies; the hub never supplies their listener port.
 Pending negotiation correlation and file-data handling remain planned.
 Group chat remains planned.

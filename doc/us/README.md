@@ -1,7 +1,8 @@
 # dc24h.eu documentation
 
-alpha-0.6.3: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.6.4: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
+- [Connection Routing — alpha-0.6.4](CONNECTION_ROUTING.md)
 - [ADC RCM — alpha-0.6.3](ADC_RCM.md)
 - [ADC CTM — alpha-0.6.2](ADC_CTM.md)
 - [Transfer Core — alpha-0.6.1](TRANSFER_CORE.md)
