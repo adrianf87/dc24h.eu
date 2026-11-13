@@ -1,5 +1,7 @@
 # dc24h.eu technical documentation
 
+[ADC CTM — alpha-0.6.2](us/ADC_CTM.md) · [PL](pl/ADC_CTM.md)
+
 [Transfer Core — alpha-0.6.1](us/TRANSFER_CORE.md) · [PL](pl/TRANSFER_CORE.md)
 
 [WebAdmin Search Monitoring — alpha-0.5.13](us/WEBADMIN_SEARCH.md) · [PL](pl/WEBADMIN_SEARCH.md)
@@ -16,7 +18,7 @@
 
 [Feature Routing / routing funkcji — alpha-0.5.7](us/FEATURE_ROUTING.md) · [PL](pl/FEATURE_ROUTING.md)
 
-Current development version: alpha-0.6.1. Default language: EN/US UTF-8.
+Current development version: alpha-0.6.2. Default language: EN/US UTF-8.
 
 - [English (US)](us/README.md)
 - [Polski](pl/README.md)

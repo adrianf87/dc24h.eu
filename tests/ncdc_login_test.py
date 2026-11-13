@@ -28,6 +28,9 @@ MSG_CODEC = sys.argv.pop(1)
 ENCRYPTED = '--tls' in sys.argv
 if ENCRYPTED:
     sys.argv.remove('--tls')
+CTM_TEST = '--ctm' in sys.argv
+if CTM_TEST:
+    sys.argv.remove('--ctm')
 TRANSFER_CORE = '--transfer-core' in sys.argv
 if TRANSFER_CORE:
     sys.argv.remove('--transfer-core')
@@ -419,6 +422,42 @@ class NcdcLoginTest(unittest.TestCase):
                         wait_screen(b'ActivePassiveNcdcSecretUdpProbe.zip')
                         os.write(master, b'\x1b2')
                         self.assertNotIn(b'ActivePassiveNcdcSecretUdpProbe', replies)
+                if CTM_TEST:
+                    os.write(master, b'/hset active_ip 127.0.0.1\r/hset active_port 0\r/hset active_udp_port 0\r/hset active true\r')
+                    advertised = {}
+                    for _ in range(12):
+                        delta = observer.line()
+                        self.assertTrue(delta.startswith(b'BINF ' + replacement_sid + b' '), delta)
+                        for field in delta.split()[2:]: advertised[field[:2]] = field[2:]
+                        if b'TCP4' in advertised.get(b'SU', b'').split(b',') and advertised.get(b'I4') == b'127.0.0.1': break
+                    else: self.fail('ncdc did not become TCP active')
+                    os.write(master, b'/open dc24h_login\r/browse ListObserver\r')
+                    offer = observer.line()
+                    self.assertTrue(offer.startswith(b'DCTM ' + replacement_sid + b' ' + observer.sid + b' '), offer)
+                    words = offer.split(); self.assertEqual(words[3], b'ADC/1.0')
+                    self.assertTrue(1 <= int(words[4]) <= 65535); self.assertTrue(words[5])
+                    # Use the hub-forwarded listener and token in an actual peer
+                    # handshake. The hub never opens this connection or sees CINF.
+                    with socket.create_connection(('127.0.0.1', int(words[4])), timeout=3) as cc:
+                        cc.sendall(b'CSUP ADBASE ADTIGR\n')
+                        pending = bytearray()
+                        def cc_line():
+                            while b'\n' not in pending:
+                                chunk = cc.recv(16384); self.assertTrue(chunk, 'ncdc closed its CTM listener'); pending.extend(chunk)
+                            line, tail = bytes(pending).split(b'\n', 1); pending[:] = tail; return line
+                        self.assertTrue(cc_line().startswith(b'CSUP '))
+                        cc.sendall(b'CINF ID' + pair(99)[1] + b' TO' + words[5] + b'\n')
+                        peer_inf = cc_line()
+                        self.assertTrue(peer_inf.startswith(b'CINF '), peer_inf)
+                        self.assertIn(b'ID' + public_cid(replacement_join), peer_inf)
+                        request = cc_line()
+                        self.assertTrue(request.startswith(b'CGET '), request)
+                    observer.send(b'BMSG ' + observer.sid + b' CtmNcdcHandshakeRecovery')
+                    self.assertEqual(observer.line(), b'BMSG ' + observer.sid + b' CtmNcdcHandshakeRecovery')
+                    wait_screen(b'CtmNcdcHandshakeRecovery')
+                    if not ENCRYPTED:
+                        wait_capture(wire, offer+b'\n'); self.assertIn(offer+b'\n', wire)
+                    self.assertNotIn(b'CINF ID', hub.log)
                 os.write(master, b'/quit\r')
                 deadline = time.monotonic() + 4
                 while process.poll() is None and time.monotonic() < deadline:

@@ -13,6 +13,7 @@
 #include "dc24h/chat/statistics.hpp"
 #include "dc24h/adc/search_routing.hpp"
 #include "dc24h/adc/result_routing.hpp"
+#include "dc24h/adc/ctm_routing.hpp"
 #include "dc24h/search/security.hpp"
 #include "dc24h/search/statistics.hpp"
 
@@ -101,6 +102,7 @@ private:
     bool admit_search(Peer& peer, const Message& message, search::Operation operation, users::TimePoint now, search::Attempt& attempt);
     void receive_result(Id id, const Message& message, users::TimePoint now, search::Attempt& attempt);
     void receive_search(Id id, const Message& message, users::TimePoint now, search::Attempt& attempt);
+    void receive_ctm(Id id, const Message& message);
     void route_status(Id id, const Message& message);
     void route_chat(Id id, const Message& message, chat::Attempt& attempt);
     void relay(Id except, const Message& message);
@@ -111,6 +113,8 @@ private:
     search::Core search_;
     SearchRouter search_router_;
     ResultRouter result_router_;
+    transfers::Core transfers_;
+    CtmRouter ctm_router_;
     chat::Core chat_;
     MessageRouter message_router_;
     HubMessages hub_messages_;

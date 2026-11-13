@@ -1,6 +1,8 @@
 # WebAdmin Search Monitoring — alpha-0.5.13
 
-**Current increment — alpha-0.6.1:** [Transfer Core](TRANSFER_CORE.md) adds an independent C++20 connection-coordination engine: bounded owning intents, active/passive IPv4/IPv6 roles and immutable session-bound one-attempt plans with cancellation and dispatch rechecks. Shared Users address classification preserves Search behavior. Live CTM/RCM routing and file data transfer remain future work.
+**Current increment — alpha-0.6.2:** [ADC CTM](ADC_CTM.md) adds owning D/E CTM validation and live target/echo routing over Transfer Core, with checked source TCP activity, lifetime/endpoint rechecks, shared bounded queues and real ncdc client-handshake interoperability. Protocol/port/token/extensions retain their checked spelling and privacy. RCM and file-data handling remain later stages.
+
+**Increment delivered in alpha-0.6.1:** [Transfer Core](TRANSFER_CORE.md) adds an independent C++20 connection-coordination engine: bounded owning intents, active/passive IPv4/IPv6 roles and immutable session-bound one-attempt plans with cancellation and dispatch rechecks. Shared Users address classification preserves Search behavior. Live CTM/RCM routing and file data transfer remain future work.
 
 **alpha-0.5.13 local validation (2026-11-13):** Debug server build and all **120/120 CTest suites** passed with required integration tools, including real ncdc ADC/ADCS/UDP, MariaDB and Apache HTTPS. WebAdmin production build/typecheck, **12 Node tests**, **10 Chromium tests** and real C++ API-to-React integration with positive search rates passed. Desktop and mobile PL views were inspected. Metadata, UTF-8, language parity/local links, changed Python syntax, shipped INI and whitespace checks passed; no compiler warnings. This increment changes frontend monitoring and release metadata, with no C++ search algorithm/API change. Remote CI, the full OS/client matrix and production load remain unverified.
 

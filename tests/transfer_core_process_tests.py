@@ -1,4 +1,4 @@
-"""Transfer Core remains independent: live CTM/RCM fail closed without payload routing."""
+"""Transfer Core regression: passive CTM fails validation; RCM remains staged."""
 import json
 import pathlib
 import tempfile
@@ -29,7 +29,8 @@ class TransferCoreProcessTests(unittest.TestCase):
                     frame = kind + b' ' + source.sid + b' ' + target.sid + b' ADC/1.0 '
                     if kind.endswith(b'CTM'): frame += b'1515 '
                     source.send(frame + b'CoordinationPrivateToken')
-                    self.assertEqual(source.line(), b'ISTA 125 Command\\snot\\simplemented FC' + kind)
+                    expected = (b'ISTA 100 CTM\\ssender\\sis\\snot\\sTCP\\sactive FC' if kind.endswith(b'CTM') else b'ISTA 125 Command\\snot\\simplemented FC')
+                    self.assertEqual(source.line(), expected + kind)
                     fence = b'BINF ' + source.sid + b' DETransferFence'
                     source.send(fence)
                     for peer in (source, target, bystander): self.assertEqual(peer.line(), fence)

@@ -12,6 +12,11 @@ std::optional<Error> Core::validate_sender(users::SessionId sender, std::string_
     if (model->identity()->sid() != source) { return Error::wrong_source; }
     return {};
 }
+std::optional<users::AddressBytes> Core::tcp_address(users::SessionId owner, AddressFamily family) const noexcept {
+    const auto* model = sessions_.find(owner);
+    if (!model || !model->ready() || !model->user() || !users::tcp_active(model->user()->profile(), family)) { return {}; }
+    return users::public_address(model->user()->profile(), family);
+}
 std::optional<users::AddressBytes> Core::address(const users::Session& sender, const users::Session& target, const Request& request) const noexcept {
     const auto& origin = sender.user()->profile();
     const auto& recipient = target.user()->profile();

@@ -1,5 +1,7 @@
 # Transfer Core — alpha-0.6.1
 
+**Bieżący etap — alpha-0.6.2:** [ADC CTM](ADC_CTM.md) dodaje własną walidację D/E CTM i rzeczywisty routing celu/echa przez Transfer Core, z kontrolą aktywności TCP źródła, życia/adresu, wspólnymi ograniczonymi kolejkami i handshake rzeczywistego ncdc. Protokół/port/token/rozszerzenia zachowują sprawdzony zapis i prywatność. RCM i dane plików pozostają kolejnymi etapami.
+
 **Lokalna walidacja alpha-0.6.1 (2026-11-13):** Wszystkie **124/124 zestawy CTest** przeszły w Debug, Release i ASan/UBSan z wymaganymi narzędziami i domyślnym wykrywaniem wycieków, w tym błędy/czasy życia Transfer Core, granice ADC/ADCS, rzeczywista odmowa listy plików ncdc i działający po niej czat, dotychczasowe Search/UDP, MariaDB i Apache HTTPS. Końcowy test zachowania próby i przenoszenia planu ponownie przeszedł w Debug i Release. Brak ostrzeżeń kompilatora. Przeszły build/typecheck WebAdmin, **12 testów Node**, **10 testów Chromium** i integracja API C++. Poprawne są metadane, UTF-8, języki/linki dokumentacji, składnia zmienionych plików Python, INI i białe znaki. Zdalne CI, pełna macierz systemów/klientów i obciążenie produkcyjne pozostają niesprawdzone.
 
 Etap powstał bezpośrednio z main `9e6d320bfebd4d95ec7da5d896f9ad71f8e33c16` po scaleniu alpha-0.5.13. Gałąź zachowuje wcześniejszy kod/historię i jest publikowana oddzielnie; main pozostaje bez zmian.

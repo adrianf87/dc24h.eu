@@ -2,10 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.6.1 (Transfer Core).**
+**Current development version: alpha-0.6.2 (ADC CTM).**
 
 Completed increments (older bullets describe their original delivery scope):
 
+- **alpha-0.6.2 ADC CTM**: owning Connect To Me validation and live DCTM target / ECTM target+source routing through Transfer Core, with active-source checks, shared bounded queues and real ncdc peer handshakes. See [ADC CTM](doc/us/ADC_CTM.md).
 - **alpha-0.6.1 Transfer Core**: independent checked connection intents, IPv4/IPv6 active/passive roles and lifetime-bound one-attempt plans with cancel/revalidation. Live CTM/RCM and file transfers remain future stages. See [Transfer Core](doc/us/TRANSFER_CORE.md).
 - **alpha-0.5.13 WebAdmin**: browser-local search traffic rates, a bounded chart and accessible interval table, with pause/manual refresh, local clear and restart/outage recovery. See [WebAdmin Search Monitoring](doc/us/WEBADMIN_SEARCH.md).
 - **alpha-0.5.12 Configuration**: 19 aggregate SCH/RES counters, tracked token windows and all 16 effective search settings in the authenticated read-only API and US/PL WebAdmin Search page. See [Search Configuration and Statistics](doc/us/SEARCH_CONFIGURATION.md).
