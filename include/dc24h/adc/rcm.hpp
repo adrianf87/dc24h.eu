@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dc24h/adc/parser.hpp"
+#include "dc24h/transfers/protocol.hpp"
 
 namespace dc24h::adc {
 inline constexpr std::size_t max_rcm_bytes = 2048;
@@ -10,6 +11,7 @@ class RcmRequest final {
 public:
     [[nodiscard]] const Message& message() const noexcept { return message_; }
     [[nodiscard]] const std::string& protocol() const noexcept { return message_.parameters[0]; }
+    [[nodiscard]] transfers::ProtocolKind protocol_kind() const noexcept { return transfers::classify_protocol(protocol()); }
     [[nodiscard]] const std::string& token() const noexcept { return message_.parameters[1]; }
 private:
     friend std::variant<RcmRequest, RcmError> validate_rcm(const Message& message);

@@ -1,5 +1,6 @@
 #include "dc24h/adc/status.hpp"
 #include "dc24h/adc/serializer.hpp"
+#include "connection_fields.hpp"
 
 #include <arpa/inet.h>
 #include <algorithm>
@@ -62,7 +63,15 @@ std::variant<StatusView, StatusError> validate_status(const Message& message) {
             const auto time = parse_integer(field.value);
             if (!time || *time < 0) { return StatusError::invalid_field; }
         }
-        if ((field.name == "TO" || field.name == "PR") && !text_atom(field.value)) { return StatusError::invalid_field; }
+        // A peer's connection failure must round-trip the same opaque CTM/RCM
+        // token, including NFC text/spaces. PR retains the connection grammar.
+        const bool connection_error = code->error() == 41 || code->error() == 42;
+        if (field.name == "TO" && (connection_error ? !detail::connection_token(field.value) : !text_atom(field.value))) {
+            return StatusError::invalid_field;
+        }
+        if (field.name == "PR" && (connection_error ? !detail::connection_protocol(field.value) : !text_atom(field.value))) {
+            return StatusError::invalid_field;
+        }
         if ((field.name == "I4" || field.name == "I6") && !ip(field.value, field.name == "I6")) { return StatusError::invalid_field; }
     }
     return StatusView{*code, message.parameters[1]};

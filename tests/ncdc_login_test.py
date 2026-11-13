@@ -7,6 +7,7 @@ import pty
 import re
 import select
 import socket
+import ssl
 import sqlite3
 import struct
 import subprocess
@@ -28,6 +29,10 @@ MSG_CODEC = sys.argv.pop(1)
 ENCRYPTED = '--tls' in sys.argv
 if ENCRYPTED:
     sys.argv.remove('--tls')
+PEER_TLS = '--peer-tls' in sys.argv
+if PEER_TLS:
+    sys.argv.remove('--peer-tls')
+PEER_PROTOCOL = b'ADCS/1.0' if PEER_TLS else b'ADC/1.0'
 TERMINAL_PRESSURE = '--terminal-pressure' in sys.argv
 if TERMINAL_PRESSURE:
     sys.argv.remove('--terminal-pressure')
@@ -61,8 +66,9 @@ class NcdcLoginTest(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix='dc24h-ncdc-login-') as directory:
             ini = pathlib.Path(directory) / 'hub.ini'
             network = '[network]\nlisten=127.0.0.1:0\n'
-            if ENCRYPTED:
+            if ENCRYPTED or PEER_TLS:
                 credentials(directory)
+            if ENCRYPTED:
                 network = ('[network]\nadcs_listen=127.0.0.1:0\n[tls]\n'
                            'certificate=certificate.pem\nprivate_key=private.pem\n')
             welcome=b'IMSG Welcome\\sto\\sdc24h.eu.\\sConfigured\\sncdc\\schat.'
@@ -76,7 +82,7 @@ class NcdcLoginTest(unittest.TestCase):
             hub = Hub(self, '--config', str(ini), '--log-connections', 'on', '--log-chat', 'on', **options)
             observer = Peer(self, connect_tls(self, hub, str(pathlib.Path(directory) / 'certificate.pem')) if ENCRYPTED else hub.connect())
             observer.login(b'ListObserver', 99, welcome=welcome)
-            feature_update = b'BINF ' + observer.sid + b' SUTCP4'
+            feature_update = b'BINF ' + observer.sid + (b' SUTCP4,ADCS' if PEER_TLS else b' SUTCP4')
             observer.send(feature_update); self.assertEqual(observer.line(), feature_update)
             wire, replies, errors = bytearray(), bytearray(), []
             finished = threading.Event()
@@ -160,6 +166,57 @@ class NcdcLoginTest(unittest.TestCase):
                     if select.select([master], [], [], 0.1)[0]:
                         screen.extend(os.read(master, 65536))
 
+            def peer_context(server=False):
+                context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER if server else ssl.PROTOCOL_TLS_CLIENT)
+                if not server:
+                    context.check_hostname = False
+                context.minimum_version = ssl.TLSVersion.TLSv1_2
+                context.verify_mode = ssl.CERT_REQUIRED
+                # The generated local ncdc certificate is the explicit test
+                # trust anchor. This is not a claim of hub-side KEYP support.
+                context.load_verify_locations(cafile=str(pathlib.Path(directory) / 'session/cert/client.crt'))
+                context.load_cert_chain(str(pathlib.Path(directory) / 'certificate.pem'),
+                                        str(pathlib.Path(directory) / 'private.pem'))
+                return context
+
+            def peer_connect(port):
+                raw = socket.create_connection(('127.0.0.1', port), timeout=3)
+                if not PEER_TLS:
+                    return raw
+                try:
+                    peer = peer_context().wrap_socket(raw, server_hostname='localhost')
+                    self.assertIn(peer.version(), ('TLSv1.2', 'TLSv1.3'))
+                    self.assertTrue(peer.getpeercert(binary_form=True))
+                    return peer
+                except BaseException:
+                    raw.close()
+                    raise
+
+            def activate_ncdc():
+                # ncdc's port 0 means a random number, not an OS-assigned free
+                # port. Reserve TCP/UDP numbers until ncdc advertises readiness.
+                # Both sides use SO_REUSEADDR; the TCP reservation never listens.
+                with socket.socket() as tcp_port, socket.socket(type=socket.SOCK_DGRAM) as udp_port:
+                    for reservation in (tcp_port, udp_port):
+                        reservation.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                        reservation.bind(('127.0.0.1', 0))
+                    tcp_number, udp_number = tcp_port.getsockname()[1], udp_port.getsockname()[1]
+                    commands = (f'/hset active_ip 127.0.0.1\r/hset active_port {tcp_number}\r'
+                                f'/hset active_udp_port {udp_number}\r/hset active true\r').encode()
+                    os.write(master, commands)
+                    advertised = {}
+                    for _ in range(12):
+                        delta = observer_line()
+                        self.assertTrue(delta.startswith(b'BINF ' + replacement_sid + b' '), delta)
+                        for field in delta.split()[2:]:
+                            advertised[field[:2]] = field[2:]
+                        features = advertised.get(b'SU', b'').split(b',')
+                        if (b'TCP4' in features and b'UDP4' in features and
+                                advertised.get(b'I4') == b'127.0.0.1' and
+                                int(advertised.get(b'U4', b'0') or b'0') == udp_number):
+                            return advertised, tcp_number
+                    self.fail('ncdc did not publish its reserved active endpoints')
+
             def wait_capture(buffer, expected):
                 deadline = time.monotonic() + 3
                 while expected not in buffer:
@@ -171,6 +228,8 @@ class NcdcLoginTest(unittest.TestCase):
                 wait_screen(b'Welcome')
                 nickname = 'dc24hŻółw'.encode('utf-8')
                 os.write(master, b'/set nick ' + nickname + b'\r')
+                if PEER_TLS:
+                    os.write(master, b'/set tls_policy prefer\r')
                 scheme = 'adcs' if ENCRYPTED else 'adc'
                 os.write(master, f'/open dc24h_login {scheme}://127.0.0.1:{listener.getsockname()[1]}/\r'.encode())
                 hub.wait_for(lambda: hub.log.count(b'event=login_ready') == 2)
@@ -437,16 +496,8 @@ class NcdcLoginTest(unittest.TestCase):
                         self.assertTrue(fallback.startswith(b'DRES ' + replacement_sid + b' ' + observer.sid + b' '))
                         self.assertIn(b'TOActivePassiveHubToken', fallback)
                         # Turn ncdc itself active and verify actual UDP receipt in its search UI.
-                        os.write(master, b'/set sudp_policy disabled\r/hset active_ip 127.0.0.1\r/hset active_port 0\r/hset active_udp_port 0\r/hset active true\r')
-                        advertised = {}
-                        for _ in range(12):
-                            delta = observer_line()
-                            self.assertTrue(delta.startswith(b'BINF ' + replacement_sid + b' '), delta)
-                            for field in delta.split()[2:]: advertised[field[:2]] = field[2:]
-                            if b'UDP4' in advertised.get(b'SU', b'').split(b',') and int(advertised.get(b'U4', b'0') or b'0') > 0:
-                                break
-                        else:
-                            self.fail('ncdc did not publish an active UDP endpoint')
+                        os.write(master, b'/set sudp_policy disabled\r')
+                        advertised, _ = activate_ncdc()
                         os.write(master, b'/search -hub -ge 1K -t archive ActivePassiveNcdcSecret\r')
                         active_query = observer_line()
                         self.assertIn(b'ANActivePassiveNcdcSecret', active_query)
@@ -459,17 +510,33 @@ class NcdcLoginTest(unittest.TestCase):
                         wait_screen(b'ActivePassiveNcdcSecretUdpProbe.zip')
                         os.write(master, b'\x1b2')
                         self.assertNotIn(b'ActivePassiveNcdcSecretUdpProbe', replies)
+                if PEER_TLS:
+                    # Unsupported protocols are decided by the receiving peer.
+                    # Its rejection must preserve the opaque original token.
+                    unsupported = b'DCTM ' + observer.sid + b' ' + replacement_sid + b' future/1.0 1515 ProtocolPrivate\\s' + 'Żółw'.encode()
+                    observer.send(unsupported)
+                    rejected = observer_line()
+                    self.assertEqual(rejected, b'DSTA ' + replacement_sid + b' ' + observer.sid + b' 141 Unknown\\sprotocol PRfuture/1.0 TOProtocolPrivate\\s' + 'Żółw'.encode())
                 if RCM_TEST:
                     os.write(master, b'/open dc24h_login\r/browse ListObserver\r')
                     reverse = observer_line()
                     self.assertTrue(reverse.startswith(b'DRCM ' + replacement_sid + b' ' + observer.sid + b' '), reverse)
-                    words = reverse.split(); self.assertEqual(words[3], b'ADC/1.0'); self.assertTrue(words[4])
+                    words = reverse.split(); self.assertEqual(words[3], PEER_PROTOCOL); self.assertTrue(words[4])
                     with socket.socket() as listener_cc:
                         listener_cc.bind(('127.0.0.1', 0)); listener_cc.listen(1); listener_cc.settimeout(3)
                         offer = (b'DCTM ' + observer.sid + b' ' + replacement_sid + b' ' + words[3] + b' ' +
                                  str(listener_cc.getsockname()[1]).encode() + b' ' + words[4])
                         observer.send(offer)
                         cc, _ = listener_cc.accept()
+                        cc.settimeout(3)
+                        if PEER_TLS:
+                            try:
+                                cc = peer_context(server=True).wrap_socket(cc, server_side=True)
+                            except BaseException:
+                                cc.close()
+                                raise
+                            self.assertIn(cc.version(), ('TLSv1.2', 'TLSv1.3'))
+                            self.assertTrue(cc.getpeercert(binary_form=True))
                         with cc:
                             cc.settimeout(3); pending = bytearray()
                             def client_line():
@@ -509,22 +576,16 @@ class NcdcLoginTest(unittest.TestCase):
                             os.close(terminal_fd)
                         os.write(master, b'/help\r')
                         time.sleep(0.2)  # Let ncdc reach its blocked UI redraw.
-                    os.write(master, b'/hset active_ip 127.0.0.1\r/hset active_port 0\r/hset active_udp_port 0\r/hset active true\r')
-                    advertised = {}
-                    for _ in range(12):
-                        delta = observer_line()
-                        self.assertTrue(delta.startswith(b'BINF ' + replacement_sid + b' '), delta)
-                        for field in delta.split()[2:]: advertised[field[:2]] = field[2:]
-                        if b'TCP4' in advertised.get(b'SU', b'').split(b',') and advertised.get(b'I4') == b'127.0.0.1': break
-                    else: self.fail('ncdc did not become active for RCM')
-                    observer.send(b'BINF ' + observer.sid + b' SU')
-                    self.assertEqual(observer_line(), b'BINF ' + observer.sid + b' SU')
+                    _, active_tcp_port = activate_ncdc()
+                    passive_update = b'BINF ' + observer.sid + (b' SUADCS' if PEER_TLS else b' SU')
+                    observer.send(passive_update)
+                    self.assertEqual(observer_line(), passive_update)
                     token_rcm = b'RcmNcdcIncomingPrivate'
-                    observer.send(b'DRCM ' + observer.sid + b' ' + replacement_sid + b' ADC/1.0 ' + token_rcm)
+                    observer.send(b'DRCM ' + observer.sid + b' ' + replacement_sid + b' ' + PEER_PROTOCOL + b' ' + token_rcm)
                     reply = observer_line().split()
-                    self.assertEqual(reply[:4], [b'DCTM', replacement_sid, observer.sid, b'ADC/1.0'])
-                    self.assertEqual(reply[5], token_rcm); self.assertTrue(1 <= int(reply[4]) <= 65535)
-                    with socket.create_connection(('127.0.0.1', int(reply[4])), timeout=3) as cc:
+                    self.assertEqual(reply[:4], [b'DCTM', replacement_sid, observer.sid, PEER_PROTOCOL])
+                    self.assertEqual(reply[5], token_rcm); self.assertEqual(int(reply[4]), active_tcp_port)
+                    with peer_connect(int(reply[4])) as cc:
                         cc.sendall(b'CSUP ADBASE ADTIGR\n'); pending = bytearray()
                         def server_line():
                             while b'\n' not in pending:
@@ -538,22 +599,15 @@ class NcdcLoginTest(unittest.TestCase):
                     wait_screen(b'RcmNcdcHandshakeRecovery')
                     self.assertNotIn(token_rcm, hub.log)
                 if CTM_TEST:
-                    os.write(master, b'/hset active_ip 127.0.0.1\r/hset active_port 0\r/hset active_udp_port 0\r/hset active true\r')
-                    advertised = {}
-                    for _ in range(12):
-                        delta = observer_line()
-                        self.assertTrue(delta.startswith(b'BINF ' + replacement_sid + b' '), delta)
-                        for field in delta.split()[2:]: advertised[field[:2]] = field[2:]
-                        if b'TCP4' in advertised.get(b'SU', b'').split(b',') and advertised.get(b'I4') == b'127.0.0.1': break
-                    else: self.fail('ncdc did not become TCP active')
+                    _, active_tcp_port = activate_ncdc()
                     os.write(master, b'/open dc24h_login\r/browse ListObserver\r')
                     offer = observer_line()
                     self.assertTrue(offer.startswith(b'DCTM ' + replacement_sid + b' ' + observer.sid + b' '), offer)
-                    words = offer.split(); self.assertEqual(words[3], b'ADC/1.0')
-                    self.assertTrue(1 <= int(words[4]) <= 65535); self.assertTrue(words[5])
+                    words = offer.split(); self.assertEqual(words[3], PEER_PROTOCOL)
+                    self.assertEqual(int(words[4]), active_tcp_port); self.assertTrue(words[5])
                     # Use the hub-forwarded listener and token in an actual peer
                     # handshake. The hub never opens this connection or sees CINF.
-                    with socket.create_connection(('127.0.0.1', int(words[4])), timeout=3) as cc:
+                    with peer_connect(int(words[4])) as cc:
                         cc.sendall(b'CSUP ADBASE ADTIGR\n')
                         pending = bytearray()
                         def cc_line():

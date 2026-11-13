@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dc24h/adc/parser.hpp"
+#include "dc24h/transfers/protocol.hpp"
 
 namespace dc24h::adc {
 inline constexpr std::size_t max_ctm_bytes = 2048;
@@ -11,6 +12,7 @@ class CtmRequest final {
 public:
     [[nodiscard]] const Message& message() const noexcept { return message_; }
     [[nodiscard]] const std::string& protocol() const noexcept { return message_.parameters[0]; }
+    [[nodiscard]] transfers::ProtocolKind protocol_kind() const noexcept { return transfers::classify_protocol(protocol()); }
     [[nodiscard]] std::uint16_t port() const noexcept { return port_; }
     [[nodiscard]] const std::string& token() const noexcept { return message_.parameters[2]; }
 private:

@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.6.4: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.6.5: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [Protocol Negotiation — alpha-0.6.5](PROTOCOL_NEGOTIATION.md)
 - [Connection Routing — alpha-0.6.4](CONNECTION_ROUTING.md)
 - [ADC RCM — alpha-0.6.3](ADC_RCM.md)
 - [ADC CTM — alpha-0.6.2](ADC_CTM.md)
