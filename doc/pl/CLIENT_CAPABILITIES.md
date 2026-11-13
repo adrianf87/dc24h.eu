@@ -1,5 +1,7 @@
 # Client Capabilities — alpha-0.6.6
 
+**Bieżący etap — alpha-0.6.7:** [Transfer Tokens](TRANSFER_TOKENS.md) ujednolica ograniczoną walidację tokenów i własne wartości w Core, CTM/RCM i błędach klientów. Unicode, skrajne spacje i ukośniki pozostają dokładne przy routingu i granicznych handshake ncdc. Niezależne żądania mogą powtarzać token; nie dodano rejestru ani domniemanej korelacji.
+
 **Weryfikacja lokalna alpha-0.6.6 (2026-11-13):** Przeszły wszystkie 147/147 testów CTest w Debug, Release i ASan/UBSan, w tym zmiany trybu rzeczywistego ncdc i handshake klientów ze zwykłym TCP/TLS. Poprawne są build/typecheck WebAdmin, 12 testów Node, 10 testów Chromium i integracja z rzeczywistym API C++; brak ostrzeżeń kompilatora. Przeszły kontrole metadanych, UTF-8, zgodności języków/linków, składni zmienionych plików Python, przykładowego INI i białych znaków. Nie oczekiwano na zakończenie GitHub Actions. Pełna macierz wspieranych systemów i obciążenie produkcyjne pozostają niesprawdzone.
 
 Etap utworzony bezpośrednio z main `1aacfbd` po alpha-0.6.5. Ujednolica publiczne możliwości TCP, role klientów według rodziny adresów i wybór ścieżki przez inicjatora. Zachowano kod i historię; gałąź numerowana jest publikowana osobno od main.

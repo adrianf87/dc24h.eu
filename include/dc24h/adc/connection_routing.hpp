@@ -17,6 +17,9 @@ public:
     ConnectionFrame& operator=(ConnectionFrame&&) = delete;
     [[nodiscard]] const Message& message() const noexcept { return message_; }
     [[nodiscard]] const std::string& wire() const noexcept { return wire_; }
+    [[nodiscard]] const std::string& token() const noexcept {
+        return message_.parameters[message_.kind == Command::ctm ? 2U : 1U];
+    }
     [[nodiscard]] transfers::ProtocolKind protocol_kind() const noexcept { return transfers::classify_protocol(message_.parameters[0]); }
     [[nodiscard]] transfers::Encryption encryption() const noexcept { return transfers::encryption(protocol_kind()); }
 private:

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.6.6 LANGUAGES CXX)
+project(dc24h VERSION 0.6.7 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -59,7 +59,7 @@ set_target_properties(dc24h_search PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_search PUBLIC include)
 target_link_libraries(dc24h_search PUBLIC dc24h_users PRIVATE dc24h_text UTF8Proc::UTF8Proc)
 
-add_library(dc24h_transfers src/transfers/capabilities.cpp src/transfers/protocol.cpp src/transfers/request.cpp src/transfers/core.cpp)
+add_library(dc24h_transfers src/transfers/token.cpp src/transfers/capabilities.cpp src/transfers/protocol.cpp src/transfers/request.cpp src/transfers/core.cpp)
 target_compile_features(dc24h_transfers PUBLIC cxx_std_20)
 set_target_properties(dc24h_transfers PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_transfers PUBLIC include)
@@ -233,6 +233,14 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/connection_routing_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(transfers.routing transfers.routing.process PROPERTIES TIMEOUT 45)
     add_executable(protocol_negotiation_tests tests/protocol_negotiation_tests.cpp)
+    add_executable(transfer_token_tests tests/transfer_token_tests.cpp)
+    target_link_libraries(transfer_token_tests PRIVATE dc24h_adc)
+    target_compile_options(transfer_token_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(transfer_token_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME transfers.tokens COMMAND transfer_token_tests)
+    add_test(NAME transfers.tokens.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/transfer_tokens_process_tests.py" "$<TARGET_FILE:dc24h>")
+    set_tests_properties(transfers.tokens transfers.tokens.process PROPERTIES TIMEOUT 45)
     add_executable(client_capabilities_tests tests/client_capabilities_tests.cpp)
     target_link_libraries(client_capabilities_tests PRIVATE dc24h_adc)
     target_compile_options(client_capabilities_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
@@ -782,6 +790,15 @@ if(BUILD_TESTING)
                 "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>"
                 --client-capabilities --peer-tls ${capability_transport_args})
             set_tests_properties(${transport}.capabilities.ncdc ${transport}.capabilities.adcs.ncdc PROPERTIES TIMEOUT 45)
+            add_test(NAME ${transport}.tokens.ncdc COMMAND "${Python3_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
+                "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>"
+                --transfer-tokens ${capability_transport_args})
+            add_test(NAME ${transport}.tokens.adcs.ncdc COMMAND "${Python3_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
+                "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>"
+                --transfer-tokens --peer-tls ${capability_transport_args})
+            set_tests_properties(${transport}.tokens.ncdc ${transport}.tokens.adcs.ncdc PROPERTIES TIMEOUT 45)
         endforeach()
     elseif(DC24H_REQUIRE_INTEGRATION_TESTS)
         message(FATAL_ERROR "Required ncdc not found: adc.ncdc and adcs.ncdc smoke tests are unavailable")

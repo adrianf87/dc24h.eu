@@ -43,6 +43,10 @@ CLIENT_CAPABILITIES = '--client-capabilities' in sys.argv
 if CLIENT_CAPABILITIES:
     sys.argv.remove('--client-capabilities')
 RCM_TEST = RCM_TEST or CLIENT_CAPABILITIES
+TRANSFER_TOKENS = '--transfer-tokens' in sys.argv
+if TRANSFER_TOKENS:
+    sys.argv.remove('--transfer-tokens')
+RCM_TEST = RCM_TEST or TRANSFER_TOKENS
 CTM_TEST = '--ctm' in sys.argv
 if CTM_TEST:
     sys.argv.remove('--ctm')
@@ -585,6 +589,11 @@ class NcdcLoginTest(unittest.TestCase):
                     observer.send(passive_update)
                     self.assertEqual(observer_line(), passive_update)
                     token_rcm = b'RcmNcdcIncomingPrivate'
+                    if TRANSFER_TOKENS:
+                        decoded_token = ' TokenNcdcPrivate Żółw \\😀 '.encode()
+                        decoded_token += b'T' * (127 - len(decoded_token)) + b' '
+                        self.assertEqual(len(decoded_token), 128)
+                        token_rcm = decoded_token.replace(b'\\', b'\\\\').replace(b' ', b'\\s')
                     observer.send(b'DRCM ' + observer.sid + b' ' + replacement_sid + b' ' + PEER_PROTOCOL + b' ' + token_rcm)
                     reply = observer_line().split()
                     self.assertEqual(reply[:4], [b'DCTM', replacement_sid, observer.sid, PEER_PROTOCOL])
@@ -602,6 +611,15 @@ class NcdcLoginTest(unittest.TestCase):
                     self.assertEqual(observer_line(), b'BMSG ' + observer.sid + b' RcmNcdcHandshakeRecovery')
                     wait_screen(b'RcmNcdcHandshakeRecovery')
                     self.assertNotIn(token_rcm, hub.log)
+                    if TRANSFER_TOKENS:
+                        # A real peer rejection must return the exact same
+                        # boundary-size opaque token, including edge spaces.
+                        update = b'BINF ' + observer.sid + (b' SUTCP4,ADCS' if PEER_TLS else b' SUTCP4')
+                        observer.send(update)
+                        self.assertEqual(observer_line(), update)
+                        observer.send(b'DCTM ' + observer.sid + b' ' + replacement_sid + b' future/1.0 1515 ' + token_rcm)
+                        self.assertEqual(observer_line(), b'DSTA ' + replacement_sid + b' ' + observer.sid + b' 141 Unknown\\sprotocol PRfuture/1.0 TO' + token_rcm)
+                        self.assertNotIn(b'TokenNcdcPrivate', hub.log)
                 if CLIENT_CAPABILITIES:
                     # Change the real client's live mode without reconnecting.
                     # Both peers passive must yield a private recoverable refusal.
