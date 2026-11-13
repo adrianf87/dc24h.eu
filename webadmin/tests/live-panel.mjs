@@ -22,8 +22,8 @@ try {
   });
   await page.goto(process.argv[2]);
   await expect(page.getByText("API connected", { exact: true })).toBeVisible();
-  await expect(page.getByText("alpha-0.5.10", { exact: true })).toHaveCount(2);
-  await expect(page.locator(".metric-value").nth(1)).toHaveText("9");
+  await expect(page.getByText("alpha-0.5.12", { exact: true })).toHaveCount(2);
+  await expect(page.locator(".metric-value").nth(1)).toHaveText("11");
   assert.ok(
     Number(await page.locator(".metric-value").first().textContent()) >= 2,
   );
@@ -54,10 +54,16 @@ try {
     .toHaveText(["5", "1", "2", "2", "0", "0", "5", "0", "0"]);
   assert.ok(!(await page.content()).includes("WebChatSecret"));
   await page.screenshot({ path: "test-results/live-chat-desktop.png", fullPage: true });
+  await page.getByRole("link", { name: "Search", exact: true }).click();
+  await expect(page.getByTestId("search-query-statistics").locator(".metric-value")).toHaveText(["1", "1", "0", "0", "0", "0", "1", "0", "0", "0"]);
+  await expect(page.getByTestId("search-result-statistics").locator(".metric-value")).toHaveText(["1", "1", "0", "0", "0", "0", "1", "0", "0"]);
+  await expect(page.locator('[data-setting="max_active_per_user"]')).toHaveText("8");
+  assert.ok(!(await page.content()).includes("WebSearchSecret")); assert.ok(!JSON.stringify(snapshot).includes("WebSearchSecret"));
+  await page.screenshot({ path: "test-results/live-search-desktop.png", fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("combobox").selectOption("pl");
   await expect(
-    page.getByRole("heading", { name: "Statystyki czatu" }),
+    page.getByRole("heading", { name: "Statystyki wyszukiwania" }),
   ).toBeVisible();
   assert.ok(
     await page.evaluate(
@@ -65,7 +71,7 @@ try {
     ),
   );
   await page.screenshot({
-    path: "test-results/live-chat-mobile-pl.png",
+    path: "test-results/live-search-mobile-pl.png",
     fullPage: true,
   });
   assert.deepEqual(errors, []);

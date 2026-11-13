@@ -1,5 +1,7 @@
 # Statistics — alpha-0.3.13
 
+**Bieżący etap — alpha-0.5.12:** [Konfiguracja i statystyki wyszukiwania](SEARCH_CONFIGURATION.md) udostępnia 19 liczników SCH/RES huba, wskaźnik przechowywanych okien tokenów z leniwym sprzątaniem i 16 efektywnych ustawień startowych przez uwierzytelnione API tylko do odczytu oraz dwujęzyczną stronę Search WebAdmin. Zakolejkowanie jest odrębne od dostarczenia; UDP między klientami jest wyłączone. Bez treści/historii i API zapisu konfiguracji.
+
 Gałąź utworzona bezpośrednio z main `59b7b3a048b6d00504038a6a0d0b6580f3c04907`, zawierającego alpha-0.3.1–alpha-0.3.12. Poprzednie gałęzie i historia są zachowane.
 
 ## Własność i liczniki sesji

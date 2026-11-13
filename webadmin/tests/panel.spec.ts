@@ -1,3 +1,4 @@
+import { searchSnapshot } from "./fixtures";
 import { expect, test } from "@playwright/test";
 import { WEBADMIN_VERSION } from "../src/lib/status";
 import { readFile } from "node:fs/promises";
@@ -5,7 +6,7 @@ const data = {
   api_version: "v1",
   server: {
     name: "dc24h.eu",
-    version: "alpha-0.5.10",
+    version: "alpha-0.5.12",
     core_running: true,
     uptime_seconds: 3661,
   },
@@ -224,4 +225,47 @@ test("unconfigured chat page displays unavailable counters and retains navigatio
   await expect(page.getByRole("button", { name: "Export snapshot", exact: true })).toBeDisabled();
   await page.getByRole("link", { name: "Overview", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Hub overview", exact: true })).toBeVisible();
+});
+
+test("search statistics and effective configuration are bilingual and safe to export", async ({ page }, testInfo) => {
+  await page.route("**/admin-api/v1/status", route => route.fulfill({ json: { ...data,
+    search: { ...searchSnapshot, token: "SearchPrivate", configuration: { ...searchSnapshot.configuration, password: "SearchPrivate" } } } }));
+  await page.goto("/#search");
+  await expect(page.getByRole("heading", { name: "Search statistics", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Search", exact: true })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByTestId("search-query-statistics").locator(".metric-value")).toHaveText(Array.from({ length: 10 }, (_, i) => String(i + 1)));
+  await expect(page.getByTestId("search-result-statistics").locator(".metric-value")).toHaveText(Array.from({ length: 9 }, (_, i) => String(i + 11)));
+  await expect(page.locator('[data-setting="max_active_per_user"]')).toHaveText("8");
+  await expect(page.getByText(/Direct client UDP is outside/)).toBeVisible();
+  await expect(page.getByTestId("search-configuration").locator("input,button,select")).toHaveCount(0);
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export snapshot", exact: true }).click();
+  const exported = JSON.parse(await readFile((await (await download).path())!, "utf8"));
+  expect(exported.search).toEqual(searchSnapshot); expect(JSON.stringify(exported)).not.toContain("SearchPrivate");
+  await page.screenshot({ path: testInfo.outputPath("search-desktop.png"), fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("combobox").selectOption("pl");
+  await expect(page.getByRole("heading", { name: "Statystyki wyszukiwania", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Efektywna konfiguracja", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath("search-mobile-pl.png"), fullPage: true });
+});
+test("search refresh handles restart, old APIs and invalid data honestly", async ({ page }) => {
+  let current: unknown = { ...data, search: searchSnapshot };
+  await page.route("**/admin-api/v1/status", route => route.fulfill({ json: current }));
+  await page.goto("/#search");
+  const values = page.getByTestId("search-details").locator(".metric-value");
+  await expect(values).toHaveCount(20); await expect(values.first()).toHaveText("1");
+  await page.getByRole("switch").click();
+  const zero = Object.fromEntries(Object.keys(searchSnapshot.statistics).map(key => [key, 0]));
+  current = { ...data, server: { ...data.server, uptime_seconds: 1 }, search: { statistics: zero, configuration: { ...searchSnapshot.configuration, query_rate: 3 } } };
+  await page.getByRole("button", { name: "Refresh now", exact: true }).click();
+  await expect(values).toHaveText(Array(20).fill("0")); await expect(page.locator('[data-setting="query_rate"]')).toHaveText("3");
+  current = data;
+  await page.getByRole("button", { name: "Refresh now", exact: true }).click();
+  await expect(values).toHaveText(Array(20).fill("—")); await expect(page.getByText(/Search information is unavailable/)).toBeVisible();
+  current = { ...data, search: { ...searchSnapshot, statistics: { ...searchSnapshot.statistics, queries_received: -1 } } };
+  await page.getByRole("button", { name: "Refresh now", exact: true }).click();
+  await expect(page.getByText("Connection lost", { exact: true })).toBeVisible();
+  await expect(values).toHaveText(Array(20).fill("—")); await expect(page.locator('[data-setting="query_rate"]')).toHaveText("—");
 });

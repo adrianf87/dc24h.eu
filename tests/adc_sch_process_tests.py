@@ -21,7 +21,8 @@ class SchProcessTests(unittest.TestCase):
         ini = pathlib.Path(directory.name) / 'hub.ini'
         ini.write_text('[network]\nlisten=127.0.0.1:0\nadcs_listen=127.0.0.1:0\n'
                        '[tls]\ncertificate=certificate.pem\nprivate_key=private.pem\n'
-                       '[security]\nmax_frames_per_second=10000\n')
+                       '[security]\nmax_frames_per_second=10000\n'
+                       '[search]\nquery_rate=10000\nquery_burst=10000\n')
         endpoint, token = enable_api(ini, directory.name)
         hub = Hub(self, '--config', str(ini), '--log-connections', 'on', '--log-chat', 'on')
         source = Peer(self, connect_tls(self, hub, cert) if encrypted else hub.connect())

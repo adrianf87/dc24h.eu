@@ -55,6 +55,10 @@ with tempfile.TemporaryDirectory(prefix='dc24h-web-live-') as temp:
         case.assertTrue(source.line().startswith(b'ISTA 140 '))
         source.send(b'BMSG ' + source.sid + b' ' + b'WebChatSecret' * 8)
         case.assertTrue(source.line().startswith(b'ISTA 100 '))
+        query = b'DSCH ' + source.sid + b' ' + target.sid + b' ANWebSearchSecret TOWebSearchSecretToken'
+        source.send(query); case.assertEqual(target.line(), query)
+        result = b'DRES ' + target.sid + b' ' + source.sid + b' FN/WebSearchSecret SI0 TR' + b'A'*39 + b' TOWebSearchSecretToken'
+        target.send(result); case.assertEqual(source.line(), result)
         with socket.socket() as reserve:
             reserve.bind(('127.0.0.1', 0)); webport = reserve.getsockname()[1]
         with (folder / 'vite.log').open('w') as output:
@@ -77,6 +81,7 @@ with tempfile.TemporaryDirectory(prefix='dc24h-web-live-') as temp:
         server.send_signal(signal.SIGTERM); out, err = server.communicate(timeout=3)
         assert server.returncode == 0 and not endpoint.exists(), 'C++/API shutdown failed'
         assert token.encode() not in log + err + out, 'Credential leaked in C++ output'
+        assert b'WebSearchSecret' not in log + err + out, 'Search data leaked in C++ output'
         assert b'WebChatSecret' not in log + err + out, 'Chat data leaked in C++ output'
     finally:
         for peer in peers: peer.peer.close()

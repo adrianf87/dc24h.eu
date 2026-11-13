@@ -1461,3 +1461,10 @@ th {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.search-configuration { padding: 24px; min-width: 0; }
+.search-configuration dl { margin: 0; }
+.search-setting { display: flex; justify-content: space-between; gap: 16px; padding: 13px 0; border-bottom: 1px solid var(--border, #e8ebf2); }
+.search-setting dt { min-width: 0; font-size: 13px; }
+.search-setting code { display: block; font-size: 11px; color: #7a8396; overflow-wrap: anywhere; margin-top: 5px; }
+.search-setting dd { margin: 0; flex-shrink: 0; font-size: 14px; font-variant-numeric: tabular-nums; }

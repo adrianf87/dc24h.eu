@@ -51,6 +51,23 @@ struct Peer {
 bool path_text(const std::string& value) {
     return value.size() <= 4096 && std::none_of(value.begin(), value.end(), [](unsigned char c) { return c < 32 || c == 127; });
 }
+std::string search_json(const Snapshot& value) {
+    std::string json{"{\"statistics\":{"};
+    for(std::size_t i=0;i<search::statistic_names.size();++i){
+        if(i){json+=',';}json+='\"';json+=search::statistic_names[i];json+="\":";json+=std::to_string(value.search.values[i]);
+    }
+    json+=",\"tracked_searches\":"+std::to_string(value.search.tracked_searches)+"},\"configuration\":{";
+    const auto& s=value.search_settings;
+    const auto boolean=[&](std::string_view key,bool enabled){json+='\"';json+=key;json+=enabled?"\":true,":"\":false,";};
+    const auto number=[&](std::string_view key,std::uint64_t count){json+='\"';json+=key;json+="\":";json+=std::to_string(count);json+=',';};
+    boolean("queries_enabled",s.queries_enabled);boolean("results_enabled",s.results_enabled);
+    boolean("guest_queries",s.guests.queries);boolean("guest_results",s.guests.results);boolean("require_result_token",s.require_result_token);
+    number("max_active_searches",s.tokens.total);number("max_active_per_user",s.tokens.per_owner);
+    number("search_lifetime_seconds",static_cast<std::uint64_t>(s.tokens.lifetime.count()));
+    number("query_rate",s.queries.rate);number("query_burst",s.queries.burst);number("query_byte_rate",s.queries.byte_rate);number("query_byte_burst",s.queries.byte_burst);
+    number("result_rate",s.results.rate);number("result_burst",s.results.burst);number("result_byte_rate",s.results.byte_rate);number("result_byte_burst",s.results.byte_burst);
+    json.pop_back();json+="}}";return json;
+}
 std::string status_json(const Snapshot& value) {
     std::string chat_json{"{"};
     // Names are a fixed allowlist; values contain aggregate counters only.
@@ -71,7 +88,7 @@ std::string status_json(const Snapshot& value) {
         ",\"received_bytes\":" + std::to_string(value.received_bytes) + ",\"sent_bytes\":" + std::to_string(value.sent_bytes) +
         ",\"peak_connections\":" + std::to_string(value.peak_connections) + "},\"users\":{\"online\":" +
         std::to_string(value.online_users) + ",\"peak_online\":" + std::to_string(value.peak_online_users) +
-        ",\"successful_logins\":" + std::to_string(value.successful_logins) + "},\"chat\":" + chat_json + ",\"database\":{\"enabled\":" +
+        ",\"successful_logins\":" + std::to_string(value.successful_logins) + "},\"chat\":" + chat_json + ",\"search\":" + search_json(value) + ",\"database\":{\"enabled\":" +
         (value.database_enabled ? "true" : "false") + "}}\n";
 }
 } // namespace

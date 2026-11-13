@@ -92,6 +92,7 @@ public:
     [[nodiscard]] std::optional<ActiveSearch> find_search(users::SessionId owner, std::string_view token, users::TimePoint now) noexcept {
         return tokens_.find(owner,token,now);
     }
+    [[nodiscard]] std::size_t tracked_searches() const noexcept { return tokens_.size(); }
     std::size_t prune_searches(users::TimePoint now) noexcept { return tokens_.prune(now); }
     std::size_t forget_searches(users::SessionId owner) noexcept { return tokens_.forget(owner); }
 private:

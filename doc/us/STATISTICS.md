@@ -1,5 +1,7 @@
 # Statistics — alpha-0.3.13
 
+**Current increment — alpha-0.5.12:** [Search Configuration and Statistics](SEARCH_CONFIGURATION.md) exposes 19 cumulative hub SCH/RES counters, a lazy stored-token-window gauge and all 16 effective startup search settings through the authenticated read-only API and bilingual WebAdmin Search page. Queue acceptance is distinct from delivery; direct client UDP is excluded. No payload/history or configuration write endpoint is added.
+
 Built directly from main `59b7b3a048b6d00504038a6a0d0b6580f3c04907`, which already includes alpha-0.3.1–alpha-0.3.12. Earlier branches and history are preserved.
 
 ## Session ownership and accounting

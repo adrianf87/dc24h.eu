@@ -3,6 +3,8 @@
 #include "dc24h/security/limits.hpp"
 #include "dc24h/users/limits.hpp"
 #include "dc24h/chat/settings.hpp"
+#include "dc24h/search/security.hpp"
+#include "dc24h/search/statistics.hpp"
 #include "dc24h/chat/statistics.hpp"
 
 #include <atomic>
@@ -35,6 +37,7 @@ struct Options {
     security::Limits security{};
     users::Limits users{};
     chat::Settings chat{};
+    search::SecuritySettings search{};
 };
 
 struct Statistics {
@@ -57,6 +60,7 @@ struct Statistics {
     std::size_t peak_online_users{};
     std::uint64_t successful_logins{};
     chat::Statistics chat{};
+    search::Statistics search{};
 };
 
 class TcpServer final {
@@ -96,6 +100,8 @@ private:
     std::atomic<std::size_t> peak_connections_{0}, online_users_{0}, peak_online_users_{0};
     std::atomic<std::uint64_t> successful_logins_{0};
     std::array<std::atomic<std::uint64_t>, chat::statistic_names.size()> chat_statistics_{};
+    std::array<std::atomic<std::uint64_t>, search::statistic_names.size()> search_statistics_{};
+    std::atomic<std::uint64_t> tracked_searches_{};
 };
 
 } // namespace dc24h::network

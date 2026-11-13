@@ -209,6 +209,7 @@ TcpServer::TcpServer(logging::Logger& logger, Options options)
     }
     security::validate(options_.security);
     chat::validate_settings(options_.chat);
+    search::validate_security(options_.search);
     users::validate(options_.users);
     for (const auto& endpoint : options_.listeners) {
         socklen_t size{};
@@ -238,6 +239,8 @@ Statistics TcpServer::statistics() const noexcept {
             security_rejected_.load(), security_closed_.load(), closed_.load(), sent_bytes_.load(),
             peak_connections_.load(), online_users_.load(), peak_online_users_.load(), successful_logins_.load()};
     for (std::size_t i = 0; i < chat_statistics_.size(); ++i) { result.chat.values[i] = chat_statistics_[i].load(); }
+    for(std::size_t i=0;i<search_statistics_.size();++i){result.search.values[i]=search_statistics_[i].load();}
+    result.search.tracked_searches=tracked_searches_.load();
     return result;
 }
 
@@ -299,6 +302,7 @@ void TcpServer::run() {
     adc::LoginLimits login_limits;
     login_limits.anti_flood = options_.chat.flood;
     login_limits.chat = options_.chat.policy;
+    login_limits.search = options_.search;
     login_limits.welcome_text = options_.chat.welcome_enabled ? std::optional<std::string>(options_.chat.welcome_message) : std::nullopt;
     login_limits.connections=options_.max_connections;
     login_limits.users=options_.users;
@@ -308,6 +312,9 @@ void TcpServer::run() {
         online_users_.store(value.online());
         peak_online_users_.store(value.peak_online);
         successful_logins_.store(value.successful_logins);
+        const auto search=login.search_statistics();
+        for(std::size_t i=0;i<search_statistics_.size();++i){search_statistics_[i].store(search.values[i]);}
+        tracked_searches_.store(search.tracked_searches);
         const auto chat = login.chat_statistics();
         for (std::size_t i = 0; i < chat_statistics_.size(); ++i) { chat_statistics_[i].store(chat.values[i]); }
     };

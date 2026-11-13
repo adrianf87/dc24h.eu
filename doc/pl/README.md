@@ -1,7 +1,9 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.5.10: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.5.12: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [Konfiguracja i statystyki wyszukiwania — alpha-0.5.12](SEARCH_CONFIGURATION.md)
+- [Search Security — alpha-0.5.11](SEARCH_SECURITY.md)
 - [Active/Passive — alpha-0.5.10](ACTIVE_PASSIVE.md)
 - [Result Routing — alpha-0.5.9](RESULT_ROUTING.md)
 - [ADC RES — alpha-0.5.8](ADC_RES.md)
