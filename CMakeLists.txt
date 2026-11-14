@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.6.10 LANGUAGES CXX)
+project(dc24h VERSION 0.6.11 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -232,6 +232,14 @@ if(BUILD_TESTING)
     add_test(NAME transfers.routing.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/connection_routing_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(transfers.routing transfers.routing.process PROPERTIES TIMEOUT 45)
+    add_executable(transfer_statistics_tests tests/transfer_statistics_tests.cpp)
+    target_link_libraries(transfer_statistics_tests PRIVATE dc24h_adc)
+    target_compile_options(transfer_statistics_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(transfer_statistics_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME transfers.statistics COMMAND transfer_statistics_tests)
+    add_test(NAME transfers.statistics.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/transfer_statistics_process_tests.py" "$<TARGET_FILE:dc24h>")
+    set_tests_properties(transfers.statistics transfers.statistics.process PROPERTIES TIMEOUT 60)
     add_executable(transfer_limits_tests tests/transfer_limits_tests.cpp)
     target_link_libraries(transfer_limits_tests PRIVATE dc24h_adc)
     target_compile_options(transfer_limits_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)

@@ -7,6 +7,7 @@
 #include "dc24h/transfers/security.hpp"
 #include "dc24h/search/statistics.hpp"
 #include "dc24h/chat/statistics.hpp"
+#include "dc24h/transfers/statistics.hpp"
 
 #include <atomic>
 #include <chrono>
@@ -63,6 +64,7 @@ struct Statistics {
     std::uint64_t successful_logins{};
     chat::Statistics chat{};
     search::Statistics search{};
+    transfers::Statistics transfers{};
 };
 
 class TcpServer final {
@@ -104,6 +106,7 @@ private:
     std::array<std::atomic<std::uint64_t>, chat::statistic_names.size()> chat_statistics_{};
     std::array<std::atomic<std::uint64_t>, search::statistic_names.size()> search_statistics_{};
     std::atomic<std::uint64_t> tracked_searches_{};
+    std::array<std::atomic<std::uint64_t>, transfers::statistic_names.size()> transfer_statistics_{};
 };
 
 } // namespace dc24h::network

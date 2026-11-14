@@ -4,6 +4,7 @@ import pathlib
 import tempfile
 import unittest
 from adc_login_process_tests import Peer
+from transfer_statistics_support import assert_statistics
 from api_support import enable_api, fetch_status
 from network_process_tests import Hub, drain_until_eof
 from tls_support import credentials, connect_tls
@@ -70,7 +71,7 @@ class CtmProcessTests(unittest.TestCase):
                     self.assertEqual(source.line(), b'ISTA 100 RCM\\srequires\\spassive\\ssender\\sand\\sactive\\srecipient FCDRCM'); fence()
                     after = fetch_status(endpoint, secret)
                     self.assertEqual(after['chat'], before['chat']); self.assertEqual(after['search'], before['search'])
-                    self.assertNotIn('transfers', after)
+                    assert_statistics(self, after, ctm_received=14, ctm_routed=3, ctm_rejected=11, ctm_queued=4, rcm_received=1, rcm_rejected=1)
                     for private in ('CtmSecret', 'opaque', secret): self.assertNotIn(private, json.dumps(after))
                     old_sid = target.sid; target.peer.close(); peers.remove(target)
                     for peer in peers: self.assertEqual(peer.line(), b'IQUI '+old_sid)

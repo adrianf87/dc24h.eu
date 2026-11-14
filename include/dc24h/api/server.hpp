@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dc24h/chat/statistics.hpp"
+#include "dc24h/transfers/statistics.hpp"
 #include "dc24h/search/statistics.hpp"
 #include "dc24h/search/security.hpp"
 
@@ -36,6 +37,7 @@ struct Snapshot {
     chat::Statistics chat{};
     search::Statistics search{};
     search::SecuritySettings search_settings{};
+    transfers::Statistics transfers{};
 };
 using StatusProvider = std::function<Snapshot()>;
 using FailureHandler = std::function<void()>;

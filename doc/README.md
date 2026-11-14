@@ -1,5 +1,9 @@
 # dc24h.eu technical documentation
 
+[Transfer Statistics — alpha-0.6.11](us/TRANSFER_STATISTICS.md) · [PL](pl/TRANSFER_STATISTICS.md)
+
+[Debian 13 custom-runner CI](us/CI_DEBIAN13.md) · [PL](pl/CI_DEBIAN13.md)
+
 [Transfer Limits — alpha-0.6.10](us/TRANSFER_LIMITS.md) · [PL](pl/TRANSFER_LIMITS.md)
 
 [Error Handling — alpha-0.6.9](us/ERROR_HANDLING.md) · [PL](pl/ERROR_HANDLING.md)
@@ -34,7 +38,7 @@
 
 [Feature Routing / routing funkcji — alpha-0.5.7](us/FEATURE_ROUTING.md) · [PL](pl/FEATURE_ROUTING.md)
 
-Current development version: alpha-0.6.10. Default language: EN/US UTF-8.
+Current development version: alpha-0.6.11. Default language: EN/US UTF-8.
 
 - [English (US)](us/README.md)
 - [Polski](pl/README.md)

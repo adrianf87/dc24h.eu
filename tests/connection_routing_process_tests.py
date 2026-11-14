@@ -4,6 +4,7 @@ import pathlib
 import tempfile
 import unittest
 from adc_login_process_tests import Peer
+from transfer_statistics_support import assert_statistics
 from api_support import enable_api, fetch_status
 from network_process_tests import Hub, drain_until_eof
 from tls_support import credentials, connect_tls
@@ -70,7 +71,7 @@ class ConnectionRoutingProcessTests(unittest.TestCase):
                 reverse=b'DRCM '+passive_c.sid+b' '+active_d.sid+b' future/1.0 '+token
                 wave(active_a,fresh,passive_c,reverse,{replacement:[fresh],active_d:[reverse]})
                 after=fetch_status(endpoint,secret)
-                self.assertEqual(after['chat'],before['chat']);self.assertEqual(after['search'],before['search']);self.assertNotIn('transfers',after)
+                self.assertEqual(after['chat'],before['chat']);self.assertEqual(after['search'],before['search']);assert_statistics(self, after, ctm_received=6, ctm_routed=4, ctm_rejected=2, ctm_queued=5, rcm_received=3, rcm_routed=2, rcm_rejected=1, rcm_queued=3)
                 for private in ('RoutingPrivateToken','PairPrivateA','PairPrivateC',secret):self.assertNotIn(private,json.dumps(after))
                 # A source SID from the other pair cannot select its recipients.
                 active_a.send(b'ECTM '+active_d.sid+b' '+passive_c.sid+b' ADC/1.0 1515 '+token)

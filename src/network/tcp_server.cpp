@@ -242,6 +242,7 @@ Statistics TcpServer::statistics() const noexcept {
     for (std::size_t i = 0; i < chat_statistics_.size(); ++i) { result.chat.values[i] = chat_statistics_[i].load(); }
     for(std::size_t i=0;i<search_statistics_.size();++i){result.search.values[i]=search_statistics_[i].load();}
     result.search.tracked_searches=tracked_searches_.load();
+    for(std::size_t i=0;i<transfer_statistics_.size();++i){result.transfers.values[i]=transfer_statistics_[i].load();}
     return result;
 }
 
@@ -317,6 +318,8 @@ void TcpServer::run() {
         const auto search=login.search_statistics();
         for(std::size_t i=0;i<search_statistics_.size();++i){search_statistics_[i].store(search.values[i]);}
         tracked_searches_.store(search.tracked_searches);
+        const auto transfers = login.transfer_statistics();
+        for(std::size_t i=0;i<transfer_statistics_.size();++i){transfer_statistics_[i].store(transfers.values[i]);}
         const auto chat = login.chat_statistics();
         for (std::size_t i = 0; i < chat_statistics_.size(); ++i) { chat_statistics_[i].store(chat.values[i]); }
     };

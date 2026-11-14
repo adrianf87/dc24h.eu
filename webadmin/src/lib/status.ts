@@ -1,6 +1,8 @@
+import { parseTransfers } from "./transfer-status.ts";
+import type { TransferSnapshot } from "./transfer-status.ts";
 import { parseSearch } from "./search-status.ts";
 import type { SearchSnapshot } from "./search-status.ts";
-export const WEBADMIN_VERSION = "alpha-0.6.10";
+export const WEBADMIN_VERSION = "alpha-0.6.11";
 export interface HubSnapshot {
   api_version: "v1";
   server: {
@@ -35,6 +37,7 @@ export interface HubSnapshot {
     refused: number;
   };
   search?: SearchSnapshot;
+  transfers?: TransferSnapshot;
   database: { enabled: boolean };
 }
 const record = (value: unknown): Record<string, unknown> => {
@@ -104,6 +107,7 @@ export function parseSnapshot(value: unknown): HubSnapshot {
     },
     database: { enabled: database.enabled },
     ...(root.search === undefined ? {} : { search: parseSearch(root.search) }),
+    ...(root.transfers === undefined ? {} : { transfers: parseTransfers(root.transfers) }),
   };
 }
 export function duration(seconds: number): string {

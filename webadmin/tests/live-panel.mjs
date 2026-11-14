@@ -22,8 +22,8 @@ try {
   });
   await page.goto(process.argv[2]);
   await expect(page.getByText("API connected", { exact: true })).toBeVisible();
-  await expect(page.getByText("alpha-0.6.10", { exact: true })).toHaveCount(2);
-  await expect(page.locator(".metric-value").nth(1)).toHaveText("11");
+  await expect(page.getByText("alpha-0.6.11", { exact: true })).toHaveCount(2);
+  await expect(page.locator(".metric-value").nth(1)).toHaveText("15");
   assert.ok(
     Number(await page.locator(".metric-value").first().textContent()) >= 2,
   );
@@ -33,6 +33,18 @@ try {
   assert.equal(status.status(), 200);
   const snapshot = await status.json();
   assert.deepEqual(snapshot.users, { online: 2, peak_online: 2, successful_logins: 2 });
+  assert.equal(snapshot.transfers.statistics.ctm_received, 1);
+  assert.equal(snapshot.transfers.statistics.ctm_routed, 1);
+  assert.equal(snapshot.transfers.statistics.ctm_queued, 2);
+  assert.equal(snapshot.transfers.statistics.rcm_received, 1);
+  assert.equal(snapshot.transfers.statistics.rcm_queued, 1);
+  assert.equal(snapshot.transfers.statistics.peer_connection_failed, 1);
+  assert.ok(!JSON.stringify(snapshot).includes("WebTransferSecret"));
+  await page.getByRole("link", { name: "Connections", exact: true }).click();
+  await expect(page.getByTestId("transfer-ctm").locator(".metric-value")).toHaveText(["1", "1", "0", "0", "0", "0", "2", "0", "0", "0"]);
+  await expect(page.getByTestId("transfer-rcm").locator(".metric-value")).toHaveText(["1", "1", "0", "0", "0", "0", "1", "0", "0", "0"]);
+  await expect(page.getByTestId("transfer-peer-reports").locator(".metric-value")).toHaveText(["0", "1"]);
+  await page.getByRole("link", { name: "Overview", exact: true }).click();
   await expect(page.getByTestId("user-statistics").locator(".metric-value")).toHaveText(["2", "2", "2", "0"]);
   assert.deepEqual(snapshot.chat, { received: 5, public_dispatches: 1, private_dispatches: 2,
     rejected: 2, flood_limited: 0, errors: 0, queued: 5, unavailable: 0, refused: 0 });

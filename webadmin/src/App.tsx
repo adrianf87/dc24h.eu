@@ -34,6 +34,7 @@ import type { HubSnapshot } from "./lib/status";
 import { Metric } from "./components/Metric";
 import { SearchStatistics } from "./components/SearchStatistics";
 import { SearchMonitoring } from "./components/SearchMonitoring";
+import { TransferStatistics } from "./components/TransferStatistics";
 import { ChatStatistics } from "./components/ChatStatistics";
 import { useHub } from "./lib/useHub";
 import type { Sample } from "./lib/useHub";
@@ -700,6 +701,7 @@ export default function App() {
                 value={number(snapshot?.network.sent_bytes)} hint={t.bytesHint} color="violet" />
             </div>
           )}
+          {page === "connections" && <TransferStatistics snapshot={snapshot} t={t} number={number} />}
           {(page === "overview" || page === "connections") && (
             <div className="overview-grid">
               <Chart samples={hub.samples} t={t} />

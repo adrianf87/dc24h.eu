@@ -15,6 +15,7 @@
 #include "dc24h/adc/result_routing.hpp"
 #include "dc24h/adc/connection_routing.hpp"
 #include "dc24h/adc/status_routing.hpp"
+#include "dc24h/transfers/statistics.hpp"
 #include "dc24h/search/security.hpp"
 #include "dc24h/search/statistics.hpp"
 
@@ -82,6 +83,7 @@ public:
         auto value=search_statistics_;value.tracked_searches=search_.tracked_searches();return value;
     }
     [[nodiscard]] chat::Statistics chat_statistics() const noexcept { return chat_statistics_; }
+    [[nodiscard]] transfers::Statistics transfer_statistics() const noexcept { return transfer_statistics_; }
     [[nodiscard]] bool closing(Id id) const;
     [[nodiscard]] bool must_close(Id id) const;
     [[nodiscard]] bool overloaded(Id id) const;
@@ -108,8 +110,8 @@ private:
     bool admit_search(Peer& peer, const Message& message, search::Operation operation, users::TimePoint now, search::Attempt& attempt);
     void receive_result(Id id, const Message& message, users::TimePoint now, search::Attempt& attempt);
     void receive_search(Id id, const Message& message, users::TimePoint now, search::Attempt& attempt);
-    void receive_connection(Id id, const Message& message, users::TimePoint now);
-    void receive_impl(Id id, const Message& message, chat::FloodClock::time_point chat_now);
+    void receive_connection(Id id, const Message& message, users::TimePoint now, transfers::Attempt& attempt);
+    void receive_impl(Id id, const Message& message, chat::FloodClock::time_point chat_now, transfers::Attempt& transfer_attempt);
     void route_status(Id id, const Message& message);
     void route_chat(Id id, const Message& message, chat::Attempt& attempt);
     void relay(Id except, const Message& message);
@@ -135,5 +137,6 @@ private:
     std::size_t queued_{0};
     chat::Statistics chat_statistics_{};
     search::Statistics search_statistics_{};
+    transfers::Statistics transfer_statistics_{};
 };
 } // namespace dc24h::adc

@@ -5,6 +5,7 @@ import tempfile
 import unittest
 
 from adc_login_process_tests import Peer
+from transfer_statistics_support import assert_statistics
 from api_support import enable_api, fetch_status
 from network_process_tests import Hub
 from tls_support import credentials, connect_tls
@@ -94,7 +95,7 @@ class ClientCapabilitiesProcessTests(unittest.TestCase):
                 after = fetch_status(endpoint, secret)
                 self.assertEqual(before['chat'], after['chat'])
                 self.assertEqual(before['search'], after['search'])
-                self.assertNotIn('transfers', after)
+                assert_statistics(self, after, ctm_received=24, ctm_routed=10, ctm_rejected=14, ctm_queued=15, rcm_received=24, rcm_routed=6, rcm_rejected=18, rcm_queued=9)
                 self.assertNotIn('CapabilitiesPrivate', json.dumps(after))
                 # Readiness survives recoverable refusals.
                 chat = b'BMSG ' + bystander.sid + b' CapabilityRecovery'

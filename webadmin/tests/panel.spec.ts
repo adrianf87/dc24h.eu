@@ -6,7 +6,7 @@ const data = {
   api_version: "v1",
   server: {
     name: "dc24h.eu",
-    version: "alpha-0.6.10",
+    version: "alpha-0.6.11",
     core_running: true,
     uptime_seconds: 3661,
   },
@@ -354,4 +354,29 @@ test("search monitor drops stale baselines after errors, missing search, resets 
   await page.clock.runFor(16000);
   await page.getByRole("button", { name: "Refresh now", exact: true }).click();
   await expect(rates).toHaveText(["—", "—", "—", "—"]);
+});
+
+test("connection page shows transfer counters, safe export and Polish mobile fallback", async ({ page }) => {
+  const { TRANSFER_COUNTERS } = await import("../src/lib/transfer-status");
+  const statistics = Object.fromEntries(TRANSFER_COUNTERS.map((key, i) => [key, i + 1]));
+  let payload: unknown = { ...data, transfers: { statistics: { ...statistics, token: "TransferPrivate" } } };
+  await page.route("**/admin-api/v1/status", route => route.fulfill({ json: payload }));
+  await page.goto("/#connections");
+  const details = page.getByTestId("transfer-details");
+  await expect(details.getByRole("heading", { name: "Transfer coordination", exact: true })).toBeVisible();
+  await expect(details.locator(".metric-value")).toHaveText(Array.from({ length: 22 }, (_, i) => String(i + 1)));
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export snapshot" }).click();
+  const download = await downloadPromise;
+  const exported = JSON.parse(await readFile((await download.path())!, "utf8"));
+  expect(exported.transfers).toEqual({ statistics });
+  expect(JSON.stringify(exported)).not.toContain("TransferPrivate");
+  payload = data;
+  await page.getByRole("button", { name: "Refresh now" }).click();
+  await expect(details.getByRole("status")).toHaveText("Transfer statistics are unavailable from this hub.");
+  await expect(details.locator(".metric-value")).toHaveText(Array(22).fill("—"));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("combobox").selectOption("pl");
+  await expect(details.getByRole("heading", { name: "Koordynacja transferów", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

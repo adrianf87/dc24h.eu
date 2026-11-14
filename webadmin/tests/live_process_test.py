@@ -56,6 +56,16 @@ with tempfile.TemporaryDirectory(prefix='dc24h-web-live-') as temp:
         case.assertTrue(source.line().startswith(b'ISTA 140 '))
         source.send(b'BMSG ' + source.sid + b' ' + b'WebChatSecret' * 8)
         case.assertTrue(source.line().startswith(b'ISTA 100 '))
+        update = b'BINF ' + source.sid + b' SUTCP4'
+        source.send(update)
+        for peer in peers: case.assertEqual(peer.line(), update)
+        offer = b'ECTM ' + source.sid + b' ' + target.sid + b' ADC/1.0 01515 WebTransferSecretToken'
+        source.send(offer)
+        for peer in peers: case.assertEqual(peer.line(), offer)
+        reverse = b'DRCM ' + target.sid + b' ' + source.sid + b' ADCS/1.0 WebTransferSecretToken'
+        target.send(reverse); case.assertEqual(source.line(), reverse)
+        failure = b'DSTA ' + target.sid + b' ' + source.sid + b' 142 WebTransferSecretFailure PRADC/1.0 TOWebTransferSecretToken'
+        target.send(failure); case.assertEqual(source.line(), failure)
         query = b'DSCH ' + source.sid + b' ' + target.sid + b' ANWebSearchSecret TOWebSearchSecretToken'
         source.send(query); case.assertEqual(target.line(), query)
         result = b'DRES ' + target.sid + b' ' + source.sid + b' FN/WebSearchSecret SI0 TR' + b'A'*39 + b' TOWebSearchSecretToken'
@@ -82,7 +92,9 @@ with tempfile.TemporaryDirectory(prefix='dc24h-web-live-') as temp:
                 ready.register(live.stdout, selectors.EVENT_READ)
                 assert ready.select(30), 'Browser baseline timed out'
                 marker = live.stdout.readline().strip()
-                assert marker == 'SEARCH_MONITOR_READY', 'Browser did not establish its search baseline'
+                if marker != 'SEARCH_MONITOR_READY':
+                    live_out, live_err = live.communicate(timeout=10)
+                    raise AssertionError('Browser did not establish its search baseline: ' + live_err.replace(token, '[redacted]'))
             for index in range(2):
                 window = b'WebSearchSecretToken' + str(index).encode()
                 query = b'DSCH ' + source.sid + b' ' + target.sid + b' ANWebSearchSecret TO' + window
@@ -97,6 +109,7 @@ with tempfile.TemporaryDirectory(prefix='dc24h-web-live-') as temp:
         assert token.encode() not in log + err + out, 'Credential leaked in C++ output'
         assert b'WebSearchSecret' not in log + err + out, 'Search data leaked in C++ output'
         assert b'WebChatSecret' not in log + err + out, 'Chat data leaked in C++ output'
+        assert b'WebTransferSecret' not in log + err + out, 'Transfer data leaked in C++ output'
     finally:
         if live is not None and live.poll() is None:
             live.kill(); live.communicate(timeout=3)
