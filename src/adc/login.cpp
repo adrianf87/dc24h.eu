@@ -37,7 +37,7 @@ struct LoginHub::Peer {
          const std::optional<chat::FloodLimits>& limits, const search::SecuritySettings& search_settings,
          const transfers::SecuritySettings& transfer_settings)
         : session(std::move(pool), address), lifecycle(model), search_guard(search_settings), search_permissions(search_settings.guests),
-          transfer_permissions(transfer_settings.guests) { if (limits) { anti_flood.emplace(*limits); } }
+          transfer_permissions(transfer_settings.guests), transfer_guard(transfer_settings.flood) { if (limits) { anti_flood.emplace(*limits); } }
     ClientSession session;
     const users::Session& lifecycle;
     std::deque<Frame> output;
@@ -48,8 +48,21 @@ struct LoginHub::Peer {
     search::SearchGuard search_guard;
     search::Permissions search_permissions;
     transfers::Permissions transfer_permissions;
+    transfers::TransferGuard transfer_guard;
 };
 namespace {
+std::size_t message_bytes(const Message& message) noexcept {
+    constexpr auto cap = max_frame_bytes + 1;
+    if (message.parameters.size() > max_parameters || message.features.size() > max_feature_selectors) { return std::numeric_limits<std::size_t>::max(); }
+    std::size_t bytes = 4;
+    const auto add = [&](std::size_t size) { bytes = size >= cap - bytes ? cap : bytes + size; };
+    if (message.source) { add(1); add(message.source->size()); }
+    if (message.target) { add(1); add(message.target->size()); }
+    if (!message.features.empty()) { add(1); }
+    for (const auto& feature : message.features) { add(1); add(feature.name.size()); }
+    for (const auto& field : message.parameters) { add(1); add(field.size()); }
+    return bytes == cap ? std::numeric_limits<std::size_t>::max() : bytes;
+}
 SharedHubMessageFrame welcome_packet(const std::optional<std::string>& text) {
     if (!text) { return {}; }
     chat::validate_welcome(*text);
@@ -101,6 +114,7 @@ std::string_view status_description(std::string_view code) noexcept {
 
 LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), search_(sessions_,limits.search.tokens), search_router_(search_), result_router_(search_), transfers_(sessions_,limits.transfers,this), connection_router_(transfers_), status_router_(sessions_), chat_(sessions_), message_router_(chat_,limits.chat), hub_messages_(sessions_), welcome_message_(welcome_packet(limits.welcome_text)), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
     search::validate_security(limits.search);
+    transfers::validate_limits(limits.transfers.flood);
     if (limits.anti_flood) { chat::validate(*limits.anti_flood); }
     if (limits.connections == 0 || limits.connections > 65535 ||
         limits.output_per_client < 128 || limits.output_per_client > 16 * 1024 * 1024 ||
@@ -374,7 +388,7 @@ void LoginHub::receive_impl(Id id, const Message& message, chat::FloodClock::tim
     } else if (message.kind == Command::res) {
         receive_result(id, message, chat_now, search_attempt);
     } else if (message.kind == Command::ctm || message.kind == Command::rcm) {
-        receive_connection(id, message);
+        receive_connection(id, message, chat_now);
     } else if (message.kind == Command::sta) {
         if (message.type != MessageType::hub) { route_status(id, message); }
     } else if (before == ConnectionState::normal && message.kind != Command::sup) {
@@ -382,10 +396,19 @@ void LoginHub::receive_impl(Id id, const Message& message, chat::FloodClock::tim
         (void)enqueue(peer, make_status(*StatusCode::parse("125"), "Command not implemented", offending));
     }
 }
-void LoginHub::receive_connection(Id id, const Message& message) {
+void LoginHub::receive_connection(Id id, const Message& message, users::TimePoint now) {
     auto& peer = *peers_.at(id);
     try {
         const auto command = std::string(1, static_cast<char>(message.type)) + (message.kind == Command::ctm ? "CTM" : "RCM");
+        const auto limited = [&] {
+            if (peer.transfer_guard.notice(now)) {
+                (void)enqueue(peer, make_status(*StatusCode::parse("100"), "Connection request rate limit exceeded", command));
+            }
+        };
+        const auto bytes = message_bytes(message);
+        // Session/state/source checks still run before admission.
+        // Charge every valid request attempt before routing/policy diagnostics.
+        if (!peer.transfer_guard.admit(transfers::Direction::outgoing, bytes, now)) { limited(); return; }
         const auto refuse = [&](ConnectionRoutingError error) {
             const auto failure = connection_failure(error, message.kind);
             if (failure.action == FailureAction::reply) {
@@ -398,7 +421,15 @@ void LoginHub::receive_connection(Id id, const Message& message) {
         };
         auto prepared = connection_router_.prepare(peer.lifecycle.id(), message);
         if (const auto* error = std::get_if<ConnectionRoutingError>(&prepared)) { refuse(*error); return; }
-        const auto result = connection_router_.dispatch(std::get<RoutedConnection>(prepared), [&](users::SessionId recipient, const SharedConnectionFrame& frame) {
+        const auto& routed = std::get<RoutedConnection>(prepared);
+        const auto target = peers_.find(routed.plan().target().value());
+        if (target == peers_.end()) { (void)connection_router_.cancel(routed); refuse(ConnectionRoutingError::recipient_unavailable); return; }
+        // All senders share this target lifetime's incoming budget. An E echo
+        // is part of the same attempt, never an additional incoming request.
+        if (!target->second->transfer_guard.admit(transfers::Direction::incoming, bytes, now)) {
+            (void)connection_router_.cancel(routed); limited(); return;
+        }
+        const auto result = connection_router_.dispatch(routed, [&](users::SessionId recipient, const SharedConnectionFrame& frame) {
             const auto found = peers_.find(recipient.value());
             if (found == peers_.end()) { return false; }
             try { return enqueue_shared(*found->second, frame); }
@@ -430,26 +461,12 @@ bool LoginHub::set_search_permissions(Id id, search::Permissions permissions) no
     peer.search_permissions = permissions;
     return true;
 }
-namespace {
-std::size_t search_bytes(const Message& message) noexcept {
-    constexpr auto cap = max_frame_bytes + 1;
-    if (message.parameters.size() > max_parameters || message.features.size() > max_feature_selectors) { return std::numeric_limits<std::size_t>::max(); }
-    std::size_t bytes = 4;
-    const auto add = [&](std::size_t size) { bytes = size >= cap - bytes ? cap : bytes + size; };
-    if (message.source) { add(1); add(message.source->size()); }
-    if (message.target) { add(1); add(message.target->size()); }
-    if (!message.features.empty()) { add(1); }
-    for (const auto& feature : message.features) { add(1); add(feature.name.size()); }
-    for (const auto& field : message.parameters) { add(1); add(field.size()); }
-    return bytes == cap ? std::numeric_limits<std::size_t>::max() : bytes;
-}
-}
 bool LoginHub::admit_search(Peer& peer, const Message& message, search::Operation operation, users::TimePoint now, search::Attempt& attempt) {
     std::string_view code = "100", description;
     if (const auto error = search::authorize(limits_.search,peer.search_permissions,operation)) {
         code = "125";
         description = *error == search::PermissionError::disabled ? "Search operation is disabled" : "Search operation not permitted";
-    } else if (!peer.search_guard.admit(operation,search_bytes(message),now)) {
+    } else if (!peer.search_guard.admit(operation,message_bytes(message),now)) {
         description = "Search rate limit exceeded";
         attempt.outcome(search::Outcome::rate_limited);
     } else if (operation == search::Operation::result && limits_.search.require_result_token &&
@@ -486,7 +503,7 @@ void LoginHub::receive_result(Id id, const Message& message, users::TimePoint no
         auto prepared = result_router_.prepare(peer.lifecycle.id(),message,now);
         if (const auto* error = std::get_if<ResultRoutingError>(&prepared)) { refuse(*error); return; }
         bool recipient_limited = false;
-        const auto bytes = search_bytes(message);
+        const auto bytes = message_bytes(message);
         const auto report = result_router_.dispatch(std::get<RoutedResult>(prepared),[&](users::SessionId recipient,const SharedResultFrame& frame) {
             const auto found = peers_.find(recipient.value());
             if (found == peers_.end()) { return false; }

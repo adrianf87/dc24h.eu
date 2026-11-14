@@ -168,6 +168,7 @@ void validate(const Settings& settings) {
     users::validate(net.users);
     chat::validate_settings(net.chat);
     search::validate_security(net.search);
+    transfers::validate_limits(net.transfers.flood);
     const auto count = net.listeners.size() + net.tls_listeners.size();
     if (count == 0 || count > 16 || net.max_connections == 0 || net.max_connections > 65535 ||
         net.idle_timeout.count() < 1 || net.idle_timeout.count() > 86400) {
@@ -300,6 +301,22 @@ Settings load_file(const std::string& filename) {
                 settings.network.transfers.guests.initiate = transfer_switch(value);
             } else if (section == "transfers" && key == "guest_receive") {
                 settings.network.transfers.guests.receive = transfer_switch(value);
+            } else if (section == "transfers" && key == "request_rate") {
+                settings.network.transfers.flood.requests.rate = positive_number(value, transfers::max_request_rate);
+            } else if (section == "transfers" && key == "request_burst") {
+                settings.network.transfers.flood.requests.burst = positive_number(value, transfers::max_request_rate);
+            } else if (section == "transfers" && key == "request_byte_rate") {
+                settings.network.transfers.flood.requests.byte_rate = positive_number(value, transfers::max_transfer_byte_rate);
+            } else if (section == "transfers" && key == "request_byte_burst") {
+                settings.network.transfers.flood.requests.byte_burst = positive_number(value, transfers::max_transfer_byte_rate);
+            } else if (section == "transfers" && key == "incoming_rate") {
+                settings.network.transfers.flood.incoming.rate = positive_number(value, transfers::max_request_rate);
+            } else if (section == "transfers" && key == "incoming_burst") {
+                settings.network.transfers.flood.incoming.burst = positive_number(value, transfers::max_request_rate);
+            } else if (section == "transfers" && key == "incoming_byte_rate") {
+                settings.network.transfers.flood.incoming.byte_rate = positive_number(value, transfers::max_transfer_byte_rate);
+            } else if (section == "transfers" && key == "incoming_byte_burst") {
+                settings.network.transfers.flood.incoming.byte_burst = positive_number(value, transfers::max_transfer_byte_rate);
             } else if (section == "search" && key == "queries_enabled") {
                 settings.network.search.queries_enabled = connection_logging(value);
             } else if (section == "search" && key == "results_enabled") {

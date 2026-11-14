@@ -50,6 +50,9 @@ RCM_TEST = RCM_TEST or TRANSFER_TOKENS
 TRANSFER_ERRORS = '--transfer-errors' in sys.argv
 if TRANSFER_ERRORS:
     sys.argv.remove('--transfer-errors')
+TRANSFER_LIMITS = '--transfer-limits' in sys.argv
+if TRANSFER_LIMITS:
+    sys.argv.remove('--transfer-limits')
 CTM_TEST = '--ctm' in sys.argv
 if CTM_TEST:
     sys.argv.remove('--ctm')
@@ -97,6 +100,8 @@ class NcdcLoginTest(unittest.TestCase):
                 ini.write_text(ini.read_text() + '[search]\nguest_queries=off\n')
             if CONNECTION_SECURITY:
                 ini.write_text(ini.read_text() + '[transfers]\nguest_initiate=off\n')
+            if TRANSFER_LIMITS:
+                ini.write_text(ini.read_text() + '[transfers]\nrequest_rate=1\nrequest_burst=1\n')
             api_path, token = enable_api(ini, directory)
             options = {'ready_pattern': TLS_READY} if ENCRYPTED else {}
             hub = Hub(self, '--config', str(ini), '--log-connections', 'on', '--log-chat', 'on', **options)
@@ -756,6 +761,25 @@ class NcdcLoginTest(unittest.TestCase):
                     os.write(master, b'/open dc24h_login\rSecurityNcdcRecovery\r')
                     self.assertEqual(observer_line(), b'BMSG ' + replacement_sid + b' SecurityNcdcRecovery')
                     wait_screen(b'SecurityNcdcRecovery')
+                if TRANSFER_LIMITS:
+                    # One raw sender floods a real ncdc recipient. Only the
+                    # admitted unsupported-protocol offer may reach the client.
+                    time.sleep(1.1)
+                    limited_offer = b'DCTM ' + observer.sid + b' ' + replacement_sid + b' future/1.0 1515 LimitsNcdcPrivate'
+                    observer.peer.sendall((limited_offer + b'\n') * 32)
+                    received = [observer_line(), observer_line()]
+                    self.assertEqual(sum(line.startswith(b'ISTA 100 Connection\\srequest\\srate\\slimit\\sexceeded FCDCTM') for line in received), 1)
+                    self.assertEqual(sum(line.startswith(b'DSTA ' + replacement_sid + b' ' + observer.sid + b' 141 ') for line in received), 1)
+                    time.sleep(1.1)
+                    observer.send(limited_offer)
+                    self.assertTrue(observer_line().startswith(b'DSTA ' + replacement_sid + b' ' + observer.sid + b' 141 '))
+                    marker = b'BMSG ' + observer.sid + b' LimitsNcdcRecovery'
+                    observer.send(marker)
+                    self.assertEqual(observer_line(), marker)
+                    wait_screen(b'LimitsNcdcRecovery')
+                    os.write(master, b'/open dc24h_login\rLimitsNcdcStillOnline\r')
+                    self.assertEqual(observer_line(), b'BMSG ' + replacement_sid + b' LimitsNcdcStillOnline')
+                    self.assertNotIn(b'LimitsNcdcPrivate', hub.log)
                 os.write(master, b'/quit\r')
                 deadline = time.monotonic() + 4
                 while process.poll() is None and time.monotonic() < deadline:

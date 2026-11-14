@@ -210,6 +210,7 @@ TcpServer::TcpServer(logging::Logger& logger, Options options)
     security::validate(options_.security);
     chat::validate_settings(options_.chat);
     search::validate_security(options_.search);
+    transfers::validate_limits(options_.transfers.flood);
     users::validate(options_.users);
     for (const auto& endpoint : options_.listeners) {
         socklen_t size{};

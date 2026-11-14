@@ -1,5 +1,17 @@
 # Changelog
 
+## alpha-0.6.10 — 2026-11-14
+
+Transfer Limits increment, based directly on main `76f3710905367d76ddd6791643446d14f152e6ec` after Error Handling:
+
+- Added fixed-memory TransferGuard with independent outgoing/incoming count and decoded-byte buckets, atomic debit, fractional monotonic refill, overflow-safe extreme clocks and one shared quota-notice allowance per second. CTM/RCM, D/E, protocol/token/recipient changes share each lifetime's budgets; receiving traffic leaves outgoing credit available.
+- LoginHub charges source attempts before Connection Router preparation and routing/policy diagnostics, then applies aggregate incoming quotas to successfully prepared target lifetimes. Target denial cancels before target/echo delivery; accepted E costs one attempt per direction. Existing source/state rejection, authorization rechecks, one-attempt dispatch, bounded queues and allocation-fault isolation remain. Mode/permission updates do not refill credits; disconnect destroys the guard.
+- Added eight strict [transfers] request/incoming rate/burst/byte_rate/byte_burst keys with startup validation in configuration, Network and LoginHub. Defaults are 32/s burst 64 outgoing and 128/s burst 256 incoming, plus bounded byte quotas. Refusals use a static source-only recoverable ISTA 100/FC without request data, queued retries or target/echo amplification.
+- Added native clock/atomicity/overflow/no-allocation/security/lifetime tests, fragmented mixed ADC/ADCS IPv4/IPv6 process coverage, aggregate-target and extension-byte tests, invalid/duplicate INI checks, API/log privacy and two real ncdc flood/refill/chat-recovery suites. Updated EN/US and PL documentation/help, example INI and server/WebAdmin release metadata. Earlier alpha-0.6.1–alpha-0.6.9 branches and history remain.
+- No dependency, SQL migration, endpoint, transfer metric/page, pending-token registry or peer socket/file handling is added. Standalone trusted Core/Router consumers still own admission policy; live quotas are applied by LoginHub. Peer bandwidth/concurrency limits remain future work.
+
+- Validation: All **169/169 CTest tests** passed in each of Debug, Release and ASan/UBSan with required integrations (new transfer limits, real ncdc flood/refill plus previous positive peer handshakes, MariaDB and Apache HTTPS). No compiler warnings. WebAdmin build/typecheck, **12 Node tests**, **10 Chromium tests** and real C++ API integration passed. Metadata, UTF-8/language parity/local links, changed Python syntax, example INI startup/shutdown and whitespace checks passed. GitHub Actions completion is not awaited. Full supported OS coverage and production load remain unverified.
+
 ## alpha-0.6.9 — 2026-11-14
 
 Error Handling increment, based directly on main `9efb6020755362d4c9ea537014a36cfbfed145b3` after Connection Security:
