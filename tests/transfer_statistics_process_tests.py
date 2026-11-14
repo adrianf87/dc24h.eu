@@ -32,7 +32,7 @@ class TransferStatisticsProcessTests(unittest.TestCase):
                 a, b, c = peers
                 initial = fetch_status(endpoint, secret)
                 expected = dict.fromkeys(NAMES, 0)
-                self.assertEqual(initial['transfers'], {'statistics': expected})
+                self.assertEqual(initial['transfers']['statistics'], expected)
                 update = b'BINF ' + b.sid + b' SU'
                 self.exchange(peers, b, [update], {p: [update] for p in peers})
                 offer = b'ECTM ' + a.sid + b' ' + b.sid + b' ADCS/1.0 01515 StatisticsPrivateToken'
@@ -67,7 +67,7 @@ class TransferStatisticsProcessTests(unittest.TestCase):
                 self.assertNotIn(b'StatisticsPrivate', hub.log)
                 self.assertNotIn(secret.encode(), hub.log)
                 restarted = Hub(self, '--config', str(ini))
-                self.assertEqual(fetch_status(endpoint, secret)['transfers'], {'statistics': dict.fromkeys(NAMES, 0)})
+                self.assertEqual(fetch_status(endpoint, secret)['transfers']['statistics'], dict.fromkeys(NAMES, 0))
                 restarted.stop()
 
     def test_silent_source_and_aggregate_target_denials(self):

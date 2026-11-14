@@ -1,7 +1,8 @@
 # dc24h.eu documentation
 
-alpha-0.6.12: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.6.13: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
+- [Transfer Configuration — alpha-0.6.13](TRANSFER_CONFIGURATION.md)
 - [WebAdmin Transfer Monitoring — alpha-0.6.12](WEBADMIN_TRANSFERS.md)
 - [Transfer Statistics — alpha-0.6.11](TRANSFER_STATISTICS.md)
 - [Debian 13 custom-runner CI](CI_DEBIAN13.md)

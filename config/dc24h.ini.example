@@ -1,4 +1,4 @@
-# dc24h.eu alpha-0.6.12 configuration (UTF-8, no secrets committed)
+# dc24h.eu alpha-0.6.13 configuration (UTF-8, no secrets committed)
 # Section names and keys are case-sensitive; duplicate singular keys are errors.
 [general]
 language = us
@@ -57,6 +57,10 @@ result_byte_rate = 262144
 result_byte_burst = 1048576
 
 [transfers]
+# any (default), none, or up to 16 exact case-sensitive protocol names.
+# Examples: ADC/1.0,ADCS/1.0 or ADCS/1.0 (peer TLS only; independent of hub TLS).
+# Restart to apply. A denied protocol gets private recoverable ISTA 125/FC.
+allowed_protocols = any
 # Per connection lifetime: CTM/RCM and D/E share each count/byte budget.
 # Incoming limits aggregate all senders targeting this connection; echo costs once.
 # Bytes are decoded headers/fields/separators, excluding final LF.

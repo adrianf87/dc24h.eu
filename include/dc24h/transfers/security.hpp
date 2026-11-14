@@ -2,6 +2,7 @@
 
 #include "dc24h/users/connectivity.hpp"
 #include "dc24h/transfers/limits.hpp"
+#include "dc24h/transfers/protocol_policy.hpp"
 #include "dc24h/users/session.hpp"
 
 namespace dc24h::transfers {
@@ -14,6 +15,7 @@ struct SecuritySettings {
     bool ctm_enabled{true}, rcm_enabled{true};
     Permissions guests{};
     Limits flood{};
+    ProtocolPolicy allowed_protocols{};
 };
 enum class PermissionError { disabled, forbidden };
 [[nodiscard]] std::optional<PermissionError> authorize(const SecuritySettings& settings,

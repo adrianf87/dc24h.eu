@@ -178,6 +178,8 @@ Hub zachowuje jawne żądania i tokeny błędów; TLS klientów jest niezależny
 Klienci zachowują protokół/token odpowiedzi CTM; hub nie podaje za nich portu.
 Tokeny połączeń: 1..128 zdekodowanych bajtów NFC UTF-8; zachowane litery, spacje i ukośniki.
 Transfery [transfers]: ctm_enabled, rcm_enabled, guest_initiate, guest_receive (on/off, domyślnie on).
+allowed_protocols: any (domyślnie), none lub do 16 dokładnych nazw oddzielonych przecinkami.
+Zmiany transferów wymagają restartu; API i WebAdmin pokazują efektywną politykę startową.
 Limity transferów: request_rate/burst/byte_rate/byte_burst oraz incoming_rate/burst/byte_rate/byte_burst.
 CTM/RCM współdzielą budżety nadawcy i odbiorcy; nadmiar jest pomijany, do 1 prywatnego powiadomienia/s.
 Uprawnienia inicjowania źródła i odbioru celu są ponownie sprawdzane przed wysyłką.

@@ -58,6 +58,7 @@ Preparation Core::prepare(users::SessionId sender, std::string_view source, std:
     const auto endpoint = address(*sessions_.find(sender), *destination, request);
     if (!endpoint) { return Error::incompatible_connectivity; }
     if (const auto error = authorize_pair(sender, destination->id(), request.kind())) { return permission_error(*error); }
+    if (!settings_.allowed_protocols.allows(request.protocol())) { return Error::protocol_forbidden; }
     return Plan(domain_, sender, destination->id(), source, target, std::move(request), *endpoint);
 }
 std::variant<State, Error> Core::dispatch(const Plan& plan, const Sink& sink) const {
@@ -74,6 +75,7 @@ std::variant<State, Error> Core::dispatch(const Plan& plan, const Sink& sink) co
     const auto endpoint = address(*sessions_.find(plan.sender()), *destination, plan.request());
     if (!endpoint || *endpoint != plan.listener_address()) { return Error::incompatible_connectivity; }
     if (const auto error = authorize_pair(plan.sender(), plan.target(), plan.request().kind())) { return permission_error(*error); }
+    if (!settings_.allowed_protocols.allows(plan.request().protocol())) { return Error::protocol_forbidden; }
     attempt->state = State::dispatching;
     try {
         attempt->state = sink(plan.target(), plan) ? State::queued : State::refused;

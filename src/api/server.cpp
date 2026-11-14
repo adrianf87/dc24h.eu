@@ -68,10 +68,31 @@ std::string search_json(const Snapshot& value) {
     number("result_rate",s.results.rate);number("result_burst",s.results.burst);number("result_byte_rate",s.results.byte_rate);number("result_byte_burst",s.results.byte_burst);
     json.pop_back();json+="}}";return json;
 }
-std::string transfers_json(const transfers::Statistics& statistics) {
+std::string transfers_json(const transfers::Statistics& statistics, const transfers::SecuritySettings& settings) {
     std::string json{"{\"statistics\":{"};
     for(std::size_t i=0;i<transfers::statistic_names.size();++i){
         if(i){json+=',';}json+='\"';json+=transfers::statistic_names[i];json+="\":";json+=std::to_string(statistics.values[i]);
+    }
+    json+="},\"configuration\":{";
+    const auto boolean=[&](std::string_view key,bool enabled){json+='\"';json+=key;json+=enabled?"\":true,":"\":false,";};
+    const auto number=[&](std::string_view key,std::uint32_t count){json+='\"';json+=key;json+="\":";json+=std::to_string(count);json+=',';};
+    boolean("ctm_enabled",settings.ctm_enabled);boolean("rcm_enabled",settings.rcm_enabled);
+    boolean("guest_initiate",settings.guests.initiate);boolean("guest_receive",settings.guests.receive);
+    number("request_rate",settings.flood.requests.rate);number("request_burst",settings.flood.requests.burst);
+    number("request_byte_rate",settings.flood.requests.byte_rate);number("request_byte_burst",settings.flood.requests.byte_burst);
+    number("incoming_rate",settings.flood.incoming.rate);number("incoming_burst",settings.flood.incoming.burst);
+    number("incoming_byte_rate",settings.flood.incoming.byte_rate);number("incoming_byte_burst",settings.flood.incoming.byte_burst);
+    json+="\"allowed_protocols\":";
+    if (settings.allowed_protocols.any()) { json+="\"any\""; }
+    else {
+        json+='[';
+        bool first=true;
+        for (const auto& name : settings.allowed_protocols.names()) {
+            if (!first) { json+=','; } first=false;json+='\"';
+            for (const char c : name) { if(c=='\"'||c=='\\'){json+='\\';}json+=c; }
+            json+='\"';
+        }
+        json+=']';
     }
     json+="}}";return json;
 }
@@ -95,7 +116,7 @@ std::string status_json(const Snapshot& value) {
         ",\"received_bytes\":" + std::to_string(value.received_bytes) + ",\"sent_bytes\":" + std::to_string(value.sent_bytes) +
         ",\"peak_connections\":" + std::to_string(value.peak_connections) + "},\"users\":{\"online\":" +
         std::to_string(value.online_users) + ",\"peak_online\":" + std::to_string(value.peak_online_users) +
-        ",\"successful_logins\":" + std::to_string(value.successful_logins) + "},\"chat\":" + chat_json + ",\"search\":" + search_json(value) + ",\"transfers\":" + transfers_json(value.transfers) + ",\"database\":{\"enabled\":" +
+        ",\"successful_logins\":" + std::to_string(value.successful_logins) + "},\"chat\":" + chat_json + ",\"search\":" + search_json(value) + ",\"transfers\":" + transfers_json(value.transfers, value.transfer_settings) + ",\"database\":{\"enabled\":" +
         (value.database_enabled ? "true" : "false") + "}}\n";
 }
 } // namespace

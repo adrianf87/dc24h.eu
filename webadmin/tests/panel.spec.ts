@@ -8,7 +8,7 @@ const data = {
   api_version: "v1",
   server: {
     name: "dc24h.eu",
-    version: "alpha-0.6.12",
+    version: "alpha-0.6.13",
     core_running: true,
     uptime_seconds: 3661,
   },
@@ -469,4 +469,46 @@ test("transfer monitor drops stale baselines after errors, missing transfers, re
   await page.clock.runFor(16000);
   await page.getByRole("button", { name: "Refresh now", exact: true }).click();
   await expect(rates).toHaveText(["—", "—", "—", "—"]);
+});
+
+test("transfer startup configuration is bilingual, read-only, safe to export and backward compatible", async ({ page }, testInfo) => {
+  const { transferConfiguration } = await import("./fixtures");
+  const configuration = { ...transferConfiguration, guest_receive: false,
+    allowed_protocols: ["ADCS/1.0", "x".repeat(32), "<img/onerror=alert(1)>"] };
+  let payload: unknown = { ...data, transfers: { ...transferSnapshot, configuration: { ...configuration, secret: "ConfigurationPrivate" } } };
+  await page.route("**/admin-api/v1/status", route => route.fulfill({ json: payload }));
+  await page.goto("/#connections");
+  await expect(page.getByText("API connected", { exact: true })).toBeVisible();
+  await page.getByRole("switch").click();
+  const settings = page.getByTestId("transfer-configuration");
+  await expect(settings.getByRole("heading", { name: "Effective transfer configuration" })).toBeVisible();
+  await expect(settings.locator("[data-transfer-setting]")).toHaveCount(13);
+  await expect(settings.locator('[data-transfer-setting="request_byte_burst"]')).toHaveText("262,144");
+  await expect(settings.locator('[data-transfer-setting="guest_receive"]')).toHaveText("Disabled");
+  await expect(settings.locator('[data-transfer-setting="allowed_protocols"]')).toHaveText(configuration.allowed_protocols.join(", "));
+  await expect(settings.locator("img, input, select, textarea")).toHaveCount(0);
+  const downloading = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export snapshot" }).click();
+  const exported = JSON.parse(await readFile((await (await downloading).path())!, "utf8"));
+  expect(exported.transfers.configuration).toEqual(configuration);
+  expect(JSON.stringify(exported)).not.toContain("ConfigurationPrivate");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("combobox").selectOption("pl");
+  await expect(settings.getByRole("heading", { name: "Efektywna konfiguracja transferów" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await settings.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: testInfo.outputPath("transfer-configuration-mobile-pl.png"), animations: "disabled" });
+  for (const [protocols, label] of [[[], "Brak (CTM/RCM odrzucane)"], ["any", "Dowolny poprawny protokół (także rozszerzenia)"]] as const) {
+    payload = { ...data, transfers: { ...transferSnapshot, configuration: { ...configuration, allowed_protocols: protocols } } };
+    await page.getByRole("button", { name: "Odśwież teraz" }).click();
+    await expect(settings.locator('[data-transfer-setting="allowed_protocols"]')).toHaveText(label);
+  }
+  payload = { ...data, transfers: transferSnapshot };
+  await page.getByRole("button", { name: "Odśwież teraz" }).click();
+  await expect(settings.getByRole("status")).toHaveText("Konfiguracja transferów jest niedostępna na tym hubie.");
+  await expect(settings.locator("[data-transfer-setting]")).toHaveText(Array(13).fill("—"));
+  await expect(page.getByTestId("transfer-ctm").locator(".metric-value").first()).toHaveText("1");
+  payload = { ...data, transfers: { ...transferSnapshot, configuration: { ...configuration, request_rate: 0 } } };
+  await page.getByRole("button", { name: "Odśwież teraz" }).click();
+  await expect(page.getByTestId("transfer-ctm").locator(".metric-value").first()).toHaveText("—");
 });

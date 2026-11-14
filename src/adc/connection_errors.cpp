@@ -17,6 +17,7 @@ ConnectionFailure connection_failure(ConnectionRoutingError error, Command comma
     case invalid_message: return {FailureAction::reply,"100","Invalid connection request"};
     case disabled: return {FailureAction::reply,"125","Connection operation is disabled"};
     case forbidden: return {FailureAction::reply,"125","Connection operation not permitted"};
+    case protocol_forbidden: return {FailureAction::reply,"125","Connection protocol not permitted"};
     default: return {FailureAction::abort, {}, {}};
     }
 }

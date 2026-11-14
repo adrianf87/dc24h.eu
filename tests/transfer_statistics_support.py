@@ -6,4 +6,4 @@ NAMES = [f'{kind}_{field}' for kind in ('ctm', 'rcm') for field in FIELDS] + ['p
 def assert_statistics(case, snapshot, **nonzero):
     expected = dict.fromkeys(NAMES, 0)
     expected.update(nonzero)
-    case.assertEqual(snapshot['transfers'], {'statistics': expected})
+    case.assertEqual(snapshot['transfers']['statistics'], expected)

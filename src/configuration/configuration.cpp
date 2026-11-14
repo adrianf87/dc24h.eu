@@ -293,6 +293,8 @@ Settings load_file(const std::string& filename) {
                 settings.network.chat.welcome_enabled = connection_logging(value);
             } else if (section == "chat" && key == "welcome_message") {
                 settings.network.chat.welcome_message = value;
+            } else if (section == "transfers" && key == "allowed_protocols") {
+                settings.network.transfers.allowed_protocols = transfers::ProtocolPolicy::parse(value);
             } else if (section == "transfers" && key == "ctm_enabled") {
                 settings.network.transfers.ctm_enabled = transfer_switch(value);
             } else if (section == "transfers" && key == "rcm_enabled") {

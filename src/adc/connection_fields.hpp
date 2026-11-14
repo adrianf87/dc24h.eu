@@ -26,8 +26,7 @@ std::optional<Error> connection_preflight(const Message& message, Command kind, 
     return {};
 }
 inline bool connection_protocol(std::string_view value) noexcept {
-    return !value.empty() && value.size() <= transfers::max_protocol_bytes &&
-        std::all_of(value.begin(), value.end(), [](unsigned char c) { return c >= 33 && c <= 126; });
+    return transfers::valid_wire_protocol(value);
 }
 inline bool connection_token(std::string_view value) {
     return !transfers::validate_token(value);

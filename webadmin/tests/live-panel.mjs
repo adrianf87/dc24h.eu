@@ -22,7 +22,7 @@ try {
   });
   await page.goto(process.argv[2]);
   await expect(page.getByText("API connected", { exact: true })).toBeVisible();
-  await expect(page.getByText("alpha-0.6.12", { exact: true })).toHaveCount(2);
+  await expect(page.getByText("alpha-0.6.13", { exact: true })).toHaveCount(2);
   await expect(page.locator(".metric-value").nth(1)).toHaveText("15");
   assert.ok(
     Number(await page.locator(".metric-value").first().textContent()) >= 2,
@@ -44,6 +44,12 @@ try {
   await expect(page.getByTestId("transfer-ctm").locator(".metric-value")).toHaveText(["1", "1", "0", "0", "0", "0", "2", "0", "0", "0"]);
   await expect(page.getByTestId("transfer-rcm").locator(".metric-value")).toHaveText(["1", "1", "0", "0", "0", "0", "1", "0", "0", "0"]);
   await expect(page.getByTestId("transfer-peer-reports").locator(".metric-value")).toHaveText(["0", "1"]);
+  assert.deepEqual(snapshot.transfers.configuration.allowed_protocols, ["ADC/1.0", "ADCS/1.0", 'Future"\\Protocol/1.0']);
+  assert.equal(snapshot.transfers.configuration.request_rate, 9);
+  const configurationView = page.getByTestId("transfer-configuration");
+  await expect(configurationView.locator('[data-transfer-setting="allowed_protocols"]')).toHaveText(snapshot.transfers.configuration.allowed_protocols.join(", "));
+  await expect(configurationView.locator('[data-transfer-setting="request_rate"]')).toHaveText("9");
+
   await page.getByRole("link", { name: "Overview", exact: true }).click();
   await expect(page.getByTestId("user-statistics").locator(".metric-value")).toHaveText(["2", "2", "2", "0"]);
   assert.deepEqual(snapshot.chat, { received: 5, public_dispatches: 1, private_dispatches: 2,
