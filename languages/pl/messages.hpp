@@ -3,7 +3,14 @@
 #include <string_view>
 
 namespace dc24h::i18n::pl {
-inline constexpr std::array<std::string_view, 128> messages{{
+inline constexpr std::array<std::string_view, 134> messages{{
+    "Połączenie z bazą danych nie nadaje się do użycia",
+    "Naruszenie ograniczenia bazy danych",
+    "Konflikt transakcji bazy danych",
+    "Przekroczono limit operacji bazy danych",
+    "Niepoprawny stan transakcji bazy danych",
+    "Połączenie z bazą danych użyte z innego wątku",
+
     "Przełączniki transferów muszą mieć wartość on lub off",
     "Czat zdarzenie=",
     "Pominięte zdarzenia logu czatu=",
@@ -192,5 +199,7 @@ Ustawienia bazy w sekcji INI [database]; domyślnie wyłączona.
 --check-config nie łączy z MariaDB ani nie odczytuje pliku hasła.
 Lokalne API: INI [api], domyślnie wyłączone; gniazdo Unix i prywatny token Bearer.
 Tylko GET /api/v1/health i /api/v1/status. Brak operacji zmieniających stan.
+Database Core: typowane parametry, ograniczone wyniki i transakcje RAII w wątku właściciela.
+Błąd SQL/wyniku wymaga wycofania; utrata połączenia bez automatycznego ponawiania zapisów.
 )HELP";
 } // namespace dc24h::i18n::pl

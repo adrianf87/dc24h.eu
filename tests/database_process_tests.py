@@ -13,6 +13,9 @@ import time
 from api_support import enable_api, fetch_status
 
 BINARY, TEST = map(os.path.abspath, sys.argv[1:3])
+CORE_TEST = os.path.abspath(sys.argv[3]) if len(sys.argv) >= 4 else None
+NCDC = os.path.abspath(sys.argv[4]) if len(sys.argv) >= 6 else None
+MSG_CODEC = os.path.abspath(sys.argv[5]) if len(sys.argv) >= 6 else None
 
 
 def run(args, **kwargs):
@@ -29,13 +32,19 @@ def main():
         folder = Path(temp)
         data = folder / 'data'
         db_socket = folder / 'db.sock'
+        # Bootstrap SQL also creates temporary system tables. Keep those files
+        # private when separate CTest instances initialize MariaDB concurrently.
+        sql_tmp = folder / 'sql-tmp'
+        sql_tmp.mkdir(mode=0o700)
         init = run(['mariadb-install-db', '--no-defaults', '--datadir=' + str(data),
+                    '--tmpdir=' + str(sql_tmp),
                     '--auth-root-authentication-method=normal', '--skip-test-db',
                     '--user=' + pwd.getpwuid(os.geteuid()).pw_name])
         require(init.returncode == 0, 'Disposable database initialization failed: ' + init.stderr)
         daemon_log = folder / 'daemon.log'
         base = ['mariadbd', '--no-defaults', '--user=' + pwd.getpwuid(os.geteuid()).pw_name,
                 '--datadir=' + str(data), '--socket=' + str(db_socket),
+                '--tmpdir=' + str(sql_tmp),
                 '--pid-file=' + str(folder / 'db.pid'), '--log-error=' + str(daemon_log),
                 '--skip-networking', '--skip-name-resolve',
                 '--innodb-buffer-pool-size=32M', '--innodb-log-file-size=8M']
@@ -99,15 +108,33 @@ def main():
                     'Migration checksum differs from SQL source')
             result = cli(path, '--migrate-database')
             require(result.returncode == 0 and 'applied=0' in result.stdout, result.stderr)
+            if CORE_TEST:
+                sql("DELIMITER //\nCREATE PROCEDURE dc24h.dc24h_core_multiple_results() BEGIN SELECT 1; SELECT 2; END//\nDELIMITER ;\n"
+                    "GRANT EXECUTE ON PROCEDURE dc24h.dc24h_core_multiple_results TO 'dc24h'@'localhost';")
+                result = run([CORE_TEST, str(db_socket), str(password)])
+                require(result.returncode == 0, result.stderr)
+                no_secrets(result)
+
             # A read-only service account can connect but cannot run DDL migrations.
             sql("CREATE USER 'runtime'@'localhost' IDENTIFIED BY PASSWORD '" + native_hash + "';"
                 "GRANT SELECT ON dc24h.* TO 'runtime'@'localhost';")
             config(db_user='runtime')
             require(cli(path, '--check-database').returncode == 0, 'Read-only connection failed')
+            if CORE_TEST:
+                result = run([CORE_TEST, str(db_socket), str(password), '--readonly'])
+                require(result.returncode == 0, result.stderr)
+                no_secrets(result)
+
             result = cli(path, '--migrate-database')
             require(result.returncode == 1, 'Migration accepted without DDL privileges'); no_secrets(result)
             config()
             api_path, api_token = enable_api(path, folder)
+            if NCDC:
+                for transport in ([], ['--tls']):
+                    result = run([sys.executable, str(Path(__file__).with_name('ncdc_login_test.py')),
+                                  BINARY, NCDC, MSG_CODEC, '--database-config', str(path), *transport])
+                    require(result.returncode == 0, result.stderr)
+                    no_secrets(result)
             # Enabled database startup and graceful shutdown.
             hub = subprocess.Popen([BINARY, '--config', str(path)], stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, bufsize=0)

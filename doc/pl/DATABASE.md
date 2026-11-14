@@ -1,4 +1,6 @@
-# MariaDB — alpha-0.1.8
+# MariaDB — alpha-0.7.1
+
+**Aktualny etap — alpha-0.7.1:** [Database Core](DATABASE_CORE.md) dodaje typowane parametry, ograniczone wyniki na własność, metadane zapisu, egzekwowanie wątku właściciela, zredagowane błędy i transakcje RAII. Niezmienna migracja 1 i konfiguracja operatora poniżej pozostają; wymagane przebudowanie zależnych komponentów.
 
 Zaimplementowano opcjonalne połączenie Connector/C, RAII, ograniczenia czasu, kodowanie `utf8mb4`, zapytania parametryzowane i jawną migrację rejestru wersji. Konta użytkowników, uwierzytelnianie i hashowanie haseł, role, uprawnienia, konfiguracja w bazie, bany, dane administracyjne oraz zapisywanie zdarzeń pozostają planowane. Haseł użytkowników huba jeszcze nie przechowujemy; przyszły moduł powinien korzystać ze sprawdzonej implementacji Argon2id. WebAdmin będzie używał API C++, nie bezpośredniego SQL.
 

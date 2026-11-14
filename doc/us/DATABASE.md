@@ -1,4 +1,6 @@
-# MariaDB — alpha-0.1.8
+# MariaDB — alpha-0.7.1
+
+**Current increment — alpha-0.7.1:** [Database Core](DATABASE_CORE.md) adds typed prepared parameters, bounded owning query results, execution metadata, owner-thread enforcement, redacted errors and RAII transactions. The immutable migration-1 baseline and operator setup below remain; dependent native components require rebuilding.
 
 Implemented: optional Connector/C connection, RAII cleanup, bounded timeouts, UTF-8 (`utf8mb4`), prepared statements and an explicit migration-metadata baseline. Accounts, authentication/password hashing, roles, permissions, configuration persistence, bans, administrative records and event persistence remain planned. No hub user passwords are stored yet; a future authentication module must use an audited Argon2id implementation. WebAdmin will use the C++ API rather than direct SQL.
 

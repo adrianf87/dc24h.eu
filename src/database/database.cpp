@@ -2,8 +2,6 @@
 #include "dc24h/database/migration.hpp"
 #include "dc24h/security/secret_file.hpp"
 
-#include <mysql.h>
-#include <openssl/crypto.h>
 #include <openssl/sha.h>
 
 #include <algorithm>
@@ -23,43 +21,6 @@ bool identifier(std::string_view value) {
                    (c >= '0' && c <= '9') || c == '_';
         });
 }
-void option(MYSQL* handle, mysql_option key, const void* value) {
-    if (mysql_optionsv(handle, key, value) != 0) {
-        throw std::runtime_error("Database option setup failed");
-    }
-}
-struct Statement {
-    MYSQL_STMT* handle;
-    Statement(MYSQL* connection, std::string_view sql, const std::vector<std::string>& parameters)
-        : handle(mysql_stmt_init(connection)) {
-        if (handle == nullptr) { throw std::runtime_error("Database statement failed"); }
-        // Construction failures must close the partially prepared statement.
-        try {
-            if (sql.empty() || sql.size() > 65536 ||
-                mysql_stmt_prepare(handle, sql.data(), static_cast<unsigned long>(sql.size())) != 0 ||
-                mysql_stmt_param_count(handle) != parameters.size()) {
-                throw std::runtime_error("Database statement failed");
-            }
-            std::vector<MYSQL_BIND> bindings(parameters.size());
-            std::vector<unsigned long> lengths(parameters.size());
-            for (std::size_t i = 0; i < parameters.size(); ++i) {
-                if (parameters[i].size() > 65536) { throw std::runtime_error("Database statement failed"); }
-                lengths[i] = static_cast<unsigned long>(parameters[i].size());
-                bindings[i].buffer_type = MYSQL_TYPE_STRING;
-                bindings[i].buffer = const_cast<char*>(parameters[i].data());
-                bindings[i].buffer_length = lengths[i];
-                bindings[i].length = &lengths[i];
-            }
-            if ((!bindings.empty() && mysql_stmt_bind_param(handle, bindings.data()) != 0) ||
-                mysql_stmt_execute(handle) != 0) {
-                throw std::runtime_error("Database statement failed");
-            }
-        } catch (...) { mysql_stmt_close(handle); throw; }
-    }
-    ~Statement() { mysql_stmt_close(handle); }
-    Statement(const Statement&) = delete;
-    Statement& operator=(const Statement&) = delete;
-};
 } // namespace
 
 void validate(const Options& options) {
@@ -76,65 +37,8 @@ std::string read_password(const std::string& filename) {
     catch (const std::exception&) { throw std::runtime_error("Cannot read private database password file"); }
 }
 
-struct Connection::Impl {
-    MYSQL* handle{mysql_init(nullptr)};
-    ~Impl() { if (handle != nullptr) { mysql_close(handle); } }
-};
-
-Connection::Connection(const Options& options) : impl_(std::make_unique<Impl>()) {
-    validate(options);
-    if (!options.enabled) { throw std::invalid_argument("Database is disabled"); }
-    if (impl_->handle == nullptr) { throw std::runtime_error("Database initialization failed"); }
-    auto* handle = impl_->handle;
-    option(handle, MYSQL_OPT_CONNECT_TIMEOUT, &options.timeout);
-    option(handle, MYSQL_OPT_READ_TIMEOUT, &options.timeout);
-    option(handle, MYSQL_OPT_WRITE_TIMEOUT, &options.timeout);
-    const my_bool off = 0;
-    const unsigned int local_infile = 0;
-    const unsigned int protocol = MYSQL_PROTOCOL_SOCKET;
-    option(handle, MYSQL_OPT_PROTOCOL, &protocol);
-    option(handle, MYSQL_OPT_RECONNECT, &off);
-    // Local Unix socket security is provided by OS permissions, independently of TLS defaults.
-    option(handle, MYSQL_OPT_SSL_ENFORCE, &off);
-    option(handle, MYSQL_OPT_LOCAL_INFILE, &local_infile);
-    option(handle, MYSQL_SET_CHARSET_NAME, "utf8mb4");
-    auto password = read_password(options.password_file);
-    struct Erase { std::string& value; ~Erase() { OPENSSL_cleanse(value.data(), value.size()); } } erase{password};
-    if (mysql_real_connect(handle, "localhost",
-            options.user.c_str(), password.c_str(), options.name.c_str(), 0, options.socket.c_str(), 0) == nullptr) {
-        throw std::runtime_error("Database connection failed");
-    }
-    if (mysql_set_character_set(handle, "utf8mb4") != 0) {
-        throw std::runtime_error("Database character set setup failed");
-    }
-}
-Connection::~Connection() = default;
-void Connection::ping() {
-    if (mysql_ping(impl_->handle) != 0) { throw std::runtime_error("Database ping failed"); }
-}
-void Connection::execute(std::string_view sql, const std::vector<std::string>& parameters) {
-    const Statement statement(impl_->handle, sql, parameters);
-    if (mysql_stmt_field_count(statement.handle) != 0) { throw std::runtime_error("Database result shape invalid"); }
-}
-std::optional<std::string> Connection::scalar(std::string_view sql, const std::vector<std::string>& parameters) {
-    const Statement statement(impl_->handle, sql, parameters);
-    if (mysql_stmt_field_count(statement.handle) != 1) { throw std::runtime_error("Database result shape invalid"); }
-    std::array<char, 4096> buffer{};
-    unsigned long length{};
-    my_bool is_null{}, error{};
-    MYSQL_BIND binding{};
-    binding.buffer_type = MYSQL_TYPE_STRING;
-    binding.buffer = buffer.data(); binding.buffer_length = buffer.size();
-    binding.length = &length; binding.is_null = &is_null; binding.error = &error;
-    if (mysql_stmt_bind_result(statement.handle, &binding) != 0 || mysql_stmt_fetch(statement.handle) != 0 || error) {
-        throw std::runtime_error("Database result shape invalid");
-    }
-    const auto result = is_null ? std::nullopt : std::optional(std::string(buffer.data(), length));
-    if (mysql_stmt_fetch(statement.handle) != MYSQL_NO_DATA) { throw std::runtime_error("Database result shape invalid"); }
-    return result;
-}
-
 unsigned int migrate(Connection& connection) {
+    if (connection.in_transaction()) { throw Error(ErrorKind::transaction, Operation::begin); }
     const auto name = connection.scalar("SELECT DATABASE()");
     if (!name) { throw std::runtime_error("Database migration failed"); }
     std::array<unsigned char, SHA256_DIGEST_LENGTH> hash{};
