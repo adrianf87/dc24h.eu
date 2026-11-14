@@ -1,5 +1,6 @@
 """Real ncdc completes guest login/reconnect on the C++ TCP/OpenSSL reactor."""
 from contextlib import closing
+import configparser
 import fcntl
 import os
 import pathlib
@@ -24,6 +25,11 @@ from adc_process_tests import counters
 from adc_login_process_tests import Peer, pair
 from tls_support import credentials, TLS_READY, connect_tls
 
+DATABASE_CONFIG = None
+if '--database-config' in sys.argv:
+    index = sys.argv.index('--database-config')
+    DATABASE_CONFIG = pathlib.Path(sys.argv[index + 1]).resolve()
+    del sys.argv[index:index + 2]
 NCDC = sys.argv.pop(1)
 MSG_CODEC = sys.argv.pop(1)
 ENCRYPTED = '--tls' in sys.argv
@@ -110,9 +116,19 @@ class NcdcLoginTest(unittest.TestCase):
                 ini.write_text(ini.read_text() + '[transfers]\nrequest_rate=1\nrequest_burst=1\n')
             if TRANSFER_CONFIGURATION:
                 ini.write_text(ini.read_text() + '[transfers]\nallowed_protocols=' + PEER_PROTOCOL.decode() + '\n')
+            if DATABASE_CONFIG is not None:
+                source = configparser.ConfigParser(interpolation=None)
+                self.assertTrue(source.read(DATABASE_CONFIG, encoding='utf-8'))
+                settings = dict(source['database'])
+                self.assertEqual(settings['enabled'], 'on')
+                for key in ('socket', 'password_file'):
+                    settings[key] = str((DATABASE_CONFIG.parent / settings[key]).resolve())
+                ini.write_text(ini.read_text() + '[database]\n' + ''.join(key + '=' + value + '\n' for key, value in settings.items()))
             api_path, token = enable_api(ini, directory)
             options = {'ready_pattern': TLS_READY} if ENCRYPTED else {}
             hub = Hub(self, '--config', str(ini), '--log-connections', 'on', '--log-chat', 'on', **options)
+            if DATABASE_CONFIG is not None:
+                self.assertTrue(fetch_status(api_path, token)['database']['enabled'])
             observer = Peer(self, connect_tls(self, hub, str(pathlib.Path(directory) / 'certificate.pem')) if ENCRYPTED else hub.connect())
             observer.login(b'ListObserver', 99, welcome=welcome)
             feature_update = b'BINF ' + observer.sid + (b' SUTCP4,ADCS' if PEER_TLS else b' SUTCP4')

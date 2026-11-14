@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.6.13 LANGUAGES CXX)
+project(dc24h VERSION 0.7.1 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -100,11 +100,11 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS database/migratio
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/database/migrations/0001_schema_migrations.sql" DC24H_BASELINE_SQL)
 file(SHA256 "${CMAKE_CURRENT_SOURCE_DIR}/database/migrations/0001_schema_migrations.sql" DC24H_BASELINE_SHA256)
 configure_file(cmake/migration.hpp.in generated/dc24h/database/migration.hpp @ONLY)
-add_library(dc24h_database src/database/database.cpp)
+add_library(dc24h_database src/database/database.cpp src/database/connection.cpp)
 target_compile_features(dc24h_database PUBLIC cxx_std_20)
 set_target_properties(dc24h_database PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_database PUBLIC include PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
-target_link_libraries(dc24h_database PRIVATE MariaDB::ConnectorC OpenSSL::Crypto dc24h_security)
+target_link_libraries(dc24h_database PRIVATE MariaDB::ConnectorC OpenSSL::Crypto dc24h_security Threads::Threads)
 
 add_library(dc24h_api src/api/http.cpp src/api/server.cpp)
 target_compile_features(dc24h_api PUBLIC cxx_std_20)
@@ -680,6 +680,11 @@ if(BUILD_TESTING)
     target_compile_options(database_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
     add_test(NAME database.unit COMMAND database_tests)
     set_tests_properties(database.unit PROPERTIES TIMEOUT 15)
+    add_executable(database_core_tests tests/database_core_tests.cpp)
+    target_link_libraries(database_core_tests PRIVATE dc24h_database Threads::Threads)
+    target_compile_options(database_core_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    add_test(NAME database.core COMMAND database_core_tests)
+    set_tests_properties(database.core PROPERTIES TIMEOUT 15)
     find_program(MARIADBD_EXECUTABLE mariadbd PATHS /usr/sbin)
     find_program(MARIADB_INSTALL_DB_EXECUTABLE mariadb-install-db)
     find_program(MARIADB_CLIENT_EXECUTABLE mariadb)
@@ -688,6 +693,11 @@ if(BUILD_TESTING)
         add_test(NAME database.process COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/database_process_tests.py"
             "$<TARGET_FILE:dc24h>" "$<TARGET_FILE:database_tests>")
+        add_test(NAME database.core.process COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/database_process_tests.py"
+            "$<TARGET_FILE:dc24h>" "$<TARGET_FILE:database_tests>" "$<TARGET_FILE:database_core_tests>")
+        set_tests_properties(database.core.process PROPERTIES TIMEOUT 120
+            ENVIRONMENT "PATH=/usr/sbin:/usr/bin:/sbin:/bin:$ENV{PATH}")
         set_tests_properties(database.process PROPERTIES TIMEOUT 120
             ENVIRONMENT "PATH=/usr/sbin:/usr/bin:/sbin:/bin:$ENV{PATH}")
     elseif(DC24H_REQUIRE_INTEGRATION_TESTS)
@@ -717,6 +727,14 @@ if(BUILD_TESTING)
     endif()
     find_program(NCDC_EXECUTABLE ncdc)
     if(NCDC_EXECUTABLE)
+        if(MARIADBD_EXECUTABLE AND MARIADB_INSTALL_DB_EXECUTABLE AND MARIADB_CLIENT_EXECUTABLE AND MARIADB_ADMIN_EXECUTABLE)
+            add_test(NAME database.ncdc.process COMMAND "${Python3_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/database_process_tests.py"
+                "$<TARGET_FILE:dc24h>" "$<TARGET_FILE:database_tests>" "$<TARGET_FILE:database_core_tests>"
+                "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>")
+            set_tests_properties(database.ncdc.process PROPERTIES TIMEOUT 120
+                ENVIRONMENT "PATH=/usr/sbin:/usr/bin:/sbin:/bin:$ENV{PATH}")
+        endif()
         add_test(NAME adc.security.ncdc COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_negotiation_test.py"
             "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}")

@@ -3,7 +3,14 @@
 #include <string_view>
 
 namespace dc24h::i18n::us {
-inline constexpr std::array<std::string_view, 128> messages{{
+inline constexpr std::array<std::string_view, 134> messages{{
+    "Database connection is unusable",
+    "Database constraint violation",
+    "Database transaction conflict",
+    "Database operation limit exceeded",
+    "Invalid database transaction state",
+    "Database connection used from a different thread",
+
     "Transfer switches must be on or off",
     "Chat event=",
     "Chat log events suppressed=",
@@ -189,6 +196,8 @@ Pending negotiation correlation and file-data handling remain planned.
 Group chat remains planned.
 Database settings use [database] in INI; disabled by default.
 --check-database connects/pings; --migrate-database explicitly applies metadata migrations.
+Database Core provides typed bound parameters, bounded results and owner-thread RAII transactions.
+SQL/result errors require rollback; lost connections are retired without reconnect or write replay.
 --check-config never connects to MariaDB or reads the password file.
 Local API: INI [api], disabled by default; Unix socket and private Bearer token.
 GET /api/v1/health and /api/v1/status only. No administrative mutations.
