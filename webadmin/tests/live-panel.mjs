@@ -22,7 +22,7 @@ try {
   });
   await page.goto(process.argv[2]);
   await expect(page.getByText("API connected", { exact: true })).toBeVisible();
-  await expect(page.getByText("alpha-0.6.11", { exact: true })).toHaveCount(2);
+  await expect(page.getByText("alpha-0.6.12", { exact: true })).toHaveCount(2);
   await expect(page.locator(".metric-value").nth(1)).toHaveText("15");
   assert.ok(
     Number(await page.locator(".metric-value").first().textContent()) >= 2,
@@ -79,10 +79,20 @@ try {
   await expect(page.getByTestId("search-monitoring").locator("polyline")).toHaveCount(2);
   assert.ok(!(await page.content()).includes("WebSearchSecret")); assert.ok(!JSON.stringify(snapshot).includes("WebSearchSecret"));
   await page.screenshot({ path: "test-results/live-search-desktop.png", animations: "disabled", fullPage: true });
+  await page.getByRole("link", { name: "Connections", exact: true }).click();
+  await expect(page.getByTestId("transfer-ctm").locator(".metric-value").first()).toHaveText("3");
+  await expect(page.getByTestId("transfer-rcm").locator(".metric-value").first()).toHaveText("3");
+  const transferRates = page.getByTestId("transfer-rates").locator(".metric-value");
+  assert.ok(Number(await transferRates.nth(0).textContent()) > 0, "Live CTM did not produce a positive sampled rate");
+  assert.ok(Number(await transferRates.nth(1).textContent()) > 0, "Live RCM did not produce a positive sampled rate");
+  assert.ok(Number(await transferRates.nth(3).textContent()) > 0, "Live queue copies did not produce a positive sampled rate");
+  await expect(page.getByTestId("transfer-monitoring").locator("polyline")).toHaveCount(2);
+  assert.ok(!(await page.content()).includes("WebTransferSecret"));
+  await page.screenshot({ path: "test-results/live-transfers-desktop.png", animations: "disabled", fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("combobox").selectOption("pl");
   await expect(
-    page.getByRole("heading", { name: "Monitoring wyszukiwań" }),
+    page.getByRole("heading", { name: "Ostatnia aktywność koordynacji" }),
   ).toBeVisible();
   assert.ok(
     await page.evaluate(
@@ -90,12 +100,17 @@ try {
     ),
   );
   await page.screenshot({
-    path: "test-results/live-search-mobile-pl.png",
+    path: "test-results/live-transfers-mobile-pl.png",
     animations: "disabled", fullPage: true,
   });
+  await page.getByRole("button", { name: "Otwórz nawigację" }).click();
+  await page.getByRole("link", { name: "Wyszukiwanie", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Monitoring wyszukiwań" })).toBeVisible();
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await page.screenshot({ path: "test-results/live-search-mobile-pl.png", animations: "disabled", fullPage: true });
   assert.deepEqual(errors, []);
   console.log(
-    "Real C++ API → local adapter → React: live search rates, counters, secret isolation, desktop and mobile PL OK",
+    "Real C++ API → local adapter → React: live search/transfer rates, counters, secret isolation, desktop and mobile PL OK",
   );
 } finally {
   await browser.close();

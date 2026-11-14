@@ -1,5 +1,12 @@
 import type { Copy } from "../us";
 export const pl = {
+  transferMonitorTitle: "Ostatnia aktywność koordynacji",
+  transferMonitorNote: "Obserwowane tempo CTM/RCM między odczytami API. Przyjęcie do kolejki nie potwierdza połączenia klientów, postępu pliku ani przepustowości. Raporty klientów pozostają niezweryfikowane.",
+  transferCtmPerSecond: "Żądania CTM / s",
+  transferRcmPerSecond: "Żądania RCM / s",
+  transferTrendTitle: "Żądania połączeń",
+  transferChartLabel: "Obserwowane żądania CTM i RCM na sekundę; wartości w tabeli ostatnich przedziałów",
+
   searchMonitorTitle: "Ostatnia aktywność",
   searchMonitorNote: "Tempo jest szacowane między przyjętymi odczytami API z użyciem monotonicznego zegara przeglądarki. Tylko SCH/RES huba; bez UDP między klientami.",
   searchSamplingLive: "Automatyczne odpytywanie włączone",
