@@ -767,6 +767,15 @@ if(BUILD_TESTING)
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
             "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>" --active-passive --tls)
         set_tests_properties(adc.activepassive.ncdc adcs.activepassive.ncdc PROPERTIES TIMEOUT 60)
+        add_test(NAME adcs.activepassive.bindscope.ncdc COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
+            "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>"
+            --active-passive --tls --port-scope-conflict)
+        add_test(NAME adcs.capabilities.bindscope.ncdc COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
+            "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>"
+            --client-capabilities --peer-tls --tls --port-scope-conflict)
+        set_tests_properties(adcs.activepassive.bindscope.ncdc adcs.capabilities.bindscope.ncdc PROPERTIES TIMEOUT 60)
         add_test(NAME adc.searchsecurity.ncdc COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
             "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>" --search-security)

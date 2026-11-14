@@ -1,5 +1,12 @@
 # Changelog
 
+## alpha-0.6.11 — CI follow-up (2026-11-14)
+
+- Fix ncdc activation bind scope after main's Ubuntu 24.04 Debug `adcs.activepassive.ncdc` timeout (170/171 passed). Port reservations covered 127.0.0.1, while the client's unset local_address allowed a wildcard listener conflict on another interface. Set local_address=127.0.0.1 before active-mode configuration so the real listener matches the reservation. Keep the three-second deadline and all existing protocol/terminal/readiness checks.
+- Add two real ADCS bind-scope regressions with TCP/UDP conflicts held on 127.0.0.2 until ncdc readiness, covering actual UDP search results and repeated mode transitions with peer TLS. The active/passive regression reproduces the old timeout deterministically. Include observed INF fields in activation-failure diagnostics and document the fix in US/PL. No server protocol, dependency, release-version or workflow change.
+
+- Validation: The forced-conflict active/passive regression failed with the old command sequence and passed after the fix. **173/173 CTest suites** passed in Debug; all **49 ncdc suites plus metadata (50/50)** passed in each of Release and ASan/UBSan. Python syntax, release/documentation checks, whitespace and actionlint passed. New GitHub Actions completion is not awaited.
+
 ## alpha-0.6.11 — 2026-11-14
 
 Transfer Statistics increment and requested CI maintenance, based on main `122a682452cc02ee3589819beda5e70c3aca0914`:

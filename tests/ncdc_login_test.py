@@ -72,6 +72,9 @@ if SEARCH_SECURITY:
 TTH_SEARCH = '--tth' in sys.argv
 if TTH_SEARCH:
     sys.argv.remove('--tth')
+PORT_SCOPE_CONFLICT = '--port-scope-conflict' in sys.argv
+if PORT_SCOPE_CONFLICT:
+    sys.argv.remove('--port-scope-conflict')
 ACTIVE_PASSIVE = '--active-passive' in sys.argv
 if ACTIVE_PASSIVE:
     sys.argv.remove('--active-passive')
@@ -221,17 +224,34 @@ class NcdcLoginTest(unittest.TestCase):
                 # ncdc's port 0 means a random number, not an OS-assigned free
                 # port. Reserve TCP/UDP numbers until ncdc advertises readiness.
                 # Both sides use SO_REUSEADDR; the TCP reservation never listens.
-                with socket.socket() as tcp_port, socket.socket(type=socket.SOCK_DGRAM) as udp_port:
-                    for reservation in (tcp_port, udp_port):
+                with socket.socket() as tcp_port, socket.socket(type=socket.SOCK_DGRAM) as udp_port, \
+                        socket.socket() as other_tcp, socket.socket(type=socket.SOCK_DGRAM) as other_udp:
+                    # A number can be free on 127.0.0.1 while another interface
+                    # already owns it. Keep both conflicting binds until the
+                    # real client confirms its TCP/UDP listener configuration.
+                    for reservation, conflict in ((tcp_port, other_tcp), (udp_port, other_udp)):
+                        candidate = 0
+                        if PORT_SCOPE_CONFLICT:
+                            conflict.bind(('127.0.0.2', 0))
+                            if conflict.type == socket.SOCK_STREAM:
+                                conflict.listen(1)
+                            candidate = conflict.getsockname()[1]
                         reservation.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                        reservation.bind(('127.0.0.1', 0))
+                        reservation.bind(('127.0.0.1', candidate))
                     tcp_number, udp_number = tcp_port.getsockname()[1], udp_port.getsockname()[1]
-                    commands = (f'/hset active_ip 127.0.0.1\r/hset active_port {tcp_number}\r'
+                    # Match ncdc's bind scope to the reserved loopback sockets.
+                    # active_ip is only an advertised address; without an
+                    # explicit local_address ncdc binds 0.0.0.0 and can collide
+                    # with sockets on another interface using the same port.
+                    commands = (f'/hset local_address 127.0.0.1\r/hset active_ip 127.0.0.1\r/hset active_port {tcp_number}\r'
                                 f'/hset active_udp_port {udp_number}\r/hset active true\r').encode()
                     os.write(master, commands)
                     advertised = {}
                     for _ in range(12):
-                        delta = observer_line()
+                        try:
+                            delta = observer_line()
+                        except AssertionError as error:
+                            raise AssertionError('ncdc active endpoint wait failed; observed INF fields: ' + repr(advertised)) from error
                         self.assertTrue(delta.startswith(b'BINF ' + replacement_sid + b' '), delta)
                         for field in delta.split()[2:]:
                             advertised[field[:2]] = field[2:]
