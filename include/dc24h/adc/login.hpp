@@ -108,7 +108,7 @@ private:
     bool admit_search(Peer& peer, const Message& message, search::Operation operation, users::TimePoint now, search::Attempt& attempt);
     void receive_result(Id id, const Message& message, users::TimePoint now, search::Attempt& attempt);
     void receive_search(Id id, const Message& message, users::TimePoint now, search::Attempt& attempt);
-    void receive_connection(Id id, const Message& message);
+    void receive_connection(Id id, const Message& message, users::TimePoint now);
     void receive_impl(Id id, const Message& message, chat::FloodClock::time_point chat_now);
     void route_status(Id id, const Message& message);
     void route_chat(Id id, const Message& message, chat::Attempt& attempt);

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.6.9 LANGUAGES CXX)
+project(dc24h VERSION 0.6.10 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -59,7 +59,7 @@ set_target_properties(dc24h_search PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_search PUBLIC include)
 target_link_libraries(dc24h_search PUBLIC dc24h_users PRIVATE dc24h_text UTF8Proc::UTF8Proc)
 
-add_library(dc24h_transfers src/transfers/security.cpp src/transfers/token.cpp src/transfers/capabilities.cpp src/transfers/protocol.cpp src/transfers/request.cpp src/transfers/core.cpp)
+add_library(dc24h_transfers src/transfers/limits.cpp src/transfers/security.cpp src/transfers/token.cpp src/transfers/capabilities.cpp src/transfers/protocol.cpp src/transfers/request.cpp src/transfers/core.cpp)
 target_compile_features(dc24h_transfers PUBLIC cxx_std_20)
 set_target_properties(dc24h_transfers PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_transfers PUBLIC include)
@@ -232,6 +232,14 @@ if(BUILD_TESTING)
     add_test(NAME transfers.routing.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/connection_routing_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(transfers.routing transfers.routing.process PROPERTIES TIMEOUT 45)
+    add_executable(transfer_limits_tests tests/transfer_limits_tests.cpp)
+    target_link_libraries(transfer_limits_tests PRIVATE dc24h_adc)
+    target_compile_options(transfer_limits_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(transfer_limits_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME transfers.limits COMMAND transfer_limits_tests)
+    add_test(NAME transfers.limits.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/transfer_limits_process_tests.py" "$<TARGET_FILE:dc24h>")
+    set_tests_properties(transfers.limits transfers.limits.process PROPERTIES TIMEOUT 60)
     add_executable(transfer_errors_tests tests/transfer_errors_tests.cpp)
     target_link_libraries(transfer_errors_tests PRIVATE dc24h_adc)
     target_compile_options(transfer_errors_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
@@ -824,6 +832,11 @@ if(BUILD_TESTING)
                 "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>"
                 --connection-security-active ${capability_transport_args})
             set_tests_properties(${transport}.connectionsecurity.ncdc ${transport}.connectionsecurity.active.ncdc PROPERTIES TIMEOUT 45)
+            add_test(NAME ${transport}.transferlimits.ncdc COMMAND "${Python3_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
+                "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>"
+                --transfer-limits ${capability_transport_args})
+            set_tests_properties(${transport}.transferlimits.ncdc PROPERTIES TIMEOUT 45)
             add_test(NAME ${transport}.transfererrors.ncdc COMMAND "${Python3_EXECUTABLE}"
                 "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
                 "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>"

@@ -2,10 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.6.9 (Error Handling).**
+**Current development version: alpha-0.6.10 (Transfer Limits).**
 
 Completed increments (older bullets describe their original delivery scope):
 
+- **alpha-0.6.10 Transfer Limits**: shared CTM/RCM source and aggregate recipient count/byte budgets, bounded private notices, monotonic refill and real ncdc recovery. See [Transfer Limits](doc/us/TRANSFER_LIMITS.md).
 - **alpha-0.6.9 Error Handling**: centralized connection diagnostics, immutable shared STA routing with fixed lifetime audiences, allocation/queue fault isolation and disconnect/reset recovery. See [Error Handling](doc/us/ERROR_HANDLING.md).
 - **alpha-0.6.8 Connection Security**: shared endpoint/port checks, configurable CTM/RCM and guest permissions, trusted lifetime grants, dispatch/echo authorization rechecks and real ncdc denial/recovery tests. See [Connection Security](doc/us/CONNECTION_SECURITY.md).
 - **alpha-0.6.7 Transfer Tokens**: one bounded opaque connection-token policy, owning typed values, exact CTM/RCM/error forwarding and real ncdc boundary-token handshakes. See [Transfer Tokens](doc/us/TRANSFER_TOKENS.md).

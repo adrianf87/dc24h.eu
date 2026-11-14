@@ -1,6 +1,6 @@
 import { parseSearch } from "./search-status.ts";
 import type { SearchSnapshot } from "./search-status.ts";
-export const WEBADMIN_VERSION = "alpha-0.6.9";
+export const WEBADMIN_VERSION = "alpha-0.6.10";
 export interface HubSnapshot {
   api_version: "v1";
   server: {

@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.6.9: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.6.10: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [Transfer Limits — alpha-0.6.10](TRANSFER_LIMITS.md)
 - [Error Handling — alpha-0.6.9](ERROR_HANDLING.md)
 - [Connection Security — alpha-0.6.8](CONNECTION_SECURITY.md)
 - [Transfer Tokens — alpha-0.6.7](TRANSFER_TOKENS.md)

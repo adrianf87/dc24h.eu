@@ -1,4 +1,4 @@
-# dc24h.eu alpha-0.6.9 configuration (UTF-8, no secrets committed)
+# dc24h.eu alpha-0.6.10 configuration (UTF-8, no secrets committed)
 # Section names and keys are case-sensitive; duplicate singular keys are errors.
 [general]
 language = us
@@ -57,6 +57,17 @@ result_byte_rate = 262144
 result_byte_burst = 1048576
 
 [transfers]
+# Per connection lifetime: CTM/RCM and D/E share each count/byte budget.
+# Incoming limits aggregate all senders targeting this connection; echo costs once.
+# Bytes are decoded headers/fields/separators, excluding final LF.
+request_rate = 32
+request_burst = 64
+request_byte_rate = 131072
+request_byte_burst = 262144
+incoming_rate = 128
+incoming_burst = 256
+incoming_byte_rate = 524288
+incoming_byte_burst = 1048576
 # Connection coordination policy; restart to apply. Each switch is on/off.
 # Per-session grants are available only through the trusted in-process API.
 ctm_enabled = on
