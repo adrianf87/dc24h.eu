@@ -4,6 +4,7 @@ import pathlib
 import tempfile
 import unittest
 from adc_login_process_tests import Peer
+from transfer_statistics_support import assert_statistics
 from api_support import enable_api, fetch_status
 from network_process_tests import Hub, drain_until_eof
 from tls_support import credentials, connect_tls
@@ -37,7 +38,7 @@ class TransferCoreProcessTests(unittest.TestCase):
                 after = fetch_status(endpoint, token)
                 self.assertEqual(after['search'], before['search'])
                 self.assertEqual(after['chat'], before['chat'])
-                self.assertNotIn('transfers', after)
+                assert_statistics(self, after, ctm_received=2, ctm_rejected=2, rcm_received=2, rcm_rejected=2)
                 self.assertNotIn('CoordinationPrivate', json.dumps(after))
                 waiting = Peer(self, hub.connect()); waiting.handshake()
                 waiting.send(b'DRCM ' + waiting.sid + b' ' + target.sid + b' ADC/1.0 CoordinationPrivateToken')

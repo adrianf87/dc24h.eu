@@ -4,6 +4,7 @@ import pathlib
 import tempfile
 import unittest
 from adc_login_process_tests import Peer
+from transfer_statistics_support import assert_statistics
 from api_support import enable_api, fetch_status
 from network_process_tests import Hub, drain_until_eof
 from tls_support import credentials, connect_tls
@@ -68,7 +69,7 @@ class RcmProcessTests(unittest.TestCase):
                     update(target,b'')
                     source.send(rcm());self.assertEqual(source.line(),denied);fence();update(target,b'TCP'+suffix)
                     after=fetch_status(endpoint,secret)
-                    self.assertEqual(after['search'],before['search']);self.assertEqual(after['chat'],before['chat']);self.assertNotIn('transfers',after)
+                    self.assertEqual(after['search'],before['search']);self.assertEqual(after['chat'],before['chat']);assert_statistics(self, after, ctm_received=3, ctm_routed=3, ctm_queued=3, rcm_received=15, rcm_routed=4, rcm_rejected=11, rcm_queued=5)
                     for private in ('RcmSecret','opaque',secret):self.assertNotIn(private,json.dumps(after))
                     old_sid=target.sid;target.peer.close();peers.remove(target)
                     for peer in peers:self.assertEqual(peer.line(),b'IQUI '+old_sid)

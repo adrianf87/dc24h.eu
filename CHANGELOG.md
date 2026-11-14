@@ -1,5 +1,17 @@
 # Changelog
 
+## alpha-0.6.11 — 2026-11-14
+
+Transfer Statistics increment and requested CI maintenance, based on main `122a682452cc02ee3589819beda5e70c3aca0914`:
+
+- Added allocation-free, saturating 22-field transfer statistics: independent CTM/RCM received/routed/rejected/source-limited/recipient-limited/internal-error outcomes, queue copies/refusals/cancellations/allocation faults, and accepted peer STA 41/42 reports counted once regardless of E echo. One scoped outcome covers early rejection and allocation failures; disconnect preserves totals and a new hub resets them. Client reports do not verify a peer connection or transfer.
+- Published fixed atomic copies through Network and a v1 transfers.statistics extension in the authenticated local status API. Added an allowlisted safe-integer frontend adapter and bilingual transfer counters on the existing Connections page, including export and honest unavailable values for older APIs. No identities, endpoints, protocols, tokens or request data are exported/logged; Chat/Search accounting remains independent.
+- Added native exact/lifetime/quota/saturation/no-allocation tests with a 128-case allocation sweep, mixed ADC/ADCS IPv4/IPv6 process/API/privacy/restart tests, real ncdc telemetry assertions and frontend parser/browser/live-API coverage. Updated EN/US and PL documentation, WebAdmin copy and release metadata. No dependency, migration, configuration key, new endpoint or peer-data handling is added.
+- Updated all checkout steps to actions/checkout@v6 and setup-node to v5, preserving custom-runner persist-credentials:false and WebAdmin node-version:22. The action runtime is Node 24; no host Node 24 apt installation is needed.
+- Extended the existing Proxmox Debian 13 workflow with trusted main/alpha-* push triggers, an explicit Debian 13/tool check and a sequential Debug/Release matrix on [self-hosted, Linux, X64, ci-controller]. Kept VM start/shutdown ownership, strict SSH checks, secrets, timeouts and shared concurrency. Added actionlint custom-label configuration and US/PL runner instructions.
+
+- Validation: Final full **171/171 CTest suites** passed in each of Debug, Release and ASan/UBSan on local Debian 13 with required integrations. An earlier parallel Debug ncdc mode-transition timeout passed three isolated rechecks and the final complete run, retaining its three-second deadline. No compiler warnings. WebAdmin build/typecheck, **14 Node tests**, **11 Chromium tests** and real C++ API/React transfer telemetry passed. actionlint 1.7.12, workflow bash syntax, counter-name parity, metadata/UTF-8/language parity/local links, changed Python syntax and whitespace checks passed. Remote GitHub Actions/custom-runner completion is not awaited; other supported OS versions and production load remain unverified.
+
 ## alpha-0.6.10 — 2026-11-14
 
 Transfer Limits increment, based directly on main `76f3710905367d76ddd6791643446d14f152e6ec` after Error Handling:

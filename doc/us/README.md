@@ -1,7 +1,9 @@
 # dc24h.eu documentation
 
-alpha-0.6.10: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.6.11: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
+- [Transfer Statistics — alpha-0.6.11](TRANSFER_STATISTICS.md)
+- [Debian 13 custom-runner CI](CI_DEBIAN13.md)
 - [Transfer Limits — alpha-0.6.10](TRANSFER_LIMITS.md)
 - [Error Handling — alpha-0.6.9](ERROR_HANDLING.md)
 - [Connection Security — alpha-0.6.8](CONNECTION_SECURITY.md)

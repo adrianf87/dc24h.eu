@@ -780,6 +780,28 @@ class NcdcLoginTest(unittest.TestCase):
                     os.write(master, b'/open dc24h_login\rLimitsNcdcStillOnline\r')
                     self.assertEqual(observer_line(), b'BMSG ' + replacement_sid + b' LimitsNcdcStillOnline')
                     self.assertNotIn(b'LimitsNcdcPrivate', hub.log)
+                if TRANSFER_CORE or CTM_TEST or RCM_TEST or TRANSFER_ERRORS or TRANSFER_LIMITS or CONNECTION_SECURITY:
+                    deadline = time.monotonic() + 3
+                    while True:
+                        transfer_stats = fetch_status(api_path, token)['transfers']['statistics']
+                        complete = transfer_stats['ctm_received'] + transfer_stats['rcm_received'] > 0
+                        complete = complete and all(transfer_stats[kind + '_received'] == sum(transfer_stats[kind + '_' + name] for name in ('routed', 'rejected', 'rate_limited', 'recipient_limited', 'errors')) for kind in ('ctm', 'rcm'))
+                        if TRANSFER_LIMITS:
+                            complete = complete and transfer_stats['ctm_rate_limited'] > 0 and transfer_stats['peer_protocol_unsupported'] >= 2
+                        if TRANSFER_ERRORS:
+                            complete = complete and transfer_stats['peer_protocol_unsupported'] >= 1 and transfer_stats['peer_connection_failed'] >= 1
+                        if complete:
+                            break
+                        self.assertLess(time.monotonic(), deadline, transfer_stats)
+                        time.sleep(.02)
+                    for kind in ('ctm', 'rcm'):
+                        self.assertEqual(transfer_stats[kind + '_received'], sum(transfer_stats[kind + '_' + name] for name in ('routed', 'rejected', 'rate_limited', 'recipient_limited', 'errors')))
+                    if TRANSFER_LIMITS:
+                        self.assertGreater(transfer_stats['ctm_rate_limited'], 0)
+                        self.assertGreaterEqual(transfer_stats['peer_protocol_unsupported'], 2)
+                    elif TRANSFER_ERRORS:
+                        self.assertGreaterEqual(transfer_stats['peer_protocol_unsupported'], 1)
+                        self.assertGreaterEqual(transfer_stats['peer_connection_failed'], 1)
                 os.write(master, b'/quit\r')
                 deadline = time.monotonic() + 4
                 while process.poll() is None and time.monotonic() < deadline:

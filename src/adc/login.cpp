@@ -232,19 +232,24 @@ void LoginHub::relay(Id except, const Message& message) {
 }
 
 void LoginHub::receive(Id id, const Message& message, chat::FloodClock::time_point chat_now) {
+    const auto found = peers_.find(id);
+    const bool connection_request = message.kind == Command::ctm || message.kind == Command::rcm;
+    const bool eligible = found != peers_.end() && !found->second->lifecycle.closing() && !found->second->lifecycle.immediate();
+    transfers::Attempt transfer_attempt(connection_request && eligible ? &transfer_statistics_ : nullptr,
+        message.kind == Command::ctm ? transfers::Operation::ctm : transfers::Operation::rcm);
     if (message.kind != Command::sta && message.kind != Command::ctm && message.kind != Command::rcm) {
-        receive_impl(id, message, chat_now); return;
+        receive_impl(id, message, chat_now, transfer_attempt); return;
     }
-    try { receive_impl(id, message, chat_now); }
+    try { receive_impl(id, message, chat_now, transfer_attempt); }
     catch (const std::bad_alloc&) {
         // Include validation and terminal diagnostics in source fault isolation.
-        const auto found = peers_.find(id);
+        transfer_attempt.outcome(transfers::Outcome::error);
         if (found != peers_.end()) {
             check_model(sessions_.force_close(found->second->lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
         }
     }
 }
-void LoginHub::receive_impl(Id id, const Message& message, chat::FloodClock::time_point chat_now) {
+void LoginHub::receive_impl(Id id, const Message& message, chat::FloodClock::time_point chat_now, transfers::Attempt& transfer_attempt) {
     auto& peer = *peers_.at(id);
     if (peer.lifecycle.closing() || peer.lifecycle.immediate()) { return; }
     search::Attempt search_attempt(message.kind==Command::sch || message.kind==Command::res ? &search_statistics_ : nullptr,
@@ -291,6 +296,7 @@ void LoginHub::receive_impl(Id id, const Message& message, chat::FloodClock::tim
             check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));return;
         }
         if (message.kind==Command::ctm || message.kind==Command::rcm) {
+            transfer_attempt.outcome(transfers::Outcome::error);
             check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));return;
         }
         if (message.kind!=Command::msg) { throw; }
@@ -388,7 +394,7 @@ void LoginHub::receive_impl(Id id, const Message& message, chat::FloodClock::tim
     } else if (message.kind == Command::res) {
         receive_result(id, message, chat_now, search_attempt);
     } else if (message.kind == Command::ctm || message.kind == Command::rcm) {
-        receive_connection(id, message, chat_now);
+        receive_connection(id, message, chat_now, transfer_attempt);
     } else if (message.kind == Command::sta) {
         if (message.type != MessageType::hub) { route_status(id, message); }
     } else if (before == ConnectionState::normal && message.kind != Command::sup) {
@@ -396,7 +402,7 @@ void LoginHub::receive_impl(Id id, const Message& message, chat::FloodClock::tim
         (void)enqueue(peer, make_status(*StatusCode::parse("125"), "Command not implemented", offending));
     }
 }
-void LoginHub::receive_connection(Id id, const Message& message, users::TimePoint now) {
+void LoginHub::receive_connection(Id id, const Message& message, users::TimePoint now, transfers::Attempt& attempt) {
     auto& peer = *peers_.at(id);
     try {
         const auto command = std::string(1, static_cast<char>(message.type)) + (message.kind == Command::ctm ? "CTM" : "RCM");
@@ -408,7 +414,9 @@ void LoginHub::receive_connection(Id id, const Message& message, users::TimePoin
         const auto bytes = message_bytes(message);
         // Session/state/source checks still run before admission.
         // Charge every valid request attempt before routing/policy diagnostics.
-        if (!peer.transfer_guard.admit(transfers::Direction::outgoing, bytes, now)) { limited(); return; }
+        if (!peer.transfer_guard.admit(transfers::Direction::outgoing, bytes, now)) {
+            attempt.outcome(transfers::Outcome::rate_limited); limited(); return;
+        }
         const auto refuse = [&](ConnectionRoutingError error) {
             const auto failure = connection_failure(error, message.kind);
             if (failure.action == FailureAction::reply) {
@@ -416,6 +424,7 @@ void LoginHub::receive_connection(Id id, const Message& message, users::TimePoin
             } else if (failure.action == FailureAction::terminate) {
                 reject(peer, failure.code, command, failure.description);
             } else {
+                attempt.outcome(transfers::Outcome::error);
                 check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
             }
         };
@@ -427,6 +436,7 @@ void LoginHub::receive_connection(Id id, const Message& message, users::TimePoin
         // All senders share this target lifetime's incoming budget. An E echo
         // is part of the same attempt, never an additional incoming request.
         if (!target->second->transfer_guard.admit(transfers::Direction::incoming, bytes, now)) {
+            attempt.outcome(transfers::Outcome::recipient_limited);
             (void)connection_router_.cancel(routed); limited(); return;
         }
         const auto result = connection_router_.dispatch(routed, [&](users::SessionId recipient, const SharedConnectionFrame& frame) {
@@ -434,11 +444,18 @@ void LoginHub::receive_connection(Id id, const Message& message, users::TimePoin
             if (found == peers_.end()) { return false; }
             try { return enqueue_shared(*found->second, frame); }
             catch (const std::bad_alloc&) {
+                attempt.queue_error();
                 check_model(sessions_.force_close(recipient,users::CloseCause::internal_error,users::Clock::now())); return false;
             }
         });
         if (const auto* error = std::get_if<ConnectionRoutingError>(&result)) { refuse(*error); }
+        else {
+            const auto& report = std::get<ConnectionDispatchReport>(result);
+            attempt.outcome(transfers::Outcome::routed);
+            attempt.delivery(report.queued, report.refused, report.canceled);
+        }
     } catch (const std::bad_alloc&) {
+        attempt.outcome(transfers::Outcome::error);
         check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
     }
 }
@@ -647,7 +664,11 @@ void LoginHub::route_status(Id id, const Message& message) {
             else { reject(sender, "240"); }
             return;
         }
-        const auto result = status_router_.dispatch(std::get<StatusDelivery>(prepared), [&](users::SessionId recipient, const SharedStatusFrame& frame) {
+        const auto& delivery = std::get<StatusDelivery>(prepared);
+        if (message.type == MessageType::direct || message.type == MessageType::echo) {
+            transfers::peer_report(transfer_statistics_, delivery.frame()->code().error());
+        }
+        const auto result = status_router_.dispatch(delivery, [&](users::SessionId recipient, const SharedStatusFrame& frame) {
             const auto found = peers_.find(recipient.value());
             if (found == peers_.end()) { return false; }
             try { return enqueue_shared(*found->second, frame); }

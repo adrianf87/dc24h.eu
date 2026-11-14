@@ -1,6 +1,8 @@
 name: Proxmox Debian 13 Tests
 
 on:
+  push:
+    branches: [main, "alpha-*"]
   workflow_dispatch:
 
 permissions:
@@ -61,30 +63,44 @@ jobs:
           exit 1
 
   test:
-    name: Debian 13 - CMake and CTest
+    name: Debian 13 - ${{ matrix.build_type }} - CMake and CTest
     needs: start
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        build_type: [Debug, Release]
     runs-on: [self-hosted, Linux, X64, ci-controller]
     timeout-minutes: 60
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           persist-credentials: false
 
-      - name: System information
-        run: cat /etc/os-release
+      - name: Verify Debian 13 custom runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat /etc/os-release
+          . /etc/os-release
+          test "$ID" = debian
+          test "$VERSION_ID" = 13
+          cmake --version
+          c++ --version
+          ncdc --version
 
       - name: Configure
         run: |
-          cmake -S . -B build \
-            -DCMAKE_BUILD_TYPE=Release \
+          cmake -S . -B "build-debian13-${{ matrix.build_type }}" \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
             -DDC24H_REQUIRE_INTEGRATION_TESTS=ON
 
       - name: Build
-        run: cmake --build build --parallel 2
+        run: cmake --build "build-debian13-${{ matrix.build_type }}" --parallel 2
 
       - name: Test
-        run: ctest --test-dir build --output-on-failure
+        run: ctest --test-dir "build-debian13-${{ matrix.build_type }}" --output-on-failure
 
   shutdown:
     name: Shutdown VM 100

@@ -4,6 +4,7 @@ import pathlib
 import tempfile
 import unittest
 from adc_login_process_tests import Peer
+from transfer_statistics_support import assert_statistics
 from api_support import enable_api, fetch_status
 from network_process_tests import Hub, drain_until_eof
 from tls_support import credentials, connect_tls
@@ -83,7 +84,7 @@ class ProtocolNegotiationProcessTests(unittest.TestCase):
                 after = fetch_status(endpoint, secret)
                 self.assertEqual(after['chat'], before['chat'])
                 self.assertEqual(after['search'], before['search'])
-                self.assertNotIn('transfers', after)
+                assert_statistics(self, after, ctm_received=40, ctm_routed=40, ctm_queued=50, rcm_received=20, rcm_routed=20, rcm_queued=30, peer_protocol_unsupported=40, peer_connection_failed=40)
                 for private in ('ProtocolPrivate', 'NegotiationPrivateUnknown', secret):
                     self.assertNotIn(private, json.dumps(after))
                 # Another source SID cannot forge the peer's rejection.
