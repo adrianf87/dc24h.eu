@@ -179,6 +179,8 @@ Client capabilities track TCP4/TCP6 separately; UDP and hub TLS do not grant TCP
 Connection tokens: 1..128 decoded NFC UTF-8 bytes; exact case, spaces and backslashes preserved.
 Transfers [transfers]: ctm_enabled, rcm_enabled, guest_initiate, guest_receive (on/off, default on).
 Source initiation and target receipt permissions are checked again before dispatch.
+Peer STA errors retain explicit protocol/token; routed fatal severity does not close hub sessions.
+STA uses shared bounded output; validation/queue/terminal memory faults isolate affected connections.
 Pending negotiation correlation and file-data handling remain planned.
 Group chat remains planned.
 Database settings use [database] in INI; disabled by default.

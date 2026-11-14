@@ -1,5 +1,7 @@
 # Connection Security — alpha-0.6.8
 
+**Bieżący etap — alpha-0.6.9:** [Error Handling](ERROR_HANDLING.md) ujednolica diagnostykę połączeń i wspólny niezmienny routing STA do stałej listy gotowych sesji. Przygotowanie, kolejki odbiorców, diagnostyka zamykania i wyjściowa walidacja STA izolują błędy pamięci; kierowany fatalny status klienta zachowuje sesje huba. Sprawdzają to testy natywne, mieszane ADC/ADCS i ncdc z resetem/błędami/dalszą komunikacją.
+
 **Weryfikacja lokalna alpha-0.6.8 (2026-11-14):** Przeszły wszystkie 159/159 testów CTest w Debug, Release i ASan/UBSan, w tym odmowy aktywnego/pasywnego ncdc i wcześniejsze poprawne handshake klientów zwykłych/TLS. Końcowe kompilacje nie mają ostrzeżeń po poprawce pomocnika alokacji testu statystyk; ten test ponownie przeszedł w trzech trybach. Poprawne są build/typecheck WebAdmin, 12 testów Node, 10 testów Chromium i integracja API C++. Przeszły kontrole metadanych, UTF-8, zgodności języków/linków, składni zmienionych plików Python, przykładowego INI i białych znaków. Nie oczekiwano na GitHub Actions; pełna macierz wspieranych systemów i obciążenie produkcyjne pozostają niesprawdzone.
 
 Etap utworzony bezpośrednio z main `236b58877a317c19bcb1574c2b4545d3091c44fe` po Transfer Tokens. Dodaje jawne uprawnienia połączeń, zaufane nadania związane z życiem sesji i ponowną autoryzację oraz ujednolica/sprawdza walidację adresu i portu. Gałąź numerowana jest publikowana osobno od main, z zachowaniem kodu i historii.

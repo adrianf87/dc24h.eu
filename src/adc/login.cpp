@@ -3,6 +3,7 @@
 #include "dc24h/adc/res.hpp"
 #include "dc24h/adc/serializer.hpp"
 #include "dc24h/adc/status.hpp"
+#include "dc24h/adc/connection_errors.hpp"
 #include "dc24h/adc/msg.hpp"
 
 #include <deque>
@@ -17,7 +18,7 @@ namespace dc24h::adc {
 struct LoginHub::Peer {
     struct Frame {
         struct Owned { Message message; std::string wire; };
-        std::variant<Owned,SharedPublicChatFrame,SharedPrivateChatFrame,SharedHubMessageFrame,SharedSearchFrame,SharedResultFrame,SharedConnectionFrame> content;
+        std::variant<Owned,SharedPublicChatFrame,SharedPrivateChatFrame,SharedHubMessageFrame,SharedSearchFrame,SharedResultFrame,SharedConnectionFrame,SharedStatusFrame> content;
         Completion completion;
         [[nodiscard]] const Message& message() const noexcept {
             return std::visit([](const auto& frame) -> const Message& {
@@ -98,7 +99,7 @@ std::string_view status_description(std::string_view code) noexcept {
 }
 } // namespace
 
-LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), search_(sessions_,limits.search.tokens), search_router_(search_), result_router_(search_), transfers_(sessions_,limits.transfers,this), connection_router_(transfers_), chat_(sessions_), message_router_(chat_,limits.chat), hub_messages_(sessions_), welcome_message_(welcome_packet(limits.welcome_text)), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
+LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), search_(sessions_,limits.search.tokens), search_router_(search_), result_router_(search_), transfers_(sessions_,limits.transfers,this), connection_router_(transfers_), status_router_(sessions_), chat_(sessions_), message_router_(chat_,limits.chat), hub_messages_(sessions_), welcome_message_(welcome_packet(limits.welcome_text)), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
     search::validate_security(limits.search);
     if (limits.anti_flood) { chat::validate(*limits.anti_flood); }
     if (limits.connections == 0 || limits.connections > 65535 ||
@@ -191,13 +192,17 @@ void LoginHub::close(Id id, CloseReason reason, users::TimePoint now) {
         check_model(sessions_.force_close(peer.lifecycle.id(),session_cause(reason),now));
         return;
     }
-    switch (reason) {
-    case CloseReason::login_timeout: reject(peer, "240", {}, "Login timed out", users::CloseCause::login_timeout, now); break;
-    case CloseReason::idle_timeout: reject(peer, "230", {}, "Idle connection timed out", users::CloseCause::idle_timeout, now); break;
-    case CloseReason::partial_frame_timeout: reject(peer, "240", {}, "Incomplete frame timed out", users::CloseCause::partial_frame_timeout, now); break;
-    case CloseReason::security_quota: reject(peer, "240", {}, "Protocol resource limit exceeded", users::CloseCause::security_quota, now); break;
-    case CloseReason::negotiation_limit: reject(peer, "240", {}, "Negotiation resource limit exceeded", users::CloseCause::negotiation_limit, now); break;
-    case CloseReason::identity_limit: reject(peer, "240", {}, "Identity verification rate limit exceeded", users::CloseCause::identity_limit, now); break;
+    try {
+        switch (reason) {
+        case CloseReason::login_timeout: reject(peer, "240", {}, "Login timed out", users::CloseCause::login_timeout, now); break;
+        case CloseReason::idle_timeout: reject(peer, "230", {}, "Idle connection timed out", users::CloseCause::idle_timeout, now); break;
+        case CloseReason::partial_frame_timeout: reject(peer, "240", {}, "Incomplete frame timed out", users::CloseCause::partial_frame_timeout, now); break;
+        case CloseReason::security_quota: reject(peer, "240", {}, "Protocol resource limit exceeded", users::CloseCause::security_quota, now); break;
+        case CloseReason::negotiation_limit: reject(peer, "240", {}, "Negotiation resource limit exceeded", users::CloseCause::negotiation_limit, now); break;
+        case CloseReason::identity_limit: reject(peer, "240", {}, "Identity verification rate limit exceeded", users::CloseCause::identity_limit, now); break;
+        }
+    } catch (const std::bad_alloc&) {
+        check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,now));
     }
 }
 bool LoginHub::needs_identity_check(Id id, const Message& message) const {
@@ -213,6 +218,19 @@ void LoginHub::relay(Id except, const Message& message) {
 }
 
 void LoginHub::receive(Id id, const Message& message, chat::FloodClock::time_point chat_now) {
+    if (message.kind != Command::sta && message.kind != Command::ctm && message.kind != Command::rcm) {
+        receive_impl(id, message, chat_now); return;
+    }
+    try { receive_impl(id, message, chat_now); }
+    catch (const std::bad_alloc&) {
+        // Include validation and terminal diagnostics in source fault isolation.
+        const auto found = peers_.find(id);
+        if (found != peers_.end()) {
+            check_model(sessions_.force_close(found->second->lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
+        }
+    }
+}
+void LoginHub::receive_impl(Id id, const Message& message, chat::FloodClock::time_point chat_now) {
     auto& peer = *peers_.at(id);
     if (peer.lifecycle.closing() || peer.lifecycle.immediate()) { return; }
     search::Attempt search_attempt(message.kind==Command::sch || message.kind==Command::res ? &search_statistics_ : nullptr,
@@ -367,26 +385,15 @@ void LoginHub::receive(Id id, const Message& message, chat::FloodClock::time_poi
 void LoginHub::receive_connection(Id id, const Message& message) {
     auto& peer = *peers_.at(id);
     try {
-        const bool ctm = message.kind == Command::ctm;
-        const auto command = std::string(1, static_cast<char>(message.type)) + (ctm ? "CTM" : "RCM");
+        const auto command = std::string(1, static_cast<char>(message.type)) + (message.kind == Command::ctm ? "CTM" : "RCM");
         const auto refuse = [&](ConnectionRoutingError error) {
-            switch (error) {
-            case ConnectionRoutingError::invalid_state: reject(peer, "244", command); break;
-            case ConnectionRoutingError::wrong_source: reject(peer, "240", command); break;
-            case ConnectionRoutingError::recipient_unavailable:
-                (void)enqueue(peer, make_status(*StatusCode::parse("140"), ctm ? "CTM recipient unavailable" : "RCM recipient unavailable", command)); break;
-            case ConnectionRoutingError::inactive_sender:
-                (void)enqueue(peer, make_status(*StatusCode::parse("100"), "CTM sender is not TCP active", command)); break;
-            case ConnectionRoutingError::incompatible_connectivity:
-                (void)enqueue(peer, make_status(*StatusCode::parse("100"), "RCM requires passive sender and active recipient", command)); break;
-            case ConnectionRoutingError::invalid_message:
-                (void)enqueue(peer, make_status(*StatusCode::parse("100"), "Invalid connection request", command)); break;
-            case ConnectionRoutingError::disabled:
-                (void)enqueue(peer, make_status(*StatusCode::parse("125"), "Connection operation is disabled", command)); break;
-            case ConnectionRoutingError::forbidden:
-                (void)enqueue(peer, make_status(*StatusCode::parse("125"), "Connection operation not permitted", command)); break;
-            default:
-                check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now())); break;
+            const auto failure = connection_failure(error, message.kind);
+            if (failure.action == FailureAction::reply) {
+                (void)enqueue(peer, make_status(*StatusCode::parse(failure.code), failure.description, command));
+            } else if (failure.action == FailureAction::terminate) {
+                reject(peer, failure.code, command, failure.description);
+            } else {
+                check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
             }
         };
         auto prepared = connection_router_.prepare(peer.lifecycle.id(), message);
@@ -612,38 +619,31 @@ std::variant<chat::DispatchReport, HubMessageError> LoginHub::send_hub_message(
     });
 }
 void LoginHub::route_status(Id id, const Message& message) {
-    const auto safe = public_status(message);
-    if (message.type == MessageType::direct || message.type == MessageType::echo) {
-        const auto* target = sessions_.by_sid(*message.target);
-        if (!target || !target->ready()) {
-            (void)enqueue(*peers_.at(id), make_status(*StatusCode::parse("140"), "Status recipient unavailable"));
+    auto& sender = *peers_.at(id);
+    try {
+        auto prepared = status_router_.prepare(sender.lifecycle.id(), message);
+        if (const auto* error = std::get_if<StatusRoutingError>(&prepared)) {
+            if (*error == StatusRoutingError::recipient_unavailable) {
+                (void)enqueue(sender, make_status(*StatusCode::parse("140"), "Status recipient unavailable"));
+            } else if (*error == StatusRoutingError::wrong_source) { reject(sender, "240"); }
+            else if (*error == StatusRoutingError::invalid_state) { reject(sender, "244"); }
+            else { reject(sender, "240"); }
             return;
         }
-        (void)enqueue(*peers_.at(target->id().value()), safe);
-        if (message.type == MessageType::echo && target->id().value() != id) { (void)enqueue(*peers_.at(id), safe); }
-        return;
-    }
-    for (auto& [recipient, peer] : peers_) {
-        if (!ready(recipient)) { continue; }
-        if (message.type == MessageType::feature) {
-            const auto supported = peer->session.info()->field("SU").value_or("");
-            const auto has_feature = [&](std::string_view name) {
-                std::size_t start=0;
-                while (start < supported.size()) {
-                    const auto comma=supported.find(',',start);
-                    if (supported.substr(start, comma==std::string_view::npos ? comma : comma-start)==name) { return true; }
-                    if (comma==std::string_view::npos) { break; }
-                    start=comma+1;
-                }
+        const auto result = status_router_.dispatch(std::get<StatusDelivery>(prepared), [&](users::SessionId recipient, const SharedStatusFrame& frame) {
+            const auto found = peers_.find(recipient.value());
+            if (found == peers_.end()) { return false; }
+            try { return enqueue_shared(*found->second, frame); }
+            catch (const std::bad_alloc&) {
+                check_model(sessions_.force_close(recipient,users::CloseCause::internal_error,users::Clock::now()));
                 return false;
-            };
-            bool matches=true;
-            for (const auto& feature : message.features) {
-                if (has_feature(feature.name) != feature.required) { matches=false; break; }
             }
-            if (!matches) { continue; }
+        });
+        if (std::holds_alternative<StatusRoutingError>(result)) {
+            check_model(sessions_.force_close(sender.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
         }
-        (void)enqueue(*peer, safe);
+    } catch (const std::bad_alloc&) {
+        check_model(sessions_.force_close(sender.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
     }
 }
 
@@ -664,7 +664,13 @@ bool LoginHub::consume(Id id, std::size_t bytes) {
     peer.queued -= frame.wire().size();
     queued_ -= frame.wire().size();
     if (peer.lifecycle.closing()) { return false; }
-    if (peer.session.observe(Direction::to_client, frame.message())) {
+    ClientSessionResult observed;
+    try { observed = peer.session.observe(Direction::to_client, frame.message()); }
+    catch (const std::bad_alloc&) {
+        if (frame.message().kind != Command::sta) { throw; }
+        check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now())); return false;
+    }
+    if (observed) {
         check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now())); return false;
     }
     if (frame.completion == Completion::support) {

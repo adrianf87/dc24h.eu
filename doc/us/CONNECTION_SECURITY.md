@@ -1,5 +1,7 @@
 # Connection Security — alpha-0.6.8
 
+**Current increment — alpha-0.6.9:** [Error Handling](ERROR_HANDLING.md) consolidates connection diagnostics and immutable shared STA routing with fixed ready-session audiences. Status preparation, recipient queues, terminal diagnostics and completed STA validation isolate memory faults; routed peer fatal status retains hub sessions. Native, mixed ADC/ADCS and ncdc reset/error/recovery cases cover the behavior.
+
 **alpha-0.6.8 local validation (2026-11-14):** All 159/159 CTest tests passed in Debug, Release and ASan/UBSan, including real ncdc passive/active policy refusals and earlier successful plaintext/TLS peer handshakes. Final builds were warning-free after the statistics allocator helper repair; its native test passed again in all three modes. WebAdmin build/typecheck, 12 Node tests, 10 Chromium tests and real C++ API integration passed. Metadata, UTF-8, language parity/local links, changed Python syntax, example INI and whitespace checks passed. GitHub Actions completion is not awaited; the full supported OS matrix and production load remain unverified.
 
 Based directly on main `236b58877a317c19bcb1574c2b4545d3091c44fe` after Transfer Tokens. This increment adds explicit connection permissions, trusted lifetime grants and authorization rechecks, and centralizes/tests endpoint and port validation. The numbered branch is published separately from main with code/history preserved.
