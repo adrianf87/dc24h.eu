@@ -86,16 +86,16 @@ void integration(char* argv[]) {
     require(rival.scalar("SELECT GET_LOCK(" + lock_sql + ", 0)") == "1");
     rejects([&] { (void)migrate(connection); });
     require(rival.scalar("SELECT RELEASE_LOCK(" + lock_sql + ")") == "1");
-    require(migrate(connection) == 1);
+    require(migrate(connection) == 2);
     require(migrate(connection) == 0);
-    connection.execute("UPDATE dc24h_schema_migrations SET checksum = ?", {std::string(64, '0')});
+    connection.execute("UPDATE dc24h_schema_migrations SET checksum = ? WHERE version=1", {std::string(64, '0')});
     rejects([&] { (void)migrate(connection); });
-    connection.execute("DELETE FROM dc24h_schema_migrations");
-    require(migrate(connection) == 1);
-    connection.execute("UPDATE dc24h_schema_migrations SET version = 2");
+    connection.execute("UPDATE dc24h_schema_migrations SET checksum = ? WHERE version=1", {std::string(migration_catalog()[0].checksum)});
+    require(migrate(connection) == 0);
+    connection.execute("UPDATE dc24h_schema_migrations SET version = 99 WHERE version=2");
     rejects([&] { (void)migrate(connection); });
-    connection.execute("DELETE FROM dc24h_schema_migrations");
-    require(migrate(connection) == 1);
+    connection.execute("UPDATE dc24h_schema_migrations SET version = 2 WHERE version=99");
+    require(migrate(connection) == 0);
 
 }
 }

@@ -1,6 +1,8 @@
-# MariaDB — alpha-0.7.1
+# MariaDB — alpha-0.7.2
 
-**Aktualny etap — alpha-0.7.1:** [Database Core](DATABASE_CORE.md) dodaje typowane parametry, ograniczone wyniki na własność, metadane zapisu, egzekwowanie wątku właściciela, zredagowane błędy i transakcje RAII. Niezmienna migracja 1 i konfiguracja operatora poniżej pozostają; wymagane przebudowanie zależnych komponentów.
+**Wersjonowanie schematu — alpha-0.7.2:** [Migracje bazy danych](DATABASE_MIGRATIONS.md) opisują uporządkowany katalog, aktualizację v1, odczyt stanu i obsługę częściowych błędów.
+
+**Core dostarczony w alpha-0.7.1:** [Database Core](DATABASE_CORE.md) dodaje typowane parametry, ograniczone wyniki na własność, metadane zapisu, egzekwowanie wątku właściciela, zredagowane błędy i transakcje RAII. Niezmienna migracja 1 i konfiguracja operatora poniżej pozostają; wymagane przebudowanie zależnych komponentów.
 
 Zaimplementowano opcjonalne połączenie Connector/C, RAII, ograniczenia czasu, kodowanie `utf8mb4`, zapytania parametryzowane i jawną migrację rejestru wersji. Konta użytkowników, uwierzytelnianie i hashowanie haseł, role, uprawnienia, konfiguracja w bazie, bany, dane administracyjne oraz zapisywanie zdarzeń pozostają planowane. Haseł użytkowników huba jeszcze nie przechowujemy; przyszły moduł powinien korzystać ze sprawdzonej implementacji Argon2id. WebAdmin będzie używał API C++, nie bezpośredniego SQL.
 
@@ -23,7 +25,7 @@ Nieznane/powtórzone klucze i błędne kombinacje są odrzucane również przy w
 
 ## Hasło i transport
 
-Utwórz bazę i osobne konto narzędziami administratora MariaDB. Nie uruchamiaj usługi na koncie SQL root. Konto wykonawcze powinno mieć `SELECT` w wybranym schemacie (jego wybór wymaga uprawnień); jawna migracja dodatkowo wymaga `CREATE` i `INSERT`. Dla przyszłych migracji stosuj osobne dane operatora. Program nie tworzy automatycznie bazy, użytkowników ani uprawnień.
+Utwórz bazę i osobne konto narzędziami administratora MariaDB. Nie uruchamiaj usługi na koncie SQL root. Konto wykonawcze powinno mieć `SELECT` w wybranym schemacie (jego wybór wymaga uprawnień); jawna migracja dodatkowo wymaga `CREATE`, `ALTER` i `INSERT`. Dla przyszłych migracji stosuj osobne dane operatora. Program nie tworzy automatycznie bazy, użytkowników ani uprawnień.
 
 Hasło umieść w pliku należącym do efektywnego UID procesu, bez praw grupy/innych, z jednym dowiązaniem twardym i długością do 4096 bajtów (zwykle tryb 0600 lub 0400). Odrzucane są dowiązania symboliczne ostatniego elementu ścieżki, katalogi, FIFO, puste pliki, NUL/znaki sterujące i zbyt duże pliki. Usuwane jest jedno końcowe LF lub CRLF; pozostałe bajty, w tym spacje, są zachowywane. Chroń również katalogi nadrzędne. Bufor odczytu i tymczasowe hasło aplikacji są zerowane; Connector/C może zachowywać własne kopie do zamknięcia połączenia. To hasło konta usługi MariaDB, nie użytkownika huba.
 
@@ -41,21 +43,9 @@ timeout = 5
 
 Pusty socket i klucze dotyczące TCP są odrzucane. Nie udostępniaj lokalnego gniazda bazy przez niezabezpieczony tunel.
 
-## Jawna migracja podstawowa
+## Jawne wersjonowanie schematu
 
-```sh
-./build/dc24h --config config/dc24h.ini --check-config
-./build/dc24h --config config/dc24h.ini --check-database
-./build/dc24h --config config/dc24h.ini --migrate-database
-```
-
-Sprawdzenie bazy i migracja łączą się z SQL, ale nie uruchamiają Core, nasłuchu ani logu z konfiguracji. Kody zakończenia: 0 sukces, 1 błąd bazy, 2 błędne argumenty. Te trzy operacje wzajemnie się wykluczają; operacje bazy wymagają jej włączenia. Sprawdzenie wykonuje tylko ping; zwykły start nie zmienia schematu.
-
-Migracja 1 tworzy tabelę InnoDB `dc24h_schema_migrations`: klucz główny `version` (INT UNSIGNED), `name` ASCII, `checksum` ASCII SHA-256 i znacznik czasu `applied_at`. Źródło to `database/migrations/0001_schema_migrations.sql`; CMake wbudowuje dokładne bajty i SHA-256, śledzi zmiany i instaluje SQL w `share/dc24h/migrations`. Program nie ładuje dowolnych plików ani nie rozdziela SQL średnikami. Nazwa migracji to `schema_migrations`.
-
-Runner uzyskuje bez oczekiwania blokadę połączenia `GET_LOCK`: `dc24h:` i pierwsze 52 znaki szesnastkowe SHA-256 nazwy bazy. Chroni to przed równoległymi współpracującymi runnerami dc24h tego samego schematu na tym samym serwerze. Brak blokady przerywa operację; RAII zwalnia ją również po błędach. Tabela powstaje idempotentnie; wpis wersji 1 jest zapisywany dopiero po udanym DDL. Powtórne uruchomienie sprawdza wersję/nazwę/sumę i zwraca `applied=0`. Obce wersje, dodatkowe rekordy lub zmienione sumy kończą się błędem. Nie edytuj zastosowanych migracji. Weryfikacja tożsamości wpisów nie jest pełnym audytem zgodności struktury tabel.
-
-DDL MariaDB może niejawnie zatwierdzać transakcję; brak obietnicy rollbacku. Migrację podstawową można ponowić po przerwaniu pomiędzy utworzeniem tabeli a zapisem wersji. Przyszłe migracje nieidempotentne wymagają jawnego zapisu i naprawy częściowych błędów. Przed migracją wykonaj kopię bazy i sprawdź SQL/uprawnienia. Brak automatyzacji kopii i downgrade. Źródła: [opcje Connector/C](https://mariadb.com/docs/connectors/mariadb-connector-c/api-functions/mysql_optionsv), [niejawne zatwierdzenia DDL](https://mariadb.com/docs/server/reference/sql-statements/transactions/sql-statements-that-cause-an-implicit-commit).
+`--migrate-database` stosuje teraz uporządkowany kompilowany katalog do v2, zachowuje dokładną sumę v1 i dodaje kolumnę metadanych `state`. `--database-status` odczytuje current/latest/pending/dirty bez DDL; zwykły start nigdy nie migruje. Poświadczenia inicjalizacji/aktualizacji wymagają dodatkowo ALTER. Przyszłe migracje po inicjalizacji zapisują `applying` przed SQL i odmawiają automatycznego odtwarzania po częściowym błędzie. Pełny kontrakt, manifest, format sum, uprawnienia i naprawa przez operatora: [Migracje bazy danych](DATABASE_MIGRATIONS.md).
 
 ## Kontrakt adaptera
 

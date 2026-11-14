@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.7.1: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.7.2: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [Migracje bazy danych — alpha-0.7.2](DATABASE_MIGRATIONS.md)
 - [Database Core — alpha-0.7.1](DATABASE_CORE.md)
 - [Transfer Configuration — alpha-0.6.13](TRANSFER_CONFIGURATION.md)
 - [WebAdmin Transfer Monitoring — alpha-0.6.12](WEBADMIN_TRANSFERS.md)

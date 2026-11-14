@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
     for (int i = 1; i < argc; ++i) {
         const std::string_view key(argv[i]);
         if (key == "--help" || key == "--version" || key == "--check-config" ||
-            key == "--check-database" || key == "--migrate-database") { continue; }
+            key == "--check-database" || key == "--migrate-database" || key == "--database-status") { continue; }
         if (i + 1 < argc) {
             const std::string_view value(argv[++i]);
             if (key == "--language" && (value == "us" || value == "pl")) {
@@ -72,13 +72,19 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    if (parsed.check_database || parsed.migrate_database) {
+    if (parsed.check_database || parsed.migrate_database || parsed.database_status) {
         try {
             dc24h::database::Connection database(parsed.settings.database);
             database.ping();
             if (parsed.migrate_database) {
                 const auto applied = dc24h::database::migrate(database);
                 std::cout << dc24h::i18n::translate("Database migrations applied=", language) << applied << '\n';
+            } else if (parsed.database_status) {
+                const auto status = dc24h::database::inspect_migrations(database);
+                std::cout << dc24h::i18n::translate("Database schema version=", language) << status.current_version
+                          << " latest=" << status.latest_version << " pending=" << status.pending
+                          << " dirty=" << (status.dirty ? "yes" : "no") << '\n';
+                return status.dirty ? EXIT_FAILURE : EXIT_SUCCESS;
             } else {
                 std::cout << dc24h::i18n::translate("Database connection OK\n", language);
             }

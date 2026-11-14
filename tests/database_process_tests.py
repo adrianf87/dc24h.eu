@@ -12,6 +12,11 @@ import time
 
 from api_support import enable_api, fetch_status
 
+MIGRATION_TEST = None
+if '--migration-test' in sys.argv:
+    index = sys.argv.index('--migration-test')
+    MIGRATION_TEST = os.path.abspath(sys.argv[index + 1])
+    del sys.argv[index:index + 2]
 BINARY, TEST = map(os.path.abspath, sys.argv[1:3])
 CORE_TEST = os.path.abspath(sys.argv[3]) if len(sys.argv) >= 4 else None
 NCDC = os.path.abspath(sys.argv[4]) if len(sys.argv) >= 6 else None
@@ -91,23 +96,31 @@ def main():
             sql('CREATE DATABASE dc24h CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;'
                 "CREATE USER 'dc24h'@'localhost' IDENTIFIED BY PASSWORD '" + native_hash + "';"
                 "CREATE USER 'dc24h'@'127.0.0.1' IDENTIFIED BY PASSWORD '" + native_hash + "';"
-                "GRANT SELECT, INSERT, UPDATE, DELETE, CREATE ON dc24h.* TO 'dc24h'@'localhost';"
-                "GRANT SELECT, INSERT, UPDATE, DELETE, CREATE ON dc24h.* TO 'dc24h'@'127.0.0.1';")
+                "GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP ON dc24h.* TO 'dc24h'@'localhost';"
+                "GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP ON dc24h.* TO 'dc24h'@'127.0.0.1';")
             path = config()
-            for action in ['--check-config', '--check-database']:
+            for action in ['--check-config', '--check-database', '--database-status']:
                 result = cli(path, action)
                 require(result.returncode == 0, result.stderr)
                 no_secrets(result)
+            require('version=0 latest=2 pending=2 dirty=no' in cli(path, '--database-status').stdout,
+                    'Fresh schema status is incorrect')
             require(sql('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema="dc24h"') == '0',
                     'Check command modified schema')
             result = run([TEST, str(db_socket), str(password)])
             require(result.returncode == 0, result.stderr)
             expected = hashlib.sha256((Path(__file__).resolve().parents[1] /
                                       'database/migrations/0001_schema_migrations.sql').read_bytes()).hexdigest()
-            require(sql('SELECT checksum FROM dc24h.dc24h_schema_migrations') == expected,
+            require(sql('SELECT checksum FROM dc24h.dc24h_schema_migrations WHERE version=1') == expected,
                     'Migration checksum differs from SQL source')
             result = cli(path, '--migrate-database')
             require(result.returncode == 0 and 'applied=0' in result.stdout, result.stderr)
+            require('version=2 latest=2 pending=0 dirty=no' in cli(path, '--database-status').stdout,
+                    'Schema status does not match applied migrations')
+            if MIGRATION_TEST:
+                result = run([MIGRATION_TEST, str(db_socket), str(password)])
+                require(result.returncode == 0, result.stderr)
+                no_secrets(result)
             if CORE_TEST:
                 sql("DELIMITER //\nCREATE PROCEDURE dc24h.dc24h_core_multiple_results() BEGIN SELECT 1; SELECT 2; END//\nDELIMITER ;\n"
                     "GRANT EXECUTE ON PROCEDURE dc24h.dc24h_core_multiple_results TO 'dc24h'@'localhost';")
@@ -126,8 +139,17 @@ def main():
                 no_secrets(result)
 
             result = cli(path, '--migrate-database')
-            require(result.returncode == 1, 'Migration accepted without DDL privileges'); no_secrets(result)
+            require(result.returncode == 0 and 'applied=0' in result.stdout, 'Read-only no-op migration failed')
+            require(cli(path, '--database-status').returncode == 0, 'Read-only schema inspection failed')
+            # A legacy registry requires ALTER; inspection never upgrades it.
+            sql('DELETE FROM dc24h.dc24h_schema_migrations WHERE version=2;'
+                'ALTER TABLE dc24h.dc24h_schema_migrations DROP COLUMN state;')
+            result = cli(path, '--migrate-database')
+            require(result.returncode == 1, 'Upgrade accepted without ALTER privileges'); no_secrets(result)
+            require('version=1 latest=2 pending=1 dirty=no' in cli(path, '--database-status').stdout,
+                    'Read-only status changed legacy schema')
             config()
+            require('applied=1' in cli(path, '--migrate-database').stdout, 'Legacy upgrade failed')
             api_path, api_token = enable_api(path, folder)
             if NCDC:
                 for transport in ([], ['--tls']):
@@ -157,11 +179,13 @@ def main():
             hub = None
             require(not api_path.exists(), 'API socket leaked after database shutdown')
             # Database actions do not create the configured log.
-            for action in ['--check-database', '--migrate-database']:
+            for action in ['--check-database', '--migrate-database', '--database-status']:
                 result = run([BINARY, '--config', str(path), '--log-file', str(folder / 'unused.log'), action])
                 require(result.returncode == 0 and not (folder / 'unused.log').exists(), result.stderr)
             result = cli(path, '--language', 'pl', '--check-database')
             require(result.returncode == 0 and 'Połączenie z bazą' in result.stdout, result.stderr)
+            result = cli(path, '--language', 'pl', '--database-status')
+            require(result.returncode == 0 and 'Wersja schematu bazy danych=2' in result.stdout, result.stderr)
             config(db_user='missing_private_user')
             result = cli(path, '--check-database')
             require(result.returncode == 1, 'Missing user accepted'); no_secrets(result)
@@ -187,9 +211,13 @@ def main():
                 require(result.returncode == 2, 'Log/secret alias accepted')
             (folder / 'password-alias').unlink()
             require(password.read_text() == secret + '\n', 'Log changed secret file')
-            for action in ['--check-config', '--check-database']:
+            for action in ['--check-config', '--check-database', '--database-status']:
                 result = cli(path, action, '--migrate-database')
                 require(result.returncode == 2, 'Conflicting database action accepted')
+            for action in ['--check-config', '--check-database', '--migrate-database']:
+                require(cli(path, '--database-status', action).returncode == 2, 'Conflicting status action accepted')
+            for action in ['--help', '--version']:
+                require(cli(path, '--database-status', action).returncode == 2, 'Status accepted with help/version')
             for setting in ['port=0', 'port=65536', 'timeout=0', 'timeout=61', 'password=SECRET',
                             'enabled=on', 'name=bad-name', 'host=localhost', 'tls_ca=server.pem']:
                 config(setting + '\n')
@@ -197,7 +225,7 @@ def main():
                 require(result.returncode == 2, 'Invalid setting accepted: ' + setting)
             path.write_text('[database]\nenabled=off\nsocket=missing-db.sock\npassword_file=missing-password\n')
             require(cli(path, '--check-config').returncode == 0, 'Disabled database read credentials')
-            for action in ['--check-database', '--migrate-database']:
+            for action in ['--check-database', '--migrate-database', '--database-status']:
                 require(cli(path, action).returncode == 2, 'Database action accepted in disabled mode')
             config(password='missing-private-password')
             result = cli(path, '--check-database')

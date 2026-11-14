@@ -1,0 +1,52 @@
+# Database Migrations — alpha-0.7.2
+
+Based on main `4f204b9f8901a5201c56abad957543344c177256`, including Database Core alpha-0.7.1. This stage versions the SQL schema through an ordered compiled catalog, preserves the original baseline, upgrades its metadata and supplies read-only status and failure detection. It adds no application/account/authentication tables or WebAdmin writes.
+
+## Operator commands
+
+```sh
+./build/dc24h --config config/dc24h.ini --check-database
+./build/dc24h --config config/dc24h.ini --database-status
+./build/dc24h --config config/dc24h.ini --migrate-database
+```
+
+Use enabled `[database]` settings and a pre-provisioned local MariaDB database/account as described in [Database](DATABASE.md). These commands connect synchronously through its Unix socket and exit without binding hub listeners, starting Core or opening the configured log. They are mutually exclusive with each other and `--check-config`, help and version. US is the default; `--language pl` translates messages. No database passwords belong in arguments or SQL source.
+
+`--check-database` only pings. `--database-status` only reads migration metadata; it performs no DDL, writes or advisory-lock acquisition. A fresh schema reports `version=0 latest=2 pending=2 dirty=no`; a legacy v1 reports `version=1 latest=2 pending=1 dirty=no`; the current schema reports `version=2 latest=2 pending=0 dirty=no`. Dirty means a known migration started but has not been recorded as complete. Invalid/unknown history fails rather than guessing a version. Status is an observation, not a transactional snapshot during concurrent DDL.
+
+`--migrate-database` applies the pending suffix and reports the number of newly recorded versions, e.g. `Database migrations applied=2` on an empty database, `applied=1` for the v1 upgrade and `applied=0` on a current schema. Exit codes: 0 on successful inspection/application (pending clean migrations do not make inspection fail), 1 on database/metadata/dirty-state failure, 2 on invalid arguments/settings. Inspecting a dirty state returns 1. Ordinary hub startup and `--check-config` never inspect or change schema history automatically; `database.enabled` in the API remains configuration, not schema or health status.
+
+Use separate operator credentials. The current fresh/upgrade path needs SELECT, CREATE, ALTER and INSERT on the selected schema. UPDATE is additionally needed to finish future journaled migrations; future SQL determines further grants. A SELECT-only account can inspect a current/legacy schema and run an up-to-date migration no-op, but cannot bootstrap or upgrade. No account, database or grant is provisioned by the runner. Schedule schema changes with the application stopped and take an operator-managed backup; this stage supplies no live migration coordinator, backup, downgrade or repair command.
+
+## Catalog and exact checksums
+
+`database/migrations/manifest.json` explicitly declares contiguous integer versions starting at 1, canonical names and ordered SQL files. CMake validates identity/order/filenames/size, reads the exact source bytes, calculates SHA-256 and embeds immutable statements and metadata. It also tracks manifest/listed SQL changes for reconfiguration and installs those exact sources plus the manifest under `share/dc24h/migrations`. Unlisted SQL sources, duplicate files, traversal, symlinks, missing files and raw-string delimiter collisions fail configuration. The runtime validates the compiled catalog again before contacting history.
+
+| Version | Name | SQL | Behavior |
+| --- | --- | --- | --- |
+| 1 | `schema_migrations` | `0001_schema_migrations.sql` | Original unchanged idempotent InnoDB registry baseline |
+| 2 | `migration_state` | `0002_migration_state.sql` | Idempotently adds the ASCII `state` column, default `applied` |
+
+The original four fields remain: unsigned `version` primary key, ASCII/binary-collation `name` and SHA-256 `checksum`, and non-null `applied_at` timestamp. Version 2 adds `state VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'applied'`. Existing v1 identity, checksum and timestamp remain untouched. Applied rows are compared byte-for-byte with the catalog and must form a contiguous prefix. Gaps, unknown/newer versions, identity/checksum changes, invalid states and incompatible metadata shapes fail before pending DDL. Metadata checks cover engine, column order/types/nullability/ASCII collations and the version primary key; this is not a full audit of all defaults, indexes, triggers or application schema drift.
+
+For a one-file migration, checksum is SHA-256 of that file's exact bytes, retaining the v1 checksum convention. For multiple files, hash the ordered concatenation of each file's decimal byte length, a colon and exact bytes: `len1:bytes1len2:bytes2...`. Lengths count UTF-8 bytes. Sources must use LF text without NUL/CR; configuration rejects CRLF because C++ compilers normalize it inside raw literals. No accepted source bytes are normalized, and SQL tokens/semicolons are never split. Literal quotes, semicolons, `@name@` and CMake-like text remain SQL bytes. Each file is one server-prepared statement; the driver rejects multi-statement files. Forbid credentials and untrusted/client-selected SQL in the catalog. Trusted migration SQL must not change the selected database/session transaction settings or edit the migration registry itself.
+
+To extend the catalog, add version N+1 with a new canonical name and its explicit files (`0003_name.sql` or ordered `0003_name_01.sql`, `0003_name_02.sql`, etc.), then review, rebuild and add fixture-based upgrade/failure tests. Do not edit applied SQL or rewrite its recorded checksum. Limits: 2..128 catalog entries, 1..32 files per entry, 1..65536 bytes per file; names use lower ASCII letters, digits and underscores and start with a letter. The runtime uses the compiled catalog and never loads scripts from the working directory or installed data path. There is no arbitrary script CLI, target-version option or down migration.
+
+## Locking, bootstrap and partial failures
+
+The existing advisory-lock name is preserved: `dc24h:` plus the first 52 hex digits of SHA-256 of `DATABASE()`. A zero-wait, connection-owned `GET_LOCK` serializes cooperating runners on the same server/schema; contention or recursive ownership fails immediately. Ownership is checked before each statement and after execution. Scoped cleanup releases the lock on success/failure; connection loss releases it server-side. Other applications/DB administrators that ignore this lock are not serialized.
+
+Only the immutable bootstrap migrations 1 and 2 are automatically resumable: v1's `CREATE TABLE IF NOT EXISTS` and v2's `ADD COLUMN IF NOT EXISTS` can repeat if interrupted after DDL but before inserting their applied record. A correctly shaped empty legacy registry may finish v1; an enhanced empty registry is rejected, since it may indicate deleted history. A valid v1 with the state column already present may finish the v2 gap. These exceptions do not allow unknown history or incompatible columns. A failure to acquire required privileges leaves the applied prefix intact.
+
+Starting with version 3, the generic runner first inserts an autocommitted `applying` identity row, then executes each explicit SQL statement in order. It marks that row `applied` and sets `applied_at=CURRENT_TIMESTAMP` only after all statements succeed; until then the timestamp records the attempt's start, not completion. SQL errors, allocation faults or lost acknowledgements may leave some effects and the `applying` row durable. Later inspection reports dirty, and migration refuses to continue or replay any statements. The shipped catalog ends at v2; real-server test catalogs exercise this path with versions 3/4 without shipping application tables.
+
+MariaDB DDL can implicitly commit, so wrapping these statements in a transaction would not provide atomic migration rollback. Migration/inspection inside a Database Core transaction is rejected before SQL/advisory locking. Core transport failures retire the connection without reconnect/replay; a missing completion acknowledgement requires a new connection and inspection. An exception does not prove that SQL had no effect. Sources: [MariaDB implicit commits](https://mariadb.com/docs/server/reference/sql-statements/transactions/sql-statements-that-cause-an-implicit-commit), [GET_LOCK](https://mariadb.com/docs/server/reference/sql-functions/secondary-functions/miscellaneous-functions/get_lock), [ALTER TABLE](https://mariadb.com/docs/server/reference/sql-statements/data-definition/alter/alter-table).
+
+On failure, preserve the database/history and inspect the precise failed version and actual schema with operator tools. Restore the backup or reconcile partial effects and recorded identity under an operator-reviewed recovery procedure before restarting migrations. The CLI supplies no automatic deletion of dirty rows, checksum replacement, mark-applied or rollback operation. Restoring an older binary against a newer registry is rejected. Error messages are fixed EN/US or PL text and do not print SQL, private paths, values or raw MariaDB diagnostics.
+
+## Verification
+
+Tests compile real CMake catalog fixtures and exercise exact single/multi-file hashes, UTF-8, SQL literals, invalid ordering/paths, missing/unlisted/duplicate/symlink sources and size/delimiter boundaries and rejection of NUL/CRLF before compiler normalization. Native tests cover public catalog metadata and invalid compiled catalogs. Disposable MariaDB tests cover fresh install/no-op, legacy upgrade and preserved v1 timestamp/checksum, interrupted bootstrap, history/metadata corruption, read-only inspection/privilege failures, locking and reentrancy, active-transaction guards, ordered multi-file SQL, durable partial failures, killed connections and refusal to replay. No host database is contacted or modified.
+
+The enabled hub still runs real ncdc login/reconnect/chat over ADC and ADCS against the private test database. Existing protocol, API, Apache and WebAdmin checks remain. See [Testing](TESTING.md) and [Changelog](../../CHANGELOG.md) for actual local results. GitHub CI remains hosted Ubuntu 22.04/24.04 only; remote Check status is not awaited.

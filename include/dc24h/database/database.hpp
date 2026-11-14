@@ -104,8 +104,25 @@ private:
     bool active_{true};
 };
 
-// Explicit operator action only. Returns number of newly applied migrations.
-// Baseline creates migration metadata only, no user/authentication schema yet.
+struct MigrationInfo { unsigned int version; std::string_view name, checksum; };
+struct MigrationStatus {
+    unsigned int current_version{}, latest_version{}, pending{};
+    bool dirty{false};
+};
+enum class MigrationErrorKind { catalog, lock_unavailable, history, dirty, schema };
+class MigrationError final : public std::runtime_error {
+public:
+    explicit MigrationError(MigrationErrorKind kind);
+    [[nodiscard]] MigrationErrorKind kind() const noexcept { return kind_; }
+private:
+    MigrationErrorKind kind_;
+};
+// Compiled catalog only. Views refer to process-lifetime immutable metadata.
+[[nodiscard]] std::vector<MigrationInfo> migration_catalog();
+// Read-only metadata inspection; no lock acquisition or DDL. Dirty is reported.
+[[nodiscard]] MigrationStatus inspect_migrations(Connection& connection);
+// Explicit operator action only. Applies a checked contiguous prefix under the
+// schema advisory lock; refuses dirty history, never repairs/replays DDL blindly.
 [[nodiscard]] unsigned int migrate(Connection& connection);
 
 } // namespace dc24h::database

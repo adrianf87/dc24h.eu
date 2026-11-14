@@ -24,6 +24,7 @@ struct CommandLine {
     bool check_only{false};
     bool check_database{false};
     bool migrate_database{false};
+    bool database_status{false};
     bool show_help{false};
     bool show_version{false};
 };

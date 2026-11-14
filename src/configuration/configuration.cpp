@@ -434,7 +434,7 @@ CommandLine parse_arguments(int argc, char* const argv[]) {
         const std::string_view key(argv[i]);
         if (key == "--help") { result.show_help = true; continue; }
         if (key == "--version") { result.show_version = true; continue; }
-        if (key == "--check-config" || key == "--check-database" || key == "--migrate-database") { operational = true; continue; }
+        if (key == "--check-config" || key == "--check-database" || key == "--migrate-database" || key == "--database-status") { operational = true; continue; }
         if (key == "--config") {
             if (has_config || i + 1 == argc) {
                 throw std::invalid_argument("Provide --config only once with a file");
@@ -463,6 +463,7 @@ CommandLine parse_arguments(int argc, char* const argv[]) {
         if (key == "--check-config") { result.check_only = true; continue; }
         if (key == "--check-database") { result.check_database = true; continue; }
         if (key == "--migrate-database") { result.migrate_database = true; continue; }
+        if (key == "--database-status") { result.database_status = true; continue; }
         if (key == "--help" || key == "--version") { continue; }
         const std::string_view value(argv[++i]);
         if (key == "--listen") { plain.add(result.settings, result.settings.network.listeners, value); }
@@ -499,10 +500,10 @@ CommandLine parse_arguments(int argc, char* const argv[]) {
         } else if (key == "--language") { result.settings.logging.language = i18n::parse_language(value); }
     }
     if (static_cast<int>(result.check_only) + static_cast<int>(result.check_database) +
-        static_cast<int>(result.migrate_database) > 1) {
+        static_cast<int>(result.migrate_database) + static_cast<int>(result.database_status) > 1) {
         throw std::invalid_argument("Database actions and configuration check are mutually exclusive");
     }
-    if ((result.check_database || result.migrate_database) && !result.settings.database.enabled) {
+    if ((result.check_database || result.migrate_database || result.database_status) && !result.settings.database.enabled) {
         throw std::invalid_argument("Database is disabled");
     }
     validate(result.settings);

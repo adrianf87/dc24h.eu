@@ -1,5 +1,7 @@
 # Database Core — alpha-0.7.1
 
+**Schema versioning — alpha-0.7.2:** [Database Migrations](DATABASE_MIGRATIONS.md) documents the ordered catalog, v1 upgrade, read-only status and partial-failure contract.
+
 Based directly on main `85a2d155270ff7f218ec336a7013fc65a6471275` after alpha-0.6.13. The earlier optional socket connection and migration registry remain. This increment adds a reusable synchronous C++20 MariaDB core: typed prepared values, bounded owning results, write metadata, typed redacted errors and scoped transactions. Accounts, authentication, roles, bans and application repositories remain later stages; no application migration is introduced.
 
 ## Connection ownership and transport

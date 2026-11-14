@@ -1,5 +1,7 @@
 # Database Core — alpha-0.7.1
 
+**Wersjonowanie schematu — alpha-0.7.2:** [Migracje bazy danych](DATABASE_MIGRATIONS.md) opisują uporządkowany katalog, aktualizację v1, odczyt stanu i obsługę częściowych błędów.
+
 Etap oparty bezpośrednio na main `85a2d155270ff7f218ec336a7013fc65a6471275` po alpha-0.6.13. Zachowuje opcjonalne połączenie przez gniazdo i rejestr migracji. Dodaje synchroniczny rdzeń MariaDB dla C++20: typowane parametry, ograniczone wyniki na własność, metadane zapisu, typowane zredagowane błędy i transakcje zakresowe. Konta, uwierzytelnianie, role, bany i repozytoria aplikacji pozostają kolejnymi etapami; bez nowej migracji aplikacyjnej.
 
 ## Własność połączenia i transport

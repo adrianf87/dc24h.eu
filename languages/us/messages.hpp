@@ -3,7 +3,11 @@
 #include <string_view>
 
 namespace dc24h::i18n::us {
-inline constexpr std::array<std::string_view, 134> messages{{
+inline constexpr std::array<std::string_view, 138> messages{{
+    "Invalid database migration catalog",
+    "Database migration requires operator recovery",
+    "Database migration metadata schema mismatch",
+    "Database schema version=",
     "Database connection is unusable",
     "Database constraint violation",
     "Database transaction conflict",
@@ -140,7 +144,7 @@ inline constexpr std::array<std::string_view, 134> messages{{
     "Invalid user/session limits",
     "User session limit reached; excess peer rejected",
 }};
-inline constexpr std::string_view help = R"HELP(Usage: dc24h [--config FILE] [--check-config | --check-database | --migrate-database]
+inline constexpr std::string_view help = R"HELP(Usage: dc24h [--config FILE] [--check-config | --check-database | --database-status | --migrate-database]
              [--listen IPv4:port | [IPv6]:port | none] ...
              [--adcs-listen IPv4:port | [IPv6]:port | none] ...
              [--tls-cert CHAIN.pem --tls-key KEY.pem]
@@ -195,7 +199,8 @@ STA uses shared bounded output; validation/queue/terminal memory faults isolate 
 Pending negotiation correlation and file-data handling remain planned.
 Group chat remains planned.
 Database settings use [database] in INI; disabled by default.
---check-database connects/pings; --migrate-database explicitly applies metadata migrations.
+--check-database connects/pings; --database-status reads version/latest/pending/dirty.
+--migrate-database explicitly applies the ordered compiled SQL catalog; dirty history requires operator recovery.
 Database Core provides typed bound parameters, bounded results and owner-thread RAII transactions.
 SQL/result errors require rollback; lost connections are retired without reconnect or write replay.
 --check-config never connects to MariaDB or reads the password file.

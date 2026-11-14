@@ -1,11 +1,15 @@
 # MariaDB migrations
 
-`0001_schema_migrations.sql` is the immutable alpha-0.1.8 migration metadata baseline.
-CMake embeds the exact SQL and SHA-256 in the database library and installs the SQL
-under `share/dc24h/migrations`. Run only through the explicit
-`dc24h --config FILE --migrate-database` action; normal startup never migrates.
+`manifest.json` declares the ordered alpha-0.7.2 catalog. Migration 1 remains the
+immutable alpha-0.1.8 metadata baseline; migration 2 adds the migration state
+column. CMake validates and embeds exact LF SQL/SHA-256 and installs the manifest
+and listed SQL under `share/dc24h/migrations`. Each file is one prepared statement;
+multiple files run in manifest order without splitting on semicolons.
 
-The baseline creates the migration registry only. Application tables and future
-partial-failure recovery are not implemented. Never edit an applied migration.
-See [English documentation](../../doc/us/DATABASE.md) and
-[Polish documentation](../../doc/pl/DATABASE.md).
+Use `dc24h --config FILE --database-status` for read-only version inspection and
+`--migrate-database` for explicit upgrades; normal startup never migrates. Future
+versions 3+ record applying before SQL and refuse replay after partial failure.
+Only the two idempotent bootstrap steps are resumable automatically. Never edit
+an applied migration. No application schema, down migration or automated repair
+is supplied. See [English](../../doc/us/DATABASE_MIGRATIONS.md) and
+[Polish](../../doc/pl/DATABASE_MIGRATIONS.md) for extension/recovery and privileges.

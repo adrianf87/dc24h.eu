@@ -1,0 +1,6 @@
+{
+  "migrations": [
+    { "version": 1, "name": "schema_migrations", "files": ["0001_schema_migrations.sql"] },
+    { "version": 2, "name": "migration_state", "files": ["0002_migration_state.sql"] }
+  ]
+}

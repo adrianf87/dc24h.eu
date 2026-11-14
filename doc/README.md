@@ -1,5 +1,7 @@
 # dc24h.eu technical documentation
 
+[Database Migrations — alpha-0.7.2](us/DATABASE_MIGRATIONS.md) · [PL](pl/DATABASE_MIGRATIONS.md)
+
 [Database Core — alpha-0.7.1](us/DATABASE_CORE.md) · [PL](pl/DATABASE_CORE.md)
 
 [Transfer Configuration — alpha-0.6.13](us/TRANSFER_CONFIGURATION.md) · [PL](pl/TRANSFER_CONFIGURATION.md)
