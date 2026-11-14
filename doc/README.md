@@ -1,5 +1,7 @@
 # dc24h.eu technical documentation
 
+[Error Handling — alpha-0.6.9](us/ERROR_HANDLING.md) · [PL](pl/ERROR_HANDLING.md)
+
 [Connection Security — alpha-0.6.8](us/CONNECTION_SECURITY.md) · [PL](pl/CONNECTION_SECURITY.md)
 
 [Transfer Tokens — alpha-0.6.7](us/TRANSFER_TOKENS.md) · [PL](pl/TRANSFER_TOKENS.md)
@@ -30,7 +32,7 @@
 
 [Feature Routing / routing funkcji — alpha-0.5.7](us/FEATURE_ROUTING.md) · [PL](pl/FEATURE_ROUTING.md)
 
-Current development version: alpha-0.6.8. Default language: EN/US UTF-8.
+Current development version: alpha-0.6.9. Default language: EN/US UTF-8.
 
 - [English (US)](us/README.md)
 - [Polski](pl/README.md)

@@ -47,6 +47,9 @@ TRANSFER_TOKENS = '--transfer-tokens' in sys.argv
 if TRANSFER_TOKENS:
     sys.argv.remove('--transfer-tokens')
 RCM_TEST = RCM_TEST or TRANSFER_TOKENS
+TRANSFER_ERRORS = '--transfer-errors' in sys.argv
+if TRANSFER_ERRORS:
+    sys.argv.remove('--transfer-errors')
 CTM_TEST = '--ctm' in sys.argv
 if CTM_TEST:
     sys.argv.remove('--ctm')
@@ -697,6 +700,49 @@ class NcdcLoginTest(unittest.TestCase):
                     if not ENCRYPTED:
                         wait_capture(wire, offer+b'\n'); self.assertIn(offer+b'\n', wire)
                     self.assertNotIn(b'CINF ID', hub.log)
+                if TRANSFER_ERRORS:
+                    # Reset an actual accepted peer connection. ncdc 1.23.1
+                    # handles socket failure locally rather than promising a
+                    # hub DSTA for every failed TCP attempt.
+                    error_token = 'ErrorNcdcPrivate Żółw \\ token'.encode().replace(b'\\', b'\\\\').replace(b' ', b'\\s')
+                    with socket.socket() as failing_peer:
+                        failing_peer.bind(('127.0.0.1', 0))
+                        failing_peer.listen(1)
+                        failing_peer.settimeout(3)
+                        port = str(failing_peer.getsockname()[1]).encode()
+                        observer.send(b'DCTM ' + observer.sid + b' ' + replacement_sid + b' ' + PEER_PROTOCOL + b' ' + port + b' ' + error_token)
+                        cc, _ = failing_peer.accept()
+                        with cc:
+                            cc.settimeout(3)
+                            prefix = b'\x16\x03' if PEER_TLS else b'CSUP '
+                            received = b''
+                            while len(received) < len(prefix):
+                                chunk = cc.recv(4096)
+                                self.assertTrue(chunk, 'ncdc closed before starting its peer protocol')
+                                received += chunk
+                            self.assertTrue(received.startswith(prefix), received[:32])
+                            cc.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
+                    observer.send(b'DCTM ' + observer.sid + b' ' + replacement_sid + b' future/1.0 1515 ' + error_token)
+                    for _ in range(3):
+                        failure = observer_line()
+                        if failure.startswith(b'DSTA ' + replacement_sid + b' ' + observer.sid + b' 141 '):
+                            break
+                        self.assertTrue(failure.startswith(b'DSTA ' + replacement_sid + b' ' + observer.sid + b' 142 '), failure)
+                        self.assertIn(b' PR' + PEER_PROTOCOL, failure)
+                        self.assertIn(b' TO' + error_token, failure)
+                    else:
+                        self.fail('ncdc did not report unsupported peer protocol')
+                    self.assertIn(b' PRfuture/1.0', failure)
+                    self.assertIn(b' TO' + error_token, failure)
+                    # A routed fatal peer report must not terminate hub NORMAL.
+                    observer.send(b'DSTA ' + observer.sid + b' ' + replacement_sid + b' 242 PeerFailure PR' + PEER_PROTOCOL + b' TO' + error_token)
+                    marker = b'BMSG ' + observer.sid + b' ErrorNcdcStillOnline'
+                    observer.send(marker)
+                    self.assertEqual(observer_line(), marker)
+                    wait_screen(b'ErrorNcdcStillOnline')
+                    os.write(master, b'/open dc24h_login\rErrorNcdcRecovery\r')
+                    self.assertEqual(observer_line(), b'BMSG ' + replacement_sid + b' ErrorNcdcRecovery')
+                    wait_screen(b'ErrorNcdcRecovery')
                 if CONNECTION_SECURITY:
                     if CONNECTION_SECURITY_ACTIVE:
                         activate_ncdc()
@@ -763,6 +809,7 @@ class NcdcLoginTest(unittest.TestCase):
                 self.assertNotIn(b'SearchCoreSecret', hub.log)
                 self.assertNotIn(b'SecurityDeniedSecret', hub.log)
                 self.assertNotIn(b'SecurityRecoveryProbe', hub.log)
+                self.assertNotIn(b'ErrorNcdcPrivate', hub.log)
                 self.assertNotIn(TEST_TTH, hub.log)
                 self.assertNotIn(b'FeatureRoutingProbe', hub.log)
                 self.assertNotIn(b'dc24hIncomingChat', hub.log)

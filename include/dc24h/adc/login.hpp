@@ -14,6 +14,7 @@
 #include "dc24h/adc/search_routing.hpp"
 #include "dc24h/adc/result_routing.hpp"
 #include "dc24h/adc/connection_routing.hpp"
+#include "dc24h/adc/status_routing.hpp"
 #include "dc24h/search/security.hpp"
 #include "dc24h/search/statistics.hpp"
 
@@ -108,6 +109,7 @@ private:
     void receive_result(Id id, const Message& message, users::TimePoint now, search::Attempt& attempt);
     void receive_search(Id id, const Message& message, users::TimePoint now, search::Attempt& attempt);
     void receive_connection(Id id, const Message& message);
+    void receive_impl(Id id, const Message& message, chat::FloodClock::time_point chat_now);
     void route_status(Id id, const Message& message);
     void route_chat(Id id, const Message& message, chat::Attempt& attempt);
     void relay(Id except, const Message& message);
@@ -120,6 +122,7 @@ private:
     ResultRouter result_router_;
     transfers::Core transfers_;
     ConnectionRouter connection_router_;
+    StatusRouter status_router_;
     chat::Core chat_;
     MessageRouter message_router_;
     HubMessages hub_messages_;

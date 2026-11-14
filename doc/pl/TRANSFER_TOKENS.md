@@ -1,6 +1,8 @@
 # Transfer Tokens — alpha-0.6.7
 
-**Bieżący etap — alpha-0.6.8:** [Connection Security](CONNECTION_SECURITY.md) dodaje startową politykę CTM/RCM/gości, zaufane nadania gotowych sesji i ponowną autoryzację przygotowania/wysyłki/echa. Wspólne kontrole IP i portu zachowują działanie zarządzanych profili. Testy natywne, mieszane ADC/ADCS i ncdc obejmują odmowy, podszywanie i dalszą komunikację.
+**Bieżący etap — alpha-0.6.9:** [Error Handling](ERROR_HANDLING.md) ujednolica diagnostykę połączeń i wspólny niezmienny routing STA do stałej listy gotowych sesji. Przygotowanie, kolejki odbiorców, diagnostyka zamykania i wyjściowa walidacja STA izolują błędy pamięci; kierowany fatalny status klienta zachowuje sesje huba. Sprawdzają to testy natywne, mieszane ADC/ADCS i ncdc z resetem/błędami/dalszą komunikacją.
+
+**Etap dostarczony w alpha-0.6.8:** [Connection Security](CONNECTION_SECURITY.md) dodaje startową politykę CTM/RCM/gości, zaufane nadania gotowych sesji i ponowną autoryzację przygotowania/wysyłki/echa. Wspólne kontrole IP i portu zachowują działanie zarządzanych profili. Testy natywne, mieszane ADC/ADCS i ncdc obejmują odmowy, podszywanie i dalszą komunikację.
 
 **Weryfikacja lokalna alpha-0.6.7 (2026-11-14):** Przeszły wszystkie 153/153 testów CTest w Debug, Release i ASan/UBSan, w tym cztery scenariusze rzeczywistego ncdc z tokenem granicznej długości przez oba transporty huba i zwykłe/TLS połączenia klientów. Brak ostrzeżeń kompilatora. Poprawne są build/typecheck WebAdmin, 12 testów Node, 10 testów Chromium i integracja z API C++. Przeszły kontrole metadanych, UTF-8, zgodności języków/linków, składni zmienionych plików Python, przykładowego INI i białych znaków. Nie oczekiwano na koniec GitHub Actions; pełna macierz wspieranych systemów i obciążenie produkcyjne pozostają niesprawdzone.
 

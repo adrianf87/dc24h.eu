@@ -179,6 +179,8 @@ Klienci zachowują protokół/token odpowiedzi CTM; hub nie podaje za nich portu
 Tokeny połączeń: 1..128 zdekodowanych bajtów NFC UTF-8; zachowane litery, spacje i ukośniki.
 Transfery [transfers]: ctm_enabled, rcm_enabled, guest_initiate, guest_receive (on/off, domyślnie on).
 Uprawnienia inicjowania źródła i odbioru celu są ponownie sprawdzane przed wysyłką.
+Błędy STA klientów zachowują protokół/token; kierowany status fatalny nie zamyka sesji huba.
+STA używa wspólnych ograniczonych kolejek; błędy pamięci walidacji/kolejki/zamykania są izolowane.
 Korelacja oczekujących negocjacji i obsługa danych plików pozostają planowane.
 Czat grupowy pozostaje planowany.
 Ustawienia bazy w sekcji INI [database]; domyślnie wyłączona.
