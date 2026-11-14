@@ -2,10 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.6.7 (Transfer Tokens).**
+**Current development version: alpha-0.6.8 (Connection Security).**
 
 Completed increments (older bullets describe their original delivery scope):
 
+- **alpha-0.6.8 Connection Security**: shared endpoint/port checks, configurable CTM/RCM and guest permissions, trusted lifetime grants, dispatch/echo authorization rechecks and real ncdc denial/recovery tests. See [Connection Security](doc/us/CONNECTION_SECURITY.md).
 - **alpha-0.6.7 Transfer Tokens**: one bounded opaque connection-token policy, owning typed values, exact CTM/RCM/error forwarding and real ncdc boundary-token handshakes. See [Transfer Tokens](doc/us/TRANSFER_TOKENS.md).
 - **alpha-0.6.6 Client Capabilities**: owning per-family TCP modes and advisory peer protocols, shared CTM/RCM admission, pure originator path selection and live INF mode changes with real ncdc. See [Client Capabilities](doc/us/CLIENT_CAPABILITIES.md).
 - **alpha-0.6.5 Protocol Negotiation**: typed ADC/1.0 and ADCS/1.0 intent, capability/preference selection with required-TLS refusal, lossless peer negotiation errors and real ncdc TLS peer handshakes. See [Protocol Negotiation](doc/us/PROTOCOL_NEGOTIATION.md).

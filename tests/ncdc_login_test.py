@@ -53,6 +53,13 @@ if CTM_TEST:
 TRANSFER_CORE = '--transfer-core' in sys.argv
 if TRANSFER_CORE:
     sys.argv.remove('--transfer-core')
+CONNECTION_SECURITY_ACTIVE = '--connection-security-active' in sys.argv
+if CONNECTION_SECURITY_ACTIVE:
+    sys.argv.remove('--connection-security-active')
+CONNECTION_SECURITY = '--connection-security' in sys.argv
+if CONNECTION_SECURITY:
+    sys.argv.remove('--connection-security')
+CONNECTION_SECURITY = CONNECTION_SECURITY or CONNECTION_SECURITY_ACTIVE
 SEARCH_SECURITY = '--search-security' in sys.argv
 if SEARCH_SECURITY:
     sys.argv.remove('--search-security')
@@ -85,6 +92,8 @@ class NcdcLoginTest(unittest.TestCase):
                            '[security]\nmax_connections_per_ip=8\n')
             if SEARCH_SECURITY:
                 ini.write_text(ini.read_text() + '[search]\nguest_queries=off\n')
+            if CONNECTION_SECURITY:
+                ini.write_text(ini.read_text() + '[transfers]\nguest_initiate=off\n')
             api_path, token = enable_api(ini, directory)
             options = {'ready_pattern': TLS_READY} if ENCRYPTED else {}
             hub = Hub(self, '--config', str(ini), '--log-connections', 'on', '--log-chat', 'on', **options)
@@ -688,6 +697,19 @@ class NcdcLoginTest(unittest.TestCase):
                     if not ENCRYPTED:
                         wait_capture(wire, offer+b'\n'); self.assertIn(offer+b'\n', wire)
                     self.assertNotIn(b'CINF ID', hub.log)
+                if CONNECTION_SECURITY:
+                    if CONNECTION_SECURITY_ACTIVE:
+                        activate_ncdc()
+                    screen.clear()
+                    os.write(master, b'/open dc24h_login\r/browse ListObserver\r')
+                    wait_screen(b'Connection operation not permitted')
+                    if not ENCRYPTED:
+                        command = b'DCTM' if CONNECTION_SECURITY_ACTIVE else b'DRCM'
+                        wait_capture(wire, command + b' ' + replacement_sid + b' ' + observer.sid)
+                        wait_capture(replies, b'ISTA 125 Connection\\soperation\\snot\\spermitted FC' + command + b'\n')
+                    os.write(master, b'/open dc24h_login\rSecurityNcdcRecovery\r')
+                    self.assertEqual(observer_line(), b'BMSG ' + replacement_sid + b' SecurityNcdcRecovery')
+                    wait_screen(b'SecurityNcdcRecovery')
                 os.write(master, b'/quit\r')
                 deadline = time.monotonic() + 4
                 while process.poll() is None and time.monotonic() < deadline:

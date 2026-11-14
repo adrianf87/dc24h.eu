@@ -3,7 +3,8 @@
 #include <string_view>
 
 namespace dc24h::i18n::us {
-inline constexpr std::array<std::string_view, 127> messages{{
+inline constexpr std::array<std::string_view, 128> messages{{
+    "Transfer switches must be on or off",
     "Chat event=",
     "Chat log events suppressed=",
     "Invalid chat policy",
@@ -176,6 +177,8 @@ The hub preserves explicit requests and opaque failure tokens; peer TLS is indep
 Peers preserve protocol/token in CTM replies; the hub never supplies their listener port.
 Client capabilities track TCP4/TCP6 separately; UDP and hub TLS do not grant TCP activity.
 Connection tokens: 1..128 decoded NFC UTF-8 bytes; exact case, spaces and backslashes preserved.
+Transfers [transfers]: ctm_enabled, rcm_enabled, guest_initiate, guest_receive (on/off, default on).
+Source initiation and target receipt permissions are checked again before dispatch.
 Pending negotiation correlation and file-data handling remain planned.
 Group chat remains planned.
 Database settings use [database] in INI; disabled by default.

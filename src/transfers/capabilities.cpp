@@ -2,9 +2,8 @@
 
 namespace dc24h::transfers {
 std::optional<users::AddressBytes> ClientCapabilities::listener(AddressFamily family) const noexcept {
-    if (family == AddressFamily::ipv4) { return tcp4; }
-    if (family == AddressFamily::ipv6) { return tcp6; }
-    return {};
+    const auto path = family == AddressFamily::ipv4 ? tcp4 : family == AddressFamily::ipv6 ? tcp6 : std::nullopt;
+    return path && users::usable_address(*path, family) ? path : std::nullopt;
 }
 ClientCapabilities client_capabilities(const users::Profile& profile) noexcept {
     ClientCapabilities result{{}, {}, advertised_protocols(profile)};

@@ -1,4 +1,5 @@
 #include "dc24h/transfers/request.hpp"
+#include "dc24h/transfers/security.hpp"
 
 namespace dc24h::transfers {
 Request::Request(const RequestData& data, Protocol protocol, Token token)
@@ -7,7 +8,7 @@ Request::Request(const RequestData& data, Protocol protocol, Token token)
 std::variant<Request, RequestError> Request::create(const RequestData& data) {
     if (data.kind != Kind::connect_to_me && data.kind != Kind::reverse_connect) { return RequestError::invalid_kind; }
     if (data.family != AddressFamily::ipv4 && data.family != AddressFamily::ipv6) { return RequestError::invalid_family; }
-    if ((data.kind == Kind::connect_to_me && (!data.port || *data.port < 1 || *data.port > 65535)) ||
+    if ((data.kind == Kind::connect_to_me && (!data.port || !valid_connection_port(*data.port))) ||
         (data.kind == Kind::reverse_connect && data.port)) { return RequestError::invalid_port; }
     // Enforce byte ceilings before normalization or owning copies.
     if (data.protocol.empty() || data.protocol.size() > max_protocol_bytes) { return RequestError::invalid_protocol; }

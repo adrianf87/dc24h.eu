@@ -4,6 +4,7 @@
 #include "dc24h/users/limits.hpp"
 #include "dc24h/chat/settings.hpp"
 #include "dc24h/search/security.hpp"
+#include "dc24h/transfers/security.hpp"
 #include "dc24h/search/statistics.hpp"
 #include "dc24h/chat/statistics.hpp"
 
@@ -38,6 +39,7 @@ struct Options {
     users::Limits users{};
     chat::Settings chat{};
     search::SecuritySettings search{};
+    transfers::SecuritySettings transfers{};
 };
 
 struct Statistics {

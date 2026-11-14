@@ -3,7 +3,8 @@
 #include <string_view>
 
 namespace dc24h::i18n::pl {
-inline constexpr std::array<std::string_view, 127> messages{{
+inline constexpr std::array<std::string_view, 128> messages{{
+    "Przełączniki transferów muszą mieć wartość on lub off",
     "Czat zdarzenie=",
     "Pominięte zdarzenia logu czatu=",
     "Niepoprawna polityka czatu",
@@ -176,6 +177,8 @@ Protokoły klientów: ADC/1.0 oznacza zwykły TCP, ADCS/1.0 wymaga TLS między k
 Hub zachowuje jawne żądania i tokeny błędów; TLS klientów jest niezależny od TLS huba.
 Klienci zachowują protokół/token odpowiedzi CTM; hub nie podaje za nich portu.
 Tokeny połączeń: 1..128 zdekodowanych bajtów NFC UTF-8; zachowane litery, spacje i ukośniki.
+Transfery [transfers]: ctm_enabled, rcm_enabled, guest_initiate, guest_receive (on/off, domyślnie on).
+Uprawnienia inicjowania źródła i odbioru celu są ponownie sprawdzane przed wysyłką.
 Korelacja oczekujących negocjacji i obsługa danych plików pozostają planowane.
 Czat grupowy pozostaje planowany.
 Ustawienia bazy w sekcji INI [database]; domyślnie wyłączona.

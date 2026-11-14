@@ -1,4 +1,4 @@
-# dc24h.eu alpha-0.6.7 configuration (UTF-8, no secrets committed)
+# dc24h.eu alpha-0.6.8 configuration (UTF-8, no secrets committed)
 # Section names and keys are case-sensitive; duplicate singular keys are errors.
 [general]
 language = us
@@ -55,6 +55,14 @@ result_rate = 64
 result_burst = 128
 result_byte_rate = 262144
 result_byte_burst = 1048576
+
+[transfers]
+# Connection coordination policy; restart to apply. Each switch is on/off.
+# Per-session grants are available only through the trusted in-process API.
+ctm_enabled = on
+rcm_enabled = on
+guest_initiate = on
+guest_receive = on
 
 [security]
 max_connections_per_ip = 128

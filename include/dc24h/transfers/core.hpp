@@ -1,12 +1,13 @@
 #pragma once
 
 #include "dc24h/transfers/capabilities.hpp"
+#include "dc24h/transfers/security.hpp"
 #include "dc24h/users/session_manager.hpp"
 #include <functional>
 
 namespace dc24h::transfers {
 enum class Error { missing_sender, sender_not_ready, wrong_source, recipient_unavailable,
-    self_connection, incompatible_connectivity, foreign_plan, missing_sink, already_consumed };
+    self_connection, incompatible_connectivity, foreign_plan, missing_sink, already_consumed, disabled, forbidden };
 enum class State { prepared, dispatching, queued, refused, canceled, failed };
 namespace detail {
 struct Domain final {};
@@ -40,7 +41,8 @@ using Preparation = std::variant<Plan, Error, RequestError>;
 class Core final {
 public:
     using Sink = std::function<bool(users::SessionId, const Plan&)>;
-    explicit Core(const users::SessionManager& sessions) : sessions_(sessions) {}
+    explicit Core(const users::SessionManager& sessions, SecuritySettings settings = {}, const PermissionSource* authority = nullptr)
+        : sessions_(sessions), settings_(settings), authority_(authority) {}
     Core(const Core&) = delete;
     Core& operator=(const Core&) = delete;
     Core(Core&&) = delete;
@@ -48,6 +50,7 @@ public:
     [[nodiscard]] std::optional<Error> validate_sender(users::SessionId sender, std::string_view source) const noexcept;
     [[nodiscard]] std::optional<users::AddressBytes> tcp_address(users::SessionId owner, AddressFamily family) const noexcept;
     [[nodiscard]] std::optional<ClientCapabilities> capabilities(users::SessionId owner) const noexcept;
+    [[nodiscard]] std::optional<PermissionError> authorize_sender(users::SessionId sender, Kind kind) const noexcept;
     [[nodiscard]] std::optional<users::SessionId> resolve_target(std::string_view target) const noexcept;
     [[nodiscard]] bool owns(const Plan& plan) const noexcept { return plan.domain_ == domain_; }
     [[nodiscard]] Preparation prepare(users::SessionId sender, std::string_view source,
@@ -60,9 +63,13 @@ public:
     [[nodiscard]] std::variant<State, Error> dispatch(const Plan& plan, const Sink& sink) const;
     [[nodiscard]] bool cancel(const Plan& plan) const noexcept;
 private:
+    [[nodiscard]] std::optional<Permissions> permissions(users::SessionId id) const noexcept;
+    [[nodiscard]] std::optional<PermissionError> authorize_pair(users::SessionId sender, users::SessionId target, Kind kind) const noexcept;
     [[nodiscard]] std::optional<users::AddressBytes> address(const users::Session& sender,
         const users::Session& target, const Request& request) const noexcept;
     const users::SessionManager& sessions_;
+    const SecuritySettings settings_;
+    const PermissionSource* authority_;
     const std::shared_ptr<const detail::Domain> domain_{std::make_shared<const detail::Domain>()};
 };
 } // namespace dc24h::transfers

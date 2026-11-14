@@ -33,13 +33,14 @@ struct LoginLimits {
     chat::Policy chat{};
     std::optional<std::string> welcome_text{std::string(chat::default_welcome_message)};
     search::SecuritySettings search{};
+    transfers::SecuritySettings transfers{};
 };
 enum class CloseReason { login_timeout, idle_timeout, partial_frame_timeout, security_quota, negotiation_limit, identity_limit };
 
 // Single reactor-thread owner of guest admission, public presence and ordered
 // output. IDs are transport tokens, never fd numbers. No socket/SQL/logger I/O.
-// Chat delegates to typed adapters and Chat Core. Accounts and transfers remain separate.
-class LoginHub final {
+// Chat, Search and Transfers delegate to their typed adapters and cores.
+class LoginHub final : private transfers::PermissionSource {
 public:
     using Id = std::uint64_t;
     explicit LoginHub(LoginLimits limits = {});
@@ -54,6 +55,9 @@ public:
     // Client INF/SUP never grants permissions. Revoking queries cancels that
     // owner's token windows; rate credits are preserved across permission changes.
     [[nodiscard]] bool set_search_permissions(Id id, search::Permissions permissions) noexcept;
+    // Trusted owner-thread grant, reset with this connection's Peer lifetime.
+    // Client metadata cannot grant or override transfer permissions.
+    [[nodiscard]] bool set_transfer_permissions(Id id, transfers::Permissions permissions) noexcept;
     [[nodiscard]] bool needs_identity_check(Id id, const Message& message) const;
     // Sanitized terminal notification; idempotent and bounded by existing output
     // caps. Assigned clients receive ISTA then a final own IQUI. No clocks here.
@@ -92,6 +96,7 @@ public:
     [[nodiscard]] std::variant<chat::DispatchReport, HubMessageError> send_hub_message(
         std::string_view text, std::optional<users::SessionId> target = {});
 private:
+    [[nodiscard]] std::optional<transfers::Permissions> connection_permissions(users::SessionId id) const noexcept override;
     struct Peer;
     enum class Completion { observe, support, welcome };
     bool enqueue(Peer& peer, Message message, Completion completion = Completion::observe);
