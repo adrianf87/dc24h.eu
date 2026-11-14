@@ -1,5 +1,11 @@
 # Changelog
 
+## CI maintenance — GitHub-hosted Ubuntu only (2026-11-14)
+
+- Retain only `build.yml`: GitHub-hosted Ubuntu 22.04/24.04 C++ Debug/Release and the Ubuntu 24.04 WebAdmin job, with all existing integration checks.
+- Remove active workflows `.github/workflows/proxmox-connection.yml`, `.github/workflows/proxmox-debian13.yml` and the obsolete self-hosted runner label configuration. No application/platform support, Ubuntu test commands, external host state or repository secrets are changed.
+- Update US/PL CI documentation. Validation: workflow YAML/job/matrix assertions and shell syntax passed; the retained Ubuntu workflow is byte-for-byte unchanged. No application rebuild is needed for this CI-only change. New remote CI completion is not claimed.
+
 ## alpha-0.6.12 — 2026-11-14
 
 WebAdmin Transfer Monitoring increment, based directly on main `d24df98b9903ff259d01c87f5e1412bd0a87f6d5` after the ncdc bind-scope repair. The alpha-0.6.1–alpha-0.6.11 implementations and existing branches are retained.
