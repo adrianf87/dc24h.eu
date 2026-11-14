@@ -1,5 +1,7 @@
 # dc24h.eu technical documentation
 
+[Transfer Configuration — alpha-0.6.13](us/TRANSFER_CONFIGURATION.md) · [PL](pl/TRANSFER_CONFIGURATION.md)
+
 [WebAdmin Transfer Monitoring — alpha-0.6.12](us/WEBADMIN_TRANSFERS.md) · [PL](pl/WEBADMIN_TRANSFERS.md)
 
 [Transfer Statistics — alpha-0.6.11](us/TRANSFER_STATISTICS.md) · [PL](pl/TRANSFER_STATISTICS.md)

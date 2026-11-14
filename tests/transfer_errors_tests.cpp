@@ -38,7 +38,7 @@ void error_policy(){
     for(auto command:{Command::ctm,Command::rcm})for(auto error:{ConnectionRoutingError::invalid_state,ConnectionRoutingError::wrong_source,
         ConnectionRoutingError::invalid_message,ConnectionRoutingError::recipient_unavailable,ConnectionRoutingError::inactive_sender,
         ConnectionRoutingError::foreign_plan,ConnectionRoutingError::missing_sink,ConnectionRoutingError::already_dispatched,
-        ConnectionRoutingError::incompatible_connectivity,ConnectionRoutingError::disabled,ConnectionRoutingError::forbidden}){
+        ConnectionRoutingError::incompatible_connectivity,ConnectionRoutingError::disabled,ConnectionRoutingError::forbidden,ConnectionRoutingError::protocol_forbidden}){
         fail_after=0;const auto f=connection_failure(error,command);const auto remaining=fail_after;fail_after=-1;
         require(remaining==0,"Failure policy allocated");
         if(f.action==FailureAction::abort){require(f.code.empty()&&f.description.empty(),"Internal error exposed client diagnostic");}

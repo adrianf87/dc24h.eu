@@ -18,6 +18,7 @@ ConnectionRoutingError convert(transfers::Error error, transfers::Kind kind) noe
     case already_consumed: return ConnectionRoutingError::already_dispatched;
     case disabled: return ConnectionRoutingError::disabled;
     case forbidden: return ConnectionRoutingError::forbidden;
+    case protocol_forbidden: return ConnectionRoutingError::protocol_forbidden;
     default: return ConnectionRoutingError::invalid_message;
     }
 }

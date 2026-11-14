@@ -7,7 +7,7 @@
 
 namespace dc24h::adc {
 enum class ConnectionRoutingError { invalid_state, wrong_source, invalid_message, recipient_unavailable,
-    inactive_sender, foreign_plan, missing_sink, already_dispatched, incompatible_connectivity, disabled, forbidden };
+    inactive_sender, foreign_plan, missing_sink, already_dispatched, incompatible_connectivity, disabled, forbidden, protocol_forbidden };
 namespace detail { struct ConnectionDomain final {}; }
 class ConnectionFrame final {
 public:

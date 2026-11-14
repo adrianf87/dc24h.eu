@@ -8,6 +8,11 @@
 namespace dc24h::users { class Profile; }
 namespace dc24h::transfers {
 inline constexpr std::size_t max_protocol_bytes = 32;
+[[nodiscard]] constexpr bool valid_wire_protocol(std::string_view name) noexcept {
+    if (name.empty() || name.size() > max_protocol_bytes) { return false; }
+    for (const unsigned char c : name) { if (c < 33 || c > 126) { return false; } }
+    return true;
+}
 enum class ProtocolKind { adc_1_0, adcs_1_0, extension };
 enum class Encryption { plaintext, tls_required, peer_defined };
 [[nodiscard]] constexpr ProtocolKind classify_protocol(std::string_view name) noexcept {

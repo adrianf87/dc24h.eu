@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.6.12 LANGUAGES CXX)
+project(dc24h VERSION 0.6.13 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -59,7 +59,7 @@ set_target_properties(dc24h_search PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_search PUBLIC include)
 target_link_libraries(dc24h_search PUBLIC dc24h_users PRIVATE dc24h_text UTF8Proc::UTF8Proc)
 
-add_library(dc24h_transfers src/transfers/limits.cpp src/transfers/security.cpp src/transfers/token.cpp src/transfers/capabilities.cpp src/transfers/protocol.cpp src/transfers/request.cpp src/transfers/core.cpp)
+add_library(dc24h_transfers src/transfers/protocol_policy.cpp src/transfers/limits.cpp src/transfers/security.cpp src/transfers/token.cpp src/transfers/capabilities.cpp src/transfers/protocol.cpp src/transfers/request.cpp src/transfers/core.cpp)
 target_compile_features(dc24h_transfers PUBLIC cxx_std_20)
 set_target_properties(dc24h_transfers PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_transfers PUBLIC include)
@@ -232,6 +232,14 @@ if(BUILD_TESTING)
     add_test(NAME transfers.routing.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/connection_routing_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(transfers.routing transfers.routing.process PROPERTIES TIMEOUT 45)
+    add_executable(transfer_configuration_tests tests/transfer_configuration_tests.cpp)
+    target_link_libraries(transfer_configuration_tests PRIVATE dc24h_adc dc24h_configuration)
+    target_compile_options(transfer_configuration_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(transfer_configuration_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME transfers.configuration COMMAND transfer_configuration_tests)
+    add_test(NAME transfers.configuration.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/transfer_configuration_process_tests.py" "$<TARGET_FILE:dc24h>")
+    set_tests_properties(transfers.configuration transfers.configuration.process PROPERTIES TIMEOUT 90)
     add_executable(transfer_statistics_tests tests/transfer_statistics_tests.cpp)
     target_link_libraries(transfer_statistics_tests PRIVATE dc24h_adc)
     target_compile_options(transfer_statistics_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
@@ -797,6 +805,22 @@ if(BUILD_TESTING)
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
             "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>" --ctm --tls)
         set_tests_properties(adc.ctm.ncdc adcs.ctm.ncdc PROPERTIES TIMEOUT 45)
+        foreach(hub_transport adc adcs)
+            set(configuration_hub_flags)
+            if(hub_transport STREQUAL "adcs")
+                list(APPEND configuration_hub_flags --tls)
+            endif()
+            add_test(NAME ${hub_transport}.transferconfiguration.ncdc COMMAND "${Python3_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
+                "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>"
+                --ctm --transfer-configuration ${configuration_hub_flags})
+            add_test(NAME ${hub_transport}.transferconfiguration.adcs.ncdc COMMAND "${Python3_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
+                "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>"
+                --rcm --peer-tls --transfer-configuration ${configuration_hub_flags})
+            set_tests_properties(${hub_transport}.transferconfiguration.ncdc ${hub_transport}.transferconfiguration.adcs.ncdc PROPERTIES TIMEOUT 60)
+        endforeach()
+
         add_test(NAME adc.rcm.ncdc COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_login_test.py"
             "$<TARGET_FILE:dc24h>" "${NCDC_EXECUTABLE}" "$<TARGET_FILE:adc_msg_tests>" --rcm)

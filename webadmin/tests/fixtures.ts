@@ -2,7 +2,7 @@ export const snapshot = {
   api_version: "v1",
   server: {
     name: "dc24h.eu",
-    version: "alpha-0.6.12",
+    version: "alpha-0.6.13",
     core_running: true,
     uptime_seconds: 3661,
   },
@@ -33,4 +33,11 @@ export const searchSnapshot = {
     max_active_searches: 4096, max_active_per_user: 8, search_lifetime_seconds: 60,
     query_rate: 10, query_burst: 32, query_byte_rate: 32768, query_byte_burst: 131072,
     result_rate: 64, result_burst: 128, result_byte_rate: 262144, result_byte_burst: 1048576 },
+};
+
+export const transferConfiguration = {
+  ctm_enabled: true, rcm_enabled: true, guest_initiate: true, guest_receive: true,
+  request_rate: 32, request_burst: 64, request_byte_rate: 131072, request_byte_burst: 262144,
+  incoming_rate: 128, incoming_burst: 256, incoming_byte_rate: 524288, incoming_byte_burst: 1048576,
+  allowed_protocols: "any" as const,
 };

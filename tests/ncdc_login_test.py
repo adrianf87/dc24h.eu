@@ -50,6 +50,9 @@ RCM_TEST = RCM_TEST or TRANSFER_TOKENS
 TRANSFER_ERRORS = '--transfer-errors' in sys.argv
 if TRANSFER_ERRORS:
     sys.argv.remove('--transfer-errors')
+TRANSFER_CONFIGURATION = '--transfer-configuration' in sys.argv
+if TRANSFER_CONFIGURATION:
+    sys.argv.remove('--transfer-configuration')
 TRANSFER_LIMITS = '--transfer-limits' in sys.argv
 if TRANSFER_LIMITS:
     sys.argv.remove('--transfer-limits')
@@ -105,6 +108,8 @@ class NcdcLoginTest(unittest.TestCase):
                 ini.write_text(ini.read_text() + '[transfers]\nguest_initiate=off\n')
             if TRANSFER_LIMITS:
                 ini.write_text(ini.read_text() + '[transfers]\nrequest_rate=1\nrequest_burst=1\n')
+            if TRANSFER_CONFIGURATION:
+                ini.write_text(ini.read_text() + '[transfers]\nallowed_protocols=' + PEER_PROTOCOL.decode() + '\n')
             api_path, token = enable_api(ini, directory)
             options = {'ready_pattern': TLS_READY} if ENCRYPTED else {}
             hub = Hub(self, '--config', str(ini), '--log-connections', 'on', '--log-chat', 'on', **options)
@@ -555,7 +560,21 @@ class NcdcLoginTest(unittest.TestCase):
                         wait_screen(b'ActivePassiveNcdcSecretUdpProbe.zip')
                         os.write(master, b'\x1b2')
                         self.assertNotIn(b'ActivePassiveNcdcSecretUdpProbe', replies)
-                if PEER_TLS:
+                if TRANSFER_CONFIGURATION:
+                    config = fetch_status(api_path, token)['transfers']['configuration']
+                    self.assertEqual(config['allowed_protocols'], [PEER_PROTOCOL.decode()])
+                    self.assertEqual(config['request_rate'], 32)
+                    for protocol in (b'future/1.0', b'ADC/1.0' if PEER_TLS else b'ADCS/1.0'):
+                        denied = b'ECTM ' + observer.sid + b' ' + replacement_sid + b' ' + protocol + b' 1515 ConfigurationNcdcPrivate'
+                        observer.send(denied)
+                        self.assertEqual(observer_line(), b'ISTA 125 Connection\\sprotocol\\snot\\spermitted FCECTM')
+                    fence = b'BINF ' + observer.sid + b' DEConfigurationNcdcFence'
+                    observer.send(fence); self.assertEqual(observer_line(), fence)
+                    if not ENCRYPTED:
+                        wait_capture(replies, fence + b'\n')
+                        self.assertNotIn(b'ConfigurationNcdcPrivate', replies)
+                    self.assertNotIn(b'ConfigurationNcdcPrivate', hub.log)
+                if PEER_TLS and not TRANSFER_CONFIGURATION:
                     # Unsupported protocols are decided by the receiving peer.
                     # Its rejection must preserve the opaque original token.
                     unsupported = b'DCTM ' + observer.sid + b' ' + replacement_sid + b' future/1.0 1515 ProtocolPrivate\\s' + 'Żółw'.encode()

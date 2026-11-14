@@ -7,7 +7,7 @@
 
 namespace dc24h::transfers {
 enum class Error { missing_sender, sender_not_ready, wrong_source, recipient_unavailable,
-    self_connection, incompatible_connectivity, foreign_plan, missing_sink, already_consumed, disabled, forbidden };
+    self_connection, incompatible_connectivity, foreign_plan, missing_sink, already_consumed, disabled, forbidden, protocol_forbidden };
 enum class State { prepared, dispatching, queued, refused, canceled, failed };
 namespace detail {
 struct Domain final {};

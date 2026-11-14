@@ -1,5 +1,17 @@
 # Changelog
 
+## alpha-0.6.13 — 2026-11-14
+
+Transfer Configuration increment, based directly on main `cc48fbd90d8f023bf1295f726a34ce9e7e158426` after the alpha-0.6.12 merge:
+
+- Added owning `transfers::ProtocolPolicy` and `[transfers] allowed_protocols`: default `any` preserves previous forwarding, `none` denies eligible CTM/RCM, and a checked list permits up to 16 exact case-sensitive visible-ASCII names of 1–32 bytes. Entries retain order; ASCII edge whitespace is trimmed, while duplicates, empty entries, reserved keyword mixtures and invalid/oversized names/lists fail startup. No wildcard matching or inferred protocol downgrade.
+- Enforced policy in Transfer Core prepare/dispatch for native and live D/E CTM/RCM. Existing source/readiness/wire/endpoint/permission precedence remains. A denial returns source-only recoverable ISTA 125/FC without target delivery or E echo, counts as an existing rejected attempt, and remains bounded by source quotas. Peer STA 41/42 routing is independent. Factored the unchanged wire protocol boundary into a shared allocation-free helper.
+- Exposed all 13 effective startup transfer settings (four switches, eight existing count/decoded-byte quotas and protocol policy) through the authenticated read-only status API. Explicit lists are owning snapshots captured before Network options move; quotes/backslashes are JSON-escaped. The API exports `"any"` or an ordered array, with `[]` for `none`. No request identity/endpoint/token data, API write, database migration or new dependency. Dependent native components require rebuilding.
+- Added EN/US and Polish Connections configuration views with quota units, restart guidance, literal protocol rendering, safe export and unavailable settings for older APIs that still provide statistics. Browser validation checks strict bounds and owns allowlisted arrays; cumulative metrics and browser rate history remain independent of configuration.
+- Added native policy/Core/router/INI/boundary/ownership/no-allocation tests, mixed ADC/ADCS IPv4/IPv6 settings/denial/restart/privacy tests and four real ncdc ADC-only/ADCS-only private-denial plus actual plaintext/certificate-checked TLS peer-handshake suites. Extended frontend bounds/compatibility/export/mobile checks and the real C++ API/React harness with custom limits and long quoted/backslash extension names. Updated release metadata, CLI help and mirrored US/PL documentation. The GitHub workflow remains Ubuntu-only; publication does not wait for remote Check status.
+
+- Validation: Full local runs passed **179/179 CTest suites in each of Debug and Release** on Debian 13 with required integrations, including four new real ncdc configuration/peer-handshake suites and all prior ADC/ADCS, MariaDB and Apache checks. Both builds completed without compiler warnings. WebAdmin production build/typecheck, **23 Node tests**, **14 Chromium tests** and real C++ API/React custom-configuration and traffic integration passed. Mobile PL rendering, shipped example INI, changed Python syntax, release metadata, UTF-8/language parity/local links and whitespace checks passed. The Ubuntu-only GitHub workflow is unchanged. Other supported OS versions, sanitizer runs for this increment and production load remain unverified; remote Check status is not awaited.
+
 ## CI maintenance — GitHub-hosted Ubuntu only (2026-11-14)
 
 - Retain only `build.yml`: GitHub-hosted Ubuntu 22.04/24.04 C++ Debug/Release and the Ubuntu 24.04 WebAdmin job, with all existing integration checks.

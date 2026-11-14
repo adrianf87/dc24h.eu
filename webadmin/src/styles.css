@@ -1468,6 +1468,8 @@ th {
 .search-setting dt { min-width: 0; font-size: 13px; }
 .search-setting code { display: block; font-size: 11px; color: #7a8396; overflow-wrap: anywhere; margin-top: 5px; }
 .search-setting dd { margin: 0; flex-shrink: 0; font-size: 14px; font-variant-numeric: tabular-nums; }
+.transfer-protocol-setting { flex-wrap: wrap; }
+.transfer-protocol-setting dd { flex-shrink: 1; overflow-wrap: anywhere; min-width: 0; max-width: 100%; }
 
 .search-monitoring { margin-bottom: 28px; min-width: 0; }
 .search-monitoring .mini-label { display: block; font-size: 12px; line-height: 1.6; white-space: normal; max-width: 100%; }

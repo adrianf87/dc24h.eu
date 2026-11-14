@@ -178,6 +178,8 @@ Peers preserve protocol/token in CTM replies; the hub never supplies their liste
 Client capabilities track TCP4/TCP6 separately; UDP and hub TLS do not grant TCP activity.
 Connection tokens: 1..128 decoded NFC UTF-8 bytes; exact case, spaces and backslashes preserved.
 Transfers [transfers]: ctm_enabled, rcm_enabled, guest_initiate, guest_receive (on/off, default on).
+allowed_protocols: any (default), none, or up to 16 exact comma-separated names.
+Restart to apply transfer settings; the API and WebAdmin expose effective startup policy.
 Source initiation and target receipt permissions are checked again before dispatch.
 Transfer quotas: request_rate/burst/byte_rate/byte_burst and incoming_rate/burst/byte_rate/byte_burst.
 CTM/RCM share source and recipient budgets; excess is dropped with at most one private notice/s.

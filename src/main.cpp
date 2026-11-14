@@ -122,6 +122,8 @@ int main(int argc, char* argv[]) {
                 database->ping();
                 logger.info("Database connected");
             }
+            // Capture owning startup policy before Options moves its strings.
+            const auto transfer_settings = parsed.settings.network.transfers;
             dc24h::network::TcpServer network(logger, std::move(parsed.settings.network));
             dc24h::core::Server server(logger, &network);
             std::atomic<bool> signal_error{false};
@@ -137,7 +139,7 @@ int main(int argc, char* argv[]) {
                         stats.active, stats.accepted, stats.adc_frames, stats.adcs_handshakes,
                         stats.security_rejected, stats.security_closed, database != nullptr,
                         stats.rejected, stats.closed, stats.received_bytes, stats.sent_bytes,
-                        stats.peak_connections, stats.online_users, stats.peak_online_users, stats.successful_logins, stats.chat, stats.search, parsed.settings.network.search, stats.transfers};
+                        stats.peak_connections, stats.online_users, stats.peak_online_users, stats.successful_logins, stats.chat, stats.search, parsed.settings.network.search, stats.transfers, transfer_settings};
                 }, [&] { signal_error.store(true); server.request_stop(); });
                 api->start();
             }
