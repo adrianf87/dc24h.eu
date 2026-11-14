@@ -3,6 +3,8 @@ import { parseSnapshot } from "./status";
 import type { HubSnapshot } from "./status";
 import { observeSearch } from "./search-monitoring";
 import type { SearchObservation } from "./search-monitoring";
+import { observeTransfers } from "./transfer-monitoring";
+import type { TransferObservation } from "./transfer-monitoring";
 export type Connection = "connecting" | "live" | "unconfigured" | "offline";
 export interface Sample {
   time: number;
@@ -15,6 +17,7 @@ export function useHub(autoRefresh: boolean) {
   const [checked, setChecked] = useState<number | null>(null);
   const [samples, setSamples] = useState<Sample[]>([]);
   const [searchSamples, setSearchSamples] = useState<SearchObservation[]>([]);
+  const [transferSamples, setTransferSamples] = useState<TransferObservation[]>([]);
   const active = useRef<AbortController | null>(null);
   const previousUptime = useRef(0);
   const refresh = useCallback(async () => {
@@ -36,6 +39,7 @@ export function useHub(autoRefresh: boolean) {
         setSnapshot(null);
         setSamples([]);
         setSearchSamples([]);
+        setTransferSamples([]);
         return;
       }
       if (!response.headers.get("content-type")?.startsWith("application/json"))
@@ -67,6 +71,7 @@ export function useHub(autoRefresh: boolean) {
       setChecked(now);
       const observedAt = performance.now();
       setSearchSamples(previous => observeSearch(previous, value, observedAt));
+      setTransferSamples(previous => observeTransfers(previous, value, observedAt));
       setSamples((previous) =>
         [
           ...(restarted ? [] : previous),
@@ -85,6 +90,7 @@ export function useHub(autoRefresh: boolean) {
         setSnapshot(null);
         setSamples([]);
         setSearchSamples([]);
+        setTransferSamples([]);
       }
     } finally {
       clearTimeout(timer);
@@ -101,5 +107,6 @@ export function useHub(autoRefresh: boolean) {
     return () => clearInterval(timer);
   }, [autoRefresh, refresh]);
   const clearSearchSamples = useCallback(() => setSearchSamples([]), []);
-  return { connection, snapshot, refreshing, checked, samples, searchSamples, clearSearchSamples, refresh };
+  const clearTransferSamples = useCallback(() => setTransferSamples([]), []);
+  return { connection, snapshot, refreshing, checked, samples, searchSamples, clearSearchSamples, transferSamples, clearTransferSamples, refresh };
 }

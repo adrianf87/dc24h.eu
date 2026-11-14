@@ -1,4 +1,11 @@
 export const us = {
+  transferMonitorTitle: "Recent coordination activity",
+  transferMonitorNote: "Observed CTM/RCM rates between API polls. Queue acceptance does not confirm peer connections, file progress or bandwidth. Peer reports remain unverified client claims.",
+  transferCtmPerSecond: "CTM requests / s",
+  transferRcmPerSecond: "RCM requests / s",
+  transferTrendTitle: "Connection requests",
+  transferChartLabel: "Observed CTM and RCM requests per second; values available in recent intervals table",
+
   searchMonitorTitle: "Recent activity",
   searchMonitorNote: "Rates are estimates between accepted API polls, using a monotonic browser clock. Hub SCH/RES only; direct client UDP is excluded.",
   searchSamplingLive: "Automatic polling enabled",

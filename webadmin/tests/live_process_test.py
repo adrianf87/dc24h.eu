@@ -101,6 +101,11 @@ with tempfile.TemporaryDirectory(prefix='dc24h-web-live-') as temp:
                 source.send(query); case.assertEqual(target.line(), query)
                 result = b'DRES ' + target.sid + b' ' + source.sid + b' FN/WebSearchSecret SI0 TR' + b'A'*39 + b' TO' + window
                 target.send(result); case.assertEqual(source.line(), result)
+                # New traffic after the browser baseline must produce observed
+                # transfer rates through the real C++ API, not mocked JSON.
+                source.send(offer)
+                for peer in peers: case.assertEqual(peer.line(), offer)
+                target.send(reverse); case.assertEqual(source.line(), reverse)
             live_out, live_err = live.communicate(timeout=40)
             assert live.returncode == 0, live_err.replace(token, '[redacted]')
             print(live_out.strip())

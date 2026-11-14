@@ -1,5 +1,7 @@
 # dc24h.eu technical documentation
 
+[WebAdmin Transfer Monitoring — alpha-0.6.12](us/WEBADMIN_TRANSFERS.md) · [PL](pl/WEBADMIN_TRANSFERS.md)
+
 [Transfer Statistics — alpha-0.6.11](us/TRANSFER_STATISTICS.md) · [PL](pl/TRANSFER_STATISTICS.md)
 
 [Debian 13 custom-runner CI](us/CI_DEBIAN13.md) · [PL](pl/CI_DEBIAN13.md)

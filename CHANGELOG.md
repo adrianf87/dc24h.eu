@@ -1,5 +1,22 @@
 # Changelog
 
+## CI maintenance — GitHub-hosted Ubuntu only (2026-11-14)
+
+- Retain only `build.yml`: GitHub-hosted Ubuntu 22.04/24.04 C++ Debug/Release and the Ubuntu 24.04 WebAdmin job, with all existing integration checks.
+- Remove active workflows `.github/workflows/proxmox-connection.yml`, `.github/workflows/proxmox-debian13.yml` and the obsolete self-hosted runner label configuration. No application/platform support, Ubuntu test commands, external host state or repository secrets are changed.
+- Update US/PL CI documentation. Validation: workflow YAML/job/matrix assertions and shell syntax passed; the retained Ubuntu workflow is byte-for-byte unchanged. No application rebuild is needed for this CI-only change. New remote CI completion is not claimed.
+
+## alpha-0.6.12 — 2026-11-14
+
+WebAdmin Transfer Monitoring increment, based directly on main `d24df98b9903ff259d01c87f5e1412bd0a87f6d5` after the ncdc bind-scope repair. The alpha-0.6.1–alpha-0.6.11 implementations and existing branches are retained.
+
+- Added recent CTM/RCM request, refused-attempt and queued-copy rates to Connections, with a shared-scale chart and accessible last-six-interval table. Existing 22 cumulative outcomes, queue/error counters and unverified peer reports remain visible. EN/US and Polish support responsive controls, pause/manual refresh, local clear and unavailable-data states.
+- Added bounded browser-only history of 30 owned observations using all 22 allowlisted counters and monotonic response times. One-second minimum intervals retain rapid-refresh increments; gaps over 15 seconds, version/uptime/counter resets, missing extensions and request/parse failures start fresh baselines. Rates subtract each safe counter before combining deltas; idle intervals show zero and first samples show unavailable rates. Shared polling, navigation/locale retention and Search monitoring remain; transfer clear changes only its own observations.
+- Reused the authenticated status API and private server-side credential flow. Export stays cumulative and allowlisted. No request payloads, identities, endpoints, tokens, peer socket/file progress, bandwidth or confirmed-transfer claims are added. No C++ protocol/routing change, API endpoint/write, dependency, database migration, INI key or production service activation.
+- Added six TypeScript monitoring tests, two browser scenarios and real C++ socket/API/React transfer-rate assertions while preserving Search/mobile/credential checks. Updated release metadata and process expectations, mirrored US/PL monitoring documentation and module navigation. Published on alpha-0.6.12 with main/history preserved.
+
+- Validation: All 173 CTest suites passed in Debug (including release-metadata/version rechecks) and all 173 passed in the complete Release run on Debian 13, with required integration tools and real ncdc. Both C++ builds were warning-free. WebAdmin production build/typecheck, 20 Node tests, 13 Chromium tests and actual C++ API-to-React CTM/RCM rate integration passed. Desktop/mobile PL screenshots were inspected; release metadata, UTF-8/language parity/local links, changed Python syntax and whitespace checks passed. Other supported operating systems, production load and the new remote CI run remain unverified.
+
 ## alpha-0.6.11 — CI follow-up (2026-11-14)
 
 - Fix ncdc activation bind scope after main's Ubuntu 24.04 Debug `adcs.activepassive.ncdc` timeout (170/171 passed). Port reservations covered 127.0.0.1, while the client's unset local_address allowed a wildcard listener conflict on another interface. Set local_address=127.0.0.1 before active-mode configuration so the real listener matches the reservation. Keep the three-second deadline and all existing protocol/terminal/readiness checks.
