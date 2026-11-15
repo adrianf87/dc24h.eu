@@ -12,8 +12,8 @@ jobs:
     runs-on: [self-hosted, Linux, X64, server-747585786, ubuntu-24.04]
     steps:
       - uses: actions/checkout@v6
-      - name: Install server dependencies and integration-test tools
-        run: sudo apt-get update && sudo apt-get install -y build-essential cmake python3 libutf8proc-dev libgcrypt20-dev libssl-dev openssl ncdc libmariadb-dev mariadb-server apache2
+      - name: Check pre-provisioned server dependencies
+        run: python3 scripts/ci/runner_dependencies.py check server
       - name: Configure C++20
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DDC24H_REQUIRE_INTEGRATION_TESTS=ON
       - name: Build
@@ -30,8 +30,8 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: webadmin/package-lock.json
-      - name: Install C++ integration dependencies
-        run: sudo apt-get update && sudo apt-get install -y build-essential cmake python3 libutf8proc-dev libgcrypt20-dev libssl-dev libmariadb-dev
+      - name: Check pre-provisioned WebAdmin dependencies
+        run: python3 scripts/ci/runner_dependencies.py check webadmin
       - name: Build integration server
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF && cmake --build build --parallel 2
       - name: Install frontend dependencies
@@ -45,7 +45,7 @@ jobs:
         run: npm test
       - name: Install Chromium
         working-directory: webadmin
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
       - name: Browser tests
         working-directory: webadmin
         run: npm run test:e2e

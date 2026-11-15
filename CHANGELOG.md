@@ -1,5 +1,10 @@
 # Changelog
 
+## CI fix — unprivileged runner jobs (2026-11-15)
+
+- The first self-hosted run reached `server-747585786` but failed before compilation because sudo required a password. Remove apt/sudo from jobs and Playwright `--with-deps`; use strict package checks and user-owned Chromium downloads. Preserve all tests and runner labels.
+- Add an explicit administrator-only Ubuntu 24.04 dependency installer and US/PL setup instructions. No sudoers, passwords, permissions or secrets are changed. The runner needs one-time administrator provisioning before missing packages can pass.
+
 ## CI maintenance — self-hosted Ubuntu 24.04 (2026-11-15)
 
 - Route every active server and WebAdmin job to the existing `server-747585786` runner with `[self-hosted, Linux, X64, server-747585786, ubuntu-24.04]`; remove the GitHub-hosted OS matrix and targets without a hosted fallback.
