@@ -1,5 +1,16 @@
 # Changelog
 
+## alpha-0.7.3 — 2026-11-15
+
+Account Model increment, based directly on main `aabe5ddcbc47a4c65a5069b077fd0b5e71a9281c` after the self-hosted CI fix:
+
+- Add the independent C++20 `dc24h_accounts` library with checked persistent IDs (positive signed BIGINT), owning 1–64-byte already-NFC UTF-8 account names, exact role/status keys and validated UTC-second audit timestamps. Reject malformed text, controls/format/separators, unknown enum values and inconsistent timestamps; defaults are unassigned/registered/disabled.
+- Add checked import and independent snapshots, immutable name/access/last-login candidates preserving identity and creation time, monotonic update checks, safe moves and allocation-safe copy assignment. Errors are input-free enum categories; bad_alloc propagates without mutating the source/destination.
+- Keep credentials and live connection identities out of account metadata. No SQL account schema/repository, password verification, registration, authenticated session binding or permission grant is introduced. Existing ADC/ADCS guest behavior remains unchanged. Add native bounds/Unicode/ownership/time/error/fault tests, release metadata and US/PL documentation.
+- Inherit main's self-hosted Ubuntu 24.04 routing and CI fix: administrator provisions dependencies once; normal jobs check packages and install Chromium without sudo. Preserve all C++ Debug/Release and WebAdmin tests. Publication does not wait for remote Check status.
+
+- Validation: All **186/186 CTest suites passed in both Debug and Release** on Debian 13, including required MariaDB/Apache integrations and real ncdc ADC/ADCS. The new account suite passed under **ASan/UBSan** with leak detection enabled; C++ builds were warning-free. WebAdmin production build/typecheck, **23 Node tests**, **14 Chromium tests** and real C++ API/React integration passed. Example INI, changed Python syntax, metadata, UTF-8/language parity/local links, dependency-lock scope, actionlint and whitespace passed. Full-suite sanitizers, the remaining OS matrix and production load remain unverified; new remote Check status is not awaited.
+
 ## CI fix — unprivileged runner jobs (2026-11-15)
 
 - The first self-hosted run reached `server-747585786` but failed before compilation because sudo required a password. Remove apt/sudo from jobs and Playwright `--with-deps`; use strict package checks and user-owned Chromium downloads. Preserve all tests and runner labels.

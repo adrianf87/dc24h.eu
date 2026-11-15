@@ -1,7 +1,8 @@
 # dc24h.eu documentation
 
-alpha-0.7.2: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.7.3: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
+- [Account Model — alpha-0.7.3](ACCOUNT_MODEL.md)
 - [Database Migrations — alpha-0.7.2](DATABASE_MIGRATIONS.md)
 - [Database Core — alpha-0.7.1](DATABASE_CORE.md)
 - [Transfer Configuration — alpha-0.6.13](TRANSFER_CONFIGURATION.md)

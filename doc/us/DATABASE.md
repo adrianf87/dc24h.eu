@@ -1,5 +1,7 @@
 # MariaDB — alpha-0.7.2
 
+**Current increment — alpha-0.7.3:** [Account Model](ACCOUNT_MODEL.md) adds independent checked persistent-account metadata, bounded NFC UTF-8 names, roles/status, UTC audit times and immutable candidate updates. Live account authentication, persistence and permission mapping remain future stages. CI uses the self-hosted Ubuntu 24.04 runner with pre-provisioned dependencies and no sudo in jobs.
+
 **Schema versioning — alpha-0.7.2:** [Database Migrations](DATABASE_MIGRATIONS.md) documents the ordered catalog, v1 upgrade, read-only status and partial-failure contract.
 
 **Core delivered in alpha-0.7.1:** [Database Core](DATABASE_CORE.md) adds typed prepared parameters, bounded owning query results, execution metadata, owner-thread enforcement, redacted errors and RAII transactions. The immutable migration-1 baseline and operator setup below remain; dependent native components require rebuilding.

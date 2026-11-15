@@ -1,5 +1,7 @@
 # Roadmap
 
+**Current increment — alpha-0.7.3:** [Account Model](ACCOUNT_MODEL.md) adds independent checked persistent-account metadata, bounded NFC UTF-8 names, roles/status, UTC audit times and immutable candidate updates. Live account authentication, persistence and permission mapping remain future stages. CI uses the self-hosted Ubuntu 24.04 runner with pre-provisioned dependencies and no sudo in jobs.
+
 **Current increment — alpha-0.7.2:** [Database Migrations](DATABASE_MIGRATIONS.md) adds an ordered compiled SQL catalog, exact checksums, read-only `--database-status`, preserved v1 upgrade and durable applying/applied history for future non-bootstrap changes. Migrations remain explicit; no application schema or automatic DDL replay.
 
 **Increment delivered in alpha-0.7.1:** [Database Core](DATABASE_CORE.md) adds typed prepared values, bounded owning results, write metadata and thread-owned RAII transactions, with redacted errors, rollback-only failure handling and connection retirement without replay. Existing local-socket credentials/migrations and Ubuntu-only CI remain.
@@ -101,6 +103,7 @@
 
 | Stage | Implemented scope |
 | --- | --- |
+| alpha-0.7.3 Account Model | Independent checked account IDs/names, role/status, UTC audit times and immutable candidate updates |
 | alpha-0.1.1 Core | Lifecycle, start/stop, synchronous system signals, logging |
 | alpha-0.1.2 Network | Nonblocking TCP, IPv4/IPv6, multiple listeners and clients, resource limits |
 | alpha-0.1.3 ADC | Bounded stream syntax parser, commands and data validation |

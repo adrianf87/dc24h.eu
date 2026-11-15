@@ -2,10 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.7.2 (Database Migrations).**
+**Current development version: alpha-0.7.3 (Account Model).**
 
 Completed increments (older bullets describe their original delivery scope):
 
+- **alpha-0.7.3 Account Model**: independent checked persistent-account metadata, Unicode names, roles/status, UTC audit times and immutable candidates with allocation-safe ownership. See [Account Model](doc/us/ACCOUNT_MODEL.md).
 - **alpha-0.7.2 Database Migrations**: ordered compiled SQL catalog, exact checksums, legacy metadata upgrade, read-only schema status and durable partial-migration detection without blind DDL replay. See [Database Migrations](doc/us/DATABASE_MIGRATIONS.md).
 - **alpha-0.7.1 Database Core**: typed MariaDB parameters, bounded owning results, write metadata and owner-thread RAII transactions, with deterministic conflict/loss/fault tests and database-enabled real ncdc. See [Database Core](doc/us/DATABASE_CORE.md).
 - **alpha-0.6.13 Configuration**: exact bounded peer-protocol policy, existing count/byte limits and all effective transfer settings in the authenticated API and US/PL Connections page. See [Transfer Configuration](doc/us/TRANSFER_CONFIGURATION.md).

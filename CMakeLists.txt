@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.7.2 LANGUAGES CXX)
+project(dc24h VERSION 0.7.3 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -39,6 +39,14 @@ target_compile_features(dc24h_text PUBLIC cxx_std_20)
 set_target_properties(dc24h_text PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_text PUBLIC include)
 target_link_libraries(dc24h_text PRIVATE UTF8Proc::UTF8Proc)
+
+# Detached persistent account metadata; deliberately independent of ADC/SQL.
+add_library(dc24h_accounts src/accounts/account.cpp)
+target_compile_features(dc24h_accounts PUBLIC cxx_std_20)
+set_target_properties(dc24h_accounts PROPERTIES CXX_EXTENSIONS OFF)
+target_include_directories(dc24h_accounts PUBLIC include)
+target_link_libraries(dc24h_accounts PRIVATE dc24h_text UTF8Proc::UTF8Proc)
+target_compile_options(dc24h_accounts PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 
 add_library(dc24h_users src/users/session.cpp src/users/session_manager.cpp src/users/user.cpp src/users/connectivity.cpp
     src/users/nick_manager.cpp src/users/user_registry.cpp src/users/limits.cpp)
@@ -571,6 +579,13 @@ if(BUILD_TESTING)
     add_test(NAME users.nicknames.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/nick_manager_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(users.nicknames users.nicknames.process PROPERTIES TIMEOUT 30)
+    add_executable(account_model_tests tests/account_model_tests.cpp)
+    target_link_libraries(account_model_tests PRIVATE dc24h_accounts)
+    target_compile_options(account_model_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(account_model_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME accounts.model COMMAND account_model_tests)
+    set_tests_properties(accounts.model PROPERTIES TIMEOUT 15)
+
     add_executable(user_values_tests tests/user_values_tests.cpp)
     target_link_libraries(user_values_tests PRIVATE dc24h_adc dc24h_text)
     target_compile_options(user_values_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)

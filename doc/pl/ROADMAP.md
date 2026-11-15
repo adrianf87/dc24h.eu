@@ -1,5 +1,7 @@
 # Plan rozwoju
 
+**Aktualny etap — alpha-0.7.3:** [Model konta](ACCOUNT_MODEL.md) dodaje niezależne, zweryfikowane metadane trwałego konta, ograniczone nazwy UTF-8 NFC, role/stan, daty UTC i kandydatów zmian bez modyfikowania oryginału. Uwierzytelnianie kont, zapis i mapowanie uprawnień pozostają kolejnymi etapami. CI używa własnego runnera Ubuntu 24.04 z przygotowanymi zależnościami i bez sudo w zadaniach.
+
 **Aktualny etap — alpha-0.7.2:** [Migracje bazy danych](DATABASE_MIGRATIONS.md) dodają uporządkowany kompilowany katalog SQL, dokładne sumy, odczyt `--database-status`, zachowanie v1 przy aktualizacji i trwały stan applying/applied przyszłych zmian po inicjalizacji. Migracje pozostają jawne; bez schematu aplikacji i automatycznego odtwarzania DDL.
 
 **Etap dostarczony w alpha-0.7.1:** [Database Core](DATABASE_CORE.md) dodaje typowane parametry, ograniczone wyniki na własność, metadane zapisu i transakcje RAII właściciela wątku, z redakcją błędów, blokadą zatwierdzania po błędzie i zamykaniem połączenia bez odtwarzania zapisów. Zachowano lokalne poświadczenia/migracje i CI wyłącznie na Ubuntu.
@@ -101,6 +103,7 @@
 
 | Etap | Zaimplementowany zakres |
 | --- | --- |
+| alpha-0.7.3 Account Model | Niezależne zweryfikowane ID/nazwy kont, role/stan, daty UTC i kandydaci zmian |
 | alpha-0.1.1 Core | Cykl życia, start/stop, sygnały i logger |
 | alpha-0.1.2 Network | TCP IPv4/IPv6, wiele portów i klientów, limity zasobów |
 | alpha-0.1.3 ADC | Ograniczony parser strumienia, komendy i walidacja danych |

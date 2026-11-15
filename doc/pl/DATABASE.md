@@ -1,5 +1,7 @@
 # MariaDB — alpha-0.7.2
 
+**Aktualny etap — alpha-0.7.3:** [Model konta](ACCOUNT_MODEL.md) dodaje niezależne, zweryfikowane metadane trwałego konta, ograniczone nazwy UTF-8 NFC, role/stan, daty UTC i kandydatów zmian bez modyfikowania oryginału. Uwierzytelnianie kont, zapis i mapowanie uprawnień pozostają kolejnymi etapami. CI używa własnego runnera Ubuntu 24.04 z przygotowanymi zależnościami i bez sudo w zadaniach.
+
 **Wersjonowanie schematu — alpha-0.7.2:** [Migracje bazy danych](DATABASE_MIGRATIONS.md) opisują uporządkowany katalog, aktualizację v1, odczyt stanu i obsługę częściowych błędów.
 
 **Core dostarczony w alpha-0.7.1:** [Database Core](DATABASE_CORE.md) dodaje typowane parametry, ograniczone wyniki na własność, metadane zapisu, egzekwowanie wątku właściciela, zredagowane błędy i transakcje RAII. Niezmienna migracja 1 i konfiguracja operatora poniżej pozostają; wymagane przebudowanie zależnych komponentów.
