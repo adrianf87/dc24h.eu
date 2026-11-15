@@ -7,7 +7,7 @@ alpha-0.7.2: działająca implementacja oraz jawnie oznaczone plany kolejnych mo
 - [Transfer Configuration — alpha-0.6.13](TRANSFER_CONFIGURATION.md)
 - [WebAdmin Transfer Monitoring — alpha-0.6.12](WEBADMIN_TRANSFERS.md)
 - [Transfer Statistics — alpha-0.6.11](TRANSFER_STATISTICS.md)
-- [Debian 13 custom-runner CI](CI_DEBIAN13.md)
+- [CI na własnym runnerze Ubuntu 24.04](CI_DEBIAN13.md)
 - [Transfer Limits — alpha-0.6.10](TRANSFER_LIMITS.md)
 - [Error Handling — alpha-0.6.9](ERROR_HANDLING.md)
 - [Connection Security — alpha-0.6.8](CONNECTION_SECURITY.md)

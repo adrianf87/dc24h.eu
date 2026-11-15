@@ -1,5 +1,11 @@
 # Changelog
 
+## CI maintenance — self-hosted Ubuntu 24.04 (2026-11-15)
+
+- Route every active server and WebAdmin job to the existing `server-747585786` runner with `[self-hosted, Linux, X64, server-747585786, ubuntu-24.04]`; remove the GitHub-hosted OS matrix and targets without a hosted fallback.
+- Keep Debug/Release, required CTest integrations, frontend build/unit/browser tests and real C++ API integration. Limit the server matrix to one job at a time and explicitly install build-essential, CMake and Python on the self-hosted machine.
+- Update US/PL CI documentation and navigation. Publication does not wait for remote Check status; existing runs keep their original workflow revision.
+
 ## alpha-0.7.2 — 2026-11-14
 
 Database Migrations increment, based directly on main `4f204b9f8901a5201c56abad957543344c177256` after the alpha-0.7.1 merge:

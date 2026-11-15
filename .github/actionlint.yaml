@@ -1,0 +1,4 @@
+self-hosted-runner:
+  labels:
+    - server-747585786
+    - ubuntu-24.04

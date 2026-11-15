@@ -6,14 +6,14 @@ jobs:
   server:
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04]
         build_type: [Debug, Release]
-    runs-on: ${{ matrix.os }}
+    runs-on: [self-hosted, Linux, X64, server-747585786, ubuntu-24.04]
     steps:
       - uses: actions/checkout@v6
       - name: Install server dependencies and integration-test tools
-        run: sudo apt-get update && sudo apt-get install -y libutf8proc-dev libgcrypt20-dev libssl-dev openssl ncdc libmariadb-dev mariadb-server apache2
+        run: sudo apt-get update && sudo apt-get install -y build-essential cmake python3 libutf8proc-dev libgcrypt20-dev libssl-dev openssl ncdc libmariadb-dev mariadb-server apache2
       - name: Configure C++20
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DDC24H_REQUIRE_INTEGRATION_TESTS=ON
       - name: Build
@@ -22,7 +22,7 @@ jobs:
         run: ctest --test-dir build --output-on-failure
 
   webadmin:
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, Linux, X64, server-747585786, ubuntu-24.04]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v5
@@ -31,7 +31,7 @@ jobs:
           cache: npm
           cache-dependency-path: webadmin/package-lock.json
       - name: Install C++ integration dependencies
-        run: sudo apt-get update && sudo apt-get install -y libutf8proc-dev libgcrypt20-dev libssl-dev libmariadb-dev
+        run: sudo apt-get update && sudo apt-get install -y build-essential cmake python3 libutf8proc-dev libgcrypt20-dev libssl-dev libmariadb-dev
       - name: Build integration server
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF && cmake --build build --parallel 2
       - name: Install frontend dependencies
