@@ -12,6 +12,11 @@ import time
 
 from api_support import enable_api, fetch_status
 
+ACCOUNT_TEST = None
+if '--account-test' in sys.argv:
+    index = sys.argv.index('--account-test')
+    ACCOUNT_TEST = os.path.abspath(sys.argv[index + 1])
+    del sys.argv[index:index + 2]
 MIGRATION_TEST = None
 if '--migration-test' in sys.argv:
     index = sys.argv.index('--migration-test')
@@ -103,7 +108,7 @@ def main():
                 result = cli(path, action)
                 require(result.returncode == 0, result.stderr)
                 no_secrets(result)
-            require('version=0 latest=2 pending=2 dirty=no' in cli(path, '--database-status').stdout,
+            require('version=0 latest=3 pending=3 dirty=no' in cli(path, '--database-status').stdout,
                     'Fresh schema status is incorrect')
             require(sql('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema="dc24h"') == '0',
                     'Check command modified schema')
@@ -115,11 +120,15 @@ def main():
                     'Migration checksum differs from SQL source')
             result = cli(path, '--migrate-database')
             require(result.returncode == 0 and 'applied=0' in result.stdout, result.stderr)
-            require('version=2 latest=2 pending=0 dirty=no' in cli(path, '--database-status').stdout,
+            require('version=3 latest=3 pending=0 dirty=no' in cli(path, '--database-status').stdout,
                     'Schema status does not match applied migrations')
             if MIGRATION_TEST:
                 result = run([MIGRATION_TEST, str(db_socket), str(password)])
                 require(result.returncode == 0, result.stderr)
+                no_secrets(result)
+            if ACCOUNT_TEST:
+                result = run([ACCOUNT_TEST, str(db_socket), str(password)])
+                require(result.returncode == 0, 'Account test exit=' + str(result.returncode) + ': ' + result.stderr)
                 no_secrets(result)
             if CORE_TEST:
                 sql("DELIMITER //\nCREATE PROCEDURE dc24h.dc24h_core_multiple_results() BEGIN SELECT 1; SELECT 2; END//\nDELIMITER ;\n"
@@ -138,18 +147,23 @@ def main():
                 require(result.returncode == 0, result.stderr)
                 no_secrets(result)
 
+            if ACCOUNT_TEST:
+                result = run([ACCOUNT_TEST, str(db_socket), str(password), '--readonly'])
+                require(result.returncode == 0, result.stderr)
+                no_secrets(result)
             result = cli(path, '--migrate-database')
             require(result.returncode == 0 and 'applied=0' in result.stdout, 'Read-only no-op migration failed')
             require(cli(path, '--database-status').returncode == 0, 'Read-only schema inspection failed')
             # A legacy registry requires ALTER; inspection never upgrades it.
-            sql('DELETE FROM dc24h.dc24h_schema_migrations WHERE version=2;'
+            sql('DROP TABLE dc24h.dc24h_accounts;'
+                'DELETE FROM dc24h.dc24h_schema_migrations WHERE version>=2;'
                 'ALTER TABLE dc24h.dc24h_schema_migrations DROP COLUMN state;')
             result = cli(path, '--migrate-database')
             require(result.returncode == 1, 'Upgrade accepted without ALTER privileges'); no_secrets(result)
-            require('version=1 latest=2 pending=1 dirty=no' in cli(path, '--database-status').stdout,
+            require('version=1 latest=3 pending=2 dirty=no' in cli(path, '--database-status').stdout,
                     'Read-only status changed legacy schema')
             config()
-            require('applied=1' in cli(path, '--migrate-database').stdout, 'Legacy upgrade failed')
+            require('applied=2' in cli(path, '--migrate-database').stdout, 'Legacy upgrade failed')
             api_path, api_token = enable_api(path, folder)
             if NCDC:
                 for transport in ([], ['--tls']):
@@ -185,7 +199,7 @@ def main():
             result = cli(path, '--language', 'pl', '--check-database')
             require(result.returncode == 0 and 'Połączenie z bazą' in result.stdout, result.stderr)
             result = cli(path, '--language', 'pl', '--database-status')
-            require(result.returncode == 0 and 'Wersja schematu bazy danych=2' in result.stdout, result.stderr)
+            require(result.returncode == 0 and 'Wersja schematu bazy danych=3' in result.stdout, result.stderr)
             config(db_user='missing_private_user')
             result = cli(path, '--check-database')
             require(result.returncode == 1, 'Missing user accepted'); no_secrets(result)

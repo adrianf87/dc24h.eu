@@ -1,12 +1,12 @@
 # MariaDB — alpha-0.7.2
 
-**Aktualny etap — alpha-0.7.3:** [Model konta](ACCOUNT_MODEL.md) dodaje niezależne, zweryfikowane metadane trwałego konta, ograniczone nazwy UTF-8 NFC, role/stan, daty UTC i kandydatów zmian bez modyfikowania oryginału. Uwierzytelnianie kont, zapis i mapowanie uprawnień pozostają kolejnymi etapami. CI używa własnego runnera Ubuntu 24.04 z przygotowanymi zależnościami i bez sudo w zadaniach.
+**Aktualny etap — alpha-0.7.4:** [Repozytorium kont](ACCOUNT_REPOSITORY.md) zapisuje zweryfikowane metadane kont w MariaDB z generowanymi ID, dokładnymi unikalnymi nazwami, rewizjami i transakcyjnym wykrywaniem konfliktów. Migracja v3 dodaje tabelę kont; poświadczenia, uwierzytelnione powiązanie sesji i zapis kont z WebAdmin pozostają planowane. CI wywołuje przypięty workflow Proxmox z github-runner-v0.1 dla tymczasowych klonów Ubuntu 24.04/22.04; przygotowanie używa ograniczonego helpera, a testy działają bez sudo.
 
 **Wersjonowanie schematu — alpha-0.7.2:** [Migracje bazy danych](DATABASE_MIGRATIONS.md) opisują uporządkowany katalog, aktualizację v1, odczyt stanu i obsługę częściowych błędów.
 
 **Core dostarczony w alpha-0.7.1:** [Database Core](DATABASE_CORE.md) dodaje typowane parametry, ograniczone wyniki na własność, metadane zapisu, egzekwowanie wątku właściciela, zredagowane błędy i transakcje RAII. Niezmienna migracja 1 i konfiguracja operatora poniżej pozostają; wymagane przebudowanie zależnych komponentów.
 
-Zaimplementowano opcjonalne połączenie Connector/C, RAII, ograniczenia czasu, kodowanie `utf8mb4`, zapytania parametryzowane i jawną migrację rejestru wersji. Konta użytkowników, uwierzytelnianie i hashowanie haseł, role, uprawnienia, konfiguracja w bazie, bany, dane administracyjne oraz zapisywanie zdarzeń pozostają planowane. Haseł użytkowników huba jeszcze nie przechowujemy; przyszły moduł powinien korzystać ze sprawdzonej implementacji Argon2id. WebAdmin będzie używał API C++, nie bezpośredniego SQL.
+Zaimplementowano opcjonalne połączenie Connector/C, RAII, ograniczenia czasu, kodowanie `utf8mb4`, zapytania parametryzowane i jawną migrację rejestru wersji. Zapis metadanych kont i klucze roli/stanu udostępnia [Repozytorium kont](ACCOUNT_REPOSITORY.md). Uwierzytelnianie i haszowanie haseł, mapowanie uprawnień sesji, konfiguracja w bazie, bany, dane administracyjne oraz zapisywanie zdarzeń pozostają planowane. Haseł użytkowników huba jeszcze nie przechowujemy; przyszły moduł powinien korzystać ze sprawdzonej implementacji Argon2id. WebAdmin będzie używał API C++, nie bezpośredniego SQL.
 
 ## Budowanie i konfiguracja
 
@@ -47,7 +47,7 @@ Pusty socket i klucze dotyczące TCP są odrzucane. Nie udostępniaj lokalnego g
 
 ## Jawne wersjonowanie schematu
 
-`--migrate-database` stosuje teraz uporządkowany kompilowany katalog do v2, zachowuje dokładną sumę v1 i dodaje kolumnę metadanych `state`. `--database-status` odczytuje current/latest/pending/dirty bez DDL; zwykły start nigdy nie migruje. Poświadczenia inicjalizacji/aktualizacji wymagają dodatkowo ALTER. Przyszłe migracje po inicjalizacji zapisują `applying` przed SQL i odmawiają automatycznego odtwarzania po częściowym błędzie. Pełny kontrakt, manifest, format sum, uprawnienia i naprawa przez operatora: [Migracje bazy danych](DATABASE_MIGRATIONS.md).
+`--migrate-database` stosuje teraz uporządkowany kompilowany katalog do v3, zachowuje dokładną sumę v1 i dodaje kolumnę metadanych `state` i tabelę kont. `--database-status` odczytuje current/latest/pending/dirty bez DDL; zwykły start nigdy nie migruje. Poświadczenia inicjalizacji/aktualizacji wymagają dodatkowo ALTER. Przyszłe migracje po inicjalizacji zapisują `applying` przed SQL i odmawiają automatycznego odtwarzania po częściowym błędzie. Pełny kontrakt, manifest, format sum, uprawnienia i naprawa przez operatora: [Migracje bazy danych](DATABASE_MIGRATIONS.md).
 
 ## Kontrakt adaptera
 

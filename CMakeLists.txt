@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.7.3 LANGUAGES CXX)
+project(dc24h VERSION 0.7.4 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -112,6 +112,13 @@ target_compile_features(dc24h_database PUBLIC cxx_std_20)
 set_target_properties(dc24h_database PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_database PUBLIC include PRIVATE src/database "${CMAKE_CURRENT_BINARY_DIR}/generated")
 target_link_libraries(dc24h_database PRIVATE MariaDB::ConnectorC OpenSSL::Crypto dc24h_security Threads::Threads)
+
+add_library(dc24h_account_repository src/accounts/repository.cpp)
+target_compile_features(dc24h_account_repository PUBLIC cxx_std_20)
+set_target_properties(dc24h_account_repository PROPERTIES CXX_EXTENSIONS OFF)
+target_include_directories(dc24h_account_repository PUBLIC include)
+target_link_libraries(dc24h_account_repository PUBLIC dc24h_accounts dc24h_database)
+target_compile_options(dc24h_account_repository PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 
 add_library(dc24h_api src/api/http.cpp src/api/server.cpp)
 target_compile_features(dc24h_api PUBLIC cxx_std_20)
@@ -708,11 +715,21 @@ if(BUILD_TESTING)
     target_compile_options(database_migrations_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
     add_test(NAME database.migrations COMMAND database_migrations_tests)
     set_tests_properties(database.migrations PROPERTIES TIMEOUT 15)
+    add_executable(account_repository_tests tests/account_repository_tests.cpp)
+    target_link_libraries(account_repository_tests PRIVATE dc24h_account_repository Threads::Threads)
+    target_compile_options(account_repository_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(account_repository_tests PROPERTIES CXX_EXTENSIONS OFF)
     find_program(MARIADBD_EXECUTABLE mariadbd PATHS /usr/sbin)
     find_program(MARIADB_INSTALL_DB_EXECUTABLE mariadb-install-db)
     find_program(MARIADB_CLIENT_EXECUTABLE mariadb)
     find_program(MARIADB_ADMIN_EXECUTABLE mariadb-admin)
     if(MARIADBD_EXECUTABLE AND MARIADB_INSTALL_DB_EXECUTABLE AND MARIADB_CLIENT_EXECUTABLE AND MARIADB_ADMIN_EXECUTABLE)
+        add_test(NAME accounts.repository.process COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/database_process_tests.py"
+            "$<TARGET_FILE:dc24h>" "$<TARGET_FILE:database_tests>"
+            --account-test "$<TARGET_FILE:account_repository_tests>")
+        set_tests_properties(accounts.repository.process PROPERTIES TIMEOUT 120
+            ENVIRONMENT "PATH=/usr/sbin:/usr/bin:/sbin:/bin:$ENV{PATH}")
         add_test(NAME database.process COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/database_process_tests.py"
             "$<TARGET_FILE:dc24h>" "$<TARGET_FILE:database_tests>")

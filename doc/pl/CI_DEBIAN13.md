@@ -1,23 +1,26 @@
-# CI na własnym runnerze Ubuntu 24.04
+# CI na własnych runnerach Proxmox
 
-Jedynym aktywnym workflow jest `.github/workflows/build.yml`. Każde zadanie wybiera istniejący runner `server-747585786` przez wszystkie pięć etykiet: `[self-hosted, Linux, X64, server-747585786, ubuntu-24.04]`. Nie ma celu ani zastępczego runnera hostowanego przez GitHub. Gdy własny runner jest offline lub zajęty, zadania czekają w kolejce.
+Workflow alpha-0.7.4 `.github/workflows/build.yml` wywołuje [workflow VM](https://github.com/adrianf87/dc24h.eu/blob/20ca46bd5f297a98bbbbe59604bcb0a041839b6d/.github/workflows/proxmox-vm.yml) z **github-runner-v0.1**, przypięty do `20ca46bd5f297a98bbbbe59604bcb0a041839b6d`. Gałąź rozwojowa powstała z main; nie dodano merge, cherry-pick ani rodzica z gałęzi runnerów. Gałąź źródłowa pozostaje bez zmian.
 
-Macierz serwera zachowuje **Debug i Release**, `fail-fast: false` oraz limit jednego zadania macierzy naraz. Sprawdza uprzednio zainstalowane narzędzia kompilacji i wymagane zależności, buduje C++20 i uruchamia wszystkie zestawy CTest z wymaganymi integracjami, w tym ncdc, MariaDB i Apache2. Zadanie WebAdmin używa tego samego runnera z Node 22, produkcyjnym build/typecheck, testami jednostkowymi, testami Chromium i integracją z rzeczywistym API C++. Jeden zarejestrowany runner wykonuje jedno zadanie naraz.
+| Etykieta runnera | Odpowiedzialność |
+| --- | --- |
+| `proxmox-worker-1` | Przygotowanie i sprzątanie klonów przez zainstalowany kontroler hosta |
+| `proxmox-worker-2` | VM 200 z zatrzymanej VM 100; Ubuntu 24.04 |
+| `proxmox-worker-3` | VM 201 z zatrzymanej VM 101; Ubuntu 22.04 i G++ 12 |
 
-Konto runnera wymaga Git, Pythona 3, dostępu sieciowego do repozytoriów pakietów i zapisywalnego katalogu roboczego. CI nie wywołuje sudo i nie pyta o hasło. Powyższe etykiety muszą pozostać przypisane w ustawieniach GitHub.
+Wszystkie zadania używają własnych runnerów Linux X64. Pełny cykl VM 200, wraz z usunięciem, kończy się przed utworzeniem VM 201. Wspólna grupa concurrency `dc24h-proxmox-vms-200-201` szereguje tę gałąź z gałęzią infrastruktury; `cancel-in-progress: false` pozwala zakończyć sprzątanie. Aktywny przebieg źródłowej gałęzi może opóźnić kolejkę. Pakiety źródłowych VM pozostają bez zmian; VM 300/301 są poza workflow.
 
-## Jednorazowe przygotowanie przez administratora
+Provision pobiera wyłącznie dokładną kopię skryptu `proxmox-worker/scripts/guest/runner_dependencies.py`, porównuje ją z zainstalowaną wersją roota i instaluje zależności w pasującym oznaczonym klonie przez ograniczone `sudo -n /usr/local/sbin/dc24h-ci-dependencies install all`. To jedyna uprzywilejowana operacja przygotowania; buildy/testy aplikacji działają bez sudo. Skrypt odmawia instalowania pakietów w źródłach i przy niewłaściwym systemie/serialu DMI. Nie dodano haseł, tokenów rejestracji, ogólnych praw sudo ani instalatorów infrastruktury.
 
-Pierwszy przebieg na własnym runnerze zatrzymał się przed kompilacją, ponieważ konto runnera nie mogło użyć sudo bez hasła. W sprawdzonej kopii repozytorium na **server-747585786 (Ubuntu 24.04)** administrator jednorazowo instaluje pakiety serwera i systemowe zależności Chromium:
+Każde Ubuntu wykonuje C++20 Debug i Release z wymaganymi integracjami MariaDB/Apache/ncdc CTest, następnie build/typecheck WebAdmin, testy Node, Chromium i rzeczywiste API C++/React. Równoległość build/CTest/Node/Playwright wynosi cztery. Checkouty aplikacji pomijają `proxmox-worker`, podobnie archiwa źródeł przez `.gitattributes`. Zwykły clone wymaga jawnego sparse checkout, aby pominąć śledzone pliki.
+
+Wymagane są zainstalowane kontroler hosta i bootstrap gości z gałęzi runnerów. Przypięta [instrukcja infrastruktury](https://github.com/adrianf87/dc24h.eu/blob/20ca46bd5f297a98bbbbe59604bcb0a041839b6d/proxmox-worker/README.md) opisuje instalację, własność klonów, dzierżawy, reaper po sześciu godzinach, naprawę i ponawianie. Nie uruchamiaj źródła równolegle z klonem, nie omijaj kontroli własności i nie ponawiaj samych końcowych zadań po sprzątaniu: używaj **Re-run all jobs**. Sprzątanie zwraca błąd przy nieudanym przygotowaniu, testach lub usuwaniu. PR z forków są wykluczone przed działaniami infrastruktury.
+
+Caller obsługuje push i PR dla `alpha-0.7.4` i `main` oraz ręczne uruchomienie. Filtr main zadziała dopiero po osobno autoryzowanym scaleniu; ten etap nie scala main. Sprawdzenie lokalne:
 
 ```sh
-sudo python3 scripts/ci/runner_dependencies.py install all
+actionlint -config-file .github/actionlint.yaml .github/workflows/build.yml
+python3 -m py_compile proxmox-worker/scripts/guest/runner_dependencies.py
 ```
 
-To jawne przygotowanie używa apt i może uruchomić pakietowe usługi MariaDB/Apache; wykonaj je na dedykowanej maszynie CI. Nie zmienia sudoers, uprawnień runnera, haseł ani sekretów repozytorium. Skrypt odmawia instalacji na innym systemie lub bez roota. Listę pakietów można przejrzeć bez uprawnień: `python3 scripts/ci/runner_dependencies.py list all`.
-
-Zwykłe zadania wykonują wyłącznie `check server` / `check webadmin`. Brak pakietów kończy się czytelnym błędem; testy nie są pomijane. Playwright pobiera własną wersję Chromium do pamięci podręcznej konta runnera przez `npx playwright install chromium`, bez `--with-deps` i sudo. Po zmianie zależności administrator powtarza przygotowanie. Lista pakietów odpowiada zależnościom Chromium z katalogu Ubuntu 24.04 x64 w przypiętej wersji Playwright.
-
-Workflow uruchamiają zdarzenia push i pull request. Konfigurację sprawdzamy lokalnie; publikacja nie czeka na zdalny **Check status**. Wyniki wykonania są dostępne w GitHub Actions. Istniejące przebiegi używają swojej pierwotnej wersji workflow; zmiana kieruje nowe przebiegi na własny runner.
-
-Dawne workflow VM Proxmox/Debian pozostają wycofane. Archiwalne workflow poza `.github/workflows/` nie są aktywnymi workflow GitHub Actions. Wspierane platformy aplikacji i historyczne wyniki testów pozostają bez zmian.
+Wyniki lokalne opisuje [Testowanie](TESTING.md), a rzeczywisty wynik runnerów jest w GitHub Actions. Stary runner `server-747585786` nie jest już celem zadań; jego usunięta rejestracja nie jest odtwarzana.

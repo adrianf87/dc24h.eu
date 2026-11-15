@@ -1,5 +1,7 @@
 # Account Model — alpha-0.7.3
 
+The alpha-0.7.3 delivery scope below is retained for history. See [Account Repository](ACCOUNT_REPOSITORY.md) for persistence delivered in alpha-0.7.4.
+
 Based directly on main `aabe5ddcbc47a4c65a5069b077fd0b5e71a9281c`, including Database Core, Database Migrations and the unprivileged self-hosted CI fix.
 
 ## Purpose and ownership

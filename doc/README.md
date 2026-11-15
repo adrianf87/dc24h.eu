@@ -1,5 +1,7 @@
 # dc24h.eu technical documentation
 
+[Account Repository — alpha-0.7.4](us/ACCOUNT_REPOSITORY.md) · [PL](pl/ACCOUNT_REPOSITORY.md)
+
 [Account Model — alpha-0.7.3](us/ACCOUNT_MODEL.md) · [PL](pl/ACCOUNT_MODEL.md)
 
 [Database Migrations — alpha-0.7.2](us/DATABASE_MIGRATIONS.md) · [PL](pl/DATABASE_MIGRATIONS.md)

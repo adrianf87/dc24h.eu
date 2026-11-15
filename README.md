@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.7.3 (Account Model).**
+**Current development version: alpha-0.7.4 (Account Repository).**
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.7.4 Account Repository**: MariaDB account metadata storage, generated IDs, byte-exact unique names, safe row imports and transactional revision checks. See [Account Repository](doc/us/ACCOUNT_REPOSITORY.md).
 
 - **alpha-0.7.3 Account Model**: independent checked persistent-account metadata, Unicode names, roles/status, UTC audit times and immutable candidates with allocation-safe ownership. See [Account Model](doc/us/ACCOUNT_MODEL.md).
 - **alpha-0.7.2 Database Migrations**: ordered compiled SQL catalog, exact checksums, legacy metadata upgrade, read-only schema status and durable partial-migration detection without blind DDL replay. See [Database Migrations](doc/us/DATABASE_MIGRATIONS.md).
@@ -119,7 +121,7 @@ Completed increments (older bullets describe their original delivery scope):
 
 - **alpha-0.1.11 Apache2**: customizable static WebAdmin HTTPS example, HTTP→HTTPS redirect, TLS 1.2/1.3, certificate paths and isolated HTTPS tests.
 
-Guest login, public user sessions, public chat and direct/echo private chat are implemented. Group chat, registered-user authentication, moderation/history, search, transfer coordination, account persistence and a production authenticated web gateway remain future milestones.
+Guest login, public user sessions, public chat and direct/echo private chat are implemented. Group chat, registered-user authentication, moderation/history, search, transfer coordination and a production authenticated web gateway remain future milestones.
 
 ## Build
 

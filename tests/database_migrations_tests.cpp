@@ -31,7 +31,7 @@ std::string checksum(std::span<const std::string_view> sql) {
 void unit() {
     const auto& entries = detail::builtin_migrations;
     detail::validate_catalog(entries);
-    require(migration_catalog().size() == 2 && entries[0].info.version == 1 && entries[1].info.version == 2);
+    require(migration_catalog().size() == 3 && entries[0].info.version == 1 && entries[1].info.version == 2);
     require(entries[0].info.name == "schema_migrations" && entries[1].info.name == "migration_state");
     auto invalid = entries;
     invalid[1].info.version = 3;
@@ -49,34 +49,35 @@ void unit() {
 }
 void legacy(Connection& c) {
     const auto catalog = migration_catalog();
-    require(inspect_migrations(c).current_version == 2 && migrate(c) == 0);
+    const auto bootstrap = std::span(detail::builtin_migrations).first(2);
+    require(detail::inspect(c,bootstrap).current_version == 2 && detail::run(c,bootstrap) == 0);
     const auto original_time = c.scalar("SELECT applied_at FROM dc24h_schema_migrations WHERE version=1");
     c.execute("DELETE FROM dc24h_schema_migrations WHERE version=2");
     c.execute("ALTER TABLE dc24h_schema_migrations DROP COLUMN state");
-    auto status = inspect_migrations(c);
+    auto status = detail::inspect(c,bootstrap);
     require(status.current_version == 1 && status.latest_version == 2 && status.pending == 1 && !status.dirty);
     c.execute("UPDATE dc24h_schema_migrations SET checksum=REPEAT('0',64) WHERE version=1");
-    rejects(MigrationErrorKind::history,[&] { (void)migrate(c); });
+    rejects(MigrationErrorKind::history,[&] { (void)detail::run(c,bootstrap); });
     require(c.scalar("SELECT COUNT(*) FROM information_schema.columns WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='dc24h_schema_migrations' AND COLUMN_NAME='state'") == "0");
     c.execute("UPDATE dc24h_schema_migrations SET checksum=? WHERE version=1",{std::string(catalog[0].checksum)});
-    require(migrate(c) == 1 && migrate(c) == 0);
+    require(detail::run(c,bootstrap) == 1 && detail::run(c,bootstrap) == 0);
     require(c.scalar("SELECT applied_at FROM dc24h_schema_migrations WHERE version=1") == original_time);
     // Recover the safe v2 bootstrap gap: ALTER succeeded, metadata insert did not.
     c.execute("DELETE FROM dc24h_schema_migrations WHERE version=2");
-    require(inspect_migrations(c).pending == 1 && migrate(c) == 1);
+    require(detail::inspect(c,bootstrap).pending == 1 && detail::run(c,bootstrap) == 1);
     c.execute("UPDATE dc24h_schema_migrations SET name='PrivateMismatch' WHERE version=2");
-    rejects(MigrationErrorKind::history,[&] { (void)inspect_migrations(c); });
+    rejects(MigrationErrorKind::history,[&] { (void)detail::inspect(c,bootstrap); });
     c.execute("UPDATE dc24h_schema_migrations SET name='migration_state' WHERE version=2");
     c.execute("UPDATE dc24h_schema_migrations SET state='applying' WHERE version=2");
-    rejects(MigrationErrorKind::history,[&] { (void)migrate(c); });
+    rejects(MigrationErrorKind::history,[&] { (void)detail::run(c,bootstrap); });
     c.execute("UPDATE dc24h_schema_migrations SET state='applied' WHERE version=2");
     c.execute("UPDATE dc24h_schema_migrations SET version=99 WHERE version=2");
-    rejects(MigrationErrorKind::history,[&] { (void)migrate(c); });
+    rejects(MigrationErrorKind::history,[&] { (void)detail::run(c,bootstrap); });
     c.execute("UPDATE dc24h_schema_migrations SET version=2 WHERE version=99");
     c.execute("ALTER TABLE dc24h_schema_migrations MODIFY state VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NULL DEFAULT 'applied'");
-    rejects(MigrationErrorKind::schema,[&] { (void)migrate(c); });
+    rejects(MigrationErrorKind::schema,[&] { (void)detail::run(c,bootstrap); });
     c.execute("ALTER TABLE dc24h_schema_migrations MODIFY state VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'applied'");
-    require(migrate(c) == 0);
+    require(detail::run(c,bootstrap) == 0);
 }
 void locking(Connection& c, const Options& options) {
     const std::string expression = "CONCAT('dc24h:',LEFT(SHA2(DATABASE(),256),52))";
@@ -149,16 +150,19 @@ void future(Connection& c, const Options& options) {
     rejects(MigrationErrorKind::dirty,[&] { (void)detail::run(c,crash); });
     c.execute("DROP TABLE dc24h_interrupted_fixture");
     c.execute("DELETE FROM dc24h_schema_migrations WHERE version=3");
-    require(migrate(c) == 0);
+    require(migrate(c) == 1); // restore shipped account migration after fixture teardown
 }
 void integration(const Options& options) {
     Connection c(options);
+    c.execute("DROP TABLE dc24h_accounts");
+    c.execute("DELETE FROM dc24h_schema_migrations WHERE version=3");
     legacy(c); locking(c,options); future(c,options);
     c.execute("DELETE FROM dc24h_schema_migrations");
     rejects(MigrationErrorKind::history,[&] { (void)migrate(c); });
+    c.execute("DROP TABLE dc24h_accounts");
     c.execute("DROP TABLE dc24h_schema_migrations");
-    require(inspect_migrations(c).current_version == 0 && inspect_migrations(c).pending == 2);
-    require(migrate(c) == 2 && migrate(c) == 0);
+    require(inspect_migrations(c).current_version == 0 && inspect_migrations(c).pending == 3);
+    require(migrate(c) == 3 && migrate(c) == 0);
 }
 }
 int main(int argc, char* argv[]) {

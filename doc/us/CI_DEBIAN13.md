@@ -1,23 +1,26 @@
-# Self-hosted Ubuntu 24.04 CI
+# Self-hosted Proxmox CI
 
-`.github/workflows/build.yml` is the only active workflow. Every job targets the existing runner `server-747585786` using all five labels: `[self-hosted, Linux, X64, server-747585786, ubuntu-24.04]`. There is no GitHub-hosted runner target or fallback. If this runner is offline or busy, jobs wait in the queue.
+The alpha-0.7.4 caller `.github/workflows/build.yml` uses the reusable [VM workflow](https://github.com/adrianf87/dc24h.eu/blob/20ca46bd5f297a98bbbbe59604bcb0a041839b6d/.github/workflows/proxmox-vm.yml) from **github-runner-v0.1**, pinned at `20ca46bd5f297a98bbbbe59604bcb0a041839b6d`. The development branch was created from main; no merge, cherry-pick or parent from the runner branch is added. The source runner branch remains unchanged.
 
-The server matrix retains **Debug and Release**, `fail-fast: false` and a maximum of one matrix job at a time. It checks pre-provisioned build tools and required dependencies, builds C++20 and runs all CTest suites with required integrations, including ncdc, MariaDB and Apache2. The WebAdmin job uses the same runner with Node 22, production build/typecheck, unit tests, Chromium browser tests and the real C++ API integration. A single registered runner executes one job at a time.
+| Runner label | Responsibility |
+| --- | --- |
+| `proxmox-worker-1` | Prepare and clean disposable clones using the installed host controller |
+| `proxmox-worker-2` | VM 200, cloned from stopped VM 100; Ubuntu 24.04 |
+| `proxmox-worker-3` | VM 201, cloned from stopped VM 101; Ubuntu 22.04 with G++ 12 |
 
-The runner account needs Git, Python 3, network access to package registries and a writable workspace. CI never invokes sudo or requests a password. The runner labels shown above must remain assigned in GitHub settings.
+Every job uses self-hosted Linux X64 runners. The complete VM 200 cycle finishes, including deletion, before VM 201 starts. Shared concurrency group `dc24h-proxmox-vms-200-201` serializes this branch with the infrastructure branch; `cancel-in-progress: false` lets active cleanup finish. Existing source-branch runs can delay this branch in the queue. Source VM packages stay unchanged; VMs 300/301 are outside this workflow.
 
-## One-time administrator setup
+The provision job checks out only the exact guest helper snapshot at `proxmox-worker/scripts/guest/runner_dependencies.py`, compares it with the root-owned installed helper and installs dependencies inside the matching marked clone through the restricted `sudo -n /usr/local/sbin/dc24h-ci-dependencies install all` command. This is the only privileged provisioning action; application builds/tests run without sudo. The helper refuses package installation in source VMs or the wrong OS/DMI serial. No passwords, registration tokens, new generic sudo rights or infrastructure installers are added here.
 
-The first self-hosted run failed before compilation because the runner account could not use sudo without a password. From a reviewed checkout on **server-747585786 (Ubuntu 24.04)**, an administrator installs the required server and Chromium system packages once:
+After provisioning, each Ubuntu version runs C++20 Debug and Release with required MariaDB/Apache/ncdc CTest integrations, then WebAdmin build/typecheck, Node, Chromium and real C++ API/React integration. Build/CTest/Node/Playwright concurrency is four. Application checkouts exclude `proxmox-worker`; source archives also omit it using `.gitattributes`. Ordinary clones require explicit sparse checkout to omit tracked files.
+
+The runner branch's installed host controller and guest bootstrap remain prerequisites. See the pinned [infrastructure instructions](https://github.com/adrianf87/dc24h.eu/blob/20ca46bd5f297a98bbbbe59604bcb0a041839b6d/proxmox-worker/README.md) for setup, clone ownership, leases, six-hour reaper, recovery and rerun rules. Do not start a source VM together with its clone, bypass ownership checks or replay only later jobs after cleanup: use **Re-run all jobs**. Cleanup reports failure if provisioning/tests/deletion fail. Fork PRs are excluded before any infrastructure action.
+
+Pushes and PRs for `alpha-0.7.4` and `main`, plus manual dispatch, trigger the caller. The main filter takes effect only after a separately authorized merge; this increment does not merge main. Validate locally with:
 
 ```sh
-sudo python3 scripts/ci/runner_dependencies.py install all
+actionlint -config-file .github/actionlint.yaml .github/workflows/build.yml
+python3 -m py_compile proxmox-worker/scripts/guest/runner_dependencies.py
 ```
 
-This explicit setup uses apt and may start the packaged MariaDB/Apache services; use the dedicated CI machine. It does not change sudoers, runner permissions, passwords or repository secrets. The script refuses installation on another OS or without root. Review the package list without privileges with `python3 scripts/ci/runner_dependencies.py list all`.
-
-Normal jobs only run `check server` / `check webadmin`. Missing packages produce an actionable failure; tests are not skipped. Playwright downloads its Chromium build into the runner user's cache with `npx playwright install chromium`, without `--with-deps` or sudo. Repeat administrator provisioning if dependencies change. The package list mirrors Chromium dependencies in the locked Playwright Ubuntu 24.04 x64 catalog.
-
-Push and pull-request events run this workflow. Configuration checks are performed locally; publication does not wait for remote **Check status**. Remote execution results are available in GitHub Actions. Existing runs use their original workflow revision; this change routes new runs to the self-hosted runner.
-
-The former Proxmox/Debian VM workflows remain retired. Archived workflows outside `.github/workflows/` are not active GitHub Actions workflows. Supported application platforms and historical test results are unchanged.
+Local application test results are in [Testing](TESTING.md); GitHub Actions supplies the actual remote runner outcome. The old `server-747585786` runner is no longer targeted; its deleted GitHub registration is not recreated.

@@ -1,6 +1,6 @@
 # Wersjonowanie
 
-**Aktualny etap — alpha-0.7.3:** [Model konta](ACCOUNT_MODEL.md) dodaje niezależne, zweryfikowane metadane trwałego konta, ograniczone nazwy UTF-8 NFC, role/stan, daty UTC i kandydatów zmian bez modyfikowania oryginału. Uwierzytelnianie kont, zapis i mapowanie uprawnień pozostają kolejnymi etapami. CI używa własnego runnera Ubuntu 24.04 z przygotowanymi zależnościami i bez sudo w zadaniach.
+**Aktualny etap — alpha-0.7.4:** [Repozytorium kont](ACCOUNT_REPOSITORY.md) zapisuje zweryfikowane metadane kont w MariaDB z generowanymi ID, dokładnymi unikalnymi nazwami, rewizjami i transakcyjnym wykrywaniem konfliktów. Migracja v3 dodaje tabelę kont; poświadczenia, uwierzytelnione powiązanie sesji i zapis kont z WebAdmin pozostają planowane. CI wywołuje przypięty workflow Proxmox z github-runner-v0.1 dla tymczasowych klonów Ubuntu 24.04/22.04; przygotowanie używa ograniczonego helpera, a testy działają bez sudo.
 
 **Aktualny etap — alpha-0.7.2:** [Migracje bazy danych](DATABASE_MIGRATIONS.md) dodają uporządkowany kompilowany katalog SQL, dokładne sumy, odczyt `--database-status`, zachowanie v1 przy aktualizacji i trwały stan applying/applied przyszłych zmian po inicjalizacji. Migracje pozostają jawne; bez schematu aplikacji i automatycznego odtwarzania DDL.
 
@@ -97,6 +97,7 @@
 | Wersja | Gałąź | Zakres |
 | --- | --- | --- |
 | alpha-0.7.3 | alpha-0.7.3 | Model konta: zweryfikowane trwałe metadane; uwierzytelnianie i zapis pozostają planowane |
+| alpha-0.7.4 | alpha-0.7.4 | Repozytorium kont: zapis MariaDB, dokładne nazwy i konflikty rewizji |
 | alpha-0.1.1 | alpha-0.1.1 | Core |
 | alpha-0.1.2 | alpha-0.1.2 | Network |
 | alpha-0.1.3 | alpha-0.1.3 | Parser ADC |

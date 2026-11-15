@@ -1,5 +1,17 @@
 # Changelog
 
+## alpha-0.7.4 — 2026-11-15
+
+Account Repository increment, based directly on main `5947add6c5b6e318841c612c93b9cb5cf5eae061`. Existing alpha-0.7.1–alpha-0.7.3 branches and implementations are retained.
+
+- Add the C++20 `dc24h_account_repository` library with generated account IDs, owning ID/name lookups, validated inserts and metadata updates. Preserve exact NFC UTF-8 name bytes/case and SQL NULL versus epoch login time. Bind all values as prepared parameters.
+- Add migration v3 for InnoDB account metadata, full binary unique names, stable role/status keys, UTC-second timestamps and positive revisions. Keep migration 1/2 bytes and checksums unchanged. Require explicit clean/current migrations and compatible account engine/columns/indexes before repository operations; never migrate during ordinary startup.
+- Own each write transaction, compare a locked expected snapshot/revision, detect same-second concurrent edits and increment revision even for identical writes. Preserve identity/creation time and monotonic audit metadata. Build owning results before commit and construct bound alternatives directly for safe allocation-failure unwinding. Duplicate/stale/corrupt/schema errors use fixed diagnostics; native errors retain unknown-outcome information without automatic replay.
+- Add disposable MariaDB coverage for exact Unicode names, generated IDs, duplicates, null/epoch/max times, invalid imports, schema drift, read-only privileges, persistence across connections/processes, racing updates and allocation-failure sweeps through successful insert/update. Extend catalog/legacy upgrade fixtures for the new schema. Update release metadata, WebAdmin version assertions and mirrored EN/US and PL documentation. Reuse the Proxmox VM workflow from github-runner-v0.1 pinned at `20ca46bd5f297a98bbbbe59604bcb0a041839b6d`, with an exact provisioning-helper snapshot. Runner 1 manages clones; runners 2/3 execute Ubuntu 24.04/22.04 serially with cleanup. No runner-branch merge, cherry-pick or main update.
+- Credentials, registration/authentication, authenticated session/role binding, account API/WebAdmin writes, delete/list operations and pooling remain future stages. Stored administrator metadata does not grant a live guest session authority. No production hub or host database deployment is performed.
+
+- Validation: **187/187 CTest suites passed in Debug and Release on Ubuntu 24.04**, including MariaDB, Apache and real ncdc ADC/ADCS. Repository integration passed under **ASan/UBSan** with leak detection and allocation-failure sweeps. Final C++ builds were warning-free. WebAdmin production build/typecheck, **23 Node tests**, **14 Chromium tests** and real C++ API/React integration passed. Release metadata, documentation UTF-8/language parity/local links, changed Python syntax, unchanged bootstrap migrations, actionlint for the pinned workflow caller, exact guest-helper provenance, Python syntax and whitespace checks passed. Full-suite sanitizers, other OS versions and production load remain unverified; remote CI completion is reported separately.
+
 ## alpha-0.7.3 — 2026-11-15
 
 Account Model increment, based directly on main `aabe5ddcbc47a4c65a5069b077fd0b5e71a9281c` after the self-hosted CI fix:

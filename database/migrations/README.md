@@ -1,15 +1,15 @@
 # MariaDB migrations
 
-`manifest.json` declares the ordered alpha-0.7.2 catalog. Migration 1 remains the
+`manifest.json` declares the ordered SQL catalog. Migration 1 remains the
 immutable alpha-0.1.8 metadata baseline; migration 2 adds the migration state
-column. CMake validates and embeds exact LF SQL/SHA-256 and installs the manifest
+column; migration 3 adds checked account metadata storage. CMake validates and embeds exact LF SQL/SHA-256 and installs the manifest
 and listed SQL under `share/dc24h/migrations`. Each file is one prepared statement;
 multiple files run in manifest order without splitting on semicolons.
 
 Use `dc24h --config FILE --database-status` for read-only version inspection and
-`--migrate-database` for explicit upgrades; normal startup never migrates. Future
+`--migrate-database` for explicit upgrades; normal startup never migrates. All
 versions 3+ record applying before SQL and refuse replay after partial failure.
 Only the two idempotent bootstrap steps are resumable automatically. Never edit
-an applied migration. No application schema, down migration or automated repair
-is supplied. See [English](../../doc/us/DATABASE_MIGRATIONS.md) and
+an applied migration. The account table is the first application schema. No down migration or automated
+repair is supplied. See [English](../../doc/us/DATABASE_MIGRATIONS.md) and
 [Polish](../../doc/pl/DATABASE_MIGRATIONS.md) for extension/recovery and privileges.

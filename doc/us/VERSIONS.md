@@ -1,6 +1,6 @@
 # Versions
 
-**Current increment — alpha-0.7.3:** [Account Model](ACCOUNT_MODEL.md) adds independent checked persistent-account metadata, bounded NFC UTF-8 names, roles/status, UTC audit times and immutable candidate updates. Live account authentication, persistence and permission mapping remain future stages. CI uses the self-hosted Ubuntu 24.04 runner with pre-provisioned dependencies and no sudo in jobs.
+**Current increment — alpha-0.7.4:** [Account Repository](ACCOUNT_REPOSITORY.md) persists checked account metadata in MariaDB with generated IDs, exact unique names, revisions and transactional conflict detection. Migration v3 adds the account table; credentials, authenticated session binding and WebAdmin account writes remain planned. CI reuses the pinned Proxmox runner workflow from github-runner-v0.1 for disposable Ubuntu 24.04/22.04 clones; provisioning uses its restricted helper and tests run without sudo.
 
 **Current increment — alpha-0.7.2:** [Database Migrations](DATABASE_MIGRATIONS.md) adds an ordered compiled SQL catalog, exact checksums, read-only `--database-status`, preserved v1 upgrade and durable applying/applied history for future non-bootstrap changes. Migrations remain explicit; no application schema or automatic DDL replay.
 
@@ -97,6 +97,7 @@
 | Version | Branch | Scope |
 | --- | --- | --- |
 | alpha-0.7.3 | alpha-0.7.3 | Account Model: checked persistent metadata; authentication and persistence remain planned |
+| alpha-0.7.4 | alpha-0.7.4 | Account Repository: MariaDB storage, exact names and revision conflicts |
 | alpha-0.1.1 | alpha-0.1.1 | Core |
 | alpha-0.1.2 | alpha-0.1.2 | Network |
 | alpha-0.1.3 | alpha-0.1.3 | ADC parser |

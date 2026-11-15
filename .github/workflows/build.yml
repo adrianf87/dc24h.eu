@@ -1,54 +1,34 @@
-name: Build and test dc24h.eu
-on: [push, pull_request]
+name: Check status
+on:
+  push:
+    branches: [main, alpha-0.7.4]
+  pull_request:
+    branches: [main, alpha-0.7.4]
+  workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: dc24h-proxmox-vms-200-201
+  cancel-in-progress: false
 jobs:
-  server:
-    strategy:
-      fail-fast: false
-      max-parallel: 1
-      matrix:
-        build_type: [Debug, Release]
-    runs-on: [self-hosted, Linux, X64, server-747585786, ubuntu-24.04]
-    steps:
-      - uses: actions/checkout@v6
-      - name: Check pre-provisioned server dependencies
-        run: python3 scripts/ci/runner_dependencies.py check server
-      - name: Configure C++20
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DDC24H_REQUIRE_INTEGRATION_TESTS=ON
-      - name: Build
-        run: cmake --build build --parallel 2
-      - name: Test
-        run: ctest --test-dir build --output-on-failure
+  vm200:
+    name: VM 200 - Ubuntu 24.04
+    if: >-
+      github.repository == 'adrianf87/dc24h.eu' &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
+    uses: adrianf87/dc24h.eu/.github/workflows/proxmox-vm.yml@20ca46bd5f297a98bbbbe59604bcb0a041839b6d
+    with:
+      runner: proxmox-worker-2
+      ubuntu: '24.04'
+      cxx: g++
 
-  webadmin:
-    runs-on: [self-hosted, Linux, X64, server-747585786, ubuntu-24.04]
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: webadmin/package-lock.json
-      - name: Check pre-provisioned WebAdmin dependencies
-        run: python3 scripts/ci/runner_dependencies.py check webadmin
-      - name: Build integration server
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF && cmake --build build --parallel 2
-      - name: Install frontend dependencies
-        working-directory: webadmin
-        run: npm ci
-      - name: Typecheck and production build
-        working-directory: webadmin
-        run: npm run build
-      - name: Unit tests
-        working-directory: webadmin
-        run: npm test
-      - name: Install Chromium
-        working-directory: webadmin
-        run: npx playwright install chromium
-      - name: Browser tests
-        working-directory: webadmin
-        run: npm run test:e2e
-      - name: Real C++ API integration
-        working-directory: webadmin
-        run: npm run test:integration -- ../build/dc24h
+  vm201:
+    name: VM 201 - Ubuntu 22.04
+    needs: vm200
+    if: ${{ !cancelled() && needs.vm200.result != 'skipped' }}
+    uses: adrianf87/dc24h.eu/.github/workflows/proxmox-vm.yml@20ca46bd5f297a98bbbbe59604bcb0a041839b6d
+    with:
+      runner: proxmox-worker-3
+      ubuntu: '22.04'
+      cxx: g++-12

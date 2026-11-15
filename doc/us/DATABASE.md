@@ -1,12 +1,12 @@
 # MariaDB — alpha-0.7.2
 
-**Current increment — alpha-0.7.3:** [Account Model](ACCOUNT_MODEL.md) adds independent checked persistent-account metadata, bounded NFC UTF-8 names, roles/status, UTC audit times and immutable candidate updates. Live account authentication, persistence and permission mapping remain future stages. CI uses the self-hosted Ubuntu 24.04 runner with pre-provisioned dependencies and no sudo in jobs.
+**Current increment — alpha-0.7.4:** [Account Repository](ACCOUNT_REPOSITORY.md) persists checked account metadata in MariaDB with generated IDs, exact unique names, revisions and transactional conflict detection. Migration v3 adds the account table; credentials, authenticated session binding and WebAdmin account writes remain planned. CI reuses the pinned Proxmox runner workflow from github-runner-v0.1 for disposable Ubuntu 24.04/22.04 clones; provisioning uses its restricted helper and tests run without sudo.
 
 **Schema versioning — alpha-0.7.2:** [Database Migrations](DATABASE_MIGRATIONS.md) documents the ordered catalog, v1 upgrade, read-only status and partial-failure contract.
 
 **Core delivered in alpha-0.7.1:** [Database Core](DATABASE_CORE.md) adds typed prepared parameters, bounded owning query results, execution metadata, owner-thread enforcement, redacted errors and RAII transactions. The immutable migration-1 baseline and operator setup below remain; dependent native components require rebuilding.
 
-Implemented: optional Connector/C connection, RAII cleanup, bounded timeouts, UTF-8 (`utf8mb4`), prepared statements and an explicit migration-metadata baseline. Accounts, authentication/password hashing, roles, permissions, configuration persistence, bans, administrative records and event persistence remain planned. No hub user passwords are stored yet; a future authentication module must use an audited Argon2id implementation. WebAdmin will use the C++ API rather than direct SQL.
+Implemented: optional Connector/C connection, RAII cleanup, bounded timeouts, UTF-8 (`utf8mb4`), prepared statements and an explicit migration-metadata baseline. Account metadata storage and role/status keys are implemented in [Account Repository](ACCOUNT_REPOSITORY.md). Authentication/password hashing, live role/permission mapping, configuration persistence, bans, administrative records and event persistence remain planned. No hub user passwords are stored yet; a future authentication module must use an audited Argon2id implementation. WebAdmin will use the C++ API rather than direct SQL.
 
 ## Build and configuration
 
@@ -47,7 +47,7 @@ An empty socket and TCP-related keys are rejected. Never expose a local database
 
 ## Explicit schema versioning
 
-`--migrate-database` now applies the ordered compiled catalog through v2, preserving v1's exact checksum and adding the `state` metadata column. `--database-status` reads the current/latest/pending/dirty state without DDL; ordinary startup never migrates. Current bootstrap/upgrade credentials additionally need ALTER. Future non-bootstrap migrations persist `applying` before SQL and refuse automatic replay after partial failure. The full contract, source manifest, checksum format, privilege and operator recovery guidance are in [Database Migrations](DATABASE_MIGRATIONS.md).
+`--migrate-database` now applies the ordered compiled catalog through v3, preserving v1's exact checksum and adding the `state` metadata column and account table. `--database-status` reads the current/latest/pending/dirty state without DDL; ordinary startup never migrates. Current bootstrap/upgrade credentials additionally need ALTER. Future non-bootstrap migrations persist `applying` before SQL and refuse automatic replay after partial failure. The full contract, source manifest, checksum format, privilege and operator recovery guidance are in [Database Migrations](DATABASE_MIGRATIONS.md).
 
 ## Adapter contract
 

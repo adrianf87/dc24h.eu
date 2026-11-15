@@ -86,7 +86,7 @@ void integration(char* argv[]) {
     require(rival.scalar("SELECT GET_LOCK(" + lock_sql + ", 0)") == "1");
     rejects([&] { (void)migrate(connection); });
     require(rival.scalar("SELECT RELEASE_LOCK(" + lock_sql + ")") == "1");
-    require(migrate(connection) == 2);
+    require(migrate(connection) == migration_catalog().size());
     require(migrate(connection) == 0);
     connection.execute("UPDATE dc24h_schema_migrations SET checksum = ? WHERE version=1", {std::string(64, '0')});
     rejects([&] { (void)migrate(connection); });
