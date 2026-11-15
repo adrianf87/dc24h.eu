@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.7.4 LANGUAGES CXX)
+project(dc24h VERSION 0.7.5 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -119,6 +119,13 @@ set_target_properties(dc24h_account_repository PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_account_repository PUBLIC include)
 target_link_libraries(dc24h_account_repository PUBLIC dc24h_accounts dc24h_database)
 target_compile_options(dc24h_account_repository PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+
+add_library(dc24h_registration src/accounts/registration.cpp src/accounts/registration_password.cpp)
+target_compile_features(dc24h_registration PUBLIC cxx_std_20)
+set_target_properties(dc24h_registration PROPERTIES CXX_EXTENSIONS OFF)
+target_include_directories(dc24h_registration PUBLIC include PRIVATE src/accounts)
+target_link_libraries(dc24h_registration PUBLIC dc24h_account_repository PRIVATE OpenSSL::Crypto UTF8Proc::UTF8Proc)
+target_compile_options(dc24h_registration PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 
 add_library(dc24h_api src/api/http.cpp src/api/server.cpp)
 target_compile_features(dc24h_api PUBLIC cxx_std_20)
@@ -719,11 +726,25 @@ if(BUILD_TESTING)
     target_link_libraries(account_repository_tests PRIVATE dc24h_account_repository Threads::Threads)
     target_compile_options(account_repository_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
     set_target_properties(account_repository_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_executable(registration_tests tests/registration_tests.cpp)
+    target_link_libraries(registration_tests PRIVATE dc24h_registration OpenSSL::Crypto Threads::Threads)
+    target_include_directories(registration_tests PRIVATE src/accounts)
+    target_compile_options(registration_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(registration_tests PROPERTIES CXX_EXTENSIONS OFF)
+    target_link_options(registration_tests PRIVATE -Wl,--wrap=RAND_bytes -Wl,--wrap=EVP_PBE_scrypt -Wl,--wrap=OPENSSL_cleanse)
+    add_test(NAME accounts.registration COMMAND registration_tests)
+    set_tests_properties(accounts.registration PROPERTIES TIMEOUT 30)
     find_program(MARIADBD_EXECUTABLE mariadbd PATHS /usr/sbin)
     find_program(MARIADB_INSTALL_DB_EXECUTABLE mariadb-install-db)
     find_program(MARIADB_CLIENT_EXECUTABLE mariadb)
     find_program(MARIADB_ADMIN_EXECUTABLE mariadb-admin)
     if(MARIADBD_EXECUTABLE AND MARIADB_INSTALL_DB_EXECUTABLE AND MARIADB_CLIENT_EXECUTABLE AND MARIADB_ADMIN_EXECUTABLE)
+        add_test(NAME accounts.registration.process COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/database_process_tests.py"
+            "$<TARGET_FILE:dc24h>" "$<TARGET_FILE:database_tests>"
+            --registration-test "$<TARGET_FILE:registration_tests>")
+        set_tests_properties(accounts.registration.process PROPERTIES TIMEOUT 120
+            ENVIRONMENT "PATH=/usr/sbin:/usr/bin:/sbin:/bin:$ENV{PATH}")
         add_test(NAME accounts.repository.process COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/database_process_tests.py"
             "$<TARGET_FILE:dc24h>" "$<TARGET_FILE:database_tests>"

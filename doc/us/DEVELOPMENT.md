@@ -1,6 +1,6 @@
 # Development
 
-**Current increment — alpha-0.7.4:** [Account Repository](ACCOUNT_REPOSITORY.md) persists checked account metadata in MariaDB with generated IDs, exact unique names, revisions and transactional conflict detection. Migration v3 adds the account table; credentials, authenticated session binding and WebAdmin account writes remain planned. CI reuses the pinned Proxmox runner workflow from github-runner-v0.1 for disposable Ubuntu 24.04/22.04 clones; provisioning uses its restricted helper and tests run without sudo.
+**Current increment — alpha-0.7.5:** [Registration](REGISTRATION.md) atomically creates registered/disabled accounts and separately stored, randomly salted OpenSSL scrypt password verifiers. Migration v4 adds credential storage; validated Unicode inputs, fixed KDF costs and rollback prevent partial accounts. Authentication/session grants and public API/WebAdmin registration remain planned. CI retains the pinned Proxmox Ubuntu 24.04/22.04 workflow without merging github-runner-v0.1.
 
 **Current increment — alpha-0.7.2:** [Database Migrations](DATABASE_MIGRATIONS.md) adds an ordered compiled SQL catalog, exact checksums, read-only `--database-status`, preserved v1 upgrade and durable applying/applied history for future non-bootstrap changes. Migrations remain explicit; no application schema or automatic DDL replay.
 

@@ -12,6 +12,11 @@ import time
 
 from api_support import enable_api, fetch_status
 
+REGISTRATION_TEST = None
+if '--registration-test' in sys.argv:
+    index = sys.argv.index('--registration-test')
+    REGISTRATION_TEST = os.path.abspath(sys.argv[index + 1])
+    del sys.argv[index:index + 2]
 ACCOUNT_TEST = None
 if '--account-test' in sys.argv:
     index = sys.argv.index('--account-test')
@@ -108,7 +113,7 @@ def main():
                 result = cli(path, action)
                 require(result.returncode == 0, result.stderr)
                 no_secrets(result)
-            require('version=0 latest=3 pending=3 dirty=no' in cli(path, '--database-status').stdout,
+            require('version=0 latest=4 pending=4 dirty=no' in cli(path, '--database-status').stdout,
                     'Fresh schema status is incorrect')
             require(sql('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema="dc24h"') == '0',
                     'Check command modified schema')
@@ -120,12 +125,35 @@ def main():
                     'Migration checksum differs from SQL source')
             result = cli(path, '--migrate-database')
             require(result.returncode == 0 and 'applied=0' in result.stdout, result.stderr)
-            require('version=3 latest=3 pending=0 dirty=no' in cli(path, '--database-status').stdout,
+            require('version=4 latest=4 pending=0 dirty=no' in cli(path, '--database-status').stdout,
                     'Schema status does not match applied migrations')
             if MIGRATION_TEST:
                 result = run([MIGRATION_TEST, str(db_socket), str(password)])
                 require(result.returncode == 0, result.stderr)
                 no_secrets(result)
+            if REGISTRATION_TEST:
+                sql("CREATE USER 'registration_limited'@'localhost' IDENTIFIED BY PASSWORD '" + native_hash + "';"
+                    "GRANT SELECT ON dc24h.* TO 'registration_limited'@'localhost';"
+                    "GRANT INSERT ON dc24h.dc24h_accounts TO 'registration_limited'@'localhost';")
+                result = run([REGISTRATION_TEST, str(db_socket), str(password)])
+                require(result.returncode == 0, result.stderr)
+                no_secrets(result)
+                require('Registration test password 42!' not in result.stdout + result.stderr and
+                        '$dc24h-scrypt$' not in result.stdout + result.stderr, 'Registration credential leaked')
+                stored = sql("SELECT HEX(c.verifier) FROM dc24h.dc24h_account_credentials c "
+                             "JOIN dc24h.dc24h_accounts a ON a.id=c.account_id "
+                             "WHERE a.name IN ('RegisteredOne','RegisteredTwo') ORDER BY a.name").splitlines()
+                require(len(stored) == 2 and stored[0] != stored[1], 'Independent salts missing')
+                for text in stored:
+                    encoded = bytes.fromhex(text).decode('ascii')
+                    fields = encoded.split('$')
+                    require(len(fields) == 5 and fields[:3] == ['', 'dc24h-scrypt', 'v=1,ln=17,r=8,p=1'],
+                            'Unexpected credential format')
+                    salt, key = map(bytes.fromhex, fields[3:])
+                    require(len(salt) == 32 and len(key) == 32, 'Unexpected credential size')
+                    expected_key = hashlib.scrypt(b'Registration test password 42!', salt=salt, n=131072, r=8, p=1,
+                                                  maxmem=256 * 1024 * 1024, dklen=32)
+                    require(key == expected_key, 'Independent password derivation differs')
             if ACCOUNT_TEST:
                 result = run([ACCOUNT_TEST, str(db_socket), str(password)])
                 require(result.returncode == 0, 'Account test exit=' + str(result.returncode) + ': ' + result.stderr)
@@ -154,16 +182,21 @@ def main():
             result = cli(path, '--migrate-database')
             require(result.returncode == 0 and 'applied=0' in result.stdout, 'Read-only no-op migration failed')
             require(cli(path, '--database-status').returncode == 0, 'Read-only schema inspection failed')
+            if REGISTRATION_TEST:
+                result = run([REGISTRATION_TEST, str(db_socket), str(password), '--readonly'])
+                require(result.returncode == 0, result.stderr)
+                no_secrets(result)
             # A legacy registry requires ALTER; inspection never upgrades it.
-            sql('DROP TABLE dc24h.dc24h_accounts;'
+            sql('DROP TABLE dc24h.dc24h_account_credentials;'
+                'DROP TABLE dc24h.dc24h_accounts;'
                 'DELETE FROM dc24h.dc24h_schema_migrations WHERE version>=2;'
                 'ALTER TABLE dc24h.dc24h_schema_migrations DROP COLUMN state;')
             result = cli(path, '--migrate-database')
             require(result.returncode == 1, 'Upgrade accepted without ALTER privileges'); no_secrets(result)
-            require('version=1 latest=3 pending=2 dirty=no' in cli(path, '--database-status').stdout,
+            require('version=1 latest=4 pending=3 dirty=no' in cli(path, '--database-status').stdout,
                     'Read-only status changed legacy schema')
             config()
-            require('applied=2' in cli(path, '--migrate-database').stdout, 'Legacy upgrade failed')
+            require('applied=3' in cli(path, '--migrate-database').stdout, 'Legacy upgrade failed')
             api_path, api_token = enable_api(path, folder)
             if NCDC:
                 for transport in ([], ['--tls']):
@@ -199,7 +232,7 @@ def main():
             result = cli(path, '--language', 'pl', '--check-database')
             require(result.returncode == 0 and 'Połączenie z bazą' in result.stdout, result.stderr)
             result = cli(path, '--language', 'pl', '--database-status')
-            require(result.returncode == 0 and 'Wersja schematu bazy danych=3' in result.stdout, result.stderr)
+            require(result.returncode == 0 and 'Wersja schematu bazy danych=4' in result.stdout, result.stderr)
             config(db_user='missing_private_user')
             result = cli(path, '--check-database')
             require(result.returncode == 1, 'Missing user accepted'); no_secrets(result)

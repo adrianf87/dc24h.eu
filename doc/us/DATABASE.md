@@ -1,12 +1,12 @@
 # MariaDB — alpha-0.7.2
 
-**Current increment — alpha-0.7.4:** [Account Repository](ACCOUNT_REPOSITORY.md) persists checked account metadata in MariaDB with generated IDs, exact unique names, revisions and transactional conflict detection. Migration v3 adds the account table; credentials, authenticated session binding and WebAdmin account writes remain planned. CI reuses the pinned Proxmox runner workflow from github-runner-v0.1 for disposable Ubuntu 24.04/22.04 clones; provisioning uses its restricted helper and tests run without sudo.
+**Current increment — alpha-0.7.5:** [Registration](REGISTRATION.md) atomically creates registered/disabled accounts and separately stored, randomly salted OpenSSL scrypt password verifiers. Migration v4 adds credential storage; validated Unicode inputs, fixed KDF costs and rollback prevent partial accounts. Authentication/session grants and public API/WebAdmin registration remain planned. CI retains the pinned Proxmox Ubuntu 24.04/22.04 workflow without merging github-runner-v0.1.
 
 **Schema versioning — alpha-0.7.2:** [Database Migrations](DATABASE_MIGRATIONS.md) documents the ordered catalog, v1 upgrade, read-only status and partial-failure contract.
 
 **Core delivered in alpha-0.7.1:** [Database Core](DATABASE_CORE.md) adds typed prepared parameters, bounded owning query results, execution metadata, owner-thread enforcement, redacted errors and RAII transactions. The immutable migration-1 baseline and operator setup below remain; dependent native components require rebuilding.
 
-Implemented: optional Connector/C connection, RAII cleanup, bounded timeouts, UTF-8 (`utf8mb4`), prepared statements and an explicit migration-metadata baseline. Account metadata storage and role/status keys are implemented in [Account Repository](ACCOUNT_REPOSITORY.md). Authentication/password hashing, live role/permission mapping, configuration persistence, bans, administrative records and event persistence remain planned. No hub user passwords are stored yet; a future authentication module must use an audited Argon2id implementation. WebAdmin will use the C++ API rather than direct SQL.
+Implemented: optional Connector/C connection, RAII cleanup, bounded timeouts, UTF-8 (`utf8mb4`), prepared statements and an explicit migration-metadata baseline. Account metadata storage and role/status keys are implemented in [Account Repository](ACCOUNT_REPOSITORY.md). [Registration](REGISTRATION.md) adds separate salted scrypt verifiers using existing OpenSSL and an atomic account/credential transaction. Authentication, live role/permission mapping, configuration persistence, bans, administrative records and event persistence remain planned. Plaintext hub passwords are never stored. WebAdmin will use the C++ API rather than direct SQL.
 
 ## Build and configuration
 
@@ -47,7 +47,7 @@ An empty socket and TCP-related keys are rejected. Never expose a local database
 
 ## Explicit schema versioning
 
-`--migrate-database` now applies the ordered compiled catalog through v3, preserving v1's exact checksum and adding the `state` metadata column and account table. `--database-status` reads the current/latest/pending/dirty state without DDL; ordinary startup never migrates. Current bootstrap/upgrade credentials additionally need ALTER. Future non-bootstrap migrations persist `applying` before SQL and refuse automatic replay after partial failure. The full contract, source manifest, checksum format, privilege and operator recovery guidance are in [Database Migrations](DATABASE_MIGRATIONS.md).
+`--migrate-database` now applies the ordered compiled catalog through v4, preserving v1's exact checksum and adding the `state` metadata column and account/credential tables. `--database-status` reads the current/latest/pending/dirty state without DDL; ordinary startup never migrates. Current bootstrap/upgrade credentials additionally need ALTER. Future non-bootstrap migrations persist `applying` before SQL and refuse automatic replay after partial failure. The full contract, source manifest, checksum format, privilege and operator recovery guidance are in [Database Migrations](DATABASE_MIGRATIONS.md).
 
 ## Adapter contract
 

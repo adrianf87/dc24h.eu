@@ -1,6 +1,6 @@
 # Architektura
 
-**Aktualny etap — alpha-0.7.4:** [Repozytorium kont](ACCOUNT_REPOSITORY.md) zapisuje zweryfikowane metadane kont w MariaDB z generowanymi ID, dokładnymi unikalnymi nazwami, rewizjami i transakcyjnym wykrywaniem konfliktów. Migracja v3 dodaje tabelę kont; poświadczenia, uwierzytelnione powiązanie sesji i zapis kont z WebAdmin pozostają planowane. CI wywołuje przypięty workflow Proxmox z github-runner-v0.1 dla tymczasowych klonów Ubuntu 24.04/22.04; przygotowanie używa ograniczonego helpera, a testy działają bez sudo.
+**Aktualny etap — alpha-0.7.5:** [Rejestracja](REGISTRATION.md) atomowo tworzy konta registered/disabled i osobno przechowywane weryfikatory haseł OpenSSL scrypt z losową solą. Migracja v4 dodaje poświadczenia; walidacja Unicode, stały koszt KDF i rollback zapobiegają częściowym kontom. Uwierzytelnianie sesji i publiczna rejestracja API/WebAdmin pozostają planowane. CI zachowuje przypięty workflow Proxmox Ubuntu 24.04/22.04 bez scalania github-runner-v0.1.
 
 **Aktualny etap — alpha-0.7.2:** [Migracje bazy danych](DATABASE_MIGRATIONS.md) dodają uporządkowany kompilowany katalog SQL, dokładne sumy, odczyt `--database-status`, zachowanie v1 przy aktualizacji i trwały stan applying/applied przyszłych zmian po inicjalizacji. Migracje pozostają jawne; bez schematu aplikacji i automatycznego odtwarzania DDL.
 

@@ -42,6 +42,9 @@ public:
     // Missing or superseded rows report stale, including same-second changes.
     [[nodiscard]] StoredAccount update(const StoredAccount& expected, const Account& replacement);
 private:
+    friend class RegistrationService;
+    // Internal composition point; caller owns rollback and commit. Never public.
+    [[nodiscard]] StoredAccount insert_in_transaction(const NewAccount& account);
     void require_schema();
     database::Connection& connection_;
 };

@@ -124,6 +124,14 @@ StoredAccount AccountRepository::insert(const NewAccount& input) {
     if (!std::holds_alternative<Account>(checked)) { fail(RepositoryErrorKind::invalid_account); }
     require_schema();
     auto transaction = connection_.transaction();
+    auto result = insert_in_transaction(input);
+    transaction.commit();
+    return result;
+}
+StoredAccount AccountRepository::insert_in_transaction(const NewAccount& input) {
+    if (!connection_.in_transaction()) { throw database::Error(database::ErrorKind::transaction,database::Operation::begin); }
+    auto checked = Account::create({1,input.name,input.role,input.status,input.times});
+    if (!std::holds_alternative<Account>(checked)) { fail(RepositoryErrorKind::invalid_account); }
     database::Execution written;
     try {
         written = connection_.execute_prepared(
@@ -135,7 +143,6 @@ StoredAccount AccountRepository::insert(const NewAccount& input) {
     auto saved = Account::create({written.insert_id,input.name,input.role,input.status,input.times});
     if (!std::holds_alternative<Account>(saved)) { fail(RepositoryErrorKind::invalid_record); }
     StoredAccount result{std::get<Account>(std::move(saved)),1};
-    transaction.commit(); // No allocating result construction after commit.
     return result;
 }
 StoredAccount AccountRepository::update(const StoredAccount& expected, const Account& next) {

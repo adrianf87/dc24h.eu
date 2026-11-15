@@ -1,7 +1,8 @@
 # dc24h.eu documentation
 
-alpha-0.7.4: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.7.5: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
+- [Registration — alpha-0.7.5](REGISTRATION.md)
 - [Account Repository — alpha-0.7.4](ACCOUNT_REPOSITORY.md)
 - [Account Model — alpha-0.7.3](ACCOUNT_MODEL.md)
 - [Database Migrations — alpha-0.7.2](DATABASE_MIGRATIONS.md)

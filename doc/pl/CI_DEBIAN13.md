@@ -1,6 +1,6 @@
 # CI na własnych runnerach Proxmox
 
-Workflow alpha-0.7.4 `.github/workflows/build.yml` wywołuje [workflow VM](https://github.com/adrianf87/dc24h.eu/blob/20ca46bd5f297a98bbbbe59604bcb0a041839b6d/.github/workflows/proxmox-vm.yml) z **github-runner-v0.1**, przypięty do `20ca46bd5f297a98bbbbe59604bcb0a041839b6d`. Gałąź rozwojowa powstała z main; nie dodano merge, cherry-pick ani rodzica z gałęzi runnerów. Gałąź źródłowa pozostaje bez zmian.
+Workflow alpha-0.7.5 `.github/workflows/build.yml` wywołuje [workflow VM](https://github.com/adrianf87/dc24h.eu/blob/20ca46bd5f297a98bbbbe59604bcb0a041839b6d/.github/workflows/proxmox-vm.yml) z **github-runner-v0.1**, przypięty do `20ca46bd5f297a98bbbbe59604bcb0a041839b6d`. Gałąź rozwojowa powstała z main; nie dodano merge, cherry-pick ani rodzica z gałęzi runnerów. Gałąź źródłowa pozostaje bez zmian.
 
 | Etykieta runnera | Odpowiedzialność |
 | --- | --- |
@@ -16,7 +16,7 @@ Każde Ubuntu wykonuje C++20 Debug i Release z wymaganymi integracjami MariaDB/A
 
 Wymagane są zainstalowane kontroler hosta i bootstrap gości z gałęzi runnerów. Przypięta [instrukcja infrastruktury](https://github.com/adrianf87/dc24h.eu/blob/20ca46bd5f297a98bbbbe59604bcb0a041839b6d/proxmox-worker/README.md) opisuje instalację, własność klonów, dzierżawy, reaper po sześciu godzinach, naprawę i ponawianie. Nie uruchamiaj źródła równolegle z klonem, nie omijaj kontroli własności i nie ponawiaj samych końcowych zadań po sprzątaniu: używaj **Re-run all jobs**. Sprzątanie zwraca błąd przy nieudanym przygotowaniu, testach lub usuwaniu. PR z forków są wykluczone przed działaniami infrastruktury.
 
-Caller obsługuje push i PR dla `alpha-0.7.4` i `main` oraz ręczne uruchomienie. Filtr main zadziała dopiero po osobno autoryzowanym scaleniu; ten etap nie scala main. Sprawdzenie lokalne:
+Caller obsługuje push i PR dla `alpha-0.7.5` i `main` oraz ręczne uruchomienie. Filtr main zadziała dopiero po osobno autoryzowanym scaleniu; ten etap nie scala main. Sprawdzenie lokalne:
 
 ```sh
 actionlint -config-file .github/actionlint.yaml .github/workflows/build.yml

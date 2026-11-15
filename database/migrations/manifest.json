@@ -2,6 +2,7 @@
   "migrations": [
     { "version": 1, "name": "schema_migrations", "files": ["0001_schema_migrations.sql"] },
     { "version": 2, "name": "migration_state", "files": ["0002_migration_state.sql"] },
-    { "version": 3, "name": "accounts", "files": ["0003_accounts.sql"] }
+    { "version": 3, "name": "accounts", "files": ["0003_accounts.sql"] },
+    { "version": 4, "name": "account_credentials", "files": ["0004_account_credentials.sql"] }
   ]
 }

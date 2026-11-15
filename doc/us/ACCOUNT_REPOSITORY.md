@@ -1,5 +1,7 @@
 # Account Repository — alpha-0.7.4
 
+The original alpha-0.7.4 scope below is retained for history. [Registration](REGISTRATION.md) now composes account and credential inserts in one private transaction; public repository operations still own their transaction.
+
 Based directly on main `5947add6c5b6e318841c612c93b9cb5cf5eae061`. Existing alpha-0.7.1 Database Core, alpha-0.7.2 Migrations and alpha-0.7.3 Account Model are retained.
 
 ## Scope and API

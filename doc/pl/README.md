@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.7.4: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.7.5: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [Rejestracja — alpha-0.7.5](REGISTRATION.md)
 - [Repozytorium kont — alpha-0.7.4](ACCOUNT_REPOSITORY.md)
 - [Model konta — alpha-0.7.3](ACCOUNT_MODEL.md)
 - [Migracje bazy danych — alpha-0.7.2](DATABASE_MIGRATIONS.md)

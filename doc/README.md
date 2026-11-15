@@ -1,5 +1,7 @@
 # dc24h.eu technical documentation
 
+[Registration — alpha-0.7.5](us/REGISTRATION.md) · [PL](pl/REGISTRATION.md)
+
 [Account Repository — alpha-0.7.4](us/ACCOUNT_REPOSITORY.md) · [PL](pl/ACCOUNT_REPOSITORY.md)
 
 [Account Model — alpha-0.7.3](us/ACCOUNT_MODEL.md) · [PL](pl/ACCOUNT_MODEL.md)

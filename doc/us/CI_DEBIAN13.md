@@ -1,6 +1,6 @@
 # Self-hosted Proxmox CI
 
-The alpha-0.7.4 caller `.github/workflows/build.yml` uses the reusable [VM workflow](https://github.com/adrianf87/dc24h.eu/blob/20ca46bd5f297a98bbbbe59604bcb0a041839b6d/.github/workflows/proxmox-vm.yml) from **github-runner-v0.1**, pinned at `20ca46bd5f297a98bbbbe59604bcb0a041839b6d`. The development branch was created from main; no merge, cherry-pick or parent from the runner branch is added. The source runner branch remains unchanged.
+The alpha-0.7.5 caller `.github/workflows/build.yml` uses the reusable [VM workflow](https://github.com/adrianf87/dc24h.eu/blob/20ca46bd5f297a98bbbbe59604bcb0a041839b6d/.github/workflows/proxmox-vm.yml) from **github-runner-v0.1**, pinned at `20ca46bd5f297a98bbbbe59604bcb0a041839b6d`. The development branch was created from main; no merge, cherry-pick or parent from the runner branch is added. The source runner branch remains unchanged.
 
 | Runner label | Responsibility |
 | --- | --- |
@@ -16,7 +16,7 @@ After provisioning, each Ubuntu version runs C++20 Debug and Release with requir
 
 The runner branch's installed host controller and guest bootstrap remain prerequisites. See the pinned [infrastructure instructions](https://github.com/adrianf87/dc24h.eu/blob/20ca46bd5f297a98bbbbe59604bcb0a041839b6d/proxmox-worker/README.md) for setup, clone ownership, leases, six-hour reaper, recovery and rerun rules. Do not start a source VM together with its clone, bypass ownership checks or replay only later jobs after cleanup: use **Re-run all jobs**. Cleanup reports failure if provisioning/tests/deletion fail. Fork PRs are excluded before any infrastructure action.
 
-Pushes and PRs for `alpha-0.7.4` and `main`, plus manual dispatch, trigger the caller. The main filter takes effect only after a separately authorized merge; this increment does not merge main. Validate locally with:
+Pushes and PRs for `alpha-0.7.5` and `main`, plus manual dispatch, trigger the caller. The main filter takes effect only after a separately authorized merge; this increment does not merge main. Validate locally with:
 
 ```sh
 actionlint -config-file .github/actionlint.yaml .github/workflows/build.yml

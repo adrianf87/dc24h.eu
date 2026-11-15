@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.7.4 (Account Repository).**
+**Current development version: alpha-0.7.5 (Registration).**
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.7.5 Registration**: atomic registered/disabled account and salted scrypt verifier creation through a trusted C++ API; bounded Unicode inputs, fixed costs and fault-tested rollback. See [Registration](doc/us/REGISTRATION.md).
 
 - **alpha-0.7.4 Account Repository**: MariaDB account metadata storage, generated IDs, byte-exact unique names, safe row imports and transactional revision checks. See [Account Repository](doc/us/ACCOUNT_REPOSITORY.md).
 
