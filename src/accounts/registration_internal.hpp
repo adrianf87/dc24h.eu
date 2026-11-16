@@ -21,4 +21,7 @@ struct EncodedPassword final {
 };
 void validate_password(std::string_view password);
 void hash_password(std::string_view password, EncodedPassword& output);
+// Strict fixed-cost v1 envelope only. Malformed/unsupported stored parameters
+// fail before any KDF work. Inputs are borrowed; temporary decoded keys are wiped.
+[[nodiscard]] bool verify_password(std::string_view password, std::string_view encoded);
 } // namespace dc24h::accounts::detail

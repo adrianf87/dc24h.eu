@@ -1,5 +1,7 @@
 # Versions
 
+**alpha-0.7.7 Password Security** starts directly from main `75c82eea4d5799460bebe93ed1b6accef175ce25`. It preserves schema v5 and existing Registration/Identity Mapping, adds protected credential checking and updates all release fixtures. The branch is not merged automatically.
+
 **alpha-0.7.6 Identity Mapping** starts from main `d279245e3636d631c159ee8df53623c293fb36e8`. It retains alpha-0.7.1–0.7.5, adds schema v5 and [identity mapping](IDENTITY_MAPPING.md), and runs tests on the single Contabo runner. The numbered branch is not merged automatically.
 
 **Current increment — alpha-0.7.5:** [Registration](REGISTRATION.md) atomically creates registered/disabled accounts and separately stored, randomly salted OpenSSL scrypt password verifiers. Migration v4 adds credential storage; validated Unicode inputs, fixed KDF costs and rollback prevent partial accounts. Authentication/session grants and public API/WebAdmin registration remain planned. CI retains the pinned Proxmox Ubuntu 24.04/22.04 workflow without merging github-runner-v0.1.

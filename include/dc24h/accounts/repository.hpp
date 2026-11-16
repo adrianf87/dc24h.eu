@@ -44,6 +44,7 @@ public:
 private:
     friend class RegistrationService;
     friend class IdentityRepository;
+    friend class PasswordSecurityService;
     // Internal composition point; caller owns rollback and commit. Never public.
     [[nodiscard]] StoredAccount insert_in_transaction(const NewAccount& account);
     void require_schema();

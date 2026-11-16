@@ -27,6 +27,7 @@ public:
     [[nodiscard]] StoredAccount create_account(
         std::string_view name, std::string_view password, Timestamp created_at);
 private:
+    friend class PasswordSecurityService;
     void require_credentials_schema();
     database::Connection& connection_;
 };

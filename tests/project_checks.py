@@ -27,6 +27,13 @@ def check_project(root):
     frontend = (root / "webadmin/src/lib/status.ts").read_text(encoding="utf-8")
     if f'export const WEBADMIN_VERSION = "alpha-{version}";' not in frontend:
         errors.append("WEBADMIN_VERSION differs from CMake project version")
+    # Keep black-box CLI/log/API and browser fixtures on the release version.
+    # Otherwise metadata can pass while the real process tests expect an older build.
+    for name in ("tests/process_tests.py", "tests/logging_process_tests.py", "tests/api_process_tests.py",
+                 "webadmin/tests/fixtures.ts", "webadmin/tests/panel.spec.ts", "webadmin/tests/live-panel.mjs"):
+        versions = set(re.findall(r"alpha-\d+\.\d+\.\d+", (root / name).read_text(encoding="utf-8")))
+        if versions != {f"alpha-{version}"}:
+            errors.append(f"{name}: release version fixtures differ from CMake project version")
 
     us = {p.relative_to(root / "doc/us") for p in (root / "doc/us").rglob("*.md")}
     pl = {p.relative_to(root / "doc/pl") for p in (root / "doc/pl").rglob("*.md")}

@@ -1,5 +1,7 @@
 # Roadmap
 
+**Delivered in alpha-0.7.7:** [Password Security](PASSWORD_SECURITY.md) adds fixed-format, fixed-cost scrypt verification through a trusted read-only C++ service, constant-time key comparison and cleansed owned buffers. A credential match does not activate accounts or admit sessions; public authentication, reset and rehashing remain future stages.
+
 **Delivered in alpha-0.7.6:** [Identity Mapping](IDENTITY_MAPPING.md) adds immutable, unique account/nickname/CID bindings and exact-pair lookup in explicit schema v5. Binding is a trusted management operation; password authentication, session grants and revocation remain future stages. [Contabo CI](CONTABO_CI.md) uses Ubuntu 24.04 and six parallel workers.
 
 **Current increment — alpha-0.7.5:** [Registration](REGISTRATION.md) atomically creates registered/disabled accounts and separately stored, randomly salted OpenSSL scrypt password verifiers. Migration v4 adds credential storage; validated Unicode inputs, fixed KDF costs and rollback prevent partial accounts. Authentication/session grants and public API/WebAdmin registration remain planned. CI retains the pinned Proxmox Ubuntu 24.04/22.04 workflow without merging github-runner-v0.1.

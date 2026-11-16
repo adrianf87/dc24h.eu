@@ -1,5 +1,7 @@
 # Registration — alpha-0.7.5
 
+**Current extension (alpha-0.7.7):** [Password Security](PASSWORD_SECURITY.md) now verifies the existing unchanged v1 credential format through a trusted read-only service. Registration behavior and all SQL migrations remain unchanged. Historical future-work descriptions below refer to the original alpha-0.7.5 scope.
+
 Based directly on main `493e146af8192e0a87288261a9c9548ec2ee66da`, retaining Database Core, Migrations, Account Model and Account Repository. Branch `alpha-0.7.5` is not merged automatically.
 
 ## Contract and scope

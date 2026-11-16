@@ -1,5 +1,7 @@
 # Rejestracja — alpha-0.7.5
 
+**Rozszerzenie alpha-0.7.7:** [Password Security](PASSWORD_SECURITY.md) sprawdza niezmieniony format v1 przez zaufany serwis tylko do odczytu. Rejestracja i migracje SQL pozostają identyczne. Historyczne plany poniżej dotyczą pierwotnego zakresu alpha-0.7.5.
+
 Podstawa: bezpośrednio main `493e146af8192e0a87288261a9c9548ec2ee66da`. Zachowano Database Core, Migracje, Model konta i Repozytorium kont. Gałąź `alpha-0.7.5` nie jest automatycznie scalana.
 
 ## Kontrakt i zakres

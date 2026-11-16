@@ -1,5 +1,18 @@
 # Changelog
 
+## alpha-0.7.7 — 2026-11-16
+
+Password Security, based directly on main `75c82eea4d5799460bebe93ed1b6accef175ce25`. Existing numbered branches are preserved. This branch does not merge to main automatically.
+
+- Add `dc24h_password_security` and a trusted synchronous `PasswordSecurityService::verify(AccountId, password)` returning only matched/mismatch/unavailable. Reuse current account/credential storage checks and require minimal SELECT privileges. Refuse invalid input, caller transactions, wrong threads and incompatible storage. Keep account metadata, credentials and session permissions unchanged; no public endpoint or secret-bearing result.
+- Strictly allowlist the unchanged Registration v1 verifier length, prefix, version, costs, lowercase hex and separators before expensive work. Use existing OpenSSL scrypt with fixed N=131072/r=8/p=1, 32-byte salt/key and 256 MiB provider memory cap. Compare complete derived keys with CRYPTO_memcmp, fail closed on provider errors and expose no weak fallback or production injection.
+- Clean noncopyable decoded salt/key buffers and the service-owned SQL credential cell on ordinary and exceptional exits. Preserve Registration hashing and its buffer erasure. Caller plaintext and library/OS/SQL/backup copies are outside this guarantee; full-operation timing and global concurrent KDF budgets remain caller concerns.
+- Add independent-fixture, malformed-byte/cost, Unicode/whitespace/length, comparator, provider-failure and buffer-cleansing checks, plus private MariaDB tests for real registered records, missing credentials, unchanged metadata, minimal/read-only/denied privileges, thread/transaction gates, foreign-key drift and allocation faults. Normal tests use real production scrypt; only executable-local allocation sweeps replace expensive KDF work.
+- Preserve SQL migration 1–5 bytes and schema v5. Update CMake/WebAdmin/test versions and mirrored US/PL documentation. Extend metadata checks to catch stale CLI/log/API/browser version fixtures. Retain only the single Contabo Ubuntu 24.04 runner, six parallel workers, pinned checkout and branch-specific queues for alpha-0.7.7.
+- Password rotation/reset, adaptive rehashing, breached-password screening, account activation, live authenticated session admission and public API/UI remain future stages. No production deployment or schema migration.
+
+Validation: warning-free targeted Debug builds; all 17 selected CTest suites passed across focused runs (password security, registration, account model/repository/mapping, migrations/catalog, CLI/log/API, metadata and real ncdc ADC/ADCS). Python/shell syntax, actionlint, UTF-8/language parity/local links and whitespace checks passed. A deliberate stale version fixture was rejected by metadata validation. SQL migration files and manifest are byte-for-byte unchanged. Full remote Debug/Release/WebAdmin CI is launched without waiting for completion; its result is not claimed.
+
 ## Main integration — 2026-11-16
 
 Enable the validated Contabo workflow for push and pull_request events on both main and alpha-0.7.6 before the explicitly requested integration. Retain the single Ubuntu 24.04 runner, branch-specific queue groups, pinned checkout and six parallel workers. The complete alpha-0.7.6 run at 669cbd470076708e03fc870ecbb38033e743d6da passed; validate this trigger-only adjustment with actionlint. New CI is not awaited.
