@@ -5,6 +5,7 @@
 #include "dc24h/accounts/repository.hpp"
 #include "dc24h/security/secret_file.hpp"
 #include "registration_internal.hpp"
+#include "adc_storage_internal.hpp"
 #include <openssl/crypto.h>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
@@ -108,6 +109,9 @@ void require_storage(database::Connection& connection) {
     if (fk.rows.size() != 1 || fk.rows[0][0] != "account_id" || fk.rows[0][1] != "dc24h_accounts" || fk.rows[0][2] != "id" || fk.rows[0][3] != "1") { fail(AdcCredentialErrorKind::schema); }
 }
 }
+namespace detail {
+void require_adc_credentials_schema(database::Connection& connection) { require_storage(connection); }
+}
 AdcCredentialError::AdcCredentialError(AdcCredentialErrorKind kind) : std::runtime_error([kind] {
     switch (kind) {
     case AdcCredentialErrorKind::input: return "Invalid ADC credential input";
@@ -136,14 +140,37 @@ std::shared_ptr<const AdcSecretKey> AdcSecretKey::load(const std::string& path) 
 void AdcCredentialService::enroll(AccountId account,std::string_view account_password,std::string_view adc_password,Timestamp time) {
     if (time < 0 || time > max_timestamp) { fail(AdcCredentialErrorKind::input); }
     detail::validate_password(adc_password);
-    if (PasswordSecurityService(connection_).verify(account,account_password) != PasswordVerification::matched) { fail(AdcCredentialErrorKind::proof); }
-    require_storage(connection_);
-    const auto stored = AccountRepository(connection_).find_by_id(account);
+    AccountRepository repository(connection_);
+    const auto stored = repository.find_by_id(account);
     if (!stored || time < stored->account.times().created_at) { fail(AdcCredentialErrorKind::input); }
+    RegistrationService(connection_).require_credentials_schema();
+    require_storage(connection_);
+    struct EraseProof {
+        database::Result& result;
+        ~EraseProof() { for (auto& row : result.rows) { for (auto& cell : row) {
+            if (cell && !cell->empty()) { OPENSSL_cleanse(cell->data(),cell->size()); }
+        } } }
+    };
+    auto captured = connection_.query("SELECT verifier,created_at FROM dc24h_account_credentials WHERE account_id=?",
+        parameters(account.value()),{1,2,192,256});
+    EraseProof erase_captured{captured};
+    if (captured.rows.size() != 1 || captured.rows[0].size() != 2 || !captured.rows[0][0]) { fail(AdcCredentialErrorKind::proof); }
+    const auto credential_time = number<Timestamp>(captured.rows[0][1]);
+    if (credential_time < stored->account.times().created_at || credential_time > stored->account.times().updated_at) { fail(AdcCredentialErrorKind::invalid_record); }
+    try {
+        if (!detail::verify_password(account_password,*captured.rows[0][0])) { fail(AdcCredentialErrorKind::proof); }
+    } catch (const PasswordSecurityError&) { fail(AdcCredentialErrorKind::invalid_record);
+    } catch (const RegistrationError& error) {
+        fail(error.kind() == RegistrationErrorKind::crypto ? AdcCredentialErrorKind::crypto : AdcCredentialErrorKind::input);
+    }
     if (!IdentityRepository(connection_).find_by_account(account)) { fail(AdcCredentialErrorKind::mapping); }
     auto encrypted = seal(key_.bytes_,account,time,adc_password); EraseString erase{encrypted};
     auto transaction = connection_.transaction();
-    if (connection_.query("SELECT id FROM dc24h_accounts WHERE id=? FOR UPDATE",parameters(account.value()),{1,1,20,20}).rows.empty()) { fail(AdcCredentialErrorKind::input); }
+    if (repository.locked_in_transaction(account) != stored) { fail(AdcCredentialErrorKind::conflict); }
+    auto current = connection_.query("SELECT verifier,created_at FROM dc24h_account_credentials WHERE account_id=? FOR UPDATE",
+        parameters(account.value()),{1,2,192,256});
+    EraseProof erase_current{current};
+    if (current.rows != captured.rows) { fail(AdcCredentialErrorKind::proof); }
     try {
         const auto written = connection_.execute_prepared("INSERT INTO dc24h_account_adc_credentials(account_id,secret,created_at) VALUES (?,?,?)",
             parameters(account.value(),database::Bytes(encrypted.begin(),encrypted.end()),time));

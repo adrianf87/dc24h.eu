@@ -45,6 +45,10 @@ private:
     friend class RegistrationService;
     friend class IdentityRepository;
     friend class PasswordSecurityService;
+    friend class AccountManagementService;
+    friend class AdcCredentialService;
+    [[nodiscard]] std::optional<StoredAccount> locked_in_transaction(AccountId id);
+    [[nodiscard]] StoredAccount update_in_transaction(const StoredAccount& expected, const Account& replacement);
     // Internal composition point; caller owns rollback and commit. Never public.
     [[nodiscard]] StoredAccount insert_in_transaction(const NewAccount& account);
     void require_schema();

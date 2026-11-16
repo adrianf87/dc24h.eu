@@ -1,5 +1,7 @@
 # Roles — alpha-0.7.10
 
+**alpha-0.7.11 Account Management:** [trusted password change, disable and reset](ACCOUNT_MANAGEMENT.md) now compose atomic account/credential writes with fresh password proof, revision checks and ADC credential removal. Perform these operations with the hub stopped, then explicitly reenroll/reactivate as appropriate and restart. No live reload, new SQL migration or public management endpoint.
+
 This stage starts from main `4390bd0ab8f4680f4ece63afb1354db66aaff9e9`.
 It activates the existing persisted `registered`, `moderator` and `administrator`
 account roles in authenticated ADC/ADCS sessions. The branch is not merged into
@@ -23,6 +25,8 @@ hub policy, not a protocol claim supplied by the client.
 
 ## Capability matrix
 
+For persistent operations see [Account Management](ACCOUNT_MANAGEMENT.md).
+
 `dc24h_roles` exposes allocation-free `security::allows(Role, Permission)` and
 `security::can_revoke(actor_role, target_role)`. Permission and role enums are
 checked explicitly, without numeric ordering or an allow-by-default fallback.
@@ -31,6 +35,7 @@ checked explicitly, without numeric ordering or an allow-by-default fallback.
 | --- | --- | --- | --- | --- |
 | Send search queries/results | Configured guest policy | Allowed | Allowed | Allowed |
 | Initiate/receive CTM or RCM | Configured guest policy | Allowed | Allowed | Allowed |
+| Persistent password reset/disable for registered/moderator targets | Denied | Denied | Denied | Fresh administrator password proof |
 | Revoke a registered account session | Denied | Denied | Allowed | Allowed |
 | Revoke a moderator session | Denied | Denied | Denied | Allowed |
 | Revoke an administrator session | Denied | Denied | Denied | Denied |
