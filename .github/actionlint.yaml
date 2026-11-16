@@ -1,5 +1,4 @@
 self-hosted-runner:
   labels:
-    - proxmox-worker-1
-    - proxmox-worker-2
-    - proxmox-worker-3
+    - server-747585786
+    - ubuntu-24-04

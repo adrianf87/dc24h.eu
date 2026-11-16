@@ -12,6 +12,11 @@ import time
 
 from api_support import enable_api, fetch_status
 
+IDENTITY_TEST = None
+if '--identity-test' in sys.argv:
+    index = sys.argv.index('--identity-test')
+    IDENTITY_TEST = os.path.abspath(sys.argv[index + 1])
+    del sys.argv[index:index + 2]
 REGISTRATION_TEST = None
 if '--registration-test' in sys.argv:
     index = sys.argv.index('--registration-test')
@@ -113,7 +118,7 @@ def main():
                 result = cli(path, action)
                 require(result.returncode == 0, result.stderr)
                 no_secrets(result)
-            require('version=0 latest=4 pending=4 dirty=no' in cli(path, '--database-status').stdout,
+            require('version=0 latest=5 pending=5 dirty=no' in cli(path, '--database-status').stdout,
                     'Fresh schema status is incorrect')
             require(sql('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema="dc24h"') == '0',
                     'Check command modified schema')
@@ -125,7 +130,7 @@ def main():
                     'Migration checksum differs from SQL source')
             result = cli(path, '--migrate-database')
             require(result.returncode == 0 and 'applied=0' in result.stdout, result.stderr)
-            require('version=4 latest=4 pending=0 dirty=no' in cli(path, '--database-status').stdout,
+            require('version=5 latest=5 pending=0 dirty=no' in cli(path, '--database-status').stdout,
                     'Schema status does not match applied migrations')
             if MIGRATION_TEST:
                 result = run([MIGRATION_TEST, str(db_socket), str(password)])
@@ -154,6 +159,10 @@ def main():
                     expected_key = hashlib.scrypt(b'Registration test password 42!', salt=salt, n=131072, r=8, p=1,
                                                   maxmem=256 * 1024 * 1024, dklen=32)
                     require(key == expected_key, 'Independent password derivation differs')
+            if IDENTITY_TEST:
+                result = run([IDENTITY_TEST, str(db_socket), str(password)])
+                require(result.returncode == 0, result.stderr)
+                no_secrets(result)
             if ACCOUNT_TEST:
                 result = run([ACCOUNT_TEST, str(db_socket), str(password)])
                 require(result.returncode == 0, 'Account test exit=' + str(result.returncode) + ': ' + result.stderr)
@@ -186,17 +195,22 @@ def main():
                 result = run([REGISTRATION_TEST, str(db_socket), str(password), '--readonly'])
                 require(result.returncode == 0, result.stderr)
                 no_secrets(result)
+            if IDENTITY_TEST:
+                result = run([IDENTITY_TEST, str(db_socket), str(password), '--readonly'])
+                require(result.returncode == 0, result.stderr)
+                no_secrets(result)
             # A legacy registry requires ALTER; inspection never upgrades it.
-            sql('DROP TABLE dc24h.dc24h_account_credentials;'
+            sql('DROP TABLE dc24h.dc24h_account_identities;'
+                'DROP TABLE dc24h.dc24h_account_credentials;'
                 'DROP TABLE dc24h.dc24h_accounts;'
                 'DELETE FROM dc24h.dc24h_schema_migrations WHERE version>=2;'
                 'ALTER TABLE dc24h.dc24h_schema_migrations DROP COLUMN state;')
             result = cli(path, '--migrate-database')
             require(result.returncode == 1, 'Upgrade accepted without ALTER privileges'); no_secrets(result)
-            require('version=1 latest=4 pending=3 dirty=no' in cli(path, '--database-status').stdout,
+            require('version=1 latest=5 pending=4 dirty=no' in cli(path, '--database-status').stdout,
                     'Read-only status changed legacy schema')
             config()
-            require('applied=3' in cli(path, '--migrate-database').stdout, 'Legacy upgrade failed')
+            require('applied=4' in cli(path, '--migrate-database').stdout, 'Legacy upgrade failed')
             api_path, api_token = enable_api(path, folder)
             if NCDC:
                 for transport in ([], ['--tls']):
@@ -232,7 +246,7 @@ def main():
             result = cli(path, '--language', 'pl', '--check-database')
             require(result.returncode == 0 and 'Połączenie z bazą' in result.stdout, result.stderr)
             result = cli(path, '--language', 'pl', '--database-status')
-            require(result.returncode == 0 and 'Wersja schematu bazy danych=4' in result.stdout, result.stderr)
+            require(result.returncode == 0 and 'Wersja schematu bazy danych=5' in result.stdout, result.stderr)
             config(db_user='missing_private_user')
             result = cli(path, '--check-database')
             require(result.returncode == 1, 'Missing user accepted'); no_secrets(result)

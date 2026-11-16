@@ -1,5 +1,7 @@
 # Plan rozwoju
 
+**Dostarczono w alpha-0.7.6:** [Identity Mapping](IDENTITY_MAPPING.md) dodaje niezmienne, unikalne przypisania konto/nick/CID i odczyt dokładnej pary w jawnym schemacie v5. To zaufana operacja zarządzania; uwierzytelnianie hasłem, uprawnienia sesji i cofanie przypisań są dalszymi etapami. [Contabo CI](CONTABO_CI.md) używa Ubuntu 24.04 i równoległości 6.
+
 **Aktualny etap — alpha-0.7.5:** [Rejestracja](REGISTRATION.md) atomowo tworzy konta registered/disabled i osobno przechowywane weryfikatory haseł OpenSSL scrypt z losową solą. Migracja v4 dodaje poświadczenia; walidacja Unicode, stały koszt KDF i rollback zapobiegają częściowym kontom. Uwierzytelnianie sesji i publiczna rejestracja API/WebAdmin pozostają planowane. CI zachowuje przypięty workflow Proxmox Ubuntu 24.04/22.04 bez scalania github-runner-v0.1.
 
 **Aktualny etap — alpha-0.7.2:** [Migracje bazy danych](DATABASE_MIGRATIONS.md) dodają uporządkowany kompilowany katalog SQL, dokładne sumy, odczyt `--database-status`, zachowanie v1 przy aktualizacji i trwały stan applying/applied przyszłych zmian po inicjalizacji. Migracje pozostają jawne; bez schematu aplikacji i automatycznego odtwarzania DDL.
