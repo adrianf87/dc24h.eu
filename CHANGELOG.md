@@ -1,5 +1,9 @@
 # Changelog
 
+## Main integration — 2026-11-16
+
+Enable the validated Contabo workflow for push and pull_request events on both main and alpha-0.7.6 before the explicitly requested integration. Retain the single Ubuntu 24.04 runner, branch-specific queue groups, pinned checkout and six parallel workers. The complete alpha-0.7.6 run at 669cbd470076708e03fc870ecbb38033e743d6da passed; validate this trigger-only adjustment with actionlint. New CI is not awaited.
+
 ## alpha-0.7.6 test-version correction — 2026-11-16
 
 - Update the exact CLI version, startup-log and API snapshot expectations from alpha-0.7.5 to alpha-0.7.6. The prior Contabo Debug run passed 188 of 191 CTest suites; these three stale assertions were the only failures. Preserve all assertions, server behavior and six-worker Contabo CI. No branch merge.
