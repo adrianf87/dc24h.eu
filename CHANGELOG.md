@@ -1,5 +1,11 @@
 # Changelog
 
+## Contabo CI repair — 2026-11-16
+
+- Failed alpha-0.7.5/0.7.6 runs stopped in checkout with authenticated Git fetch reporting Repository not found, before application tests. Pin checkout v5 `fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09`, which configures the temporary HTTP authentication header directly and cleans older v6 credential includes. Retain `contents: read` and `persist-credentials: false`; no PAT or persisted credential is introduced. New CI must verify the fetch; completed application tests are not claimed by this repair.
+- Scope the concurrency group by `github.ref`. A shared default concurrency group retained only one pending run and canceled other branches' pending runs even with cancel-in-progress disabled. Branches now queue independently; the single Contabo runner serializes execution. Preserve Ubuntu 24.04 and six parallel build/test workers.
+- Validation: actionlint and structural routing/auth/concurrency checks passed. Full CI is restarted without waiting for completion. No application-source changes or branch merge.
+
 ## alpha-0.7.6 — 2026-11-16
 
 Identity Mapping, based directly on main `d279245e3636d631c159ee8df53623c293fb36e8`. Preserve existing alpha-0.7.1–0.7.5 code and branch history; no automatic merge to main.

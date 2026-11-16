@@ -20,8 +20,9 @@ Build/CTest parallelism, Node test concurrency and Playwright workers are all
 private MariaDB and Apache checks. No supported OS beyond Ubuntu 24.04 is
 claimed tested by this workflow.
 
-The common concurrency group `dc24h-contabo-server-747585786` serializes jobs
-across branches. The single runner also executes one job at a time.
+Concurrency uses `dc24h-contabo-server-747585786-${{ github.ref }}` so separate
+branches do not replace one another's pending run. The single Contabo runner
+serializes jobs. Within a branch, GitHub retains one pending run by default.
 System packages are provisioned administratively through
 `contabo/scripts/dependencies.py`; CI only checks them and never uses sudo.
 Node 22 and user-local Chromium are handled by the workflow. See
@@ -35,3 +36,5 @@ not erase history or cancel previously queued runs.
 
 CI is launched after publishing commits. The requested workflow is not polled
 to completion during this task: a queued/running job is not reported as passed.
+
+Checkout is pinned to v5 `fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09` to use direct temporary HTTP-header authentication following v6 fetch failures on the persistent runner. `persist-credentials: false` removes authentication after checkout. No PAT or increased permission is needed. The new fetch must be verified by CI; this configuration change does not claim completed tests.

@@ -20,8 +20,10 @@ workerów Playwright wynoszą **6**. Wymagane są narzędzia testów integracyjn
 w tym ncdc ADC/ADCS, prywatna MariaDB i Apache. Ten workflow nie potwierdza
 testów innych systemów niż Ubuntu 24.04.
 
-Wspólna grupa `dc24h-contabo-server-747585786` szereguje przebiegi między
-branchami. Pojedynczy runner również wykonuje tylko jedno zadanie naraz.
+Grupa `dc24h-contabo-server-747585786-${{ github.ref }}` jest osobna dla
+każdego brancha, dzięki czemu oczekujące przebiegi różnych branchy nie anulują
+się wzajemnie. Jeden runner Contabo szereguje wykonanie zadań. W obrębie brancha
+GitHub domyślnie zachowuje tylko jeden oczekujący przebieg.
 Administrator przygotowuje pakiety przez `contabo/scripts/dependencies.py`;
 CI tylko je sprawdza i nie używa sudo. Workflow instaluje Node 22 i Chromium
 w katalogu użytkownika. Zobacz [przygotowanie workera](../../contabo/README.md).
@@ -34,3 +36,5 @@ usuwa wyników ani nie anuluje wcześniej zakolejkowanych zadań.
 
 CI startuje po opublikowaniu commitów. Zgodnie z poleceniem nie oczekujemy
 w tym zadaniu na koniec przebiegów; kolejka i trwający test nie oznaczają sukcesu.
+
+Checkout jest przypięty do v5 `fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09`, korzystającego z bezpośredniego tymczasowego nagłówka HTTP, po błędach fetch w v6 na trwałym runnerze. `persist-credentials: false` usuwa uwierzytelnienie po checkout. Nie dodano PAT ani szerszych uprawnień. Nowy fetch wymaga weryfikacji w CI; zmiana konfiguracji nie oznacza ukończonych testów.

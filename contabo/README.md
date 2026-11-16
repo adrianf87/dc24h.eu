@@ -27,3 +27,5 @@ sudo password or NOPASSWD rule. Node 22 is installed by setup-node; Chromium is
 installed for the runner user. Never commit passwords, tokens or runner credentials.
 
 The folder is excluded from source archives and included by normal Git checkout.
+
+Checkout is pinned to v5 `fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09` with `persist-credentials: false` after v6 fetch authentication failures. Concurrency groups include `github.ref`; separate branches queue independently on the single runner. New workflow runs verify checkout; no completed-test result is implied.
