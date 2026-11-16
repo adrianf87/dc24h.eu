@@ -1,5 +1,7 @@
 # ADC Authentication — alpha-0.7.8
 
+**alpha-0.7.10 Roles:** [sprawdzone role kont](ROLES.md) są teraz przypisane do gotowych sesji, nadają uprawnienia Search/Transfers i pozwalają personelowi unieważniać sesje niższych ról. Limity globalne i jawne blokady połączeń nadal obowiązują. Zmiany roli w bazie wymagają restartu; bez nowej migracji SQL i publicznego API administracji.
+
 **alpha-0.7.9 Auth Sessions:** [sesje kont związane z połączeniem](AUTH_SESSIONS.md) dodają atomowe powiązanie przy gotowości, zaufane odczyty według konta i unieważnianie połączenia. Zamykanie natychmiast usuwa uwierzytelnienie. Bez nowej migracji SQL, automatycznych ról i sesji przeglądarkowych. CI korzysta z [runnerów GitHub](GITHUB_CI.md) bez czekania na wynik.
 
 Logowanie kont przez GPA/PAS działa w istniejącym reactorze TCP/TLS. Branch powstał z main `a20abc38e731e9cb94b3fbf73aa080e2ccaf273d`; scalenie wymaga osobnej dyspozycji. Tożsamości nieobecne w katalogu kont nadal mogą logować się jako goście.

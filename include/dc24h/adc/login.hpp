@@ -2,6 +2,7 @@
 
 #include "dc24h/adc/inf.hpp"
 #include "dc24h/adc/authentication.hpp"
+#include "dc24h/security/roles.hpp"
 #include "dc24h/adc/user_login.hpp"
 #include "dc24h/adc/user_list.hpp"
 #include "dc24h/adc/inf_updates.hpp"
@@ -98,6 +99,13 @@ public:
     // closes its transport on the next reactor pass; does not revoke credentials
     // or prevent a fresh GPA/PAS login. No allocations, SQL or automatic grants.
     [[nodiscard]] bool revoke_auth_session(Id id, users::TimePoint now = users::Clock::now()) noexcept;
+    // Role policy only, never bypasses global feature switches, flood budgets or
+    // per-session overrides. Missing/guest/pending/closing lifetimes deny.
+    [[nodiscard]] bool role_allows(Id id, security::Permission permission) const noexcept;
+    // Trusted adapter supplies the ACTUAL transport actor, never a client-chosen
+    // account/SID. Both lifetimes must be ready/authenticated in this hub.
+    [[nodiscard]] bool revoke_auth_session_as(Id actor, Id target,
+        users::TimePoint now = users::Clock::now()) noexcept;
     [[nodiscard]] ConnectionState state(Id id) const;
     [[nodiscard]] std::size_t queued_bytes() const noexcept { return queued_; }
     [[nodiscard]] std::size_t users() const noexcept { return sessions_.identified_users(); }

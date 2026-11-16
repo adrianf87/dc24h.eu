@@ -1,5 +1,7 @@
 # Model konta — alpha-0.7.3
 
+**alpha-0.7.10 Roles:** [sprawdzone role kont](ROLES.md) są teraz przypisane do gotowych sesji, nadają uprawnienia Search/Transfers i pozwalają personelowi unieważniać sesje niższych ról. Limity globalne i jawne blokady połączeń nadal obowiązują. Zmiany roli w bazie wymagają restartu; bez nowej migracji SQL i publicznego API administracji.
+
 Poniżej zachowano historyczny zakres alpha-0.7.3. Zapis wprowadzony w alpha-0.7.4 opisuje [Repozytorium kont](ACCOUNT_REPOSITORY.md).
 
 Etap oparty bezpośrednio na main `aabe5ddcbc47a4c65a5069b077fd0b5e71a9281c`, obejmującym Database Core, Database Migrations i poprawkę CI bez sudo w zadaniach.

@@ -1,5 +1,7 @@
 # Account Model — alpha-0.7.3
 
+**alpha-0.7.10 Roles:** [validated account roles](ROLES.md) now bind to ready authenticated sessions, seed Search/Transfers grants and authorize staff revocation of lower-role sessions. Global limits and explicit connection restrictions still apply. Stored role changes require restart; no new SQL migration or public administration endpoint.
+
 The alpha-0.7.3 delivery scope below is retained for history. See [Account Repository](ACCOUNT_REPOSITORY.md) for persistence delivered in alpha-0.7.4.
 
 Based directly on main `aabe5ddcbc47a4c65a5069b077fd0b5e71a9281c`, including Database Core, Database Migrations and the unprivileged self-hosted CI fix.

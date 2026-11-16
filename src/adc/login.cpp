@@ -42,6 +42,7 @@ struct LoginHub::Peer {
     PasswordChallenge authentication;
     std::optional<std::uint64_t> pending_account;
     std::optional<accounts::AccountId> verified_account;
+    accounts::Role authentication_role{accounts::Role::registered};
     const users::Session& lifecycle;
     std::deque<Frame> output;
     std::size_t offset{0};
@@ -350,9 +351,10 @@ void LoginHub::receive_impl(Id id, const Message& message, chat::FloodClock::tim
                     auto decision = limits_.authentication->prepare(*metadata.field("NI"),cid,peer.lifecycle.transport(),peer.authentication);
                     if (std::holds_alternative<DeniedAuthentication>(decision)) { reject(peer,"223"); return; }
                     if (auto* required = std::get_if<PasswordAuthentication>(&decision)) {
-                        if (required->account_id == 0 || required->account_id > 9223372036854775807ULL || !peer.authentication.pending() ||
+                        if (required->account_id == 0 || required->account_id > 9223372036854775807ULL || accounts::role_key(required->role).empty() || !peer.authentication.pending() ||
                             peer.session.approve_identity(IdentityMode::password_required)) { reject(peer,"210"); return; }
                         peer.pending_account = required->account_id;
+                        peer.authentication_role = required->role;
                         (void)enqueue(peer,std::move(required->challenge),Completion::authentication);
                         return;
                     }
@@ -444,6 +446,15 @@ bool LoginHub::revoke_auth_session(Id id, users::TimePoint now) noexcept {
     if (!auth || sessions_.force_close(auth->session_id,users::CloseCause::authentication_revoked,now)) { return false; }
     (void)search_.forget_searches(auth->session_id);
     return true;
+}
+bool LoginHub::role_allows(Id id, security::Permission permission) const noexcept {
+    const auto auth = authenticated_session(id);
+    return auth && security::allows(auth->role,permission);
+}
+bool LoginHub::revoke_auth_session_as(Id actor, Id target, users::TimePoint now) noexcept {
+    const auto source = authenticated_session(actor), destination = authenticated_session(target);
+    if (actor == target || !source || !destination || now < source->established_at || !security::can_revoke(source->role,destination->role)) { return false; }
+    return revoke_auth_session(target,now);
 }
 void LoginHub::receive_connection(Id id, const Message& message, users::TimePoint now, transfers::Attempt& attempt) {
     auto& peer = *peers_.at(id);
@@ -762,9 +773,15 @@ bool LoginHub::consume(Id id, std::size_t bytes) {
             check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
         }
     } else if (frame.completion == Completion::welcome) {
-        if (user_login_.complete_welcome(peer.lifecycle.id(), peer.session, users::Clock::now(), peer.verified_account)) {
+        if (user_login_.complete_welcome(peer.lifecycle.id(), peer.session, users::Clock::now(), peer.verified_account, peer.authentication_role)) {
             check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
             return false;
+        }
+        if (const auto auth = peer.lifecycle.authentication()) {
+            peer.search_permissions = {security::allows(auth->role,security::Permission::search_queries),
+                                       security::allows(auth->role,security::Permission::search_results)};
+            peer.transfer_permissions = {security::allows(auth->role,security::Permission::initiate_transfers),
+                                         security::allows(auth->role,security::Permission::receive_transfers)};
         }
         peer.verified_account.reset();
         return true;

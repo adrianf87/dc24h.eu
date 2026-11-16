@@ -1,5 +1,17 @@
 # Changelog
 
+## alpha-0.7.10 — 2026-11-16
+
+Roles, based directly on main `4390bd0ab8f4680f4ece63afb1354db66aaff9e9`; no automatic merge.
+
+- Retain validated registered/moderator/administrator roles from MariaDB in the immutable authentication directory and bind them to ready AuthSession records only after correct PAS and the final own-BINF LF. Reject unknown roles without partial readiness; guest/client INF/SUP metadata cannot grant account authority.
+- Add the allocation-free `dc24h_roles` policy module with explicit capability and lower-role revocation checks. Seed existing per-session Search/Transfers grants once on authenticated readiness. Preserve configured guest access, global feature/protocol/flood/capacity gates and explicit per-connection overrides, including across SUP/INF updates. Administrator has no bypass of these gates.
+- Add trusted actor-bound session revocation: moderators may revoke registered sessions; administrators may also revoke moderator sessions. Reject self/equal/higher-role, stale, guest, pending, closing and backwards-time requests. Re-resolve current lifetimes and preserve allocation-free cleanup. No public kick/role-management API or automatic live role reload is exposed.
+- Test the complete capability/hierarchy matrix, ready barriers, invalid roles, explicit policy precedence and revocation under allocation failure. Verify actual MariaDB role loading, immutable/fresh directory snapshots, disabled staff refusal and guest-restricted authenticated Search/Transfers over TCP/TLS; retain real ncdc ADC/ADCS authentication, reconnect, welcome and chat. Existing schema v6, migrations and credentials are unchanged.
+- Update release metadata/fixtures, mirrored US/PL Roles and Auth Sessions documentation, and GitHub-hosted Ubuntu 24.04 branch checks. Retain all available CPU workers through `nproc` and start remote CI without awaiting completion.
+
+Validation on Debian 13: all 197/197 CTest suites passed in both Debug and Release, including real ncdc ADC/ADCS, private MariaDB and Apache. WebAdmin typecheck/production build and 23 Node tests passed. Final builds were warning-free; focused role/credential regressions passed again in both builds. Metadata, documentation UTF-8/language parity/local links, Python syntax, actionlint and whitespace checks passed. Remote CI completion is not awaited. No production deployment, database migration or access-policy change is performed.
+
 ## alpha-0.7.9 — 2026-11-16
 
 Auth Sessions, based directly on main `f39d552c174941effd4b9e18ff83f8515059b8f8`; no automatic merge.

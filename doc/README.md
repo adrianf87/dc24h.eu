@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.7.9.
+Current development version: alpha-0.7.10.
+
+[Roles — alpha-0.7.10](us/ROLES.md) · [PL](pl/ROLES.md)
 
 [Auth Sessions — alpha-0.7.9](us/AUTH_SESSIONS.md) · [PL](pl/AUTH_SESSIONS.md)
 

@@ -26,7 +26,11 @@ private:
 };
 struct GuestAuthentication {};
 struct DeniedAuthentication {};
-struct PasswordAuthentication { std::uint64_t account_id; Message challenge; };
+struct PasswordAuthentication {
+    std::uint64_t account_id;
+    Message challenge;
+    accounts::Role role{accounts::Role::registered};
+};
 using AuthenticationPreparation = std::variant<GuestAuthentication,DeniedAuthentication,PasswordAuthentication>;
 // Immutable trusted startup policy: no SQL, blocking work or password KDF on
 // the reactor. A bounded secret may be decrypted to prepare a Tiger challenge.
