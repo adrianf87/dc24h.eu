@@ -1,5 +1,9 @@
 # Changelog
 
+## Main integration of alpha-0.7.8 — 2026-11-16
+
+Enable main push/PR checks alongside alpha-0.7.8 for the explicitly requested integration. Preserve GPA/PAS account authentication, separate encrypted ADC credentials, external private keys, unchanged scrypt and schema v6. Retain the single Contabo Ubuntu 24.04 runner, six parallel workers, pinned checkout and branch-specific queues. Full alpha-0.7.8 CI passed at a1247d637bc7e0f8ffab96d1ee7a3528f888af0d; actionlint validates this trigger-only adjustment. Newly triggered CI is not awaited.
+
 ## alpha-0.7.8 — 2026-11-16
 
 ADC Authentication, based directly on main `a20abc38e731e9cb94b3fbf73aa080e2ccaf273d`; no automatic merge.
