@@ -1,5 +1,18 @@
 # Changelog
 
+## alpha-0.7.12 — 2026-11-16
+
+Anti-Bruteforce, based directly on main `420715822970698018dd093d16b2f5486b676da1`; no automatic merge.
+
+- Add bounded shared global, canonical source-IP and trusted account-ID token buckets to ADC/ADCS authentication. Charge admitted attempts before their result, including success and abandoned/wrong-password attempts; socket cleanup and reconnects do not refund credit. All roles use the same gates. Guest decisions on an account-enabled hub share the IP/global budget; pure guest hubs retain existing behavior.
+- Check IP/global admission before authentication preparation and account admission before queuing IGPA. Reject depleted budgets and full tracking tables with generic authentication failure, cancel any prepared challenge, and grant no ready session or role. Existing admitted challenges and ready sessions remain valid. No blocking delay, SQL, KDF, persistent ban or account mutation is added to the reactor.
+- Provide validated authentication configuration for IP/account burst and refill window, global attempts per second and independent tracking capacities. Default to 20 IP attempts and 10 account attempts per 60-second refill horizon, 128 global attempts per second and 4096 entries per map. Canonicalize IPv4/mapped IPv6 and equivalent IPv6 spellings, prune only fully recoverable entries, clamp backwards time and preserve conservative charging on later failures. State is process-local and shared across listeners.
+- Add a fixed authentication_limit lifecycle event and reuse the aggregate security_closed API counter without publishing source/account keys, challenges or remaining budgets. Preserve schema v6, password formats, authentication snapshots and existing flood/connection/identity gates.
+- Cover fractional refill, clock extremes, address aliases, independent budgets, bounded tables, allocation failure, reconnect/success semantics and administrator parity in native tests. Exercise real MariaDB-backed TCP/TLS login from distinct source IPs, shared IP/account refusal, fresh-challenge recovery, configuration bounds, aggregate metrics and private logs. Retain real ncdc ADC/ADCS wrong/correct-password, reconnect, welcome and chat regressions.
+- Update release fixtures and mirrored US/PL documentation. Enable alpha-0.7.12 GitHub-hosted Ubuntu 24.04 checks, retaining all available CPU workers through nproc.
+
+Validation on Debian 13: all 199/199 CTest suites passed in Debug and Release, including real ncdc, disposable MariaDB and Apache. The final metric assertion also passed in a focused Debug authentication-process rerun. Final C++ builds were warning-free. WebAdmin typecheck/production build and 23 Node tests passed. Metadata, documentation UTF-8/language parity/local links, Python syntax, actionlint, unchanged migration files and whitespace checks passed. Remote CI is triggered without waiting for completion. No production deployment, account change or database migration is performed.
+
 ## alpha-0.7.11 — 2026-11-16
 
 Account Management, based directly on main `c81c126b082c10833d4f85829c948fd2ee125184`; no automatic merge.

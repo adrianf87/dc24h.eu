@@ -33,12 +33,18 @@ struct LoginHub::Peer {
             }, content);
         }
     };
+    static security::AuthenticationAddress address_key(std::string_view address) {
+        const auto key = security::AuthenticationAddress::parse(address);
+        if (!key) { throw std::invalid_argument("Invalid authentication peer address"); }
+        return *key;
+    }
     Peer(std::shared_ptr<SidPool> pool, std::string_view address, const users::Session& model,
          const std::optional<chat::FloodLimits>& limits, const search::SecuritySettings& search_settings,
          const transfers::SecuritySettings& transfer_settings)
-        : session(std::move(pool), address), lifecycle(model), search_guard(search_settings), search_permissions(search_settings.guests),
+        : session(std::move(pool), address), peer_address(address_key(address)), lifecycle(model), search_guard(search_settings), search_permissions(search_settings.guests),
           transfer_permissions(transfer_settings.guests), transfer_guard(transfer_settings.flood) { if (limits) { anti_flood.emplace(*limits); } }
     ClientSession session;
+    security::AuthenticationAddress peer_address;
     PasswordChallenge authentication;
     std::optional<std::uint64_t> pending_account;
     std::optional<accounts::AccountId> verified_account;
@@ -117,7 +123,7 @@ std::string_view status_description(std::string_view code) noexcept {
 }
 } // namespace
 
-LoginHub::LoginHub(LoginLimits limits) : limits_(limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), search_(sessions_,limits.search.tokens), search_router_(search_), result_router_(search_), transfers_(sessions_,limits.transfers,this), connection_router_(transfers_), status_router_(sessions_), chat_(sessions_), message_router_(chat_,limits.chat), hub_messages_(sessions_), welcome_message_(welcome_packet(limits.welcome_text)), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
+LoginHub::LoginHub(LoginLimits limits) : limits_(limits), authentication_limiter_(limits.authentication_limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), search_(sessions_,limits.search.tokens), search_router_(search_), result_router_(search_), transfers_(sessions_,limits.transfers,this), connection_router_(transfers_), status_router_(sessions_), chat_(sessions_), message_router_(chat_,limits.chat), hub_messages_(sessions_), welcome_message_(welcome_packet(limits.welcome_text)), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
     search::validate_security(limits.search);
     transfers::validate_limits(limits.transfers.flood);
     if (limits.anti_flood) { chat::validate(*limits.anti_flood); }
@@ -348,16 +354,21 @@ void LoginHub::receive_impl(Id id, const Message& message, chat::FloodClock::tim
             if (sessions_.users_full()) { reject(peer,"211",{},"Hub user limit reached"); return; }
             if (limits_.authentication) {
                 try {
+                    if (!authentication_limiter_.admit_ip(peer.peer_address,chat_now)) { limit_authentication(peer); return; }
                     auto decision = limits_.authentication->prepare(*metadata.field("NI"),cid,peer.lifecycle.transport(),peer.authentication);
                     if (std::holds_alternative<DeniedAuthentication>(decision)) { reject(peer,"223"); return; }
                     if (auto* required = std::get_if<PasswordAuthentication>(&decision)) {
                         if (required->account_id == 0 || required->account_id > 9223372036854775807ULL || accounts::role_key(required->role).empty() || !peer.authentication.pending() ||
                             peer.session.approve_identity(IdentityMode::password_required)) { reject(peer,"210"); return; }
+                        if (!authentication_limiter_.admit_account(required->account_id,chat_now)) { limit_authentication(peer); return; }
                         peer.pending_account = required->account_id;
                         peer.authentication_role = required->role;
                         (void)enqueue(peer,std::move(required->challenge),Completion::authentication);
                         return;
                     }
+                } catch (const std::bad_alloc&) {
+                    peer.authentication.cancel();
+                    check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now())); return;
                 } catch (const std::exception&) { reject(peer,"210"); return; }
             }
             if (peer.session.approve_identity(IdentityMode::guest)) { reject(peer, "240"); return; }
@@ -392,6 +403,9 @@ void LoginHub::receive_impl(Id id, const Message& message, chat::FloodClock::tim
         // Transfer handlers remain separate.
         (void)enqueue(peer, make_status(*StatusCode::parse("125"), "Command not implemented", offending));
     }
+}
+void LoginHub::limit_authentication(Peer& peer) {
+    reject(peer,"223",{}, {},users::CloseCause::authentication_limit);
 }
 void LoginHub::complete_login(Peer& peer) {
     std::optional<InitialUserList> welcome;

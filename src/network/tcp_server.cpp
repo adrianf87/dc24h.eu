@@ -38,6 +38,7 @@ constexpr std::array close_events{
     std::pair{Cause::output_limit,Event::output_limit}, std::pair{Cause::security_quota,Event::security_quota},
     std::pair{Cause::negotiation_limit,Event::negotiation_limit}, std::pair{Cause::identity_limit,Event::identity_limit},
     std::pair{Cause::authentication_revoked,Event::authentication_revoked},
+    std::pair{Cause::authentication_limit,Event::authentication_limit},
     std::pair{Cause::close_timeout,Event::close_timeout}, std::pair{Cause::internal_error,Event::socket_error}
 };
 Cause session_cause(Event event) noexcept {
@@ -209,6 +210,7 @@ TcpServer::TcpServer(logging::Logger& logger, Options options)
         throw std::invalid_argument("ADCS needs both TLS certificate and private key with a TLS listener");
     }
     security::validate(options_.security);
+    security::validate(options_.authentication_limits);
     chat::validate_settings(options_.chat);
     search::validate_security(options_.search);
     transfers::validate_limits(options_.transfers.flood);
@@ -311,6 +313,7 @@ void TcpServer::run() {
     login_limits.connections=options_.max_connections;
     login_limits.users=options_.users;
     login_limits.authentication=options_.authentication;
+    login_limits.authentication_limits=options_.authentication_limits;
     adc::LoginHub login(login_limits);
     auto publish_users = [&]() noexcept {
         const auto value = login.sessions().statistics();
@@ -337,7 +340,7 @@ void TcpServer::run() {
     bool accepting = true;
     Clock::time_point resume_accepting{};
 
-    enum class Warning { invalid_frame, connection_limit, idle, tls_failure, handshake_timeout, peer_io, admission_quota, frame_quota, partial_frame, login_timeout, output_timeout, negotiation_limit, identity_limit, session_id_limit, session_limit, count };
+    enum class Warning { invalid_frame, connection_limit, idle, tls_failure, handshake_timeout, peer_io, admission_quota, frame_quota, partial_frame, login_timeout, output_timeout, negotiation_limit, identity_limit, authentication_limit, session_id_limit, session_limit, count };
     std::array<std::optional<Clock::time_point>, static_cast<std::size_t>(Warning::count)> last_warnings{};
     auto warn_once = [&](Warning category, std::string_view message) {
         const auto now = Clock::now();
@@ -599,7 +602,12 @@ void TcpServer::run() {
                         return; // No INF validation/Tiger work on a denied attempt.
                     }
                     const auto before_chat = login.chat_statistics();
+                    const bool was_closing = login.closing(token);
                     login.receive(token, *message);
+                    if (!was_closing && login.session_model(token).terminal_cause() == Cause::authentication_limit) {
+                        security_closed_.fetch_add(1);
+                        warn_once(Warning::authentication_limit,"Authentication attempt limit reached; connection closed");
+                    }
                     const auto after_chat = login.chat_statistics();
                     for (std::size_t i = 0; i < chat::event_names.size(); ++i) {
                         if (before_chat.values[i+1] != after_chat.values[i+1]) {

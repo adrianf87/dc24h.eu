@@ -129,6 +129,14 @@ max_accounts = 1024
 # Registered users require ADCS; plain ADC needs explicit off (unsafe networks).
 require_tls = on
 
+# Authentication attempt token buckets (shared by ADC/ADCS and reconnects).
+attempts_per_ip = 20
+attempts_per_account = 10
+attempts_per_second = 128
+attempt_window_seconds = 60
+max_tracked_attempt_ips = 4096
+max_tracked_attempt_accounts = 4096
+
 [api]
 # Local read-only HTTP API. No TCP listener; disabled by default.
 enabled = off
