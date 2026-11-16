@@ -8,6 +8,7 @@ from pathlib import Path
 import pty
 import select
 import socket
+import ssl
 import sqlite3
 import struct
 import subprocess
@@ -19,7 +20,8 @@ import unittest
 
 from network_process_tests import Hub, BINARY
 from adc_login_process_tests import Peer, pair
-from tls_support import credentials, connect_tls
+from api_support import enable_api, fetch_status
+from tls_support import credentials, connect_tls, tls_endpoint
 
 BASE = Path(sys.argv.pop(1)).resolve()
 KEY = Path(sys.argv.pop(1)).resolve()
@@ -112,6 +114,15 @@ class AuthenticationTests(unittest.TestCase):
     def peer(self, hub, cert, secure=True):
         raw = connect_tls(self, hub, cert) if secure else hub.connect()
         self.addCleanup(raw.close)
+        return Peer(self, raw)
+
+    def source_peer(self, hub, cert, source, secure):
+        endpoint = tls_endpoint(hub) if secure else hub.endpoints[0]
+        raw = socket.create_connection(endpoint, timeout=3, source_address=(source, 0))
+        self.addCleanup(raw.close)
+        if secure:
+            raw = ssl.create_default_context(cafile=cert).wrap_socket(raw, server_hostname='localhost')
+            self.addCleanup(raw.close)
         return Peer(self, raw)
 
     def identify(self, peer, nick=b'RegisteredADC', seed=7):
@@ -223,6 +234,68 @@ class AuthenticationTests(unittest.TestCase):
                 admin.send(b'DCTM ' + admin.sid + b' ' + target.sid + b' ADC/1.0 1511 Disabled')
                 self.assertTrue(admin.line().startswith(b'ISTA 125 Connection\\soperation\\sis\\sdisabled'))
                 blocked.stop()
+
+    def test_attempt_limits_shared_ip_account_and_recovery(self):
+        policies = (
+            ('attempts_per_ip=2\nattempts_per_account=100\n', ('127.0.0.1', '127.0.0.1', '127.0.0.1'), b'RegisteredADC', 7, '127.0.0.2'),
+            ('attempts_per_ip=100\nattempts_per_account=2\n', ('127.0.0.1', '127.0.0.2', '127.0.0.3'), b'ModeratorADC', 12, '127.0.0.3'),
+        )
+        for policy, sources, allowed_nick, allowed_seed, allowed_source in policies:
+            with self.subTest(policy=policy):
+                root, ini, cert = self.config(False, policy='[authentication]\n' + policy +
+                    'attempt_window_seconds=60\nattempts_per_second=100000\n')
+                endpoint, token = enable_api(ini, root)
+                hub = Hub(self, '--config', str(ini), '--log-connections', 'on')
+                for index, source in enumerate(sources):
+                    peer = self.source_peer(hub, cert, source, index != 0)
+                    first = self.identify(peer)
+                    if index < 2:
+                        self.assertTrue(first.startswith(b'IGPA '))
+                        peer.send(b'HPAS ' + response(first[5:], b'Wrong ADC password!'))
+                        self.failed(peer)
+                    else:
+                        # Throttled clients never receive a challenge or user list.
+                        self.assertTrue(first.startswith(b'ISTA 223 '))
+                        self.failed(peer, first)
+                allowed = self.source_peer(hub, cert, allowed_source, True)
+                first = self.identify(allowed, allowed_nick, allowed_seed)
+                self.assertTrue(first.startswith(b'IGPA '))
+                allowed.send(b'HPAS ' + response(first[5:])); self.finish(allowed)
+                self.assertEqual(fetch_status(endpoint, token)['network']['security_closed'], 1)
+                hub.stop()
+                self.assertIn(b'event=authentication_limit', hub.log)
+                self.assertEqual(hub.log.count(b'event=login_ready'), 1)
+                for value in (PASSWORD, b'HPAS', b'IGPA', b'RegisteredADC', b'ModeratorADC', b'127.0.0.2', b'127.0.0.3'):
+                    self.assertNotIn(value, hub.log)
+        hub, _, cert = self.hub(False, '[authentication]\nattempts_per_ip=1\nattempts_per_account=1\n'
+            'attempt_window_seconds=1\nattempts_per_second=100000\n')
+        wrong = self.source_peer(hub, cert, '127.0.0.1', False)
+        challenge = self.identify(wrong); self.assertTrue(challenge.startswith(b'IGPA '))
+        wrong.send(b'HPAS ' + response(challenge[5:], b'Wrong ADC password!')); self.failed(wrong)
+        time.sleep(1.1)
+        recovered = self.source_peer(hub, cert, '127.0.0.1', True)
+        fresh = self.identify(recovered); self.assertTrue(fresh.startswith(b'IGPA '))
+        self.assertNotEqual(fresh, challenge)
+        recovered.send(b'HPAS ' + response(fresh[5:])); self.finish(recovered)
+        hub.stop()
+
+    def test_attempt_limit_configuration_bounds(self):
+        invalid = ('attempts_per_ip=0', 'attempts_per_ip=100001', 'attempts_per_account=0',
+            'attempts_per_account=100001', 'attempts_per_second=0', 'attempts_per_second=100001',
+            'attempt_window_seconds=0', 'attempt_window_seconds=3601', 'max_tracked_attempt_ips=0',
+            'max_tracked_attempt_ips=65537', 'max_tracked_attempt_accounts=0', 'max_tracked_attempt_accounts=65537',
+            'attempts_per_ip=-1', 'attempts_per_account=no', 'attempts_per_ip=2\nattempts_per_ip=3')
+        with tempfile.TemporaryDirectory(prefix='dc24h-auth-limits-') as temp:
+            ini = Path(temp) / 'hub.ini'
+            for setting in invalid:
+                ini.write_text('[authentication]\n' + setting + '\n')
+                result = subprocess.run([BINARY, '--config', str(ini), '--check-config'], capture_output=True, timeout=3)
+                self.assertEqual(result.returncode, 2, setting)
+            ini.write_text('[authentication]\nattempts_per_ip=100000\nattempts_per_account=100000\n'
+                'attempts_per_second=100000\nattempt_window_seconds=3600\n'
+                'max_tracked_attempt_ips=65536\nmax_tracked_attempt_accounts=65536\n')
+            result = subprocess.run([BINARY, '--config', str(ini), '--check-config'], capture_output=True, timeout=3)
+            self.assertEqual(result.returncode, 0)
 
     def test_authenticated_disconnect_requires_fresh_login(self):
         hub, _, cert = self.hub(False)

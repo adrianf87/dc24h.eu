@@ -1,7 +1,8 @@
 # dc24h.eu documentation
 
-alpha-0.7.11: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.7.12: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
+- [Anti-Bruteforce — alpha-0.7.12](ANTI_BRUTEFORCE.md)
 - [Account Management — alpha-0.7.11](ACCOUNT_MANAGEMENT.md)
 - [Roles — alpha-0.7.10](ROLES.md)
 - [Auth Sessions — alpha-0.7.9](AUTH_SESSIONS.md)

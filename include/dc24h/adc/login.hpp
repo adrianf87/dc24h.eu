@@ -3,6 +3,7 @@
 #include "dc24h/adc/inf.hpp"
 #include "dc24h/adc/authentication.hpp"
 #include "dc24h/security/roles.hpp"
+#include "dc24h/security/authentication_limits.hpp"
 #include "dc24h/adc/user_login.hpp"
 #include "dc24h/adc/user_list.hpp"
 #include "dc24h/adc/inf_updates.hpp"
@@ -39,6 +40,7 @@ struct LoginLimits {
     search::SecuritySettings search{};
     transfers::SecuritySettings transfers{};
     std::shared_ptr<const AuthenticationSource> authentication{};
+    security::AuthenticationLimits authentication_limits{};
 };
 enum class CloseReason { login_timeout, idle_timeout, partial_frame_timeout, security_quota, negotiation_limit, identity_limit };
 
@@ -120,6 +122,7 @@ private:
     struct Peer;
     enum class Completion { observe, support, authentication, welcome };
     void complete_login(Peer& peer);
+    void limit_authentication(Peer& peer);
     bool enqueue(Peer& peer, Message message, Completion completion = Completion::observe);
     template<class Packet> bool enqueue_shared(Peer& peer, std::shared_ptr<const Packet> frame);
     void reject(Peer& peer, std::string_view status, std::optional<std::string_view> command = {},
@@ -135,6 +138,7 @@ private:
     void relay(Id except, const Message& message);
     void announce_departure(const Departure& departure);
     LoginLimits limits_;
+    security::AuthenticationLimiter authentication_limiter_;
     std::shared_ptr<SidPool> pool_;
     users::SessionManager sessions_; // Outlives the peers that borrow models.
     search::Core search_;

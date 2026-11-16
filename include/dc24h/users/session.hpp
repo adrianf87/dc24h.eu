@@ -43,7 +43,7 @@ enum class CloseCause {
     tls_read_error, tcp_read_error, socket_error, write_error, shutdown,
     login_timeout, idle_timeout, handshake_timeout, partial_frame_timeout,
     output_timeout, output_limit, security_quota, negotiation_limit,
-    identity_limit, close_timeout, internal_error, authentication_revoked
+    identity_limit, close_timeout, internal_error, authentication_revoked, authentication_limit
 };
 enum class CloseMode { drain, immediate };
 enum class SessionError { invalid_state, backwards_time, invalid_identity, invalid_role };

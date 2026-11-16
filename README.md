@@ -2,11 +2,13 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.7.11 (Account Management).**
+**Current development version: alpha-0.7.12 (Anti-Bruteforce).**
 
 CI on `main`: [GitHub-hosted Ubuntu 24.04 runners](doc/us/GITHUB_CI.md) · [PL](doc/pl/GITHUB_CI.md).
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.7.12 Anti-Bruteforce**: bounded global/IP/account token buckets shared by ADC/ADCS and reconnects, generic refusal, automatic refill and fixed private log events. See [Anti-Bruteforce](doc/us/ANTI_BRUTEFORCE.md).
 
 - **alpha-0.7.11 Account Management**: trusted atomic password change, administrator disable/reset with fresh proof and revision checks, ADC credential invalidation and explicit maintenance restart/reenrollment. See [Account Management](doc/us/ACCOUNT_MANAGEMENT.md).
 

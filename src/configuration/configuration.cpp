@@ -178,6 +178,7 @@ void validate(const Settings& settings) {
         }
     }
     security::validate(net.security);
+    security::validate(net.authentication_limits);
     users::validate(net.users);
     chat::validate_settings(net.chat);
     search::validate_security(net.search);
@@ -422,6 +423,18 @@ Settings load_file(const std::string& filename) {
                 settings.authentication.key_file = resolve_path(value,path.parent_path());
             } else if (section == "authentication" && key == "max_accounts") {
                 settings.authentication.max_accounts = positive_number(value,4096);
+            } else if (section == "authentication" && key == "attempts_per_ip") {
+                settings.network.authentication_limits.attempts_per_ip = positive_number(value,100000);
+            } else if (section == "authentication" && key == "attempts_per_account") {
+                settings.network.authentication_limits.attempts_per_account = positive_number(value,100000);
+            } else if (section == "authentication" && key == "attempts_per_second") {
+                settings.network.authentication_limits.attempts_per_second = positive_number(value,100000);
+            } else if (section == "authentication" && key == "attempt_window_seconds") {
+                settings.network.authentication_limits.window = std::chrono::seconds(positive_number(value,3600));
+            } else if (section == "authentication" && key == "max_tracked_attempt_ips") {
+                settings.network.authentication_limits.max_tracked_ips = positive_number(value,65536);
+            } else if (section == "authentication" && key == "max_tracked_attempt_accounts") {
+                settings.network.authentication_limits.max_tracked_accounts = positive_number(value,65536);
             } else if (section == "authentication" && key == "require_tls") {
                 settings.authentication.require_tls = connection_logging(value);
             } else if (section == "database" && key == "enabled") {

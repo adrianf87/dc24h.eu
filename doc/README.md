@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.7.11.
+Current development version: alpha-0.7.12.
+
+[Anti-Bruteforce — alpha-0.7.12](us/ANTI_BRUTEFORCE.md) · [PL](pl/ANTI_BRUTEFORCE.md)
 
 [Account Management — alpha-0.7.11](us/ACCOUNT_MANAGEMENT.md) · [PL](pl/ACCOUNT_MANAGEMENT.md)
 
