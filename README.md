@@ -2,10 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.7.7 (Password Security).**
+**Current development version: alpha-0.7.8 (ADC Authentication).**
 
 Completed increments (older bullets describe their original delivery scope):
 
+- **alpha-0.7.8 ADC Authentication**: account-backed GPA/PAS, separate AES-256-GCM encrypted ADC passwords with an external private key, unchanged scrypt credentials and ADCS by default. See [ADC Authentication](doc/us/ADC_AUTHENTICATION.md).
 - **alpha-0.7.7 Password Security**: strict fixed-cost verifier decoding, credential checks without secret-bearing results, constant-time key comparison and cleansed owned buffers. See [Password Security](doc/us/PASSWORD_SECURITY.md).
 
 - **alpha-0.7.6 Identity Mapping**: immutable account/nickname/CID bindings in MariaDB, exact-pair resolution, conflict-safe writes and explicit schema v5. See [Identity Mapping](doc/us/IDENTITY_MAPPING.md).

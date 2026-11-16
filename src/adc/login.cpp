@@ -39,6 +39,8 @@ struct LoginHub::Peer {
         : session(std::move(pool), address), lifecycle(model), search_guard(search_settings), search_permissions(search_settings.guests),
           transfer_permissions(transfer_settings.guests), transfer_guard(transfer_settings.flood) { if (limits) { anti_flood.emplace(*limits); } }
     ClientSession session;
+    PasswordChallenge authentication;
+    std::optional<std::uint64_t> account;
     const users::Session& lifecycle;
     std::deque<Frame> output;
     std::size_t offset{0};
@@ -100,6 +102,7 @@ std::string_view status_description(std::string_view code) noexcept {
     if (code == "211") { return "Hub session limit reached"; }
     if (code == "221") { return "Invalid nickname"; }
     if (code == "222") { return "Nickname already in use"; }
+    if (code == "223") { return "Authentication failed"; }
     if (code == "224") { return "Client ID already in use"; }
     if (code == "227") { return "Invalid client identity"; }
     if (code == "243") { return "Required client information missing or invalid"; }
@@ -179,6 +182,7 @@ bool LoginHub::enqueue_shared(Peer& peer, std::shared_ptr<const Packet> frame) {
 }
 void LoginHub::reject(Peer& peer, std::string_view status, std::optional<std::string_view> command,
                       std::string_view description, users::CloseCause cause, users::TimePoint now) {
+    peer.authentication.cancel();
     if (peer.lifecycle.closing() || peer.lifecycle.immediate()) { return; }
     check_model(sessions_.begin_close(peer.lifecycle.id(),cause,now));
     // Keep a possibly partially sent/TLS-pinned front, cancel all later ordinary
@@ -269,6 +273,10 @@ void LoginHub::receive_impl(Id id, const Message& message, chat::FloodClock::tim
         for (const auto& token : message.parameters) {
             const auto field = parse_named_parameter(token);
             if (field && field->name == "NI") {
+                if (before == ConnectionState::normal && limits_.authentication &&
+                    !limits_.authentication->allows_identity(field->value,*peer.session.info()->field("ID"),peer.account)) {
+                    reject(peer,"223"); return;
+                }
                 const auto* found = sessions_.by_nickname(field->value);
                 if (found && found->id().value() != id) { reject(peer, "222"); return; }
             }
@@ -321,6 +329,10 @@ void LoginHub::receive_impl(Id id, const Message& message, chat::FloodClock::tim
     }
     if (before == ConnectionState::protocol && message.kind == Command::sup) {
         (void)enqueue(peer, *peer.session.support().initial_reply(), Completion::support);
+    } else if (before == ConnectionState::verify && message.kind == Command::pas) {
+        if (!peer.account || peer.authentication.verify(message)) { reject(peer,"223"); return; }
+        if (peer.session.approve_password()) { reject(peer,"244"); return; }
+        complete_login(peer);
     } else if (message.kind == Command::inf) {
         const auto& metadata = *peer.session.info();
         const std::string cid(*metadata.field("ID"));
@@ -330,47 +342,21 @@ void LoginHub::receive_impl(Id id, const Message& message, chat::FloodClock::tim
             // The manager enforces this again on registration. Preflight before
             // welcome planning/queueing so a full hub discloses no user list.
             if (sessions_.users_full()) { reject(peer,"211",{},"Hub user limit reached"); return; }
-            // Accounts are not implemented: this release explicitly admits guests.
-            // CID proof is not an account/password/role authentication mechanism.
-            if (peer.session.approve_identity(IdentityMode::guest)) { reject(peer, "240"); return; }
-            std::optional<InitialUserList> welcome;
-            try {
-                const auto available = std::min(limits_.output_per_client - peer.queued, limits_.output_total - queued_);
-                const auto notice_bytes = welcome_message_ ? welcome_message_->wire().size() : 0;
-                if (notice_bytes > available) {
-                    check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::output_limit,users::Clock::now()));
-                    return;
-                }
-                auto result = user_list_.prepare(peer.lifecycle.id(), peer.session,
-                    [this](users::SessionId owner) -> const ClientInfo* {
-                        const auto found = peers_.find(owner.value());
-                        return found != peers_.end() && found->second->session.info() ? &*found->second->session.info() : nullptr;
-                    }, available - notice_bytes);
-                if (const auto* error = std::get_if<UserListError>(&result)) {
-                    const auto cause = *error == UserListError::output_limit ? users::CloseCause::output_limit : users::CloseCause::internal_error;
-                    check_model(sessions_.force_close(peer.lifecycle.id(),cause,users::Clock::now()));
-                    return;
-                }
-                welcome.emplace(std::move(std::get<InitialUserList>(result)));
-                const auto& frames = welcome->frames();
-                for (std::size_t i = 0; i < frames.size(); ++i) {
-                    if (!enqueue(peer, frames[i], i + 1 == frames.size() ? Completion::welcome : Completion::observe)) { return; }
-                }
-                // Client sees its own INF before system chat. Queue before the
-                // registry commit/publication; readiness still ends at own INF.
-                if (welcome_message_ && !enqueue_shared(peer, welcome_message_)) { return; }
-                if (const auto error = user_login_.register_guest(peer.lifecycle.id(), peer.session, users::Clock::now())) {
-                    reject(peer, user_login_status(*error)); return;
-                }
-            } catch (const std::bad_alloc&) {
-                // Welcome planning/queueing and registration failures publish no
-                // user. Preserve pinned output until immediate transport cleanup.
-                check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
-                return;
+            if (limits_.authentication) {
+                try {
+                    auto decision = limits_.authentication->prepare(*metadata.field("NI"),cid,peer.lifecycle.transport(),peer.authentication);
+                    if (std::holds_alternative<DeniedAuthentication>(decision)) { reject(peer,"223"); return; }
+                    if (auto* required = std::get_if<PasswordAuthentication>(&decision)) {
+                        if (required->account_id == 0 || required->account_id > 9223372036854775807ULL || !peer.authentication.pending() ||
+                            peer.session.approve_identity(IdentityMode::password_required)) { reject(peer,"210"); return; }
+                        peer.account = required->account_id;
+                        (void)enqueue(peer,std::move(required->challenge),Completion::authentication);
+                        return;
+                    }
+                } catch (const std::exception&) { reject(peer,"210"); return; }
             }
-            // Publication follows the complete prepared welcome and registry
-            // commit. Subsequent FIFO joins/updates/quits follow own INF.
-            relay(id, welcome->frames().back());
+            if (peer.session.approve_identity(IdentityMode::guest)) { reject(peer, "240"); return; }
+            complete_login(peer);
         }
     } else if (message.kind == Command::msg) {
         if (peer.anti_flood && (message.type == MessageType::broadcast || message.type == MessageType::direct || message.type == MessageType::echo)) {
@@ -401,6 +387,51 @@ void LoginHub::receive_impl(Id id, const Message& message, chat::FloodClock::tim
         // Transfer handlers remain separate.
         (void)enqueue(peer, make_status(*StatusCode::parse("125"), "Command not implemented", offending));
     }
+}
+void LoginHub::complete_login(Peer& peer) {
+    std::optional<InitialUserList> welcome;
+    try {
+        const auto available = std::min(limits_.output_per_client - peer.queued, limits_.output_total - queued_);
+        const auto notice_bytes = welcome_message_ ? welcome_message_->wire().size() : 0;
+        if (notice_bytes > available) {
+            check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::output_limit,users::Clock::now()));
+            return;
+        }
+        auto result = user_list_.prepare(peer.lifecycle.id(), peer.session,
+            [this](users::SessionId owner) -> const ClientInfo* {
+                const auto found = peers_.find(owner.value());
+                return found != peers_.end() && found->second->session.info() ? &*found->second->session.info() : nullptr;
+            }, available - notice_bytes);
+        if (const auto* error = std::get_if<UserListError>(&result)) {
+            const auto cause = *error == UserListError::output_limit ? users::CloseCause::output_limit : users::CloseCause::internal_error;
+            check_model(sessions_.force_close(peer.lifecycle.id(),cause,users::Clock::now()));
+            return;
+        }
+        welcome.emplace(std::move(std::get<InitialUserList>(result)));
+        const auto& frames = welcome->frames();
+        for (std::size_t i = 0; i < frames.size(); ++i) {
+            if (!enqueue(peer, frames[i], i + 1 == frames.size() ? Completion::welcome : Completion::observe)) { return; }
+        }
+        // Client sees its own INF before system chat. Queue before the
+        // registry commit/publication; readiness still ends at own INF.
+        if (welcome_message_ && !enqueue_shared(peer, welcome_message_)) { return; }
+        if (const auto error = user_login_.register_approved(peer.lifecycle.id(), peer.session, users::Clock::now())) {
+            reject(peer, user_login_status(*error)); return;
+        }
+    } catch (const std::bad_alloc&) {
+        // Welcome planning/queueing and registration failures publish no
+        // user. Preserve pinned output until immediate transport cleanup.
+        check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
+        return;
+    }
+    // Publication follows the complete prepared welcome and registry
+    // commit. Subsequent FIFO joins/updates/quits follow own INF.
+    relay(peer.lifecycle.id().value(), welcome->frames().back());
+}
+std::optional<std::uint64_t> LoginHub::authenticated_account(Id id) const {
+    const auto found = peers_.find(id);
+    if (found == peers_.end() || !found->second->lifecycle.ready()) { return {}; }
+    return found->second->account;
 }
 void LoginHub::receive_connection(Id id, const Message& message, users::TimePoint now, transfers::Attempt& attempt) {
     auto& peer = *peers_.at(id);
@@ -714,6 +745,10 @@ bool LoginHub::consume(Id id, std::size_t bytes) {
     if (frame.completion == Completion::support) {
         if (const auto error = peer.session.prepare_sid()) { reject(peer, sid_status_code(*error)); return false; }
         (void)enqueue(peer, *peer.session.sid_reply());
+    } else if (frame.completion == Completion::authentication) {
+        if (!peer.authentication.sent()) {
+            check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
+        }
     } else if (frame.completion == Completion::welcome) {
         if (user_login_.complete_welcome(peer.lifecycle.id(), peer.session, users::Clock::now())) {
             check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));

@@ -1,4 +1,5 @@
 #include "dc24h/adcs/tls.hpp"
+#include "dc24h/accounts/adc_authentication.hpp"
 #include "dc24h/configuration/configuration.hpp"
 #include "dc24h/core/server.hpp"
 #include "dc24h/core/termination_signals.hpp"
@@ -59,6 +60,9 @@ int main(int argc, char* argv[]) {
     }
     if (parsed.check_only) {
         try {
+            if (parsed.settings.authentication.enabled) {
+                (void)dc24h::accounts::AdcSecretKey::load(parsed.settings.authentication.key_file);
+            }
             if (!parsed.settings.network.tls_listeners.empty()) {
                 const dc24h::adcs::Context context(parsed.settings.network.tls_certificate,
                                                    parsed.settings.network.tls_private_key);
@@ -127,6 +131,12 @@ int main(int argc, char* argv[]) {
                 database = std::make_unique<dc24h::database::Connection>(parsed.settings.database);
                 database->ping();
                 logger.info("Database connected");
+            }
+            if (parsed.settings.authentication.enabled) {
+                const auto key = dc24h::accounts::AdcSecretKey::load(parsed.settings.authentication.key_file);
+                parsed.settings.network.authentication = dc24h::accounts::AdcAuthenticationDirectory::load(*database,key,
+                    parsed.settings.authentication.max_accounts,parsed.settings.authentication.require_tls);
+                logger.info("ADC account authentication enabled");
             }
             // Capture owning startup policy before Options moves its strings.
             const auto transfer_settings = parsed.settings.network.transfers;

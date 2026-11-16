@@ -9,7 +9,7 @@ using UserLoginFailure = std::variant<UserLoginError, users::RegistryError, user
 using UserLoginResult = std::optional<UserLoginFailure>;
 [[nodiscard]] std::string_view user_login_status(const UserLoginFailure& error) noexcept;
 
-// One reactor/thread. Bridge from an already validated and guest-approved ADC
+// One reactor/thread. Bridge from an already validated and policy-approved ADC
 // ClientSession to the managed public User. Owns no credentials or user copies.
 // LoginHub stages bounded welcome output before registration, and calls
 // complete_welcome only after the final LF of the own-INF is actually sent.
@@ -21,6 +21,8 @@ public:
     UserLogin(UserLogin&&) = delete;
     UserLogin& operator=(UserLogin&&) = delete;
     [[nodiscard]] UserLoginResult register_guest(users::SessionId id, const ClientSession& client,
+        users::TimePoint now);
+    [[nodiscard]] UserLoginResult register_approved(users::SessionId id, const ClientSession& client,
         users::TimePoint now);
     [[nodiscard]] UserLoginResult complete_welcome(users::SessionId id, const ClientSession& client,
         users::TimePoint now) noexcept;

@@ -13,11 +13,13 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
 
 namespace dc24h::logging { class Logger; }
+namespace dc24h::adc { class AuthenticationSource; }
 
 namespace dc24h::network {
 
@@ -41,6 +43,7 @@ struct Options {
     chat::Settings chat{};
     search::SecuritySettings search{};
     transfers::SecuritySettings transfers{};
+    std::shared_ptr<const adc::AuthenticationSource> authentication{};
 };
 
 struct Statistics {

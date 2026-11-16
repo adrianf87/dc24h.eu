@@ -309,6 +309,7 @@ void TcpServer::run() {
     login_limits.welcome_text = options_.chat.welcome_enabled ? std::optional<std::string>(options_.chat.welcome_message) : std::nullopt;
     login_limits.connections=options_.max_connections;
     login_limits.users=options_.users;
+    login_limits.authentication=options_.authentication;
     adc::LoginHub login(login_limits);
     auto publish_users = [&]() noexcept {
         const auto value = login.sessions().statistics();

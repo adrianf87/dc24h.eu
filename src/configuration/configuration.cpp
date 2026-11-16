@@ -164,6 +164,19 @@ void validate(const Settings& settings) {
     database::validate(settings.database);
     api::validate(settings.api);
     const auto& net = settings.network;
+    if (settings.authentication.enabled && (!settings.database.enabled || settings.authentication.key_file.empty() ||
+        settings.authentication.max_accounts == 0 || settings.authentication.max_accounts > 4096 ||
+        (settings.authentication.require_tls && net.tls_listeners.empty()))) {
+        throw std::invalid_argument("ADC authentication requires database, private key and compatible listeners");
+    }
+    if (!settings.authentication.key_file.empty()) {
+        path_text(settings.authentication.key_file);
+        for (const auto& other : {settings.database.password_file,settings.api.token_file,settings.source_file,net.tls_private_key,net.tls_certificate}) {
+            if (!other.empty() && same_file(settings.authentication.key_file,other)) {
+                throw std::invalid_argument("ADC authentication key must use a separate private file");
+            }
+        }
+    }
     security::validate(net.security);
     users::validate(net.users);
     chat::validate_settings(net.chat);
@@ -186,7 +199,7 @@ void validate(const Settings& settings) {
     if (!settings.source_file.empty()) { path_text(settings.source_file); }
     if (!settings.api.socket_path.empty()) {
         for (const auto& protected_path : {settings.source_file, net.tls_certificate, net.tls_private_key,
-                settings.database.password_file, settings.database.socket, settings.api.token_file, settings.logging.file_path}) {
+                settings.database.password_file, settings.database.socket, settings.api.token_file, settings.logging.file_path, settings.authentication.key_file}) {
             if (!protected_path.empty() && same_file(settings.api.socket_path, protected_path)) {
                 throw std::invalid_argument("API socket cannot target configuration or credential files");
             }
@@ -201,7 +214,7 @@ void validate(const Settings& settings) {
     }
     if (!log.file_path.empty()) {
         path_text(log.file_path);
-        for (const auto& protected_path : {settings.source_file, net.tls_certificate, net.tls_private_key, settings.database.password_file, settings.api.token_file, settings.api.socket_path}) {
+        for (const auto& protected_path : {settings.source_file, net.tls_certificate, net.tls_private_key, settings.database.password_file, settings.api.token_file, settings.api.socket_path, settings.authentication.key_file}) {
             if (!protected_path.empty() && same_file(log.file_path, protected_path)) {
                 throw std::invalid_argument("Log file cannot target configuration or credential files");
             }
@@ -245,7 +258,7 @@ Settings load_file(const std::string& filename) {
                 throw std::invalid_argument("Invalid section at line " + std::to_string(line_number));
             }
             section = trim(std::string_view(text).substr(1, text.size() - 2));
-            if (section != "network" && section != "tls" && section != "logging" && section != "general" && section != "security" && section != "database" && section != "api" && section != "users" && section != "chat" && section != "search" && section != "transfers") {
+            if (section != "network" && section != "tls" && section != "logging" && section != "general" && section != "security" && section != "database" && section != "api" && section != "users" && section != "chat" && section != "search" && section != "transfers" && section != "authentication") {
                 throw std::invalid_argument("Unknown configuration section at line " + std::to_string(line_number));
             }
             continue;
@@ -403,6 +416,14 @@ Settings load_file(const std::string& filename) {
                 settings.api.max_connections = positive_number(value, 128);
             } else if (section == "api" && key == "request_timeout") {
                 settings.api.request_timeout = positive_number(value, 30);
+            } else if (section == "authentication" && key == "enabled") {
+                settings.authentication.enabled = connection_logging(value);
+            } else if (section == "authentication" && key == "key_file") {
+                settings.authentication.key_file = resolve_path(value,path.parent_path());
+            } else if (section == "authentication" && key == "max_accounts") {
+                settings.authentication.max_accounts = positive_number(value,4096);
+            } else if (section == "authentication" && key == "require_tls") {
+                settings.authentication.require_tls = connection_logging(value);
             } else if (section == "database" && key == "enabled") {
                 settings.database.enabled = connection_logging(value);
             } else if (section == "database" && key == "socket") {

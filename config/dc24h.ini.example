@@ -120,6 +120,15 @@ timeout = 5
 # password_file = /etc/dc24h/database.password
 # alpha-0.1.8 supports local Unix sockets only; TCP database transport is deferred.
 
+[authentication]
+# Account-backed GPA/PAS; explicitly migrate schema v6 before enabling.
+enabled = off
+# 32-byte AES key: openssl rand -hex 32. Separate private file, never in SQL/Git.
+# key_file = /etc/dc24h/adc.key
+max_accounts = 1024
+# Registered users require ADCS; plain ADC needs explicit off (unsafe networks).
+require_tls = on
+
 [api]
 # Local read-only HTTP API. No TCP listener; disabled by default.
 enabled = off

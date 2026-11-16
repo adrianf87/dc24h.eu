@@ -1,5 +1,7 @@
 # Plan rozwoju
 
+**alpha-0.7.8:** [ADC Authentication](ADC_AUTHENTICATION.md) wdraża logowanie kont GPA/PAS, osobne hasło ADC szyfrowane AES-256-GCM i prywatny klucz poza bazą, zachowując scrypt. Wymagane są jawna migracja v6, aktywne konto i dokładna para nick/CID; domyślnie obowiązuje ADCS. Zmiany i blokady w katalogu startowym wymagają restartu. Publiczne przygotowanie kont, reset, rotacja i nadawanie ról pozostają kolejnymi etapami. Ten wpis zastępuje wcześniejsze opisy planowanego uwierzytelniania.
+
 **Dostarczono w alpha-0.7.7:** [Password Security](PASSWORD_SECURITY.md) dodaje zaufany serwis C++ tylko do odczytu, ścisły format i stały koszt scrypt, porównanie kluczy w stałym czasie oraz wymazanie własnych buforów. Dopasowanie hasła nie aktywuje konta ani sesji; publiczne logowanie, reset i przeliczanie KDF są kolejnymi etapami.
 
 **Dostarczono w alpha-0.7.6:** [Identity Mapping](IDENTITY_MAPPING.md) dodaje niezmienne, unikalne przypisania konto/nick/CID i odczyt dokładnej pary w jawnym schemacie v5. To zaufana operacja zarządzania; uwierzytelnianie hasłem, uprawnienia sesji i cofanie przypisań są dalszymi etapami. [Contabo CI](CONTABO_CI.md) używa Ubuntu 24.04 i równoległości 6.
