@@ -1,5 +1,10 @@
 # Changelog
 
+## alpha-0.7.6 test-version correction — 2026-11-16
+
+- Update the exact CLI version, startup-log and API snapshot expectations from alpha-0.7.5 to alpha-0.7.6. The prior Contabo Debug run passed 188 of 191 CTest suites; these three stale assertions were the only failures. Preserve all assertions, server behavior and six-worker Contabo CI. No branch merge.
+- Validation: all three affected CTest suites passed locally. Python syntax, release metadata, documentation links/language parity and whitespace checks passed. Restart full remote CI without waiting for completion; no completed Debug/Release/WebAdmin result is claimed.
+
 ## Contabo CI repair — 2026-11-16
 
 - Failed alpha-0.7.5/0.7.6 runs stopped in checkout with authenticated Git fetch reporting Repository not found, before application tests. Pin checkout v5 `fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09`, which configures the temporary HTTP authentication header directly and cleans older v6 credential includes. Retain `contents: read` and `persist-credentials: false`; no PAT or persisted credential is introduced. New CI must verify the fetch; completed application tests are not claimed by this repair.
