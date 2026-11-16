@@ -50,7 +50,8 @@ public:
     [[nodiscard]] MutationResult mark_ready(SessionId id, TimePoint now) noexcept;
     // Trusted authentication adapter only: caller proves PAS before the final
     // own-INF LF. Atomic, no-throw binding plus readiness; never upgrades guests.
-    [[nodiscard]] MutationResult mark_authenticated_ready(SessionId id, accounts::AccountId account, TimePoint now) noexcept;
+    [[nodiscard]] MutationResult mark_authenticated_ready(SessionId id, accounts::AccountId account, TimePoint now,
+        accounts::Role role = accounts::Role::registered) noexcept;
     [[nodiscard]] std::optional<AuthSession> authenticated(SessionId id) const noexcept;
     // Owning ready-only account-filtered pages in lifetime-ID order. A snapshot
     // is historical data; resolve the ID again before authorizing any action.

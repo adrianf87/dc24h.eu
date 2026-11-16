@@ -155,7 +155,7 @@ void AdcCredentialService::enroll(AccountId account,std::string_view account_pas
     transaction.commit();
 }
 struct AdcAuthenticationDirectory::Impl {
-    struct Record { AccountId id; IdentityKey identity; Status status; std::optional<std::string> secret; Timestamp created_at; };
+    struct Record { AccountId id; IdentityKey identity; Role role; Status status; std::optional<std::string> secret; Timestamp created_at; };
     std::shared_ptr<const AdcSecretKey> key;
     bool require_tls;
     std::vector<Record> records;
@@ -192,7 +192,7 @@ std::shared_ptr<const AdcAuthenticationDirectory> AdcAuthenticationDirectory::lo
             if (row[9]) { PlainSecret plain; open(impl->key->bytes_,*AccountId::from_value(id),time,*row[9],plain); }
             const auto index = impl->records.size();
             if (!impl->nicknames.emplace(identity->nickname(),index).second || !impl->cids.emplace(identity->cid().text(),index).second) { fail(AdcCredentialErrorKind::invalid_record); }
-            impl->records.push_back({*AccountId::from_value(id),std::move(*identity),*status,row[9],time}); after = id;
+            impl->records.push_back({*AccountId::from_value(id),std::move(*identity),*role,*status,row[9],time}); after = id;
         }
     }
     transaction.commit();
@@ -208,7 +208,7 @@ adc::AuthenticationPreparation AdcAuthenticationDirectory::prepare(std::string_v
     PlainSecret plain; open(impl_->key->bytes_,record.id,record.created_at,*record.secret,plain);
     auto prepared = challenge.issue(plain.view(),adc::SessionHash::tiger192);
     if (!std::holds_alternative<adc::Message>(prepared)) { fail(AdcCredentialErrorKind::crypto); }
-    return adc::PasswordAuthentication{record.id.value(),std::get<adc::Message>(std::move(prepared))};
+    return adc::PasswordAuthentication{record.id.value(),std::get<adc::Message>(std::move(prepared)),record.role};
 }
 bool AdcAuthenticationDirectory::allows_identity(std::string_view nickname,std::string_view cid,std::optional<std::uint64_t> account) const noexcept {
     const auto nick = impl_->nicknames.find(nickname), client = impl_->cids.find(cid);

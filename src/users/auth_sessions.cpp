@@ -4,13 +4,14 @@
 #include <stdexcept>
 
 namespace dc24h::users {
-Result Session::mark_authenticated_ready(accounts::AccountId account, TimePoint now) noexcept {
+Result Session::mark_authenticated_ready(accounts::AccountId account, TimePoint now, accounts::Role role) noexcept {
+    if (accounts::role_key(role).empty()) { return SessionError::invalid_role; }
     if (const auto error = mark_ready(now)) { return error; }
-    authentication_ = AuthSession{id_,account,transport_,now};
+    authentication_ = AuthSession{id_,account,transport_,now,role};
     return {};
 }
-MutationResult SessionManager::mark_authenticated_ready(SessionId id, accounts::AccountId account, TimePoint now) noexcept {
-    return mutate(id,[=](Session& model) { return model.mark_authenticated_ready(account,now); });
+MutationResult SessionManager::mark_authenticated_ready(SessionId id, accounts::AccountId account, TimePoint now, accounts::Role role) noexcept {
+    return mutate(id,[=](Session& model) { return model.mark_authenticated_ready(account,now,role); });
 }
 std::optional<AuthSession> SessionManager::authenticated(SessionId id) const noexcept {
     const auto* model = find(id);

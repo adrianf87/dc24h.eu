@@ -1,5 +1,7 @@
 # Auth Sessions — alpha-0.7.9
 
+**alpha-0.7.10 Roles:** [sprawdzone role kont](ROLES.md) są teraz przypisane do gotowych sesji, nadają uprawnienia Search/Transfers i pozwalają personelowi unieważniać sesje niższych ról. Limity globalne i jawne blokady połączeń nadal obowiązują. Zmiany roli w bazie wymagają restartu; bez nowej migracji SQL i publicznego API administracji.
+
 Etap powstaje bezpośrednio z main `f39d552c174941effd4b9e18ff83f8515059b8f8`.
 Dodaje sesje uwierzytelnionych kont związane z połączeniem do istniejącego modułu
 Users i adaptera GPA/PAS. Nie scala automatycznie gałęzi z main.
@@ -21,7 +23,7 @@ poleceniem ADC ani tokenem przesyłanym przez sieć.
 
 ## Dane i własność
 
-`AuthSession` jest samodzielną wartością zawierającą cztery pola:
+`AuthSession` jest samodzielną wartością zawierającą pięć pól (rola została dodana w alpha-0.7.10):
 
 | Pole | Znaczenie |
 | --- | --- |
@@ -29,12 +31,13 @@ poleceniem ADC ani tokenem przesyłanym przez sieć.
 | `account_id` | Sprawdzony dodatni `accounts::AccountId` z zakresu signed BIGINT |
 | `transport` | Faktyczny transport `adc` albo `adcs` danego połączenia |
 | `established_at` | Jawny monotoniczny czas gotowości, równy `Timeline::ready` |
+| `role` | Sprawdzona rola konta z katalogu startowego; uprawnienia i hierarchię opisuje [Roles](ROLES.md) |
 
 Jednowątkowy właściciel `SessionManager` przechowuje powiązanie w istniejącym
 obiekcie `Session`. Opcjonalne pole ma stały rozmiar; gotowość, odczyt i usunięcie
 nie alokują pamięci. Pojemność wyznaczają dotychczasowe limity sesji/użytkowników.
 Wartość nie zawiera hasła, wyzwania, odpowiedzi, szyfrogramu, klucza, nazwy konta,
-roli ani publicznego profilu. Czas nie jest znacznikiem UTC bazy i nie aktualizuje
+ani publicznego profilu. Czas nie jest znacznikiem UTC bazy i nie aktualizuje
 `last_login_at`.
 
 `Session::authentication()`, `Snapshot::authentication`,
@@ -79,7 +82,7 @@ zdarzenia i lokalne ID życia połączenia.
 Operacja dotyczy tylko tego połączenia. Nie wyłącza konta, nie zmienia katalogu
 startowego i nie blokuje nowego poprawnego logowania. Zmiany statusu, mapowań
 i danych uwierzytelniających w bazie nadal wymagają restartu. Przeładowanie
-katalogu na żywo, bany kont, automatyczne role, sesje przeglądarkowe, JWT/cookies,
+katalogu na żywo, bany kont, role niestandardowe, sesje przeglądarkowe, JWT/cookies,
 publiczne API unieważniania, trwały zapis aktywnych sesji i nowy absolutny TTL
 pozostają poza etapem. Dotychczasowe limity bezczynności/logowania/zamykania
 nadal działają. Nie ma nowej migracji SQL; schemat v6 i zapis haseł są bez zmian.

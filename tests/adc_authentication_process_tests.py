@@ -85,7 +85,7 @@ class Client:
 
 
 class AuthenticationTests(unittest.TestCase):
-    def config(self, require_tls=True, key=KEY):
+    def config(self, require_tls=True, key=KEY, policy=''):
         folder = tempfile.TemporaryDirectory(prefix='dc24h-adc-auth-')
         self.addCleanup(folder.cleanup)
         root = Path(folder.name)
@@ -102,11 +102,11 @@ class AuthenticationTests(unittest.TestCase):
                        '[authentication]\nenabled=on\nkey_file=' + str(key) + '\nrequire_tls=' +
                        ('on' if require_tls else 'off') + '\n'
                        '[security]\nlogin_timeout=2\nmax_accepts_per_minute=1000\n'
-                       '[chat]\nwelcome_message=Authentication ready.\n')
+                       '[chat]\nwelcome_message=Authentication ready.\n' + policy)
         return root, ini, cert
 
-    def hub(self, require_tls=True):
-        root, ini, cert = self.config(require_tls)
+    def hub(self, require_tls=True, policy=''):
+        root, ini, cert = self.config(require_tls, policy=policy)
         return Hub(self, '--config', str(ini), '--log-connections', 'on'), root, cert
 
     def peer(self, hub, cert, secure=True):
@@ -167,6 +167,62 @@ class AuthenticationTests(unittest.TestCase):
         self.assertEqual(hub.log.count(b'event=login_ready'), 2)
         for value in (PASSWORD, b'HPAS', b'IGPA', b'AuthenticatedChat', b'DC24HADC1', b'$dc24h-scrypt$'):
             self.assertNotIn(value, hub.log)
+
+    def test_role_grants_guest_policy_and_global_switches(self):
+        for secure in (False, True):
+            with self.subTest(secure=secure):
+                hub, _, cert = self.hub(False, '[search]\nguest_queries=off\nguest_results=off\n'
+                    '[transfers]\nguest_initiate=off\nguest_receive=off\n')
+                observer = self.peer(hub, cert, secure)
+                observer.login(b'RoleGuest', 99, welcome=WELCOME)
+                registered = self.peer(hub, cert, secure)
+                first = self.identify(registered)
+                registered.send(b'HPAS ' + response(first[5:])); self.finish(registered)
+                self.assertTrue(observer.line().startswith(b'BINF ' + registered.sid + b' '))
+                moderator = self.peer(hub, cert, secure)
+                first = self.identify(moderator, b'ModeratorADC', 12)
+                moderator.send(b'HPAS ' + response(first[5:])); self.finish(moderator)
+                for peer in (observer, registered):
+                    self.assertTrue(peer.line().startswith(b'BINF ' + moderator.sid + b' '))
+                for source in (observer, registered, moderator):
+                    update = b'BINF ' + source.sid + b' SUTCP4'
+                    source.send(update)
+                    for peer in (observer, registered, moderator): self.assertEqual(peer.line(), update)
+                observer.send(b'HSUP ADOPER')
+                observer.send(b'DSCH ' + observer.sid + b' ' + moderator.sid + b' ANRoleGuest')
+                self.assertTrue(observer.line().startswith(b'ISTA 125 Search\\soperation\\snot\\spermitted'))
+                query = b'DSCH ' + registered.sid + b' ' + moderator.sid + b' ANRolePrivate TORoleToken'
+                registered.send(query); self.assertEqual(moderator.line(), query)
+                result = b'DRES ' + moderator.sid + b' ' + registered.sid + b' FN/file SI0 TR' + b'A'*39 + b' TORoleToken'
+                moderator.send(result); self.assertEqual(registered.line(), result)
+                transfer = b'DCTM ' + registered.sid + b' ' + moderator.sid + b' ADC/1.0 1511 RolePrivateTransfer'
+                registered.send(transfer); self.assertEqual(moderator.line(), transfer)
+                observer.send(b'DCTM ' + observer.sid + b' ' + moderator.sid + b' ADC/1.0 1511 RolePrivateDenied')
+                self.assertTrue(observer.line().startswith(b'ISTA 125 Connection\\soperation\\snot\\spermitted'))
+                # A public role claim is rejected instead of becoming authority.
+                observer.send(b'BINF ' + observer.sid + b' CT4')
+                self.assertTrue(observer.line().startswith(b'ISTA 2'))
+                hub.stop()
+                for value in (PASSWORD, b'HPAS', b'IGPA', b'RolePrivate'):
+                    self.assertNotIn(value, hub.log)
+                blocked, _, blocked_cert = self.hub(False, '[search]\nqueries_enabled=off\n[transfers]\nctm_enabled=off\n')
+                peers = []
+                for nickname, seed in ((b'AdministratorADC', 13), (b'RegisteredADC', 7)):
+                    peer = self.peer(blocked, blocked_cert, secure)
+                    challenge = self.identify(peer, nickname, seed)
+                    peer.send(b'HPAS ' + response(challenge[5:])); self.finish(peer)
+                    for earlier in peers: self.assertTrue(earlier.line().startswith(b'BINF ' + peer.sid + b' '))
+                    peers.append(peer)
+                admin, target = peers
+                for source in peers:
+                    update = b'BINF ' + source.sid + b' SUTCP4'
+                    source.send(update)
+                    for peer in peers: self.assertEqual(peer.line(), update)
+                admin.send(b'DSCH ' + admin.sid + b' ' + target.sid + b' ANDisabled')
+                self.assertTrue(admin.line().startswith(b'ISTA 125 Search\\soperation\\sis\\sdisabled'))
+                admin.send(b'DCTM ' + admin.sid + b' ' + target.sid + b' ADC/1.0 1511 Disabled')
+                self.assertTrue(admin.line().startswith(b'ISTA 125 Connection\\soperation\\sis\\sdisabled'))
+                blocked.stop()
 
     def test_authenticated_disconnect_requires_fresh_login(self):
         hub, _, cert = self.hub(False)

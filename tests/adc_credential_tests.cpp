@@ -40,10 +40,10 @@ std::string cid(unsigned seed) {
     for (std::size_t i = 0; i < pid.size(); ++i) { pid[i] = static_cast<unsigned char>(i+seed); }
     return dc24h::adc::tiger_base32(*dc24h::adc::tiger192(pid));
 }
-StoredAccount create(Connection& c,std::string name,std::string nickname,unsigned seed,bool active = true) {
+StoredAccount create(Connection& c,std::string name,std::string nickname,unsigned seed,bool active = true,Role role = Role::registered) {
     auto account = RegistrationService(c).create_account(name,account_password,42);
-    if (active) {
-        auto changed = account.account.with_access(Role::registered,Status::active,42);
+    if (active || role != Role::registered) {
+        auto changed = account.account.with_access(role,active ? Status::active : Status::disabled,42);
         account = AccountRepository(c).update(account,std::get<Account>(changed));
     }
     (void)IdentityRepository(c).bind(account.account.id(),*IdentityKey::create(nickname,cid(seed)),42);
@@ -52,8 +52,12 @@ StoredAccount create(Connection& c,std::string name,std::string nickname,unsigne
 void integration(const Options& options,const std::string& key_path) {
     Connection c(options); const auto key = AdcSecretKey::load(key_path); AdcCredentialService service(c,*key);
     const auto one = create(c,"AuthAccountOne","RegisteredADC",7);
-    const auto disabled = create(c,"AuthAccountDisabled","DisabledADC",8,false);
+    const auto disabled = create(c,"AuthAccountDisabled","DisabledADC",8,false,Role::administrator);
     const auto absent = create(c,"AuthAccountUnenrolled","MissingADC",9);
+    const auto moderator = create(c,"RoleModeratorAccount","ModeratorADC",12,true,Role::moderator);
+    const auto administrator = create(c,"RoleAdministratorAccount","AdministratorADC",13,true,Role::administrator);
+    service.enroll(moderator.account.id(),account_password,adc_password,42);
+    service.enroll(administrator.account.id(),account_password,adc_password,42);
     service.enroll(one.account.id(),account_password,adc_password,42);
     service.enroll(disabled.account.id(),account_password,adc_password,42);
     auto protected_value = c.scalar("SELECT secret FROM dc24h_account_adc_credentials WHERE account_id=?",{std::to_string(one.account.id().value())});
@@ -74,8 +78,22 @@ void integration(const Options& options,const std::string& key_path) {
       catch (const dc24h::database::Error& error) { require(error.kind() == dc24h::database::ErrorKind::transaction); }
       transaction.rollback(); }
     const auto source = AdcAuthenticationDirectory::load(c,key);
-    { dc24h::adc::PasswordChallenge challenge;
-      require(std::holds_alternative<dc24h::adc::PasswordAuthentication>(source->prepare("RegisteredADC",cid(7),dc24h::users::Transport::adcs,challenge))); }
+    struct Expected { const char* nickname; unsigned seed; Role role; };
+    for (const auto& expected : {Expected{"RegisteredADC",7,Role::registered}, Expected{"ModeratorADC",12,Role::moderator},
+                                Expected{"AdministratorADC",13,Role::administrator}}) {
+        dc24h::adc::PasswordChallenge challenge;
+        const auto prepared = source->prepare(expected.nickname,cid(expected.seed),dc24h::users::Transport::adcs,challenge);
+        require(std::holds_alternative<dc24h::adc::PasswordAuthentication>(prepared));
+        require(std::get<dc24h::adc::PasswordAuthentication>(prepared).role == expected.role);
+    }
+    // Role changes affect only new startup directories, never an existing snapshot.
+    auto downgraded_account = AccountRepository(c).update(moderator,std::get<Account>(moderator.account.with_access(Role::registered,Status::active,43)));
+    { dc24h::adc::PasswordChallenge old_challenge,new_challenge;
+      const auto old = source->prepare("ModeratorADC",cid(12),dc24h::users::Transport::adcs,old_challenge);
+      const auto fresh = AdcAuthenticationDirectory::load(c,key)->prepare("ModeratorADC",cid(12),dc24h::users::Transport::adcs,new_challenge);
+      require(std::get<dc24h::adc::PasswordAuthentication>(old).role == Role::moderator);
+      require(std::get<dc24h::adc::PasswordAuthentication>(fresh).role == Role::registered); }
+    (void)AccountRepository(c).update(downgraded_account,std::get<Account>(downgraded_account.account.with_access(Role::moderator,Status::active,44)));
     for (const auto& pair : {std::pair{"RegisteredADC",cid(8)},std::pair{"OtherNick",cid(7)},std::pair{"DisabledADC",cid(8)},std::pair{"MissingADC",cid(9)}}) {
         dc24h::adc::PasswordChallenge challenge;
         require(std::holds_alternative<dc24h::adc::DeniedAuthentication>(source->prepare(pair.first,pair.second,dc24h::users::Transport::adcs,challenge)));

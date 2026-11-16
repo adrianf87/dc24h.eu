@@ -46,7 +46,7 @@ enum class CloseCause {
     identity_limit, close_timeout, internal_error, authentication_revoked
 };
 enum class CloseMode { drain, immediate };
-enum class SessionError { invalid_state, backwards_time, invalid_identity };
+enum class SessionError { invalid_state, backwards_time, invalid_identity, invalid_role };
 using Result = std::optional<SessionError>;
 
 struct Timeline {
@@ -61,6 +61,7 @@ struct AuthSession {
     accounts::AccountId account_id;
     Transport transport;
     TimePoint established_at;
+    accounts::Role role{accounts::Role::registered};
     friend bool operator==(const AuthSession&, const AuthSession&) = default;
 };
 struct Snapshot {
@@ -112,7 +113,7 @@ public:
     [[nodiscard]] std::optional<AuthSession> authentication() const noexcept { return authentication_; }
 private:
     friend class SessionManager;
-    [[nodiscard]] Result mark_authenticated_ready(accounts::AccountId account, TimePoint now) noexcept;
+    [[nodiscard]] Result mark_authenticated_ready(accounts::AccountId account, TimePoint now, accounts::Role role) noexcept;
     [[nodiscard]] bool valid_time(TimePoint now) const noexcept { return now >= last_; }
     SessionId id_;
     Transport transport_;

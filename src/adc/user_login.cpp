@@ -63,7 +63,7 @@ UserLoginResult UserLogin::register_approved(users::SessionId id, const ClientSe
     // indexes transactionally; failure leaves the model and registry unchanged.
     return promote(sessions_.identify(id, std::move(*user), now));
 }
-UserLoginResult UserLogin::complete_welcome(users::SessionId id, const ClientSession& client, users::TimePoint now, std::optional<accounts::AccountId> account) noexcept {
+UserLoginResult UserLogin::complete_welcome(users::SessionId id, const ClientSession& client, users::TimePoint now, std::optional<accounts::AccountId> account, accounts::Role role) noexcept {
     const auto* model = sessions_.find(id);
     if (!model) { return users::RegistryError::missing; }
     if (model->phase() != users::Phase::identified) { return users::SessionError::invalid_state; }
@@ -73,6 +73,6 @@ UserLoginResult UserLogin::complete_welcome(users::SessionId id, const ClientSes
     if (!identity || identity->sid() != client.sid() ||
         client.info()->field("ID") != identity->cid() ||
         client.info()->field("NI") != identity->nickname()) { return UserLoginError::identity_mismatch; }
-    return promote(account ? sessions_.mark_authenticated_ready(id,*account,now) : sessions_.mark_ready(id,now));
+    return promote(account ? sessions_.mark_authenticated_ready(id,*account,now,role) : sessions_.mark_ready(id,now));
 }
 } // namespace dc24h::adc

@@ -1,5 +1,7 @@
 # Auth Sessions — alpha-0.7.9
 
+**alpha-0.7.10 Roles:** [validated account roles](ROLES.md) now bind to ready authenticated sessions, seed Search/Transfers grants and authorize staff revocation of lower-role sessions. Global limits and explicit connection restrictions still apply. Stored role changes require restart; no new SQL migration or public administration endpoint.
+
 This stage starts directly from main `f39d552c174941effd4b9e18ff83f8515059b8f8`.
 It adds connection-bound authenticated account sessions to the existing Users
 module and GPA/PAS adapter. It does not merge the numbered branch into main.
@@ -22,7 +24,7 @@ not a new ADC command or a wire bearer token.
 
 ## Data and ownership
 
-An `AuthSession` is an owning value with four fields:
+An `AuthSession` is an owning value with five fields (the role is added in alpha-0.7.10):
 
 | Field | Meaning |
 | --- | --- |
@@ -30,11 +32,12 @@ An `AuthSession` is an owning value with four fields:
 | `account_id` | Checked positive signed-BIGINT `accounts::AccountId` |
 | `transport` | Actual `adc` or `adcs` transport of that connection |
 | `established_at` | Explicit steady-clock readiness time, equal to `Timeline::ready` |
+| `role` | Validated startup account role; see [Roles](ROLES.md) for grants and hierarchy |
 
 The single reactor-thread `SessionManager` owns the live association inside the
 existing `Session`. It uses fixed-size optional storage; readiness, lookup and
 removal allocate nothing. Capacity is bounded by the existing session/user limits.
-No password, challenge, response, ciphertext, key, account name, role or public
+No password, challenge, response, ciphertext, key, account name or public
 profile is added to the value. This timestamp is not UTC database metadata and
 never updates `last_login_at`.
 
@@ -83,7 +86,7 @@ The opt-in connection log records only its fixed event and local lifetime ID.
 This operation revokes that connection only. It does not disable an account,
 change the immutable startup directory or block a fresh valid login. Persisted
 account status, mapping and credential changes still require restart. Live
-directory reload, account-wide bans, automatic role grants, browser sessions,
+directory reload, account-wide bans, custom role policies, browser sessions,
 JWT/cookies, a public revocation API, persistence of active sessions and a new
 absolute session TTL are outside this stage. Existing network idle/login/close
 timeouts remain active. No SQL migration is added; schema v6 and credential

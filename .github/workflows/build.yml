@@ -1,9 +1,9 @@
 name: Check status
 on:
   push:
-    branches: [main, alpha-0.7.8, alpha-0.7.9]
+    branches: [main, alpha-0.7.8, alpha-0.7.9, alpha-0.7.10]
   pull_request:
-    branches: [main, alpha-0.7.8, alpha-0.7.9]
+    branches: [main, alpha-0.7.8, alpha-0.7.9, alpha-0.7.10]
   workflow_dispatch:
 permissions:
   contents: read

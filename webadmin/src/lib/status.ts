@@ -2,7 +2,7 @@ import { parseTransfers } from "./transfer-status.ts";
 import type { TransferSnapshot } from "./transfer-status.ts";
 import { parseSearch } from "./search-status.ts";
 import type { SearchSnapshot } from "./search-status.ts";
-export const WEBADMIN_VERSION = "alpha-0.7.9";
+export const WEBADMIN_VERSION = "alpha-0.7.10";
 export interface HubSnapshot {
   api_version: "v1";
   server: {
