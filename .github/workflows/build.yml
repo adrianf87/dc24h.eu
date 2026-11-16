@@ -80,7 +80,7 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Browser tests
         working-directory: webadmin
-        run: npm run test:e2e -- --workers=2 --fully-parallel
+        run: npm run test:e2e -- --workers="$(nproc)" --fully-parallel
       - name: Real C++ API integration
         working-directory: webadmin
         run: npm run test:integration -- ../build/Release/dc24h

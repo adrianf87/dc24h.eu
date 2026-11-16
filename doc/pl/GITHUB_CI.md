@@ -18,8 +18,8 @@ Trzy zadania mogą działać niezależnie:
   `BUILD_TESTING=OFF`; pełne testy C++ wykonuje powyższa macierz. Playwright
   instaluje Chromium i jego zależności systemowe.
 
-Kompilacja C++, CTest i testy Node wykorzystują liczbę CPU runnera; Playwright
-używa dwóch workerów. Testy uruchamiają własne, odizolowane usługi. Pakiety są
+Kompilacja C++, CTest, testy Node i Playwright wykorzystują pełną dostępną
+liczbę CPU runnera (`nproc`) jako liczbę równoległych workerów. Testy uruchamiają własne, odizolowane usługi. Pakiety są
 instalowane przez sudo na jednorazowych maszynach GitHub; kompilacja i testy
 pracują jako użytkownik runnera. Rejestracja własnego runnera, host Contabo
 ani maszyny Proxmox nie są wymagane.
