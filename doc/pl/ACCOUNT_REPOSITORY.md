@@ -1,5 +1,7 @@
 # Repozytorium kont — alpha-0.7.4
 
+**alpha-0.7.11 Account Management:** [zaufana zmiana hasła, wyłączenie i reset](ACCOUNT_MANAGEMENT.md) łączą atomowy zapis konta/haseł ze świeżym potwierdzeniem, rewizją i usunięciem danych ADC. Wykonuj przy zatrzymanym hubie, następnie jawnie zapisz ADC/aktywuj konto według potrzeby i uruchom hub ponownie. Bez przeładowania na żywo, nowej migracji SQL i publicznego API zarządzania.
+
 Poniżej zachowano historyczny zakres alpha-0.7.4. [Rejestracja](REGISTRATION.md) łączy teraz zapis konta i poświadczeń w jednej prywatnej transakcji; publiczne operacje repozytorium nadal zarządzają własną transakcją.
 
 Podstawa: bezpośrednio main `5947add6c5b6e318841c612c93b9cb5cf5eae061`. Zachowano istniejące etapy alpha-0.7.1 Database Core, alpha-0.7.2 Migracje i alpha-0.7.3 Model konta.

@@ -60,6 +60,16 @@ void duplicate(const database::Error& error) {
         fail(RepositoryErrorKind::duplicate);
     }
 }
+void validate_update(const StoredAccount& expected, const Account& next) {
+    const auto& old_times = expected.account.times();
+    const auto& times = next.times();
+    if (!expected.account.valid() || !next.valid() || expected.revision == 0 || expected.revision >= max_revision ||
+        next.id() != expected.account.id() || times.created_at != old_times.created_at ||
+        times.updated_at < old_times.updated_at || (old_times.last_login_at &&
+        (!times.last_login_at || *times.last_login_at < *old_times.last_login_at))) {
+        fail(RepositoryErrorKind::invalid_account);
+    }
+}
 }
 RepositoryError::RepositoryError(RepositoryErrorKind kind)
     : std::runtime_error([kind] {
@@ -145,20 +155,25 @@ StoredAccount AccountRepository::insert_in_transaction(const NewAccount& input) 
     StoredAccount result{std::get<Account>(std::move(saved)),1};
     return result;
 }
+std::optional<StoredAccount> AccountRepository::locked_in_transaction(AccountId id) {
+    if (!connection_.in_transaction()) { throw database::Error(database::ErrorKind::transaction,database::Operation::begin); }
+    return decode(connection_.query(locked,parameters(id.value()),limits));
+}
 StoredAccount AccountRepository::update(const StoredAccount& expected, const Account& next) {
-    const auto& old_times = expected.account.times();
-    const auto& times = next.times();
-    if (!expected.account.valid() || !next.valid() || expected.revision == 0 || expected.revision >= max_revision ||
-        next.id() != expected.account.id() || times.created_at != old_times.created_at ||
-        times.updated_at < old_times.updated_at || (old_times.last_login_at &&
-        (!times.last_login_at || *times.last_login_at < *old_times.last_login_at))) {
-        fail(RepositoryErrorKind::invalid_account);
-    }
-    // Complete the owning return value before any mutation.
-    StoredAccount result{next,expected.revision+1};
+    validate_update(expected,next);
     require_schema();
     auto transaction = connection_.transaction();
-    const auto current = decode(connection_.query(locked,parameters(next.id().value()),limits));
+    auto result = update_in_transaction(expected,next);
+    transaction.commit();
+    return result;
+}
+StoredAccount AccountRepository::update_in_transaction(const StoredAccount& expected, const Account& next) {
+    if (!connection_.in_transaction()) { throw database::Error(database::ErrorKind::transaction,database::Operation::begin); }
+    validate_update(expected,next);
+    const auto& times = next.times();
+    // Complete the owning return value before any mutation.
+    StoredAccount result{next,expected.revision+1};
+    const auto current = locked_in_transaction(next.id());
     if (!current || *current != expected) { fail(RepositoryErrorKind::stale); }
     database::Execution written;
     try {
@@ -168,7 +183,6 @@ StoredAccount AccountRepository::update(const StoredAccount& expected, const Acc
              times.updated_at,login(times),next.id().value(),expected.revision));
     } catch (const database::Error& error) { duplicate(error); throw; }
     if (written.affected_rows != 1) { fail(RepositoryErrorKind::stale); }
-    transaction.commit();
     return result;
 }
 } // namespace dc24h::accounts

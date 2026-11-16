@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.7.10 LANGUAGES CXX)
+project(dc24h VERSION 0.7.11 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -154,6 +154,13 @@ set_target_properties(dc24h_account_authentication PROPERTIES CXX_EXTENSIONS OFF
 target_include_directories(dc24h_account_authentication PUBLIC include PRIVATE src/accounts)
 target_link_libraries(dc24h_account_authentication PUBLIC dc24h_identity_mapping dc24h_password_security PRIVATE OpenSSL::Crypto dc24h_security)
 target_compile_options(dc24h_account_authentication PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+
+add_library(dc24h_account_management src/accounts/management.cpp)
+target_compile_features(dc24h_account_management PUBLIC cxx_std_20)
+set_target_properties(dc24h_account_management PROPERTIES CXX_EXTENSIONS OFF)
+target_include_directories(dc24h_account_management PUBLIC include PRIVATE src/accounts)
+target_link_libraries(dc24h_account_management PUBLIC dc24h_account_authentication dc24h_roles PRIVATE OpenSSL::Crypto)
+target_compile_options(dc24h_account_management PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 
 add_library(dc24h_api src/api/http.cpp src/api/server.cpp)
 target_compile_features(dc24h_api PUBLIC cxx_std_20)
@@ -771,6 +778,11 @@ if(BUILD_TESTING)
     target_compile_options(registration_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
     set_target_properties(registration_tests PROPERTIES CXX_EXTENSIONS OFF)
     target_link_options(registration_tests PRIVATE -Wl,--wrap=RAND_bytes -Wl,--wrap=EVP_PBE_scrypt -Wl,--wrap=OPENSSL_cleanse)
+    add_executable(account_management_tests tests/account_management_tests.cpp)
+    target_link_libraries(account_management_tests PRIVATE dc24h_account_management OpenSSL::Crypto Threads::Threads)
+    target_include_directories(account_management_tests PRIVATE src/accounts)
+    target_compile_options(account_management_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    target_link_options(account_management_tests PRIVATE -Wl,--wrap=RAND_bytes -Wl,--wrap=EVP_PBE_scrypt -Wl,--wrap=OPENSSL_cleanse)
     add_executable(adc_credential_tests tests/adc_credential_tests.cpp)
     target_link_libraries(adc_credential_tests PRIVATE dc24h_account_authentication OpenSSL::Crypto)
     target_compile_options(adc_credential_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
@@ -802,6 +814,12 @@ if(BUILD_TESTING)
     find_program(MARIADB_CLIENT_EXECUTABLE mariadb)
     find_program(MARIADB_ADMIN_EXECUTABLE mariadb-admin)
     if(MARIADBD_EXECUTABLE AND MARIADB_INSTALL_DB_EXECUTABLE AND MARIADB_CLIENT_EXECUTABLE AND MARIADB_ADMIN_EXECUTABLE)
+        add_test(NAME accounts.management.process COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/database_process_tests.py"
+            "$<TARGET_FILE:dc24h>" "$<TARGET_FILE:database_tests>"
+            --management-test "$<TARGET_FILE:account_management_tests>")
+        set_tests_properties(accounts.management.process PROPERTIES TIMEOUT 210
+            ENVIRONMENT "PATH=/usr/sbin:/usr/bin:/sbin:/bin:$ENV{PATH}")
         add_test(NAME accounts.adc_authentication.process COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/database_process_tests.py"
             "$<TARGET_FILE:dc24h>" "$<TARGET_FILE:database_tests>"

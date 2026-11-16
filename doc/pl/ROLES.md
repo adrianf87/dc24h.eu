@@ -1,5 +1,7 @@
 # Roles — alpha-0.7.10
 
+**alpha-0.7.11 Account Management:** [zaufana zmiana hasła, wyłączenie i reset](ACCOUNT_MANAGEMENT.md) łączą atomowy zapis konta/haseł ze świeżym potwierdzeniem, rewizją i usunięciem danych ADC. Wykonuj przy zatrzymanym hubie, następnie jawnie zapisz ADC/aktywuj konto według potrzeby i uruchom hub ponownie. Bez przeładowania na żywo, nowej migracji SQL i publicznego API zarządzania.
+
 Etap powstaje z main `4390bd0ab8f4680f4ece63afb1354db66aaff9e9` i aktywuje
 istniejące role kont `registered`, `moderator`, `administrator` w uwierzytelnionych
 sesjach ADC/ADCS. Nie scala automatycznie gałęzi z main. Bez nowej migracji SQL;
@@ -22,6 +24,8 @@ huba, a nie deklaracją uprawnień przesyłaną przez klienta.
 
 ## Macierz uprawnień
 
+Operacje trwałe opisuje [Account Management](ACCOUNT_MANAGEMENT.md).
+
 `dc24h_roles` udostępnia bezalokacyjne `security::allows(Role, Permission)` oraz
 `security::can_revoke(actor_role, target_role)`. Role i uprawnienia są sprawdzane
 jawnie, bez porównywania numerów enum i bez domyślnego zezwolenia.
@@ -30,6 +34,7 @@ jawnie, bez porównywania numerów enum i bez domyślnego zezwolenia.
 | --- | --- | --- | --- | --- |
 | Wysyłanie zapytań/wyników wyszukiwania | Polityka gości z konfiguracji | Tak | Tak | Tak |
 | Inicjowanie/odbieranie CTM lub RCM | Polityka gości z konfiguracji | Tak | Tak | Tak |
+| Trwały reset/wyłączenie kont registered/moderator | Nie | Nie | Nie | Świeże potwierdzenie hasła administratora |
 | Unieważnienie sesji registered | Nie | Nie | Tak | Tak |
 | Unieważnienie sesji moderatora | Nie | Nie | Nie | Tak |
 | Unieważnienie sesji administratora | Nie | Nie | Nie | Nie |

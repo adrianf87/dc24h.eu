@@ -28,6 +28,8 @@ public:
         std::string_view name, std::string_view password, Timestamp created_at);
 private:
     friend class PasswordSecurityService;
+    friend class AccountManagementService;
+    friend class AdcCredentialService;
     void require_credentials_schema();
     database::Connection& connection_;
 };

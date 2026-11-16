@@ -1,5 +1,18 @@
 # Changelog
 
+## alpha-0.7.11 — 2026-11-16
+
+Account Management, based directly on main `c81c126b082c10833d4f85829c948fd2ee125184`; no automatic merge.
+
+- Add the trusted synchronous `dc24h_account_management` C++ service for current-password-proven account password changes and freshly proven active-administrator disable/reset operations. Administrators may manage registered/moderator targets, never themselves or other administrators; disabled accounts cannot change their own password. Reset leaves the target disabled; no automatic role or activation grant.
+- Compose account revision/time updates, new randomly salted fixed-cost scrypt verifiers when needed and deletion of old encrypted ADC credentials in one transaction. Preserve account identity/role/creation/last-login data and mappings. Derive expensive KDFs before locks, lock account rows in ID order, recheck complete snapshots and exact proof records, wipe owned sensitive buffers and preserve unknown-outcome database errors without retry. Existing migrations/schema v6 remain unchanged.
+- Harden ADC enrollment against password-management races by rechecking the captured account revision and the exact verifier used for proof under row locks before inserting an envelope. A stale in-flight enrollment cannot restore ADC access after credential rotation or a credential-only concurrent change.
+- Require a stopped serving hub for these maintenance APIs: existing startup directories retain old access/secrets. Explicitly reactivate reset accounts when intended, reenroll a fresh separate ADC password with the new account-password proof, then restart. No live reload, command queue, password CLI, public account endpoint or email/token recovery flow is exposed.
+- Add real MariaDB/scrypt/AES-GCM tests for proof/role/time/format failures, last-login/mapping preservation, salts and old-password refusal, reset recovery, schema/privilege denial with rollback, allocation failures, actor demotion, proof/enrollment races and exactly one concurrent reset winner. After reset/activation/reenrollment, real ncdc proves wrong/correct-password ADC/ADCS login, reconnect, welcome and chat. Extend the role capability matrix with administrator-only persistent account management.
+- Update release fixtures and mirrored US/PL documentation and enable alpha-0.7.11 GitHub-hosted Ubuntu 24.04 checks with all available CPUs via `nproc`.
+
+Validation on Debian 13: the final code passed all 198/198 CTest suites in both Debug and Release, including management/enrollment race tests, real ncdc ADC/ADCS, disposable MariaDB and Apache. Final C++ builds were warning-free. WebAdmin typecheck/production build and 23 Node tests passed. Metadata, documentation UTF-8/language parity/local links, Python syntax, actionlint, unchanged migration files and whitespace checks passed. Remote CI is triggered without waiting for completion. No production deployment, account change, credential enrollment or database migration is performed.
+
 ## alpha-0.7.10 — 2026-11-16
 
 Roles, based directly on main `4390bd0ab8f4680f4ece63afb1354db66aaff9e9`; no automatic merge.

@@ -2,11 +2,13 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.7.10 (Roles).**
+**Current development version: alpha-0.7.11 (Account Management).**
 
 CI on `main`: [GitHub-hosted Ubuntu 24.04 runners](doc/us/GITHUB_CI.md) · [PL](doc/pl/GITHUB_CI.md).
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.7.11 Account Management**: trusted atomic password change, administrator disable/reset with fresh proof and revision checks, ADC credential invalidation and explicit maintenance restart/reenrollment. See [Account Management](doc/us/ACCOUNT_MANAGEMENT.md).
 
 - **alpha-0.7.10 Roles**: validated account roles in ready sessions, fixed search/transfer grants and staff session-revocation hierarchy; global policies and explicit session restrictions remain enforced. See [Roles](doc/us/ROLES.md).
 

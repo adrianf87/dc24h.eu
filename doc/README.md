@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.7.10.
+Current development version: alpha-0.7.11.
+
+[Account Management — alpha-0.7.11](us/ACCOUNT_MANAGEMENT.md) · [PL](pl/ACCOUNT_MANAGEMENT.md)
 
 [Roles — alpha-0.7.10](us/ROLES.md) · [PL](pl/ROLES.md)
 

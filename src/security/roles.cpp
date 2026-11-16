@@ -10,6 +10,7 @@ bool allows(accounts::Role role, Permission permission) noexcept {
     switch (permission) {
     case Permission::search_queries: case Permission::search_results:
     case Permission::initiate_transfers: case Permission::receive_transfers: return true;
+    case Permission::manage_accounts: return role == Role::administrator;
     case Permission::revoke_sessions: return role == Role::moderator || role == Role::administrator;
     }
     return false;
@@ -18,5 +19,9 @@ bool can_revoke(accounts::Role actor, accounts::Role target) noexcept {
     using accounts::Role;
     if (!allows(actor,Permission::revoke_sessions)) { return false; }
     return target == Role::registered || (actor == Role::administrator && target == Role::moderator);
+}
+bool can_manage(accounts::Role actor, accounts::Role target) noexcept {
+    return allows(actor,Permission::manage_accounts) &&
+        (target == accounts::Role::registered || target == accounts::Role::moderator);
 }
 } // namespace dc24h::security

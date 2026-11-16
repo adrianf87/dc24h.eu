@@ -86,16 +86,20 @@ void matrix() {
             require(security::allows(role,permission));
         }
         require(security::allows(role,Permission::revoke_sessions) == (role != Role::registered));
+        require(security::allows(role,Permission::manage_accounts) == (role == Role::administrator));
         require(!security::allows(role,static_cast<Permission>(999)));
         for (auto target : {Role::registered,Role::moderator,Role::administrator}) {
             const auto expected = (role == Role::moderator && target == Role::registered) ||
                 (role == Role::administrator && (target == Role::registered || target == Role::moderator));
             require(security::can_revoke(role,target) == expected);
+            require(security::can_manage(role,target) == (role == Role::administrator && target != Role::administrator));
         }
         require(!security::can_revoke(role,static_cast<Role>(999)));
     }
     require(!security::allows(static_cast<Role>(999),Permission::search_queries));
     require(!security::can_revoke(static_cast<Role>(999),Role::registered));
+    require(!security::can_manage(static_cast<Role>(999),Role::registered));
+    require(!security::can_manage(Role::administrator,static_cast<Role>(999)));
     users::SessionManager manager(1); const auto id = *users::SessionId::from_value(1);
     require(std::holds_alternative<const users::Session*>(manager.add(id,users::Transport::adc,{})));
     require(!manager.start_negotiation(id,{}));
