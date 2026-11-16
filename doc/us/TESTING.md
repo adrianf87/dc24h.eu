@@ -1,5 +1,7 @@
 # Testing
 
+**alpha-0.7.7:** password-security unit and private-MariaDB tests cover independent scrypt fixtures, malformed records rejected before KDF work, exact password bytes, fixed costs, comparator use, provider failures, minimal privileges and cleansing/allocation failures. Existing registration/mapping, version, ncdc and metadata regressions are checked locally. Full Contabo CI is launched without awaiting completion; actual results are recorded in CHANGELOG.md.
+
 **Test-version correction (2026-11-16):** the prior Contabo Debug run passed 188/191 suites; core.process, logging.process and api.process still expected alpha-0.7.5. Their exact expectations now use alpha-0.7.6. The three affected suites are verified locally; full Contabo CI is restarted without awaiting its result.
 
 **alpha-0.7.6 validation:** targeted Debug checks cover identity mapping, account repository, registration, migration catalog and v4→v5 upgrades on private MariaDB. The full Debug/Release, ncdc ADC/ADCS and WebAdmin workflow is launched on [Contabo Ubuntu 24.04](CONTABO_CI.md) with six parallel workers. Its completion is not awaited or claimed here; exact local results are recorded in CHANGELOG.md.

@@ -12,6 +12,11 @@ import time
 
 from api_support import enable_api, fetch_status
 
+PASSWORD_TEST = None
+if '--password-test' in sys.argv:
+    index = sys.argv.index('--password-test')
+    PASSWORD_TEST = os.path.abspath(sys.argv[index + 1])
+    del sys.argv[index:index + 2]
 IDENTITY_TEST = None
 if '--identity-test' in sys.argv:
     index = sys.argv.index('--identity-test')
@@ -159,6 +164,19 @@ def main():
                     expected_key = hashlib.scrypt(b'Registration test password 42!', salt=salt, n=131072, r=8, p=1,
                                                   maxmem=256 * 1024 * 1024, dklen=32)
                     require(key == expected_key, 'Independent password derivation differs')
+            if PASSWORD_TEST:
+                sql("CREATE USER 'password_limited'@'localhost' IDENTIFIED BY PASSWORD '" + native_hash + "';"
+                    "CREATE USER 'password_no_credentials'@'localhost' IDENTIFIED BY PASSWORD '" + native_hash + "';"
+                    "GRANT SELECT ON dc24h.dc24h_schema_migrations TO 'password_limited'@'localhost';"
+                    "GRANT SELECT ON dc24h.dc24h_accounts TO 'password_limited'@'localhost';"
+                    "GRANT SELECT ON dc24h.dc24h_account_credentials TO 'password_limited'@'localhost';"
+                    "GRANT SELECT ON dc24h.dc24h_schema_migrations TO 'password_no_credentials'@'localhost';"
+                    "GRANT SELECT ON dc24h.dc24h_accounts TO 'password_no_credentials'@'localhost';")
+                result = run([PASSWORD_TEST, str(db_socket), str(password)])
+                require(result.returncode == 0, result.stderr)
+                no_secrets(result)
+                require('Registration test password 42!' not in result.stdout + result.stderr and
+                        '$dc24h-scrypt$' not in result.stdout + result.stderr, 'Credential check leaked material')
             if IDENTITY_TEST:
                 result = run([IDENTITY_TEST, str(db_socket), str(password)])
                 require(result.returncode == 0, result.stderr)
@@ -197,6 +215,10 @@ def main():
                 no_secrets(result)
             if IDENTITY_TEST:
                 result = run([IDENTITY_TEST, str(db_socket), str(password), '--readonly'])
+                require(result.returncode == 0, result.stderr)
+                no_secrets(result)
+            if PASSWORD_TEST:
+                result = run([PASSWORD_TEST, str(db_socket), str(password), '--readonly'])
                 require(result.returncode == 0, result.stderr)
                 no_secrets(result)
             # A legacy registry requires ALTER; inspection never upgrades it.

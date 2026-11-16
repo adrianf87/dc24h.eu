@@ -1,5 +1,7 @@
 # Testowanie
 
+**alpha-0.7.7:** testy jednostkowe i prywatna MariaDB obejmują niezależny wzorzec scrypt, odrzucanie błędnego rekordu przed KDF, dokładne bajty hasła, stałe koszty, porównanie kluczy, awarie dostawcy, minimalne uprawnienia i wymazanie danych przy wyjątkach/alokacjach. Lokalnie sprawdzamy też rejestrację, mapowanie, wersję, ncdc i metadane. Pełne CI Contabo startuje bez oczekiwania na zakończenie; wyniki zapisuje CHANGELOG.md.
+
 **Poprawka wersji w testach (2026-11-16):** poprzedni przebieg Debug na Contabo zaliczył 188/191 zestawów. core.process, logging.process i api.process nadal oczekiwały alpha-0.7.5; dokładne oczekiwania zmieniono na alpha-0.7.6. Trzy zestawy przeszły lokalnie; pełne CI Contabo startuje ponownie bez oczekiwania na wynik.
 
 **Weryfikacja alpha-0.7.6:** ukierunkowane testy Debug obejmują mapowanie tożsamości, repozytorium kont, rejestrację, katalog migracji i aktualizację v4→v5 w prywatnej MariaDB. Pełny workflow Debug/Release, ncdc ADC/ADCS i WebAdmin startuje na [Contabo Ubuntu 24.04](CONTABO_CI.md) z równoległością 6. Nie czekamy tutaj na koniec ani nie deklarujemy wyniku CI; lokalne wyniki zapisuje CHANGELOG.md.

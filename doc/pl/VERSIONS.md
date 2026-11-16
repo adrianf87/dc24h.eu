@@ -1,5 +1,7 @@
 # Wersjonowanie
 
+**alpha-0.7.7 Password Security** pochodzi bezpośrednio z main `75c82eea4d5799460bebe93ed1b6accef175ce25`. Zachowuje schemat v5, rejestrację i mapowanie, dodaje chronione sprawdzanie haseł oraz aktualizuje wszystkie oczekiwania wersji. Branch nie jest automatycznie scalany.
+
 **alpha-0.7.6 Identity Mapping** rozpoczyna się z main `d279245e3636d631c159ee8df53623c293fb36e8`. Zachowuje alpha-0.7.1–0.7.5, dodaje schemat v5 i [mapowanie tożsamości](IDENTITY_MAPPING.md), a testy uruchamia na jednym runnerze Contabo. Branch nie jest automatycznie scalany.
 
 **Aktualny etap — alpha-0.7.5:** [Rejestracja](REGISTRATION.md) atomowo tworzy konta registered/disabled i osobno przechowywane weryfikatory haseł OpenSSL scrypt z losową solą. Migracja v4 dodaje poświadczenia; walidacja Unicode, stały koszt KDF i rollback zapobiegają częściowym kontom. Uwierzytelnianie sesji i publiczna rejestracja API/WebAdmin pozostają planowane. CI zachowuje przypięty workflow Proxmox Ubuntu 24.04/22.04 bez scalania github-runner-v0.1.

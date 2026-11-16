@@ -1,7 +1,8 @@
 # dc24h.eu documentation
 
-alpha-0.7.6: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.7.7: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
+- [Password Security — alpha-0.7.7](PASSWORD_SECURITY.md)
 - [Identity Mapping — alpha-0.7.6](IDENTITY_MAPPING.md)
 - [Contabo CI](CONTABO_CI.md)
 - [Registration — alpha-0.7.5](REGISTRATION.md)

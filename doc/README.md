@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.7.6.
+Current development version: alpha-0.7.7.
+
+[Password Security — alpha-0.7.7](us/PASSWORD_SECURITY.md) · [PL](pl/PASSWORD_SECURITY.md)
 
 [Identity Mapping — alpha-0.7.6](us/IDENTITY_MAPPING.md) · [PL](pl/IDENTITY_MAPPING.md)
 

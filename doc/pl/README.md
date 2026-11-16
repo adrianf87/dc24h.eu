@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.7.6: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.7.7: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [Password Security — alpha-0.7.7](PASSWORD_SECURITY.md)
 - [Identity Mapping — alpha-0.7.6](IDENTITY_MAPPING.md)
 - [Contabo CI](CONTABO_CI.md)
 - [Rejestracja — alpha-0.7.5](REGISTRATION.md)

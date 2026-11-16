@@ -1,5 +1,7 @@
 # Identity Mapping — alpha-0.7.6
 
+**Rozszerzenie alpha-0.7.7:** [Password Security](PASSWORD_SECURITY.md) dodaje sprawdzenie danych uwierzytelniających. Samo mapowanie ani samo dopasowanie hasła nadal nie przyznają uprawnień sesji/konta. Historyczne plany poniżej opisują pierwotny etap alpha-0.7.6.
+
 Etap rozpoczyna się bezpośrednio z main `d279245e3636d631c159ee8df53623c293fb36e8`.
 Zachowuje Database Core, migracje, model i repozytorium kont oraz rejestrację.
 Branch nie jest automatycznie scalany z main.

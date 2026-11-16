@@ -1,5 +1,7 @@
 # Identity Mapping — alpha-0.7.6
 
+**Current extension (alpha-0.7.7):** [Password Security](PASSWORD_SECURITY.md) adds credential checks. Mapping alone and a matching password alone still do not grant a session or account permissions. Historical future-work statements below describe the original alpha-0.7.6 increment.
+
 This increment starts directly from main `d279245e3636d631c159ee8df53623c293fb36e8`.
 Database Core, migrations, account metadata, repository and registration remain
 intact. The branch is not merged to main automatically.
