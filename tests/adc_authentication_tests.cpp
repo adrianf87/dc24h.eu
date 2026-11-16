@@ -128,12 +128,17 @@ void login() {
     { LoginHub hub(limits); const auto sid = identify(hub,1,dc24h::users::Transport::adcs);
       require(drain(hub,1).starts_with("IGPA "));
       hub.receive(1,parse("HPAS "+std::string(response)));
-      require(!hub.ready(1) && !hub.authenticated_account(1));
+      require(!hub.ready(1) && !hub.authenticated_account(1) && !hub.snapshot(1)->authentication);
       require(hub.output(1).starts_with("IINF ")); (void)hub.consume(1,hub.output(1).size());
       require(hub.output(1).starts_with("BINF "+sid));
       (void)hub.consume(1,hub.output(1).size()-1); require(!hub.authenticated_account(1));
       require(hub.consume(1,1) && hub.authenticated_account(1) == 42); (void)drain(hub,1);
-      hub.receive(1,parse("BINF "+sid+" NIRenamed")); require(hub.closing(1)); }
+      const auto auth = hub.authenticated_session(1);
+      require(auth && auth->session_id.value() == 1 && auth->account_id.value() == 42 &&
+              auth->transport == dc24h::users::Transport::adcs);
+      require(hub.snapshot(1)->authentication == auth && hub.session_model(1).timeline().ready == auth->established_at);
+      hub.receive(1,parse("BINF "+sid+" NIRenamed")); require(hub.closing(1));
+      require(!hub.authenticated_session(1) && !hub.snapshot(1)->authentication); }
     { LoginHub hub(limits); (void)identify(hub,1,dc24h::users::Transport::adcs); (void)drain(hub,1);
       hub.receive(1,parse("HPAS "+std::string(39,'A'))); require(hub.closing(1) && hub.users() == 0);
       const auto terminal = drain(hub,1); require(terminal.find("ISTA 223 ") != std::string::npos);
@@ -142,8 +147,57 @@ void login() {
       require(hub.closing(1) && drain(hub,1).starts_with("ISTA 223 ")); }
     require(scrubbed);
 }
+void auth_sessions() {
+    LoginLimits limits; limits.authentication = std::make_shared<Source>();
+    LoginHub hub(limits);
+    require(!hub.authenticated_session(0) && !hub.authenticated_session(99));
+    require(!hub.revoke_auth_session(0) && !hub.revoke_auth_session(99));
+    const auto sid = identify(hub,1,dc24h::users::Transport::adcs);
+    require(!hub.revoke_auth_session(1)); // Pending GPA is never a ready auth session.
+    (void)drain(hub,1);
+    hub.receive(1,parse("HPAS "+std::string(response)));
+    require(!hub.authenticated_session(1));
+    (void)drain(hub,1);
+    const auto saved = hub.authenticated_session(1); require(saved.has_value());
+    const auto account = *dc24h::accounts::AccountId::from_value(42);
+    require(hub.sessions().authenticated_page(account).size() == 1);
+    require(!hub.revoke_auth_session(1,dc24h::users::TimePoint{})); // Backwards time is rejected atomically.
+    require(hub.authenticated_session(1) == saved);
+    fail_after = 0;
+    const bool revoked = hub.revoke_auth_session(1);
+    fail_after = -1;
+    require(revoked && hub.must_close(1) && !hub.ready(1) && !hub.authenticated_account(1));
+    require(hub.session_model(1).terminal_cause() == dc24h::users::CloseCause::authentication_revoked);
+    require(!hub.revoke_auth_session(1) && hub.sessions().authenticated_page(account).empty());
+    hub.receive(1,parse("BMSG "+sid+" AfterRevocation")); require(hub.output(1).empty());
+    hub.disconnect(1,false);
+    require(!hub.authenticated_session(1) && !hub.sessions().find(saved->session_id));
+    (void)identify(hub,2,dc24h::users::Transport::adcs);
+    require(!hub.authenticated_session(2)); (void)drain(hub,2);
+    hub.receive(2,parse("HPAS "+std::string(response))); (void)drain(hub,2);
+    require(hub.authenticated_session(2)->session_id.value() == 2 && saved->session_id.value() == 1);
+    require(!hub.revoke_auth_session(1) && hub.authenticated_account(2) == 42);
+    hub.close(2,CloseReason::idle_timeout);
+    require(!hub.authenticated_session(2) && !hub.snapshot(2)->authentication);
+    hub.disconnect(2,false);
+    // Client-supplied role claims cannot create an authenticated session.
+    hub.connect(3,"127.0.0.1"); hub.receive(3,parse("HSUP ADBASE ADTIGR"));
+    const auto output = drain(hub,3); const auto guest_sid = output.substr(output.find("ISID ")+5,4);
+    TigerDigest pid{}; pid[0] = 100;
+    hub.receive(3,parse("BINF "+guest_sid+" NIGuest ID"+tiger_base32(*tiger192(pid))+" PD"+tiger_base32(pid)+" I40.0.0.0 CT4"));
+    (void)drain(hub,3);
+    require(hub.closing(3) && !hub.authenticated_session(3) && !hub.revoke_auth_session(3));
+    hub.disconnect(3,false);
+    hub.connect(4,"127.0.0.1"); hub.receive(4,parse("HSUP ADBASE ADTIGR"));
+    const auto guest_output = drain(hub,4);
+    const auto next_sid = guest_output.substr(guest_output.find("ISID ")+5,4);
+    hub.receive(4,parse("BINF "+next_sid+" NIGuest ID"+tiger_base32(*tiger192(pid))+" PD"+tiger_base32(pid)+" I40.0.0.0"));
+    (void)drain(hub,4);
+    require(hub.ready(4) && !hub.authenticated_session(4) && !hub.revoke_auth_session(4));
+    hub.disconnect(4,false);
+}
 }
 int main() {
-    try { codec(); login(); std::cout << "ADC challenge and login checks passed\n"; }
+    try { codec(); login(); auth_sessions(); std::cout << "ADC challenge and login checks passed\n"; }
     catch (const std::exception& error) { fail_after = -1; std::cerr << error.what() << '\n'; return 1; }
 }

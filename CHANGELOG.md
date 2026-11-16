@@ -1,5 +1,17 @@
 # Changelog
 
+## alpha-0.7.9 — 2026-11-16
+
+Auth Sessions, based directly on main `f39d552c174941effd4b9e18ff83f8515059b8f8`; no automatic merge.
+
+- Add managed, connection-bound `users::AuthSession` values containing checked account ID, local lifetime ID, actual ADC/ADCS transport and steady-clock readiness time. Commit the association atomically with readiness only after valid PAS and the final own-BINF LF. Pending challenges and ready guests expose no account session.
+- Keep trusted ready-only accessors and bounded account-filtered snapshot pages in SessionManager. Copies are historical data, not bearer credentials. Disallow rebind/guest upgrade and authenticated nickname changes; preserve public identity indexes on failure. No role grants, UTC last-login writes or SQL changes.
+- Clear authentication on all successful close/finalization paths. Add allocation-free trusted per-connection revocation, immediate routing refusal, search-window cleanup and a payload-free lifecycle event. A new valid login remains possible; account/mapping/credential changes still require startup-directory replacement through restart.
+- Add lifecycle/time/isolation/paging/allocation-failure tests, final-LF and revocation/reconnect regressions, client role-claim rejection and fresh authenticated TCP/TLS login after disconnect. Retain real ncdc password/welcome/chat checks, disposable MariaDB/Apache integrations and schema v6. Update release fixtures and mirrored US/PL documentation.
+- Add alpha-0.7.9 push/PR triggers to the existing GitHub-hosted Ubuntu 24.04 Debug/Release/WebAdmin workflow. Builds, CTest, Node and Playwright retain `nproc` parallelism. Start remote CI without waiting for completion.
+
+Validation on Debian 13: all 196/196 CTest suites passed in both Debug and Release, including the new auth-session suite, actual ncdc ADC/ADCS, private MariaDB and Apache. Both C++ builds were warning-free. WebAdmin typecheck/production build and 23 Node tests passed. Release metadata, documentation UTF-8/language parity/local links, Python syntax, actionlint and whitespace checks passed. Remote Ubuntu 24.04 Debug/Release and browser/API checks are triggered without waiting for completion. No deployment, production database migration or secret enrollment is performed.
+
 ## Main integration of alpha-0.7.8 — 2026-11-16
 
 Enable main push/PR checks alongside alpha-0.7.8 for the explicitly requested integration. Preserve GPA/PAS account authentication, separate encrypted ADC credentials, external private keys, unchanged scrypt and schema v6. Retain the single Contabo Ubuntu 24.04 runner, six parallel workers, pinned checkout and branch-specific queues. Full alpha-0.7.8 CI passed at a1247d637bc7e0f8ffab96d1ee7a3528f888af0d; actionlint validates this trigger-only adjustment. Newly triggered CI is not awaited.

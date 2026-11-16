@@ -40,7 +40,8 @@ struct LoginHub::Peer {
           transfer_permissions(transfer_settings.guests), transfer_guard(transfer_settings.flood) { if (limits) { anti_flood.emplace(*limits); } }
     ClientSession session;
     PasswordChallenge authentication;
-    std::optional<std::uint64_t> account;
+    std::optional<std::uint64_t> pending_account;
+    std::optional<accounts::AccountId> verified_account;
     const users::Session& lifecycle;
     std::deque<Frame> output;
     std::size_t offset{0};
@@ -274,7 +275,7 @@ void LoginHub::receive_impl(Id id, const Message& message, chat::FloodClock::tim
             const auto field = parse_named_parameter(token);
             if (field && field->name == "NI") {
                 if (before == ConnectionState::normal && limits_.authentication &&
-                    !limits_.authentication->allows_identity(field->value,*peer.session.info()->field("ID"),peer.account)) {
+                    !limits_.authentication->allows_identity(field->value,*peer.session.info()->field("ID"),authenticated_account(id))) {
                     reject(peer,"223"); return;
                 }
                 const auto* found = sessions_.by_nickname(field->value);
@@ -330,8 +331,10 @@ void LoginHub::receive_impl(Id id, const Message& message, chat::FloodClock::tim
     if (before == ConnectionState::protocol && message.kind == Command::sup) {
         (void)enqueue(peer, *peer.session.support().initial_reply(), Completion::support);
     } else if (before == ConnectionState::verify && message.kind == Command::pas) {
-        if (!peer.account || peer.authentication.verify(message)) { reject(peer,"223"); return; }
+        if (!peer.pending_account || peer.authentication.verify(message)) { reject(peer,"223"); return; }
         if (peer.session.approve_password()) { reject(peer,"244"); return; }
+        peer.verified_account = accounts::AccountId::from_value(*peer.pending_account);
+        peer.pending_account.reset();
         complete_login(peer);
     } else if (message.kind == Command::inf) {
         const auto& metadata = *peer.session.info();
@@ -349,7 +352,7 @@ void LoginHub::receive_impl(Id id, const Message& message, chat::FloodClock::tim
                     if (auto* required = std::get_if<PasswordAuthentication>(&decision)) {
                         if (required->account_id == 0 || required->account_id > 9223372036854775807ULL || !peer.authentication.pending() ||
                             peer.session.approve_identity(IdentityMode::password_required)) { reject(peer,"210"); return; }
-                        peer.account = required->account_id;
+                        peer.pending_account = required->account_id;
                         (void)enqueue(peer,std::move(required->challenge),Completion::authentication);
                         return;
                     }
@@ -428,10 +431,19 @@ void LoginHub::complete_login(Peer& peer) {
     // commit. Subsequent FIFO joins/updates/quits follow own INF.
     relay(peer.lifecycle.id().value(), welcome->frames().back());
 }
+std::optional<users::AuthSession> LoginHub::authenticated_session(Id id) const noexcept {
+    const auto key = users::SessionId::from_value(id);
+    return key ? sessions_.authenticated(*key) : std::nullopt;
+}
 std::optional<std::uint64_t> LoginHub::authenticated_account(Id id) const {
-    const auto found = peers_.find(id);
-    if (found == peers_.end() || !found->second->lifecycle.ready()) { return {}; }
-    return found->second->account;
+    const auto auth = authenticated_session(id);
+    return auth ? std::optional<std::uint64_t>{auth->account_id.value()} : std::nullopt;
+}
+bool LoginHub::revoke_auth_session(Id id, users::TimePoint now) noexcept {
+    const auto auth = authenticated_session(id);
+    if (!auth || sessions_.force_close(auth->session_id,users::CloseCause::authentication_revoked,now)) { return false; }
+    (void)search_.forget_searches(auth->session_id);
+    return true;
 }
 void LoginHub::receive_connection(Id id, const Message& message, users::TimePoint now, transfers::Attempt& attempt) {
     auto& peer = *peers_.at(id);
@@ -750,10 +762,11 @@ bool LoginHub::consume(Id id, std::size_t bytes) {
             check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
         }
     } else if (frame.completion == Completion::welcome) {
-        if (user_login_.complete_welcome(peer.lifecycle.id(), peer.session, users::Clock::now())) {
+        if (user_login_.complete_welcome(peer.lifecycle.id(), peer.session, users::Clock::now(), peer.verified_account)) {
             check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
             return false;
         }
+        peer.verified_account.reset();
         return true;
     }
     return false;

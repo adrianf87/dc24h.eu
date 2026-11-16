@@ -37,6 +37,7 @@ constexpr std::array close_events{
     std::pair{Cause::partial_frame_timeout,Event::partial_frame_timeout}, std::pair{Cause::output_timeout,Event::output_timeout},
     std::pair{Cause::output_limit,Event::output_limit}, std::pair{Cause::security_quota,Event::security_quota},
     std::pair{Cause::negotiation_limit,Event::negotiation_limit}, std::pair{Cause::identity_limit,Event::identity_limit},
+    std::pair{Cause::authentication_revoked,Event::authentication_revoked},
     std::pair{Cause::close_timeout,Event::close_timeout}, std::pair{Cause::internal_error,Event::socket_error}
 };
 Cause session_cause(Event event) noexcept {

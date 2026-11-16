@@ -1,5 +1,7 @@
 # Testing
 
+**alpha-0.7.9 Auth Sessions:** [connection-bound account sessions](AUTH_SESSIONS.md) add atomic readiness binding, trusted account-filtered lookups and per-connection revocation. Closing clears authentication immediately. No new SQL migration, automatic role grants or browser sessions are added. CI uses [GitHub-hosted runners](GITHUB_CI.md) and is not awaited.
+
 **alpha-0.7.8:** [ADC Authentication](ADC_AUTHENTICATION.md) implements account-backed GPA/PAS with separate AES-256-GCM encrypted ADC passwords and an external private key, while preserving scrypt. Explicit migration v6 and active exact nickname/CID mappings are required; ADCS is the default. The bounded startup directory requires restart for changes/revocations. Public provisioning/reset/rotation and role grants remain future work. This entry supersedes earlier stage descriptions of authentication as planned.
 
 **alpha-0.7.7:** password-security unit and private-MariaDB tests cover independent scrypt fixtures, malformed records rejected before KDF work, exact password bytes, fixed costs, comparator use, provider failures, minimal privileges and cleansing/allocation failures. Existing registration/mapping, version, ncdc and metadata regressions are checked locally. Full Contabo CI is launched without awaiting completion; actual results are recorded in CHANGELOG.md.

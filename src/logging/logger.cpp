@@ -77,6 +77,7 @@ std::string_view event_name(ConnectionEvent event) noexcept {
     case ConnectionEvent::peer_status: return "peer_status";
     case ConnectionEvent::close_timeout: return "close_timeout";
     case ConnectionEvent::negotiation_limit: return "negotiation_limit";
+    case ConnectionEvent::authentication_revoked: return "authentication_revoked";
     case ConnectionEvent::identity_limit: return "identity_limit";
     }
     return {};

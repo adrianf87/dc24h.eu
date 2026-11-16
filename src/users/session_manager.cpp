@@ -125,6 +125,7 @@ MutationResult SessionManager::update_user(SessionId id, User user, TimePoint no
         return SessionError::invalid_identity;
     }
     if (identity.nickname()==model->identity()->nickname()) { return promote(model->update_user(std::move(user),now)); }
+    if (model->authentication()) { return SessionError::invalid_identity; }
     if (by_nickname(identity.nickname())) { return RegistryError::duplicate_nickname; }
     // Lifecycle, time and identity gates above match Session::update_user.
     // NickManager commits first; the checked model move below cannot throw.
