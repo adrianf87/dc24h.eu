@@ -93,6 +93,11 @@ public:
     [[nodiscard]] bool ready(Id id) const;
     // Trusted owner-thread account lookup, published only after final welcome LF.
     [[nodiscard]] std::optional<std::uint64_t> authenticated_account(Id id) const;
+    [[nodiscard]] std::optional<users::AuthSession> authenticated_session(Id id) const noexcept;
+    // Trusted owner-thread operation. Immediately disables this ready lifetime,
+    // closes its transport on the next reactor pass; does not revoke credentials
+    // or prevent a fresh GPA/PAS login. No allocations, SQL or automatic grants.
+    [[nodiscard]] bool revoke_auth_session(Id id, users::TimePoint now = users::Clock::now()) noexcept;
     [[nodiscard]] ConnectionState state(Id id) const;
     [[nodiscard]] std::size_t queued_bytes() const noexcept { return queued_; }
     [[nodiscard]] std::size_t users() const noexcept { return sessions_.identified_users(); }

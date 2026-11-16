@@ -48,6 +48,14 @@ public:
     [[nodiscard]] MutationResult update_user(SessionId id, User user, TimePoint now);
     [[nodiscard]] MutationResult rename(SessionId id, std::string_view nickname, TimePoint now);
     [[nodiscard]] MutationResult mark_ready(SessionId id, TimePoint now) noexcept;
+    // Trusted authentication adapter only: caller proves PAS before the final
+    // own-INF LF. Atomic, no-throw binding plus readiness; never upgrades guests.
+    [[nodiscard]] MutationResult mark_authenticated_ready(SessionId id, accounts::AccountId account, TimePoint now) noexcept;
+    [[nodiscard]] std::optional<AuthSession> authenticated(SessionId id) const noexcept;
+    // Owning ready-only account-filtered pages in lifetime-ID order. A snapshot
+    // is historical data; resolve the ID again before authorizing any action.
+    [[nodiscard]] std::vector<AuthSession> authenticated_page(accounts::AccountId account,
+        std::uint64_t after = 0, std::size_t limit = 64) const;
     [[nodiscard]] MutationResult begin_close(SessionId id, CloseCause cause, TimePoint now) noexcept;
     [[nodiscard]] MutationResult force_close(SessionId id, CloseCause cause, TimePoint now) noexcept;
     [[nodiscard]] MutationResult finish_close(SessionId id, CloseCause cause, TimePoint now) noexcept;

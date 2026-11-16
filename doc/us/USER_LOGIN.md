@@ -1,5 +1,7 @@
 # User Login — alpha-0.3.8
 
+**alpha-0.7.9 Auth Sessions:** [connection-bound account sessions](AUTH_SESSIONS.md) add atomic readiness binding, trusted account-filtered lookups and per-connection revocation. Closing clears authentication immediately. No new SQL migration, automatic role grants or browser sessions are added. CI uses [GitHub-hosted runners](GITHUB_CI.md) and is not awaited.
+
 **Increment delivered in alpha-0.3.12:** [Limits](LIMITS.md) adds configurable session/user ceilings shared by ADC/ADCS, bounded by the connection cap. SessionManager checks capacity transactionally; LoginHub rejects a full user registry before welcome/list preparation with ISTA 211 and own IQUI. Closing reservations count until cleanup. Earlier descriptions retain their historical scope.
 
 This increment starts directly from main `cc2a52603d0e67a6de722c783d84922f204ca0db`, after the alpha-0.3.7 User Registry merge. Earlier requested stages are already present. The alpha-0.3.8 branch preserves main/history and is not merged automatically.

@@ -25,7 +25,7 @@ public:
     [[nodiscard]] UserLoginResult register_approved(users::SessionId id, const ClientSession& client,
         users::TimePoint now);
     [[nodiscard]] UserLoginResult complete_welcome(users::SessionId id, const ClientSession& client,
-        users::TimePoint now) noexcept;
+        users::TimePoint now, std::optional<accounts::AccountId> account = {}) noexcept;
 private:
     users::SessionManager& sessions_;
 };

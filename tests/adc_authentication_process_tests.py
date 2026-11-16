@@ -168,6 +168,37 @@ class AuthenticationTests(unittest.TestCase):
         for value in (PASSWORD, b'HPAS', b'IGPA', b'AuthenticatedChat', b'DC24HADC1', b'$dc24h-scrypt$'):
             self.assertNotIn(value, hub.log)
 
+    def test_authenticated_disconnect_requires_fresh_login(self):
+        hub, _, cert = self.hub(False)
+        observer = self.peer(hub, cert, False)
+        observer.login(b'SessionObserver', 110, welcome=WELCOME)
+        previous = None
+        for secure in (False, True):
+            for _ in range(2):
+                peer = self.peer(hub, cert, secure)
+                first = self.identify(peer)
+                self.assertTrue(first.startswith(b'IGPA '))
+                challenge = first[5:]
+                self.assertNotEqual(challenge, previous)
+                # No new public session is published before its own fresh PAS.
+                observer.peer.settimeout(0.05)
+                with self.assertRaises(socket.timeout):
+                    observer.peer.recv(1)
+                observer.peer.settimeout(3)
+                peer.send(b'HPAS ' + response(challenge))
+                self.finish(peer)
+                self.assertTrue(observer.line().startswith(b'BINF ' + peer.sid + b' '))
+                peer.send(b'BMSG ' + peer.sid + b' FreshSession')
+                self.assertEqual(peer.line(), b'BMSG ' + peer.sid + b' FreshSession')
+                self.assertEqual(observer.line(), b'BMSG ' + peer.sid + b' FreshSession')
+                peer.peer.close()
+                self.assertEqual(observer.line(), b'IQUI ' + peer.sid)
+                previous = challenge
+        hub.stop()
+        self.assertEqual(hub.log.count(b'event=login_ready'), 5)
+        for value in (PASSWORD, b'HPAS', b'IGPA', b'FreshSession'):
+            self.assertNotIn(value, hub.log)
+
     def test_wrong_key_refuses_startup_and_config_aliases(self):
         root, ini, _ = self.config(key=Path(str(KEY) + '.wrong'))
         result = subprocess.run([BINARY, '--config', str(ini)], capture_output=True, timeout=5)

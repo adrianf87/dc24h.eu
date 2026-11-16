@@ -2,11 +2,13 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.7.8 (ADC Authentication).**
+**Current development version: alpha-0.7.9 (Auth Sessions).**
 
 CI on `main`: [GitHub-hosted Ubuntu 24.04 runners](doc/us/GITHUB_CI.md) · [PL](doc/pl/GITHUB_CI.md).
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.7.9 Auth Sessions**: managed connection/account binding after PAS and final welcome LF, ready-only trusted lookups, bounded account-filtered pages and immediate connection revocation/cleanup. See [Auth Sessions](doc/us/AUTH_SESSIONS.md).
 
 - **alpha-0.7.8 ADC Authentication**: account-backed GPA/PAS, separate AES-256-GCM encrypted ADC passwords with an external private key, unchanged scrypt credentials and ADCS by default. See [ADC Authentication](doc/us/ADC_AUTHENTICATION.md).
 - **alpha-0.7.7 Password Security**: strict fixed-cost verifier decoding, credential checks without secret-bearing results, constant-time key comparison and cleansed owned buffers. See [Password Security](doc/us/PASSWORD_SECURITY.md).

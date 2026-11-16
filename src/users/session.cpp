@@ -41,7 +41,8 @@ Result Session::identify(User user, TimePoint now) noexcept {
 Result Session::update_user(User user, TimePoint now) noexcept {
     if (phase_ != Phase::identified && phase_ != Phase::ready) { return SessionError::invalid_state; }
     if (!valid_time(now)) { return SessionError::backwards_time; }
-    if (!user.valid() || user.identity().sid()!=identity()->sid() || user.identity().cid()!=identity()->cid()) {
+    if (!user.valid() || user.identity().sid()!=identity()->sid() || user.identity().cid()!=identity()->cid() ||
+        (authentication_ && user.identity().nickname()!=identity()->nickname())) {
         return SessionError::invalid_identity;
     }
     user_=std::move(user);last_=now;return {};
@@ -63,6 +64,7 @@ Result Session::rename(std::string_view nickname, TimePoint now) {
 Result Session::begin_close(CloseCause cause, TimePoint now) noexcept {
     if (phase_ == Phase::closing || phase_ == Phase::closed) { return {}; }
     if (!valid_time(now)) { return SessionError::backwards_time; }
+    authentication_.reset();
     close_cause_=cause;timeline_.closing=now;last_=now;phase_=Phase::closing;return {};
 }
 Result Session::force_close(CloseCause cause, TimePoint now) noexcept {
@@ -87,6 +89,6 @@ Snapshot Session::snapshot() const {
     return {id_,transport_,phase_,timeline_,
         user_ ? std::optional<Identity>{user_->identity()} : std::nullopt,
         user_ ? std::optional<Profile>{user_->profile()} : std::nullopt,
-        close_cause_,forced_cause_,final_cause_,close_mode_};
+        close_cause_,forced_cause_,final_cause_,close_mode_,authentication_};
 }
 } // namespace dc24h::users

@@ -1,0 +1,99 @@
+# Auth Sessions — alpha-0.7.9
+
+Etap powstaje bezpośrednio z main `f39d552c174941effd4b9e18ff83f8515059b8f8`.
+Dodaje sesje uwierzytelnionych kont związane z połączeniem do istniejącego modułu
+Users i adaptera GPA/PAS. Nie scala automatycznie gałęzi z main.
+
+## Uwierzytelnienie i gotowość
+
+Wyzwanie hasła wybiera oczekujące konto, ale nie tworzy sesji uwierzytelnionej.
+Poprawny jednorazowy PAS zapisuje tymczasowo zweryfikowane konto w prywatnym
+obiekcie połączenia ADC. Dopiero wysłanie końcowego LF własnego BINF powoduje,
+że `UserLogin::complete_welcome` atomowo ustawia gotowość zarządzanego użytkownika
+i zapisuje `users::AuthSession`. Tymczasowe potwierdzenie jest wtedy usuwane.
+Częściowe wyjście, błędny/wczesny/niepoprawny PAS, błędy alokacji powitania oraz
+rozłączenie przed gotowością nie tworzą sesji uwierzytelnionej. Gotowe sesje gości
+nie otrzymują powiązania z kontem. Pola INF klienta nie nadają konta ani roli.
+
+[Specyfikacja ADC](https://dc-protocols.github.io/ADC.html) opisuje negocjację
+protokołu i GPA/PAS. AuthSession jest prywatnym modelem huba, a nie nowym
+poleceniem ADC ani tokenem przesyłanym przez sieć.
+
+## Dane i własność
+
+`AuthSession` jest samodzielną wartością zawierającą cztery pola:
+
+| Pole | Znaczenie |
+| --- | --- |
+| `session_id` | Niezerowy lokalny identyfikator życia połączenia; różny od fd, SID ADC i ID konta |
+| `account_id` | Sprawdzony dodatni `accounts::AccountId` z zakresu signed BIGINT |
+| `transport` | Faktyczny transport `adc` albo `adcs` danego połączenia |
+| `established_at` | Jawny monotoniczny czas gotowości, równy `Timeline::ready` |
+
+Jednowątkowy właściciel `SessionManager` przechowuje powiązanie w istniejącym
+obiekcie `Session`. Opcjonalne pole ma stały rozmiar; gotowość, odczyt i usunięcie
+nie alokują pamięci. Pojemność wyznaczają dotychczasowe limity sesji/użytkowników.
+Wartość nie zawiera hasła, wyzwania, odpowiedzi, szyfrogramu, klucza, nazwy konta,
+roli ani publicznego profilu. Czas nie jest znacznikiem UTC bazy i nie aktualizuje
+`last_login_at`.
+
+`Session::authentication()`, `Snapshot::authentication`,
+`SessionManager::authenticated(id)` i `LoginHub::authenticated_session(id)` udostępniają
+dane gotowych sesji zaufanemu kodowi. Istniejący `authenticated_account(id)`
+odczytuje zarządzany rekord. Brak ID, zero, oczekiwanie na logowanie, gość,
+zamykanie i rozłączenie nie zwracają sesji konta.
+
+`authenticated_page(account, after, limit)` zwraca kopie rekordów danego konta
+w rosnącej kolejności ID życia połączenia; kursor jest wyłączny, a limit wynosi
+1–256. Skanowanie jest ograniczone pojemnością rejestru. Strony są niezależnymi
+odczytami, a nie zamrożoną transakcją. Błąd alokacji strony nie zmienia stanu.
+Zachowana kopia pozostaje danymi historycznymi po zamknięciu; przed operacją
+uprzywilejowaną należy ponownie sprawdzić ID życia połączenia. Kopie i numery
+kont nie są dowodem uwierzytelnienia.
+
+`mark_authenticated_ready` oraz opcjonalne konto w `UserLogin::complete_welcome`
+są operacjami zaufanego adaptera, nie publicznym API logowania. Wywołujący musi
+wcześniej sprawdzić hasło i politykę konta. Brak ID, niewłaściwa faza oraz cofnięty
+czas są odrzucane bez zmiany modelu. Gotowego gościa nie można awansować,
+a sesji uwierzytelnionej przepiąć na inne konto. Model odrzuca także zmianę nicka
+przed modyfikacją indeksu nazw; aktualizacje profilu zachowujące tożsamość są dozwolone.
+
+## Zamykanie, unieważnienie i ponowne połączenie
+
+Poprawne rozpoczęcie zamykania, wymuszone zamknięcie i bezpośrednia finalizacja
+natychmiast usuwają powiązanie konta, także przy błędzie protokołu, EOF, wygaśnięciu
+bezczynności, błędzie wyjścia i wyłączeniu huba. Opróżnianie wyjścia nie zachowuje
+uwierzytelnienia. Usunięcie zwalnia dotychczasowe rezerwacje tożsamości; monotoniczny
+rejestr odrzuca ponowne użycie ID życia połączenia. Reconnect wymaga nowej wymiany
+GPA/PAS i tworzy nowy rekord po własnej barierze gotowości. Unikalność nicka/CID
+pozostaje obowiązkowa; etap nie dodaje równoległych logowań tej samej tożsamości.
+
+Zaufany kod wątku właściciela może wywołać `LoginHub::revoke_auth_session(id, now)`.
+Dla gotowej sesji konta operacja atomowo wymusza zamknięcie z przyczyną
+`authentication_revoked`, usuwa uwierzytelnienie i okna wyszukiwania bez alokacji,
+a reaktor rozłącza gniazdo w następnym obiegu. Nie dodaje komunikatu sieciowego
+i nie pozwala wznowić starego połączenia. Brak sesji, gość, ponowne unieważnienie
+oraz cofnięty czas zwracają false. Opcjonalny log połączeń zawiera tylko stały typ
+zdarzenia i lokalne ID życia połączenia.
+
+Operacja dotyczy tylko tego połączenia. Nie wyłącza konta, nie zmienia katalogu
+startowego i nie blokuje nowego poprawnego logowania. Zmiany statusu, mapowań
+i danych uwierzytelniających w bazie nadal wymagają restartu. Przeładowanie
+katalogu na żywo, bany kont, automatyczne role, sesje przeglądarkowe, JWT/cookies,
+publiczne API unieważniania, trwały zapis aktywnych sesji i nowy absolutny TTL
+pozostają poza etapem. Dotychczasowe limity bezczynności/logowania/zamykania
+nadal działają. Nie ma nowej migracji SQL; schemat v6 i zapis haseł są bez zmian.
+
+## Weryfikacja
+
+`users.auth_sessions` sprawdza fazy i czas, powiązanie konta, gotowość/usunięcie
+bez alokacji, izolację gości, niezmienność tożsamości, ograniczone strony rekordów,
+stare ID i własność kopii. `adc.authentication` sprawdza publikację po ostatnim LF,
+zgodność modelu, unieważnienie przy błędzie alokacji, blokadę ruchu po unieważnieniu
+i izolację ponownego połączenia. `accounts.adc_authentication.process` dodaje
+powtarzane rozłączenie i świeże logowanie przez TCP i TLS do istniejących testów
+prawdziwego ncdc: błędne/poprawne hasło, powitanie i czat oraz prywatna MariaDB.
+
+Debug/Release i WebAdmin korzystają z [runnerów GitHub Ubuntu 24.04](GITHUB_CI.md),
+z `nproc` dla kompilacji, testów i przeglądarki. CI jest uruchamiane bez czekania
+na wynik; changelog oddziela wyniki lokalne od CI.

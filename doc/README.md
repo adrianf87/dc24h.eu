@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.7.8.
+Current development version: alpha-0.7.9.
+
+[Auth Sessions — alpha-0.7.9](us/AUTH_SESSIONS.md) · [PL](pl/AUTH_SESSIONS.md)
 
 [ADC Authentication — alpha-0.7.8](us/ADC_AUTHENTICATION.md) · [PL](pl/ADC_AUTHENTICATION.md)
 

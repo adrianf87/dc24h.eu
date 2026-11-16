@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dc24h/users/user.hpp"
+#include "dc24h/accounts/account.hpp"
 
 #include <chrono>
 #include <cstddef>
@@ -42,7 +43,7 @@ enum class CloseCause {
     tls_read_error, tcp_read_error, socket_error, write_error, shutdown,
     login_timeout, idle_timeout, handshake_timeout, partial_frame_timeout,
     output_timeout, output_limit, security_quota, negotiation_limit,
-    identity_limit, close_timeout, internal_error
+    identity_limit, close_timeout, internal_error, authentication_revoked
 };
 enum class CloseMode { drain, immediate };
 enum class SessionError { invalid_state, backwards_time, invalid_identity };
@@ -52,6 +53,15 @@ struct Timeline {
     TimePoint accepted;
     std::optional<TimePoint> negotiating, identified, ready, closing, closed;
     friend bool operator==(const Timeline&, const Timeline&) = default;
+};
+// Owning trusted snapshot, not a bearer token or a permission grant. Only the
+// managed ready transition installs it; no credential or public profile data.
+struct AuthSession {
+    SessionId session_id;
+    accounts::AccountId account_id;
+    Transport transport;
+    TimePoint established_at;
+    friend bool operator==(const AuthSession&, const AuthSession&) = default;
 };
 struct Snapshot {
     SessionId id;
@@ -64,6 +74,7 @@ struct Snapshot {
     std::optional<CloseCause> forced_cause;
     std::optional<CloseCause> final_cause;
     CloseMode close_mode;
+    std::optional<AuthSession> authentication;
     friend bool operator==(const Snapshot&, const Snapshot&) = default;
 };
 
@@ -98,8 +109,10 @@ public:
     [[nodiscard]] bool immediate() const noexcept { return close_mode_ == CloseMode::immediate; }
     [[nodiscard]] std::optional<CloseCause> terminal_cause() const noexcept;
     [[nodiscard]] Snapshot snapshot() const;
+    [[nodiscard]] std::optional<AuthSession> authentication() const noexcept { return authentication_; }
 private:
     friend class SessionManager;
+    [[nodiscard]] Result mark_authenticated_ready(accounts::AccountId account, TimePoint now) noexcept;
     [[nodiscard]] bool valid_time(TimePoint now) const noexcept { return now >= last_; }
     SessionId id_;
     Transport transport_;
@@ -107,6 +120,7 @@ private:
     Timeline timeline_;
     TimePoint last_;
     std::optional<User> user_;
+    std::optional<AuthSession> authentication_;
     std::optional<CloseCause> close_cause_, forced_cause_, final_cause_;
     CloseMode close_mode_{CloseMode::drain};
 };

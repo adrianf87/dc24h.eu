@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.7.8 LANGUAGES CXX)
+project(dc24h VERSION 0.7.9 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -48,12 +48,12 @@ target_include_directories(dc24h_accounts PUBLIC include)
 target_link_libraries(dc24h_accounts PRIVATE dc24h_text UTF8Proc::UTF8Proc)
 target_compile_options(dc24h_accounts PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 
-add_library(dc24h_users src/users/session.cpp src/users/session_manager.cpp src/users/user.cpp src/users/connectivity.cpp
+add_library(dc24h_users src/users/session.cpp src/users/session_manager.cpp src/users/auth_sessions.cpp src/users/user.cpp src/users/connectivity.cpp
     src/users/nick_manager.cpp src/users/user_registry.cpp src/users/limits.cpp)
 target_compile_features(dc24h_users PUBLIC cxx_std_20)
 set_target_properties(dc24h_users PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_users PUBLIC include)
-target_link_libraries(dc24h_users PRIVATE dc24h_text)
+target_link_libraries(dc24h_users PUBLIC dc24h_accounts PRIVATE dc24h_text)
 
 add_library(dc24h_chat src/chat/core.cpp src/chat/anti_flood.cpp src/chat/settings.cpp)
 target_compile_features(dc24h_chat PUBLIC cxx_std_20)
@@ -632,6 +632,11 @@ if(BUILD_TESTING)
     target_compile_options(session_registry_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
     add_test(NAME users.registry COMMAND session_registry_tests)
     set_tests_properties(users.registry PROPERTIES TIMEOUT 30)
+    add_executable(auth_session_tests tests/auth_session_tests.cpp)
+    target_link_libraries(auth_session_tests PRIVATE dc24h_users)
+    target_compile_options(auth_session_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    add_test(NAME users.auth_sessions COMMAND auth_session_tests)
+    set_tests_properties(users.auth_sessions PROPERTIES TIMEOUT 30)
     add_executable(session_manager_tests tests/session_manager_tests.cpp)
     target_link_libraries(session_manager_tests PRIVATE dc24h_adc)
     target_compile_options(session_manager_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
