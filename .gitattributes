@@ -1,2 +1,3 @@
 # Applies to git archive / source ZIPs, not ordinary clones.
 /proxmox-worker export-ignore
+/contabo export-ignore

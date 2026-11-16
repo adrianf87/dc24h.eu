@@ -32,10 +32,12 @@ class CatalogTests(unittest.TestCase):
     def test_exact_bytes_and_literal_cpp_template_characters(self):
         a = "INSERT INTO fixture VALUES ('ż; @name@ $<CONFIG> ${unchanged}')\n"
         b = "UPDATE fixture SET value='second;step'\n"
-        self.manifest['migrations'].append({'version': 5, 'name': 'fixture',
-                                           'files': ['0005_fixture_01.sql', '0005_fixture_02.sql']})
+        version = len(self.manifest['migrations']) + 1
+        prefix = f'{version:04d}'
+        self.manifest['migrations'].append({'version': version, 'name': 'fixture',
+                                           'files': [f'{prefix}_fixture_01.sql', f'{prefix}_fixture_02.sql']})
         for suffix, text in [('01', a), ('02', b)]:
-            (self.source / f'0005_fixture_{suffix}.sql').write_text(text)
+            (self.source / f'{prefix}_fixture_{suffix}.sql').write_text(text)
         generated = self.generate()
         baseline = (self.source / '0001_schema_migrations.sql').read_bytes()
         self.assertIn(hashlib.sha256(baseline).hexdigest(), generated)

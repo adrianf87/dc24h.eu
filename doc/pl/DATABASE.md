@@ -1,5 +1,7 @@
 # MariaDB — alpha-0.7.2
 
+**Aktualny etap: alpha-0.7.6.** [Identity Mapping](IDENTITY_MAPPING.md) dodaje `dc24h_account_identities` przez jawną migrację v5. Konta, weryfikatory i migracje 1–4 pozostają bez zmian. Historyczne numery schematów poniżej opisują zakres wcześniejszych etapów.
+
 **Aktualny etap — alpha-0.7.5:** [Rejestracja](REGISTRATION.md) atomowo tworzy konta registered/disabled i osobno przechowywane weryfikatory haseł OpenSSL scrypt z losową solą. Migracja v4 dodaje poświadczenia; walidacja Unicode, stały koszt KDF i rollback zapobiegają częściowym kontom. Uwierzytelnianie sesji i publiczna rejestracja API/WebAdmin pozostają planowane. CI zachowuje przypięty workflow Proxmox Ubuntu 24.04/22.04 bez scalania github-runner-v0.1.
 
 **Wersjonowanie schematu — alpha-0.7.2:** [Migracje bazy danych](DATABASE_MIGRATIONS.md) opisują uporządkowany katalog, aktualizację v1, odczyt stanu i obsługę częściowych błędów.

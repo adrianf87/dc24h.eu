@@ -78,9 +78,11 @@ void integration(const Options& options) {
     rejects(RepositoryErrorKind::schema,[&] { (void)repository.insert({"Unsafe"}); });
     c.execute("ALTER TABLE dc24h_accounts ADD UNIQUE KEY dc24h_accounts_name(name)");
     c.execute("ALTER TABLE dc24h_account_credentials DROP FOREIGN KEY dc24h_credentials_account");
+    c.execute("ALTER TABLE dc24h_account_identities DROP FOREIGN KEY dc24h_identities_account");
     c.execute("ALTER TABLE dc24h_accounts ENGINE=MyISAM");
     rejects(RepositoryErrorKind::schema,[&] { (void)repository.find_by_id(first.account.id()); });
     c.execute("ALTER TABLE dc24h_accounts ENGINE=InnoDB");
+    c.execute("ALTER TABLE dc24h_account_identities ADD CONSTRAINT dc24h_identities_account FOREIGN KEY(account_id) REFERENCES dc24h_accounts(id) ON DELETE RESTRICT ON UPDATE RESTRICT");
     c.execute("ALTER TABLE dc24h_account_credentials ADD CONSTRAINT dc24h_credentials_account FOREIGN KEY(account_id) REFERENCES dc24h_accounts(id) ON DELETE RESTRICT ON UPDATE RESTRICT");
     require(repository.find_by_name(name) == first);
     // Owning rows survive connection destruction and are visible to new connections.
@@ -165,9 +167,9 @@ void integration(const Options& options) {
     c.execute("UPDATE dc24h_accounts SET revision=1 WHERE id=?",{std::to_string(first.account.id().value())});
     c.execute("SET check_constraint_checks=ON");
     require(repository.find_by_id(first.account.id()) == first);
-    c.execute("UPDATE dc24h_schema_migrations SET state='applying' WHERE version=4");
+    c.execute("UPDATE dc24h_schema_migrations SET state='applying' WHERE version=5");
     rejects(RepositoryErrorKind::schema,[&] { (void)repository.find_by_id(first.account.id()); });
-    c.execute("UPDATE dc24h_schema_migrations SET state='applied' WHERE version=4");
+    c.execute("UPDATE dc24h_schema_migrations SET state='applied' WHERE version=5");
     c.execute("DELETE FROM dc24h_accounts WHERE id=?",{std::to_string(first.account.id().value())});
     require(!repository.find_by_id(first.account.id()));
     rejects(RepositoryErrorKind::stale,[&] { (void)repository.update(first,first.account); });

@@ -14,3 +14,5 @@ Only the two idempotent bootstrap steps are resumable automatically. Never edit
 an applied migration. The account and credential tables are application schema. No down migration or automated
 repair is supplied. See [English](../../doc/us/DATABASE_MIGRATIONS.md) and
 [Polish](../../doc/pl/DATABASE_MIGRATIONS.md) for extension/recovery and privileges.
+
+Schema v5 adds immutable account/nickname/CID bindings in `0005_account_identities.sql`. Existing migrations 1–4 are unchanged. Upgrade explicitly after backup; no identities are inferred from account names. See [Identity Mapping](../../doc/us/IDENTITY_MAPPING.md).

@@ -1,5 +1,17 @@
 # Changelog
 
+## alpha-0.7.6 — 2026-11-16
+
+Identity Mapping, based directly on main `d279245e3636d631c159ee8df53623c293fb36e8`. Preserve existing alpha-0.7.1–0.7.5 code and branch history; no automatic merge to main.
+
+- Add the C++20 `dc24h_identity_mapping` library with checked, owning ADC nickname/Tiger-CID pairs, immutable per-account bindings, exact account/nickname/CID lookups and exact-pair resolution. Preserve bytes and case; refuse invalid Unicode, noncanonical CID, moved-from input, invalid UTC time, missing accounts and duplicate account/nickname/CID ownership. Never overwrite a binding or infer account permissions from public identity.
+- Add explicit InnoDB schema v5 with full binary unique indexes and a restrictive account foreign key. Keep migration 1–4 bytes unchanged and preserve account/credential records. Require current clean migration history and bounded storage compatibility checks. Own each write transaction, lock the account, prepare all values, construct owning results before mutation and preserve unknown database outcomes without automatic retry.
+- Add unit and private-MariaDB tests for exact/cross-pair lookup, persistence, conflicts, input bounds, account metadata preservation, read-only privileges, thread/transaction ownership, racing binds, schema drift, corrupt CID and allocation-failure rollback. Extend upgrade/dirty-history tests for v5 while retaining the historical v3→v4 catalog fixture. Update the catalog fixture to choose its next version dynamically.
+- Update CMake/WebAdmin release metadata and EN/US plus PL documentation. Replace this branch's Proxmox workflow with the single Contabo Ubuntu 24.04 runner `server-747585786` (ID 27), six parallel build/CTest, Node and Playwright workers and the common cross-branch concurrency group. No secrets enter source control. Existing alpha-0.7.1/0.7.2/0.7.4/0.7.5 receive CI-only commits; alpha-0.7.3 already uses Contabo.
+- Account authentication, password verification, live registered session admission, role grants, binding replacement/revocation and account HTTP/WebAdmin endpoints remain future stages. No production schema migration or deployment is performed. Other target operating systems are not claimed verified by Ubuntu-only CI.
+
+Validation: targeted Debug build passed without compiler warnings. All 9 focused CTest suites passed (identity mapping unit/private MariaDB, account repository, registration unit/private MariaDB, migration unit/upgrade, catalog and project metadata). Two additional real ncdc ADC/ADCS login suites passed. UTF-8/language parity/local links, Python and shell syntax, actionlint and whitespace checks passed. Full remote Debug/Release/ncdc/WebAdmin CI is launched without waiting for completion, as requested; its result is not claimed.
+
 ## alpha-0.7.5 — 2026-11-15
 
 Registration increment, based directly on main `493e146af8192e0a87288261a9c9548ec2ee66da`. Earlier account/database stages and branches are retained; no automatic main or github-runner-v0.1 merge.

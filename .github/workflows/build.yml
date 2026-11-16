@@ -1,34 +1,67 @@
 name: Check status
 on:
   push:
-    branches: [main, alpha-0.7.4, alpha-0.7.5]
+    branches: [alpha-0.7.6]
   pull_request:
-    branches: [main, alpha-0.7.4, alpha-0.7.5]
+    branches: [alpha-0.7.6]
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: dc24h-proxmox-vms-200-201
+  group: dc24h-contabo-server-747585786
   cancel-in-progress: false
 jobs:
-  vm200:
-    name: VM 200 - Ubuntu 24.04
+  contabo:
+    name: Contabo - Ubuntu 24.04
     if: >-
       github.repository == 'adrianf87/dc24h.eu' &&
       (github.event_name != 'pull_request' ||
        github.event.pull_request.head.repo.full_name == github.repository)
-    uses: adrianf87/dc24h.eu/.github/workflows/proxmox-vm.yml@20ca46bd5f297a98bbbbe59604bcb0a041839b6d
-    with:
-      runner: proxmox-worker-2
-      ubuntu: '24.04'
-      cxx: g++
-
-  vm201:
-    name: VM 201 - Ubuntu 22.04
-    needs: vm200
-    if: ${{ !cancelled() && needs.vm200.result != 'skipped' }}
-    uses: adrianf87/dc24h.eu/.github/workflows/proxmox-vm.yml@20ca46bd5f297a98bbbbe59604bcb0a041839b6d
-    with:
-      runner: proxmox-worker-3
-      ubuntu: '22.04'
-      cxx: g++-12
+    runs-on: [self-hosted, Linux, X64, server-747585786, ubuntu-24-04]
+    timeout-minutes: 120
+    env:
+      CXX: g++
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Verify the single Contabo worker
+        run: bash contabo/scripts/verify-runner.sh
+      - name: Check administrator-provisioned packages
+        run: python3 contabo/scripts/dependencies.py check
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: webadmin/package-lock.json
+      - name: Configure Debug C++20
+        run: cmake -S . -B build/Debug -DCMAKE_BUILD_TYPE=Debug -DDC24H_REQUIRE_INTEGRATION_TESTS=ON
+      - name: Build Debug
+        run: cmake --build build/Debug --parallel 6
+      - name: Test Debug
+        run: ctest --test-dir build/Debug --parallel 6 --output-on-failure
+      - name: Configure Release C++20
+        run: cmake -S . -B build/Release -DCMAKE_BUILD_TYPE=Release -DDC24H_REQUIRE_INTEGRATION_TESTS=ON
+      - name: Build Release
+        run: cmake --build build/Release --parallel 6
+      - name: Test Release
+        run: ctest --test-dir build/Release --parallel 6 --output-on-failure
+      - name: Install frontend dependencies
+        working-directory: webadmin
+        run: npm ci
+      - name: Typecheck and production build
+        working-directory: webadmin
+        run: npm run build
+      - name: Frontend unit tests
+        working-directory: webadmin
+        run: node --import tsx --test --test-concurrency=6 tests/*.test.ts
+      - name: Install Chromium for the runner user
+        working-directory: webadmin
+        run: npx playwright install chromium
+      - name: Browser tests
+        working-directory: webadmin
+        run: npm run test:e2e -- --workers=6 --fully-parallel
+      - name: Real C++ API integration
+        working-directory: webadmin
+        run: npm run test:integration -- ../build/Release/dc24h

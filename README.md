@@ -2,9 +2,11 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.7.5 (Registration).**
+**Current development version: alpha-0.7.6 (Identity Mapping).**
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.7.6 Identity Mapping**: immutable account/nickname/CID bindings in MariaDB, exact-pair resolution, conflict-safe writes and explicit schema v5. See [Identity Mapping](doc/us/IDENTITY_MAPPING.md).
 
 - **alpha-0.7.5 Registration**: atomic registered/disabled account and salted scrypt verifier creation through a trusted C++ API; bounded Unicode inputs, fixed costs and fault-tested rollback. See [Registration](doc/us/REGISTRATION.md).
 

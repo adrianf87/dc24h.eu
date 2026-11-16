@@ -1,5 +1,11 @@
 # dc24h.eu technical documentation
 
+Current development version: alpha-0.7.6.
+
+[Identity Mapping — alpha-0.7.6](us/IDENTITY_MAPPING.md) · [PL](pl/IDENTITY_MAPPING.md)
+
+[Contabo CI](us/CONTABO_CI.md) · [PL](pl/CONTABO_CI.md)
+
 [Registration — alpha-0.7.5](us/REGISTRATION.md) · [PL](pl/REGISTRATION.md)
 
 [Account Repository — alpha-0.7.4](us/ACCOUNT_REPOSITORY.md) · [PL](pl/ACCOUNT_REPOSITORY.md)
