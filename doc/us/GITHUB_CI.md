@@ -1,0 +1,27 @@
+# GitHub Actions CI
+
+The `Check status` workflow in `.github/workflows/build.yml` runs on disposable
+GitHub-hosted `ubuntu-24.04` runners. Pushes and pull requests targeting `main`
+or `alpha-0.7.8`, including fork pull requests, and manual dispatches trigger CI.
+The workflow has read-only repository permissions and disables persisted checkout credentials.
+
+Three jobs can run independently:
+
+- **C++ Debug** and **C++ Release**: separate matrix jobs install build dependencies
+  and MariaDB, Apache and ncdc, configure C++20 with `BUILD_TESTING=ON` and
+  `DC24H_REQUIRE_INTEGRATION_TESTS=ON`, then build and run every CTest suite.
+  Missing integration tools fail configuration. Matrix failures do not cancel the other build.
+- **WebAdmin**: Node 22, `npm ci`, typecheck/production build, Node unit tests,
+  Chromium browser tests and real C++ API/React integration. This job builds
+  its own Release `dc24h` binary with `BUILD_TESTING=OFF`; the matrix above
+  covers the full C++ test suite. Playwright installs Chromium and its system dependencies.
+
+C++ builds, CTest and Node tests use the runner's available CPU count; Playwright
+uses two workers. Tests start their own isolated services. Packages are installed
+with sudo on disposable GitHub machines; builds and tests run as the runner user.
+No self-hosted runner registration, Contabo host or Proxmox VM is required.
+
+Concurrency is grouped by workflow and Git ref with `cancel-in-progress: false`.
+C++ jobs have a 120-minute timeout; WebAdmin has 60 minutes. Check each run under
+[GitHub Actions](https://github.com/adrianf87/dc24h.eu/actions/workflows/build.yml)
+for actual results.

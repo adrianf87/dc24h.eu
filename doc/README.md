@@ -8,7 +8,7 @@ Current development version: alpha-0.7.8.
 
 [Identity Mapping — alpha-0.7.6](us/IDENTITY_MAPPING.md) · [PL](pl/IDENTITY_MAPPING.md)
 
-[Contabo CI](us/CONTABO_CI.md) · [PL](pl/CONTABO_CI.md)
+[GitHub Actions CI](us/GITHUB_CI.md) · [PL](pl/GITHUB_CI.md)
 
 [Registration — alpha-0.7.5](us/REGISTRATION.md) · [PL](pl/REGISTRATION.md)
 
@@ -26,7 +26,6 @@ Current development version: alpha-0.7.8.
 
 [Transfer Statistics — alpha-0.6.11](us/TRANSFER_STATISTICS.md) · [PL](pl/TRANSFER_STATISTICS.md)
 
-[Debian 13 custom-runner CI](us/CI_DEBIAN13.md) · [PL](pl/CI_DEBIAN13.md)
 
 [Transfer Limits — alpha-0.6.10](us/TRANSFER_LIMITS.md) · [PL](pl/TRANSFER_LIMITS.md)
 
