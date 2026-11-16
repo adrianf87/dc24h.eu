@@ -1,5 +1,7 @@
 # Versions
 
+**alpha-0.7.8:** [ADC Authentication](ADC_AUTHENTICATION.md) implements account-backed GPA/PAS with separate AES-256-GCM encrypted ADC passwords and an external private key, while preserving scrypt. Explicit migration v6 and active exact nickname/CID mappings are required; ADCS is the default. The bounded startup directory requires restart for changes/revocations. Public provisioning/reset/rotation and role grants remain future work. This entry supersedes earlier stage descriptions of authentication as planned.
+
 **alpha-0.7.7 Password Security** starts directly from main `75c82eea4d5799460bebe93ed1b6accef175ce25`. It preserves schema v5 and existing Registration/Identity Mapping, adds protected credential checking and updates all release fixtures. The branch is not merged automatically.
 
 **alpha-0.7.6 Identity Mapping** starts from main `d279245e3636d631c159ee8df53623c293fb36e8`. It retains alpha-0.7.1–0.7.5, adds schema v5 and [identity mapping](IDENTITY_MAPPING.md), and runs tests on the single Contabo runner. The numbered branch is not merged automatically.

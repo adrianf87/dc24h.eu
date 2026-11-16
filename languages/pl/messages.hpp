@@ -3,7 +3,18 @@
 #include <string_view>
 
 namespace dc24h::i18n::pl {
-inline constexpr std::array<std::string_view, 138> messages{{
+inline constexpr std::array<std::string_view, 149> messages{{
+    "Niepoprawne dane poświadczenia ADC",
+    "Niepoprawne potwierdzenie hasła konta przy zapisie hasła ADC",
+    "Poświadczenie ADC zostało już zapisane",
+    "Poświadczenie ADC wymaga powiązania tożsamości konta",
+    "Uwierzytelnianie ADC wymaga zgodnego aktualnego schematu bazy",
+    "Niepoprawne zapisane poświadczenie lub tożsamość ADC",
+    "Błąd operacji kryptograficznej poświadczenia ADC",
+    "Uwierzytelnianie ADC nie powiodło się",
+    "Włączono uwierzytelnianie kont ADC",
+    "Uwierzytelnianie ADC wymaga bazy, prywatnego klucza i zgodnych portów nasłuchu",
+    "Klucz uwierzytelniania ADC wymaga oddzielnego prywatnego pliku",
     "Niepoprawny katalog migracji bazy danych",
     "Migracja bazy danych wymaga interwencji operatora",
     "Niezgodny schemat metadanych migracji bazy danych",

@@ -1,5 +1,20 @@
 # Changelog
 
+## Main integration of alpha-0.7.8 — 2026-11-16
+
+Enable main push/PR checks alongside alpha-0.7.8 for the explicitly requested integration. Preserve GPA/PAS account authentication, separate encrypted ADC credentials, external private keys, unchanged scrypt and schema v6. Retain the single Contabo Ubuntu 24.04 runner, six parallel workers, pinned checkout and branch-specific queues. Full alpha-0.7.8 CI passed at a1247d637bc7e0f8ffab96d1ee7a3528f888af0d; actionlint validates this trigger-only adjustment. Newly triggered CI is not awaited.
+
+## alpha-0.7.8 — 2026-11-16
+
+ADC Authentication, based directly on main `a20abc38e731e9cb94b3fbf73aa080e2ccaf273d`; no automatic merge.
+
+- Implement one-shot GPA/PAS with random 24-byte challenges, exact Tiger/base32 responses, constant-time digest comparison, output-completion barriers and sensitive-buffer erasure. Admit account sessions only after correct PAS and the existing own-BINF final LF; reject early, malformed, wrong and replayed responses without user-list publication.
+- Preserve existing scrypt credentials. Following the explicit project decision, enroll a separate ADC password through a trusted C++ service after proving the original account password. Store only AES-256-GCM envelopes bound to account/time, with an external private key. Add explicit schema v6 while preserving SQL 1–5 bytes. No overwrite/reset, public provisioning endpoint or secret CLI arguments.
+- Load bounded validated account/mapping/ciphertext snapshots before opening listeners; require active exact nickname/CID pairs and ADCS by default. Reserved identities cannot fall back to guests or be taken through rename. Unknown identities retain guest behavior. SQL/scrypt stay outside the reactor; changes/revocations require restart. Role grants and last-login updates remain separate.
+- Add crypto/fault/lifecycle tests, disposable MariaDB and restricted-reader checks, wrong-key/tampered-record startup failures, v5 upgrade preservation and live ncdc ADC/ADCS wrong/correct-password, reconnect, welcome and chat checks. Update config, release fixtures and mirrored US/PL documentation. Keep the single Ubuntu 24.04 Contabo worker and six-way CI on alpha-0.7.8; no Proxmox tests.
+
+Validation: all 195 Debug CTest suites passed across the full run and metadata recheck after documentation files were completed, including real ncdc account and guest ADC/ADCS, disposable MariaDB and Apache. The C++ build was warning-free. Release metadata, local documentation links/language parity, Python syntax, actionlint and whitespace checks passed. Full remote Debug/Release/WebAdmin CI is triggered without waiting for completion. No production key, schema migration or deployment is performed.
+
 ## Main integration of alpha-0.7.7 — 2026-11-16
 
 Enable main push/PR checks alongside alpha-0.7.7 for the explicitly requested integration. Retain the single Contabo Ubuntu 24.04 runner, six parallel build/test workers, pinned checkout and branch-specific queues. Full alpha-0.7.7 CI passed at 061cd1842ac02f91408c9ba813b75085d1145d4b; actionlint validates this trigger-only adjustment. Newly triggered CI is not awaited.

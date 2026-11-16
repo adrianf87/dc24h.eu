@@ -1,5 +1,7 @@
 # Testowanie
 
+**alpha-0.7.8:** [ADC Authentication](ADC_AUTHENTICATION.md) wdraża logowanie kont GPA/PAS, osobne hasło ADC szyfrowane AES-256-GCM i prywatny klucz poza bazą, zachowując scrypt. Wymagane są jawna migracja v6, aktywne konto i dokładna para nick/CID; domyślnie obowiązuje ADCS. Zmiany i blokady w katalogu startowym wymagają restartu. Publiczne przygotowanie kont, reset, rotacja i nadawanie ról pozostają kolejnymi etapami. Ten wpis zastępuje wcześniejsze opisy planowanego uwierzytelniania.
+
 **alpha-0.7.7:** testy jednostkowe i prywatna MariaDB obejmują niezależny wzorzec scrypt, odrzucanie błędnego rekordu przed KDF, dokładne bajty hasła, stałe koszty, porównanie kluczy, awarie dostawcy, minimalne uprawnienia i wymazanie danych przy wyjątkach/alokacjach. Lokalnie sprawdzamy też rejestrację, mapowanie, wersję, ncdc i metadane. Pełne CI Contabo startuje bez oczekiwania na zakończenie; wyniki zapisuje CHANGELOG.md.
 
 **Poprawka wersji w testach (2026-11-16):** poprzedni przebieg Debug na Contabo zaliczył 188/191 zestawów. core.process, logging.process i api.process nadal oczekiwały alpha-0.7.5; dokładne oczekiwania zmieniono na alpha-0.7.6. Trzy zestawy przeszły lokalnie; pełne CI Contabo startuje ponownie bez oczekiwania na wynik.

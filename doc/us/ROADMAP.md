@@ -1,5 +1,7 @@
 # Roadmap
 
+**alpha-0.7.8:** [ADC Authentication](ADC_AUTHENTICATION.md) implements account-backed GPA/PAS with separate AES-256-GCM encrypted ADC passwords and an external private key, while preserving scrypt. Explicit migration v6 and active exact nickname/CID mappings are required; ADCS is the default. The bounded startup directory requires restart for changes/revocations. Public provisioning/reset/rotation and role grants remain future work. This entry supersedes earlier stage descriptions of authentication as planned.
+
 **Delivered in alpha-0.7.7:** [Password Security](PASSWORD_SECURITY.md) adds fixed-format, fixed-cost scrypt verification through a trusted read-only C++ service, constant-time key comparison and cleansed owned buffers. A credential match does not activate accounts or admit sessions; public authentication, reset and rehashing remain future stages.
 
 **Delivered in alpha-0.7.6:** [Identity Mapping](IDENTITY_MAPPING.md) adds immutable, unique account/nickname/CID bindings and exact-pair lookup in explicit schema v5. Binding is a trusted management operation; password authentication, session grants and revocation remain future stages. [Contabo CI](CONTABO_CI.md) uses Ubuntu 24.04 and six parallel workers.

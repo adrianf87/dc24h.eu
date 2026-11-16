@@ -1,5 +1,7 @@
 # Database Migrations — alpha-0.7.2
 
+**alpha-0.7.8:** [ADC Authentication](ADC_AUTHENTICATION.md) implements account-backed GPA/PAS with separate AES-256-GCM encrypted ADC passwords and an external private key, while preserving scrypt. Explicit migration v6 and active exact nickname/CID mappings are required; ADCS is the default. The bounded startup directory requires restart for changes/revocations. Public provisioning/reset/rotation and role grants remain future work. This entry supersedes earlier stage descriptions of authentication as planned.
+
 Current catalog: v1 metadata, v2 state, v3 [account storage](ACCOUNT_REPOSITORY.md), v4 [credentials](REGISTRATION.md). Fresh databases apply 4 versions; upgrading v1 applies 3, v2 applies 2 and v3 applies 1. The original alpha-0.7.2 delivery is described below.
 
 Based on main `4f204b9f8901a5201c56abad957543344c177256`, including Database Core alpha-0.7.1. This stage versions the SQL schema through an ordered compiled catalog, preserves the original baseline, upgrades its metadata and supplies read-only status and failure detection. It adds no application/account/authentication tables or WebAdmin writes.

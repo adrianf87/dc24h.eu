@@ -3,7 +3,18 @@
 #include <string_view>
 
 namespace dc24h::i18n::us {
-inline constexpr std::array<std::string_view, 138> messages{{
+inline constexpr std::array<std::string_view, 149> messages{{
+    "Invalid ADC credential input",
+    "ADC credential enrollment proof failed",
+    "ADC credential already enrolled",
+    "ADC credential requires an account identity mapping",
+    "ADC authentication requires compatible current storage",
+    "Invalid stored ADC credential or identity",
+    "ADC credential cryptography failed",
+    "ADC authentication failed",
+    "ADC account authentication enabled",
+    "ADC authentication requires database, private key and compatible listeners",
+    "ADC authentication key must use a separate private file",
     "Invalid database migration catalog",
     "Database migration requires operator recovery",
     "Database migration metadata schema mismatch",

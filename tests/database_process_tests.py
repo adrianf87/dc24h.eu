@@ -12,6 +12,11 @@ import time
 
 from api_support import enable_api, fetch_status
 
+ADC_AUTH_TEST = None
+if '--adc-authentication-test' in sys.argv:
+    index = sys.argv.index('--adc-authentication-test')
+    ADC_AUTH_TEST = os.path.abspath(sys.argv[index + 1])
+    del sys.argv[index:index + 2]
 PASSWORD_TEST = None
 if '--password-test' in sys.argv:
     index = sys.argv.index('--password-test')
@@ -123,7 +128,7 @@ def main():
                 result = cli(path, action)
                 require(result.returncode == 0, result.stderr)
                 no_secrets(result)
-            require('version=0 latest=5 pending=5 dirty=no' in cli(path, '--database-status').stdout,
+            require('version=0 latest=6 pending=6 dirty=no' in cli(path, '--database-status').stdout,
                     'Fresh schema status is incorrect')
             require(sql('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema="dc24h"') == '0',
                     'Check command modified schema')
@@ -135,7 +140,7 @@ def main():
                     'Migration checksum differs from SQL source')
             result = cli(path, '--migrate-database')
             require(result.returncode == 0 and 'applied=0' in result.stdout, result.stderr)
-            require('version=5 latest=5 pending=0 dirty=no' in cli(path, '--database-status').stdout,
+            require('version=6 latest=6 pending=0 dirty=no' in cli(path, '--database-status').stdout,
                     'Schema status does not match applied migrations')
             if MIGRATION_TEST:
                 result = run([MIGRATION_TEST, str(db_socket), str(password)])
@@ -164,6 +169,24 @@ def main():
                     expected_key = hashlib.scrypt(b'Registration test password 42!', salt=salt, n=131072, r=8, p=1,
                                                   maxmem=256 * 1024 * 1024, dklen=32)
                     require(key == expected_key, 'Independent password derivation differs')
+            if ADC_AUTH_TEST:
+                keyfile = folder / 'adc.key'
+                keyfile.write_text('01' * 32 + '\n'); keyfile.chmod(0o600)
+                sql("CREATE USER 'adc_runtime'@'localhost' IDENTIFIED BY PASSWORD '" + native_hash + "';"
+                    "GRANT SELECT ON dc24h.dc24h_schema_migrations TO 'adc_runtime'@'localhost';"
+                    "GRANT SELECT ON dc24h.dc24h_accounts TO 'adc_runtime'@'localhost';"
+                    "GRANT SELECT ON dc24h.dc24h_account_identities TO 'adc_runtime'@'localhost';"
+                    "GRANT SELECT ON dc24h.dc24h_account_adc_credentials TO 'adc_runtime'@'localhost';")
+                result = run([ADC_AUTH_TEST, str(db_socket), str(password), str(keyfile)])
+                require(result.returncode == 0, result.stderr)
+                no_secrets(result)
+                import shutil
+                ncdc = shutil.which('ncdc')
+                require(ncdc is not None, 'ncdc is required for ADC authentication integration')
+                result = subprocess.run([sys.executable, str(Path(__file__).with_name('adc_authentication_process_tests.py')),
+                                         BINARY, str(path), str(keyfile), ncdc], capture_output=True, text=True, timeout=90)
+                require(result.returncode == 0, result.stderr)
+                no_secrets(result)
             if PASSWORD_TEST:
                 sql("CREATE USER 'password_limited'@'localhost' IDENTIFIED BY PASSWORD '" + native_hash + "';"
                     "CREATE USER 'password_no_credentials'@'localhost' IDENTIFIED BY PASSWORD '" + native_hash + "';"
@@ -222,17 +245,18 @@ def main():
                 require(result.returncode == 0, result.stderr)
                 no_secrets(result)
             # A legacy registry requires ALTER; inspection never upgrades it.
-            sql('DROP TABLE dc24h.dc24h_account_identities;'
+            sql('DROP TABLE dc24h.dc24h_account_adc_credentials;'
+                'DROP TABLE dc24h.dc24h_account_identities;'
                 'DROP TABLE dc24h.dc24h_account_credentials;'
                 'DROP TABLE dc24h.dc24h_accounts;'
                 'DELETE FROM dc24h.dc24h_schema_migrations WHERE version>=2;'
                 'ALTER TABLE dc24h.dc24h_schema_migrations DROP COLUMN state;')
             result = cli(path, '--migrate-database')
             require(result.returncode == 1, 'Upgrade accepted without ALTER privileges'); no_secrets(result)
-            require('version=1 latest=5 pending=4 dirty=no' in cli(path, '--database-status').stdout,
+            require('version=1 latest=6 pending=5 dirty=no' in cli(path, '--database-status').stdout,
                     'Read-only status changed legacy schema')
             config()
-            require('applied=4' in cli(path, '--migrate-database').stdout, 'Legacy upgrade failed')
+            require('applied=5' in cli(path, '--migrate-database').stdout, 'Legacy upgrade failed')
             api_path, api_token = enable_api(path, folder)
             if NCDC:
                 for transport in ([], ['--tls']):
@@ -268,7 +292,7 @@ def main():
             result = cli(path, '--language', 'pl', '--check-database')
             require(result.returncode == 0 and 'Połączenie z bazą' in result.stdout, result.stderr)
             result = cli(path, '--language', 'pl', '--database-status')
-            require(result.returncode == 0 and 'Wersja schematu bazy danych=5' in result.stdout, result.stderr)
+            require(result.returncode == 0 and 'Wersja schematu bazy danych=6' in result.stdout, result.stderr)
             config(db_user='missing_private_user')
             result = cli(path, '--check-database')
             require(result.returncode == 1, 'Missing user accepted'); no_secrets(result)

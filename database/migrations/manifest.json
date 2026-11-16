@@ -4,6 +4,7 @@
     { "version": 2, "name": "migration_state", "files": ["0002_migration_state.sql"] },
     { "version": 3, "name": "accounts", "files": ["0003_accounts.sql"] },
     { "version": 4, "name": "account_credentials", "files": ["0004_account_credentials.sql"] },
-    { "version": 5, "name": "account_identities", "files": ["0005_account_identities.sql"] }
+    { "version": 5, "name": "account_identities", "files": ["0005_account_identities.sql"] },
+    { "version": 6, "name": "adc_credentials", "files": ["0006_adc_credentials.sql"] }
   ]
 }

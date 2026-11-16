@@ -1,5 +1,7 @@
 # MariaDB migrations
 
+Schema v6 adds separate encrypted ADC credentials; SQL 1–5 remains unchanged. See [ADC Authentication](../../doc/us/ADC_AUTHENTICATION.md) for the external-key requirement and explicit provisioning.
+
 `manifest.json` declares the ordered SQL catalog. Migration 1 remains the
 immutable alpha-0.1.8 metadata baseline; migration 2 adds the migration state
 column; migration 3 adds checked account metadata storage and migration 4 adds

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dc24h/adc/inf.hpp"
+#include "dc24h/adc/authentication.hpp"
 #include "dc24h/adc/user_login.hpp"
 #include "dc24h/adc/user_list.hpp"
 #include "dc24h/adc/inf_updates.hpp"
@@ -36,6 +37,7 @@ struct LoginLimits {
     std::optional<std::string> welcome_text{std::string(chat::default_welcome_message)};
     search::SecuritySettings search{};
     transfers::SecuritySettings transfers{};
+    std::shared_ptr<const AuthenticationSource> authentication{};
 };
 enum class CloseReason { login_timeout, idle_timeout, partial_frame_timeout, security_quota, negotiation_limit, identity_limit };
 
@@ -89,6 +91,8 @@ public:
     [[nodiscard]] bool overloaded(Id id) const;
     [[nodiscard]] bool peer_fatal(Id id) const;
     [[nodiscard]] bool ready(Id id) const;
+    // Trusted owner-thread account lookup, published only after final welcome LF.
+    [[nodiscard]] std::optional<std::uint64_t> authenticated_account(Id id) const;
     [[nodiscard]] ConnectionState state(Id id) const;
     [[nodiscard]] std::size_t queued_bytes() const noexcept { return queued_; }
     [[nodiscard]] std::size_t users() const noexcept { return sessions_.identified_users(); }
@@ -101,7 +105,8 @@ public:
 private:
     [[nodiscard]] std::optional<transfers::Permissions> connection_permissions(users::SessionId id) const noexcept override;
     struct Peer;
-    enum class Completion { observe, support, welcome };
+    enum class Completion { observe, support, authentication, welcome };
+    void complete_login(Peer& peer);
     bool enqueue(Peer& peer, Message message, Completion completion = Completion::observe);
     template<class Packet> bool enqueue_shared(Peer& peer, std::shared_ptr<const Packet> frame);
     void reject(Peer& peer, std::string_view status, std::optional<std::string_view> command = {},

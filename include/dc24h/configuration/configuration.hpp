@@ -8,12 +8,19 @@
 #include <string>
 
 namespace dc24h::configuration {
+struct AuthenticationSettings {
+    bool enabled{false};
+    std::string key_file;
+    std::size_t max_accounts{1024};
+    bool require_tls{true};
+};
 
 struct Settings {
     network::Options network;
     logging::Options logging;
     database::Options database;
     api::Options api;
+    AuthenticationSettings authentication;
     // Parsing provenance, used to preserve TLS-only CLI defaults and protect the INI.
     bool implicit_plain_listener{true};
     std::string source_file;

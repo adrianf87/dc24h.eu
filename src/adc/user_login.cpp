@@ -45,10 +45,13 @@ std::string_view user_login_status(const UserLoginFailure& error) noexcept {
     }, error);
 }
 UserLoginResult UserLogin::register_guest(users::SessionId id, const ClientSession& client, users::TimePoint now) {
+    return register_approved(id,client,now);
+}
+UserLoginResult UserLogin::register_approved(users::SessionId id, const ClientSession& client, users::TimePoint now) {
     const auto* model = sessions_.find(id);
     if (!model) { return users::RegistryError::missing; }
     if (model->phase() != users::Phase::negotiating) { return users::SessionError::invalid_state; }
-    // NORMAL here records explicit guest approval after a valid initial INF;
+    // NORMAL records explicit guest approval or successful password approval;
     // it does not mean the welcome has been sent or the managed user is ready.
     if (client.state() != ConnectionState::normal) { return UserLoginError::invalid_protocol_state; }
     if (!verified(client)) { return UserLoginError::unverified_identity; }

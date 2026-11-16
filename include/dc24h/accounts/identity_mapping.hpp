@@ -57,6 +57,7 @@ public:
     // Both values must match the same row. Never falls back to either key.
     [[nodiscard]] std::optional<StoredIdentity> resolve(const IdentityKey& identity);
 private:
+    friend class AdcAuthenticationDirectory;
     void require_schema();
     database::Connection& connection_;
 };

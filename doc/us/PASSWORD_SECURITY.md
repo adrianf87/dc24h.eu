@@ -1,5 +1,7 @@
 # Password Security — alpha-0.7.7
 
+**alpha-0.7.8:** [ADC Authentication](ADC_AUTHENTICATION.md) implements account-backed GPA/PAS with separate AES-256-GCM encrypted ADC passwords and an external private key, while preserving scrypt. Explicit migration v6 and active exact nickname/CID mappings are required; ADCS is the default. The bounded startup directory requires restart for changes/revocations. Public provisioning/reset/rotation and role grants remain future work. This entry supersedes earlier stage descriptions of authentication as planned.
+
 Based directly on main `75c82eea4d5799460bebe93ed1b6accef175ce25`.
 This increment retains Registration and Identity Mapping, adds a trusted
 credential-check API and leaves SQL migrations 1–5 unchanged. It does not merge

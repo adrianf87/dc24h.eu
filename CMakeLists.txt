@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.7.7 LANGUAGES CXX)
+project(dc24h VERSION 0.7.8 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -73,7 +73,7 @@ set_target_properties(dc24h_transfers PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_transfers PUBLIC include)
 target_link_libraries(dc24h_transfers PUBLIC dc24h_users PRIVATE dc24h_text)
 
-add_library(dc24h_adc src/adc/connection_errors.cpp src/adc/status_routing.cpp src/adc/parser.cpp src/adc/state.cpp src/adc/sup.cpp src/adc/sid.cpp src/adc/sid_session.cpp
+add_library(dc24h_adc src/adc/authentication.cpp src/adc/connection_errors.cpp src/adc/status_routing.cpp src/adc/parser.cpp src/adc/state.cpp src/adc/sup.cpp src/adc/sid.cpp src/adc/sid_session.cpp
     src/adc/identity_hash.cpp src/adc/tiger_identity.cpp src/adc/inf.cpp src/adc/serializer.cpp src/adc/login.cpp src/adc/status.cpp src/adc/msg.cpp src/adc/sch.cpp src/adc/res.cpp src/adc/connection_routing.cpp src/adc/ctm.cpp src/adc/ctm_routing.cpp src/adc/rcm.cpp src/adc/rcm_routing.cpp src/adc/result_routing.cpp src/adc/search_routing.cpp src/adc/msg_flags.cpp src/adc/chat_validation.cpp src/adc/public_chat.cpp src/adc/private_chat.cpp src/adc/message_routing.cpp src/adc/hub_messages.cpp src/adc/user.cpp src/adc/user_login.cpp src/adc/user_list.cpp src/adc/inf_updates.cpp src/adc/user_disconnect.cpp)
 target_compile_features(dc24h_adc PUBLIC cxx_std_20)
 set_target_properties(dc24h_adc PROPERTIES CXX_EXTENSIONS OFF)
@@ -141,6 +141,13 @@ target_include_directories(dc24h_identity_mapping PUBLIC include)
 target_link_libraries(dc24h_identity_mapping PUBLIC dc24h_account_repository dc24h_adc PRIVATE dc24h_text)
 target_compile_options(dc24h_identity_mapping PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 
+add_library(dc24h_account_authentication src/accounts/adc_authentication.cpp)
+target_compile_features(dc24h_account_authentication PUBLIC cxx_std_20)
+set_target_properties(dc24h_account_authentication PROPERTIES CXX_EXTENSIONS OFF)
+target_include_directories(dc24h_account_authentication PUBLIC include PRIVATE src/accounts)
+target_link_libraries(dc24h_account_authentication PUBLIC dc24h_identity_mapping dc24h_password_security PRIVATE OpenSSL::Crypto dc24h_security)
+target_compile_options(dc24h_account_authentication PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+
 add_library(dc24h_api src/api/http.cpp src/api/server.cpp)
 target_compile_features(dc24h_api PUBLIC cxx_std_20)
 set_target_properties(dc24h_api PROPERTIES CXX_EXTENSIONS OFF)
@@ -164,7 +171,7 @@ target_link_libraries(dc24h_core PUBLIC Threads::Threads dc24h_network dc24h_log
 target_compile_definitions(dc24h_core PRIVATE _POSIX_C_SOURCE=200809L)
 
 add_executable(dc24h src/main.cpp)
-target_link_libraries(dc24h PRIVATE dc24h_core dc24h_configuration)
+target_link_libraries(dc24h PRIVATE dc24h_core dc24h_configuration dc24h_account_authentication)
 set_target_properties(dc24h PROPERTIES CXX_EXTENSIONS OFF)
 
 foreach(target dc24h_transfers dc24h_text dc24h_search dc24h_chat dc24h_users dc24h_i18n dc24h_core dc24h_network dc24h_logging dc24h_adc dc24h_adcs dc24h_security dc24h_configuration dc24h_database dc24h_api dc24h)
@@ -746,6 +753,16 @@ if(BUILD_TESTING)
     target_compile_options(registration_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
     set_target_properties(registration_tests PROPERTIES CXX_EXTENSIONS OFF)
     target_link_options(registration_tests PRIVATE -Wl,--wrap=RAND_bytes -Wl,--wrap=EVP_PBE_scrypt -Wl,--wrap=OPENSSL_cleanse)
+    add_executable(adc_credential_tests tests/adc_credential_tests.cpp)
+    target_link_libraries(adc_credential_tests PRIVATE dc24h_account_authentication OpenSSL::Crypto)
+    target_compile_options(adc_credential_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    target_link_options(adc_credential_tests PRIVATE -Wl,--wrap=RAND_bytes -Wl,--wrap=OPENSSL_cleanse)
+    add_executable(adc_authentication_tests tests/adc_authentication_tests.cpp)
+    target_link_libraries(adc_authentication_tests PRIVATE dc24h_adc Gcrypt::Gcrypt OpenSSL::Crypto)
+    target_compile_options(adc_authentication_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    target_link_options(adc_authentication_tests PRIVATE -Wl,--wrap=RAND_bytes -Wl,--wrap=gcry_md_open -Wl,--wrap=CRYPTO_memcmp -Wl,--wrap=OPENSSL_cleanse)
+    add_test(NAME adc.authentication COMMAND adc_authentication_tests)
+    set_tests_properties(adc.authentication PROPERTIES TIMEOUT 20)
     add_executable(password_security_tests tests/password_security_tests.cpp)
     target_link_libraries(password_security_tests PRIVATE dc24h_password_security OpenSSL::Crypto Threads::Threads)
     target_include_directories(password_security_tests PRIVATE src/accounts)
@@ -767,6 +784,12 @@ if(BUILD_TESTING)
     find_program(MARIADB_CLIENT_EXECUTABLE mariadb)
     find_program(MARIADB_ADMIN_EXECUTABLE mariadb-admin)
     if(MARIADBD_EXECUTABLE AND MARIADB_INSTALL_DB_EXECUTABLE AND MARIADB_CLIENT_EXECUTABLE AND MARIADB_ADMIN_EXECUTABLE)
+        add_test(NAME accounts.adc_authentication.process COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/database_process_tests.py"
+            "$<TARGET_FILE:dc24h>" "$<TARGET_FILE:database_tests>"
+            --adc-authentication-test "$<TARGET_FILE:adc_credential_tests>")
+        set_tests_properties(accounts.adc_authentication.process PROPERTIES TIMEOUT 120
+            ENVIRONMENT "PATH=/usr/sbin:/usr/bin:/sbin:/bin:$ENV{PATH}")
         add_test(NAME accounts.password_security.process COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/database_process_tests.py"
             "$<TARGET_FILE:dc24h>" "$<TARGET_FILE:database_tests>"

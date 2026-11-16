@@ -1,5 +1,7 @@
 # Wersjonowanie
 
+**alpha-0.7.8:** [ADC Authentication](ADC_AUTHENTICATION.md) wdraża logowanie kont GPA/PAS, osobne hasło ADC szyfrowane AES-256-GCM i prywatny klucz poza bazą, zachowując scrypt. Wymagane są jawna migracja v6, aktywne konto i dokładna para nick/CID; domyślnie obowiązuje ADCS. Zmiany i blokady w katalogu startowym wymagają restartu. Publiczne przygotowanie kont, reset, rotacja i nadawanie ról pozostają kolejnymi etapami. Ten wpis zastępuje wcześniejsze opisy planowanego uwierzytelniania.
+
 **alpha-0.7.7 Password Security** pochodzi bezpośrednio z main `75c82eea4d5799460bebe93ed1b6accef175ce25`. Zachowuje schemat v5, rejestrację i mapowanie, dodaje chronione sprawdzanie haseł oraz aktualizuje wszystkie oczekiwania wersji. Branch nie jest automatycznie scalany.
 
 **alpha-0.7.6 Identity Mapping** rozpoczyna się z main `d279245e3636d631c159ee8df53623c293fb36e8`. Zachowuje alpha-0.7.1–0.7.5, dodaje schemat v5 i [mapowanie tożsamości](IDENTITY_MAPPING.md), a testy uruchamia na jednym runnerze Contabo. Branch nie jest automatycznie scalany.
