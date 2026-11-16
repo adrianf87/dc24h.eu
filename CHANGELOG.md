@@ -1,5 +1,9 @@
 # Changelog
 
+## Main integration of alpha-0.7.7 — 2026-11-16
+
+Enable main push/PR checks alongside alpha-0.7.7 for the explicitly requested integration. Retain the single Contabo Ubuntu 24.04 runner, six parallel build/test workers, pinned checkout and branch-specific queues. Full alpha-0.7.7 CI passed at 061cd1842ac02f91408c9ba813b75085d1145d4b; actionlint validates this trigger-only adjustment. Newly triggered CI is not awaited.
+
 ## alpha-0.7.7 — 2026-11-16
 
 Password Security, based directly on main `75c82eea4d5799460bebe93ed1b6accef175ce25`. Existing numbered branches are preserved. This branch does not merge to main automatically.
