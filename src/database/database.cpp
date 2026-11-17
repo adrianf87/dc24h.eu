@@ -2,6 +2,7 @@
 #include "dc24h/security/secret_file.hpp"
 
 #include <algorithm>
+#include <new>
 #include <stdexcept>
 
 namespace dc24h::database {
@@ -21,7 +22,8 @@ bool identifier(std::string_view value) {
 
 void validate(const Options& options) {
     if (!identifier(options.name) || !clean(options.user, 128) ||
-        options.timeout == 0 || options.timeout > 60 || !clean(options.socket, 4096) ||
+        options.timeout == 0 || options.timeout > 60 || options.connect_timeout > 60 ||
+        options.read_timeout > 60 || options.write_timeout > 60 || !clean(options.socket, 4096) ||
         (!options.password_file.empty() && !clean(options.password_file, 4096)) ||
         (options.enabled && options.password_file.empty())) {
         throw std::invalid_argument("Invalid database settings");
@@ -30,6 +32,7 @@ void validate(const Options& options) {
 
 std::string read_password(const std::string& filename) {
     try { return security::read_private_secret(filename); }
+    catch (const std::bad_alloc&) { throw; }
     catch (const std::exception&) { throw std::runtime_error("Cannot read private database password file"); }
 }
 

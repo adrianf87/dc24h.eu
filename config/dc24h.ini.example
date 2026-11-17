@@ -116,6 +116,10 @@ socket = /run/mysqld/mysqld.sock
 name = dc24h
 user = dc24h
 timeout = 5
+# Optional independent 1..60 second overrides; omitted values inherit timeout.
+# connect_timeout = 5
+# read_timeout = 5
+# write_timeout = 5
 # Password: private regular file, current effective UID, mode 0600 or 0400.
 # password_file = /etc/dc24h/database.password
 # alpha-0.1.8 supports local Unix sockets only; TCP database transport is deferred.

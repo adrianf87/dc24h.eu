@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <atomic>
 #include <limits>
+#include <new>
 #include <thread>
 #include <type_traits>
 #include <utility>
@@ -41,6 +42,7 @@ void library() {
 bool lost(unsigned int code, const char* state) noexcept {
     return code == CR_SERVER_GONE_ERROR || code == CR_SERVER_LOST ||
         code == CR_COMMANDS_OUT_OF_SYNC || code == CR_MALFORMED_PACKET ||
+        code == CR_ERR_NET_READ || code == CR_ERR_NET_WRITE || code == CR_ERR_NET_UNCOMPRESS ||
         code == CR_SERVER_LOST_EXTENDED || (state && state[0] == '0' && state[1] == '8');
 }
 Error native_error(unsigned int code, const char* state, Operation operation) {
@@ -106,10 +108,12 @@ void validate(const QueryLimits& limits) {
 
 struct Connection::Impl {
     const std::thread::id owner{std::this_thread::get_id()};
+    const Options options; // Paths/settings only; never cache the application password.
     MYSQL* handle{};
     bool transaction_active{false}, transaction_failed{false};
     std::atomic<bool> retire_requested{false};
-    Impl() {
+    std::atomic<bool> scope_active{false}; // Survives transport retirement until scope cleanup.
+    explicit Impl(const Options& settings) : options(settings) {
         library();
         handle = mysql_init(nullptr);
         if (!handle) { throw Error(ErrorKind::initialization, Operation::connect); }
@@ -220,14 +224,17 @@ struct Connection::Impl {
 Connection::Connection(const Options& options) {
     validate(options);
     if (!options.enabled) { throw std::invalid_argument("Database is disabled"); }
-    impl_ = std::make_shared<Impl>();
+    impl_ = std::make_shared<Impl>(options);
     auto* handle = impl_->handle;
     const auto option = [&](mysql_option key, const void* value) {
         if (mysql_optionsv(handle, key, value) != 0) { throw Error(ErrorKind::initialization, Operation::connect); }
     };
-    option(MYSQL_OPT_CONNECT_TIMEOUT, &options.timeout);
-    option(MYSQL_OPT_READ_TIMEOUT, &options.timeout);
-    option(MYSQL_OPT_WRITE_TIMEOUT, &options.timeout);
+    const auto connect_timeout = options.connect_timeout ? options.connect_timeout : options.timeout;
+    const auto read_timeout = options.read_timeout ? options.read_timeout : options.timeout;
+    const auto write_timeout = options.write_timeout ? options.write_timeout : options.timeout;
+    option(MYSQL_OPT_CONNECT_TIMEOUT, &connect_timeout);
+    option(MYSQL_OPT_READ_TIMEOUT, &read_timeout);
+    option(MYSQL_OPT_WRITE_TIMEOUT, &write_timeout);
     const my_bool off = 0;
     const unsigned int local_infile = 0, protocol = MYSQL_PROTOCOL_SOCKET;
     option(MYSQL_OPT_PROTOCOL, &protocol); option(MYSQL_OPT_RECONNECT, &off);
@@ -235,6 +242,7 @@ Connection::Connection(const Options& options) {
     option(MYSQL_SET_CHARSET_NAME, "utf8mb4");
     auto password = [&] {
         try { return read_password(options.password_file); }
+        catch (const std::bad_alloc&) { throw; }
         catch (const std::exception&) { throw Error(ErrorKind::credentials, Operation::connect); }
     }();
     struct Erase { std::string& value; ~Erase() { OPENSSL_cleanse(value.data(), value.size()); } } erase{password};
@@ -247,6 +255,15 @@ Connection::Connection(const Options& options) {
     impl_->after(Operation::connect);
 }
 Connection::~Connection() = default;
+void Connection::reconnect() {
+    if (impl_->owner != std::this_thread::get_id()) { throw Error(ErrorKind::wrong_thread, Operation::connect); }
+    if (impl_->scope_active.load()) { throw Error(ErrorKind::transaction, Operation::connect); }
+    // Expire all old weak Transaction links only after a fully initialized new
+    // session is available. On any failure the original session stays retired.
+    impl_->retire();
+    Connection replacement(impl_->options);
+    impl_.swap(replacement.impl_);
+}
 void Connection::ping() {
     (void)impl_->run(Operation::ping, [&] {
         if (mysql_ping(impl_->handle) != 0) { throw native_error(mysql_errno(impl_->handle), mysql_sqlstate(impl_->handle), Operation::ping); }
@@ -339,6 +356,7 @@ Transaction::Transaction(const std::shared_ptr<Connection::Impl>& impl) : impl_(
         impl->control("START TRANSACTION", Operation::begin);
         impl->transaction_active = true;
         impl->after(Operation::begin);
+        impl->scope_active.store(true);
     } catch (...) { impl->retire(); throw; }
 }
 Transaction::Transaction(Transaction&& other) noexcept : impl_(std::move(other.impl_)), active_(std::exchange(other.active_, false)) {}
@@ -349,9 +367,9 @@ void Transaction::commit() {
     if (!active_ || !impl->transaction_active || impl->transaction_failed) { throw Error(ErrorKind::transaction, Operation::commit); }
     try {
         impl->control("COMMIT", Operation::commit);
-        impl->transaction_active = false;active_ = false;
+        impl->transaction_active = false;active_ = false;impl->scope_active.store(false);
         impl->after(Operation::commit);
-    } catch (...) { impl->retire();active_ = false;throw; }
+    } catch (...) { impl->retire();active_ = false;impl->scope_active.store(false);throw; }
 }
 void Transaction::rollback() {
     const auto impl = impl_.lock();
@@ -360,15 +378,18 @@ void Transaction::rollback() {
     if (!active_ || !impl->transaction_active) { throw Error(ErrorKind::transaction, Operation::rollback); }
     try {
         impl->control("ROLLBACK", Operation::rollback);
-        impl->transaction_active = impl->transaction_failed = false;active_ = false;
+        impl->transaction_active = impl->transaction_failed = false;active_ = false;impl->scope_active.store(false);
         impl->after(Operation::rollback);
-    } catch (...) { impl->retire();active_ = false;throw; }
+    } catch (...) { impl->retire();active_ = false;impl->scope_active.store(false);throw; }
 }
 Transaction::~Transaction() {
     if (!active_) { return; }
     const auto impl = impl_.lock();
     if (!impl) { return; } // Connection close already rolled back the server transaction.
-    if (impl->owner != std::this_thread::get_id()) { impl->retire_requested.store(true);return; }
+    if (impl->owner != std::this_thread::get_id()) {
+        impl->retire_requested.store(true);impl->scope_active.store(false);return;
+    }
     try { rollback(); } catch (...) { impl->retire(); }
+    impl->scope_active.store(false);
 }
 } // namespace dc24h::database

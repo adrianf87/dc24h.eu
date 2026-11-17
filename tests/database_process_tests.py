@@ -3,8 +3,10 @@ import hashlib
 import os
 from pathlib import Path
 import pwd
+import re
 import selectors
 import signal
+import socket
 import subprocess
 import sys
 import tempfile
@@ -12,6 +14,11 @@ import time
 
 from api_support import enable_api, fetch_status
 
+RESILIENCE_TEST = None
+if '--resilience-test' in sys.argv:
+    index = sys.argv.index('--resilience-test')
+    RESILIENCE_TEST = os.path.abspath(sys.argv[index + 1])
+    del sys.argv[index:index + 2]
 MANAGEMENT_TEST = None
 if '--management-test' in sys.argv:
     index = sys.argv.index('--management-test')
@@ -85,6 +92,7 @@ def main():
                 '--innodb-buffer-pool-size=32M', '--innodb-log-file-size=8M']
         daemon = None
         hub = None
+        recovery = None
         def sql(text):
             result = run(['mariadb', '--no-defaults', '--skip-ssl', '--protocol=socket', '--socket=' + str(db_socket),
                           '--user=root', '--batch', '--skip-column-names'], input=text)
@@ -129,6 +137,32 @@ def main():
                 "GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP ON dc24h.* TO 'dc24h'@'localhost';"
                 "GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP ON dc24h.* TO 'dc24h'@'127.0.0.1';")
             path = config()
+            if RESILIENCE_TEST:
+                sql("GRANT CREATE TEMPORARY TABLES ON dc24h.* TO 'dc24h'@'localhost';")
+                # An accepting Unix socket that never sends a server handshake.
+                blackhole = folder / 'blackhole.sock'
+                with socket.socket(socket.AF_UNIX) as listener:
+                    listener.bind(str(blackhole)); listener.listen(1); listener.settimeout(5)
+                    stalled = subprocess.Popen([RESILIENCE_TEST, str(blackhole), str(password), 'handshake'],
+                                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                    try:
+                        with listener.accept()[0]:
+                            out, err = stalled.communicate(timeout=12)
+                        require(stalled.returncode == 0, err)
+                        no_secrets(subprocess.CompletedProcess([], stalled.returncode, out, err))
+                    finally:
+                        if stalled.poll() is None:
+                            stalled.kill(); stalled.communicate(timeout=5)
+                for key in ('connect_timeout', 'read_timeout', 'write_timeout'):
+                    for value in (1, 60):
+                        require(cli(config(f'{key}={value}\n'), '--check-config').returncode == 0,
+                                'Valid independent database timeout rejected')
+                    for value in (0, 61, -1, 'x', ''):
+                        require(cli(config(f'{key}={value}\n'), '--check-config').returncode == 2,
+                                'Invalid independent database timeout accepted')
+                    require(cli(config(f'{key}=1\n{key}=2\n'), '--check-config').returncode == 2,
+                            'Duplicate independent database timeout accepted')
+                config()
             for action in ['--check-config', '--check-database', '--database-status']:
                 result = cli(path, action)
                 require(result.returncode == 0, result.stderr)
@@ -137,6 +171,17 @@ def main():
                     'Fresh schema status is incorrect')
             require(sql('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema="dc24h"') == '0',
                     'Check command modified schema')
+            if RESILIENCE_TEST:
+                result = run([RESILIENCE_TEST, str(db_socket), str(password)])
+                require(result.returncode == 0, result.stderr)
+                no_secrets(result)
+                from database_fault_proxy import fault_case
+                for mode in ('write', 'commit_ack'):
+                    no_secrets(fault_case(RESILIENCE_TEST, folder, db_socket, password, mode))
+                require(sql('SELECT value FROM dc24h.dc24h_ack_fixture WHERE id=1') == '1',
+                        'Acknowledged COMMIT was lost or replayed')
+                sql('DROP TABLE dc24h.dc24h_ack_fixture;')
+                sql('DROP TABLE dc24h.dc24h_resilience_fixture;')
             result = run([TEST, str(db_socket), str(password)])
             require(result.returncode == 0, result.stderr)
             expected = hashlib.sha256((Path(__file__).resolve().parents[1] /
@@ -306,6 +351,35 @@ def main():
                     log.extend(chunk)
             require(b'Database connected' in log, 'Database not connected before network startup')
             require(fetch_status(api_path, api_token)['database']['enabled'], 'API database status is incorrect')
+            if RESILIENCE_TEST:
+                recovery = subprocess.Popen([RESILIENCE_TEST, str(db_socket), str(password), 'restart'],
+                    stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1)
+                def recovery_line(expected):
+                    with selectors.DefaultSelector() as ready:
+                        ready.register(recovery.stdout, selectors.EVENT_READ)
+                        require(ready.select(15), 'Recovery test response timed out')
+                    require(recovery.stdout.readline().strip() == expected, 'Unexpected recovery test response')
+                recovery_line('ready')
+                daemon.terminate(); daemon.wait(timeout=15); daemon = None
+                recovery.stdin.write('down\n'); recovery.stdin.flush(); recovery_line('down')
+                # Startup configuration is not a liveness probe. Existing reactor
+                # sessions and new guest handshakes work without synchronous SQL.
+                require(fetch_status(api_path, api_token)['server']['core_running'], 'Database outage stopped hub API')
+                endpoint = re.search(rb'Network listening on 127\.0\.0\.1:([0-9]+)', log)
+                require(endpoint is not None, 'Missing loopback hub endpoint')
+                with socket.create_connection(('127.0.0.1', int(endpoint[1])), timeout=3) as peer:
+                    peer.sendall(b'HSUP ADBASE ADTIGR\n')
+                    with peer.makefile('rb') as frames:
+                        require(frames.readline() == b'ISUP ADBASE ADTIGR\n', 'Database outage stopped ADC')
+                        require(frames.readline().startswith(b'ISID '), 'Database outage stopped SID allocation')
+                unavailable = cli(path, '--check-database')
+                require(unavailable.returncode == 1, 'Database outage accepted by CLI'); no_secrets(unavailable)
+                daemon = start(['--skip-ssl'])
+                recovery.stdin.write('up\n'); recovery.stdin.flush(); recovery_line('recovered')
+                out, err = recovery.communicate(timeout=5)
+                require(recovery.returncode == 0, err)
+                no_secrets(subprocess.CompletedProcess([], recovery.returncode, out, err)); recovery = None
+                require(cli(path, '--check-database').returncode == 0, 'Database did not recover')
             hub.send_signal(signal.SIGTERM)
             out, err = hub.communicate(timeout=5)
             require(hub.returncode == 0, 'Enabled database shutdown failed')
@@ -367,6 +441,8 @@ def main():
             require(cli(path, '--check-config').returncode == 0, 'Dry run opened private password')
             print('Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK')
         finally:
+            if recovery is not None:
+                recovery.kill(); recovery.communicate(timeout=5)
             if hub is not None:
                 hub.kill(); hub.communicate(timeout=5)
             if daemon is not None:

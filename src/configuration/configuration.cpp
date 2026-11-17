@@ -449,6 +449,12 @@ Settings load_file(const std::string& filename) {
                 settings.database.password_file = resolve_path(value, path.parent_path());
             } else if (section == "database" && key == "timeout") {
                 settings.database.timeout = positive_number(value, 60);
+            } else if (section == "database" && key == "connect_timeout") {
+                settings.database.connect_timeout = positive_number(value, 60);
+            } else if (section == "database" && key == "read_timeout") {
+                settings.database.read_timeout = positive_number(value, 60);
+            } else if (section == "database" && key == "write_timeout") {
+                settings.database.write_timeout = positive_number(value, 60);
             } else if (section == "general" && key == "language") {
                 settings.logging.language = i18n::parse_language(value);
             } else { throw std::invalid_argument("Unknown configuration key"); }

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.7.12 LANGUAGES CXX)
+project(dc24h VERSION 0.7.13 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -768,6 +768,13 @@ if(BUILD_TESTING)
     target_compile_options(database_core_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
     add_test(NAME database.core COMMAND database_core_tests)
     set_tests_properties(database.core PROPERTIES TIMEOUT 15)
+    add_executable(database_resilience_tests tests/database_resilience_tests.cpp)
+    target_link_libraries(database_resilience_tests PRIVATE dc24h_database Threads::Threads)
+    target_compile_features(database_resilience_tests PRIVATE cxx_std_20)
+    set_target_properties(database_resilience_tests PROPERTIES CXX_EXTENSIONS OFF)
+    target_compile_options(database_resilience_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    add_test(NAME database.resilience COMMAND database_resilience_tests)
+    set_tests_properties(database.resilience PROPERTIES TIMEOUT 15)
     add_executable(database_migrations_tests tests/database_migrations_tests.cpp)
     target_link_libraries(database_migrations_tests PRIVATE dc24h_database OpenSSL::Crypto Threads::Threads)
     target_include_directories(database_migrations_tests PRIVATE src/database "${CMAKE_CURRENT_BINARY_DIR}/generated")
@@ -862,6 +869,12 @@ if(BUILD_TESTING)
         add_test(NAME database.core.process COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/database_process_tests.py"
             "$<TARGET_FILE:dc24h>" "$<TARGET_FILE:database_tests>" "$<TARGET_FILE:database_core_tests>")
+        add_test(NAME database.resilience.process COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/database_process_tests.py"
+            "$<TARGET_FILE:dc24h>" "$<TARGET_FILE:database_tests>"
+            --resilience-test "$<TARGET_FILE:database_resilience_tests>")
+        set_tests_properties(database.resilience.process PROPERTIES TIMEOUT 150
+            ENVIRONMENT "PATH=/usr/sbin:/usr/bin:/sbin:/bin:$ENV{PATH}")
         add_test(NAME database.migrations.process COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/database_process_tests.py"
             "$<TARGET_FILE:dc24h>" "$<TARGET_FILE:database_tests>"
