@@ -3,7 +3,14 @@
 #include <string_view>
 
 namespace dc24h::i18n::us {
-inline constexpr std::array<std::string_view, 155> messages{{
+inline constexpr std::array<std::string_view, 161> messages{{
+    "Invalid administrative command",
+    "Administrative command refused",
+    "Administrative account revision is stale",
+    "Administrative account not found",
+    "Administrative service unavailable",
+    "Administrative write outcome unknown",
+
     "Owner provisioning completed",
     "Ownership transfer completed",
     "Ownership outcome unknown; inspect storage before retrying",

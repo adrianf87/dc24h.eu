@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.8.2 LANGUAGES CXX)
+project(dc24h VERSION 0.8.3 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -185,14 +185,20 @@ target_link_libraries(dc24h_core PUBLIC Threads::Threads dc24h_network dc24h_log
 target_compile_definitions(dc24h_core PRIVATE _POSIX_C_SOURCE=200809L)
 
 add_executable(dc24h src/main.cpp)
+add_library(dc24h_admin src/admin/core.cpp)
+target_compile_features(dc24h_admin PUBLIC cxx_std_20)
+set_target_properties(dc24h_admin PROPERTIES CXX_EXTENSIONS OFF)
+target_include_directories(dc24h_admin PUBLIC include)
+target_link_libraries(dc24h_admin PUBLIC dc24h_account_management)
+target_compile_options(dc24h_admin PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 add_library(dc24h_account_api src/api/accounts.cpp)
 target_compile_features(dc24h_account_api PUBLIC cxx_std_20)
 target_include_directories(dc24h_account_api PUBLIC include)
-target_link_libraries(dc24h_account_api PUBLIC dc24h_api dc24h_account_management dc24h_password_security dc24h_registration)
+target_link_libraries(dc24h_account_api PUBLIC dc24h_api dc24h_admin)
 target_compile_options(dc24h_account_api PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 add_executable(dc24h-owner src/owner_admin.cpp)
 target_include_directories(dc24h-owner PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
-target_link_libraries(dc24h-owner PRIVATE dc24h_account_management dc24h_configuration dc24h_security)
+target_link_libraries(dc24h-owner PRIVATE dc24h_admin dc24h_configuration dc24h_security)
 target_compile_options(dc24h-owner PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 add_executable(dc24h-account-admin src/account_admin.cpp)
 target_include_directories(dc24h-account-admin PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
@@ -812,6 +818,11 @@ if(BUILD_TESTING)
     target_compile_options(registration_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
     set_target_properties(registration_tests PROPERTIES CXX_EXTENSIONS OFF)
     target_link_options(registration_tests PRIVATE -Wl,--wrap=RAND_bytes -Wl,--wrap=EVP_PBE_scrypt -Wl,--wrap=OPENSSL_cleanse)
+    add_executable(admin_core_tests tests/admin_core_tests.cpp)
+    target_link_libraries(admin_core_tests PRIVATE dc24h_admin)
+    target_compile_options(admin_core_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    add_test(NAME admin.core COMMAND admin_core_tests)
+    set_tests_properties(admin.core PROPERTIES TIMEOUT 15)
     add_executable(account_management_tests tests/account_management_tests.cpp)
     target_link_libraries(account_management_tests PRIVATE dc24h_account_management OpenSSL::Crypto Threads::Threads)
     target_include_directories(account_management_tests PRIVATE src/accounts)
@@ -848,6 +859,12 @@ if(BUILD_TESTING)
     find_program(MARIADB_CLIENT_EXECUTABLE mariadb)
     find_program(MARIADB_ADMIN_EXECUTABLE mariadb-admin)
     if(MARIADBD_EXECUTABLE AND MARIADB_INSTALL_DB_EXECUTABLE AND MARIADB_CLIENT_EXECUTABLE AND MARIADB_ADMIN_EXECUTABLE)
+        add_test(NAME admin.core.process COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/database_process_tests.py"
+            "$<TARGET_FILE:dc24h>" "$<TARGET_FILE:database_tests>"
+            --admin-core-test "$<TARGET_FILE:admin_core_tests>")
+        set_tests_properties(admin.core.process PROPERTIES TIMEOUT 120
+            ENVIRONMENT "PATH=/usr/sbin:/usr/bin:/sbin:/bin:$ENV{PATH}")
         add_test(NAME accounts.owner_cli.process COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/database_process_tests.py"
             "$<TARGET_FILE:dc24h>" "$<TARGET_FILE:database_tests>"

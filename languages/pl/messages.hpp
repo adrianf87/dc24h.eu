@@ -3,7 +3,14 @@
 #include <string_view>
 
 namespace dc24h::i18n::pl {
-inline constexpr std::array<std::string_view, 155> messages{{
+inline constexpr std::array<std::string_view, 161> messages{{
+    "Nieprawidłowe polecenie administracyjne",
+    "Odmowa polecenia administracyjnego",
+    "Nieaktualna rewizja konta administracyjnego",
+    "Nie znaleziono konta administracyjnego",
+    "Usługa administracyjna jest niedostępna",
+    "Nieznany wynik zapisu administracyjnego",
+
     "Utworzono właściciela huba",
     "Przekazano własność huba",
     "Nieznany wynik przekazania własności; sprawdź bazę przed ponowieniem",

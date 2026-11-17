@@ -15,6 +15,11 @@ import time
 
 from api_support import enable_api, fetch_status
 
+ADMIN_CORE_TEST = None
+if '--admin-core-test' in sys.argv:
+    index = sys.argv.index('--admin-core-test')
+    ADMIN_CORE_TEST = os.path.abspath(sys.argv[index+1])
+    del sys.argv[index:index+2]
 OWNER_CLI_TEST = None
 if '--owner-cli-test' in sys.argv:
     index = sys.argv.index('--owner-cli-test')
@@ -233,6 +238,21 @@ def main():
                     expected_key = hashlib.scrypt(b'Registration test password 42!', salt=salt, n=131072, r=8, p=1,
                                                   maxmem=256 * 1024 * 1024, dklen=32)
                     require(key == expected_key, 'Independent password derivation differs')
+            if ADMIN_CORE_TEST:
+                sql("CREATE USER 'management_limited'@'localhost' IDENTIFIED BY PASSWORD '" + native_hash + "';"
+                    "GRANT SELECT ON dc24h.* TO 'management_limited'@'localhost';"
+                    "GRANT UPDATE ON dc24h.dc24h_accounts TO 'management_limited'@'localhost';"
+                    "GRANT INSERT,UPDATE ON dc24h.dc24h_account_credentials TO 'management_limited'@'localhost';")
+                result = run([ADMIN_CORE_TEST, str(db_socket), str(password)])
+                require(result.returncode == 0, result.stderr)
+                no_secrets(result)
+                from database_fault_proxy import fault_case
+                actor_id = sql("SELECT id FROM dc24h.dc24h_accounts WHERE name='CoreSuccessor'")
+                no_secrets(fault_case(ADMIN_CORE_TEST, folder, db_socket, password, 'commit_ack', (actor_id,)))
+                require(sql("SELECT COUNT(*) FROM dc24h.dc24h_accounts WHERE name='CoreUnknownWrite' AND revision=1") == '1',
+                        'Admin Core lost COMMIT was replayed or not committed')
+                require(sql("SELECT COUNT(*) FROM dc24h.dc24h_account_credentials c JOIN dc24h.dc24h_accounts a ON a.id=c.account_id WHERE a.name='CoreUnknownWrite'") == '1',
+                        'Admin Core lost COMMIT was not atomic')
             if MANAGEMENT_TEST:
                 keyfile = folder / 'management-adc.key'
                 keyfile.write_text('02' * 32 + '\n'); keyfile.chmod(0o600)

@@ -1,4 +1,4 @@
-#include "dc24h/accounts/management.hpp"
+#include "dc24h/admin/core.hpp"
 #include "dc24h/configuration/configuration.hpp"
 #include "dc24h/security/secret_file.hpp"
 #include "dc24h/version.hpp"
@@ -59,24 +59,23 @@ int main(int argc,char* argv[]) {
         const auto target_revision = bootstrap ? 0 : number(options.at("--to-revision"));
         Secret proof{security::read_private_secret(options.at("--password-file"))};
         Secret target{bootstrap ? std::string{} : security::read_private_secret(options.at("--target-password-file"))};
-        database::Connection connection(settings.database);
-        accounts::AccountManagementService management(connection);
+        admin::Engine engine(settings.database,admin::Origin::owner_cli);
         const auto now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        admin::Command command;command.time=now;
         if (bootstrap) {
-            const auto result = management.bootstrap_owner(options.at("--bootstrap"),proof.text,now);
+            command.action=admin::Action::bootstrap_owner;command.name=options.at("--bootstrap");command.password=proof.text;
+            const auto result = std::get<accounts::StoredAccount>(engine.execute(command));
             std::cout << i18n::translate("Owner provisioning completed",language) << '\n'; metadata("owner",result);
         } else {
-            accounts::AccountRepository repository(connection);
-            const auto owner = repository.find_by_id(*accounts::AccountId::from_value(owner_id));
-            const auto successor = repository.find_by_id(*accounts::AccountId::from_value(target_id));
-            if (!owner || !successor || owner->revision != owner_revision || successor->revision != target_revision) { throw std::runtime_error("Stale accounts"); }
-            const auto result = management.transfer_ownership(*owner,proof.text,*successor,target.text,now);
+            command.action=admin::Action::transfer_owner;command.actor={owner_id,owner_revision};command.target={target_id,target_revision};
+            command.proof=proof.text;command.successor_proof=target.text;
+            const auto result = std::get<accounts::OwnershipTransfer>(engine.execute(command));
             std::cout << i18n::translate("Ownership transfer completed",language) << '\n';
             metadata("former_owner",result.former_owner); metadata("owner",result.new_owner);
         }
         return 0;
-    } catch (const database::Error& error) {
-        if (error.outcome_unknown()) { std::cerr << i18n::translate("Ownership outcome unknown; inspect storage before retrying",language) << '\n'; return 3; }
+    } catch (const admin::Error& error) {
+        if (error.kind()==admin::ErrorKind::outcome_unknown) { std::cerr << i18n::translate("Ownership outcome unknown; inspect storage before retrying",language) << '\n'; return 3; }
     } catch (...) {}
     std::cerr << i18n::translate("Ownership operation refused",language) << '\n'; return 1;
 }
