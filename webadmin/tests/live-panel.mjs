@@ -22,7 +22,7 @@ try {
   });
   await page.goto(process.argv[2]);
   await expect(page.getByText("API connected", { exact: true })).toBeVisible();
-  await expect(page.getByText("alpha-0.8.6", { exact: true })).toHaveCount(2);
+  await expect(page.getByText("alpha-0.8.7", { exact: true })).toHaveCount(2);
   await expect(page.locator(".metric-value").nth(1)).toHaveText("16");
   assert.ok(
     Number(await page.locator(".metric-value").first().textContent()) >= 2,
@@ -138,6 +138,10 @@ try {
   await expect(kicks.locator("dd").nth(2)).toHaveText("1");
   assert.ok(!(await page.content()).includes("PrivateKickReason"));
   assert.equal(snapshot.kick.refused,"1");
+  await page.goto(new URL("#mute",process.argv[2]).href);
+  await expect(page.getByTestId("mute-statistics").locator("dd")).toHaveCount(8);
+  assert.equal(snapshot.mute.attempts,"0");
+  assert.equal(snapshot.configuration.roles.operations.find(p=>p.key==="users.mute").implemented,true);
   assert.deepEqual(errors, []);
   console.log(
     "Real C++ API → local adapter → React: live search/transfer rates, counters, secret isolation, desktop and mobile PL OK",

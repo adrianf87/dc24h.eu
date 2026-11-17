@@ -1,3 +1,5 @@
+import {parseMute} from "./mute.ts";
+import type {MuteSnapshot} from "./mute.ts";
 import {parseKick} from "./kick.ts";
 import type {KickSnapshot} from "./kick.ts";
 import { parseTransfers } from "./transfer-status.ts";
@@ -6,7 +8,7 @@ import { parseSearch } from "./search-status.ts";
 import type { SearchSnapshot } from "./search-status.ts";
 import { parseConfiguration } from "./configuration.ts";
 import type { StartupConfiguration } from "./configuration.ts";
-export const WEBADMIN_VERSION = "alpha-0.8.6";
+export const WEBADMIN_VERSION = "alpha-0.8.7";
 export interface HubSnapshot {
   api_version: "v1";
   server: {
@@ -41,6 +43,7 @@ export interface HubSnapshot {
     refused: number;
   };
   kick?: KickSnapshot;
+  mute?: MuteSnapshot;
   search?: SearchSnapshot;
   transfers?: TransferSnapshot;
   database: { enabled: boolean };
@@ -79,6 +82,7 @@ export function parseSnapshot(value: unknown): HubSnapshot {
   return {
     api_version: "v1",
     ...(root.kick===undefined?{}:{kick:parseKick(root.kick)}),
+    ...(root.mute===undefined?{}:{mute:parseMute(root.mute)}),
     server: {
       name: "dc24h.eu",
       version: server.version,

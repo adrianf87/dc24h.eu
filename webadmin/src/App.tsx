@@ -40,6 +40,7 @@ import { TransferStatistics } from "./components/TransferStatistics";
 import { Roles } from "./components/Roles";
 import { StartupConfiguration } from "./components/StartupConfiguration";
 import {Bans} from "./components/Bans";
+import {MuteStatistics} from "./components/MuteStatistics";
 import {KickStatistics} from "./components/KickStatistics";
 import {AdminCore} from "./components/AdminCore";
 import { Accounts } from "./components/Accounts";
@@ -47,8 +48,8 @@ import { ChatStatistics } from "./components/ChatStatistics";
 import { useHub } from "./lib/useHub";
 import type { Sample } from "./lib/useHub";
 
-type Page = "overview" | "connections" | "chat" | "search" | "security" | "database" | "accounts" | "configuration" | "roles" | "operators" | "adminCore" | "kick" | "bans";
-const pages: Page[] = ["overview", "connections", "chat", "search", "security", "database", "accounts", "configuration", "roles", "operators", "adminCore", "kick", "bans"];
+type Page = "overview" | "connections" | "chat" | "search" | "security" | "database" | "accounts" | "configuration" | "roles" | "operators" | "adminCore" | "kick" | "bans" | "mute";
+const pages: Page[] = ["overview", "connections", "chat", "search", "security", "database", "accounts", "configuration", "roles", "operators", "adminCore", "kick", "bans", "mute"];
 const currentPage = (): Page =>
   pages.includes(location.hash.slice(1) as Page)
     ? (location.hash.slice(1) as Page)
@@ -339,6 +340,7 @@ export default function App() {
     { page: "operators", icon: Users },
     { page: "adminCore", icon: ShieldCheck },
     { page: "kick", icon: Users },
+    { page: "mute", icon: Users },
     { page: "bans", icon: ShieldCheck },
   ] as const;
   const titles = {
@@ -353,6 +355,7 @@ export default function App() {
     operators: [t.operatorsTitle, t.operatorsSub],
     adminCore: [t.adminCoreTitle,t.adminCoreSub],
     kick: [t.kickTitle,t.kickSub],
+    mute: [t.muteTitle,t.muteSub],
     bans: [t.bansTitle,t.bansSub],
     configuration: [t.configurationTitle, t.configurationSub],
   };
@@ -738,6 +741,7 @@ export default function App() {
             </div>
           )}
           {page === "bans" && <Bans t={t} />}
+          {page === "mute" && <MuteStatistics snapshot={snapshot} t={t} />}
           {page === "kick" && <KickStatistics snapshot={snapshot} t={t} />}
           {page === "adminCore" && <AdminCore t={t} />}
           {page === "roles" && <Roles snapshot={snapshot} t={t} />}

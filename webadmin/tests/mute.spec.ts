@@ -1,0 +1,20 @@
+import {test,expect} from "@playwright/test";
+import {snapshot} from "./fixtures";
+const mute={attempts:"9223372036854775807",applied:"3",cleared:"1",refused:"2",errors:"0",notice_failures:"0",public_blocked:"5",private_blocked:"8"};
+test("mute instructions and counters are private, bilingual and clear stale data",async({page})=>{
+ let mode="current";
+ await page.route("**/admin-api/v1/status",route=>route.fulfill({contentType:"application/json",body:JSON.stringify({...snapshot,...(mode==="old"?{}:{mute:mode==="malformed"?{...mute,attempts:"01"}:{...mute,nickname:"PrivateMuteTarget",message:"PrivateMutedMessage"}})})}));
+ await page.goto("/#mute");const panel=page.getByTestId("mute-statistics");
+ await expect(page.getByRole("heading",{name:"Mute chat",level:1})).toBeVisible();
+ await expect(panel.locator("dd").first()).toHaveText("9,223,372,036,854,775,807");
+ await expect(panel.getByText("+mute <nickname> [public|private|all]",{exact:true})).toBeVisible();
+ await expect(panel.getByText("+unmute <nickname> [public|private|all]",{exact:true})).toBeVisible();
+ expect(await page.content()).not.toContain("PrivateMuteTarget");expect(await page.content()).not.toContain("PrivateMutedMessage");
+ mode="old";await page.getByRole("button",{name:"Refresh now"}).click();await expect(panel.locator("dd")).toHaveCount(0);
+ mode="current";await page.getByRole("button",{name:"Refresh now"}).click();await expect(panel.locator("dd")).toHaveCount(8);
+ mode="malformed";await page.getByRole("button",{name:"Refresh now"}).click();await expect(panel.locator("dd")).toHaveCount(0);
+ mode="current";await page.getByRole("button",{name:"Refresh now"}).click();await expect(panel.locator("dd")).toHaveCount(8);
+ await page.setViewportSize({width:390,height:844});await page.getByLabel("Interface language").selectOption("pl");
+ await expect(page.getByRole("heading",{name:"Wyciszanie czatu",level:1})).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
