@@ -1,5 +1,7 @@
 # CI w GitHub Actions
 
+Testy ncdc z konfliktem interfejsów rezerwują porty na obu adresach loopback i zachowują drugi nasłuch do gotowości klienta. Wyłącznie kolizja EADDRINUSE przy przydziale wybiera nową parę w ograniczonej pętli; sam test nie jest ponawiany. `integration.ncdc_ports` sprawdza deterministyczne kolizje TCP/UDP i sprzątanie.
+
 Workflow `Check status` w `.github/workflows/build.yml` korzysta z jednorazowych
 runnerów `ubuntu-24.04` utrzymywanych przez GitHub. Uruchamia się dla push i pull
 requestów do `main` lub `alpha-0.7.8` / `alpha-0.7.9` / `alpha-0.7.10` / `alpha-0.7.11` / `alpha-0.7.12` / `alpha-0.7.13` / `alpha-0.7.14` / `alpha-0.7.15` / `alpha-0.8.1` / `alpha-0.8.2` / `alpha-0.8.3` / `alpha-0.8.4` / `alpha-0.8.5`, także z forków, oraz ręcznie.

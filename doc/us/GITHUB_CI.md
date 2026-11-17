@@ -1,5 +1,7 @@
 # GitHub Actions CI
 
+The ncdc cross-interface fixtures reserve ports on both loopback addresses, retaining the conflicting listener until the client is ready. Allocation-only EADDRINUSE collisions choose a fresh pair with bounded retries; test failures are never retried. `integration.ncdc_ports` covers deterministic TCP/UDP collisions and cleanup.
+
 The `Check status` workflow in `.github/workflows/build.yml` runs on disposable
 GitHub-hosted `ubuntu-24.04` runners. Pushes and pull requests targeting `main`
 or `alpha-0.7.8` / `alpha-0.7.9` / `alpha-0.7.10` / `alpha-0.7.11` / `alpha-0.7.12` / `alpha-0.7.13` / `alpha-0.7.14` / `alpha-0.7.15` / `alpha-0.8.1` / `alpha-0.8.2` / `alpha-0.8.3` / `alpha-0.8.4` / `alpha-0.8.5`, including fork pull requests, and manual dispatches trigger CI.

@@ -257,6 +257,9 @@ if(DC24H_REQUIRE_INTEGRATION_TESTS AND NOT BUILD_TESTING)
 endif()
 if(BUILD_TESTING)
     find_package(Python3 3.8 REQUIRED COMPONENTS Interpreter)
+    add_test(NAME integration.ncdc_ports COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_ports_tests.py")
+    set_tests_properties(integration.ncdc_ports PROPERTIES TIMEOUT 15)
     add_test(NAME project.metadata COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/project_checks.py")
     set_tests_properties(project.metadata PROPERTIES TIMEOUT 15)
