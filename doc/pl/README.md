@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.8.2: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.8.3: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [Admin Core — alpha-0.8.3](ADMIN_CORE.md)
 - [Operatorzy i własność huba — alpha-0.8.2](OPERATORS.md)
 - [Permissions — alpha-0.8.1](PERMISSIONS.md)
 - [Database and Login Configuration — alpha-0.7.15](DATABASE_AUTH_CONFIGURATION.md)
