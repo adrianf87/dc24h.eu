@@ -1,5 +1,12 @@
 # Changelog
 
+## alpha-0.7.13 — CI runner update — 2026-11-17
+
+- Match main's GitHub-hosted `ubuntu-24.04` workflow for independent C++ Debug, C++ Release and WebAdmin jobs; explicitly enable alpha-0.7.13 push/PR triggers.
+- Restore dependency installation, Chromium system dependencies, per-ref queues and nproc workers. Remove the obsolete self-hosted label configuration and update the current EN/US and PL CI documentation. This supersedes the initial self-hosted configuration described in the original release entry below.
+
+Validation: actionlint, release metadata, documentation UTF-8/language parity/local links and whitespace checks passed. Application code is unchanged. Publish the CI change without waiting for remote completion.
+
 ## alpha-0.7.13 — 2026-11-17
 
 Database Resilience, based directly on main `eb6b44e27b8d05f32d5380bc52763a710d5f0b2c`; the existing alpha-0.7.1–alpha-0.7.12 work and history are retained. No automatic merge.

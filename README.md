@@ -4,7 +4,7 @@ Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
 **Current development version: alpha-0.7.13 (Database Resilience).**
 
-CI on `main`: [self-hosted server-747585786 (Ubuntu 24.04)](doc/us/GITHUB_CI.md) · [PL](doc/pl/GITHUB_CI.md).
+CI on `main`: [GitHub-hosted Ubuntu 24.04 runners](doc/us/GITHUB_CI.md) · [PL](doc/pl/GITHUB_CI.md).
 
 Completed increments (older bullets describe their original delivery scope):
 

@@ -1,35 +1,29 @@
 # GitHub Actions CI
 
-From alpha-0.7.13, `Check status` in `.github/workflows/build.yml` runs on the
-user-provided self-hosted runner `server-747585786`, with labels
-`self-hosted`, `Linux`, `X64` and `server-747585786`. The job verifies Ubuntu 24.04,
-runner name and the `github-runner` service user before building. Earlier releases
-used other runner configurations; those historical notes do not describe current CI.
+The `Check status` workflow in `.github/workflows/build.yml` runs on disposable
+GitHub-hosted `ubuntu-24.04` runners. Pushes and pull requests targeting `main`
+or `alpha-0.7.8` / `alpha-0.7.9` / `alpha-0.7.10` / `alpha-0.7.11` / `alpha-0.7.12` / `alpha-0.7.13`, including fork pull requests, and manual dispatches trigger CI.
+The workflow has read-only repository permissions and disables persisted checkout credentials.
 
-Pushes, same-repository pull requests targeting `main` or `alpha-0.7.*`, and manual
-dispatches trigger checks. Fork pull requests do not execute on this persistent
-runner. Repository permissions are read-only and checkout does not persist credentials.
-The workflow never contains the runner login password or database credentials.
+Three jobs can run independently:
 
-One repository-wide concurrency group runs a single job at a time. Debug and
-Release are built and tested sequentially in separate build directories, followed
-by WebAdmin. This also avoids concurrent checkout/build operations in the same
-self-hosted workspace. CMake, CTest, Node and Playwright use `nproc` workers.
+- **C++ Debug** and **C++ Release**: separate matrix jobs install build dependencies
+  and MariaDB, Apache and ncdc, configure C++20 with `BUILD_TESTING=ON` and
+  `DC24H_REQUIRE_INTEGRATION_TESTS=ON`, then build and run every CTest suite.
+  Missing integration tools fail configuration. Matrix failures do not cancel the other build.
+- **WebAdmin**: Node 22, `npm ci`, typecheck/production build, Node unit tests,
+  Chromium browser tests and real C++ API/React integration. This job builds
+  its own Release `dc24h` binary with `BUILD_TESTING=OFF`; the matrix above
+  covers the full C++ test suite. Playwright installs Chromium and its system dependencies.
 
-The administrator must provision C++20 build tools, CMake, Python 3, OpenSSL,
-libutf8proc-dev, libgcrypt20-dev, libssl-dev, libmariadb-dev, MariaDB server/client,
-Apache2, ncdc and Chromium system libraries. The workflow checks tool availability
-and CMake validates headers/libraries. Packages and services are not installed or
-reconfigured with sudo during jobs. Node 22 is selected with setup-node; npm ci
-installs the lockfile and Playwright installs its user-local Chromium binary.
+C++ builds, CTest, Node tests and Playwright all use the runner's available
+CPU count (`nproc`) for parallel workers. Tests start their own isolated services. Packages are installed
+with sudo on disposable GitHub machines; builds and tests run as the runner user.
+No self-hosted runner registration, Contabo host or Proxmox VM is required.
 
-Both native builds require `DC24H_REQUIRE_INTEGRATION_TESTS=ON` and run all CTest
-suites, including disposable MariaDB recovery/restart, actual ncdc ADC/ADCS and
-Apache. WebAdmin runs typecheck, production build, unit tests, browser tests and
-integration against the Release C++ API. Failure reports are retained for seven days.
-No production database, account, schema, TLS key or service is modified by CI.
-The overall job timeout is 180 minutes.
+Concurrency is grouped by workflow and Git ref with `cancel-in-progress: false`.
+C++ jobs have a 120-minute timeout; WebAdmin has 60 minutes. Check each run under
+[GitHub Actions](https://github.com/adrianf87/dc24h.eu/actions/workflows/build.yml)
+for actual results.
 
-A pushed branch triggers the workflow. Local success does not establish runner
-availability or remote success: inspect the matching commit under
-[GitHub Actions](https://github.com/adrianf87/dc24h.eu/actions/workflows/build.yml).
+From alpha-0.7.13, all three jobs use the same GitHub-hosted Ubuntu 24.04 configuration as main. This supersedes the initial self-hosted configuration of this release. Push triggers CI; remote completion is not awaited.
