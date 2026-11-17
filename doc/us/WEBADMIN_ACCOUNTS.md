@@ -1,5 +1,7 @@
 # WebAdmin account management — alpha-0.7.14
 
+**alpha-0.8.1 Permissions:** [the seven-role permission model](PERMISSIONS.md) adds exact capability keys, explicit rank checks, constrained VIP delegation, Guest-aware kicks and transactional maintenance role assignment. Explicit migration v7 broadens stored account roles without changing earlier SQL. Mute, bans, audit browsing and configuration writes remain policy definitions with engines pending. Global limits still apply to Owner.
+
 The Accounts page supports bounded account lists, account selection, disabled
 registration, activation, disabling, current-password changes and administrator
 password resets. EN/US is the default language; Polish is available in the panel.
