@@ -195,7 +195,7 @@ bool LoginHub::enqueue_shared(Peer& peer, std::shared_ptr<const Packet> frame) {
     return true;
 }
 void LoginHub::reject(Peer& peer, std::string_view status, std::optional<std::string_view> command,
-                      std::string_view description, users::CloseCause cause, users::TimePoint now) {
+                      std::string_view description, users::CloseCause cause, users::TimePoint now, std::optional<std::int64_t> reconnect_after) {
     peer.authentication.cancel();
     if (peer.lifecycle.closing() || peer.lifecycle.immediate()) { return; }
     check_model(sessions_.begin_close(peer.lifecycle.id(),cause,now));
@@ -212,9 +212,11 @@ void LoginHub::reject(Peer& peer, std::string_view status, std::optional<std::st
         sid = Sid::parse(peer.output.front().message().parameters[0]);
     }
     if (description.empty()) { description = status_description(status); }
-    if (!enqueue(peer, make_status(*StatusCode::parse(status), description, command))) { return; }
+    auto terminal=make_status(*StatusCode::parse(status),description,command);
+    if(status=="232"&&reconnect_after){terminal.parameters.push_back("TL"+std::to_string(*reconnect_after));}
+    if (!enqueue(peer,std::move(terminal))) { return; }
     QuitOptions options{};
-    options.message = description;
+    options.message = description;options.reconnect_after=reconnect_after;
     if (sid && enqueue(peer, make_quit(*sid, options))) { peer.quit_queued = true; }
 }
 void LoginHub::close(Id id, CloseReason reason, users::TimePoint now) {
@@ -355,6 +357,10 @@ void LoginHub::receive_impl(Id id, const Message& message, chat::FloodClock::tim
         const auto* duplicate = sessions_.by_cid(cid);
         if (duplicate && duplicate->id().value() != id) { reject(peer, "224"); return; }
         if (before == ConnectionState::identify) {
+            if(limits_.bans){if(const auto ban=limits_.bans->cid(cid,bans::Directory::now())){
+                const auto left=ban->expires_at?std::max<std::int64_t>(1,*ban->expires_at-bans::Directory::now()):-1;
+                reject(peer,ban->expires_at?"232":"231",{},"Access blocked",users::CloseCause::banned,users::Clock::now(),left);return;
+            }}
             // The manager enforces this again on registration. Preflight before
             // welcome planning/queueing so a full hub discloses no user list.
             if (sessions_.users_full()) { reject(peer,"211",{},"Hub user limit reached"); return; }
@@ -366,6 +372,10 @@ void LoginHub::receive_impl(Id id, const Message& message, chat::FloodClock::tim
                     if (auto* required = std::get_if<PasswordAuthentication>(&decision)) {
                         if (required->account_id == 0 || required->account_id > 9223372036854775807ULL || !accounts::account_role(required->role) || !peer.authentication.pending() ||
                             peer.session.approve_identity(IdentityMode::password_required)) { reject(peer,"210"); return; }
+                        if(limits_.bans){if(const auto ban=limits_.bans->account(required->account_id,bans::Directory::now())){
+                            const auto left=ban->expires_at?std::max<std::int64_t>(1,*ban->expires_at-bans::Directory::now()):-1;
+                            reject(peer,ban->expires_at?"232":"231",{},"Access blocked",users::CloseCause::banned,users::Clock::now(),left);return;
+                        }}
                         if (!authentication_limiter_.admit_account(required->account_id,chat_now)) { limit_authentication(peer); return; }
                         peer.pending_account = required->account_id;
                         peer.authentication_role = required->role;

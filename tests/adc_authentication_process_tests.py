@@ -199,7 +199,7 @@ class AuthenticationTests(unittest.TestCase):
         self.assertIn('roles.manage', by_role['owner'])
         implemented = {p['key']:p['implemented'] for p in roles['operations']}
         self.assertTrue(implemented['roles.manage'])
-        self.assertFalse(implemented['users.ban'])
+        self.assertTrue(implemented['users.ban'])
         hub.stop()
 
 

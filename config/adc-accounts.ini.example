@@ -1,5 +1,5 @@
 # dc24h.eu alpha-0.7.15 — account-enabled ADCS startup profile.
-# Provision schema v7, private credentials and enrolled ADC accounts separately.
+# Provision schema v8, private credentials and enrolled ADC accounts separately.
 # Relative credential paths resolve against this INI's directory.
 # --show-configuration previews public policy without opening these files.
 # --check-config checks ADC/TLS keys; --check-database tests SQL separately.

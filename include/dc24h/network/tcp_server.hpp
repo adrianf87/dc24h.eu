@@ -1,4 +1,5 @@
 #pragma once
+#include "dc24h/bans/bans.hpp"
 #include "dc24h/admin/kick.hpp"
 
 #include "dc24h/security/limits.hpp"
@@ -44,6 +45,7 @@ struct Options {
     security::Limits security{};
     security::AuthenticationLimits authentication_limits{};
     security::RolePolicy roles{};
+    std::shared_ptr<const bans::Directory> bans{};
     users::Limits users{};
     chat::Settings chat{};
     search::SecuritySettings search{};

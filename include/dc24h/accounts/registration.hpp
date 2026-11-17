@@ -29,6 +29,7 @@ public:
 private:
     friend class PasswordSecurityService;
     friend class AccountManagementService;
+    friend class dc24h::bans::Service;
     friend class AdcCredentialService;
     void require_credentials_schema();
     database::Connection& connection_;

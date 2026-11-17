@@ -126,7 +126,7 @@ timeout = 5
 # alpha-0.1.8 supports local Unix sockets only; TCP database transport is deferred.
 
 [authentication]
-# Account-backed GPA/PAS; explicitly migrate schema v7 before enabling.
+# Account-backed GPA/PAS; explicitly migrate schema v8 before enabling.
 enabled = off
 # 32-byte AES key: openssl rand -hex 32. Separate private file, never in SQL/Git.
 # key_file = /etc/dc24h/adc.key

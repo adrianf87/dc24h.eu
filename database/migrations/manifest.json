@@ -48,6 +48,13 @@
       "files": [
         "0007_roles.sql"
       ]
+    },
+    {
+      "version": 8,
+      "name": "bans",
+      "files": [
+        "0008_bans.sql"
+      ]
     }
   ]
 }

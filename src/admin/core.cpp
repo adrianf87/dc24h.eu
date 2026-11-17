@@ -33,6 +33,14 @@ accounts::StoredAccount find(accounts::AccountRepository& repository, AccountRef
 void validate(const Command& c) {
     if (action_key(c.action).empty() || c.time < 0 || c.time > accounts::max_timestamp ||
         c.proof.size()>1024 || c.password.size()>1024 || c.successor_proof.size()>1024 || c.name.size()>64) { fail(ErrorKind::invalid_input); }
+    const bool ban=c.action==Action::ban_create||c.action==Action::ban_revoke;
+    if(ban){
+        if(!valid_id(c.actor.id)||c.actor.revision>maximum||c.proof.empty()||!c.password.empty()||!c.name.empty()||!c.successor_proof.empty()||c.role!=accounts::Role::registered){fail(ErrorKind::invalid_input);}
+        if(c.action==Action::ban_create){if(!empty(c.target)||c.subject.empty()||c.reason.empty()||!bans::parse_kind(bans::kind_key(c.ban_kind))){fail(ErrorKind::invalid_input);}}
+        else if(!valid_id(c.target.id)||!valid_id(c.target.revision)||!c.subject.empty()||!c.reason.empty()||c.expires_at||c.ban_kind!=bans::Kind::account){fail(ErrorKind::invalid_input);}
+        return;
+    }
+    if(!c.subject.empty()||!c.reason.empty()||c.expires_at||c.ban_kind!=bans::Kind::account){fail(ErrorKind::invalid_input);}
     const bool creation = c.action == Action::create || c.action == Action::bootstrap_owner;
     const bool bootstrap = c.action == Action::bootstrap_owner;
     const bool transfer = c.action == Action::transfer_owner;
@@ -54,6 +62,7 @@ std::string_view action_key(Action action) noexcept {
     case Action::create: return "accounts.create"; case Action::activate: return "accounts.activate";
     case Action::disable: return "accounts.disable"; case Action::password: return "accounts.password";
     case Action::reset: return "accounts.reset"; case Action::role: return "accounts.role";
+    case Action::ban_create: return "bans.create";case Action::ban_revoke:return "bans.revoke";
     case Action::bootstrap_owner: return "ownership.bootstrap"; case Action::transfer_owner: return "ownership.transfer";
     }
     return {};
@@ -91,6 +100,13 @@ Result Engine::execute(const Command& command) {
             database::Connection connection(options_); accounts::AccountRepository repository(connection);
             accounts::AccountManagementService service(connection);
             Result result = [&]() -> Result {
+                if(command.action==Action::ban_create||command.action==Action::ban_revoke){
+                    const auto actor=find(repository,command.actor);bans::Service bans(connection);
+                    if(command.action==Action::ban_create){return bans.create(actor,command.proof,command.ban_kind,command.subject,command.reason,command.expires_at,command.time);}
+                    const auto expected=dc24h::bans::Repository(connection).find(command.target.id);
+                    if(!expected){fail(ErrorKind::not_found);}if(expected->revision!=command.target.revision){fail(ErrorKind::stale);}
+                    return bans.revoke(actor,command.proof,*expected,command.time);
+                }
                 if (command.action == Action::bootstrap_owner) { return service.bootstrap_owner(command.name,command.password,command.time); }
                 if (command.action == Action::create) {
                     const auto actor = find(repository,command.actor);
@@ -110,6 +126,8 @@ Result Engine::execute(const Command& command) {
             }();
             static_assert(std::is_nothrow_move_constructible_v<Result>);
             record.success = true; return result;
+        } catch(const bans::Error& e){
+            fail(e.kind()==bans::ErrorKind::forbidden?ErrorKind::forbidden:e.kind()==bans::ErrorKind::stale?ErrorKind::stale:e.kind()==bans::ErrorKind::not_found?ErrorKind::not_found:e.kind()==bans::ErrorKind::invalid_input?ErrorKind::invalid_input:ErrorKind::unavailable);
         } catch (const accounts::ManagementError& e) {
             fail(e.kind()==accounts::ManagementErrorKind::stale ? ErrorKind::stale :
                  e.kind()==accounts::ManagementErrorKind::unauthorized ? ErrorKind::forbidden :
@@ -134,5 +152,8 @@ std::vector<accounts::StoredAccount> Engine::list(std::uint64_t after, bool staf
     if (after > maximum) { fail(ErrorKind::invalid_input); }
     database::Connection connection(options_); accounts::AccountRepository repository(connection);
     return staff ? repository.list_staff_after(after) : repository.list_after(after);
+}
+std::vector<bans::Record> Engine::bans_list(std::uint64_t after){
+    database::Connection connection(options_);return bans::Repository(connection).list(after);
 }
 } // namespace dc24h::admin
