@@ -31,7 +31,7 @@ std::string checksum(std::span<const std::string_view> sql) {
 void unit() {
     const auto& entries = detail::builtin_migrations;
     detail::validate_catalog(entries);
-    require(migration_catalog().size() == 6 && entries[0].info.version == 1 && entries[1].info.version == 2);
+    require(migration_catalog().size() == 7 && entries[0].info.version == 1 && entries[1].info.version == 2);
     require(entries[0].info.name == "schema_migrations" && entries[1].info.name == "migration_state");
     auto invalid = entries;
     invalid[1].info.version = 3;
@@ -150,7 +150,7 @@ void future(Connection& c, const Options& options) {
     rejects(MigrationErrorKind::dirty,[&] { (void)detail::run(c,crash); });
     c.execute("DROP TABLE dc24h_interrupted_fixture");
     c.execute("DELETE FROM dc24h_schema_migrations WHERE version=3");
-    require(migrate(c) == 4); // Restore accounts, credentials, mappings and ADC secrets.
+    require(migrate(c) == 5); // Restore accounts, credentials, mappings and ADC secrets.
 }
 void adc_upgrade(Connection& c) {
     c.execute("INSERT INTO dc24h_accounts(name,role,status,created_at,updated_at) VALUES ('AdcMigrationSentinel','registered','disabled',1,1)");
@@ -159,19 +159,19 @@ void adc_upgrade(Connection& c) {
     const auto applied = c.scalar("SELECT applied_at FROM dc24h_schema_migrations WHERE version=5");
     c.execute("DROP TABLE dc24h_account_adc_credentials");
     c.execute("DELETE FROM dc24h_schema_migrations WHERE version=6");
-    const auto status = inspect_migrations(c);
+    const auto status = detail::inspect(c,std::span(detail::builtin_migrations).first(6));
     require(status.current_version == 5 && status.latest_version == 6 && status.pending == 1 && !status.dirty);
-    require(migrate(c) == 1 && migrate(c) == 0);
+    require(detail::run(c,std::span(detail::builtin_migrations).first(6)) == 1 && detail::run(c,std::span(detail::builtin_migrations).first(6)) == 0);
     require(c.query("SELECT account_id,verifier,created_at FROM dc24h_account_credentials ORDER BY account_id").rows == before.rows);
     require(c.scalar("SELECT applied_at FROM dc24h_schema_migrations WHERE version=5") == applied);
     require(c.scalar("SELECT COUNT(*) FROM dc24h_account_adc_credentials") == "0");
     c.execute("DELETE FROM dc24h_schema_migrations WHERE version=6");
-    try { (void)migrate(c); require(false); } catch (const Error&) {}
-    require(inspect_migrations(c).dirty);
-    rejects(MigrationErrorKind::dirty,[&] { (void)migrate(c); });
+    try { (void)detail::run(c,std::span(detail::builtin_migrations).first(6)); require(false); } catch (const Error&) {}
+    require(detail::inspect(c,std::span(detail::builtin_migrations).first(6)).dirty);
+    rejects(MigrationErrorKind::dirty,[&] { (void)detail::run(c,std::span(detail::builtin_migrations).first(6)); });
     c.execute("DROP TABLE dc24h_account_adc_credentials");
     c.execute("DELETE FROM dc24h_schema_migrations WHERE version=6");
-    require(migrate(c) == 1);
+    require(detail::run(c,std::span(detail::builtin_migrations).first(6)) == 1);
 }
 void identity_upgrade(Connection& c) {
     c.execute("DROP TABLE dc24h_account_adc_credentials");
@@ -195,7 +195,7 @@ void identity_upgrade(Connection& c) {
     c.execute("DROP TABLE dc24h_account_identities");
     c.execute("DELETE FROM dc24h_schema_migrations WHERE version=5");
     require(detail::run(c,catalog) == 1);
-    require(migrate(c) == 1); // Restore schema v6.
+    require(detail::run(c,std::span(detail::builtin_migrations).first(6)) == 1); // Restore schema v6.
 }
 void credential_upgrade(Connection& c) {
     c.execute("DROP TABLE dc24h_account_adc_credentials");
@@ -224,13 +224,30 @@ void credential_upgrade(Connection& c) {
     c.execute("DROP TABLE dc24h_account_credentials");
     c.execute("DELETE FROM dc24h_schema_migrations WHERE version=4");
     require(detail::run(c,catalog) == 1);
-    require(migrate(c) == 2); // Restore mappings and ADC credentials.
+    require(detail::run(c,std::span(detail::builtin_migrations).first(6)) == 2); // Restore mappings and ADC credentials.
 }
 void integration(const Options& options) {
     Connection c(options);
+    // Preserve old account bytes through the v6 -> v7 constraint migration.
+    c.execute("DELETE FROM dc24h_schema_migrations WHERE version=7");
+    c.execute("ALTER TABLE dc24h_accounts DROP CONSTRAINT dc24h_accounts_role, ADD CONSTRAINT dc24h_accounts_role CHECK (role IN ('registered','moderator','administrator'))");
+    for(const auto role:{"registered","moderator","administrator"}) {
+        c.execute("INSERT INTO dc24h_accounts(name,role,status,created_at,updated_at) VALUES (?,?,'disabled',1,2)",{std::string("RoleLegacy_")+role,role});
+    }
+    const auto before_roles=c.query("SELECT id,name,role,status,created_at,updated_at,revision FROM dc24h_accounts ORDER BY id");
+    require(migrate(c)==1&&migrate(c)==0);
+    require(c.query("SELECT id,name,role,status,created_at,updated_at,revision FROM dc24h_accounts ORDER BY id").rows==before_roles.rows);
+    for(const auto role:{"vip","operator","owner"}) {
+        c.execute("INSERT INTO dc24h_accounts(name,role,status,created_at,updated_at) VALUES (?,?,'disabled',0,0)",{std::string("RoleUpgrade_")+role,role});
+    }
+    try{c.execute("INSERT INTO dc24h_accounts(name,role,status,created_at,updated_at) VALUES ('GuestForbidden','guest','disabled',0,0)");require(false);}catch(const Error& e){require(e.kind()==ErrorKind::constraint);}
+    c.execute("DELETE FROM dc24h_accounts WHERE name IN ('RoleUpgrade_vip','RoleUpgrade_operator','RoleUpgrade_owner')");
+    c.execute("DELETE FROM dc24h_schema_migrations WHERE version=7");
+    c.execute("ALTER TABLE dc24h_accounts DROP CONSTRAINT dc24h_accounts_role, ADD CONSTRAINT dc24h_accounts_role CHECK (role IN ('registered','moderator','administrator'))");
     adc_upgrade(c);
     identity_upgrade(c);
     credential_upgrade(c);
+    require(migrate(c)==1); // Restore the role catalog after historical-prefix tests.
     c.execute("DROP TABLE dc24h_account_adc_credentials");
     c.execute("DROP TABLE dc24h_account_identities");
     c.execute("DROP TABLE dc24h_account_credentials");
@@ -244,8 +261,8 @@ void integration(const Options& options) {
     c.execute("DROP TABLE dc24h_account_credentials");
     c.execute("DROP TABLE dc24h_accounts");
     c.execute("DROP TABLE dc24h_schema_migrations");
-    require(inspect_migrations(c).current_version == 0 && inspect_migrations(c).pending == 6);
-    require(migrate(c) == 6 && migrate(c) == 0);
+    require(inspect_migrations(c).current_version == 0 && inspect_migrations(c).pending == 7);
+    require(migrate(c) == 7 && migrate(c) == 0);
 }
 }
 int main(int argc, char* argv[]) {

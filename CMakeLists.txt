@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.7.15 LANGUAGES CXX)
+project(dc24h VERSION 0.8.1 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -166,7 +166,7 @@ add_library(dc24h_api src/api/http.cpp src/api/server.cpp src/api/configuration.
 target_compile_features(dc24h_api PUBLIC cxx_std_20)
 set_target_properties(dc24h_api PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_api PUBLIC include PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
-target_link_libraries(dc24h_api PUBLIC dc24h_logging PRIVATE Threads::Threads OpenSSL::Crypto dc24h_security)
+target_link_libraries(dc24h_api PUBLIC dc24h_logging dc24h_roles PRIVATE Threads::Threads OpenSSL::Crypto dc24h_security)
 
 add_library(dc24h_configuration src/configuration/configuration.cpp)
 target_compile_features(dc24h_configuration PUBLIC cxx_std_20)

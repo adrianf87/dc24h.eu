@@ -74,13 +74,13 @@ void ids_and_names() {
 }
 void stable_keys() {
     const std::vector<std::pair<Role, std::string_view>> roles{
-        {Role::registered, "registered"}, {Role::moderator, "moderator"}, {Role::administrator, "administrator"}};
+        {Role::registered, "registered"}, {Role::moderator, "moderator"}, {Role::administrator, "administrator"}, {Role::vip,"vip"}, {Role::operator_,"operator"}, {Role::owner,"owner"}, {Role::guest,"guest"}};
     const std::vector<std::pair<Status, std::string_view>> statuses{{Status::disabled, "disabled"}, {Status::active, "active"}};
     for (const auto& [role, key] : roles) { require(role_key(role) == key && parse_role(key) == role); }
     for (const auto& [status, key] : statuses) { require(status_key(status) == key && parse_status(key) == status); }
     require(role_key(static_cast<Role>(-1)).empty() && role_key(static_cast<Role>(100)).empty());
     require(status_key(static_cast<Status>(-1)).empty() && status_key(static_cast<Status>(100)).empty());
-    for (const auto key : {"", "Registered", "admin", "guest", " moderator", "active ", "aktywne"}) {
+    for (const auto key : {"", "Registered", "admin", "Guest", " moderator", "active ", "aktywne"}) {
         require(!parse_role(key) && !parse_status(key));
     }
     require(!parse_role(std::string("registered\0x", 12)) && !parse_status(std::string("active\0x", 8)));
@@ -101,6 +101,7 @@ void importing() {
     require(checked(account.snapshot()) == account);
     data = fixture(); data.id = 0; rejects(Account::create(data), AccountError::invalid_id);
     data = fixture(); data.id = std::numeric_limits<std::uint64_t>::max(); rejects(Account::create(data), AccountError::invalid_id);
+    data = fixture(); data.role = Role::guest; rejects(Account::create(data), AccountError::invalid_role);
     data = fixture(); data.role = static_cast<Role>(99); rejects(Account::create(data), AccountError::invalid_role);
     data = fixture(); data.status = static_cast<Status>(99); rejects(Account::create(data), AccountError::invalid_status);
     for (const auto role : {Role::registered, Role::moderator, Role::administrator}) {

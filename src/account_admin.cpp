@@ -20,7 +20,7 @@ int main(int argc,char* argv[]) {
         }
         // Validate storage/credentials before binding the administrative socket.
         { dc24h::database::Connection check(settings.database);const auto status=dc24h::database::inspect_migrations(check);
-          if(status.dirty||status.pending||status.current_version!=6){throw std::runtime_error("Account maintenance requires current database migrations");} }
+          if(status.dirty||status.pending||status.current_version!=dc24h::database::migration_catalog().size()){throw std::runtime_error("Account maintenance requires current database migrations");} }
         const dc24h::core::TerminationSignals signals;
         dc24h::logging::Logger logger(settings.logging);
         std::stop_source stop;

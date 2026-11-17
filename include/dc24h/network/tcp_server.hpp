@@ -2,6 +2,7 @@
 
 #include "dc24h/security/limits.hpp"
 #include "dc24h/security/authentication_limits.hpp"
+#include "dc24h/security/roles.hpp"
 #include "dc24h/users/limits.hpp"
 #include "dc24h/chat/settings.hpp"
 #include "dc24h/search/security.hpp"
@@ -41,6 +42,7 @@ struct Options {
     std::chrono::seconds idle_timeout{120};
     security::Limits security{};
     security::AuthenticationLimits authentication_limits{};
+    security::RolePolicy roles{};
     users::Limits users{};
     chat::Settings chat{};
     search::SecuritySettings search{};

@@ -41,6 +41,7 @@ struct LoginLimits {
     transfers::SecuritySettings transfers{};
     std::shared_ptr<const AuthenticationSource> authentication{};
     security::AuthenticationLimits authentication_limits{};
+    security::RolePolicy roles{};
 };
 enum class CloseReason { login_timeout, idle_timeout, partial_frame_timeout, security_quota, negotiation_limit, identity_limit };
 
@@ -102,10 +103,11 @@ public:
     // or prevent a fresh GPA/PAS login. No allocations, SQL or automatic grants.
     [[nodiscard]] bool revoke_auth_session(Id id, users::TimePoint now = users::Clock::now()) noexcept;
     // Role policy only, never bypasses global feature switches, flood budgets or
-    // per-session overrides. Missing/guest/pending/closing lifetimes deny.
+    // per-session overrides. Ready unauthenticated lifetimes use Guest;
+    // missing/pending/closing lifetimes deny.
     [[nodiscard]] bool role_allows(Id id, security::Permission permission) const noexcept;
     // Trusted adapter supplies the ACTUAL transport actor, never a client-chosen
-    // account/SID. Both lifetimes must be ready/authenticated in this hub.
+    // account/SID. The actor must be authenticated; the ready target may be Guest.
     [[nodiscard]] bool revoke_auth_session_as(Id actor, Id target,
         users::TimePoint now = users::Clock::now()) noexcept;
     [[nodiscard]] ConnectionState state(Id id) const;

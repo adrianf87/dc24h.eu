@@ -331,6 +331,14 @@ int main() {
             settings.authentication.enabled=false;
             require(dc24h::configuration::public_settings(settings,true).maintenance,"Maintenance mode missing");
         }
+        {
+            Fixture fixture;const auto path=fixture.write("[roles]\nvip_permissions=users.kick,audit.read\n");
+            const auto loaded=dc24h::configuration::load_file(path.string());
+            require(dc24h::security::allows(dc24h::accounts::Role::vip,dc24h::security::Permission::revoke_sessions,loaded.network.roles),"VIP configuration lost");
+            for(const auto text:{"vip_permissions=accounts.manage","vip_permissions=*","vip_permissions=users.kick,users.kick","vip_permissions=none\nvip_permissions=none"}){
+                fixture.write(std::string("[roles]\n")+text+"\n");invalid([&]{(void)dc24h::configuration::load_file(path.string());});
+            }
+        }
         load_and_override();
         invalid_configs();
         boundaries_and_precedence();

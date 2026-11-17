@@ -53,6 +53,10 @@ std::string_view role_key(Role role) noexcept {
         case Role::registered: return "registered";
         case Role::moderator: return "moderator";
         case Role::administrator: return "administrator";
+        case Role::vip: return "vip";
+        case Role::operator_: return "operator";
+        case Role::owner: return "owner";
+        case Role::guest: return "guest";
     }
     return {};
 }
@@ -64,11 +68,12 @@ std::string_view status_key(Status status) noexcept {
     return {};
 }
 std::optional<Role> parse_role(std::string_view key) noexcept {
-    for (const auto role : {Role::registered, Role::moderator, Role::administrator}) {
+    for (const auto role : role_catalog) {
         if (role_key(role) == key) { return role; }
     }
     return std::nullopt;
 }
+bool account_role(Role role) noexcept { return role!=Role::guest&&!role_key(role).empty(); }
 std::optional<Status> parse_status(std::string_view key) noexcept {
     for (const auto status : {Status::disabled, Status::active}) {
         if (status_key(status) == key) { return status; }
@@ -86,7 +91,7 @@ Account& Account::operator=(Account other) noexcept {
 std::optional<AccountError> Account::error() const noexcept {
     if (!AccountId::from_value(id_.value())) { return AccountError::invalid_id; }
     if (!name_.valid()) { return AccountError::invalid_name; }
-    if (role_key(role_).empty()) { return AccountError::invalid_role; }
+    if (!account_role(role_)) { return AccountError::invalid_role; }
     if (status_key(status_).empty()) { return AccountError::invalid_status; }
     if (!valid_times(times_)) { return AccountError::invalid_times; }
     return std::nullopt;
@@ -96,7 +101,7 @@ std::variant<Account, AccountError> Account::create(const AccountData& data) {
     const auto id = AccountId::from_value(data.id);
     if (!id) { return AccountError::invalid_id; }
     // Reject cheap invalid metadata before performing text normalization/copies.
-    if (role_key(data.role).empty()) { return AccountError::invalid_role; }
+    if (!account_role(data.role)) { return AccountError::invalid_role; }
     if (status_key(data.status).empty()) { return AccountError::invalid_status; }
     if (!valid_times(data.times)) { return AccountError::invalid_times; }
     auto name = AccountName::create(data.name);
@@ -116,7 +121,7 @@ std::variant<Account, AccountError> Account::with_name(std::string_view value, T
 }
 std::variant<Account, AccountError> Account::with_access(Role role, Status status, Timestamp changed_at) const {
     if (const auto failure = error()) { return *failure; }
-    if (role_key(role).empty()) { return AccountError::invalid_role; }
+    if (!account_role(role)) { return AccountError::invalid_role; }
     if (status_key(status).empty()) { return AccountError::invalid_status; }
     if (!timestamp(changed_at) || changed_at < times_.updated_at) { return AccountError::invalid_times; }
     auto times = times_; times.updated_at = changed_at;
