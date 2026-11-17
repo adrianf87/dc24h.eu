@@ -229,12 +229,10 @@ Connection::Connection(const Options& options) {
     const auto option = [&](mysql_option key, const void* value) {
         if (mysql_optionsv(handle, key, value) != 0) { throw Error(ErrorKind::initialization, Operation::connect); }
     };
-    const auto connect_timeout = options.connect_timeout ? options.connect_timeout : options.timeout;
-    const auto read_timeout = options.read_timeout ? options.read_timeout : options.timeout;
-    const auto write_timeout = options.write_timeout ? options.write_timeout : options.timeout;
-    option(MYSQL_OPT_CONNECT_TIMEOUT, &connect_timeout);
-    option(MYSQL_OPT_READ_TIMEOUT, &read_timeout);
-    option(MYSQL_OPT_WRITE_TIMEOUT, &write_timeout);
+    const auto timeouts = effective_timeouts(options);
+    option(MYSQL_OPT_CONNECT_TIMEOUT, &timeouts.connect);
+    option(MYSQL_OPT_READ_TIMEOUT, &timeouts.read);
+    option(MYSQL_OPT_WRITE_TIMEOUT, &timeouts.write);
     const my_bool off = 0;
     const unsigned int local_infile = 0, protocol = MYSQL_PROTOCOL_SOCKET;
     option(MYSQL_OPT_PROTOCOL, &protocol); option(MYSQL_OPT_RECONNECT, &off);

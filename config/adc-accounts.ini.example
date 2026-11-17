@@ -1,0 +1,51 @@
+# dc24h.eu alpha-0.7.15 — account-enabled ADCS startup profile.
+# Provision schema v6, private credentials and enrolled ADC accounts separately.
+# Relative credential paths resolve against this INI's directory.
+# --show-configuration previews public policy without opening these files.
+# --check-config checks ADC/TLS keys; --check-database tests SQL separately.
+[network]
+listen = none
+adcs_listen = 127.0.0.1:1512
+[tls]
+certificate = /etc/dc24h/tls/fullchain.pem
+private_key = /etc/dc24h/tls/privkey.pem
+[database]
+enabled = on
+socket = /run/mysqld/mysqld.sock
+name = dc24h
+user = dc24h
+password_file = /etc/dc24h/database.password
+timeout = 5
+connect_timeout = 3
+read_timeout = 5
+write_timeout = 5
+[authentication]
+enabled = on
+key_file = /etc/dc24h/adc.key
+require_tls = on
+max_accounts = 1024
+attempts_per_ip = 20
+attempts_per_account = 10
+attempts_per_second = 128
+attempt_window_seconds = 60
+max_tracked_attempt_ips = 4096
+max_tracked_attempt_accounts = 4096
+[security]
+login_timeout = 30
+tls_handshake_timeout = 10
+output_timeout = 10
+close_timeout = 2
+max_pending_logins = 256
+max_pending_per_ip = 64
+max_login_bytes = 65536
+max_login_frames = 64
+[logging]
+level = info
+connections = off
+chat = off
+file = stderr
+[api]
+# Enable only after provisioning a private socket directory and token file.
+enabled = off
+# socket = /run/dc24h/admin.sock
+# token_file = /etc/dc24h/admin.token

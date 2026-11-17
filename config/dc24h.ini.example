@@ -111,6 +111,7 @@ file = stderr
 
 [database]
 # Optional; no connection or automatic migration when disabled.
+# --show-configuration previews safe effective policy without contacting SQL.
 enabled = off
 socket = /run/mysqld/mysqld.sock
 name = dc24h

@@ -3,7 +3,8 @@
 #include <string_view>
 
 namespace dc24h::i18n::pl {
-inline constexpr std::array<std::string_view, 149> messages{{
+inline constexpr std::array<std::string_view, 150> messages{{
+    "Niepoprawna konfiguracja uwierzytelniania ADC",
     "Niepoprawne dane poświadczenia ADC",
     "Niepoprawne potwierdzenie hasła konta przy zapisie hasła ADC",
     "Poświadczenie ADC zostało już zapisane",
@@ -209,6 +210,7 @@ Błędy STA klientów zachowują protokół/token; kierowany status fatalny nie 
 STA używa wspólnych ograniczonych kolejek; błędy pamięci walidacji/kolejki/zamykania są izolowane.
 Korelacja oczekujących negocjacji i obsługa danych plików pozostają planowane.
 Czat grupowy pozostaje planowany.
+--show-configuration pokazuje bezpieczne ustawienia startowe JSON bez odczytu haseł i połączenia SQL.
 Ustawienia bazy w sekcji INI [database]; domyślnie wyłączona.
 --check-database sprawdza połączenie; --database-status odczytuje wersję/latest/pending/dirty.
 --migrate-database stosuje uporządkowany katalog SQL; stan dirty wymaga interwencji operatora.

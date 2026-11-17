@@ -311,6 +311,26 @@ void chat_welcome_ini_bounds() {
 
 int main() {
     try {
+        {
+            dc24h::configuration::Settings settings;
+            auto defaults=dc24h::configuration::public_settings(settings);
+            require(defaults.connect_timeout_seconds==5&&defaults.read_timeout_seconds==5&&defaults.require_tls,"Safe defaults differ");
+            settings.database.timeout=8;settings.database.read_timeout=2;settings.database.write_timeout=9;
+            settings.database.name="PrivateDatabaseName";settings.database.user="PrivateDatabaseUser";
+            settings.database.socket="/tmp/private-database.sock";settings.database.password_file="private-password-file";
+            settings.authentication.key_file="private-adc-file";
+            const auto safe=dc24h::configuration::public_settings(settings);
+            require(safe.connect_timeout_seconds==8&&safe.read_timeout_seconds==2&&safe.write_timeout_seconds==9,"Timeout inheritance differs");
+            const auto text=dc24h::api::configuration_json(safe);
+            require(text.find("Private")==std::string::npos&&text.find("private-")==std::string::npos,"Public settings leak paths/credentials");
+            for(auto capacity:{std::size_t{0},std::size_t{4097}}){settings.authentication.max_accounts=capacity;invalid([&]{dc24h::configuration::validate(settings);});}
+            settings.authentication.max_accounts=4096;
+            settings.authentication.enabled=true;invalid([&]{dc24h::configuration::validate(settings);});
+            settings.database.enabled=true;settings.authentication.require_tls=false;dc24h::configuration::validate(settings);
+            invalid([&]{(void)dc24h::configuration::public_settings(settings,true);});
+            settings.authentication.enabled=false;
+            require(dc24h::configuration::public_settings(settings,true).maintenance,"Maintenance mode missing");
+        }
         load_and_override();
         invalid_configs();
         boundaries_and_precedence();

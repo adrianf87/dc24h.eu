@@ -164,6 +164,9 @@ void validate(const Settings& settings) {
     database::validate(settings.database);
     api::validate(settings.api);
     const auto& net = settings.network;
+    if (settings.authentication.max_accounts == 0 || settings.authentication.max_accounts > 4096) {
+        throw std::invalid_argument("Invalid ADC authentication configuration");
+    }
     if (settings.authentication.enabled && (!settings.database.enabled || settings.authentication.key_file.empty() ||
         settings.authentication.max_accounts == 0 || settings.authentication.max_accounts > 4096 ||
         (settings.authentication.require_tls && net.tls_listeners.empty()))) {
@@ -221,6 +224,19 @@ void validate(const Settings& settings) {
             }
         }
     }
+}
+
+api::ConfigurationSnapshot public_settings(const Settings& settings, bool maintenance) {
+    validate(settings);
+    if (maintenance && settings.authentication.enabled) { throw std::invalid_argument("Invalid ADC authentication configuration"); }
+    const auto timeouts=database::effective_timeouts(settings.database);
+    api::ConfigurationSnapshot out;
+    out.maintenance=maintenance;out.database_enabled=settings.database.enabled;
+    out.timeout_seconds=settings.database.timeout;out.connect_timeout_seconds=timeouts.connect;
+    out.read_timeout_seconds=timeouts.read;out.write_timeout_seconds=timeouts.write;
+    out.authentication_enabled=settings.authentication.enabled;out.require_tls=settings.authentication.require_tls;
+    out.max_accounts=settings.authentication.max_accounts;out.attempts=settings.network.authentication_limits;
+    out.login=settings.network.security;return out;
 }
 
 Settings load_file(const std::string& filename) {
@@ -474,7 +490,7 @@ CommandLine parse_arguments(int argc, char* const argv[]) {
         const std::string_view key(argv[i]);
         if (key == "--help") { result.show_help = true; continue; }
         if (key == "--version") { result.show_version = true; continue; }
-        if (key == "--check-config" || key == "--check-database" || key == "--migrate-database" || key == "--database-status") { operational = true; continue; }
+        if (key == "--check-config" || key == "--check-database" || key == "--migrate-database" || key == "--database-status" || key == "--show-configuration") { operational = true; continue; }
         if (key == "--config") {
             if (has_config || i + 1 == argc) {
                 throw std::invalid_argument("Provide --config only once with a file");
@@ -504,6 +520,7 @@ CommandLine parse_arguments(int argc, char* const argv[]) {
         if (key == "--check-database") { result.check_database = true; continue; }
         if (key == "--migrate-database") { result.migrate_database = true; continue; }
         if (key == "--database-status") { result.database_status = true; continue; }
+        if (key == "--show-configuration") { result.show_configuration = true; continue; }
         if (key == "--help" || key == "--version") { continue; }
         const std::string_view value(argv[++i]);
         if (key == "--listen") { plain.add(result.settings, result.settings.network.listeners, value); }
@@ -540,7 +557,7 @@ CommandLine parse_arguments(int argc, char* const argv[]) {
         } else if (key == "--language") { result.settings.logging.language = i18n::parse_language(value); }
     }
     if (static_cast<int>(result.check_only) + static_cast<int>(result.check_database) +
-        static_cast<int>(result.migrate_database) + static_cast<int>(result.database_status) > 1) {
+        static_cast<int>(result.migrate_database) + static_cast<int>(result.database_status) + static_cast<int>(result.show_configuration) > 1) {
         throw std::invalid_argument("Database actions and configuration check are mutually exclusive");
     }
     if ((result.check_database || result.migrate_database || result.database_status) && !result.settings.database.enabled) {

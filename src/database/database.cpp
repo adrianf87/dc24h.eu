@@ -6,6 +6,11 @@
 #include <stdexcept>
 
 namespace dc24h::database {
+Timeouts effective_timeouts(const Options& options) noexcept {
+    return {options.connect_timeout ? options.connect_timeout : options.timeout,
+        options.read_timeout ? options.read_timeout : options.timeout,
+        options.write_timeout ? options.write_timeout : options.timeout};
+}
 namespace {
 bool clean(std::string_view value, std::size_t maximum) {
     return !value.empty() && value.size() <= maximum &&

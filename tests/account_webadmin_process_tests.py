@@ -54,6 +54,9 @@ def exercise(binary, seed, config, db_socket, password, token, api_socket):
         code, page = request('GET', '/api/v1/accounts?after=0')
         assert code == 200 and page['maintenance'] and len(page['accounts']) == 2
         assert request('GET', '/api/v1/status')[1]['server']['core_running'] is False
+        policy = request('GET', '/api/v1/status')[1]['configuration']
+        assert policy['mode'] == 'maintenance' and not policy['authentication']['enabled']
+        assert policy['database']['enabled'] and policy['restart_required']
         current = request('GET', '/api/v1/accounts/' + target)[1]['account']
         assert current['status'] == 'active'
         stale = { 'actor_id':actor, 'proof':proof, 'revision':'1' }

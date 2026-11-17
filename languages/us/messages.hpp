@@ -3,7 +3,8 @@
 #include <string_view>
 
 namespace dc24h::i18n::us {
-inline constexpr std::array<std::string_view, 149> messages{{
+inline constexpr std::array<std::string_view, 150> messages{{
+    "Invalid ADC authentication configuration",
     "Invalid ADC credential input",
     "ADC credential enrollment proof failed",
     "ADC credential already enrolled",
@@ -209,6 +210,7 @@ Peer STA errors retain explicit protocol/token; routed fatal severity does not c
 STA uses shared bounded output; validation/queue/terminal memory faults isolate affected connections.
 Pending negotiation correlation and file-data handling remain planned.
 Group chat remains planned.
+--show-configuration prints redacted startup settings as JSON without reading credentials or contacting SQL.
 Database settings use [database] in INI; disabled by default.
 --check-database connects/pings; --database-status reads version/latest/pending/dirty.
 --migrate-database explicitly applies the ordered compiled SQL catalog; dirty history requires operator recovery.
