@@ -44,8 +44,8 @@ import { ChatStatistics } from "./components/ChatStatistics";
 import { useHub } from "./lib/useHub";
 import type { Sample } from "./lib/useHub";
 
-type Page = "overview" | "connections" | "chat" | "search" | "security" | "database" | "accounts" | "configuration" | "roles";
-const pages: Page[] = ["overview", "connections", "chat", "search", "security", "database", "accounts", "configuration", "roles"];
+type Page = "overview" | "connections" | "chat" | "search" | "security" | "database" | "accounts" | "configuration" | "roles" | "operators";
+const pages: Page[] = ["overview", "connections", "chat", "search", "security", "database", "accounts", "configuration", "roles", "operators"];
 const currentPage = (): Page =>
   pages.includes(location.hash.slice(1) as Page)
     ? (location.hash.slice(1) as Page)
@@ -333,6 +333,7 @@ export default function App() {
     { page: "database", icon: Database },
     { page: "accounts", icon: Users },
     { page: "roles", icon: ShieldCheck },
+    { page: "operators", icon: Users },
   ] as const;
   const titles = {
     overview: [t.overviewTitle, t.overviewSub],
@@ -343,6 +344,7 @@ export default function App() {
     database: [t.databaseTitle, t.databaseSub],
     accounts: [t.accountsTitle, t.accountsSub],
     roles: [t.rolesTitle, t.rolesSub],
+    operators: [t.operatorsTitle, t.operatorsSub],
     configuration: [t.configurationTitle, t.configurationSub],
   };
   const exportSnapshot = () => {
@@ -728,7 +730,8 @@ export default function App() {
           )}
           {page === "roles" && <Roles snapshot={snapshot} t={t} />}
           {page === "configuration" && <StartupConfiguration snapshot={snapshot} t={t} number={number} />}
-          {page === "accounts" && <Accounts t={t} />}
+          {page === "accounts" && <Accounts key="accounts" t={t} />}
+          {page === "operators" && <Accounts key="operators" t={t} staff />}
           {page === "database" && (
             <section className="card database-card">
               <div className="database-emblem">
@@ -759,11 +762,11 @@ export default function App() {
             </span>
             <div>
               <strong>{t.localNote}</strong>
-              <p>{page === "accounts" ? t.accountsNote : t.localNoteSub}</p>
+              <p>{(page === "accounts" || page === "operators") ? t.accountsNote : t.localNoteSub}</p>
             </div>
             <span className="outline-label">
               <LockKeyhole size={11} />
-              {page === "accounts" ? t.accountsAction : t.readOnly}
+              {(page === "accounts" || page === "operators") ? t.accountsAction : t.readOnly}
             </span>
           </div>
           <footer>
