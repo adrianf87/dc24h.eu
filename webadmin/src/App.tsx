@@ -37,12 +37,13 @@ import { SearchMonitoring } from "./components/SearchMonitoring";
 import { TransferMonitoring } from "./components/TransferMonitoring";
 import { TransferConfiguration } from "./components/TransferConfiguration";
 import { TransferStatistics } from "./components/TransferStatistics";
+import { Accounts } from "./components/Accounts";
 import { ChatStatistics } from "./components/ChatStatistics";
 import { useHub } from "./lib/useHub";
 import type { Sample } from "./lib/useHub";
 
-type Page = "overview" | "connections" | "chat" | "search" | "security" | "database";
-const pages: Page[] = ["overview", "connections", "chat", "search", "security", "database"];
+type Page = "overview" | "connections" | "chat" | "search" | "security" | "database" | "accounts";
+const pages: Page[] = ["overview", "connections", "chat", "search", "security", "database", "accounts"];
 const currentPage = (): Page =>
   pages.includes(location.hash.slice(1) as Page)
     ? (location.hash.slice(1) as Page)
@@ -328,6 +329,7 @@ export default function App() {
     { page: "search", icon: Search },
     { page: "security", icon: ShieldCheck },
     { page: "database", icon: Database },
+    { page: "accounts", icon: Users },
   ] as const;
   const titles = {
     overview: [t.overviewTitle, t.overviewSub],
@@ -336,6 +338,7 @@ export default function App() {
     search: [t.searchTitle, t.searchSub],
     security: [t.securityTitle, t.securitySub],
     database: [t.databaseTitle, t.databaseSub],
+    accounts: [t.accountsTitle, t.accountsSub],
   };
   const exportSnapshot = () => {
     if (!snapshot) return;
@@ -718,6 +721,7 @@ export default function App() {
               <p>{t.securityNote}</p>
             </div>
           )}
+          {page === "accounts" && <Accounts t={t} />}
           {page === "database" && (
             <section className="card database-card">
               <div className="database-emblem">
@@ -748,11 +752,11 @@ export default function App() {
             </span>
             <div>
               <strong>{t.localNote}</strong>
-              <p>{t.localNoteSub}</p>
+              <p>{page === "accounts" ? t.accountsNote : t.localNoteSub}</p>
             </div>
             <span className="outline-label">
               <LockKeyhole size={11} />
-              {t.readOnly}
+              {page === "accounts" ? t.accountsAction : t.readOnly}
             </span>
           </div>
           <footer>
