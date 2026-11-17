@@ -1,5 +1,7 @@
 # Uprawnienia i hierarchia ról — alpha-0.8.1
 
+**alpha-0.8.2 Operators:** [Spis zespołu i lokalne tworzenie/przekazanie własności](OPERATORS.md) zastępują wcześniejsze ograniczenia bootstrap/przekazania Ownera. Schemat v7 i zwykła ochrona Ownera pozostają.
+
 Hub rozpoznaje siedem stałych ról i siedemnaście nazwanych uprawnień. Rola pochodzi
 ze sprawdzonego konta SQL i poprawnego logowania GPA/PAS, nigdy z pól INF/SUP
 klienta. Guest oznacza gotową sesję bez konta; nie może być zapisany jako konto

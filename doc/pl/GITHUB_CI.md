@@ -2,7 +2,7 @@
 
 Workflow `Check status` w `.github/workflows/build.yml` korzysta z jednorazowych
 runnerów `ubuntu-24.04` utrzymywanych przez GitHub. Uruchamia się dla push i pull
-requestów do `main` lub `alpha-0.7.8` / `alpha-0.7.9` / `alpha-0.7.10` / `alpha-0.7.11` / `alpha-0.7.12` / `alpha-0.7.13` / `alpha-0.7.14` / `alpha-0.7.15` / `alpha-0.8.1`, także z forków, oraz ręcznie.
+requestów do `main` lub `alpha-0.7.8` / `alpha-0.7.9` / `alpha-0.7.10` / `alpha-0.7.11` / `alpha-0.7.12` / `alpha-0.7.13` / `alpha-0.7.14` / `alpha-0.7.15` / `alpha-0.8.1` / `alpha-0.8.2`, także z forków, oraz ręcznie.
 Uprawnienia repozytorium są tylko do odczytu; checkout nie zachowuje poświadczeń.
 
 Trzy zadania mogą działać niezależnie:

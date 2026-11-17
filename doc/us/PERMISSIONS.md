@@ -1,5 +1,7 @@
 # Permissions and role hierarchy — alpha-0.8.1
 
+**alpha-0.8.2 Operators:** [Staff directory and local ownership provisioning/transfer](OPERATORS.md) supersede earlier ownership-bootstrap/transfer limitations. Schema v7 and ordinary Owner protections remain.
+
 The hub recognizes seven fixed roles and seventeen named permissions. Role authority
 comes from a checked database account and successful GPA/PAS login, never client
 INF/SUP metadata. Guest is the ready accountless session role; it cannot be stored

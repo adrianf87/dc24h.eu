@@ -1,5 +1,16 @@
 # Changelog
 
+## alpha-0.8.2 — 2026-11-17
+
+Operators — staff system and hub ownership, based directly on main `60df4e4a3311956728801d0f2568311fb534cf23`. No automatic merge.
+
+- Add local `dc24h-owner` first-Owner creation and dual-proof ownership transfer with strict private-file input, explicit stopped-hub acknowledgement, current schema checks and redacted bilingual diagnostics. No listener, browser ownership mutation, migration or production provisioning is performed.
+- Serialize ownership operations with a per-database advisory lock. Bootstrap rejects all existing Owners, including disabled accounts. Transfer requires fresh active Owner/Administrator snapshots and both account-password proofs; recheck exact credentials under ordered row locks and atomically make the successor active Owner and former Owner disabled Administrator. Increment both revisions, invalidate both ADC credentials and preserve account passwords and identity mappings. No write retry or reconnect; report uncertain SQL outcomes separately.
+- Add SQL-filtered bounded staff paging and a bilingual Operators page, including disabled staff, strict adapter/browser validation and existing proven maintenance actions. Demotion outside staff clears the selected row. Preserve rank restrictions and mark the directory as persistent metadata rather than online presence.
+- Preserve migration files/manifest and schema v7. Extend disposable MariaDB, actual CLI/HTTP, concurrency, rollback, stale-proof, Node and Chromium checks. Update EN/US and Polish documentation and alpha-0.8.2 version fixtures. CI retains Ubuntu 24.04 with four logical CPUs per runner and nproc-derived parallelism; local commands use eight CPU threads.
+
+Validation on Debian 13: all 204/204 CTest suites passed in both Debug and Release, including real ncdc ADC/ADCS, disposable MariaDB, the real owner CLI, private maintenance HTTP and Apache. Final ownership contention/reentrant-lock and exact credential-race checks also passed in Debug after strengthening those tests. C++ builds were warning-free. WebAdmin production build/typecheck, all 31 Node tests, all 22 Chromium tests and actual C++ API/adapter/React integration passed. Staged CLI installation/version/help, release metadata, documentation UTF-8/language parity/local links, Python syntax, actionlint, unchanged migration files/manifest and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration or account/credential mutation is performed.
+
 ## alpha-0.8.1 — 2026-11-17
 
 Permissions — detailed capabilities and role hierarchy, based directly on main `214db4561939e5de877f6d7e500a2e649f155c6a`. No automatic merge.

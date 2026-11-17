@@ -1,7 +1,8 @@
 # dc24h.eu documentation
 
-alpha-0.8.1: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.8.2: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
+- [Operators and Hub Ownership — alpha-0.8.2](OPERATORS.md)
 - [Permissions — alpha-0.8.1](PERMISSIONS.md)
 - [Database and Login Configuration — alpha-0.7.15](DATABASE_AUTH_CONFIGURATION.md)
 - [WebAdmin Accounts — alpha-0.7.14](WEBADMIN_ACCOUNTS.md)
