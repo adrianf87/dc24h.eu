@@ -1,5 +1,6 @@
 #pragma once
 #include "dc24h/accounts/management.hpp"
+#include "dc24h/bans/repository.hpp"
 #include <array>
 #include <exception>
 #include <optional>
@@ -8,9 +9,9 @@
 
 namespace dc24h::admin {
 enum class Origin { maintenance_api, owner_cli };
-enum class Action { create, activate, disable, password, reset, role, bootstrap_owner, transfer_owner };
-inline constexpr std::array<Action,8> action_catalog{Action::create,Action::activate,Action::disable,
-    Action::password,Action::reset,Action::role,Action::bootstrap_owner,Action::transfer_owner};
+enum class Action { create, activate, disable, password, reset, role, bootstrap_owner, transfer_owner, ban_create, ban_revoke };
+inline constexpr std::array<Action,10> action_catalog{Action::create,Action::activate,Action::disable,
+    Action::password,Action::reset,Action::role,Action::bootstrap_owner,Action::transfer_owner,Action::ban_create,Action::ban_revoke};
 [[nodiscard]] std::string_view action_key(Action action) noexcept;
 [[nodiscard]] std::optional<Action> parse_action(std::string_view key) noexcept;
 // Entry-point availability only; never a replacement for account authorization.
@@ -34,8 +35,11 @@ struct Command {
     std::string_view proof, password, name, successor_proof;
     accounts::Role role{accounts::Role::registered};
     accounts::Timestamp time{};
+    bans::Kind ban_kind{bans::Kind::account};
+    std::string_view subject,reason;
+    std::optional<bans::Timestamp> expires_at;
 };
-using Result = std::variant<accounts::StoredAccount,accounts::OwnershipTransfer>;
+using Result = std::variant<accounts::StoredAccount,accounts::OwnershipTransfer,bans::Record>;
 struct Statistics {
     std::uint64_t attempts{}, succeeded{}, refused{}, unavailable{}, outcome_unknown{};
 };
@@ -50,6 +54,7 @@ public:
     [[nodiscard]] Result execute(const Command& command);
     [[nodiscard]] accounts::StoredAccount account(std::uint64_t id);
     [[nodiscard]] std::vector<accounts::StoredAccount> list(std::uint64_t after = 0, bool staff = false);
+    [[nodiscard]] std::vector<bans::Record> bans_list(std::uint64_t after=0);
     [[nodiscard]] Statistics statistics() const noexcept { return statistics_; }
     [[nodiscard]] Origin origin() const noexcept { return origin_; }
 private:

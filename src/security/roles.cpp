@@ -31,7 +31,7 @@ std::optional<unsigned> role_rank(accounts::Role role) noexcept {
 }
 bool permission_implemented(Permission p) noexcept {
     if(permission_key(p).empty())return false;
-    return p!=Permission::mute_users&&p!=Permission::ban_users&&p!=Permission::manage_blocks&&
+    return p!=Permission::mute_users&&
         p!=Permission::read_audit&&p!=Permission::manage_configuration&&p!=Permission::manage_hub;
 }
 void validate(const RolePolicy& policy) {

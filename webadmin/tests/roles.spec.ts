@@ -8,7 +8,7 @@ test("seven-role policy is bilingual and separates grants from available actions
  await expect(page.getByRole("heading",{level:1,name:"Roles and permissions"})).toBeVisible();
  await page.getByLabel("Inspect role").selectOption("operator");
  await expect(panel.locator('[data-permission="users.ban"] td').nth(1)).toHaveText("Yes");
- await expect(panel.locator('[data-permission="users.ban"] td').nth(2)).toContainText("action pending");
+ await expect(panel.locator('[data-permission="users.ban"] td').nth(2)).toContainText("Available service");
  await expect(panel.locator('[data-permission="accounts.manage"] td').nth(1)).toHaveText("No");
  await page.getByLabel("Inspect role").selectOption("vip");
  await expect(panel.locator('[data-permission="users.kick"] td').nth(1)).toHaveText("Yes");

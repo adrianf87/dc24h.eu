@@ -1,5 +1,17 @@
 # Changelog
 
+## alpha-0.8.5 — 2026-11-17
+
+Ban Core — account, CID and exact IP admission blocks, based directly on main `bf616588d4293963bce80062bfe900ebc9a98cfe`. No automatic merge.
+
+- Add checked canonical account/CID/IPv4/IPv6 ban records, permanent/expiring semantics, immutable allocation-free admission indexes and a 4096-active-record bound. Normalize mapped IPv4, merge duplicate rules conservatively and evaluate expiry on each admission without SQL.
+- Add explicit schema v8, bounded repository paging and Operator-or-higher proven create/revoke through Admin Core. Preserve exact proof/revision/row-lock checks, account/mapped-CID hierarchy, creator authority on revoke, per-database write serialization, soft-revocation metadata and uncertain SQL outcomes without replay. Earlier SQL files 1–7 and account/credential/mapping bytes remain unchanged.
+- Load checked active policy before serving; fail startup on dirty/incompatible storage or malformed active records. Reject IP before TLS/model/SID allocation and account/CID before GPA/public presence, using generic permanent/temporary terminal notices without subject/reason logs. Global resource blocks also affect staff; admission blocks do not change maintenance password authority. Creation/revocation require stopped-hub maintenance and restart.
+- Extend the central catalog to ten actions and add private bounded ban HTTP forms plus bilingual WebAdmin listing/create/revoke, exact BIGINT parsing, proof clearing and restart guidance. Preserve ownership entry-point isolation. Mark users.ban/blocks.manage implemented while live +ban, subnet bans, full audit and mute remain pending.
+- Cover model/canonicalization/expiry, allocation-free lookups, proof races/hierarchy, migrations, malformed records, real IP/CID admission and expiry, pre-GPA account denial, lost-COMMIT/no-replay, private HTTP, Node and Chromium. Update release fixtures and mirrored EN/US/PL documentation. Retain Ubuntu 24.04 CI with four logical CPUs per runner and nproc parallelism; local commands use eight CPU threads.
+
+Validation on Debian 13: all 210/210 CTest suites passed in both Debug and Release, including disposable MariaDB, v7-to-v8 preservation/historical migration checks, real IP/CID rejection and expiry without restart, pre-GPA account/CID admission, private create/revoke HTTP, lost-COMMIT/no-replay, ncdc ADC/ADCS and Apache. Final ban model/process checks also passed in both builds with 4096-record multi-page loading, write-capacity refusal and fail-closed overflow loading. C++ builds were warning-free. WebAdmin production build/typecheck, all 34 Node tests, all 25 Chromium tests and actual C++ API/adapter/React integration passed. Release metadata, UTF-8/language parity/local links, Python syntax with warnings treated as errors, actionlint, unchanged SQL migrations 1–7 and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration or account/credential mutation is performed.
+
 ## alpha-0.8.4 — 2026-11-17
 
 Kick — live hub session removal, based directly on main `7617851a0608fe1845ab344071321ad7fc35ed01`. No automatic merge.

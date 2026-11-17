@@ -48,7 +48,7 @@ void form(std::string_view body, Fields& fields) {
     if(body.empty()||body.size()>7000){bad();}
     while(!body.empty()) {
         auto end=body.find('&');auto part=body.substr(0,end);auto equal=part.find('=');
-        if(equal==std::string_view::npos||equal==0||fields.values.size()>=6){bad();}
+        if(equal==std::string_view::npos||equal==0||fields.values.size()>=7){bad();}
         std::string key(part.substr(0,equal));
         if(key.find_first_not_of("abcdefghijklmnopqrstuvwxyz_")!=std::string::npos){bad();}
         auto [it,inserted]=fields.values.emplace(std::move(key),std::string{});if(!inserted){bad();}
@@ -62,6 +62,33 @@ void form(std::string_view body, Fields& fields) {
         if(value.size()>1024){bad();}
         if(end==std::string_view::npos){break;}body.remove_prefix(end+1);if(body.empty()){bad();}
     }
+}
+std::string ban_json(const bans::Record& r){
+    return "{\"id\":"+json_string(std::to_string(r.id))+",\"kind\":"+json_string(bans::kind_key(r.kind))+",\"subject\":"+json_string(r.subject)+",\"reason\":"+json_string(r.reason)+
+        ",\"created_at\":"+std::to_string(r.created_at)+",\"expires_at\":"+(r.expires_at?std::to_string(*r.expires_at):"null")+",\"created_by\":"+json_string(std::to_string(r.created_by))+
+        ",\"revoked_at\":"+(r.revoked_at?std::to_string(*r.revoked_at):"null")+",\"revoked_by\":"+(r.revoked_by?json_string(std::to_string(*r.revoked_by)):"null")+",\"revision\":"+json_string(std::to_string(r.revision))+"}";
+}
+std::string serve_bans(const Request& request,admin::Engine& engine,bool& written){
+    std::string_view tail(request.target);tail.remove_prefix(std::string_view("/api/v1/bans").size());
+    if(request.method=="GET"){
+        std::uint64_t after{};if(tail.starts_with("?after=")){after=number(tail.substr(7),true);}else if(!tail.empty()){throw HttpError{404,"not_found"};}
+        const auto rows=engine.bans_list(after);std::string output="{\"maintenance\":true,\"restart_required\":true,\"bans\":[";
+        for(const auto& r:rows){if(output.back()!='['){output+=',';}output+=ban_json(r);}
+        return response(200,output+"],\"next_after\":"+(rows.size()==16?json_string(std::to_string(rows.back().id)):"null")+"}");
+    }
+    if(request.method!="POST"){throw HttpError{405,"method_not_allowed"};}
+    Fields fields;form(request.body,fields);admin::Command command;command.time=bans::Directory::now();command.proof=fields.get("proof");command.actor.id=number(fields.get("actor_id"));
+    if(tail.empty()){
+        fields.exact({"actor_id","proof","kind","subject","reason","expires_at"});command.action=admin::Action::ban_create;
+        const auto kind=bans::parse_kind(fields.get("kind"));if(!kind){bad();}command.ban_kind=*kind;command.subject=fields.get("subject");command.reason=fields.get("reason");
+        if(!fields.get("expires_at").empty()){command.expires_at=static_cast<bans::Timestamp>(number(fields.get("expires_at")));}
+    }else{
+        if(tail.front()!='/'||!tail.ends_with("/revoke")){throw HttpError{404,"not_found"};}
+        fields.exact({"actor_id","proof","revision"});command.action=admin::Action::ban_revoke;
+        command.target.id=number(tail.substr(1,tail.size()-8));command.target.revision=number(fields.get("revision"));
+    }
+    const auto result=engine.execute(command);written=true;
+    return response(200,"{\"maintenance\":true,\"restart_required\":true,\"ban\":"+ban_json(std::get<bans::Record>(result))+"}");
 }
 std::string administration(const admin::Engine& engine) {
     const auto counters=engine.statistics();
@@ -77,7 +104,8 @@ std::string administration(const admin::Engine& engine) {
         ",\"unavailable\":"+json_string(std::to_string(counters.unavailable))+",\"outcome_unknown\":"+json_string(std::to_string(counters.outcome_unknown))+"}}";
     return response(200,output);
 }
-std::string serve(const Request& request,admin::Engine& engine) {
+std::string serve(const Request& request,admin::Engine& engine,bool& written) {
+    if(request.target.starts_with("/api/v1/bans")){return serve_bans(request,engine,written);}
     if(request.target=="/api/v1/admin") {
         if(request.method!="GET"){throw HttpError{405,"method_not_allowed"};}
         return administration(engine);
@@ -120,18 +148,19 @@ std::string serve(const Request& request,admin::Engine& engine) {
         if(action=="password"||action=="reset"){command.password=fields.get("password");}
         if(action=="role"){const auto role=parse_role(fields.get("role"));if(!role){bad();}command.role=*role;}
     }
-    const auto updated=std::get<StoredAccount>(engine.execute(command));
+    const auto result=engine.execute(command);written=true;const auto& updated=std::get<StoredAccount>(result);
     return response(200,"{\"account\":"+json(updated)+",\"maintenance\":true}");
 }
 }
 AccountHandler account_handler(database::Options options) {
     return [engine=admin::Engine(std::move(options),admin::Origin::maintenance_api),next=std::chrono::steady_clock::time_point{}](const Request& request) mutable {
+        bool written=false;
         try {
             if(request.method=="POST") {
                 const auto now=std::chrono::steady_clock::now();if(now<next){throw HttpError{429,"rate_limited"};}
                 next=now+std::chrono::seconds(1);
             }
-            return serve(request,engine);
+            return serve(request,engine,written);
         } catch(const HttpError& e){return response(e.status,"{\"error\":"+json_string(e.key)+"}");}
         catch(const admin::Error& e){
             const auto kind=e.kind();
@@ -143,7 +172,7 @@ AccountHandler account_handler(database::Options options) {
         catch(const PasswordSecurityError& e){return response(e.kind()==PasswordSecurityErrorKind::invalid_password?403:503,"{\"error\":\"authorization_unavailable\"}");}
         catch(const RepositoryError& e){return response(e.kind()==RepositoryErrorKind::duplicate||e.kind()==RepositoryErrorKind::stale?409:503,"{\"error\":\"account_unavailable\"}");}
         catch(const database::Error& e){return response(503,e.outcome_unknown()?"{\"error\":\"outcome_unknown\"}":"{\"error\":\"database_unavailable\"}");}
-        catch(...){return response(503,"{\"error\":\"account_unavailable\"}");}
+        catch(...){return response(503,written?"{\"error\":\"outcome_unknown\"}":"{\"error\":\"account_unavailable\"}");}
     };
 }
 }

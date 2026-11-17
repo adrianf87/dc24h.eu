@@ -1,0 +1,23 @@
+CREATE TABLE dc24h_bans (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    kind VARBINARY(16) NOT NULL,
+    subject VARBINARY(64) NOT NULL,
+    reason VARBINARY(256) NOT NULL,
+    created_at BIGINT NOT NULL,
+    expires_at BIGINT NULL,
+    created_by BIGINT NOT NULL,
+    revoked_at BIGINT NULL,
+    revoked_by BIGINT NULL,
+    revision BIGINT NOT NULL DEFAULT 1,
+    PRIMARY KEY (id),
+    KEY dc24h_bans_subject (kind,subject),
+    KEY dc24h_bans_active (revoked_at,id),
+    CONSTRAINT dc24h_bans_kind CHECK (kind IN ('account','cid','ip')),
+    CONSTRAINT dc24h_bans_subject CHECK (OCTET_LENGTH(subject) BETWEEN 1 AND 64),
+    CONSTRAINT dc24h_bans_reason CHECK (OCTET_LENGTH(reason) BETWEEN 1 AND 256),
+    CONSTRAINT dc24h_bans_time CHECK (created_at BETWEEN 0 AND 253402300799 AND (expires_at IS NULL OR (expires_at > created_at AND expires_at <= 253402300799))),
+    CONSTRAINT dc24h_bans_revoked CHECK ((revoked_at IS NULL AND revoked_by IS NULL) OR (revoked_at IS NOT NULL AND revoked_at >= created_at AND revoked_at <= 253402300799 AND revoked_by IS NOT NULL)),
+    CONSTRAINT dc24h_bans_revision CHECK (revision > 0),
+    CONSTRAINT dc24h_bans_creator FOREIGN KEY (created_by) REFERENCES dc24h_accounts(id) ON DELETE RESTRICT ON UPDATE RESTRICT,
+    CONSTRAINT dc24h_bans_revoker FOREIGN KEY (revoked_by) REFERENCES dc24h_accounts(id) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE=InnoDB

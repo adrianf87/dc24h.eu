@@ -20,3 +20,5 @@ repair is supplied. See [English](../../doc/us/DATABASE_MIGRATIONS.md) and
 Schema v5 adds immutable account/nickname/CID bindings in `0005_account_identities.sql`. Existing migrations 1–4 are unchanged. Upgrade explicitly after backup; no identities are inferred from account names. See [Identity Mapping](../../doc/us/IDENTITY_MAPPING.md).
 
 Migration v7 widens the stored account-role CHECK to six persistent roles. Guest is session-only. Migration SQL 1–6 remains immutable; see [Permissions](../../doc/us/PERMISSIONS.md).
+
+alpha-0.8.5 adds explicit v8 `0008_bans.sql` for account/CID/exact-IP blocks. Earlier SQL files 1–7 are unchanged. See [Ban Core](../../doc/us/BAN_CORE.md) ([PL](../../doc/pl/BAN_CORE.md)).

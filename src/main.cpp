@@ -6,6 +6,7 @@
 #include "dc24h/logging/logger.hpp"
 #include "dc24h/network/tcp_server.hpp"
 #include "dc24h/version.hpp"
+#include "dc24h/bans/repository.hpp"
 
 #include <atomic>
 #include <chrono>
@@ -135,6 +136,8 @@ int main(int argc, char* argv[]) {
                 database = std::make_unique<dc24h::database::Connection>(parsed.settings.database);
                 database->ping();
                 logger.info("Database connected");
+                parsed.settings.network.bans=dc24h::bans::Repository(*database).load(dc24h::bans::Directory::now());
+                logger.info("Ban policy loaded");
             }
             if (parsed.settings.authentication.enabled) {
                 const auto key = dc24h::accounts::AdcSecretKey::load(parsed.settings.authentication.key_file);

@@ -39,6 +39,7 @@ constexpr std::array close_events{
     std::pair{Cause::negotiation_limit,Event::negotiation_limit}, std::pair{Cause::identity_limit,Event::identity_limit},
     std::pair{Cause::authentication_revoked,Event::authentication_revoked},
     std::pair{Cause::kicked,Event::kicked},
+    std::pair{Cause::banned,Event::banned},
     std::pair{Cause::authentication_limit,Event::authentication_limit},
     std::pair{Cause::close_timeout,Event::close_timeout}, std::pair{Cause::internal_error,Event::socket_error}
 };
@@ -317,7 +318,7 @@ void TcpServer::run() {
     login_limits.users=options_.users;
     login_limits.authentication=options_.authentication;
     login_limits.authentication_limits=options_.authentication_limits;
-    login_limits.roles=options_.roles;
+    login_limits.roles=options_.roles;login_limits.bans=options_.bans;
     adc::LoginHub login(login_limits);
     auto publish_users = [&]() noexcept {
         const auto value = login.sessions().statistics();
@@ -536,6 +537,10 @@ void TcpServer::run() {
                     }
                     const auto admitted_at = Clock::now();
                     const auto key = peer_identity(remote);
+                    if(options_.bans&&options_.bans->ip(std::string_view(key).substr(2),bans::Directory::now())){
+                        rejected_.fetch_add(1);security_rejected_.fetch_add(1);
+                        continue; // Drop banned addresses before TLS/model/SID allocation; no payload logs.
+                    }
                     if (!peer_limiter.admit(key, admitted_at)) {
                         rejected_.fetch_add(1);
                         security_rejected_.fetch_add(1);

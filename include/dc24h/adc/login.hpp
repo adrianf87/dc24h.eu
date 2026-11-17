@@ -2,6 +2,7 @@
 
 #include "dc24h/adc/inf.hpp"
 #include "dc24h/admin/kick.hpp"
+#include "dc24h/bans/bans.hpp"
 #include "dc24h/adc/authentication.hpp"
 #include "dc24h/security/roles.hpp"
 #include "dc24h/security/authentication_limits.hpp"
@@ -43,6 +44,7 @@ struct LoginLimits {
     std::shared_ptr<const AuthenticationSource> authentication{};
     security::AuthenticationLimits authentication_limits{};
     security::RolePolicy roles{};
+    std::shared_ptr<const bans::Directory> bans{};
 };
 enum class CloseReason { login_timeout, idle_timeout, partial_frame_timeout, security_quota, negotiation_limit, identity_limit };
 
@@ -135,7 +137,7 @@ private:
     template<class Packet> bool enqueue_shared(Peer& peer, std::shared_ptr<const Packet> frame);
     void reject(Peer& peer, std::string_view status, std::optional<std::string_view> command = {},
                 std::string_view description = {}, users::CloseCause cause = users::CloseCause::protocol_rejected,
-                users::TimePoint now = users::Clock::now());
+                users::TimePoint now = users::Clock::now(), std::optional<std::int64_t> reconnect_after = {});
     bool admit_search(Peer& peer, const Message& message, search::Operation operation, users::TimePoint now, search::Attempt& attempt);
     void receive_result(Id id, const Message& message, users::TimePoint now, search::Attempt& attempt);
     void receive_search(Id id, const Message& message, users::TimePoint now, search::Attempt& attempt);

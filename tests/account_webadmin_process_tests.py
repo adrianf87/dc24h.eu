@@ -54,7 +54,7 @@ def exercise(binary, seed, config, db_socket, password, token, api_socket):
         assert request('GET', '/api/v1/admin', authorized=False)[0] == 401
         code, core = request('GET', '/api/v1/admin')
         assert code == 200 and core['maintenance'] is True
-        assert len(core['actions']) == 8 and [a['available'] for a in core['actions']] == [True]*6+[False]*2
+        assert len(core['actions']) == 10 and [a['available'] for a in core['actions']] == [True]*6+[False]*2+[True]*2
         assert all(value == '0' for value in core['statistics'].values())
         code, page = request('GET', '/api/v1/accounts?after=0')
         assert code == 200 and page['maintenance'] and len(page['accounts']) == 2
@@ -96,6 +96,16 @@ def exercise(binary, seed, config, db_socket, password, token, api_socket):
         assert request('POST', f'/api/v1/accounts/{target}/role', payload, delay=True)[0] == 403
         payload = {'actor_id':actor, 'proof':proof, 'revision':page['accounts'][0]['revision']}
         assert request('POST', f'/api/v1/accounts/{actor}/disable', payload, delay=True)[0] == 403
+        payload = {'actor_id':actor, 'proof':proof, 'kind':'account', 'subject':target, 'reason':'Private account ban', 'expires_at':''}
+        code, created_ban = request('POST', '/api/v1/bans', payload, delay=True)
+        assert code == 200 and created_ban['restart_required'] and created_ban['ban']['subject'] == target
+        code, bans = request('GET', '/api/v1/bans?after=0')
+        assert code == 200 and len(bans['bans']) == 1 and bans['maintenance'] and bans['restart_required']
+        assert request('GET', '/api/v1/bans', authorized=False)[0] == 401
+        ban = created_ban['ban']
+        code, revoked = request('POST', f"/api/v1/bans/{ban['id']}/revoke", {'actor_id':actor, 'proof':proof, 'revision':ban['revision']}, delay=True)
+        assert code == 200 and revoked['ban']['revoked_at'] is not None and revoked['ban']['revision'] == '2'
+        assert request('POST', f"/api/v1/bans/{ban['id']}/revoke", {'actor_id':actor, 'proof':proof, 'revision':ban['revision']}, delay=True)[0] == 409
         before = request('GET', '/api/v1/admin')[1]['statistics']
         assert int(before['attempts']) > 0 and int(before['succeeded']) >= 6 and int(before['refused']) >= 4
         assert request('POST', '/api/v1/accounts', {'x':'y'})[0] == 429

@@ -1,5 +1,7 @@
 # Kick — alpha-0.8.4
 
+**alpha-0.8.5 Ban Core:** [Trwałe blokady wejścia kont/CID/IP](BAN_CORE.md) dodają jawny schemat v8, dodawanie/cofanie z hasłem, egzekwowanie ze startu i wygaśnięcie. Admin Core ma dziesięć poleceń; users.ban/blocks.manage działają. Zastępuje wcześniejsze opisy v7/planowanych banów.
+
 Uwierzytelniony członek zespołu może wyrzucić aktywnego użytkownika z klienta
 ADC/ADCS, wysyłając zwykły tekst czatu publicznego:
 

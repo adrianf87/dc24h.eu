@@ -3,7 +3,17 @@
 #include <string_view>
 
 namespace dc24h::i18n::us {
-inline constexpr std::array<std::string_view, 165> messages{{
+inline constexpr std::array<std::string_view, 174> messages{{
+    "Invalid ban input",
+    "Ban authorization refused",
+    "Ban revision is stale",
+    "Ban target not found",
+    "Bans require current compatible storage",
+    "Invalid stored ban",
+    "Active ban capacity reached",
+    "Access blocked",
+    "Ban policy loaded",
+
     "Kicked from hub",
     "User kicked",
     "Kick denied",

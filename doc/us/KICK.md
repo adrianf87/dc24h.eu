@@ -1,5 +1,7 @@
 # Kick — alpha-0.8.4
 
+**alpha-0.8.5 Ban Core:** [Persistent account/CID/IP admission blocks](BAN_CORE.md) add explicit schema v8, proven create/revoke, startup enforcement and expiry. Admin Core now has ten maintenance actions; users.ban/blocks.manage are implemented. This supersedes earlier schema-v7/ban-pending statements.
+
 Authenticated staff can now kick a live user from an ADC/ADCS client by sending
 ordinary public-chat text:
 

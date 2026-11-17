@@ -1,5 +1,6 @@
 import { request } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import {parseBan,parseBans} from "../src/lib/bans.ts";
 import {parseAdmin} from "../src/lib/admin.ts";
 import { parseAccount, parseAccounts, parseStaff } from "../src/lib/accounts.ts";
 
@@ -12,8 +13,8 @@ export function accountMiddleware(config: {socket:string; token:string}|null) {
       res.end(JSON.stringify(data));
     };
     const path=req.url ?? "";
-    const read=req.method === "GET" && (path==="/admin-api/v1/admin" || /^\/admin-api\/v1\/accounts(?:\?(?:after|staff_after)=(?:0|[1-9]\d{0,18})|\/[1-9]\d{0,18})?$/.test(path));
-    const write=req.method === "POST" && /^\/admin-api\/v1\/accounts(?:\/[1-9]\d{0,18}\/(?:activate|disable|reset|password|role))?$/.test(path);
+    const read=req.method === "GET" && (path==="/admin-api/v1/admin" || /^\/admin-api\/v1\/bans(?:\?after=(?:0|[1-9]\d{0,18}))?$/.test(path) || /^\/admin-api\/v1\/accounts(?:\?(?:after|staff_after)=(?:0|[1-9]\d{0,18})|\/[1-9]\d{0,18})?$/.test(path));
+    const write=req.method === "POST" && (/^\/admin-api\/v1\/bans(?:\/[1-9]\d{0,18}\/revoke)?$/.test(path) || /^\/admin-api\/v1\/accounts(?:\/[1-9]\d{0,18}\/(?:activate|disable|reset|password|role))?$/.test(path));
     if(!read && !write){reply(404,{error:"not_found"});return;}
     if(req.headers["transfer-encoding"] || (read && req.headers["content-length"] && req.headers["content-length"] !== "0")) {reply(400,{error:"bad_request"});return;}
     if(write && (req.headers.origin !== `http://${req.headers.host}` || req.headers["x-dc24h-admin"] !== "1" ||
@@ -46,7 +47,7 @@ export function accountMiddleware(config: {socket:string; token:string}|null) {
             const error=["outcome_unknown","stale","rate_limited","unauthorized","management_refused","invalid_registration","invalid_input","account_unavailable","database_unavailable"].includes(data?.error)?data.error:"api_unavailable";
             finish();reply(status,{error});return;
           }
-          const safe=path==="/admin-api/v1/admin"?parseAdmin(data):data && "accounts" in data?(path.includes("?staff_after=")?parseStaff(data):parseAccounts(data)):data?.maintenance===true?{account:parseAccount(data.account),maintenance:true}:null;
+          const safe=path.startsWith("/admin-api/v1/bans")?(req.method==="GET"?parseBans(data):data?.maintenance===true&&data?.restart_required===true?{ban:parseBan(data.ban),maintenance:true,restart_required:true}:null):path==="/admin-api/v1/admin"?parseAdmin(data):data && "accounts" in data?(path.includes("?staff_after=")?parseStaff(data):parseAccounts(data)):data?.maintenance===true?{account:parseAccount(data.account),maintenance:true}:null;
           if(!safe)throw new Error();finish();reply(200,safe);
         }catch{finish();reply(503,{error:write?"outcome_unknown":"invalid_api_response"});}
       });
