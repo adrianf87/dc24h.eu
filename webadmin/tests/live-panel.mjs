@@ -22,8 +22,8 @@ try {
   });
   await page.goto(process.argv[2]);
   await expect(page.getByText("API connected", { exact: true })).toBeVisible();
-  await expect(page.getByText("alpha-0.8.3", { exact: true })).toHaveCount(2);
-  await expect(page.locator(".metric-value").nth(1)).toHaveText("15");
+  await expect(page.getByText("alpha-0.8.4", { exact: true })).toHaveCount(2);
+  await expect(page.locator(".metric-value").nth(1)).toHaveText("16");
   assert.ok(
     Number(await page.locator(".metric-value").first().textContent()) >= 2,
   );
@@ -132,6 +132,12 @@ try {
   await expect(page.getByRole("heading", { name: "Monitoring wyszukiwań" })).toBeVisible();
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   await page.screenshot({ path: "test-results/live-search-mobile-pl.png", animations: "disabled", fullPage: true });
+  await page.goto(new URL("#kick",process.argv[2]).href);
+  const kicks=page.getByTestId("kick-statistics");
+  await expect(kicks.locator("dd").first()).toHaveText("1");
+  await expect(kicks.locator("dd").nth(2)).toHaveText("1");
+  assert.ok(!(await page.content()).includes("PrivateKickReason"));
+  assert.equal(snapshot.kick.refused,"1");
   assert.deepEqual(errors, []);
   console.log(
     "Real C++ API → local adapter → React: live search/transfer rates, counters, secret isolation, desktop and mobile PL OK",

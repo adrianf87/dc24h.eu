@@ -35,3 +35,5 @@ and verification. Do not expose the Vite development server to a network.
 alpha-0.8.2 adds a filtered staff directory with proven maintenance operations; local ownership tooling is documented in [Operators](../doc/us/OPERATORS.md) ([PL](../doc/pl/OPERATORS.md)).
 
 alpha-0.8.3 adds the read-only [Admin Core](../doc/us/ADMIN_CORE.md) ([PL](../doc/pl/ADMIN_CORE.md)) command catalog and process outcomes through the private maintenance adapter.
+
+alpha-0.8.4 adds a read-only [Kick](../doc/us/KICK.md) ([PL](../doc/pl/KICK.md)) statistics page. Issue live kicks from your authenticated Direct Connect client.

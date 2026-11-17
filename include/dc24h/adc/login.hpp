@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dc24h/adc/inf.hpp"
+#include "dc24h/admin/kick.hpp"
 #include "dc24h/adc/authentication.hpp"
 #include "dc24h/security/roles.hpp"
 #include "dc24h/security/authentication_limits.hpp"
@@ -88,6 +89,7 @@ public:
     [[nodiscard]] search::Statistics search_statistics() const noexcept {
         auto value=search_statistics_;value.tracked_searches=search_.tracked_searches();return value;
     }
+    [[nodiscard]] admin::KickStatistics kick_statistics() const noexcept { return kick_statistics_; }
     [[nodiscard]] chat::Statistics chat_statistics() const noexcept { return chat_statistics_; }
     [[nodiscard]] transfers::Statistics transfer_statistics() const noexcept { return transfer_statistics_; }
     [[nodiscard]] bool closing(Id id) const;
@@ -110,6 +112,10 @@ public:
     // account/SID. The actor must be authenticated; the ready target may be Guest.
     [[nodiscard]] bool revoke_auth_session_as(Id actor, Id target,
         users::TimePoint now = users::Clock::now()) noexcept;
+    // Live kick: hierarchy checked, target immediately loses routing/auth access,
+    // bounded terminal notice drains before transport close. No ban or SQL write.
+    [[nodiscard]] admin::KickError kick(Id actor,Id target,std::string_view reason={},
+        users::TimePoint now=users::Clock::now());
     [[nodiscard]] ConnectionState state(Id id) const;
     [[nodiscard]] std::size_t queued_bytes() const noexcept { return queued_; }
     [[nodiscard]] std::size_t users() const noexcept { return sessions_.identified_users(); }
@@ -136,6 +142,7 @@ private:
     void receive_connection(Id id, const Message& message, users::TimePoint now, transfers::Attempt& attempt);
     void receive_impl(Id id, const Message& message, chat::FloodClock::time_point chat_now, transfers::Attempt& transfer_attempt);
     void route_status(Id id, const Message& message);
+    bool route_kick(Id id,const Message& message,users::TimePoint now);
     void route_chat(Id id, const Message& message, chat::Attempt& attempt);
     void relay(Id except, const Message& message);
     void announce_departure(const Departure& departure);
@@ -143,6 +150,7 @@ private:
     security::AuthenticationLimiter authentication_limiter_;
     std::shared_ptr<SidPool> pool_;
     users::SessionManager sessions_; // Outlives the peers that borrow models.
+    admin::KickCore kick_core_;
     search::Core search_;
     SearchRouter search_router_;
     ResultRouter result_router_;
@@ -159,6 +167,7 @@ private:
     UserDisconnect user_disconnect_;
     std::unordered_map<Id, std::unique_ptr<Peer>> peers_;
     std::size_t queued_{0};
+    admin::KickStatistics kick_statistics_{};
     chat::Statistics chat_statistics_{};
     search::Statistics search_statistics_{};
     transfers::Statistics transfer_statistics_{};

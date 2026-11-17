@@ -1,5 +1,15 @@
 import type { Copy } from "../us";
 export const pl = {
+  kick: "Wyrzucanie",
+  kickTitle: "Wyrzucanie użytkowników",
+  kickSub: "Moderacja aktywnych sesji",
+  kickNote: "Użyj uwierzytelnionego klienta Direct Connect, aby wyrzucić osobę z niższą rolą. Polecenie i powód nie trafiają na czat publiczny. Kick kończy jedną sesję; nie banuje konta i nie blokuje ponownego logowania.",
+  kickCommandNote: "Moderator i wyższe role wymagają users.kick; VIP potrzebuje jawnej delegacji. Wyślij polecenie jako zwykły tekst czatu. Hub sprawdza faktycznego nadawcę, odrzuca siebie/równych/wyższych i stosuje wspólne limity flood. Widok pokazuje tylko liczniki procesu, bez nicków i powodów.",
+  kick_attempts: "Próby wyrzucenia",
+  kick_succeeded: "Wyrzucone sesje",
+  kick_refused: "Odrzucone",
+  kick_errors: "Błędy przygotowania",
+  kick_notice_failures: "Błędy powiadomienia końcowego",
   adminCore: "Admin Core",
   adminCoreTitle: "Centralna administracja",
   adminCoreSub: "Katalog poleceń serwisowych i liczniki procesu",

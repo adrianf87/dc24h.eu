@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.8.3.
+Current development version: alpha-0.8.4.
+
+[Kick — alpha-0.8.4](us/KICK.md) · [PL](pl/KICK.md)
 
 [Admin Core — alpha-0.8.3](us/ADMIN_CORE.md) · [PL](pl/ADMIN_CORE.md)
 

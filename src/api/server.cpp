@@ -114,6 +114,12 @@ std::string status_json(const Snapshot& value) {
         chat_json += std::to_string(value.chat.values[i]);
     }
     chat_json += '}';
+    std::string kick_json="{";
+    for(std::size_t i=0;i<admin::kick_statistic_names.size();++i){
+        if(i){kick_json+=',';}kick_json+='"';kick_json+=admin::kick_statistic_names[i];kick_json+="\":\"";
+        kick_json+=std::to_string(value.kick.values[i]);kick_json+='"';
+    }
+    kick_json+='}';
     return "{\"api_version\":\"v1\",\"server\":{\"name\":\"dc24h.eu\",\"version\":\"" +
         std::string(dc24h::version) + "\",\"core_running\":" + (value.core_running ? "true" : "false") +
         ",\"uptime_seconds\":" + std::to_string(value.uptime_seconds) + "},\"network\":{\"active_connections\":" +
@@ -125,7 +131,7 @@ std::string status_json(const Snapshot& value) {
         ",\"received_bytes\":" + std::to_string(value.received_bytes) + ",\"sent_bytes\":" + std::to_string(value.sent_bytes) +
         ",\"peak_connections\":" + std::to_string(value.peak_connections) + "},\"users\":{\"online\":" +
         std::to_string(value.online_users) + ",\"peak_online\":" + std::to_string(value.peak_online_users) +
-        ",\"successful_logins\":" + std::to_string(value.successful_logins) + "},\"chat\":" + chat_json + ",\"search\":" + search_json(value) + ",\"transfers\":" + transfers_json(value.transfers, value.transfer_settings) + ",\"database\":{\"enabled\":" +
+        ",\"successful_logins\":" + std::to_string(value.successful_logins) + "},\"chat\":" + chat_json + ",\"kick\":"+kick_json+",\"search\":" + search_json(value) + ",\"transfers\":" + transfers_json(value.transfers, value.transfer_settings) + ",\"database\":{\"enabled\":" +
         (value.database_enabled ? "true" : "false") + "}" +
         (value.configuration ? ",\"configuration\":" + configuration_json(*value.configuration) : "") + "}\n";
 }

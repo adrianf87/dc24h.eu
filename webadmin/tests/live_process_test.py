@@ -74,6 +74,8 @@ with tempfile.TemporaryDirectory(prefix='dc24h-web-live-') as temp:
         target.send(result); case.assertEqual(source.line(), result)
         with socket.socket() as reserve:
             reserve.bind(('127.0.0.1', 0)); webport = reserve.getsockname()[1]
+        source.send(b'BMSG ' + source.sid + b' +kick\\sWebChatSecretUser1\\sPrivateKickReason')
+        case.assertTrue(source.line().startswith(b'ISTA 125 Kick\\sdenied'))
         with (folder / 'vite.log').open('w') as output:
             vite = subprocess.Popen(['node', 'node_modules/vite/bin/vite.js', '--port', str(webport)], cwd=root,
                 env={**os.environ, 'DC24H_API_SOCKET': str(endpoint), 'DC24H_API_TOKEN_FILE': str(credential)}, stdout=output, stderr=output)

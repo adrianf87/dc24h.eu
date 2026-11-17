@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.8.3: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.8.4: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [Kick — alpha-0.8.4](KICK.md)
 - [Admin Core — alpha-0.8.3](ADMIN_CORE.md)
 - [Operatorzy i własność huba — alpha-0.8.2](OPERATORS.md)
 - [Permissions — alpha-0.8.1](PERMISSIONS.md)
