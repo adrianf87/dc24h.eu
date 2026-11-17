@@ -1,5 +1,7 @@
 # Operatorzy i własność huba — alpha-0.8.2
 
+**alpha-0.8.3 Admin Core:** [Centralny silnik poleceń serwisowych](ADMIN_CORE.md) obsługuje API kont i CLI Ownera, izolację punktów dostępu, wyniki, prywatny katalog i liczniki procesu. Dowody haseł, transakcje i schemat v7 pozostają.
+
 Etap rozwija [Uprawnienia](PERMISSIONS.md) z main. Do zespołu należą Moderator,
 Operator, Administrator i Owner. Uprawnienia pochodzą ze sprawdzonej roli konta
 i uwierzytelnienia, nigdy z INF klienta ani wartości wybranej w przeglądarce.

@@ -6,7 +6,7 @@ import subprocess
 import threading
 
 
-def fault_case(binary, folder, database_socket, password, mode):
+def fault_case(binary, folder, database_socket, password, mode, arguments=()):
     endpoint = Path(folder) / (mode + '.sock')
     stop = threading.Event()
     triggered = threading.Event()
@@ -66,7 +66,7 @@ def fault_case(binary, folder, database_socket, password, mode):
         worker = threading.Thread(target=proxy, daemon=True)
         worker.start()
         try:
-            result = subprocess.run([binary, str(endpoint), str(password), mode],
+            result = subprocess.run([binary, str(endpoint), str(password), mode, *map(str, arguments)],
                                     capture_output=True, text=True, timeout=20)
         finally:
             stop.set()

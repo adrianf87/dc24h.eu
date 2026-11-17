@@ -1,3 +1,4 @@
+import {administration} from "./admin-fixture.ts";
 import assert from "node:assert/strict";
 import {test} from "node:test";
 import {createServer,request} from "node:http";
@@ -13,7 +14,7 @@ test("account adapter requires same-origin forms and redacts service credentials
  let writes=0, observed="", authorization="", staffMode=true;
  const backend=createServer((req,res)=>{authorization=String(req.headers.authorization);let data="";req.on("data",c=>data+=c);req.on("end",()=>{
   if(req.method==="POST"){writes++;observed=data;}
-  res.setHeader("Content-Type","application/json");res.end(JSON.stringify(req.method==="POST"?{account:{...account,verifier:"private"},maintenance:true,token}:{accounts:[staffMode&&req.url?.includes("staff_after")?{...account,role:"owner"}:account],staff_only:staffMode&&req.url?.includes("staff_after"),next_after:null,maintenance:true,token}));
+  res.setHeader("Content-Type","application/json");res.end(JSON.stringify(req.url==="/api/v1/admin"?{...administration,token}:req.method==="POST"?{account:{...account,verifier:"private"},maintenance:true,token}:{accounts:[staffMode&&req.url?.includes("staff_after")?{...account,role:"owner"}:account],staff_only:staffMode&&req.url?.includes("staff_after"),next_after:null,maintenance:true,token}));
  });});backend.listen(socket);await once(backend,"listening");
  const handler=middleware({socket,token}),adapter=createServer((req,res)=>handler(req,res,()=>res.end()));adapter.listen(0,"127.0.0.1");await once(adapter,"listening");
  const port=(adapter.address() as AddressInfo).port,host=`127.0.0.1:${port}`;
@@ -22,6 +23,9 @@ test("account adapter requires same-origin forms and redacts service credentials
  });
  try {
   assert.equal((await call("GET")).code,200);
+  const core=await call("GET",{},"","/admin-api/v1/admin");
+  assert.equal(core.code,200);assert.deepEqual(JSON.parse(core.text),administration);assert.ok(!core.text.includes(token));
+  assert.equal((await call("POST",{},"","/admin-api/v1/admin")).code,404);
   const staff=await call("GET",{},"","/admin-api/v1/accounts?staff_after=0");
   assert.equal(staff.code,200);assert.equal(JSON.parse(staff.text).staff_only,true);assert.ok(!staff.text.includes(token));
   staffMode=false;

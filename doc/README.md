@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.8.2.
+Current development version: alpha-0.8.3.
+
+[Admin Core — alpha-0.8.3](us/ADMIN_CORE.md) · [PL](pl/ADMIN_CORE.md)
 
 [Operators — alpha-0.8.2](us/OPERATORS.md) · [PL](pl/OPERATORS.md)
 

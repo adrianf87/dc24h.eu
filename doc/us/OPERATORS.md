@@ -1,5 +1,7 @@
 # Operators and hub ownership — alpha-0.8.2
 
+**alpha-0.8.3 Admin Core:** [Central maintenance command dispatch](ADMIN_CORE.md) now serves the account API and owner CLI, with entry-point isolation, fixed outcomes, private discovery and process counters. Existing proof/transaction rules and schema v7 remain.
+
 This increment builds on [Permissions](PERMISSIONS.md) from main. Staff accounts
 are Moderator, Operator, Administrator and Owner. Their authority comes from
 persistent checked account roles and successful authentication, never client INF

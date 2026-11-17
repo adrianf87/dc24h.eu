@@ -1,6 +1,6 @@
 #include "dc24h/api/accounts.hpp"
 #include "dc24h/api/http.hpp"
-#include "dc24h/accounts/management.hpp"
+#include "dc24h/admin/core.hpp"
 #include "dc24h/accounts/password_security.hpp"
 #include "dc24h/accounts/registration.hpp"
 #include <openssl/crypto.h>
@@ -63,11 +63,26 @@ void form(std::string_view body, Fields& fields) {
         if(end==std::string_view::npos){break;}body.remove_prefix(end+1);if(body.empty()){bad();}
     }
 }
-StoredAccount find(AccountRepository& repository,std::string_view id) {
-    auto found=repository.find_by_id(*AccountId::from_value(number(id)));
-    if(!found){throw HttpError{404,"not_found"};}return *found;
+std::string administration(const admin::Engine& engine) {
+    const auto counters=engine.statistics();
+    std::string output="{\"maintenance\":true,\"actions\":[";
+    for(auto action:admin::action_catalog) {
+        if(output.back()!='['){output+=',';}
+        const bool owner=action==admin::Action::bootstrap_owner||action==admin::Action::transfer_owner;
+        output+="{\"key\":"+json_string(admin::action_key(action))+",\"available\":"+(admin::available(action,engine.origin())?"true":"false")+
+            ",\"local_owner_only\":"+(owner?"true":"false")+"}";
+    }
+    output+="],\"statistics\":{\"attempts\":"+json_string(std::to_string(counters.attempts))+
+        ",\"succeeded\":"+json_string(std::to_string(counters.succeeded))+",\"refused\":"+json_string(std::to_string(counters.refused))+
+        ",\"unavailable\":"+json_string(std::to_string(counters.unavailable))+",\"outcome_unknown\":"+json_string(std::to_string(counters.outcome_unknown))+"}}";
+    return response(200,output);
 }
-std::string serve(const Request& request,const database::Options& options) {
+std::string serve(const Request& request,admin::Engine& engine) {
+    if(request.target=="/api/v1/admin") {
+        if(request.method!="GET"){throw HttpError{405,"method_not_allowed"};}
+        return administration(engine);
+    }
+    if(!request.target.starts_with("/api/v1/accounts")){throw HttpError{404,"not_found"};}
     constexpr std::string_view root="/api/v1/accounts";
     std::string_view tail(request.target);tail.remove_prefix(root.size());
     if(request.method!="GET"&&request.method!="POST"){throw HttpError{405,"method_not_allowed"};}
@@ -75,56 +90,54 @@ std::string serve(const Request& request,const database::Options& options) {
     if(request.method=="GET"&&tail.starts_with("?after=")){after=number(tail.substr(7),true);tail={};}
     if(request.method=="GET"&&tail.starts_with("?staff_after=")){after=number(tail.substr(13),true);tail={};staff=true;}
     if(!tail.empty()&&tail.front()!='/'){throw HttpError{404,"not_found"};}
-    database::Connection connection(options);AccountRepository repository(connection);
     if(request.method=="GET") {
         if(tail.empty()) {
-            const auto page=staff?repository.list_staff_after(after):repository.list_after(after);std::string output="{\"accounts\":[";
+            const auto page=engine.list(after,staff);std::string output="{\"accounts\":[";
             for(const auto& value:page){if(output.back()!='['){output+=',';}output+=json(value);}
             return response(200,output+"],\"maintenance\":true,\"staff_only\":"+(staff?"true":"false")+",\"next_after\":"+
                 (page.size()==25?json_string(std::to_string(page.back().account.id().value())):"null")+"}");
         }
-        return response(200,"{\"account\":"+json(find(repository,tail.substr(1)))+",\"maintenance\":true}");
+        return response(200,"{\"account\":"+json(engine.account(number(tail.substr(1))))+",\"maintenance\":true}");
     }
     Fields fields;form(request.body,fields);
     const auto now=std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    admin::Command command;command.time=now;command.proof=fields.get("proof");
     if(tail.empty()) {
         fields.exact({"actor_id","proof","name","password"});
-        const auto actor=find(repository,fields.get("actor_id"));
-        const auto account=AccountManagementService(connection).create_account(actor,fields.get("proof"),fields.get("name"),fields.get("password"),now);
-        return response(200,"{\"account\":"+json(account)+",\"maintenance\":true}");
+        command.action=admin::Action::create;command.actor.id=number(fields.get("actor_id"));
+        command.name=fields.get("name");command.password=fields.get("password");
+    } else {
+        tail.remove_prefix(1);const auto slash=tail.find('/');if(slash==std::string_view::npos){bad();}
+        command.target.id=number(tail.substr(0,slash));const auto action=tail.substr(slash+1);
+        const auto parsed=admin::parse_action("accounts."+std::string(action));
+        if(!parsed||*parsed==admin::Action::create){throw HttpError{404,"not_found"};}command.action=*parsed;
+        if(action=="password"){fields.exact({"revision","proof","password"});}
+        else if(action=="reset"){fields.exact({"revision","actor_id","proof","password"});}
+        else if(action=="role"){fields.exact({"revision","actor_id","proof","role"});}
+        else{fields.exact({"revision","actor_id","proof"});}
+        command.target.revision=number(fields.get("revision"));
+        if(action!="password"){command.actor.id=number(fields.get("actor_id"));}
+        if(action=="password"||action=="reset"){command.password=fields.get("password");}
+        if(action=="role"){const auto role=parse_role(fields.get("role"));if(!role){bad();}command.role=*role;}
     }
-    tail.remove_prefix(1);const auto slash=tail.find('/');if(slash==std::string_view::npos){bad();}
-    const auto target=find(repository,tail.substr(0,slash));const auto action=tail.substr(slash+1);
-    if(action=="password"){fields.exact({"revision","proof","password"});}
-    else if(action=="reset"){fields.exact({"revision","actor_id","proof","password"});}
-    else if(action=="role"){fields.exact({"revision","actor_id","proof","role"});}
-    else if(action=="activate"||action=="disable"){fields.exact({"revision","actor_id","proof"});}
-    else{throw HttpError{404,"not_found"};}
-    if(target.revision!=number(fields.get("revision"))){throw HttpError{409,"stale"};}
-    AccountManagementService management(connection);
-    auto updated=[&] {
-        if(action=="password"){return management.change_password(target,fields.get("proof"),fields.get("password"),now);}
-        const auto actor=find(repository,fields.get("actor_id"));
-        if(action=="role"){
-            const auto role=parse_role(fields.get("role"));if(!role){bad();}
-            return management.change_role(actor,fields.get("proof"),target,*role,now);
-        }
-        if(action=="reset"){return management.reset_password(actor,fields.get("proof"),target,fields.get("password"),now);}
-        if(action=="activate"){return management.activate_account(actor,fields.get("proof"),target,now);}
-        return management.disable_account(actor,fields.get("proof"),target,now);
-    }();
+    const auto updated=std::get<StoredAccount>(engine.execute(command));
     return response(200,"{\"account\":"+json(updated)+",\"maintenance\":true}");
 }
 }
 AccountHandler account_handler(database::Options options) {
-    return [options=std::move(options),next=std::chrono::steady_clock::time_point{}](const Request& request) mutable {
+    return [engine=admin::Engine(std::move(options),admin::Origin::maintenance_api),next=std::chrono::steady_clock::time_point{}](const Request& request) mutable {
         try {
             if(request.method=="POST") {
                 const auto now=std::chrono::steady_clock::now();if(now<next){throw HttpError{429,"rate_limited"};}
                 next=now+std::chrono::seconds(1);
             }
-            return serve(request,options);
+            return serve(request,engine);
         } catch(const HttpError& e){return response(e.status,"{\"error\":"+json_string(e.key)+"}");}
+        catch(const admin::Error& e){
+            const auto kind=e.kind();
+            const unsigned status=kind==admin::ErrorKind::forbidden?403:kind==admin::ErrorKind::stale?409:kind==admin::ErrorKind::not_found?404:kind==admin::ErrorKind::invalid_input?400:503;
+            return response(status,kind==admin::ErrorKind::outcome_unknown?"{\"error\":\"outcome_unknown\"}":"{\"error\":\"management_refused\"}");
+        }
         catch(const ManagementError& e){return response(e.kind()==ManagementErrorKind::stale?409:e.kind()==ManagementErrorKind::unauthorized?403:400,"{\"error\":\"management_refused\"}");}
         catch(const RegistrationError& e){return response(e.kind()==RegistrationErrorKind::crypto||e.kind()==RegistrationErrorKind::schema?503:400,"{\"error\":\"invalid_registration\"}");}
         catch(const PasswordSecurityError& e){return response(e.kind()==PasswordSecurityErrorKind::invalid_password?403:503,"{\"error\":\"authorization_unavailable\"}");}

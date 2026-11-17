@@ -1,5 +1,16 @@
 # Changelog
 
+## alpha-0.8.3 — 2026-11-17
+
+Admin Core — central administrative engine, based directly on main `71b171cf2986053f46e5839916253edabefaa331`. No automatic merge.
+
+- Add `dc24h_admin` with eight exact typed actions, fixed trusted entry-point policy, borrowed command secrets, strict command shape/revisions and central account lookup/dispatch. Route private HTTP account mutations and local Owner bootstrap/transfer through it while preserving proven account authority, ordered locks, transactional rollback and ADC invalidation. Ownership commands remain unavailable to HTTP.
+- Centralize mutation outcomes as invalid input, forbidden, stale, missing account, service unavailable or uncertain write. Preserve unknown SQL outcomes without replay/reconnect and track saturating process counters with exactly one terminal result per dispatched command. Retain no secrets, account identifiers, commands or event history.
+- Add private `GET /api/v1/admin` discovery without SQL or credential reads and a bilingual WebAdmin catalog/counter page with exact parsing, precision-safe decimal strings, manual refresh and stale-state clearing. Serving hubs/older APIs show unavailable; role availability is not an actor authorization grant.
+- Preserve schema v7, migrations/manifest, ordinary account forms, local private-file ownership tooling and pending live moderation/audit/ban/mute engines. Extend central unit/integration, actual HTTP/CLI, lost-COMMIT, Node and Chromium coverage. Update mirrored EN/US/PL documentation and version fixtures; retain GitHub Ubuntu 24.04 with four CPUs per runner and nproc parallelism, with eight-thread local tests.
+
+Validation on Debian 13: all 206/206 CTest suites passed in both Debug and Release, including real ncdc ADC/ADCS, disposable MariaDB, private HTTP, owner CLI and Apache. After making fixed Admin Core errors allocation-free, all four central/CLI/HTTP suites passed again in both builds, including real lost-COMMIT classification and independent proof of one atomic insertion without replay. C++ builds were warning-free. WebAdmin production build/typecheck, all 32 Node tests, all 23 Chromium tests and actual C++ API/adapter/React integration passed. Release metadata, documentation UTF-8/language parity/local links, Python syntax, actionlint, unchanged migrations/manifest and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration or account/credential mutation is performed.
+
 ## alpha-0.8.2 — 2026-11-17
 
 Operators — staff system and hub ownership, based directly on main `60df4e4a3311956728801d0f2568311fb534cf23`. No automatic merge.
