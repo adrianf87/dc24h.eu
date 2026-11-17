@@ -1,5 +1,17 @@
 # Changelog
 
+## alpha-0.7.14 — 2026-11-17
+
+WebAdmin — basic account management, based directly on main `94f81e111b3884316cf9c29271abbbbd4815d774`. No automatic merge.
+
+- Add the bilingual Accounts page with paginated metadata, account selection, confirmed disabled registration, activation, disable/reset and password changes. Preserve exact BIGINT IDs/revisions, clear password fields on submission, avoid secret storage/export and distinguish unavailable, refused, stale and unknown outcomes without automatic write retry.
+- Add the separate `dc24h-account-admin` maintenance executable and opt-in local account handler. Open no ADC/ADCS listeners and require stopped serving hubs, enabled private SQL/API settings, disabled ADC authentication and current clean schema v6. Keep the serving hub's HTTP parser and API read-only by default.
+- Reuse existing transactional management, scrypt password proof, account-role hierarchy and ADC credential invalidation. Add trusted activation and checked bounded repository paging; preserve schema/migrations, account names/roles and fresh-start authentication snapshots. First-administrator bootstrap, role editing, deletion, browser ADC enrollment and a production remote-login gateway remain future work.
+- Bound and validate form framing/fields, require same-UID socket peers and server-side Bearer credentials, throttle maintenance writes and preserve uncertain SQL outcomes. Extend the loopback adapter with same-origin custom-header writes, bounded concurrency and response allowlists. Update mirrored EN/US/PL documentation and all release fixtures.
+- Keep GitHub-hosted Ubuntu 24.04 Debug/Release/WebAdmin CI and explicitly trigger alpha-0.7.14; builds, CTest, Node and Chromium use four workers. Remote CI completion is not awaited.
+
+Validation on Debian 13: all 202/202 CTest suites passed in Debug and Release, including real ncdc ADC/ADCS, disposable MariaDB and Apache. After final authorization hardening, all five affected account/API suites passed again in both builds. C++ builds were warning-free. WebAdmin typecheck/production build, all 26 Node tests, all 16 Chromium tests and real C++ API/React integration passed. Metadata, documentation UTF-8/language parity/local links, Python syntax, actionlint, unchanged migration files and whitespace checks passed. Remote CI completion is not awaited; no production deployment, credential provisioning or database migration is performed.
+
 ## alpha-0.7.13 — CI parallelism — 2026-11-17
 
 Limit CMake builds, CTest, Node unit tests and Playwright to four workers per job on GitHub-hosted Ubuntu 24.04. Keep Debug, Release and WebAdmin jobs and existing triggers. CI completion is not awaited. Workflow syntax, documentation and whitespace validation passed; application code is unchanged.

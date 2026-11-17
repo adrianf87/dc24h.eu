@@ -1,5 +1,7 @@
 # Account Management — alpha-0.7.11
 
+**alpha-0.7.14 WebAdmin Accounts:** [lokalne zarządzanie kontami](WEBADMIN_ACCOUNTS.md) dodaje stronicowanie metadanych, tworzenie wyłączonych kont, aktywację, wyłączenie/reset i zmianę hasła przez osobny program bez listenerów huba. Przed zapisem zatrzymaj hub; operacje chronią hasło administratora i rewizje. Schemat v6 i migawki uwierzytelniania pozostają. CI używa czterech workerów na polecenie; nie czekamy na jego zakończenie.
+
 Etap powstaje z main `c81c126b082c10833d4f85829c948fd2ee125184` i dodaje zaufaną,
 synchroniczną bibliotekę C++ `dc24h_account_management`: zmianę hasła konta,
 administracyjne wyłączenie oraz reset hasła. Bez automatycznego scalenia, nowej

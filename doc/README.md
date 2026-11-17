@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.7.13.
+Current development version: alpha-0.7.14.
+
+[WebAdmin Accounts — alpha-0.7.14](us/WEBADMIN_ACCOUNTS.md) · [PL](pl/WEBADMIN_ACCOUNTS.md)
 
 [Database Resilience — alpha-0.7.13](us/DATABASE_RESILIENCE.md) · [PL](pl/DATABASE_RESILIENCE.md)
 

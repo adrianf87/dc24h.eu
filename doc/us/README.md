@@ -1,7 +1,8 @@
 # dc24h.eu documentation
 
-alpha-0.7.13: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.7.14: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
+- [WebAdmin Accounts — alpha-0.7.14](WEBADMIN_ACCOUNTS.md)
 - [Database Resilience — alpha-0.7.13](DATABASE_RESILIENCE.md)
 - [Anti-Bruteforce — alpha-0.7.12](ANTI_BRUTEFORCE.md)
 - [Account Management — alpha-0.7.11](ACCOUNT_MANAGEMENT.md)
