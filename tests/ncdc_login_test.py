@@ -19,6 +19,7 @@ import threading
 import time
 import unittest
 
+from ncdc_ports import reserve_active_port
 from network_process_tests import Hub
 from api_support import enable_api, fetch_status
 from adc_process_tests import counters
@@ -242,24 +243,10 @@ class NcdcLoginTest(unittest.TestCase):
                     raise
 
             def activate_ncdc():
-                # ncdc's port 0 means a random number, not an OS-assigned free
-                # port. Reserve TCP/UDP numbers until ncdc advertises readiness.
-                # Both sides use SO_REUSEADDR; the TCP reservation never listens.
-                with socket.socket() as tcp_port, socket.socket(type=socket.SOCK_DGRAM) as udp_port, \
-                        socket.socket() as other_tcp, socket.socket(type=socket.SOCK_DGRAM) as other_udp:
-                    # A number can be free on 127.0.0.1 while another interface
-                    # already owns it. Keep both conflicting binds until the
-                    # real client confirms its TCP/UDP listener configuration.
-                    for reservation, conflict in ((tcp_port, other_tcp), (udp_port, other_udp)):
-                        candidate = 0
-                        if PORT_SCOPE_CONFLICT:
-                            conflict.bind(('127.0.0.2', 0))
-                            if conflict.type == socket.SOCK_STREAM:
-                                conflict.listen(1)
-                            candidate = conflict.getsockname()[1]
-                        reservation.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                        reservation.bind(('127.0.0.1', candidate))
-                    tcp_number, udp_number = tcp_port.getsockname()[1], udp_port.getsockname()[1]
+                # Keep both protocol reservations (and deliberate cross-scope
+                # conflicts) until the real client advertises readiness.
+                with reserve_active_port(socket.SOCK_STREAM, PORT_SCOPE_CONFLICT) as tcp_number, \
+                        reserve_active_port(socket.SOCK_DGRAM, PORT_SCOPE_CONFLICT) as udp_number:
                     # Match ncdc's bind scope to the reserved loopback sockets.
                     # active_ip is only an advertised address; without an
                     # explicit local_address ncdc binds 0.0.0.0 and can collide

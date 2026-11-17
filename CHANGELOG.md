@@ -1,5 +1,11 @@
 # Changelog
 
+## CI — ncdc cross-interface port reservation — 2026-11-17
+
+Fix the intermittent `adcs.capabilities.bindscope.ncdc` failure seen in PR #27 (`Address already in use`). A port allocated on 127.0.0.2 can already be occupied on 127.0.0.1. Reserve a fresh TCP/UDP pair on allocation collision, closing both sockets before each bounded retry, and retain the deliberate conflicting bind until ncdc advertises readiness. Retry only EADDRINUSE during allocation; propagate caller/test and other socket failures. Add deterministic real-socket tests for TCP/UDP collisions, cleanup, exhaustion and error propagation. Server behavior, Ban Core and four-CPU Ubuntu 24.04 CI allocation are unchanged.
+
+Validation: all 14 affected port/capability/active-passive/RCM CTest suites passed locally in both Debug and Release with eight-worker commands. The five deterministic socket regression cases passed; Python syntax with warnings as errors, release metadata, mirrored documentation links/UTF-8, actionlint and whitespace checks passed. Remote CI completion is not awaited.
+
 ## alpha-0.8.5 — 2026-11-17
 
 Ban Core — account, CID and exact IP admission blocks, based directly on main `bf616588d4293963bce80062bfe900ebc9a98cfe`. No automatic merge.
