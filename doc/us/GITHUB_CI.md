@@ -16,8 +16,11 @@ Three jobs can run independently:
   its own Release `dc24h` binary with `BUILD_TESTING=OFF`; the matrix above
   covers the full C++ test suite. Playwright installs Chromium and its system dependencies.
 
-C++ builds, CTest, Node tests and Playwright each use a fixed limit of four
-parallel workers. CI completion is not awaited. Tests start their own isolated services. Packages are installed
+Each job uses a separate GitHub-hosted Ubuntu 24.04 runner with four logical
+CPUs (vCPUs), as provided for this public repository. The workflow verifies
+`nproc == 4` in each job. Build/test commands use `nproc`; there is no fixed
+worker-count cap or matrix max-parallel setting. CI completion is not awaited.
+See [GitHub's runner specifications](https://docs.github.com/en/actions/reference/runners/github-hosted-runners). Tests start their own isolated services. Packages are installed
 with sudo on disposable GitHub machines; builds and tests run as the runner user.
 No self-hosted runner registration, Contabo host or Proxmox VM is required.
 

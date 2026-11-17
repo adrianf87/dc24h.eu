@@ -1,5 +1,9 @@
 # Changelog
 
+## CI CPU allocation clarification — 2026-11-17
+
+Use four logical CPUs per GitHub-hosted Ubuntu 24.04 runner for this public repository, rather than hardcoding a limit of four test workers. Verify nproc=4 separately in every job and restore CPU-derived build/CTest/Node/Playwright parallelism with nproc. Keep independent matrix/WebAdmin jobs without a max-parallel cap. This supersedes the previous worker-limit wording. Workflow, metadata and whitespace validation passed; remote CI completion is not awaited.
+
 ## alpha-0.7.14 — 2026-11-17
 
 WebAdmin — basic account management, based directly on main `94f81e111b3884316cf9c29271abbbbd4815d774`. No automatic merge.

@@ -18,8 +18,11 @@ Trzy zadania mogą działać niezależnie:
   `BUILD_TESTING=OFF`; pełne testy C++ wykonuje powyższa macierz. Playwright
   instaluje Chromium i jego zależności systemowe.
 
-Kompilacja C++, CTest, testy Node i Playwright wykorzystują pełną dostępną
-stały limit czterech równoległych workerów. Nie czekamy na zakończenie CI. Testy uruchamiają własne, odizolowane usługi. Pakiety są
+Każde zadanie otrzymuje osobny runner GitHub Ubuntu 24.04 z czterema logicznymi
+CPU (vCPU), zgodnie z przydziałem dla publicznego repozytorium. Workflow sprawdza
+`nproc == 4` w każdym zadaniu. Kompilacja i testy korzystają z `nproc`, bez stałego
+limitu liczby workerów i bez max-parallel w macierzy. Nie czekamy na zakończenie CI.
+Zobacz [specyfikację runnerów GitHub](https://docs.github.com/en/actions/reference/runners/github-hosted-runners). Testy uruchamiają własne, odizolowane usługi. Pakiety są
 instalowane przez sudo na jednorazowych maszynach GitHub; kompilacja i testy
 pracują jako użytkownik runnera. Rejestracja własnego runnera, host Contabo
 ani maszyny Proxmox nie są wymagane.
