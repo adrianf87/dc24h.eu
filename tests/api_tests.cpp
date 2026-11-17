@@ -41,6 +41,14 @@ void parser() {
         require(parse_request(std::string_view(request).substr(0, i)).state == ParseState::incomplete);
     }
     const auto good = parse_request(request);
+    const std::string form_header="POST /api/v1/accounts HTTP/1.1\r\nHost: local\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 7\r\n\r\n";
+    const auto form_request=form_header+"a=b%20c";
+    for(std::size_t i=0;i<form_request.size();++i){require(parse_request(std::string_view(form_request).substr(0,i),true).state==ParseState::incomplete);}
+    require(parse_request(form_request,true).request.body=="a=b%20c");
+    require(parse_request(form_request).state==ParseState::invalid);
+    require(parse_request(form_request+"x",true).state==ParseState::invalid);
+    require(parse_request("GET / HTTP/1.1\r\nHost: x\r\nContent-Length: 1\r\n\r\nx",true).state==ParseState::invalid);
+    require(parse_request("POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 01\r\n\r\nx",true).state==ParseState::invalid);
     require(good.state == ParseState::complete && good.request.target == "/api/v1/status");
     require(good.request.method == "GET" && authenticate(good.request.authorization, token));
     require(parse_request(request + "x").state == ParseState::invalid);

@@ -82,6 +82,19 @@ RepositoryError::RepositoryError(RepositoryErrorKind kind)
         }
         return "Account repository failure";
     }()), kind_(kind) {}
+std::vector<StoredAccount> AccountRepository::list_after(std::uint64_t after, std::size_t limit) {
+    if (after > max_revision || limit == 0 || limit > 50 || connection_.in_transaction()) { fail(RepositoryErrorKind::invalid_account); }
+    require_schema();
+    auto result = connection_.query(
+        "SELECT id,name,role,status,created_at,updated_at,last_login_at,revision FROM dc24h_accounts WHERE id>? ORDER BY id LIMIT ?",
+        {after, static_cast<std::uint64_t>(limit)}, {limit,8,64,32768});
+    std::vector<StoredAccount> page; page.reserve(result.rows.size());
+    for (auto& row : result.rows) {
+        database::Result one; one.rows.push_back(std::move(row));
+        page.push_back(*decode(one));
+    }
+    return page;
+}
 void AccountRepository::require_schema() {
     const auto state = database::inspect_migrations(connection_);
     if (state.dirty || state.pending || state.current_version < 3) { fail(RepositoryErrorKind::schema); }

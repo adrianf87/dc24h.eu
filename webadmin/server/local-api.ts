@@ -13,6 +13,8 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Plugin } from "vite";
 import { parseSnapshot } from "../src/lib/status.ts";
 
+import { accountMiddleware } from "./account-api.ts";
+
 interface Credentials {
   socket: string;
   token: string;
@@ -93,6 +95,7 @@ function reply(res: ServerResponse, code: number, error: string) {
 }
 export function middleware(config: Credentials | null) {
   let active = 0;
+  const accounts = accountMiddleware(config);
   return (req: IncomingMessage, res: ServerResponse, next: () => void) => {
     if (!req.url?.startsWith("/admin-api")) {
       next();
@@ -112,6 +115,7 @@ export function middleware(config: Credentials | null) {
       reply(res, 403, "forbidden");
       return;
     }
+    if (req.url.startsWith("/admin-api/v1/accounts")) { accounts(req, res); return; }
     if (req.method !== "GET") {
       res.setHeader("Allow", "GET");
       reply(res, 405, "method_not_allowed");

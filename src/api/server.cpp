@@ -47,6 +47,15 @@ struct Peer {
     std::size_t sent{0};
     Clock::time_point accepted{Clock::now()};
     explicit Peer(Fd socket) : fd(std::move(socket)) {}
+    Peer(Peer&&) noexcept = default;
+    Peer& operator=(Peer&& other) noexcept {
+        if(this!=&other) {
+            OPENSSL_cleanse(input.data(),input.size());fd=std::move(other.fd);input=std::move(other.input);
+            output=std::move(other.output);sent=other.sent;accepted=other.accepted;
+        }
+        return *this;
+    }
+    ~Peer() { OPENSSL_cleanse(input.data(), input.size()); }
 };
 bool path_text(const std::string& value) {
     return value.size() <= 4096 && std::none_of(value.begin(), value.end(), [](unsigned char c) { return c < 32 || c == 127; });
@@ -138,6 +147,7 @@ struct Server::Impl {
     Options options;
     StatusProvider status;
     FailureHandler failure;
+    AccountHandler accounts;
     std::string token;
     Fd directory;
     Fd listener;
@@ -148,8 +158,8 @@ struct Server::Impl {
     std::atomic<bool> failed{false};
     std::jthread worker;
 
-    Impl(logging::Logger& log, Options config, StatusProvider provider, FailureHandler handler)
-        : logger(log), options(std::move(config)), status(std::move(provider)), failure(std::move(handler)) {
+    Impl(logging::Logger& log, Options config, StatusProvider provider, FailureHandler handler, AccountHandler account_handler)
+        : logger(log), options(std::move(config)), status(std::move(provider)), failure(std::move(handler)), accounts(std::move(account_handler)) {
         validate(options);
         if (!options.enabled || !status || !failure) { throw std::invalid_argument("Invalid local API settings"); }
         try { token = security::read_private_secret(options.token_file); }
@@ -213,6 +223,7 @@ struct Server::Impl {
     std::string dispatch(const Request& request) {
         const bool head = request.method == "HEAD";
         if (!authenticate(request.authorization, token)) { return response(401, "{\"error\":\"unauthorized\"}\n", head); }
+        if (accounts && request.target.starts_with("/api/v1/accounts")) { return accounts(request); }
         if (request.method != "GET") { return response(405, "{\"error\":\"method_not_allowed\"}\n", head); }
         if (request.target == "/api/v1/health") { return response(200, "{\"status\":\"ok\"}\n"); }
         if (request.target == "/api/v1/status") { return response(200, status_json(status())); }
@@ -223,13 +234,19 @@ struct Server::Impl {
             (events & (POLLERR | POLLNVAL)) != 0) { return false; }
         if (peer.output.empty() && (events & (POLLIN | POLLHUP)) != 0) {
             std::array<char, 4096> buffer{};
+            struct Wipe { std::array<char,4096>& bytes; ~Wipe(){OPENSSL_cleanse(bytes.data(),bytes.size());} } wipe{buffer};
             const auto count = ::recv(peer.fd.value, buffer.data(),
                 std::min(buffer.size(), max_request_bytes + 1 - peer.input.size()), 0);
             if (count == 0) { return false; }
             if (count < 0) { return errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR; }
             peer.input.append(buffer.data(), static_cast<std::size_t>(count));
-            const auto parsed = parse_request(peer.input);
-            if (parsed.state == ParseState::complete) { peer.output = dispatch(parsed.request); }
+            OPENSSL_cleanse(buffer.data(), buffer.size());
+            auto parsed = parse_request(peer.input, bool(accounts));
+            struct Erase { std::string& body; ~Erase() { OPENSSL_cleanse(body.data(), body.size()); } } erase{parsed.request.body};
+            if (parsed.state == ParseState::complete) {
+                peer.output = dispatch(parsed.request);
+                OPENSSL_cleanse(peer.input.data(), peer.input.size()); peer.input.clear();
+            }
             if (parsed.state == ParseState::invalid) { peer.output = response(400, "{\"error\":\"bad_request\"}\n"); }
             if (parsed.state == ParseState::too_large) { peer.output = response(431, "{\"error\":\"headers_too_large\"}\n"); }
         }
@@ -278,8 +295,8 @@ struct Server::Impl {
     }
 };
 
-Server::Server(logging::Logger& logger, Options options, StatusProvider status, FailureHandler failure)
-    : impl_(std::make_unique<Impl>(logger, std::move(options), std::move(status), std::move(failure))) {}
+Server::Server(logging::Logger& logger, Options options, StatusProvider status, FailureHandler failure, AccountHandler accounts)
+    : impl_(std::make_unique<Impl>(logger, std::move(options), std::move(status), std::move(failure), std::move(accounts))) {}
 Server::~Server() = default;
 void Server::start() {
     if (impl_->started) { throw std::logic_error("Local API start may only be called once"); }

@@ -1,5 +1,7 @@
 # dc24h.eu WebAdmin — alpha-0.5.7
 
+Account maintenance in alpha-0.7.14: see [WebAdmin Accounts](../doc/us/WEBADMIN_ACCOUNTS.md). Use the separate non-serving maintenance executable; the ordinary hub API remains read-only.
+
 React + TypeScript + Vite, with a responsive EN/US and PL read-only panel.
 Unavailable data is shown explicitly; no fake live metrics or browser token storage.
 

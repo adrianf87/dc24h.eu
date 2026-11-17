@@ -1,5 +1,7 @@
 # Account Management — alpha-0.7.11
 
+**alpha-0.7.14 WebAdmin Accounts:** [local account maintenance](WEBADMIN_ACCOUNTS.md) adds paginated checked metadata, disabled registration, activation, disable/reset and password changes through a separate non-serving executable. Stop serving hubs before writes; fresh administrator proof and revision checks protect changes. Schema v6 and startup authentication snapshots remain. CI uses four workers per command and is not awaited.
+
 This stage starts from main `c81c126b082c10833d4f85829c948fd2ee125184`.
 It adds the trusted synchronous C++ `dc24h_account_management` library for account
 password changes, administrative disabling and password resets. It does not merge

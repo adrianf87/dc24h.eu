@@ -36,6 +36,7 @@ public:
     explicit AccountRepository(database::Connection& connection) noexcept : connection_(connection) {}
     [[nodiscard]] std::optional<StoredAccount> find_by_id(AccountId id);
     [[nodiscard]] std::optional<StoredAccount> find_by_name(const AccountName& name);
+    [[nodiscard]] std::vector<StoredAccount> list_after(std::uint64_t after = 0, std::size_t limit = 25);
     [[nodiscard]] StoredAccount insert(const NewAccount& account);
     // Exact expected snapshot and revision must still match. Preserves identity
     // and creation time; update/login times cannot go backwards or lose login.

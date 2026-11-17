@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.7.13 LANGUAGES CXX)
+project(dc24h VERSION 0.7.14 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -185,6 +185,16 @@ target_link_libraries(dc24h_core PUBLIC Threads::Threads dc24h_network dc24h_log
 target_compile_definitions(dc24h_core PRIVATE _POSIX_C_SOURCE=200809L)
 
 add_executable(dc24h src/main.cpp)
+add_library(dc24h_account_api src/api/accounts.cpp)
+target_compile_features(dc24h_account_api PUBLIC cxx_std_20)
+target_include_directories(dc24h_account_api PUBLIC include)
+target_link_libraries(dc24h_account_api PUBLIC dc24h_api dc24h_account_management dc24h_password_security dc24h_registration)
+target_compile_options(dc24h_account_api PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+add_executable(dc24h-account-admin src/account_admin.cpp)
+target_include_directories(dc24h-account-admin PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+target_link_libraries(dc24h-account-admin PRIVATE dc24h_account_api dc24h_configuration dc24h_core)
+target_compile_options(dc24h-account-admin PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+set_target_properties(dc24h_account_api dc24h-account-admin PROPERTIES CXX_EXTENSIONS OFF)
 target_link_libraries(dc24h PRIVATE dc24h_core dc24h_configuration dc24h_account_authentication)
 set_target_properties(dc24h PROPERTIES CXX_EXTENSIONS OFF)
 
@@ -193,7 +203,7 @@ foreach(target dc24h_transfers dc24h_text dc24h_search dc24h_chat dc24h_users dc
 endforeach()
 
 include(GNUInstallDirs)
-install(TARGETS dc24h RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS dc24h dc24h-account-admin RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES config/dc24h.ini.example config/apache2-webadmin-https.conf.example DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/dc24h)
 
 install(FILES ${DC24H_MIGRATION_FILES} DESTINATION ${CMAKE_INSTALL_DATADIR}/dc24h/migrations)
@@ -758,6 +768,10 @@ if(BUILD_TESTING)
     add_test(NAME security.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/security_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(security.unit security.process PROPERTIES TIMEOUT 45)
+    add_executable(account_webadmin_tests tests/account_webadmin_tests.cpp)
+    set_target_properties(account_webadmin_tests PROPERTIES CXX_EXTENSIONS OFF)
+    target_link_libraries(account_webadmin_tests PRIVATE dc24h_account_api)
+    target_compile_options(account_webadmin_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
     add_executable(database_tests tests/database_tests.cpp)
     target_link_libraries(database_tests PRIVATE dc24h_database)
     target_compile_options(database_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
@@ -862,6 +876,12 @@ if(BUILD_TESTING)
             "$<TARGET_FILE:dc24h>" "$<TARGET_FILE:database_tests>"
             --account-test "$<TARGET_FILE:account_repository_tests>")
         set_tests_properties(accounts.repository.process PROPERTIES TIMEOUT 120
+            ENVIRONMENT "PATH=/usr/sbin:/usr/bin:/sbin:/bin:$ENV{PATH}")
+        add_test(NAME accounts.webadmin.process COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/database_process_tests.py"
+            "$<TARGET_FILE:dc24h>" "$<TARGET_FILE:database_tests>"
+            --account-webadmin-test "$<TARGET_FILE:dc24h-account-admin>" "$<TARGET_FILE:account_webadmin_tests>")
+        set_tests_properties(accounts.webadmin.process PROPERTIES TIMEOUT 180
             ENVIRONMENT "PATH=/usr/sbin:/usr/bin:/sbin:/bin:$ENV{PATH}")
         add_test(NAME database.process COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/database_process_tests.py"
