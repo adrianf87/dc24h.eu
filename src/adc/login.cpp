@@ -5,6 +5,7 @@
 #include "dc24h/adc/status.hpp"
 #include "dc24h/adc/connection_errors.hpp"
 #include "dc24h/adc/msg.hpp"
+#include "dc24h/text/public_text.hpp"
 
 #include <deque>
 #include <algorithm>
@@ -61,6 +62,10 @@ struct LoginHub::Peer {
     transfers::TransferGuard transfer_guard;
 };
 namespace {
+bool kick_command(const Message& message) noexcept {
+    if(message.kind!=Command::msg||message.type!=MessageType::broadcast||message.parameters.empty()){return false;}
+    const std::string_view text=message.parameters[0];return text=="+kick"||text.starts_with("+kick ");
+}
 std::size_t message_bytes(const Message& message) noexcept {
     constexpr auto cap = max_frame_bytes + 1;
     if (message.parameters.size() > max_parameters || message.features.size() > max_feature_selectors) { return std::numeric_limits<std::size_t>::max(); }
@@ -123,7 +128,7 @@ std::string_view status_description(std::string_view code) noexcept {
 }
 } // namespace
 
-LoginHub::LoginHub(LoginLimits limits) : limits_(limits), authentication_limiter_(limits.authentication_limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), search_(sessions_,limits.search.tokens), search_router_(search_), result_router_(search_), transfers_(sessions_,limits.transfers,this), connection_router_(transfers_), status_router_(sessions_), chat_(sessions_), message_router_(chat_,limits.chat), hub_messages_(sessions_), welcome_message_(welcome_packet(limits.welcome_text)), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
+LoginHub::LoginHub(LoginLimits limits) : limits_(limits), authentication_limiter_(limits.authentication_limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), kick_core_(sessions_,limits.roles), search_(sessions_,limits.search.tokens), search_router_(search_), result_router_(search_), transfers_(sessions_,limits.transfers,this), connection_router_(transfers_), status_router_(sessions_), chat_(sessions_), message_router_(chat_,limits.chat), hub_messages_(sessions_), welcome_message_(welcome_packet(limits.welcome_text)), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
     security::validate(limits.roles);
     search::validate_security(limits.search);
     transfers::validate_limits(limits.transfers.flood);
@@ -267,7 +272,7 @@ void LoginHub::receive_impl(Id id, const Message& message, chat::FloodClock::tim
     if (peer.lifecycle.closing() || peer.lifecycle.immediate()) { return; }
     search::Attempt search_attempt(message.kind==Command::sch || message.kind==Command::res ? &search_statistics_ : nullptr,
         message.kind==Command::res ? search::Kind::result : search::Kind::query);
-    chat::Attempt attempt(message.kind == Command::msg &&
+    chat::Attempt attempt(!kick_command(message) && message.kind == Command::msg &&
         (message.type == MessageType::broadcast || message.type == MessageType::direct || message.type == MessageType::echo)
         ? &chat_statistics_ : nullptr);
     if (peer.lifecycle.phase() == users::Phase::accepted) {
@@ -391,6 +396,7 @@ void LoginHub::receive_impl(Id id, const Message& message, chat::FloodClock::tim
                 return;
             }
         }
+        if(route_kick(id,message,chat_now)){return;}
         route_chat(id,message,attempt);
     } else if (message.kind == Command::sch) {
         receive_search(id, message, chat_now, search_attempt);
@@ -665,6 +671,67 @@ void LoginHub::receive_search(Id id, const Message& message, users::TimePoint no
         (void)search_.forget_searches(peer.lifecycle.id());
         check_model(sessions_.force_close(peer.lifecycle.id(), users::CloseCause::internal_error, users::Clock::now()));
     }
+}
+
+namespace {
+void kick_increment(std::uint64_t& value) noexcept { if(value!=std::numeric_limits<std::uint64_t>::max()){++value;} }
+}
+admin::KickError LoginHub::kick(Id actor,Id target,std::string_view reason,users::TimePoint now) {
+    using admin::KickError;auto& stats=kick_statistics_.values;kick_increment(stats[0]);
+    const auto source=users::SessionId::from_value(actor),destination=users::SessionId::from_value(target);
+    const auto denied=[&](KickError error){kick_increment(stats[2]);return error;};
+    if(!source||!destination){return denied(KickError::unavailable);}
+    const auto permission=kick_core_.check(*source,*destination,now);
+    if(permission!=KickError::none){return denied(permission);}
+    bool committed=false;
+    try {
+        if(reason.size()>admin::max_kick_reason_bytes||!text::valid_public_text(reason)){return denied(KickError::invalid_reason);}
+        if(reason.empty()){reason="Kicked from hub";}
+        auto& peer=*peers_.at(target);
+        const auto actor_sid=Sid::parse(session_model(actor).identity()->sid());
+        const auto target_sid=Sid::parse(peer.lifecycle.identity()->sid());
+        if(!actor_sid||!target_sid){return denied(KickError::unavailable);}
+        auto status=make_status(*StatusCode::parse("230"),reason);
+        QuitOptions options;options.initiator=actor_sid;options.message=reason;options.reconnect_after=0;
+        auto quit=make_quit(*target_sid,options);
+        const auto error=kick_core_.apply(*source,*destination,now);
+        if(error!=KickError::none){return denied(error);}
+        committed=true;kick_increment(stats[1]);
+        (void)search_.forget_searches(*destination);
+        // Preserve the TLS-pinned/partially-sent front, cancel later traffic.
+        // The terminal IQUI is the final frame; normal routing now denies target.
+        while(peer.output.size()>1){queued_-=peer.output.back().wire().size();peer.queued-=peer.output.back().wire().size();peer.output.pop_back();}
+        if(!enqueue(peer,std::move(status))||!enqueue(peer,std::move(quit))){kick_increment(stats[4]);}
+        else{peer.quit_queued=true;}
+        return KickError::none;
+    }catch(const std::bad_alloc&){
+        if(committed){
+            kick_increment(stats[4]);
+            (void)sessions_.force_close(*destination,users::CloseCause::internal_error,now);
+            return KickError::none;
+        }
+        kick_increment(stats[3]);return KickError::resources;
+    }
+}
+bool LoginHub::route_kick(Id id,const Message& message,users::TimePoint now) {
+    // Only a plain public chat command is consumed; private messages never turn
+    // into administrative commands. State/source and shared flood checks ran first.
+    if(!kick_command(message)){return false;}
+    auto command=std::string_view(message.parameters[0]);
+    admin::KickError result=admin::KickError::invalid_reason;
+    if(message.parameters.size()==1&&command.size()>6){
+        command.remove_prefix(6);const auto space=command.find(' ');const auto name=command.substr(0,space);
+        const auto* target=sessions_.by_nickname(name);
+        const auto reason=space==std::string_view::npos?std::string_view{}:command.substr(space+1);
+        result=kick(id,target?target->id().value():0,reason,now);
+    }else{kick_increment(kick_statistics_.values[0]);kick_increment(kick_statistics_.values[2]);}
+    auto& sender=*peers_.at(id);
+    try {
+        const auto code=result==admin::KickError::none?"000":result==admin::KickError::forbidden?"125":"100";
+        const auto description=result==admin::KickError::none?"User kicked":result==admin::KickError::forbidden?"Kick denied":"Kick refused; use +kick <nickname> [reason]";
+        (void)enqueue(sender,make_status(*StatusCode::parse(code),description,"BMSG"));
+    }catch(const std::bad_alloc&){(void)sessions_.force_close(sender.lifecycle.id(),users::CloseCause::internal_error,now);}
+    return true;
 }
 void LoginHub::route_chat(Id id, const Message& message, chat::Attempt& attempt) {
     auto& sender=*peers_.at(id);

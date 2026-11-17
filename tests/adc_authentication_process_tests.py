@@ -202,6 +202,49 @@ class AuthenticationTests(unittest.TestCase):
         self.assertFalse(implemented['users.ban'])
         hub.stop()
 
+
+    def test_live_kick_private_command_notice_cleanup_and_fresh_login(self):
+        for secure in (False, True):
+            with self.subTest(secure=secure):
+                root, ini, cert = self.config(False)
+                endpoint, token = enable_api(ini, root)
+                hub = Hub(self, '--config', str(ini), '--log-connections', 'on')
+                target = self.peer(hub, cert, secure)
+                challenge = self.identify(target)
+                target.send(b'HPAS ' + response(challenge[5:])); self.finish(target)
+                witness = self.peer(hub, cert, not secure)
+                witness.login(b'KickWitness', 98, welcome=WELCOME)
+                self.assertTrue(target.line().startswith(b'BINF ' + witness.sid))
+                actor = self.peer(hub, cert, secure)
+                challenge = self.identify(actor, b'ModeratorADC', 12)
+                actor.send(b'HPAS ' + response(challenge[5:])); self.finish(actor)
+                for peer in (target,witness):
+                    self.assertTrue(peer.line().startswith(b'BINF ' + actor.sid))
+                target.send(b'BMSG ' + target.sid + b' +kick\\sModeratorADC')
+                self.assertTrue(target.line().startswith(b'ISTA 125 Kick\\sdenied'))
+                target.send(b'DSCH ' + target.sid + b' ' + witness.sid + b' ANKickQuery TOKickToken')
+                self.assertTrue(witness.line().startswith(b'DSCH '))
+                self.assertEqual(fetch_status(endpoint,token)['search']['statistics']['tracked_searches'],1)
+                actor.send(b'BMSG ' + actor.sid + b' +kick\\sRegisteredADC\\sPrivateKickReason')
+                self.assertEqual(target.line(),b'ISTA 230 PrivateKickReason')
+                self.assertEqual(target.line(),b'IQUI ' + target.sid + b' ID' + actor.sid + b' TL0 MSPrivateKickReason')
+                self.assertEqual(target.peer.recv(1),b'')
+                self.assertEqual(witness.line(),b'IQUI ' + target.sid)
+                first, second = actor.line(), actor.line()
+                self.assertEqual({first,second},{b'ISTA 000 User\\skicked FCBMSG',b'IQUI ' + target.sid})
+                status=fetch_status(endpoint,token)
+                self.assertEqual(status['kick']['succeeded'],'1')
+                self.assertEqual(status['kick']['refused'],'1')
+                self.assertEqual(status['search']['statistics']['tracked_searches'],0)
+                again=self.peer(hub,cert,secure)
+                challenge=self.identify(again)
+                again.send(b'HPAS ' + response(challenge[5:]));self.finish(again)
+                self.assertTrue(witness.line().startswith(b'BINF ' + again.sid))
+                hub.stop()
+                self.assertIn(b'event=kicked',hub.log)
+                for secret in (b'PrivateKickReason',b'+kick',PASSWORD,b'HPAS',b'IGPA'):
+                    self.assertNotIn(secret,hub.log)
+
     def test_role_grants_guest_policy_and_global_switches(self):
         for secure in (False, True):
             with self.subTest(secure=secure):
@@ -385,7 +428,10 @@ class AuthenticationTests(unittest.TestCase):
             check = subprocess.run([BINARY, '--config', str(invalid), '--check-config'], capture_output=True, timeout=3)
             self.assertEqual(check.returncode, 2)
 
-    def test_real_ncdc_password_rejection_then_normal_adc_and_adcs(self):
+    def test_real_ncdc_kick_adc_and_adcs(self):
+        self.test_real_ncdc_password_rejection_then_normal_adc_and_adcs(kick=True)
+
+    def test_real_ncdc_password_rejection_then_normal_adc_and_adcs(self, kick=False):
         for secure in (True, False):
             hub, root, cert = self.hub(require_tls=secure)
             session = root / 'ncdc'
@@ -434,6 +480,14 @@ class AuthenticationTests(unittest.TestCase):
                     received.extend(observer.peer.recv(4096))
                 except socket.timeout:
                     pass
+            if kick:
+                moderator = self.peer(hub, cert, secure)
+                challenge = self.identify(moderator, b'ModeratorADC', 12)
+                moderator.send(b'HPAS ' + response(challenge[5:])); self.finish(moderator)
+                start = len(client.screen)
+                moderator.send(b'BMSG ' + moderator.sid + b' +kick\\sRegisteredADC\\sNcdcKickNotice')
+                client.wait_screen(b'ncdckicknotice', start, hub)
+                client.wait(lambda: b'event=kicked' in hub.log, hub)
             client.command(b'/quit')
             client.process.wait(timeout=3)
             client.close()

@@ -38,6 +38,7 @@ constexpr std::array close_events{
     std::pair{Cause::output_limit,Event::output_limit}, std::pair{Cause::security_quota,Event::security_quota},
     std::pair{Cause::negotiation_limit,Event::negotiation_limit}, std::pair{Cause::identity_limit,Event::identity_limit},
     std::pair{Cause::authentication_revoked,Event::authentication_revoked},
+    std::pair{Cause::kicked,Event::kicked},
     std::pair{Cause::authentication_limit,Event::authentication_limit},
     std::pair{Cause::close_timeout,Event::close_timeout}, std::pair{Cause::internal_error,Event::socket_error}
 };
@@ -247,6 +248,7 @@ Statistics TcpServer::statistics() const noexcept {
     for(std::size_t i=0;i<search_statistics_.size();++i){result.search.values[i]=search_statistics_[i].load();}
     result.search.tracked_searches=tracked_searches_.load();
     for(std::size_t i=0;i<transfer_statistics_.size();++i){result.transfers.values[i]=transfer_statistics_[i].load();}
+    for(std::size_t i=0;i<kick_statistics_.size();++i){result.kick.values[i]=kick_statistics_[i].load();}
     return result;
 }
 
@@ -327,6 +329,8 @@ void TcpServer::run() {
         tracked_searches_.store(search.tracked_searches);
         const auto transfers = login.transfer_statistics();
         for(std::size_t i=0;i<transfer_statistics_.size();++i){transfer_statistics_[i].store(transfers.values[i]);}
+        const auto kick=login.kick_statistics();
+        for(std::size_t i=0;i<kick_statistics_.size();++i){kick_statistics_[i].store(kick.values[i]);}
         const auto chat = login.chat_statistics();
         for (std::size_t i = 0; i < chat_statistics_.size(); ++i) { chat_statistics_[i].store(chat.values[i]); }
     };
