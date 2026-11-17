@@ -53,6 +53,11 @@ def exercise(binary, seed, config, db_socket, password, token, api_socket):
         assert request('GET', '/api/v1/accounts', authorized=False)[0] == 401
         code, page = request('GET', '/api/v1/accounts?after=0')
         assert code == 200 and page['maintenance'] and len(page['accounts']) == 2
+        staff_code, staff = request('GET', '/api/v1/accounts?staff_after=0')
+        assert staff_code == 200 and staff['staff_only'] is True
+        assert [a['id'] for a in staff['accounts']] == [actor]
+        assert request('GET', '/api/v1/accounts?staff_after=00')[0] == 400
+        assert request('POST', '/api/v1/accounts/owner', {'password':proof}, delay=True)[0] == 400
         assert request('GET', '/api/v1/status')[1]['server']['core_running'] is False
         policy = request('GET', '/api/v1/status')[1]['configuration']
         assert policy['mode'] == 'maintenance' and not policy['authentication']['enabled']
@@ -60,7 +65,7 @@ def exercise(binary, seed, config, db_socket, password, token, api_socket):
         current = request('GET', '/api/v1/accounts/' + target)[1]['account']
         assert current['status'] == 'active'
         stale = { 'actor_id':actor, 'proof':proof, 'revision':'1' }
-        assert request('POST', f'/api/v1/accounts/{target}/disable', stale)[0] == 409
+        assert request('POST', f'/api/v1/accounts/{target}/disable', stale, delay=True)[0] == 409
         payload = {'actor_id':actor, 'proof':proof, 'revision':current['revision']}
         code, changed = request('POST', f'/api/v1/accounts/{target}/disable', payload, delay=True)
         assert code == 200 and changed['account']['status'] == 'disabled'

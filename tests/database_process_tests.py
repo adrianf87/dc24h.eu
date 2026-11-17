@@ -15,6 +15,11 @@ import time
 
 from api_support import enable_api, fetch_status
 
+OWNER_CLI_TEST = None
+if '--owner-cli-test' in sys.argv:
+    index = sys.argv.index('--owner-cli-test')
+    OWNER_CLI_TEST = os.path.abspath(sys.argv[index+1])
+    del sys.argv[index:index+2]
 WEBADMIN_TEST = None
 if '--account-webadmin-test' in sys.argv:
     index = sys.argv.index('--account-webadmin-test')
@@ -198,6 +203,9 @@ def main():
             require(result.returncode == 0 and 'applied=0' in result.stdout, result.stderr)
             require('version=7 latest=7 pending=0 dirty=no' in cli(path, '--database-status').stdout,
                     'Schema status does not match applied migrations')
+            if OWNER_CLI_TEST:
+                from owner_cli_process_tests import exercise
+                exercise(OWNER_CLI_TEST, path, folder, sql)
             if MIGRATION_TEST:
                 result = run([MIGRATION_TEST, str(db_socket), str(password)])
                 require(result.returncode == 0, result.stderr)

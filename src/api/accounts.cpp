@@ -71,15 +71,16 @@ std::string serve(const Request& request,const database::Options& options) {
     constexpr std::string_view root="/api/v1/accounts";
     std::string_view tail(request.target);tail.remove_prefix(root.size());
     if(request.method!="GET"&&request.method!="POST"){throw HttpError{405,"method_not_allowed"};}
-    std::uint64_t after=0;
+    std::uint64_t after=0; bool staff = false;
     if(request.method=="GET"&&tail.starts_with("?after=")){after=number(tail.substr(7),true);tail={};}
+    if(request.method=="GET"&&tail.starts_with("?staff_after=")){after=number(tail.substr(13),true);tail={};staff=true;}
     if(!tail.empty()&&tail.front()!='/'){throw HttpError{404,"not_found"};}
     database::Connection connection(options);AccountRepository repository(connection);
     if(request.method=="GET") {
         if(tail.empty()) {
-            const auto page=repository.list_after(after);std::string output="{\"accounts\":[";
+            const auto page=staff?repository.list_staff_after(after):repository.list_after(after);std::string output="{\"accounts\":[";
             for(const auto& value:page){if(output.back()!='['){output+=',';}output+=json(value);}
-            return response(200,output+"],\"maintenance\":true,\"next_after\":"+
+            return response(200,output+"],\"maintenance\":true,\"staff_only\":"+(staff?"true":"false")+",\"next_after\":"+
                 (page.size()==25?json_string(std::to_string(page.back().account.id().value())):"null")+"}");
         }
         return response(200,"{\"account\":"+json(find(repository,tail.substr(1)))+",\"maintenance\":true}");
