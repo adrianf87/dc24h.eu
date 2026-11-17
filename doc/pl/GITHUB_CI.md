@@ -2,7 +2,7 @@
 
 Workflow `Check status` w `.github/workflows/build.yml` korzysta z jednorazowych
 runnerów `ubuntu-24.04` utrzymywanych przez GitHub. Uruchamia się dla push i pull
-requestów do `main` lub `alpha-0.7.8` / `alpha-0.7.9` / `alpha-0.7.10` / `alpha-0.7.11` / `alpha-0.7.12`, także z forków, oraz ręcznie.
+requestów do `main` lub `alpha-0.7.8` / `alpha-0.7.9` / `alpha-0.7.10` / `alpha-0.7.11` / `alpha-0.7.12` / `alpha-0.7.13`, także z forków, oraz ręcznie.
 Uprawnienia repozytorium są tylko do odczytu; checkout nie zachowuje poświadczeń.
 
 Trzy zadania mogą działać niezależnie:
@@ -28,3 +28,5 @@ Grupa współbieżności zależy od workflow i ref Git; `cancel-in-progress: fal
 Limit czasu zadań C++ wynosi 120 minut, a WebAdmin 60 minut. Faktyczne wyniki
 każdego przebiegu są dostępne w
 [GitHub Actions](https://github.com/adrianf87/dc24h.eu/actions/workflows/build.yml).
+
+Od alpha-0.7.13 wszystkie trzy zadania korzystają z konfiguracji GitHub-hosted Ubuntu 24.04 takiej jak main. Zastępuje ona początkową konfigurację własnego runnera w tym wydaniu. Push uruchamia CI; nie czekamy na jego zakończenie.

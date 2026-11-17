@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.7.12.
+Current development version: alpha-0.7.13.
+
+[Database Resilience — alpha-0.7.13](us/DATABASE_RESILIENCE.md) · [PL](pl/DATABASE_RESILIENCE.md)
 
 [Anti-Bruteforce — alpha-0.7.12](us/ANTI_BRUTEFORCE.md) · [PL](pl/ANTI_BRUTEFORCE.md)
 

@@ -2,7 +2,7 @@
 
 The `Check status` workflow in `.github/workflows/build.yml` runs on disposable
 GitHub-hosted `ubuntu-24.04` runners. Pushes and pull requests targeting `main`
-or `alpha-0.7.8` / `alpha-0.7.9` / `alpha-0.7.10` / `alpha-0.7.11` / `alpha-0.7.12`, including fork pull requests, and manual dispatches trigger CI.
+or `alpha-0.7.8` / `alpha-0.7.9` / `alpha-0.7.10` / `alpha-0.7.11` / `alpha-0.7.12` / `alpha-0.7.13`, including fork pull requests, and manual dispatches trigger CI.
 The workflow has read-only repository permissions and disables persisted checkout credentials.
 
 Three jobs can run independently:
@@ -25,3 +25,5 @@ Concurrency is grouped by workflow and Git ref with `cancel-in-progress: false`.
 C++ jobs have a 120-minute timeout; WebAdmin has 60 minutes. Check each run under
 [GitHub Actions](https://github.com/adrianf87/dc24h.eu/actions/workflows/build.yml)
 for actual results.
+
+From alpha-0.7.13, all three jobs use the same GitHub-hosted Ubuntu 24.04 configuration as main. This supersedes the initial self-hosted configuration of this release. Push triggers CI; remote completion is not awaited.

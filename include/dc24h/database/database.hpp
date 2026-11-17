@@ -20,6 +20,8 @@ struct Options {
     std::string user{"dc24h"};
     std::string password_file;
     unsigned int timeout{5};
+    // Zero inherits timeout in the C++ API; explicit INI values are 1..60.
+    unsigned int connect_timeout{}, read_timeout{}, write_timeout{};
 };
 
 void validate(const Options& options);
@@ -61,7 +63,7 @@ struct Execution { std::uint64_t affected_rows{}, insert_id{}; };
 class Transaction;
 
 // Synchronous, single-thread-owned connection. No use on the Network reactor.
-// RAII keeps Connector/C details out of the public interface; reconnect is disabled.
+// RAII keeps Connector/C details out of the public interface; implicit reconnect is disabled.
 class Connection final {
 public:
     explicit Connection(const Options& options);
@@ -69,6 +71,10 @@ public:
     Connection(const Connection&) = delete;
     Connection& operator=(const Connection&) = delete;
     void ping();
+    // Owner-thread, one explicit attempt with the original settings and a freshly
+    // read password file. Closes the old session first; failure leaves it retired.
+    // Refuses live Transaction scopes, never replays SQL or restores session state.
+    void reconnect();
     [[nodiscard]] Execution execute_prepared(std::string_view sql, const Parameters& parameters = {});
     [[nodiscard]] Result query(std::string_view sql, const Parameters& parameters = {}, QueryLimits limits = {});
     [[nodiscard]] Transaction transaction();
