@@ -76,6 +76,14 @@ def exercise(binary, seed, config, db_socket, password, token, api_socket):
         assert code == 200 and changed['account']['status'] == 'active'
         payload = {'proof':'Replacement account password!', 'password':'Final account password!', 'revision':changed['account']['revision']}
         assert request('POST', f'/api/v1/accounts/{target}/password', payload, delay=True)[0] == 200
+        current = request('GET', '/api/v1/accounts/' + target)[1]['account']
+        payload = {'actor_id':actor, 'proof':proof, 'revision':current['revision'], 'role':'vip'}
+        code, changed = request('POST', f'/api/v1/accounts/{target}/role', payload, delay=True)
+        assert code == 200 and changed['account']['role'] == 'vip' and changed['account']['status'] == 'disabled'
+        payload = {'actor_id':actor, 'proof':proof, 'revision':changed['account']['revision'], 'role':'owner'}
+        assert request('POST', f'/api/v1/accounts/{target}/role', payload, delay=True)[0] == 403
+        payload['role'] = 'guest'
+        assert request('POST', f'/api/v1/accounts/{target}/role', payload, delay=True)[0] == 403
         payload = {'actor_id':actor, 'proof':proof, 'revision':page['accounts'][0]['revision']}
         assert request('POST', f'/api/v1/accounts/{actor}/disable', payload, delay=True)[0] == 403
         assert request('POST', '/api/v1/accounts', {'x':'y'})[0] == 429

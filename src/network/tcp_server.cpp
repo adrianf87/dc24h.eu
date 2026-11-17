@@ -211,6 +211,7 @@ TcpServer::TcpServer(logging::Logger& logger, Options options)
     }
     security::validate(options_.security);
     security::validate(options_.authentication_limits);
+    security::validate(options_.roles);
     chat::validate_settings(options_.chat);
     search::validate_security(options_.search);
     transfers::validate_limits(options_.transfers.flood);
@@ -314,6 +315,7 @@ void TcpServer::run() {
     login_limits.users=options_.users;
     login_limits.authentication=options_.authentication;
     login_limits.authentication_limits=options_.authentication_limits;
+    login_limits.roles=options_.roles;
     adc::LoginHub login(login_limits);
     auto publish_users = [&]() noexcept {
         const auto value = login.sessions().statistics();

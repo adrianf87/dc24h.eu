@@ -108,6 +108,61 @@ void matrix() {
     require(manager.mark_authenticated_ready(id,*accounts::AccountId::from_value(1),{},static_cast<Role>(999)).has_value());
     require(manager.snapshot(id) == before);
 }
+void detailed_permissions() {
+    using security::parse_permission;using security::permission_key;
+    for(unsigned i=0;i<accounts::role_catalog.size();++i){
+        const auto role=accounts::role_catalog[i];require(security::role_rank(role)==i);
+        for(auto permission:security::permission_catalog){
+            require(parse_permission(permission_key(permission))==permission);
+            const auto key=permission_key(permission);
+            const bool basic=key=="hub.use"||key=="chat.public"||key=="chat.private"||key.starts_with("search.")||key.starts_with("transfers.");
+            const bool moderation=key=="users.kick"||key=="users.mute"||key=="audit.read";
+            const bool operation=key=="users.ban"||key=="blocks.manage";
+            const bool administration=key=="accounts.manage"||key=="roles.manage"||key=="configuration.manage";
+            require(security::allows(role,permission)==(basic||(i>=3&&moderation)||(i>=4&&operation)||(i>=5&&administration)||(i>=1&&key=="accounts.password.change")||i==6));
+        }
+        for(unsigned j=0;j<accounts::role_catalog.size();++j){
+            const auto target=accounts::role_catalog[j];
+            require(security::can_revoke(role,target)==(i>=3&&i>j));
+            require(security::can_manage(role,target)==(i>=5&&j>0&&i>j));
+            for(unsigned k=0;k<accounts::role_catalog.size();++k)
+                require(security::can_assign(role,target,accounts::role_catalog[k])==(i>=5&&j>0&&i>j&&k>0&&i>k));
+        }
+    }
+    const auto vip=security::parse_vip_permissions("users.kick, audit.read,users.mute");
+    require(security::allows(Role::vip,Permission::revoke_sessions,vip)&&security::can_revoke(Role::vip,Role::registered,vip));
+    require(!security::can_revoke(Role::vip,Role::vip,vip)&&!security::allows(Role::vip,Permission::manage_accounts,vip));
+    for(const auto text:{"","*","none,users.kick","users.ban","roles.manage","accounts.manage","users.kick,users.kick","users.kick,","USERS.KICK"}){
+        bool rejected=false;try{(void)security::parse_vip_permissions(text);}catch(const std::invalid_argument&){rejected=true;}require(rejected);
+    }
+    require(!parse_permission("users.Kick")&&!parse_permission("users.kick ")&&permission_key(static_cast<Permission>(999)).empty());
+    require(!security::allows(Role::owner,Permission::manage_accounts,security::RolePolicy{0xffffffffU}));
+    fail_allocation=true;
+    const bool allocation_free=security::allows(Role::owner,Permission::manage_roles)&&security::can_manage(Role::owner,Role::administrator)&&security::can_revoke(Role::vip,Role::guest,vip);
+    fail_allocation=false;require(allocation_free);
+    users::SessionManager sessions(1);const auto id=*users::SessionId::from_value(1);
+    require(std::holds_alternative<const users::Session*>(sessions.add(id,users::Transport::adc,{})));
+    require(!sessions.start_negotiation(id,{}));
+    require(!sessions.identify(id,*users::User::create(*users::Identity::create("AAAA","CID","User")),{}));
+    const auto before=sessions.snapshot(id);
+    const auto refused=sessions.mark_authenticated_ready(id,*accounts::AccountId::from_value(1),{},Role::guest);
+    require(refused&&std::holds_alternative<users::SessionError>(*refused)&&std::get<users::SessionError>(*refused)==users::SessionError::invalid_role);
+    require(sessions.snapshot(id)==before);
+    require(!sessions.mark_authenticated_ready(id,*accounts::AccountId::from_value(1),{},Role::registered));
+}
+void expanded_session_roles() {
+    auto settings=limits();auto source=std::make_shared<Source>();
+    source->roles[0]=Role::vip;source->roles[1]=Role::operator_;source->roles[2]=Role::owner;
+    settings.authentication=source;settings.roles=security::parse_vip_permissions("users.kick");
+    LoginHub hub(settings);(void)login(hub,1,1);(void)login(hub,2,2);(void)login(hub,3,3);(void)login(hub,4,4);(void)login(hub,8,88);clear(hub,{1,2,3,4,8});
+    require(hub.authenticated_session(1)->role==Role::vip&&hub.authenticated_session(2)->role==Role::operator_&&hub.authenticated_session(3)->role==Role::owner);
+    require(hub.role_allows(1,Permission::revoke_sessions)&&!hub.role_allows(1,Permission::ban_users));
+    require(hub.role_allows(2,Permission::ban_users)&&!hub.role_allows(2,Permission::manage_accounts));
+    require(hub.role_allows(3,Permission::manage_roles));
+    require(!hub.revoke_auth_session_as(1,2)&&!hub.revoke_auth_session_as(2,3));
+    require(hub.revoke_auth_session_as(1,4)&&hub.revoke_auth_session_as(2,8));
+    require(!hub.authenticated_session(4)&&hub.must_close(8));
+}
 void readiness() {
     auto options = limits(); auto source = std::make_shared<Source>(); options.authentication = source;
     LoginHub hub(options); const auto sid = start(hub,1,3);
@@ -121,7 +176,8 @@ void readiness() {
     require(hub.authenticated_session(1)->role == Role::administrator);
     hub.close(1,CloseReason::idle_timeout);
     require(!hub.role_allows(1,Permission::revoke_sessions) && !hub.authenticated_session(1)); hub.disconnect(1,false);
-    (void)login(hub,2,88); require(!hub.role_allows(2,Permission::search_queries)); hub.disconnect(2,false);
+    (void)login(hub,2,88); require(hub.role_allows(2,Permission::hub_use)&&hub.role_allows(2,Permission::search_queries));
+    require(!hub.role_allows(2,Permission::manage_accounts));hub.disconnect(2,false);
     (void)start(hub,3,7); require(hub.closing(3) && !hub.authenticated_session(3)); hub.disconnect(3,false);
 }
 void routing() {
@@ -176,6 +232,6 @@ void moderation() {
 }
 }
 int main() {
-    try { matrix(); readiness(); routing(); moderation(); std::cout << "Role matrix, trusted grants, policy precedence and moderation checks passed\n"; }
+    try { matrix(); detailed_permissions(); expanded_session_roles(); readiness(); routing(); moderation(); std::cout << "Role matrix, trusted grants, policy precedence and moderation checks passed\n"; }
     catch (const std::exception& error) { fail_allocation = false; std::cerr << error.what() << '\n'; return 1; }
 }

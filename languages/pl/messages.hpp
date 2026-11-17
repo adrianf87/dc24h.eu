@@ -3,7 +3,8 @@
 #include <string_view>
 
 namespace dc24h::i18n::pl {
-inline constexpr std::array<std::string_view, 150> messages{{
+inline constexpr std::array<std::string_view, 151> messages{{
+    "Niepoprawna konfiguracja uprawnień ról",
     "Niepoprawna konfiguracja uwierzytelniania ADC",
     "Niepoprawne dane poświadczenia ADC",
     "Niepoprawne potwierdzenie hasła konta przy zapisie hasła ADC",

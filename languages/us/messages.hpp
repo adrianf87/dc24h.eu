@@ -3,7 +3,8 @@
 #include <string_view>
 
 namespace dc24h::i18n::us {
-inline constexpr std::array<std::string_view, 150> messages{{
+inline constexpr std::array<std::string_view, 151> messages{{
+    "Invalid role permission configuration",
     "Invalid ADC authentication configuration",
     "Invalid ADC credential input",
     "ADC credential enrollment proof failed",

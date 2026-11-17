@@ -233,6 +233,27 @@ void integration(const Options& options,const std::string& key_path) {
     rejects(ManagementErrorKind::schema,[&]{ (void)service.disable_account(admin,original,rollback,30); });
     c.execute("ALTER TABLE dc24h_account_adc_credentials ADD CONSTRAINT dc24h_adc_credentials_account FOREIGN KEY(account_id) REFERENCES dc24h_accounts(id) ON UPDATE RESTRICT ON DELETE RESTRICT");
     require(repository.find_by_id(rollback.account.id())==rollback);
+    // The full hierarchy applies to persistent changes and role assignment.
+    auto owner=create(c,"PermissionsOwner",Role::owner);
+    const auto owner_created=service.create_account(owner,original,"PermissionsOwnerCreated",original,20);
+    require(owner_created.account.role()==Role::registered&&owner_created.account.status()==Status::disabled);
+    auto staff=create(c,"PermissionsStaff",Role::administrator);
+    const auto vip=create(c,"PermissionsVip",Role::vip);
+    enroll(c,*key,staff,original,"PermissionsStaffIdentity",47,10);
+    rejects(ManagementErrorKind::unauthorized,[&]{(void)service.change_role(admin,original,staff,Role::operator_,20);});
+    rejects(ManagementErrorKind::unauthorized,[&]{(void)service.change_role(owner,original,owner,Role::registered,20);});
+    rejects(ManagementErrorKind::unauthorized,[&]{(void)service.change_role(owner,original,vip,Role::owner,20);});
+    rejects(ManagementErrorKind::unauthorized,[&]{(void)service.change_role(admin,original,vip,Role::administrator,20);});
+    rejects(ManagementErrorKind::unauthorized,[&]{(void)service.change_role(owner,original,vip,Role::guest,20);});
+    const auto promoted=service.change_role(owner,original,staff,Role::operator_,20);
+    require(promoted.account.role()==Role::operator_&&promoted.account.status()==Status::disabled&&promoted.revision==staff.revision+1);
+    require(c.scalar("SELECT COUNT(*) FROM dc24h_account_adc_credentials WHERE account_id=?",{std::to_string(staff.account.id().value())})=="0");
+    require(PasswordSecurityService(c).verify(staff.account.id(),original)==PasswordVerification::matched);
+    rejects(ManagementErrorKind::stale,[&]{(void)service.change_role(owner,original,staff,Role::registered,20);});
+    const auto proof_target=create(c,"PermissionsRaceTarget");
+    after_kdf=[&]{(void)AccountRepository(writer).update(owner,std::get<Account>(owner.account.with_access(Role::registered,Status::active,20)));};
+    rejects(ManagementErrorKind::stale,[&]{(void)service.change_role(owner,original,proof_target,Role::vip,20);});
+    require(repository.find_by_id(proof_target.account.id())==proof_target);
     allocation_failures(options,key);
     // The real ncdc follow-up uses a reset account after explicit reactivation
     // and enrollment of a fresh, separate ADC password.

@@ -5,7 +5,7 @@
 
 namespace dc24h::users {
 Result Session::mark_authenticated_ready(accounts::AccountId account, TimePoint now, accounts::Role role) noexcept {
-    if (accounts::role_key(role).empty()) { return SessionError::invalid_role; }
+    if (!accounts::account_role(role)) { return SessionError::invalid_role; }
     if (const auto error = mark_ready(now)) { return error; }
     authentication_ = AuthSession{id_,account,transport_,now,role};
     return {};

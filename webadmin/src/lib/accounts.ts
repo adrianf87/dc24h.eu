@@ -1,5 +1,7 @@
+import {ACCOUNT_ROLES} from "./roles.ts";
+import type {AccountRole} from "./roles.ts";
 export interface Account {
-  id: string; name: string; role: "registered" | "moderator" | "administrator";
+  id: string; name: string; role: AccountRole;
   status: "active" | "disabled"; revision: string;
   created_at: number; updated_at: number; last_login_at: number | null;
 }
@@ -19,7 +21,7 @@ export function parseAccount(value: unknown): Account {
   const time = (v: unknown): v is number => typeof v === "number" && Number.isSafeInteger(v) && v >= 0 && v <= 253402300799;
   if (!id(a.id) || !id(a.revision) || typeof a.name !== "string" || !a.name || new TextEncoder().encode(a.name).length > 64 || /[\p{C}\p{Z}]/u.test(a.name) || a.name.normalize("NFC") !== a.name ||
       typeof a.role !== "string" || typeof a.status !== "string" ||
-      !["registered", "moderator", "administrator"].includes(a.role) || !["active", "disabled"].includes(a.status) ||
+      !(ACCOUNT_ROLES as readonly string[]).includes(a.role) || !["active", "disabled"].includes(a.status) ||
       !time(a.created_at) || !time(a.updated_at) || a.updated_at < a.created_at ||
       !(a.last_login_at === null || (time(a.last_login_at) && a.last_login_at >= a.created_at && a.last_login_at <= a.updated_at))) throw new Error("Invalid account");
   return {id:a.id, name:a.name, role:a.role as Account["role"], status:a.status as Account["status"], revision:a.revision,

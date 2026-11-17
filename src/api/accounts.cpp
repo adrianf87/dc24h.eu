@@ -96,6 +96,7 @@ std::string serve(const Request& request,const database::Options& options) {
     const auto target=find(repository,tail.substr(0,slash));const auto action=tail.substr(slash+1);
     if(action=="password"){fields.exact({"revision","proof","password"});}
     else if(action=="reset"){fields.exact({"revision","actor_id","proof","password"});}
+    else if(action=="role"){fields.exact({"revision","actor_id","proof","role"});}
     else if(action=="activate"||action=="disable"){fields.exact({"revision","actor_id","proof"});}
     else{throw HttpError{404,"not_found"};}
     if(target.revision!=number(fields.get("revision"))){throw HttpError{409,"stale"};}
@@ -103,6 +104,10 @@ std::string serve(const Request& request,const database::Options& options) {
     auto updated=[&] {
         if(action=="password"){return management.change_password(target,fields.get("proof"),fields.get("password"),now);}
         const auto actor=find(repository,fields.get("actor_id"));
+        if(action=="role"){
+            const auto role=parse_role(fields.get("role"));if(!role){bad();}
+            return management.change_role(actor,fields.get("proof"),target,*role,now);
+        }
         if(action=="reset"){return management.reset_password(actor,fields.get("proof"),target,fields.get("password"),now);}
         if(action=="activate"){return management.activate_account(actor,fields.get("proof"),target,now);}
         return management.disable_account(actor,fields.get("proof"),target,now);

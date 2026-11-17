@@ -20,6 +20,31 @@ std::string configuration_json(const ConfigurationSnapshot& s) {
     number("close_timeout_seconds",static_cast<std::uint64_t>(s.login.close_timeout.count()));
     number("max_pending_logins",s.login.max_pending_logins);number("max_pending_per_ip",s.login.max_pending_per_ip);
     number("max_login_bytes",s.login.max_login_bytes);number("max_login_frames",s.login.max_login_frames);
-    json.pop_back();json+="}}";return json;
+    json.pop_back();json+="},\"roles\":{\"vip_permissions\":[";
+    bool first=true;
+    for(auto p:security::permission_catalog) {
+        const auto vip=security::allows(accounts::Role::vip,p,s.roles);
+        if(vip&&!security::allows(accounts::Role::registered,p)) {
+            if(!first){json+=',';}first=false;json+='"';json+=security::permission_key(p);json+='"';
+        }
+    }
+    json+="],\"catalog\":[";first=true;
+    for(auto role:accounts::role_catalog) {
+        if(!first){json+=',';}first=false;
+        json+="{\"key\":\"";json+=accounts::role_key(role);json+="\",\"rank\":";
+        json+=std::to_string(*security::role_rank(role));json+=",\"permissions\":[";
+        bool first_permission=true;
+        for(auto p:security::permission_catalog)if(security::allows(role,p,s.roles)) {
+            if(!first_permission){json+=',';}first_permission=false;json+='"';json+=security::permission_key(p);json+='"';
+        }
+        json+="]}";
+    }
+    json+="],\"operations\":[";first=true;
+    for(auto p:security::permission_catalog) {
+        if(!first){json+=',';}first=false;
+        json+="{\"key\":\"";json+=security::permission_key(p);json+="\",\"implemented\":";
+        json+=security::permission_implemented(p)?"true}":"false}";
+    }
+    json+="]}}";return json;
 }
 }

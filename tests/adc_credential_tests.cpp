@@ -56,6 +56,10 @@ void integration(const Options& options,const std::string& key_path) {
     const auto absent = create(c,"AuthAccountUnenrolled","MissingADC",9);
     const auto moderator = create(c,"RoleModeratorAccount","ModeratorADC",12,true,Role::moderator);
     const auto administrator = create(c,"RoleAdministratorAccount","AdministratorADC",13,true,Role::administrator);
+    const auto vip=create(c,"RoleVipAccount","VipADC",14,true,Role::vip);
+    const auto oper=create(c,"RoleOperatorAccount","OperatorADC",15,true,Role::operator_);
+    const auto owner=create(c,"RoleOwnerAccount","OwnerADC",16,true,Role::owner);
+    for(const auto& account:{vip,oper,owner})service.enroll(account.account.id(),account_password,adc_password,42);
     service.enroll(moderator.account.id(),account_password,adc_password,42);
     service.enroll(administrator.account.id(),account_password,adc_password,42);
     service.enroll(one.account.id(),account_password,adc_password,42);
@@ -80,7 +84,7 @@ void integration(const Options& options,const std::string& key_path) {
     const auto source = AdcAuthenticationDirectory::load(c,key);
     struct Expected { const char* nickname; unsigned seed; Role role; };
     for (const auto& expected : {Expected{"RegisteredADC",7,Role::registered}, Expected{"ModeratorADC",12,Role::moderator},
-                                Expected{"AdministratorADC",13,Role::administrator}}) {
+                                Expected{"AdministratorADC",13,Role::administrator}, Expected{"VipADC",14,Role::vip}, Expected{"OperatorADC",15,Role::operator_}, Expected{"OwnerADC",16,Role::owner}}) {
         dc24h::adc::PasswordChallenge challenge;
         const auto prepared = source->prepare(expected.nickname,cid(expected.seed),dc24h::users::Transport::adcs,challenge);
         require(std::holds_alternative<dc24h::adc::PasswordAuthentication>(prepared));

@@ -182,6 +182,7 @@ void validate(const Settings& settings) {
     }
     security::validate(net.security);
     security::validate(net.authentication_limits);
+    security::validate(net.roles);
     users::validate(net.users);
     chat::validate_settings(net.chat);
     search::validate_security(net.search);
@@ -236,7 +237,7 @@ api::ConfigurationSnapshot public_settings(const Settings& settings, bool mainte
     out.read_timeout_seconds=timeouts.read;out.write_timeout_seconds=timeouts.write;
     out.authentication_enabled=settings.authentication.enabled;out.require_tls=settings.authentication.require_tls;
     out.max_accounts=settings.authentication.max_accounts;out.attempts=settings.network.authentication_limits;
-    out.login=settings.network.security;return out;
+    out.login=settings.network.security;out.roles=settings.network.roles;return out;
 }
 
 Settings load_file(const std::string& filename) {
@@ -275,7 +276,7 @@ Settings load_file(const std::string& filename) {
                 throw std::invalid_argument("Invalid section at line " + std::to_string(line_number));
             }
             section = trim(std::string_view(text).substr(1, text.size() - 2));
-            if (section != "network" && section != "tls" && section != "logging" && section != "general" && section != "security" && section != "database" && section != "api" && section != "users" && section != "chat" && section != "search" && section != "transfers" && section != "authentication") {
+            if (section != "network" && section != "tls" && section != "logging" && section != "general" && section != "security" && section != "database" && section != "api" && section != "users" && section != "chat" && section != "search" && section != "transfers" && section != "authentication" && section != "roles") {
                 throw std::invalid_argument("Unknown configuration section at line " + std::to_string(line_number));
             }
             continue;
@@ -471,6 +472,8 @@ Settings load_file(const std::string& filename) {
                 settings.database.read_timeout = positive_number(value, 60);
             } else if (section == "database" && key == "write_timeout") {
                 settings.database.write_timeout = positive_number(value, 60);
+            } else if (section == "roles" && key == "vip_permissions") {
+                settings.network.roles=security::parse_vip_permissions(value);
             } else if (section == "general" && key == "language") {
                 settings.logging.language = i18n::parse_language(value);
             } else { throw std::invalid_argument("Unknown configuration key"); }

@@ -124,6 +124,7 @@ std::string_view status_description(std::string_view code) noexcept {
 } // namespace
 
 LoginHub::LoginHub(LoginLimits limits) : limits_(limits), authentication_limiter_(limits.authentication_limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), search_(sessions_,limits.search.tokens), search_router_(search_), result_router_(search_), transfers_(sessions_,limits.transfers,this), connection_router_(transfers_), status_router_(sessions_), chat_(sessions_), message_router_(chat_,limits.chat), hub_messages_(sessions_), welcome_message_(welcome_packet(limits.welcome_text)), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
+    security::validate(limits.roles);
     search::validate_security(limits.search);
     transfers::validate_limits(limits.transfers.flood);
     if (limits.anti_flood) { chat::validate(*limits.anti_flood); }
@@ -358,7 +359,7 @@ void LoginHub::receive_impl(Id id, const Message& message, chat::FloodClock::tim
                     auto decision = limits_.authentication->prepare(*metadata.field("NI"),cid,peer.lifecycle.transport(),peer.authentication);
                     if (std::holds_alternative<DeniedAuthentication>(decision)) { reject(peer,"223"); return; }
                     if (auto* required = std::get_if<PasswordAuthentication>(&decision)) {
-                        if (required->account_id == 0 || required->account_id > 9223372036854775807ULL || accounts::role_key(required->role).empty() || !peer.authentication.pending() ||
+                        if (required->account_id == 0 || required->account_id > 9223372036854775807ULL || !accounts::account_role(required->role) || !peer.authentication.pending() ||
                             peer.session.approve_identity(IdentityMode::password_required)) { reject(peer,"210"); return; }
                         if (!authentication_limiter_.admit_account(required->account_id,chat_now)) { limit_authentication(peer); return; }
                         peer.pending_account = required->account_id;
@@ -462,13 +463,21 @@ bool LoginHub::revoke_auth_session(Id id, users::TimePoint now) noexcept {
     return true;
 }
 bool LoginHub::role_allows(Id id, security::Permission permission) const noexcept {
-    const auto auth = authenticated_session(id);
-    return auth && security::allows(auth->role,permission);
+    const auto key=users::SessionId::from_value(id);
+    const auto* model=key?sessions_.find(*key):nullptr;
+    if(!model||!model->ready()){return false;}
+    const auto auth=model->authentication();
+    return security::allows(auth?auth->role:accounts::Role::guest,permission,limits_.roles);
 }
 bool LoginHub::revoke_auth_session_as(Id actor, Id target, users::TimePoint now) noexcept {
-    const auto source = authenticated_session(actor), destination = authenticated_session(target);
-    if (actor == target || !source || !destination || now < source->established_at || !security::can_revoke(source->role,destination->role)) { return false; }
-    return revoke_auth_session(target,now);
+    const auto source = authenticated_session(actor);
+    const auto key=users::SessionId::from_value(target);
+    const auto* destination=key?sessions_.find(*key):nullptr;
+    if(actor==target||!source||!destination||!destination->ready()||now<source->established_at){return false;}
+    const auto auth=destination->authentication();
+    if(!security::can_revoke(source->role,auth?auth->role:accounts::Role::guest,limits_.roles)){return false;}
+    if(sessions_.force_close(*key,users::CloseCause::authentication_revoked,now)){return false;}
+    (void)search_.forget_searches(*key);return true;
 }
 void LoginHub::receive_connection(Id id, const Message& message, users::TimePoint now, transfers::Attempt& attempt) {
     auto& peer = *peers_.at(id);
@@ -792,10 +801,10 @@ bool LoginHub::consume(Id id, std::size_t bytes) {
             return false;
         }
         if (const auto auth = peer.lifecycle.authentication()) {
-            peer.search_permissions = {security::allows(auth->role,security::Permission::search_queries),
-                                       security::allows(auth->role,security::Permission::search_results)};
-            peer.transfer_permissions = {security::allows(auth->role,security::Permission::initiate_transfers),
-                                         security::allows(auth->role,security::Permission::receive_transfers)};
+            peer.search_permissions = {security::allows(auth->role,security::Permission::search_queries,limits_.roles),
+                                       security::allows(auth->role,security::Permission::search_results,limits_.roles)};
+            peer.transfer_permissions = {security::allows(auth->role,security::Permission::initiate_transfers,limits_.roles),
+                                         security::allows(auth->role,security::Permission::receive_transfers,limits_.roles)};
         }
         peer.verified_account.reset();
         return true;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <array>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -37,7 +38,11 @@ private:
     std::string value_;
 };
 
-enum class Role { registered, moderator, administrator };
+// Numeric enum values are not authority ranks; use security::role_rank.
+enum class Role { registered, moderator, administrator, vip, operator_, owner, guest };
+inline constexpr std::array<Role,7> role_catalog{Role::guest,Role::registered,Role::vip,
+    Role::moderator,Role::operator_,Role::administrator,Role::owner};
+[[nodiscard]] bool account_role(Role role) noexcept;
 enum class Status { disabled, active };
 [[nodiscard]] std::string_view role_key(Role role) noexcept;
 [[nodiscard]] std::string_view status_key(Status status) noexcept;

@@ -180,6 +180,28 @@ class AuthenticationTests(unittest.TestCase):
         for value in (PASSWORD, b'HPAS', b'IGPA', b'AuthenticatedChat', b'DC24HADC1', b'$dc24h-scrypt$'):
             self.assertNotIn(value, hub.log)
 
+    def test_vip_operator_owner_logins_and_public_policy(self):
+        root, ini, cert = self.config(False, policy='[roles]\nvip_permissions=users.kick,audit.read\n')
+        endpoint, token = enable_api(ini, root)
+        hub = Hub(self, '--config', str(ini), '--log-connections', 'on')
+        for index, (nick, seed) in enumerate(((b'VipADC',14),(b'OperatorADC',15),(b'OwnerADC',16))):
+            peer = self.peer(hub, cert, index != 0)
+            challenge = self.identify(peer, nick, seed)
+            self.assertTrue(challenge.startswith(b'IGPA '))
+            peer.send(b'HPAS ' + response(challenge[5:])); self.finish(peer)
+            # Avoid pending presence updates when exercising the next identity.
+            peer.peer.close()
+        roles = fetch_status(endpoint, token)['configuration']['roles']
+        self.assertEqual([r['key'] for r in roles['catalog']], ['guest','registered','vip','moderator','operator','administrator','owner'])
+        by_role = {r['key']:r['permissions'] for r in roles['catalog']}
+        self.assertIn('users.kick', by_role['vip'])
+        self.assertNotIn('accounts.manage', by_role['operator'])
+        self.assertIn('roles.manage', by_role['owner'])
+        implemented = {p['key']:p['implemented'] for p in roles['operations']}
+        self.assertTrue(implemented['roles.manage'])
+        self.assertFalse(implemented['users.ban'])
+        hub.stop()
+
     def test_role_grants_guest_policy_and_global_switches(self):
         for secure in (False, True):
             with self.subTest(secure=secure):

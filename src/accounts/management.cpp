@@ -62,7 +62,7 @@ ManagementError::ManagementError(ManagementErrorKind kind) : std::runtime_error(
 StoredAccount AccountManagementService::create_account(const StoredAccount& actor,
     std::string_view proof,std::string_view name,std::string_view password,Timestamp time) {
     valid_snapshot(actor);
-    if(actor.account.role()!=Role::administrator||actor.account.status()!=Status::active){fail(ManagementErrorKind::unauthorized);}
+    if(!security::allows(actor.account.role(),security::Permission::manage_accounts)||actor.account.status()!=Status::active){fail(ManagementErrorKind::unauthorized);}
     if(time<actor.account.times().updated_at||time>max_timestamp){fail(ManagementErrorKind::invalid_input);}
     const auto checked_name=AccountName::create(name);
     if(!checked_name){throw RegistrationError(RegistrationErrorKind::invalid_name);}
@@ -105,13 +105,19 @@ StoredAccount AccountManagementService::activate_account(const StoredAccount& ac
     std::string_view actor_password,const StoredAccount& expected,Timestamp time) {
     return perform(Action::activate,actor,actor_password,expected,{},time);
 }
+StoredAccount AccountManagementService::change_role(const StoredAccount& actor,
+    std::string_view proof,const StoredAccount& target,Role role,Timestamp time) {
+    return perform(Action::role,actor,proof,target,{},time,role);
+}
 StoredAccount AccountManagementService::perform(Action action,const StoredAccount& actor,
-    std::string_view proof,const StoredAccount& target,std::string_view replacement,Timestamp time) {
+    std::string_view proof,const StoredAccount& target,std::string_view replacement,Timestamp time,Role role) {
     try {
         valid_snapshot(actor); valid_snapshot(target);
+        if(action==Action::change&&!security::allows(actor.account.role(),security::Permission::change_own_password)){fail(ManagementErrorKind::unauthorized);}
         if (actor.account.status() != Status::active ||
             (action != Action::change && (actor.account.id() == target.account.id() ||
              !security::can_manage(actor.account.role(),target.account.role())))) { fail(ManagementErrorKind::unauthorized); }
+        if(action==Action::role&&!security::can_assign(actor.account.role(),target.account.role(),role)){fail(ManagementErrorKind::unauthorized);}
         if (time < actor.account.times().updated_at || time < target.account.times().updated_at || time > max_timestamp) {
             fail(ManagementErrorKind::invalid_input);
         }
@@ -119,7 +125,7 @@ StoredAccount AccountManagementService::perform(Action action,const StoredAccoun
         const bool changes_password = action == Action::change || action == Action::reset;
         if (changes_password) { detail::validate_password(replacement); }
         if (action == Action::change && proof == replacement) { fail(ManagementErrorKind::invalid_password); }
-        const auto next = std::get<Account>(target.account.with_access(target.account.role(),
+        const auto next = std::get<Account>(target.account.with_access(action==Action::role?role:target.account.role(),
             action == Action::change ? target.account.status() : action == Action::activate ? Status::active : Status::disabled,time));
         AccountRepository repository(connection_);
         repository.require_schema();

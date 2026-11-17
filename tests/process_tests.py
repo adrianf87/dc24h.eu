@@ -19,7 +19,7 @@ class ProcessTests(unittest.TestCase):
     def test_version(self):
         result = self.cli("--version")
         self.assertEqual(result.returncode, 0)
-        self.assertEqual(result.stdout, "dc24h.eu alpha-0.7.15\n")
+        self.assertEqual(result.stdout, "dc24h.eu alpha-0.8.1\n")
         self.assertEqual(result.stderr, "")
 
     def test_help(self):

@@ -1,5 +1,18 @@
 # Changelog
 
+## alpha-0.8.1 — 2026-11-17
+
+Permissions — detailed capabilities and role hierarchy, based directly on main `214db4561939e5de877f6d7e500a2e649f155c6a`. No automatic merge.
+
+- Add Guest, Registered, VIP, Moderator, Operator, Administrator and Owner with explicit ranks and seventeen exact permission keys, including users.kick/users.mute/users.ban, accounts.manage, roles.manage and audit.read. Unknown values fail closed. Preserve global feature, transport, rate and connection restrictions for all roles.
+- Add bounded strict VIP delegation for users.kick/users.mute/audit.read, defaulting to none. Validate policy at INI/Network/Core boundaries and retain immutable startup grants. Enforce strictly lower targets, support trusted kicks of ready guests and keep anonymous Guest separate from persistent accounts and authenticated session identities.
+- Extend persistent account authority to Administrator/Owner according to rank. Add fresh-proof/revision/row-lock protected role changes, disabling the target and removing ADC credentials atomically without changing account passwords or mappings. Deny self/equal/higher targets and assignments at/above the actor; Owner bootstrap/transfer stays trusted offline, with Owner targets protected.
+- Add explicit schema v7 role-constraint migration while preserving SQL files 1–6 and all existing account bytes. Load VIP/Operator/Owner through real MariaDB ADC/ADCS authentication and retain ncdc regressions. No automatic schema upgrade or production account mutation.
+- Publish safe startup role/capability/support metadata and add bilingual role inspection plus confirmed maintenance role changes in WebAdmin. Clearly mark mute, bans, blocks, audit browsing and configuration/hub writes as reserved permissions whose engines remain pending; grants do not fabricate endpoints.
+- Update version fixtures and mirrored EN/US/PL documentation. Local builds/tests use eight CPU threads. CI retains GitHub Ubuntu 24.04 with four logical CPUs per runner verified by nproc, CPU-derived parallelism and no fixed worker cap. Remote CI completion is not awaited.
+
+Validation on Debian 13: all 203/203 CTest suites passed in both Debug and Release, including real ncdc ADC/ADCS, disposable MariaDB, schema preservation and Apache. Final role/management checks also passed in both builds after strengthening the Guest-session and Owner-creation tests. C++ builds were warning-free. WebAdmin typecheck/production build, all 30 Node tests, all 20 Chromium tests and actual C++ API/adapter/React integration passed. Release metadata, documentation UTF-8/language parity/local links, Python syntax, actionlint, unchanged SQL migrations 1–6 and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration or account/credential mutation is performed.
+
 ## alpha-0.7.15 — 2026-11-17
 
 Configuration — database and account login, based directly on main `7e9e81de5aa0af0e92e5530638ac6dd3010f9cba`. No automatic merge.

@@ -1,3 +1,4 @@
+import {ACCOUNT_ROLES} from "../lib/roles";
 import { useEffect, useRef, useState } from "react";
 import { parseAccount, parseAccounts, readAccountResponse } from "../lib/accounts";
 import type { Account } from "../lib/accounts";
@@ -26,6 +27,7 @@ export function Accounts({t}:{t:Copy}) {
     const element=event.currentTarget,data=new FormData(element);const body=new URLSearchParams();
     body.set("proof",String(data.get("proof")??""));
     if(action!=="password")body.set("actor_id",String(data.get("actor_id")??""));
+    if(action==="role")body.set("role",String(data.get("role")??""));
     if(action==="create")body.set("name",String(data.get("name")??""));else body.set("revision",selected!.revision);
     if(["create","password","reset"].includes(action))body.set("password",String(data.get("password")??""));
     const path=action==="create"?"":`/${selected!.id}/${action}`;
@@ -48,13 +50,13 @@ export function Accounts({t}:{t:Copy}) {
   return <section className="card accounts-card" aria-label={t.accountsTitle}>
     <div className="card-heading"><div><h2>{t.accountsTitle}</h2><p>{t.accountsNote}</p></div>
       <button className="button secondary" disabled={busy} onClick={()=>void load(cursor)}>{t.accountsReload}</button></div>
-    <p className="accounts-maintenance">{t.accountsMaintenance}</p>
+    <p className="accounts-maintenance">{t.accountsMaintenance} {t.accountsRoleNote}</p>
     {message&&<p role="status" className="accounts-message">{message}</p>}
     <div className="accounts-table-wrap"><table><caption>{t.accountsTable}</caption><thead><tr>
       <th>ID</th><th>{t.accountsName}</th><th>{t.accountsRole}</th><th>{t.accountsStatus}</th><th>{t.accountsRevision}</th>
     </tr></thead><tbody>{items.map(account=><tr key={account.id} aria-selected={selected?.id===account.id}>
       <td>{account.id}</td><td><button disabled={busy} onClick={()=>{setSelected(account);setAction("disable");form.current?.reset();setMessage("");}}>{account.name}</button></td>
-      <td>{account.role==="administrator"?t.accountsAdministrator:account.role==="moderator"?t.accountsModerator:t.accountsRegistered}</td>
+      <td>{t[`role_${account.role}`]}</td>
       <td>{account.status==="active"?t.enabled:t.disabled}</td><td>{account.revision}</td>
     </tr>)}</tbody></table></div>
     {available&&!items.length&&<p>{t.accountsEmpty}</p>}
@@ -63,11 +65,12 @@ export function Accounts({t}:{t:Copy}) {
     {selected&&<p>{t.accountsSelected}: <strong>{selected.name}</strong> · ID {selected.id} · {t.accountsUpdated}: {new Date(selected.updated_at*1000).toISOString()}</p>}
     <form ref={form} onSubmit={event=>void submit(event)}>
       <fieldset disabled={busy||!available}><legend>{t.accountsAction}</legend>
-        <label>{t.accountsAction}<select value={action} onChange={e=>{setAction(e.target.value);form.current?.reset();setMessage("");}}>
+        <label>{t.accountsAction}<select aria-label={t.accountsAction} value={action} onChange={e=>{setAction(e.target.value);form.current?.reset();setMessage("");}}>
           <option value="create">{t.accountsCreate}</option><option value="activate">{t.accountsActivate}</option>
-          <option value="disable">{t.accountsDisable}</option><option value="reset">{t.accountsReset}</option><option value="password">{t.accountsPassword}</option>
+          <option value="disable">{t.accountsDisable}</option><option value="reset">{t.accountsReset}</option><option value="password">{t.accountsPassword}</option><option value="role">{t.accountsChangeRole}</option>
         </select></label>
         {action==="create"?<label>{t.accountsName}<input name="name" required maxLength={64} autoComplete="off"/></label>:<p>{selected?t.accountsSelected+": "+selected.name:t.accountsSelect}</p>}
+        {action==="role"&&<label>{t.accountsNewRole}<select aria-label={t.accountsNewRole} name="role" required>{ACCOUNT_ROLES.filter(r=>r!=="owner").map(r=><option key={r} value={r}>{t[`role_${r}`]}</option>)}</select></label>}
         {action!=="password"&&<label>{t.accountsActor}<input name="actor_id" required inputMode="numeric" pattern="[1-9][0-9]{0,18}" autoComplete="off"/></label>}
         <label>{action==="password"?t.accountsCurrentProof:t.accountsAdminProof}<input name="proof" type="password" required maxLength={1024} autoComplete="off"/></label>
         {["create","password","reset"].includes(action)&&<label>{t.accountsNewPassword}<input name="password" type="password" required minLength={15} maxLength={1024} autoComplete="new-password"/></label>}

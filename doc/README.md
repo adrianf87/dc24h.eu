@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.7.15.
+Current development version: alpha-0.8.1.
+
+[Permissions — alpha-0.8.1](us/PERMISSIONS.md) · [PL](pl/PERMISSIONS.md)
 
 [Database and Login Configuration — alpha-0.7.15](us/DATABASE_AUTH_CONFIGURATION.md) · [PL](pl/DATABASE_AUTH_CONFIGURATION.md)
 

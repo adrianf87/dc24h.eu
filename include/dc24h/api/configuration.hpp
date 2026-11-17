@@ -1,6 +1,7 @@
 #pragma once
 #include "dc24h/security/authentication_limits.hpp"
 #include "dc24h/security/limits.hpp"
+#include "dc24h/security/roles.hpp"
 #include <string>
 
 namespace dc24h::api {
@@ -13,6 +14,7 @@ struct ConfigurationSnapshot {
     std::size_t max_accounts{1024};
     security::AuthenticationLimits attempts{};
     security::Limits login{};
+    security::RolePolicy roles{};
 };
 [[nodiscard]] std::string configuration_json(const ConfigurationSnapshot& settings);
 }
