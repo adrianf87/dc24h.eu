@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.8.4.
+Current development version: alpha-0.8.5.
+
+[Ban Core — alpha-0.8.5](us/BAN_CORE.md) · [PL](pl/BAN_CORE.md)
 
 [Kick — alpha-0.8.4](us/KICK.md) · [PL](pl/KICK.md)
 
