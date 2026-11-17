@@ -1,4 +1,4 @@
-export const ADMIN_ACTIONS = ["accounts.create", "accounts.activate", "accounts.disable", "accounts.password", "accounts.reset", "accounts.role", "ownership.bootstrap", "ownership.transfer"] as const;
+export const ADMIN_ACTIONS = ["accounts.create", "accounts.activate", "accounts.disable", "accounts.password", "accounts.reset", "accounts.role", "ownership.bootstrap", "ownership.transfer", "bans.create", "bans.revoke"] as const;
 export const ADMIN_COUNTERS = ["attempts", "succeeded", "refused", "unavailable", "outcome_unknown"] as const;
 export interface AdminSnapshot {
   maintenance: true;
@@ -11,7 +11,7 @@ export function parseAdmin(value: unknown): AdminSnapshot {
   if (data.maintenance!==true || !Array.isArray(data.actions) || data.actions.length!==ADMIN_ACTIONS.length || !data.statistics || typeof data.statistics!=="object") throw new Error("Invalid administration");
   const actions=data.actions.map((entry:unknown,i:number)=>{
     if(!entry || typeof entry!=="object") throw new Error("Invalid action");
-    const a=entry as Record<string,unknown>,owner=i>=6;
+    const a=entry as Record<string,unknown>,owner=i===6||i===7;
     if(a.key!==ADMIN_ACTIONS[i] || a.available!==!owner || a.local_owner_only!==owner) throw new Error("Invalid action");
     return {key:ADMIN_ACTIONS[i], available:a.available as boolean, local_owner_only:owner};
   });

@@ -1,0 +1,20 @@
+import {test,expect} from "@playwright/test";
+const ban={id:"7",kind:"ip",subject:"192.0.2.1",reason:"Private policy",created_at:1,expires_at:null,created_by:"1",revoked_at:null,revoked_by:null,revision:"3"};
+test("ban maintenance creates and revokes with proof, revision and restart guidance in Polish mobile",async({page})=>{
+ const requests:string[]=[];
+ await page.route("**/admin-api/v1/bans**",async route=>{
+  if(route.request().method()==="POST"){
+   requests.push(route.request().postData()??"");const revoked=route.request().url().endsWith("/revoke");
+   await route.fulfill({contentType:"application/json",body:JSON.stringify({maintenance:true,restart_required:true,ban:{...ban,revoked_at:revoked?2:null,revoked_by:revoked?"1":null,revision:revoked?"4":"3"}})});
+  }else await route.fulfill({contentType:"application/json",body:JSON.stringify({maintenance:true,restart_required:true,bans:[ban],next_after:null})});
+ });
+ await page.goto("/#bans");await expect(page.getByRole("heading",{name:"Account, CID and IP bans",level:1})).toBeVisible();
+ await page.getByLabel("Block type").selectOption("ip");await page.getByLabel("Account ID, CID or IP address").fill("::ffff:192.0.2.1");await page.getByLabel("Reason",{exact:true}).fill("Private policy");
+ await page.getByLabel("Active Operator or higher account ID").fill("1");await page.getByLabel("Actor account password").fill("Secret ban proof!");await page.getByRole("checkbox").check();await page.getByRole("button",{name:"Create block",exact:true}).last().click();
+ await expect(page.getByTestId("bans").getByRole("status")).toContainText("Restart");await expect(page.getByLabel("Actor account password")).toHaveValue("");
+ await page.getByLabel("Active Operator or higher account ID").fill("1");await page.getByLabel("Actor account password").fill("Secret ban proof!");await page.getByRole("checkbox").check();await page.getByRole("button",{name:"Revoke selected block",exact:true}).click();
+ expect(new URLSearchParams(requests[0]).get("kind")).toBe("ip");expect(new URLSearchParams(requests[1]).get("revision")).toBe("3");
+ await page.setViewportSize({width:390,height:844});await page.getByLabel("Interface language").selectOption("pl");await expect(page.getByRole("heading",{name:"Blokady kont, CID i IP",level:1})).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ expect(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}))).not.toContain("Secret ban proof");
+});

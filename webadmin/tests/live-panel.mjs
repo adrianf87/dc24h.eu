@@ -22,7 +22,7 @@ try {
   });
   await page.goto(process.argv[2]);
   await expect(page.getByText("API connected", { exact: true })).toBeVisible();
-  await expect(page.getByText("alpha-0.8.4", { exact: true })).toHaveCount(2);
+  await expect(page.getByText("alpha-0.8.5", { exact: true })).toHaveCount(2);
   await expect(page.locator(".metric-value").nth(1)).toHaveText("16");
   assert.ok(
     Number(await page.locator(".metric-value").first().textContent()) >= 2,
@@ -53,11 +53,11 @@ try {
   const roles=snapshot.configuration.roles;
   assert.deepEqual(roles.catalog.map(r=>r.key),["guest","registered","vip","moderator","operator","administrator","owner"]);
   assert.ok(roles.catalog.find(r=>r.key==="owner").permissions.includes("roles.manage"));
-  assert.equal(roles.operations.find(p=>p.key==="users.ban").implemented,false);
+  assert.equal(roles.operations.find(p=>p.key==="users.ban").implemented,true);
   await page.getByRole("link",{name:"Roles",exact:true}).click();
   await page.getByLabel("Inspect role").selectOption("operator");
   await expect(page.locator('[data-permission="users.ban"] td').nth(1)).toHaveText("Yes");
-  await expect(page.locator('[data-permission="users.ban"] td').nth(2)).toContainText("action pending");
+  await expect(page.locator('[data-permission="users.ban"] td').nth(2)).toContainText("Available service");
   await page.getByRole("link", { name: "Connections", exact: true }).click();
   await expect(page.getByTestId("transfer-ctm").locator(".metric-value")).toHaveText(["1", "1", "0", "0", "0", "0", "2", "0", "0", "0"]);
   await expect(page.getByTestId("transfer-rcm").locator(".metric-value")).toHaveText(["1", "1", "0", "0", "0", "0", "1", "0", "0", "0"]);

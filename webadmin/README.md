@@ -37,3 +37,5 @@ alpha-0.8.2 adds a filtered staff directory with proven maintenance operations; 
 alpha-0.8.3 adds the read-only [Admin Core](../doc/us/ADMIN_CORE.md) ([PL](../doc/pl/ADMIN_CORE.md)) command catalog and process outcomes through the private maintenance adapter.
 
 alpha-0.8.4 adds a read-only [Kick](../doc/us/KICK.md) ([PL](../doc/pl/KICK.md)) statistics page. Issue live kicks from your authenticated Direct Connect client.
+
+alpha-0.8.5 adds private maintenance [Ban Core](../doc/us/BAN_CORE.md) ([PL](../doc/pl/BAN_CORE.md)) create/revoke forms with restart guidance.

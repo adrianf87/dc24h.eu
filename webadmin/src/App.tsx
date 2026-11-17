@@ -39,6 +39,7 @@ import { TransferConfiguration } from "./components/TransferConfiguration";
 import { TransferStatistics } from "./components/TransferStatistics";
 import { Roles } from "./components/Roles";
 import { StartupConfiguration } from "./components/StartupConfiguration";
+import {Bans} from "./components/Bans";
 import {KickStatistics} from "./components/KickStatistics";
 import {AdminCore} from "./components/AdminCore";
 import { Accounts } from "./components/Accounts";
@@ -46,8 +47,8 @@ import { ChatStatistics } from "./components/ChatStatistics";
 import { useHub } from "./lib/useHub";
 import type { Sample } from "./lib/useHub";
 
-type Page = "overview" | "connections" | "chat" | "search" | "security" | "database" | "accounts" | "configuration" | "roles" | "operators" | "adminCore" | "kick";
-const pages: Page[] = ["overview", "connections", "chat", "search", "security", "database", "accounts", "configuration", "roles", "operators", "adminCore", "kick"];
+type Page = "overview" | "connections" | "chat" | "search" | "security" | "database" | "accounts" | "configuration" | "roles" | "operators" | "adminCore" | "kick" | "bans";
+const pages: Page[] = ["overview", "connections", "chat", "search", "security", "database", "accounts", "configuration", "roles", "operators", "adminCore", "kick", "bans"];
 const currentPage = (): Page =>
   pages.includes(location.hash.slice(1) as Page)
     ? (location.hash.slice(1) as Page)
@@ -338,6 +339,7 @@ export default function App() {
     { page: "operators", icon: Users },
     { page: "adminCore", icon: ShieldCheck },
     { page: "kick", icon: Users },
+    { page: "bans", icon: ShieldCheck },
   ] as const;
   const titles = {
     overview: [t.overviewTitle, t.overviewSub],
@@ -351,6 +353,7 @@ export default function App() {
     operators: [t.operatorsTitle, t.operatorsSub],
     adminCore: [t.adminCoreTitle,t.adminCoreSub],
     kick: [t.kickTitle,t.kickSub],
+    bans: [t.bansTitle,t.bansSub],
     configuration: [t.configurationTitle, t.configurationSub],
   };
   const exportSnapshot = () => {
@@ -734,6 +737,7 @@ export default function App() {
               <p>{t.securityNote}</p>
             </div>
           )}
+          {page === "bans" && <Bans t={t} />}
           {page === "kick" && <KickStatistics snapshot={snapshot} t={t} />}
           {page === "adminCore" && <AdminCore t={t} />}
           {page === "roles" && <Roles snapshot={snapshot} t={t} />}
@@ -770,11 +774,11 @@ export default function App() {
             </span>
             <div>
               <strong>{t.localNote}</strong>
-              <p>{(page === "accounts" || page === "operators") ? t.accountsNote : t.localNoteSub}</p>
+              <p>{(page === "accounts" || page === "operators" || page === "bans") ? t.accountsNote : t.localNoteSub}</p>
             </div>
             <span className="outline-label">
               <LockKeyhole size={11} />
-              {(page === "accounts" || page === "operators") ? t.accountsAction : t.readOnly}
+              {(page === "accounts" || page === "operators" || page === "bans") ? t.accountsAction : t.readOnly}
             </span>
           </div>
           <footer>

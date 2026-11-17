@@ -6,7 +6,7 @@ import { parseSearch } from "./search-status.ts";
 import type { SearchSnapshot } from "./search-status.ts";
 import { parseConfiguration } from "./configuration.ts";
 import type { StartupConfiguration } from "./configuration.ts";
-export const WEBADMIN_VERSION = "alpha-0.8.4";
+export const WEBADMIN_VERSION = "alpha-0.8.5";
 export interface HubSnapshot {
   api_version: "v1";
   server: {

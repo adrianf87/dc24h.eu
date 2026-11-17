@@ -10,11 +10,12 @@ import type {AddressInfo} from "node:net";
 import {middleware} from "../server/local-api.ts";
 test("account adapter requires same-origin forms and redacts service credentials",async()=>{
  const dir=mkdtempSync(join(tmpdir(),"dc24h-accounts-adapter-")),socket=join(dir,"api.sock"),token="b".repeat(64);
+ const ban={id:"7",kind:"ip",subject:"192.0.2.1",reason:"Policy",created_at:1,expires_at:null,created_by:"1",revoked_at:null,revoked_by:null,revision:"1"};
  const account={id:"1",name:"Test",role:"registered",status:"disabled",revision:"1",created_at:1,updated_at:1,last_login_at:null};
  let writes=0, observed="", authorization="", staffMode=true;
  const backend=createServer((req,res)=>{authorization=String(req.headers.authorization);let data="";req.on("data",c=>data+=c);req.on("end",()=>{
   if(req.method==="POST"){writes++;observed=data;}
-  res.setHeader("Content-Type","application/json");res.end(JSON.stringify(req.url==="/api/v1/admin"?{...administration,token}:req.method==="POST"?{account:{...account,verifier:"private"},maintenance:true,token}:{accounts:[staffMode&&req.url?.includes("staff_after")?{...account,role:"owner"}:account],staff_only:staffMode&&req.url?.includes("staff_after"),next_after:null,maintenance:true,token}));
+  res.setHeader("Content-Type","application/json");res.end(JSON.stringify(req.url?.startsWith("/api/v1/bans")?(req.method==="GET"?{bans:[ban],next_after:null,maintenance:true,restart_required:true,token}:{ban:{...ban,proof:"private"},maintenance:true,restart_required:true,token}):req.url==="/api/v1/admin"?{...administration,token}:req.method==="POST"?{account:{...account,verifier:"private"},maintenance:true,token}:{accounts:[staffMode&&req.url?.includes("staff_after")?{...account,role:"owner"}:account],staff_only:staffMode&&req.url?.includes("staff_after"),next_after:null,maintenance:true,token}));
  });});backend.listen(socket);await once(backend,"listening");
  const handler=middleware({socket,token}),adapter=createServer((req,res)=>handler(req,res,()=>res.end()));adapter.listen(0,"127.0.0.1");await once(adapter,"listening");
  const port=(adapter.address() as AddressInfo).port,host=`127.0.0.1:${port}`;
@@ -37,5 +38,9 @@ test("account adapter requires same-origin forms and redacts service credentials
   assert.equal((await call("POST",{...headers,"X-DC24H-Admin":""},body)).code,403);assert.equal(writes,0);
   const result=await call("POST",headers,body);assert.equal(result.code,200);assert.deepEqual(JSON.parse(result.text),{account,maintenance:true});
   assert.equal(observed,body);assert.equal(authorization,`Bearer ${token}`);assert.equal(writes,1);assert.ok(!result.text.includes("private")&&!result.text.includes(token));
+  const listedBans=await call("GET",{},"","/admin-api/v1/bans?after=0");assert.equal(listedBans.code,200);assert.equal(JSON.parse(listedBans.text).bans[0].id,"7");assert.ok(!listedBans.text.includes(token));
+  const banBody="actor_id=1&proof=account+proof&kind=ip&subject=192.0.2.1&reason=Policy&expires_at=";
+  const createdBan=await call("POST",{...headers,"Content-Length":String(Buffer.byteLength(banBody))},banBody,"/admin-api/v1/bans");
+  assert.equal(createdBan.code,200);assert.deepEqual(JSON.parse(createdBan.text),{ban,maintenance:true,restart_required:true});
  } finally {adapter.close();backend.close();adapter.closeAllConnections();backend.closeAllConnections();await Promise.all([once(adapter,"close"),once(backend,"close")]);rmSync(dir,{recursive:true,force:true});}
 });

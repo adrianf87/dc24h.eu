@@ -115,7 +115,7 @@ export function middleware(config: Credentials | null) {
       reply(res, 403, "forbidden");
       return;
     }
-    if (req.url.startsWith("/admin-api/v1/accounts") || req.url === "/admin-api/v1/admin") { accounts(req, res); return; }
+    if (req.url.startsWith("/admin-api/v1/accounts") || req.url === "/admin-api/v1/admin" || req.url.startsWith("/admin-api/v1/bans")) { accounts(req, res); return; }
     if (req.method !== "GET") {
       res.setHeader("Allow", "GET");
       reply(res, 405, "method_not_allowed");
