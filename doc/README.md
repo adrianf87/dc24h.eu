@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.8.6.
+Current development version: alpha-0.8.7.
+
+[Mute — alpha-0.8.7](us/MUTE.md) · [PL](pl/MUTE.md)
 
 [Temporary Bans — alpha-0.8.6](us/TEMPORARY_BANS.md) · [PL](pl/TEMPORARY_BANS.md)
 

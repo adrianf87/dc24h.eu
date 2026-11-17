@@ -1,5 +1,16 @@
 # Changelog
 
+## alpha-0.8.7 — 2026-11-17
+
+Mute — live public/private chat moderation, based directly on main `bcbba253074ad7dbba8aa75752c51b1e68767475`. No automatic merge.
+
+- Add allocation-free Admin Core mute policy, explicit users.mute authority with strictly lower target rank, independent VIP delegation, ready lifetime and monotonic-time protection. Store two session flags, retain them across nickname changes and clear them at close; reconnect/restart starts unmuted.
+- Enforce public BMSG and private DMSG/EMSG scope at chat preparation and dispatch, including action/self/echo variants and prebuilt plans. Preserve incoming chat, hub notices, presence, search and transfer permissions. Existing queued frames may still arrive.
+- Add consumed private +mute/+unmute commands with public/private/all scope, actual authenticated connection actors, shared state/source/flood gates, fixed private acknowledgements and target notices prepared before commit. Preserve committed changes after notice failure, no automatic replay or HTTP privileged actor selection. Mark users.mute implemented; keep persistent/timed mute pending.
+- Add saturating aggregate decimal-string status counters, strict optional older-API parsing and bilingual read-only WebAdmin. Cover native hierarchy/lifetime/routing/faults, real TCP/TLS and ncdc ADC/ADCS, Node/Chromium, API/adapter/React and mirrored documentation. Preserve schema v8, migrations/manifest and Ubuntu 24.04 CI with four logical CPUs per runner and nproc parallelism. Local commands use eight threads.
+
+Validation on Debian 13: all 212/212 CTest suites passed in both Debug and Release, including disposable MariaDB, actual TCP/TLS scope denial/restoration, real ncdc mute/unmute on ADC/ADCS, existing bans/expiry/unknown-COMMIT and Apache. Final native mute checks also passed with target backwards-time refusal and no-allocation policy commit/dispatch. C++ builds were warning-free. WebAdmin production build/typecheck, all 38 Node tests, all 28 Chromium tests and actual C++ API/adapter/React integration passed. Release metadata, documentation UTF-8/language parity/local links, Python syntax with warnings as errors, actionlint, unchanged migrations/manifest and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration or account/credential mutation is performed.
+
 ## alpha-0.8.6 — 2026-11-17
 
 Temporary Bans — based directly on main `bdcda8a7254fc5c71276bec28b9b2b96a09dcb47`, including the ncdc port reservation fix. No automatic merge.
