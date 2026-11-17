@@ -49,9 +49,18 @@ std::optional<Record> Repository::find(std::uint64_t id){
     const auto result=connection_.query("SELECT "+std::string(columns)+" FROM dc24h_bans WHERE id=?",params(id),{1,10,256,2048});
     return result.rows.empty()?std::nullopt:std::optional<Record>{decode(result.rows.at(0))};
 }
-std::vector<Record> Repository::list(std::uint64_t after){
-    if(after>std::uint64_t(std::numeric_limits<std::int64_t>::max())){fail(ErrorKind::invalid_input);}require_schema();
-    const auto result=connection_.query("SELECT "+std::string(columns)+" FROM dc24h_bans WHERE id>? ORDER BY id LIMIT 16",params(after),{16,10,256,16384});
+std::vector<Record> Repository::list(std::uint64_t after,Filter filter,Timestamp now){
+    if(after>std::uint64_t(std::numeric_limits<std::int64_t>::max())||now<0||now>accounts::max_timestamp||filter_key(filter).empty()){fail(ErrorKind::invalid_input);}require_schema();
+    std::string predicate;auto parameters=params(after);
+    switch(filter){
+    case Filter::all:break;
+    case Filter::active:predicate=" AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at>?)";parameters.emplace_back(now);break;
+    case Filter::permanent:predicate=" AND revoked_at IS NULL AND expires_at IS NULL";break;
+    case Filter::temporary:predicate=" AND revoked_at IS NULL AND expires_at>?";parameters.emplace_back(now);break;
+    case Filter::expired:predicate=" AND revoked_at IS NULL AND expires_at<=?";parameters.emplace_back(now);break;
+    case Filter::revoked:predicate=" AND revoked_at IS NOT NULL";break;
+    }
+    const auto result=connection_.query("SELECT "+std::string(columns)+" FROM dc24h_bans WHERE id>?"+predicate+" ORDER BY id LIMIT 16",parameters,{16,10,256,16384});
     std::vector<Record> records;records.reserve(result.rows.size());for(const auto& row:result.rows){records.push_back(decode(row));}return records;
 }
 std::shared_ptr<const Directory> Repository::load(Timestamp now){

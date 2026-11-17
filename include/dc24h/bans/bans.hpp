@@ -35,6 +35,16 @@ struct Record {
     friend bool operator==(const Record&,const Record&)=default;
 };
 void validate(const Record& record);
+enum class State { permanent, temporary, expired, revoked };
+enum class Filter { all, active, permanent, temporary, expired, revoked };
+inline constexpr std::uint64_t max_duration_seconds=365ULL*24*60*60;
+[[nodiscard]] std::string_view state_key(State state) noexcept;
+[[nodiscard]] std::string_view filter_key(Filter filter) noexcept;
+[[nodiscard]] std::optional<Filter> parse_filter(std::string_view key) noexcept;
+// Derived lifecycle only: expiry never rewrites history or increments revision.
+[[nodiscard]] State state_at(const Record& record,Timestamp now) noexcept;
+[[nodiscard]] std::optional<Timestamp> seconds_left(const Record& record,Timestamp now) noexcept;
+[[nodiscard]] Timestamp expires_after(Timestamp now,std::uint64_t seconds);
 struct Rule {Kind kind;std::string subject;std::optional<Timestamp> expires_at;};
 struct Decision {std::optional<Timestamp> expires_at;};
 // Immutable startup snapshot; checks allocate nothing and read no SQL/secrets.

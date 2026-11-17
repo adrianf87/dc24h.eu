@@ -46,6 +46,15 @@ void unit() {
     require(local.statistics().attempts==1&&local.statistics().refused==1);
     rejects(ErrorKind::invalid_input,[&]{(void)api.account(0);});
     require(api.statistics().attempts==8);
+    // Invalid duration shapes must be refused before opening a SQL connection.
+    c={};c.action=Action::ban_create;c.actor={1,0};c.proof=proof;c.ban_kind=bans::Kind::ip;c.subject="192.0.2.1";c.reason="Timed";c.time=10;
+    c.duration_seconds=0;rejects(ErrorKind::invalid_input,[&]{(void)api.execute(c);});
+    c.duration_seconds=bans::max_duration_seconds+1;rejects(ErrorKind::invalid_input,[&]{(void)api.execute(c);});
+    c.duration_seconds=1;c.expires_at=20;rejects(ErrorKind::invalid_input,[&]{(void)api.execute(c);});
+    c.expires_at.reset();c.time=accounts::max_timestamp;rejects(ErrorKind::invalid_input,[&]{(void)api.execute(c);});
+    c.time=10;c.action=Action::ban_revoke;c.target={1,1};c.subject={};c.reason={};c.ban_kind=bans::Kind::account;
+    rejects(ErrorKind::invalid_input,[&]{(void)api.execute(c);});
+    c.action=Action::disable;rejects(ErrorKind::invalid_input,[&]{(void)api.execute(c);});
 }
 void integration(const database::Options& options) {
     using namespace accounts;

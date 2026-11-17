@@ -7,7 +7,7 @@ public:
     explicit Repository(database::Connection& connection) noexcept:connection_(connection){}
     void require_schema();
     [[nodiscard]] std::optional<Record> find(std::uint64_t id);
-    [[nodiscard]] std::vector<Record> list(std::uint64_t after=0);
+    [[nodiscard]] std::vector<Record> list(std::uint64_t after=0,Filter filter=Filter::all,Timestamp now=Directory::now());
     [[nodiscard]] std::shared_ptr<const Directory> load(Timestamp now);
 private:
     database::Connection& connection_;
