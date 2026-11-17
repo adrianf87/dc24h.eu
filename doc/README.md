@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.8.5.
+Current development version: alpha-0.8.6.
+
+[Temporary Bans — alpha-0.8.6](us/TEMPORARY_BANS.md) · [PL](pl/TEMPORARY_BANS.md)
 
 [Ban Core — alpha-0.8.5](us/BAN_CORE.md) · [PL](pl/BAN_CORE.md)
 

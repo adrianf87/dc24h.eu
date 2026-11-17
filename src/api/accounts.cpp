@@ -71,24 +71,39 @@ std::string ban_json(const bans::Record& r){
 std::string serve_bans(const Request& request,admin::Engine& engine,bool& written){
     std::string_view tail(request.target);tail.remove_prefix(std::string_view("/api/v1/bans").size());
     if(request.method=="GET"){
-        std::uint64_t after{};if(tail.starts_with("?after=")){after=number(tail.substr(7),true);}else if(!tail.empty()){throw HttpError{404,"not_found"};}
-        const auto rows=engine.bans_list(after);std::string output="{\"maintenance\":true,\"restart_required\":true,\"bans\":[";
+        std::uint64_t after{};auto filter=bans::Filter::all;
+        if(!tail.empty()){
+            if(tail.front()!='?'){throw HttpError{404,"not_found"};}tail.remove_prefix(1);if(tail.empty()){bad();}
+            if(tail.starts_with("after=")){
+                const auto end=tail.find('&');after=number(tail.substr(6,end==std::string_view::npos?end:end-6),true);
+                if(end==std::string_view::npos){tail={};}else{tail.remove_prefix(end+1);if(tail.empty()){bad();}}
+            }
+            if(!tail.empty()){
+                if(!tail.starts_with("state=")){bad();}const auto parsed=bans::parse_filter(tail.substr(6));if(!parsed){bad();}filter=*parsed;
+            }
+        }
+        const auto now=bans::Directory::now();const auto rows=engine.bans_list(after,filter,now);
+        std::string output="{\"maintenance\":true,\"restart_required\":true,\"observed_at\":"+std::to_string(now)+",\"bans\":[";
         for(const auto& r:rows){if(output.back()!='['){output+=',';}output+=ban_json(r);}
         return response(200,output+"],\"next_after\":"+(rows.size()==16?json_string(std::to_string(rows.back().id)):"null")+"}");
     }
     if(request.method!="POST"){throw HttpError{405,"method_not_allowed"};}
     Fields fields;form(request.body,fields);admin::Command command;command.time=bans::Directory::now();command.proof=fields.get("proof");command.actor.id=number(fields.get("actor_id"));
     if(tail.empty()){
-        fields.exact({"actor_id","proof","kind","subject","reason","expires_at"});command.action=admin::Action::ban_create;
+        const bool duration=fields.values.contains("duration_seconds");
+        if(duration){fields.exact({"actor_id","proof","kind","subject","reason","duration_seconds"});}
+        else{fields.exact({"actor_id","proof","kind","subject","reason","expires_at"});}
+        command.action=admin::Action::ban_create;
         const auto kind=bans::parse_kind(fields.get("kind"));if(!kind){bad();}command.ban_kind=*kind;command.subject=fields.get("subject");command.reason=fields.get("reason");
-        if(!fields.get("expires_at").empty()){command.expires_at=static_cast<bans::Timestamp>(number(fields.get("expires_at")));}
+        if(duration){command.duration_seconds=number(fields.get("duration_seconds"));}
+        else if(!fields.get("expires_at").empty()){command.expires_at=static_cast<bans::Timestamp>(number(fields.get("expires_at")));}
     }else{
         if(tail.front()!='/'||!tail.ends_with("/revoke")){throw HttpError{404,"not_found"};}
         fields.exact({"actor_id","proof","revision"});command.action=admin::Action::ban_revoke;
         command.target.id=number(tail.substr(1,tail.size()-8));command.target.revision=number(fields.get("revision"));
     }
     const auto result=engine.execute(command);written=true;
-    return response(200,"{\"maintenance\":true,\"restart_required\":true,\"ban\":"+ban_json(std::get<bans::Record>(result))+"}");
+    return response(200,"{\"maintenance\":true,\"restart_required\":true,\"observed_at\":"+std::to_string(bans::Directory::now())+",\"ban\":"+ban_json(std::get<bans::Record>(result))+"}");
 }
 std::string administration(const admin::Engine& engine) {
     const auto counters=engine.statistics();

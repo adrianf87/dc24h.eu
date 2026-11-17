@@ -38,6 +38,7 @@ struct Command {
     bans::Kind ban_kind{bans::Kind::account};
     std::string_view subject,reason;
     std::optional<bans::Timestamp> expires_at;
+    std::optional<std::uint64_t> duration_seconds;
 };
 using Result = std::variant<accounts::StoredAccount,accounts::OwnershipTransfer,bans::Record>;
 struct Statistics {
@@ -54,7 +55,7 @@ public:
     [[nodiscard]] Result execute(const Command& command);
     [[nodiscard]] accounts::StoredAccount account(std::uint64_t id);
     [[nodiscard]] std::vector<accounts::StoredAccount> list(std::uint64_t after = 0, bool staff = false);
-    [[nodiscard]] std::vector<bans::Record> bans_list(std::uint64_t after=0);
+    [[nodiscard]] std::vector<bans::Record> bans_list(std::uint64_t after=0,bans::Filter filter=bans::Filter::all,bans::Timestamp now=bans::Directory::now());
     [[nodiscard]] Statistics statistics() const noexcept { return statistics_; }
     [[nodiscard]] Origin origin() const noexcept { return origin_; }
 private:

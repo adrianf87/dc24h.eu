@@ -1,5 +1,16 @@
 # Changelog
 
+## alpha-0.8.6 — 2026-11-17
+
+Temporary Bans — based directly on main `bdcda8a7254fc5c71276bec28b9b2b96a09dcb47`, including the ncdc port reservation fix. No automatic merge.
+
+- Extend existing absolute expiry with checked relative durations (1 second to 365 days), rejecting overflow and ambiguous or unrelated command fields before SQL. Preserve role/proof/revision/unknown-outcome protections.
+- Add central permanent/temporary/expired/revoked lifecycle helpers and SQL state filters before 16-row cursor pagination. Expiry at equality is automatic on admission; expired history/revisions remain unchanged and consume no active capacity. Schema v8, migration SQL 1–8 and manifest remain unchanged.
+- Add server UTC observation to private list/write responses. Bilingual WebAdmin offers duration units, permanent/absolute choices, status filters and a live countdown anchored to monotonic elapsed time; older APIs never fabricate expiry from the browser wall clock.
+- Extend native, disposable MariaDB, private HTTP, Node and Chromium coverage for boundaries, overlap, paging, capacity, strict input, clock skew, redaction and Polish mobile. Preserve ncdc ADC/ADCS integration, Ubuntu 24.04 GitHub runners with four logical CPUs each, and nproc parallelism. Local build/test commands use eight threads.
+
+Validation on Debian 13: all 211/211 CTest suites passed in both Debug and Release, including disposable MariaDB, real admission/expiry, private HTTP, unknown-COMMIT/no-replay, ncdc ADC/ADCS and Apache. Native builds were warning-free. WebAdmin production build/typecheck, all 37 Node tests, all 27 Chromium tests and actual C++ API/adapter/React integration passed. Release metadata, documentation UTF-8/language parity/local links, Python syntax with warnings as errors, actionlint, unchanged SQL migrations/manifest and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration or account/credential mutation is performed.
+
 ## CI — ncdc cross-interface port reservation — 2026-11-17
 
 Fix the intermittent `adcs.capabilities.bindscope.ncdc` failure seen in PR #27 (`Address already in use`). A port allocated on 127.0.0.2 can already be occupied on 127.0.0.1. Reserve a fresh TCP/UDP pair on allocation collision, closing both sockets before each bounded retry, and retain the deliberate conflicting bind until ncdc advertises readiness. Retry only EADDRINUSE during allocation; propagate caller/test and other socket failures. Add deterministic real-socket tests for TCP/UDP collisions, cleanup, exhaustion and error propagation. Server behavior, Ban Core and four-CPU Ubuntu 24.04 CI allocation are unchanged.

@@ -44,6 +44,33 @@ std::optional<std::string> canonical_subject(Kind kind,std::string_view text){
         if(IN6_IS_ADDR_V4MAPPED(&v6)){family=AF_INET;bytes=&v6.s6_addr[12];}}
     if(!inet_ntop(family,bytes,output,sizeof(output))){return {};}return std::string(output);
 }
+std::string_view state_key(State state) noexcept {
+    switch(state){case State::permanent:return "permanent";case State::temporary:return "temporary";
+    case State::expired:return "expired";case State::revoked:return "revoked";}return {};
+}
+std::string_view filter_key(Filter filter) noexcept {
+    switch(filter){case Filter::all:return "all";case Filter::active:return "active";case Filter::permanent:return "permanent";
+    case Filter::temporary:return "temporary";case Filter::expired:return "expired";case Filter::revoked:return "revoked";}return {};
+}
+std::optional<Filter> parse_filter(std::string_view key) noexcept {
+    for(auto filter:{Filter::all,Filter::active,Filter::permanent,Filter::temporary,Filter::expired,Filter::revoked}){
+        if(filter_key(filter)==key){return filter;}
+    }return {};
+}
+State state_at(const Record& r,Timestamp now) noexcept {
+    if(r.revoked_at){return State::revoked;}if(!r.expires_at){return State::permanent;}
+    return *r.expires_at>now?State::temporary:State::expired;
+}
+std::optional<Timestamp> seconds_left(const Record& r,Timestamp now) noexcept {
+    if(state_at(r,now)!=State::temporary){return {};}
+    // Valid UTC inputs keep subtraction within the Timestamp range.
+    return *r.expires_at-std::clamp(now,Timestamp{0},accounts::max_timestamp);
+}
+Timestamp expires_after(Timestamp now,std::uint64_t seconds){
+    if(now<0||now>accounts::max_timestamp||!seconds||seconds>max_duration_seconds||
+        seconds>static_cast<std::uint64_t>(accounts::max_timestamp-now)){fail(ErrorKind::invalid_input);}
+    return now+static_cast<Timestamp>(seconds);
+}
 void validate(const Record& r){
     const auto subject=canonical_subject(r.kind,r.subject);
     if(!r.id||r.id>maximum||!subject||*subject!=r.subject||r.reason.empty()||r.reason.size()>256||!text::valid_public_text(r.reason)||

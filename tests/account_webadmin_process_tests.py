@@ -106,6 +106,22 @@ def exercise(binary, seed, config, db_socket, password, token, api_socket):
         code, revoked = request('POST', f"/api/v1/bans/{ban['id']}/revoke", {'actor_id':actor, 'proof':proof, 'revision':ban['revision']}, delay=True)
         assert code == 200 and revoked['ban']['revoked_at'] is not None and revoked['ban']['revision'] == '2'
         assert request('POST', f"/api/v1/bans/{ban['id']}/revoke", {'actor_id':actor, 'proof':proof, 'revision':ban['revision']}, delay=True)[0] == 409
+        timed = {'actor_id':actor, 'proof':proof, 'kind':'ip', 'subject':'192.0.2.201', 'reason':'Temporary HTTP', 'duration_seconds':'3'}
+        code, created = request('POST', '/api/v1/bans', timed, delay=True)
+        assert code == 200, created
+        record = created['ban']
+        assert record['expires_at'] == record['created_at'] + 3 and abs(created['observed_at'] - time.time()) < 3
+        code, active = request('GET', '/api/v1/bans?after=0&state=temporary')
+        assert code == 200 and active['bans'] == [record] and isinstance(active['observed_at'], int)
+        assert request('GET', '/api/v1/bans?state=permanent')[1]['bans'] == []
+        for query in ('?state=invalid', '?after=00&state=active', '?after=0&state=active&state=expired', '?after=0&', '?state='):
+            assert request('GET', '/api/v1/bans' + query)[0] == 400
+        for patch in ({'duration_seconds':'0'}, {'duration_seconds':'01'}, {'duration_seconds':'31536001'}, {'duration_seconds':'-1'}, {'expires_at':''}, {'duration_seconds':'9223372036854775807'}):
+            assert request('POST', '/api/v1/bans', {**timed, **patch}, delay=True)[0] == 400, patch
+        code, expired = request('GET', '/api/v1/bans?after=0&state=expired')
+        assert code == 200 and expired['observed_at'] >= record['expires_at'] and expired['bans'] == [record]
+        assert request('GET', '/api/v1/bans?state=active')[1]['bans'] == []
+        assert request('GET', '/api/v1/bans?state=revoked')[1]['bans'] == [revoked['ban']]
         before = request('GET', '/api/v1/admin')[1]['statistics']
         assert int(before['attempts']) > 0 and int(before['succeeded']) >= 6 and int(before['refused']) >= 4
         assert request('POST', '/api/v1/accounts', {'x':'y'})[0] == 429

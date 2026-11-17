@@ -1,7 +1,8 @@
 # dc24h.eu documentation
 
-alpha-0.8.5: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.8.6: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
+- [Temporary Bans — alpha-0.8.6](TEMPORARY_BANS.md)
 - [Ban Core — alpha-0.8.5](BAN_CORE.md)
 - [Kick — alpha-0.8.4](KICK.md)
 - [Admin Core — alpha-0.8.3](ADMIN_CORE.md)

@@ -36,11 +36,14 @@ void validate(const Command& c) {
     const bool ban=c.action==Action::ban_create||c.action==Action::ban_revoke;
     if(ban){
         if(!valid_id(c.actor.id)||c.actor.revision>maximum||c.proof.empty()||!c.password.empty()||!c.name.empty()||!c.successor_proof.empty()||c.role!=accounts::Role::registered){fail(ErrorKind::invalid_input);}
-        if(c.action==Action::ban_create){if(!empty(c.target)||c.subject.empty()||c.reason.empty()||!bans::parse_kind(bans::kind_key(c.ban_kind))){fail(ErrorKind::invalid_input);}}
-        else if(!valid_id(c.target.id)||!valid_id(c.target.revision)||!c.subject.empty()||!c.reason.empty()||c.expires_at||c.ban_kind!=bans::Kind::account){fail(ErrorKind::invalid_input);}
+        if(c.action==Action::ban_create){
+            if(!empty(c.target)||c.subject.empty()||c.reason.empty()||!bans::parse_kind(bans::kind_key(c.ban_kind))||(c.expires_at&&c.duration_seconds)){fail(ErrorKind::invalid_input);}
+            if(c.duration_seconds){(void)bans::expires_after(c.time,*c.duration_seconds);}
+        }
+        else if(!valid_id(c.target.id)||!valid_id(c.target.revision)||!c.subject.empty()||!c.reason.empty()||c.expires_at||c.duration_seconds||c.ban_kind!=bans::Kind::account){fail(ErrorKind::invalid_input);}
         return;
     }
-    if(!c.subject.empty()||!c.reason.empty()||c.expires_at||c.ban_kind!=bans::Kind::account){fail(ErrorKind::invalid_input);}
+    if(!c.subject.empty()||!c.reason.empty()||c.expires_at||c.duration_seconds||c.ban_kind!=bans::Kind::account){fail(ErrorKind::invalid_input);}
     const bool creation = c.action == Action::create || c.action == Action::bootstrap_owner;
     const bool bootstrap = c.action == Action::bootstrap_owner;
     const bool transfer = c.action == Action::transfer_owner;
@@ -102,7 +105,7 @@ Result Engine::execute(const Command& command) {
             Result result = [&]() -> Result {
                 if(command.action==Action::ban_create||command.action==Action::ban_revoke){
                     const auto actor=find(repository,command.actor);bans::Service bans(connection);
-                    if(command.action==Action::ban_create){return bans.create(actor,command.proof,command.ban_kind,command.subject,command.reason,command.expires_at,command.time);}
+                    if(command.action==Action::ban_create){return bans.create(actor,command.proof,command.ban_kind,command.subject,command.reason,command.duration_seconds?std::optional<bans::Timestamp>{bans::expires_after(command.time,*command.duration_seconds)}:command.expires_at,command.time);}
                     const auto expected=dc24h::bans::Repository(connection).find(command.target.id);
                     if(!expected){fail(ErrorKind::not_found);}if(expected->revision!=command.target.revision){fail(ErrorKind::stale);}
                     return bans.revoke(actor,command.proof,*expected,command.time);
@@ -153,7 +156,7 @@ std::vector<accounts::StoredAccount> Engine::list(std::uint64_t after, bool staf
     database::Connection connection(options_); accounts::AccountRepository repository(connection);
     return staff ? repository.list_staff_after(after) : repository.list_after(after);
 }
-std::vector<bans::Record> Engine::bans_list(std::uint64_t after){
-    database::Connection connection(options_);return bans::Repository(connection).list(after);
+std::vector<bans::Record> Engine::bans_list(std::uint64_t after,bans::Filter filter,bans::Timestamp now){
+    database::Connection connection(options_);return bans::Repository(connection).list(after,filter,now);
 }
 } // namespace dc24h::admin

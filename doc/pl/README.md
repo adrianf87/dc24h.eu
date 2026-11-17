@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.8.5: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.8.6: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [Temporary Bans — alpha-0.8.6](TEMPORARY_BANS.md)
 - [Ban Core — alpha-0.8.5](BAN_CORE.md)
 - [Kick — alpha-0.8.4](KICK.md)
 - [Admin Core — alpha-0.8.3](ADMIN_CORE.md)
