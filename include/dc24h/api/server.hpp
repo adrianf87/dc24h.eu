@@ -14,6 +14,7 @@
 namespace dc24h::logging { class Logger; }
 
 namespace dc24h::api {
+struct Request;
 struct Options {
     bool enabled{false};
     std::string socket_path;
@@ -43,13 +44,15 @@ struct Snapshot {
 };
 using StatusProvider = std::function<Snapshot()>;
 using FailureHandler = std::function<void()>;
+using AccountHandler = std::function<std::string(const Request&)>;
 
 // Owns one local HTTP worker. Call start() once; destructor stops, joins and
 // removes only this instance's socket inode. Dependencies/callback targets must
 // outlive the Server, and callback work must be bounded and thread safe.
 class Server final {
 public:
-    Server(logging::Logger& logger, Options options, StatusProvider status, FailureHandler failure);
+    Server(logging::Logger& logger, Options options, StatusProvider status, FailureHandler failure,
+        AccountHandler accounts = {});
     ~Server();
     Server(const Server&) = delete;
     Server& operator=(const Server&) = delete;

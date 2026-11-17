@@ -14,6 +14,11 @@ import time
 
 from api_support import enable_api, fetch_status
 
+WEBADMIN_TEST = None
+if '--account-webadmin-test' in sys.argv:
+    index = sys.argv.index('--account-webadmin-test')
+    WEBADMIN_TEST = (os.path.abspath(sys.argv[index+1]), os.path.abspath(sys.argv[index+2]))
+    del sys.argv[index:index+3]
 RESILIENCE_TEST = None
 if '--resilience-test' in sys.argv:
     index = sys.argv.index('--resilience-test')
@@ -336,6 +341,9 @@ def main():
                                   BINARY, NCDC, MSG_CODEC, '--database-config', str(path), *transport])
                     require(result.returncode == 0, result.stderr)
                     no_secrets(result)
+            if WEBADMIN_TEST:
+                from account_webadmin_process_tests import exercise
+                exercise(*WEBADMIN_TEST, path, db_socket, password, api_token, api_path)
             # Enabled database startup and graceful shutdown.
             hub = subprocess.Popen([BINARY, '--config', str(path)], stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, bufsize=0)

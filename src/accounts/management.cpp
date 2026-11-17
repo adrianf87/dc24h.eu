@@ -59,6 +59,36 @@ ManagementError::ManagementError(ManagementErrorKind kind) : std::runtime_error(
     }
     return "Account management failed";
 }()),kind_(kind) {}
+StoredAccount AccountManagementService::create_account(const StoredAccount& actor,
+    std::string_view proof,std::string_view name,std::string_view password,Timestamp time) {
+    valid_snapshot(actor);
+    if(actor.account.role()!=Role::administrator||actor.account.status()!=Status::active){fail(ManagementErrorKind::unauthorized);}
+    if(time<actor.account.times().updated_at||time>max_timestamp){fail(ManagementErrorKind::invalid_input);}
+    const auto checked_name=AccountName::create(name);
+    if(!checked_name){throw RegistrationError(RegistrationErrorKind::invalid_name);}
+    detail::validate_password(proof);detail::validate_password(password);
+    AccountRepository repository(connection_);repository.require_schema();
+    RegistrationService(connection_).require_credentials_schema();
+    if(repository.find_by_id(actor.account.id())!=actor){fail(ManagementErrorKind::stale);}
+    const auto key=parameters(actor.account.id().value());
+    auto captured=connection_.query("SELECT verifier,created_at FROM dc24h_account_credentials WHERE account_id=?",key,{1,2,192,256});
+    EraseResult erase_captured{captured};valid_credential(captured,actor);
+    if(!detail::verify_password(proof,*captured.rows[0][0])){fail(ManagementErrorKind::unauthorized);}
+    detail::EncodedPassword verifier;detail::hash_password(password,verifier);
+    auto transaction=connection_.transaction();
+    if(repository.locked_in_transaction(actor.account.id())!=actor){fail(ManagementErrorKind::stale);}
+    auto current=connection_.query("SELECT verifier,created_at FROM dc24h_account_credentials WHERE account_id=? FOR UPDATE",key,{1,2,192,256});
+    EraseResult erase_current{current};valid_credential(current,actor);
+    if(current.rows!=captured.rows){fail(ManagementErrorKind::stale);}
+    auto result=repository.insert_in_transaction({checked_name->text(),Role::registered,Status::disabled,{time,time,{}}});
+    database::Parameters bound;EraseParameters erase_bound{bound};bound.reserve(3);
+    bound.emplace_back(result.account.id().value());
+    bound.emplace_back(database::Bytes(verifier.bytes.begin(),verifier.bytes.end()));bound.emplace_back(time);
+    if(connection_.execute_prepared("INSERT INTO dc24h_account_credentials(account_id,verifier,created_at) VALUES (?,?,?)",bound).affected_rows!=1){
+        fail(ManagementErrorKind::invalid_record);
+    }
+    transaction.commit();return result;
+}
 StoredAccount AccountManagementService::change_password(const StoredAccount& expected,
     std::string_view current_password,std::string_view new_password,Timestamp time) {
     return perform(Action::change,expected,current_password,expected,new_password,time);
@@ -71,6 +101,10 @@ StoredAccount AccountManagementService::reset_password(const StoredAccount& acto
     std::string_view actor_password,const StoredAccount& expected,std::string_view new_password,Timestamp time) {
     return perform(Action::reset,actor,actor_password,expected,new_password,time);
 }
+StoredAccount AccountManagementService::activate_account(const StoredAccount& actor,
+    std::string_view actor_password,const StoredAccount& expected,Timestamp time) {
+    return perform(Action::activate,actor,actor_password,expected,{},time);
+}
 StoredAccount AccountManagementService::perform(Action action,const StoredAccount& actor,
     std::string_view proof,const StoredAccount& target,std::string_view replacement,Timestamp time) {
     try {
@@ -82,10 +116,11 @@ StoredAccount AccountManagementService::perform(Action action,const StoredAccoun
             fail(ManagementErrorKind::invalid_input);
         }
         detail::validate_password(proof);
-        if (action != Action::disable) { detail::validate_password(replacement); }
+        const bool changes_password = action == Action::change || action == Action::reset;
+        if (changes_password) { detail::validate_password(replacement); }
         if (action == Action::change && proof == replacement) { fail(ManagementErrorKind::invalid_password); }
         const auto next = std::get<Account>(target.account.with_access(target.account.role(),
-            action == Action::change ? target.account.status() : Status::disabled,time));
+            action == Action::change ? target.account.status() : action == Action::activate ? Status::active : Status::disabled,time));
         AccountRepository repository(connection_);
         repository.require_schema();
         RegistrationService(connection_).require_credentials_schema();
@@ -98,7 +133,7 @@ StoredAccount AccountManagementService::perform(Action action,const StoredAccoun
         EraseResult erase_captured{captured}; valid_credential(captured,actor);
         if (!detail::verify_password(proof,*captured.rows[0][0])) { fail(ManagementErrorKind::unauthorized); }
         detail::EncodedPassword verifier;
-        if (action != Action::disable) { detail::hash_password(replacement,verifier); }
+        if (changes_password) { detail::hash_password(replacement,verifier); }
         // All expensive KDF work precedes locks. The exact proof record and both
         // account snapshots are checked again in the owning transaction.
         auto transaction = connection_.transaction();
@@ -111,7 +146,7 @@ StoredAccount AccountManagementService::perform(Action action,const StoredAccoun
         EraseResult erase_current{current}; valid_credential(current,actor);
         if (current.rows != captured.rows) { fail(ManagementErrorKind::stale); }
         auto result = repository.update_in_transaction(target,next);
-        if (action != Action::disable) {
+        if (changes_password) {
             database::Parameters bound; EraseParameters erase_bound{bound}; bound.reserve(3);
             bound.emplace_back(target.account.id().value());
             bound.emplace_back(database::Bytes(verifier.bytes.begin(),verifier.bytes.end()));

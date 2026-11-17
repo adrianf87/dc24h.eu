@@ -3,6 +3,7 @@
 #include <openssl/crypto.h>
 
 #include <algorithm>
+#include <charconv>
 #include <cstdio>
 #include <ctime>
 #include <unordered_set>
@@ -25,7 +26,7 @@ std::string_view trim(std::string_view value) {
 }
 } // namespace
 
-ParseResult parse_request(std::string_view bytes) {
+ParseResult parse_request(std::string_view bytes, bool allow_form) {
     if (bytes.size() > max_request_bytes) { return {ParseState::too_large, {}}; }
     // Reject bare CR/LF as soon as enough bytes exist to classify them.
     for (std::size_t i = 0; i < bytes.size(); ++i) {
@@ -38,7 +39,6 @@ ParseResult parse_request(std::string_view bytes) {
     if (end == std::string_view::npos) {
         return {bytes.size() == max_request_bytes ? ParseState::too_large : ParseState::incomplete, {}};
     }
-    if (end + 4 != bytes.size()) { return {ParseState::invalid, {}}; }
     const auto first_end = bytes.find("\r\n");
     const auto line = bytes.substr(0, first_end);
     if (line.size() > 1024) { return {ParseState::invalid, {}}; }
@@ -56,6 +56,8 @@ ParseResult parse_request(std::string_view bytes) {
     std::unordered_set<std::string> headers;
     std::size_t offset = first_end + 2;
     bool host = false;
+    std::size_t length = 0;
+    bool form = false;
     while (offset < end + 2) {
         const auto next = bytes.find("\r\n", offset);
         const auto header = bytes.substr(offset, next - offset);
@@ -69,7 +71,13 @@ ParseResult parse_request(std::string_view bytes) {
         const auto value = trim(header.substr(colon + 1));
         if (std::any_of(value.begin(), value.end(), [](unsigned char c) { return c < 32 || c > 126; }) ||
             key == "transfer-encoding" || key == "expect" || key == "upgrade" ||
-            (key == "content-length" && value != "0")) { return {ParseState::invalid, {}}; }
+            (key == "content-length" && !allow_form && value != "0")) { return {ParseState::invalid, {}}; }
+        if (key == "content-length" && allow_form) {
+            const auto [last_byte, error] = std::from_chars(value.data(), value.data()+value.size(), length);
+            if (error != std::errc{} || last_byte != value.data()+value.size() || std::to_string(length) != value ||
+                length > 7000) { return {ParseState::invalid, {}}; }
+        }
+        if (key == "content-type") { form = value == "application/x-www-form-urlencoded"; }
         if (key == "host") {
             if (value.empty() || value.find_first_of(" ,/\\@") != std::string_view::npos) { return {ParseState::invalid, {}}; }
             host = true;
@@ -78,6 +86,11 @@ ParseResult parse_request(std::string_view bytes) {
         offset = next + 2;
     }
     if (!host) { return {ParseState::invalid, {}}; }
+    if (length && (!allow_form || request.method != "POST" || !form)) { return {ParseState::invalid, {}}; }
+    if (end + 4 + length > max_request_bytes) { return {ParseState::too_large, {}}; }
+    if (bytes.size() < end + 4 + length) { return {ParseState::incomplete, {}}; }
+    if (bytes.size() != end + 4 + length) { return {ParseState::invalid, {}}; }
+    request.body = bytes.substr(end+4, length);
     return {ParseState::complete, std::move(request)};
 }
 
@@ -99,7 +112,8 @@ bool authenticate(std::string_view authorization, std::string_view token) noexce
 std::string response(unsigned int status, std::string_view json, bool head) {
     const auto reason = status == 200 ? "OK" : status == 401 ? "Unauthorized" :
         status == 404 ? "Not Found" : status == 405 ? "Method Not Allowed" :
-        status == 431 ? "Request Header Fields Too Large" : "Bad Request";
+        status == 403 ? "Forbidden" : status == 409 ? "Conflict" : status == 429 ? "Too Many Requests" :
+        status == 503 ? "Service Unavailable" : status == 431 ? "Request Header Fields Too Large" : "Bad Request";
     std::string result = "HTTP/1.1 " + std::to_string(status) + " " + reason + "\r\n";
     const auto now = std::time(nullptr);
     std::tm utc{};
