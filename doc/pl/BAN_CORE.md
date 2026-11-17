@@ -1,5 +1,7 @@
 # Ban Core — alpha-0.8.5
 
+**alpha-0.8.6 Temporary Bans:** [Czas trwania, automatyczne wygaśnięcie i czas serwera w UI](TEMPORARY_BANS.md) rozwijają Ban Core bez zmiany schematu v8 i migracji SQL 1–8. Nowy kontrakt czasu trwania i filtrów API opisano w podanym dokumencie.
+
 Hub przechowuje i egzekwuje stałe lub czasowe blokady ID kont, kanonicznych CID
 Tiger oraz pojedynczych adresów IPv4/IPv6. Prywatny serwis i dwujęzyczny WebAdmin
 pozwalają dodawać/cofać wpisy. Hub ładuje niezmienny katalog przy starcie; wejście

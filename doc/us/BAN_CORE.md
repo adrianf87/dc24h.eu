@@ -1,5 +1,7 @@
 # Ban Core — alpha-0.8.5
 
+**alpha-0.8.6 Temporary Bans:** [Relative duration, automatic expiry and server-clock UI](TEMPORARY_BANS.md) extend Ban Core while preserving schema v8 and SQL migrations 1–8. Use the new duration/filter API contract described there.
+
 The hub now stores and enforces permanent or expiring admission blocks for account
 IDs, canonical Tiger CIDs and exact IPv4/IPv6 addresses. The private maintenance
 service and bilingual WebAdmin can create/revoke records. Serving hubs load an
