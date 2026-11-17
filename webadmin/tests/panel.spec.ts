@@ -8,7 +8,7 @@ const data = {
   api_version: "v1",
   server: {
     name: "dc24h.eu",
-    version: "alpha-0.7.14",
+    version: "alpha-0.7.15",
     core_running: true,
     uptime_seconds: 3661,
   },
@@ -46,9 +46,7 @@ test("unconfigured panel stays honest, readable and bilingual with working navig
   await expect(
     page.getByRole("button", { name: "Export snapshot" }),
   ).toBeDisabled();
-  await expect(
-    page.getByRole("button", { name: /Configuration/ }),
-  ).toBeDisabled();
+  await expect(page.getByRole("link", {name:"Configuration",exact:true})).toHaveAttribute("href", "#configuration");
   await page.getByRole("switch").click();
   await expect(page.getByRole("switch")).not.toBeChecked();
   await page.getByRole("combobox").selectOption("pl");

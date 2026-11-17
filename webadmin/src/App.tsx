@@ -37,13 +37,14 @@ import { SearchMonitoring } from "./components/SearchMonitoring";
 import { TransferMonitoring } from "./components/TransferMonitoring";
 import { TransferConfiguration } from "./components/TransferConfiguration";
 import { TransferStatistics } from "./components/TransferStatistics";
+import { StartupConfiguration } from "./components/StartupConfiguration";
 import { Accounts } from "./components/Accounts";
 import { ChatStatistics } from "./components/ChatStatistics";
 import { useHub } from "./lib/useHub";
 import type { Sample } from "./lib/useHub";
 
-type Page = "overview" | "connections" | "chat" | "search" | "security" | "database" | "accounts";
-const pages: Page[] = ["overview", "connections", "chat", "search", "security", "database", "accounts"];
+type Page = "overview" | "connections" | "chat" | "search" | "security" | "database" | "accounts" | "configuration";
+const pages: Page[] = ["overview", "connections", "chat", "search", "security", "database", "accounts", "configuration"];
 const currentPage = (): Page =>
   pages.includes(location.hash.slice(1) as Page)
     ? (location.hash.slice(1) as Page)
@@ -339,6 +340,7 @@ export default function App() {
     security: [t.securityTitle, t.securitySub],
     database: [t.databaseTitle, t.databaseSub],
     accounts: [t.accountsTitle, t.accountsSub],
+    configuration: [t.configurationTitle, t.configurationSub],
   };
   const exportSnapshot = () => {
     if (!snapshot) return;
@@ -421,8 +423,8 @@ export default function App() {
             </a>
           ))}
           <p className="nav-label admin-label">{t.administration}</p>
+          <a href="#configuration" onClick={()=>setMenu(false)} className={`nav-item ${page === "configuration" ? "active" : ""}`} aria-current={page === "configuration" ? "page" : undefined}><Settings2 size={18}/>{t.configuration}</a>
           {[
-            { icon: Settings2, label: t.configuration },
             { icon: ScrollText, label: t.logs },
           ].map((item) => (
             <button
@@ -721,6 +723,7 @@ export default function App() {
               <p>{t.securityNote}</p>
             </div>
           )}
+          {page === "configuration" && <StartupConfiguration snapshot={snapshot} t={t} number={number} />}
           {page === "accounts" && <Accounts t={t} />}
           {page === "database" && (
             <section className="card database-card">

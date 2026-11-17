@@ -22,7 +22,7 @@ try {
   });
   await page.goto(process.argv[2]);
   await expect(page.getByText("API connected", { exact: true })).toBeVisible();
-  await expect(page.getByText("alpha-0.7.14", { exact: true })).toHaveCount(2);
+  await expect(page.getByText("alpha-0.7.15", { exact: true })).toHaveCount(2);
   await expect(page.locator(".metric-value").nth(1)).toHaveText("15");
   assert.ok(
     Number(await page.locator(".metric-value").first().textContent()) >= 2,
@@ -40,6 +40,16 @@ try {
   assert.equal(snapshot.transfers.statistics.rcm_queued, 1);
   assert.equal(snapshot.transfers.statistics.peer_connection_failed, 1);
   assert.ok(!JSON.stringify(snapshot).includes("WebTransferSecret"));
+  assert.equal(snapshot.configuration.mode, "hub");
+  assert.equal(snapshot.configuration.database.connect_timeout_seconds, 8);
+  assert.equal(snapshot.configuration.database.read_timeout_seconds, 2);
+  assert.equal(snapshot.configuration.authentication.enabled, false);
+  assert.ok(!JSON.stringify(snapshot.configuration).includes("password_file"));
+  await page.getByRole("link", {name:"Configuration",exact:true}).click();
+  const startupView=page.getByTestId("startup-configuration");
+  await expect(startupView.locator('[data-configuration-setting="connect_timeout_seconds"] dd')).toHaveText("8");
+  await expect(startupView.locator('[data-configuration-setting="read_timeout_seconds"] dd')).toHaveText("2");
+  assert.ok(!(await page.content()).includes(secret));
   await page.getByRole("link", { name: "Connections", exact: true }).click();
   await expect(page.getByTestId("transfer-ctm").locator(".metric-value")).toHaveText(["1", "1", "0", "0", "0", "0", "2", "0", "0", "0"]);
   await expect(page.getByTestId("transfer-rcm").locator(".metric-value")).toHaveText(["1", "1", "0", "0", "0", "0", "1", "0", "0", "0"]);
