@@ -1,5 +1,7 @@
 # Permissions and role hierarchy — alpha-0.8.1
 
+**alpha-0.8.4 Kick:** [Live authenticated kick](KICK.md) adds the private +kick chat command, strict hierarchy, terminal notices, immediate routing cleanup and aggregate counters. Maintenance actions and schema v7 remain unchanged.
+
 **alpha-0.8.2 Operators:** [Staff directory and local ownership provisioning/transfer](OPERATORS.md) supersede earlier ownership-bootstrap/transfer limitations. Schema v7 and ordinary Owner protections remain.
 
 The hub recognizes seven fixed roles and seventeen named permissions. Role authority

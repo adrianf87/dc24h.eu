@@ -1,5 +1,16 @@
 # Changelog
 
+## alpha-0.8.4 — 2026-11-17
+
+Kick — live hub session removal, based directly on main `7617851a0608fe1845ab344071321ad7fc35ed01`. No automatic merge.
+
+- Add protocol-neutral live Admin Core kick policy and actual +kick <nickname> [reason] dispatch from authenticated ADC/ADCS chat. Bind the actor to the real connection, enforce users.kick and strictly lower target rank, retain constrained VIP delegation, shared MSG flood gates and readiness/source/time protections. Consume reserved commands privately, excluding them from ordinary chat dispatch.
+- Prepare bounded NFC reason/status/quit notices before committing close. Immediately clear target authentication/readiness and search windows, cancel later queued traffic while retaining a pinned front, and drain ISTA 230/final IQUI with initiator ID, private MS and TL0 under existing caps/deadlines. Queue failure after commit forces immediate close without retry. Other peers receive one bare departure notice; reconnect remains allowed with unchanged credentials.
+- Add fixed event=kicked logging without command/reason/account payloads and saturating aggregate live counters exposed as decimal strings through the private status API. Add bilingual read-only WebAdmin instructions/counters with optional older-API support, precision preservation and redaction. No browser-selected privileged actor or HTTP kick mutation is introduced.
+- Preserve SQL schema v7, migration files/manifest and maintenance ownership safeguards. Cover hierarchy, spoofing, flood, pending/stale targets, search cleanup, pinned output, allocation failures, queue caps, real ADC/ADCS, an actual ncdc victim, Node/Chromium and real API/adapter/React counters. Update mirrored EN/US/PL docs and release fixtures. CI retains Ubuntu 24.04 with four CPUs per runner and nproc parallelism; local builds/tests use eight threads.
+
+Validation on Debian 13: all 207/207 CTest suites passed in both Debug and Release, including real ADC/ADCS kick, an actual ncdc victim on both transports, fresh login after kick, disposable MariaDB and Apache. Native kick checks cover hierarchy, spoofing, private command handling, flood, search cleanup, pinned output, allocation faults and queue-cap fallback. Final C++ builds were warning-free. WebAdmin production build/typecheck, all 33 Node tests, all 24 Chromium tests and actual C++ API/adapter/React kick-counter integration passed. Release metadata, documentation UTF-8/language parity/local links, Python syntax with warnings treated as errors, actionlint, unchanged migrations/manifest and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration or account/credential mutation is performed.
+
 ## alpha-0.8.3 — 2026-11-17
 
 Admin Core — central administrative engine, based directly on main `71b171cf2986053f46e5839916253edabefaa331`. No automatic merge.

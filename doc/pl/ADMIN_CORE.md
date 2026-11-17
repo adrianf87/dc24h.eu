@@ -1,5 +1,7 @@
 # Admin Core — alpha-0.8.3
 
+**alpha-0.8.4 Kick:** [Wyrzucanie aktywnych sesji](KICK.md) dodaje prywatne polecenie +kick, hierarchię, komunikaty końcowe, natychmiastowe odcięcie routingu i liczniki. Operacje serwisowe i schemat v7 pozostają.
+
 Centralna biblioteka `dc24h_admin` obsługuje teraz operacje kont i własności
 z prywatnego API serwisowego i lokalnego `dc24h-owner`. Adaptery budują
 `admin::Command`; nie wyszukują już celów zapisu, nie porównują rewizji ani nie

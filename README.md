@@ -2,11 +2,13 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.8.3 (Admin Core).**
+**Current development version: alpha-0.8.4 (Kick).**
 
 CI on `main`: [GitHub-hosted Ubuntu 24.04 runners](doc/us/GITHUB_CI.md) · [PL](doc/pl/GITHUB_CI.md).
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.8.4 Kick**: authenticated `+kick <nickname> [reason]`, strict role hierarchy, private terminal ADC notices, immediate routing/search cleanup and read-only WebAdmin counters. See [Kick](doc/us/KICK.md).
 
 - **alpha-0.8.3 Admin Core**: central maintenance dispatch for eight account/ownership actions, fixed result classification, safe discovery and process counters in WebAdmin. See [Admin Core](doc/us/ADMIN_CORE.md).
 

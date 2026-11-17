@@ -1,5 +1,7 @@
 # Admin Core — alpha-0.8.3
 
+**alpha-0.8.4 Kick:** [Live authenticated kick](KICK.md) adds the private +kick chat command, strict hierarchy, terminal notices, immediate routing cleanup and aggregate counters. Maintenance actions and schema v7 remain unchanged.
+
 The central `dc24h_admin` library now dispatches account and ownership mutations
 from the private maintenance API and local `dc24h-owner` tool. Both adapters
 construct an `admin::Command`; they no longer resolve mutation targets, compare
