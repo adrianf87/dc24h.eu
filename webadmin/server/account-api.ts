@@ -12,7 +12,7 @@ export function accountMiddleware(config: {socket:string; token:string}|null) {
     };
     const path=req.url ?? "";
     const read=req.method === "GET" && /^\/admin-api\/v1\/accounts(?:\?after=(?:0|[1-9]\d{0,18})|\/[1-9]\d{0,18})?$/.test(path);
-    const write=req.method === "POST" && /^\/admin-api\/v1\/accounts(?:\/[1-9]\d{0,18}\/(?:activate|disable|reset|password))?$/.test(path);
+    const write=req.method === "POST" && /^\/admin-api\/v1\/accounts(?:\/[1-9]\d{0,18}\/(?:activate|disable|reset|password|role))?$/.test(path);
     if(!read && !write){reply(404,{error:"not_found"});return;}
     if(req.headers["transfer-encoding"] || (read && req.headers["content-length"] && req.headers["content-length"] !== "0")) {reply(400,{error:"bad_request"});return;}
     if(write && (req.headers.origin !== `http://${req.headers.host}` || req.headers["x-dc24h-admin"] !== "1" ||

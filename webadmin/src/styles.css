@@ -1521,3 +1521,12 @@ th {
 .configuration-alert { padding:12px; background:#fff6df; border-radius:8px; }
 .configuration-footnote { margin-top:24px; }
 @media(max-width:800px) { .configuration-sections { grid-template-columns:1fr; } }
+
+.roles-card { padding:24px; }
+.roles-card p { line-height:1.6; }
+.roles-selector { display:flex; align-items:center; gap:12px; margin:20px 0; }
+.roles-selector select { padding:10px; border:1px solid #aebacf; border-radius:8px; font:inherit; }
+.roles-table { overflow-x:auto; }
+.roles-table table { width:100%; border-collapse:collapse; text-align:left; }
+.roles-table caption { text-align:left; padding:12px 0; font-weight:600; }
+.roles-table th,.roles-table td { padding:12px; border-bottom:1px solid #e6eaf2; }

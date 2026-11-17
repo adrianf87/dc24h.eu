@@ -1,5 +1,7 @@
 # dc24h.eu WebAdmin — alpha-0.5.7
 
+alpha-0.8.1: see [Permissions](../doc/us/PERMISSIONS.md) for the seven-role catalog, pending-action flags, safe VIP delegation and stopped-hub role changes.
+
 Account maintenance in alpha-0.7.14: see [WebAdmin Accounts](../doc/us/WEBADMIN_ACCOUNTS.md). Use the separate non-serving maintenance executable; the ordinary hub API remains read-only.
 
 React + TypeScript + Vite, with a responsive EN/US and PL read-only panel.
