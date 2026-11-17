@@ -17,6 +17,7 @@ std::variant<RoutedMessage, RoutingError> MessageRouter::prepare(users::SessionI
         case PrivateChatError::recipient_unavailable: return RoutingError::recipient_unavailable;
         case PrivateChatError::invalid_message: return RoutingError::invalid_message;
         case PrivateChatError::text_limit: return RoutingError::text_limit;
+        case PrivateChatError::muted: return RoutingError::muted;
         case PrivateChatError::disabled: return RoutingError::disabled;
         }
     } else {
@@ -29,6 +30,7 @@ std::variant<RoutedMessage, RoutingError> MessageRouter::prepare(users::SessionI
         case PublicChatError::private_message: return RoutingError::private_broadcast;
         case PublicChatError::invalid_message: return RoutingError::invalid_message;
         case PublicChatError::text_limit: return RoutingError::text_limit;
+        case PublicChatError::muted: return RoutingError::muted;
         case PublicChatError::disabled: return RoutingError::disabled;
         }
     }

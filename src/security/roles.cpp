@@ -31,8 +31,7 @@ std::optional<unsigned> role_rank(accounts::Role role) noexcept {
 }
 bool permission_implemented(Permission p) noexcept {
     if(permission_key(p).empty())return false;
-    return p!=Permission::mute_users&&
-        p!=Permission::read_audit&&p!=Permission::manage_configuration&&p!=Permission::manage_hub;
+    return p!=Permission::read_audit&&p!=Permission::manage_configuration&&p!=Permission::manage_hub;
 }
 void validate(const RolePolicy& policy) {
     if(policy.vip_permissions&~vip_mask)throw std::invalid_argument("Invalid role permission configuration");
@@ -69,6 +68,10 @@ bool allows(accounts::Role role,Permission p,RolePolicy policy) noexcept {
     case Permission::change_own_password:return *rank>=1;
     }
     return false;
+}
+bool can_mute(accounts::Role actor,accounts::Role target,RolePolicy policy) noexcept {
+    const auto a=role_rank(actor),t=role_rank(target);
+    return a&&t&&*a>*t&&allows(actor,Permission::mute_users,policy);
 }
 bool can_revoke(accounts::Role actor,accounts::Role target,RolePolicy policy) noexcept {
     const auto a=role_rank(actor),t=role_rank(target);

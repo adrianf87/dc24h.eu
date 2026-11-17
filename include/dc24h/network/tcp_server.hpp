@@ -1,6 +1,7 @@
 #pragma once
 #include "dc24h/bans/bans.hpp"
 #include "dc24h/admin/kick.hpp"
+#include "dc24h/admin/mute.hpp"
 
 #include "dc24h/security/limits.hpp"
 #include "dc24h/security/authentication_limits.hpp"
@@ -76,6 +77,7 @@ struct Statistics {
     search::Statistics search{};
     transfers::Statistics transfers{};
     admin::KickStatistics kick{};
+    admin::MuteStatistics mute{};
 };
 
 class TcpServer final {
@@ -119,6 +121,7 @@ private:
     std::atomic<std::uint64_t> tracked_searches_{};
     std::array<std::atomic<std::uint64_t>, transfers::statistic_names.size()> transfer_statistics_{};
     std::array<std::atomic<std::uint64_t>, admin::kick_statistic_names.size()> kick_statistics_{};
+    std::array<std::atomic<std::uint64_t>, admin::mute_statistic_names.size()> mute_statistics_{};
 };
 
 } // namespace dc24h::network

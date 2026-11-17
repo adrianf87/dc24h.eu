@@ -124,6 +124,7 @@ void detailed_permissions() {
         for(unsigned j=0;j<accounts::role_catalog.size();++j){
             const auto target=accounts::role_catalog[j];
             require(security::can_revoke(role,target)==(i>=3&&i>j));
+            require(security::can_mute(role,target)==(i>=3&&i>j));
             require(security::can_manage(role,target)==(i>=5&&j>0&&i>j));
             for(unsigned k=0;k<accounts::role_catalog.size();++k)
                 require(security::can_assign(role,target,accounts::role_catalog[k])==(i>=5&&j>0&&i>j&&k>0&&i>k));

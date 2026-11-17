@@ -66,6 +66,11 @@ bool kick_command(const Message& message) noexcept {
     if(message.kind!=Command::msg||message.type!=MessageType::broadcast||message.parameters.empty()){return false;}
     const std::string_view text=message.parameters[0];return text=="+kick"||text.starts_with("+kick ");
 }
+bool mute_command(const Message& message) noexcept {
+    if(message.kind!=Command::msg||message.type!=MessageType::broadcast||message.parameters.empty()){return false;}
+    const std::string_view text=message.parameters[0];
+    return text=="+mute"||text.starts_with("+mute ")||text=="+unmute"||text.starts_with("+unmute ");
+}
 std::size_t message_bytes(const Message& message) noexcept {
     constexpr auto cap = max_frame_bytes + 1;
     if (message.parameters.size() > max_parameters || message.features.size() > max_feature_selectors) { return std::numeric_limits<std::size_t>::max(); }
@@ -128,7 +133,7 @@ std::string_view status_description(std::string_view code) noexcept {
 }
 } // namespace
 
-LoginHub::LoginHub(LoginLimits limits) : limits_(limits), authentication_limiter_(limits.authentication_limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), kick_core_(sessions_,limits.roles), search_(sessions_,limits.search.tokens), search_router_(search_), result_router_(search_), transfers_(sessions_,limits.transfers,this), connection_router_(transfers_), status_router_(sessions_), chat_(sessions_), message_router_(chat_,limits.chat), hub_messages_(sessions_), welcome_message_(welcome_packet(limits.welcome_text)), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
+LoginHub::LoginHub(LoginLimits limits) : limits_(limits), authentication_limiter_(limits.authentication_limits), pool_(std::make_shared<SidPool>()), sessions_(limits.users.bounded_by(limits.connections)), kick_core_(sessions_,limits.roles), mute_core_(sessions_,limits.roles), search_(sessions_,limits.search.tokens), search_router_(search_), result_router_(search_), transfers_(sessions_,limits.transfers,this), connection_router_(transfers_), status_router_(sessions_), chat_(sessions_), message_router_(chat_,limits.chat), hub_messages_(sessions_), welcome_message_(welcome_packet(limits.welcome_text)), user_login_(sessions_), user_list_(sessions_), inf_updates_(sessions_), user_disconnect_(sessions_) {
     security::validate(limits.roles);
     search::validate_security(limits.search);
     transfers::validate_limits(limits.transfers.flood);
@@ -274,7 +279,7 @@ void LoginHub::receive_impl(Id id, const Message& message, chat::FloodClock::tim
     if (peer.lifecycle.closing() || peer.lifecycle.immediate()) { return; }
     search::Attempt search_attempt(message.kind==Command::sch || message.kind==Command::res ? &search_statistics_ : nullptr,
         message.kind==Command::res ? search::Kind::result : search::Kind::query);
-    chat::Attempt attempt(!kick_command(message) && message.kind == Command::msg &&
+    chat::Attempt attempt(!kick_command(message) && !mute_command(message) && message.kind == Command::msg &&
         (message.type == MessageType::broadcast || message.type == MessageType::direct || message.type == MessageType::echo)
         ? &chat_statistics_ : nullptr);
     if (peer.lifecycle.phase() == users::Phase::accepted) {
@@ -406,7 +411,7 @@ void LoginHub::receive_impl(Id id, const Message& message, chat::FloodClock::tim
                 return;
             }
         }
-        if(route_kick(id,message,chat_now)){return;}
+        if(route_kick(id,message,chat_now)||route_mute(id,message,chat_now)){return;}
         route_chat(id,message,attempt);
     } else if (message.kind == Command::sch) {
         receive_search(id, message, chat_now, search_attempt);
@@ -743,6 +748,51 @@ bool LoginHub::route_kick(Id id,const Message& message,users::TimePoint now) {
     }catch(const std::bad_alloc&){(void)sessions_.force_close(sender.lifecycle.id(),users::CloseCause::internal_error,now);}
     return true;
 }
+std::optional<users::ChatMute> LoginHub::chat_mute(Id id) const noexcept {
+    const auto session=users::SessionId::from_value(id);const auto* model=session?sessions_.find(*session):nullptr;
+    return model&&model->ready()?std::optional<users::ChatMute>{model->chat_mute()}:std::nullopt;
+}
+admin::MuteError LoginHub::mute(Id actor,Id target,admin::MuteScope scope,bool enabled,users::TimePoint now) {
+    using admin::MuteError;auto& stats=mute_statistics_.values;kick_increment(stats[0]);
+    const auto source=users::SessionId::from_value(actor),destination=users::SessionId::from_value(target);
+    const auto refused=[&](MuteError error){kick_increment(stats[3]);return error;};
+    if(!source||!destination){return refused(MuteError::unavailable);}
+    const auto checked=mute_core_.check(*source,*destination,scope,now);if(checked!=MuteError::none){return refused(checked);}
+    bool committed=false;
+    try{
+        // Prepare notice before committing; post-commit failures never roll back
+        // a mute or claim refusal. Existing output limits may close that peer.
+        const auto description=scope==admin::MuteScope::public_chat?(enabled?"Public chat muted":"Public chat unmuted"):
+            scope==admin::MuteScope::private_chat?(enabled?"Private chat muted":"Private chat unmuted"):(enabled?"Public and private chat muted":"Public and private chat unmuted");
+        auto notice=make_status(*StatusCode::parse("000"),description);
+        const auto error=mute_core_.apply(*source,*destination,scope,enabled,now);
+        if(error!=MuteError::none){return refused(error);}
+        committed=true;kick_increment(stats[enabled?1:2]);
+        if(!enqueue(*peers_.at(target),std::move(notice))){kick_increment(stats[5]);}
+        return MuteError::none;
+    }catch(const std::bad_alloc&){
+        kick_increment(stats[committed?5:4]);return committed?MuteError::none:MuteError::resources;
+    }
+}
+bool LoginHub::route_mute(Id id,const Message& message,users::TimePoint now) {
+    if(!mute_command(message)){return false;}
+    auto text=std::string_view(message.parameters[0]);const bool enabled=text.starts_with("+mute");
+    const std::size_t prefix=enabled?6:8;auto result=admin::MuteError::invalid_scope;
+    if(message.parameters.size()==1&&text.size()>prefix){
+        text.remove_prefix(prefix);const auto space=text.find(' ');const auto name=text.substr(0,space);
+        const auto scope=space==std::string_view::npos?std::optional<admin::MuteScope>{admin::MuteScope::all}:admin::parse_mute_scope(text.substr(space+1));
+        if(!name.empty()&&scope){const auto* target=sessions_.by_nickname(name);result=mute(id,target?target->id().value():0,*scope,enabled,now);}
+        else{kick_increment(mute_statistics_.values[0]);kick_increment(mute_statistics_.values[3]);}
+    }else{kick_increment(mute_statistics_.values[0]);kick_increment(mute_statistics_.values[3]);}
+    auto& sender=*peers_.at(id);
+    try{
+        const auto code=result==admin::MuteError::none?"000":result==admin::MuteError::forbidden?"125":"100";
+        const auto description=result==admin::MuteError::none?(enabled?"User muted":"User unmuted"):
+            result==admin::MuteError::forbidden?"Mute denied":"Mute refused; use +mute or +unmute <nickname> [public|private|all]";
+        (void)enqueue(sender,make_status(*StatusCode::parse(code),description,"BMSG"));
+    }catch(const std::bad_alloc&){(void)sessions_.force_close(sender.lifecycle.id(),users::CloseCause::internal_error,now);}
+    return true;
+}
 void LoginHub::route_chat(Id id, const Message& message, chat::Attempt& attempt) {
     auto& sender=*peers_.at(id);
     try {
@@ -753,6 +803,9 @@ void LoginHub::route_chat(Id id, const Message& message, chat::Attempt& attempt)
         auto prepared=message_router_.prepare(sender.lifecycle.id(),message);
         if (const auto* error=std::get_if<RoutingError>(&prepared)) {
             switch (*error) {
+            case RoutingError::muted:
+                kick_increment(mute_statistics_.values[message.type==MessageType::broadcast?6:7]);
+                (void)enqueue(sender,make_status(*StatusCode::parse("125"),message.type==MessageType::broadcast?"Public chat is muted":"Private chat is muted",command));break;
             case RoutingError::recipient_unavailable: unavailable();break;
             case RoutingError::text_limit:
                 (void)enqueue(sender,make_status(*StatusCode::parse("100"),"Chat text limit exceeded",command));break;
@@ -777,7 +830,10 @@ void LoginHub::route_chat(Id id, const Message& message, chat::Attempt& attempt)
         });
         if (const auto* error=std::get_if<chat::Error>(&result)) {
             if (*error==chat::Error::recipient_unavailable) { unavailable(); }
-            else {
+            else if(*error==chat::Error::muted){
+                kick_increment(mute_statistics_.values[message.type==MessageType::broadcast?6:7]);
+                (void)enqueue(sender,make_status(*StatusCode::parse("125"),"Chat is muted",command));
+            }else {
                 attempt.outcome(chat::Event::internal_error);
                 check_model(sessions_.force_close(sender.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
             }

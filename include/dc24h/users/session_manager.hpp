@@ -52,6 +52,8 @@ public:
     // own-INF LF. Atomic, no-throw binding plus readiness; never upgrades guests.
     [[nodiscard]] MutationResult mark_authenticated_ready(SessionId id, accounts::AccountId account, TimePoint now,
         accounts::Role role = accounts::Role::registered) noexcept;
+    // Trusted moderation adapter only; authorization belongs to Admin Core.
+    [[nodiscard]] MutationResult set_chat_mute(SessionId id,ChatMute state,TimePoint now) noexcept;
     [[nodiscard]] std::optional<AuthSession> authenticated(SessionId id) const noexcept;
     // Owning ready-only account-filtered pages in lifetime-ID order. A snapshot
     // is historical data; resolve the ID again before authorizing any action.

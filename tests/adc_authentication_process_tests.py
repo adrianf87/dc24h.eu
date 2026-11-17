@@ -200,8 +200,54 @@ class AuthenticationTests(unittest.TestCase):
         implemented = {p['key']:p['implemented'] for p in roles['operations']}
         self.assertTrue(implemented['roles.manage'])
         self.assertTrue(implemented['users.ban'])
+        self.assertTrue(implemented['users.mute'])
         hub.stop()
 
+
+    def test_live_mute_public_private_scope_and_restore(self):
+        for secure in (False, True):
+            with self.subTest(secure=secure):
+                root, ini, cert = self.config(False)
+                endpoint, token = enable_api(ini, root)
+                hub = Hub(self, '--config', str(ini), '--log-connections', 'on')
+                target = self.peer(hub, cert, secure)
+                challenge = self.identify(target)
+                target.send(b'HPAS ' + response(challenge[5:])); self.finish(target)
+                witness = self.peer(hub, cert, not secure)
+                witness.login(b'MuteWitness', 98, welcome=WELCOME)
+                self.assertTrue(target.line().startswith(b'BINF ' + witness.sid))
+                actor = self.peer(hub, cert, secure)
+                challenge = self.identify(actor, b'ModeratorADC', 12)
+                actor.send(b'HPAS ' + response(challenge[5:])); self.finish(actor)
+                for peer in (target,witness):
+                    self.assertTrue(peer.line().startswith(b'BINF ' + actor.sid))
+                def change(command, notice):
+                    actor.send(b'BMSG ' + actor.sid + b' ' + command)
+                    self.assertEqual(target.line(), b'ISTA 000 ' + notice)
+                    self.assertTrue(actor.line().startswith(b'ISTA 000 User\\s'))
+                change(b'+mute\\sRegisteredADC\\spublic', b'Public\\schat\\smuted')
+                target.send(b'BMSG ' + target.sid + b' SuppressedPublic ME1')
+                self.assertEqual(target.line(), b'ISTA 125 Public\\schat\\sis\\smuted FCBMSG')
+                wire=b'EMSG ' + target.sid + b' ' + witness.sid + b' AllowedPrivate PM' + target.sid
+                target.send(wire);self.assertEqual(witness.line(),wire);self.assertEqual(target.line(),wire)
+                change(b'+mute\\sRegisteredADC\\sprivate', b'Private\\schat\\smuted')
+                target.send(b'EMSG ' + target.sid + b' ' + witness.sid + b' SuppressedPrivate PM' + target.sid + b' ME1')
+                self.assertEqual(target.line(), b'ISTA 125 Private\\schat\\sis\\smuted FCEMSG')
+                witness.send(b'BMSG ' + witness.sid + b' IncomingAllowed')
+                for peer in (target,actor,witness):self.assertEqual(peer.line(),b'BMSG ' + witness.sid + b' IncomingAllowed')
+                change(b'+unmute\\sRegisteredADC\\spublic', b'Public\\schat\\sunmuted')
+                target.send(b'BMSG ' + target.sid + b' RestoredPublic')
+                for peer in (target,actor,witness):self.assertEqual(peer.line(),b'BMSG ' + target.sid + b' RestoredPublic')
+                target.send(b'DMSG ' + target.sid + b' ' + witness.sid + b' StillPrivateBlocked')
+                self.assertEqual(target.line(), b'ISTA 125 Private\\schat\\sis\\smuted FCDMSG')
+                change(b'+unmute\\sRegisteredADC', b'Public\\sand\\sprivate\\schat\\sunmuted')
+                target.send(b'DMSG ' + target.sid + b' ' + witness.sid + b' RestoredPrivate')
+                self.assertEqual(witness.line(),b'DMSG ' + target.sid + b' ' + witness.sid + b' RestoredPrivate')
+                stats=fetch_status(endpoint,token)['mute']
+                self.assertEqual(stats,dict(attempts='4',applied='2',cleared='2',refused='0',errors='0',notice_failures='0',public_blocked='1',private_blocked='2'))
+                hub.stop()
+                for secret in (b'+mute',b'+unmute',b'SuppressedPublic',b'SuppressedPrivate',PASSWORD,b'HPAS',b'IGPA'):
+                    self.assertNotIn(secret,hub.log)
 
     def test_live_kick_private_command_notice_cleanup_and_fresh_login(self):
         for secure in (False, True):
@@ -431,7 +477,10 @@ class AuthenticationTests(unittest.TestCase):
     def test_real_ncdc_kick_adc_and_adcs(self):
         self.test_real_ncdc_password_rejection_then_normal_adc_and_adcs(kick=True)
 
-    def test_real_ncdc_password_rejection_then_normal_adc_and_adcs(self, kick=False):
+    def test_real_ncdc_mute_adc_and_adcs(self):
+        self.test_real_ncdc_password_rejection_then_normal_adc_and_adcs(mute=True)
+
+    def test_real_ncdc_password_rejection_then_normal_adc_and_adcs(self, kick=False, mute=False):
         for secure in (True, False):
             hub, root, cert = self.hub(require_tls=secure)
             session = root / 'ncdc'
@@ -488,6 +537,28 @@ class AuthenticationTests(unittest.TestCase):
                 moderator.send(b'BMSG ' + moderator.sid + b' +kick\\sRegisteredADC\\sNcdcKickNotice')
                 client.wait_screen(b'ncdckicknotice', start, hub)
                 client.wait(lambda: b'event=kicked' in hub.log, hub)
+            if mute:
+                moderator = self.peer(hub, cert, secure)
+                challenge = self.identify(moderator, b'ModeratorADC', 12)
+                moderator.send(b'HPAS ' + response(challenge[5:])); self.finish(moderator)
+                start = len(client.screen)
+                moderator.send(b'BMSG ' + moderator.sid + b' +mute\\sRegisteredADC')
+                self.assertTrue(moderator.line().startswith(b'ISTA 000 User\\smuted'))
+                client.command(b'NcdcMutedMessage')
+                client.wait_screen(b'chat is muted', start, hub)
+                start = len(client.screen)
+                moderator.send(b'BMSG ' + moderator.sid + b' +unmute\\sRegisteredADC')
+                self.assertTrue(moderator.line().startswith(b'ISTA 000 User\\sunmuted'))
+                client.command(b'NcdcUnmutedMessage')
+                client.wait_screen(b'ncdcunmutedmessage', start, hub)
+                observed=bytearray(observer.pending);observer.pending=b''
+                deadline=time.monotonic()+5
+                while b'NcdcUnmutedMessage' not in observed:
+                    self.assertLess(time.monotonic(),deadline,'Unmuted ncdc message missing')
+                    client.poll(hub)
+                    try:observed.extend(observer.peer.recv(4096))
+                    except socket.timeout:pass
+                self.assertNotIn(b'NcdcMutedMessage',observed)
             client.command(b'/quit')
             client.process.wait(timeout=3)
             client.close()

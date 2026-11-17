@@ -21,6 +21,7 @@ std::variant<PublicBroadcast, PublicChatError> PublicChat::prepare(users::Sessio
     if (const auto* error=std::get_if<chat::Error>(&prepared)) {
         switch (*error) {
         case chat::Error::missing_sender: case chat::Error::sender_not_ready: return PublicChatError::invalid_state;
+        case chat::Error::muted: return PublicChatError::muted;
         case chat::Error::wrong_source: return PublicChatError::wrong_source;
         default: return PublicChatError::invalid_message;
         }

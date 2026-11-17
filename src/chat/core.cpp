@@ -12,6 +12,7 @@ std::optional<Error> Core::validate_sender(users::SessionId sender, std::string_
 std::variant<Broadcast, Error> Core::prepare(users::SessionId sender, std::string_view source,
         std::string_view text, std::optional<bool> third_person) const {
     if (const auto error=validate_sender(sender,source)) { return *error; }
+    if(sessions_.find(sender)->chat_mute().public_chat){return Error::muted;}
     if (!text::valid_chat_text(text)) { return Error::invalid_text; }
     std::vector<users::SessionId> recipients;
     recipients.reserve(sessions_.statistics().online());
@@ -30,6 +31,7 @@ std::variant<Broadcast, Error> Core::prepare(users::SessionId sender, std::strin
 std::variant<DispatchReport, Error> Core::dispatch(const Broadcast& message, const Sink& sink) const {
     if (message.domain_!=domain_) { return Error::foreign_plan; }
     if (const auto error=validate_sender(message.sender(),message.source())) { return *error; }
+    if(sessions_.find(message.sender())->chat_mute().public_chat){return Error::muted;}
     if (!sink) { return Error::missing_sink; }
     DispatchReport report;
     for (const auto id:message.recipients()) {
@@ -43,6 +45,7 @@ std::variant<DispatchReport, Error> Core::dispatch(const Broadcast& message, con
 std::variant<Directed, Error> Core::prepare_direct(users::SessionId sender, std::string_view source,
         std::string_view target, std::string_view text, std::optional<bool> third_person, bool echo) const {
     if (const auto error=validate_sender(sender,source)) { return *error; }
+    if(sessions_.find(sender)->chat_mute().private_chat){return Error::muted;}
     if (!text::valid_chat_text(text)) { return Error::invalid_text; }
     const auto* model=sessions_.by_sid(target);
     if (!model || !model->ready() || !model->identity()) { return Error::recipient_unavailable; }
@@ -51,6 +54,7 @@ std::variant<Directed, Error> Core::prepare_direct(users::SessionId sender, std:
 std::variant<DispatchReport, Error> Core::dispatch(const Directed& message, const DirectedSink& sink) const {
     if (message.domain_!=domain_) { return Error::foreign_plan; }
     if (const auto error=validate_sender(message.sender(),message.source())) { return *error; }
+    if(sessions_.find(message.sender())->chat_mute().private_chat){return Error::muted;}
     if (!sink) { return Error::missing_sink; }
     const auto* target=sessions_.find(message.target());
     if (!target || !target->ready() || !target->identity() || target->identity()->sid()!=message.target_key()) {

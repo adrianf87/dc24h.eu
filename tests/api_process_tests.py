@@ -96,11 +96,12 @@ class ApiProcessTests(unittest.TestCase):
         drain_until_eof(peer)
         snapshot = fetch_status(fx.endpoint, fx.token)
         self.assertEqual(snapshot['api_version'], 'v1')
-        self.assertEqual(snapshot['server']['version'], 'alpha-0.8.6')
+        self.assertEqual(snapshot['server']['version'], 'alpha-0.8.7')
         self.assertTrue(snapshot['server']['core_running'])
         self.assertGreaterEqual(snapshot['network']['accepted_connections'], 1)
         self.assertEqual(snapshot['network']['adc_frames'], 1)
         self.assertEqual(snapshot['database'], {'enabled': False})
+        self.assertEqual(snapshot['mute'],dict(attempts='0',applied='0',cleared='0',refused='0',errors='0',notice_failures='0',public_blocked='0',private_blocked='0'))
         public = snapshot['configuration']
         self.assertEqual(public['mode'], 'hub')
         self.assertTrue(public['restart_required'])

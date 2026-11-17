@@ -10,7 +10,7 @@
 
 namespace dc24h::chat {
 namespace detail { struct RoutingDomain final {}; }
-enum class Error { missing_sender, sender_not_ready, wrong_source, invalid_text, missing_sink, recipient_unavailable, foreign_plan };
+enum class Error { missing_sender, sender_not_ready, wrong_source, invalid_text, missing_sink, recipient_unavailable, foreign_plan, muted };
 // Owned immutable admission snapshot. Lifetime IDs, never fd numbers or SIDs,
 // identify recipients; no nicknames, credentials or private metadata are copied.
 class Broadcast final {

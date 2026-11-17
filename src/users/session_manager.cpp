@@ -76,6 +76,9 @@ MutationResult SessionManager::start_negotiation(SessionId id, TimePoint now) no
 MutationResult SessionManager::mark_ready(SessionId id, TimePoint now) noexcept {
     return mutate(id,[now](Session& model) { return model.mark_ready(now); });
 }
+MutationResult SessionManager::set_chat_mute(SessionId id,ChatMute state,TimePoint now) noexcept {
+    return mutate(id,[=](Session& model){return model.set_chat_mute(state,now);});
+}
 MutationResult SessionManager::begin_close(SessionId id, CloseCause cause, TimePoint now) noexcept {
     return mutate(id,[=](Session& model) { return model.begin_close(cause,now); });
 }

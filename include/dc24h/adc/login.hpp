@@ -2,6 +2,7 @@
 
 #include "dc24h/adc/inf.hpp"
 #include "dc24h/admin/kick.hpp"
+#include "dc24h/admin/mute.hpp"
 #include "dc24h/bans/bans.hpp"
 #include "dc24h/adc/authentication.hpp"
 #include "dc24h/security/roles.hpp"
@@ -91,6 +92,7 @@ public:
     [[nodiscard]] search::Statistics search_statistics() const noexcept {
         auto value=search_statistics_;value.tracked_searches=search_.tracked_searches();return value;
     }
+    [[nodiscard]] admin::MuteStatistics mute_statistics() const noexcept { return mute_statistics_; }
     [[nodiscard]] admin::KickStatistics kick_statistics() const noexcept { return kick_statistics_; }
     [[nodiscard]] chat::Statistics chat_statistics() const noexcept { return chat_statistics_; }
     [[nodiscard]] transfers::Statistics transfer_statistics() const noexcept { return transfer_statistics_; }
@@ -118,6 +120,9 @@ public:
     // bounded terminal notice drains before transport close. No ban or SQL write.
     [[nodiscard]] admin::KickError kick(Id actor,Id target,std::string_view reason={},
         users::TimePoint now=users::Clock::now());
+    [[nodiscard]] admin::MuteError mute(Id actor,Id target,admin::MuteScope scope,bool enabled,
+        users::TimePoint now=users::Clock::now());
+    [[nodiscard]] std::optional<users::ChatMute> chat_mute(Id id) const noexcept;
     [[nodiscard]] ConnectionState state(Id id) const;
     [[nodiscard]] std::size_t queued_bytes() const noexcept { return queued_; }
     [[nodiscard]] std::size_t users() const noexcept { return sessions_.identified_users(); }
@@ -144,6 +149,7 @@ private:
     void receive_connection(Id id, const Message& message, users::TimePoint now, transfers::Attempt& attempt);
     void receive_impl(Id id, const Message& message, chat::FloodClock::time_point chat_now, transfers::Attempt& transfer_attempt);
     void route_status(Id id, const Message& message);
+    bool route_mute(Id id,const Message& message,users::TimePoint now);
     bool route_kick(Id id,const Message& message,users::TimePoint now);
     void route_chat(Id id, const Message& message, chat::Attempt& attempt);
     void relay(Id except, const Message& message);
@@ -153,6 +159,7 @@ private:
     std::shared_ptr<SidPool> pool_;
     users::SessionManager sessions_; // Outlives the peers that borrow models.
     admin::KickCore kick_core_;
+    admin::MuteCore mute_core_;
     search::Core search_;
     SearchRouter search_router_;
     ResultRouter result_router_;
@@ -170,6 +177,7 @@ private:
     std::unordered_map<Id, std::unique_ptr<Peer>> peers_;
     std::size_t queued_{0};
     admin::KickStatistics kick_statistics_{};
+    admin::MuteStatistics mute_statistics_{};
     chat::Statistics chat_statistics_{};
     search::Statistics search_statistics_{};
     transfers::Statistics transfer_statistics_{};

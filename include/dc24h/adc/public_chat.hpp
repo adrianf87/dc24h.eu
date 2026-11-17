@@ -8,7 +8,7 @@
 #include <utility>
 
 namespace dc24h::adc {
-enum class PublicChatError { invalid_message, unsupported_type, private_message, invalid_state, wrong_source, text_limit, disabled };
+enum class PublicChatError { invalid_message, unsupported_type, private_message, invalid_state, wrong_source, text_limit, disabled, muted };
 // One checked public frame per publication. Only PublicChat can construct it;
 // queues share immutable ownership and keep their own byte offsets/charges.
 class PublicChatFrame final {

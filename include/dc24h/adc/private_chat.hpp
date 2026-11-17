@@ -9,7 +9,7 @@
 
 namespace dc24h::adc {
 enum class PrivateChatError {
-    invalid_message, unsupported_type, unsupported_group, invalid_state, wrong_source, recipient_unavailable, text_limit, disabled
+    invalid_message, unsupported_type, unsupported_group, invalid_state, wrong_source, recipient_unavailable, text_limit, disabled, muted
 };
 class PrivateChatFrame final {
 public:

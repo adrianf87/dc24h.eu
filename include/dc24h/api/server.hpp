@@ -2,6 +2,7 @@
 
 #include "dc24h/chat/statistics.hpp"
 #include "dc24h/admin/kick.hpp"
+#include "dc24h/admin/mute.hpp"
 #include "dc24h/transfers/statistics.hpp"
 #include "dc24h/transfers/security.hpp"
 #include "dc24h/search/statistics.hpp"
@@ -46,6 +47,7 @@ struct Snapshot {
     transfers::SecuritySettings transfer_settings{};
     std::optional<ConfigurationSnapshot> configuration{};
     admin::KickStatistics kick{};
+    admin::MuteStatistics mute{};
 };
 using StatusProvider = std::function<Snapshot()>;
 using FailureHandler = std::function<void()>;

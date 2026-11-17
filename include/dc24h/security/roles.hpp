@@ -27,6 +27,7 @@ struct RolePolicy { std::uint32_t vip_permissions{}; };
 [[nodiscard]] RolePolicy parse_vip_permissions(std::string_view text);
 void validate(const RolePolicy& policy);
 [[nodiscard]] bool allows(accounts::Role role, Permission permission, RolePolicy policy = {}) noexcept;
+[[nodiscard]] bool can_mute(accounts::Role actor,accounts::Role target,RolePolicy policy = {}) noexcept;
 [[nodiscard]] bool can_revoke(accounts::Role actor, accounts::Role target, RolePolicy policy = {}) noexcept;
 [[nodiscard]] bool can_manage(accounts::Role actor, accounts::Role target) noexcept;
 // No self/equal/higher-role changes or assignment at/above the actor's rank.

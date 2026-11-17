@@ -6,7 +6,7 @@
 namespace dc24h::adc {
 enum class RoutingError {
     invalid_message, invalid_state, wrong_source, unsupported_type,
-    private_broadcast, unsupported_group, recipient_unavailable, text_limit, disabled
+    private_broadcast, unsupported_group, recipient_unavailable, text_limit, disabled, muted
 };
 using RoutedMessage = std::variant<PublicBroadcast, PrivateDelivery>;
 using RoutedFrame = std::variant<SharedPublicChatFrame, SharedPrivateChatFrame>;

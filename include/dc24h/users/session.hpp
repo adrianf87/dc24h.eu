@@ -64,6 +64,10 @@ struct AuthSession {
     accounts::Role role{accounts::Role::registered};
     friend bool operator==(const AuthSession&, const AuthSession&) = default;
 };
+struct ChatMute {
+    bool public_chat{},private_chat{};
+    friend bool operator==(const ChatMute&,const ChatMute&)=default;
+};
 struct Snapshot {
     SessionId id;
     Transport transport;
@@ -76,6 +80,7 @@ struct Snapshot {
     std::optional<CloseCause> final_cause;
     CloseMode close_mode;
     std::optional<AuthSession> authentication;
+    ChatMute chat_mute{};
     friend bool operator==(const Snapshot&, const Snapshot&) = default;
 };
 
@@ -110,9 +115,11 @@ public:
     [[nodiscard]] bool immediate() const noexcept { return close_mode_ == CloseMode::immediate; }
     [[nodiscard]] std::optional<CloseCause> terminal_cause() const noexcept;
     [[nodiscard]] Snapshot snapshot() const;
+    [[nodiscard]] ChatMute chat_mute() const noexcept { return chat_mute_; }
     [[nodiscard]] std::optional<AuthSession> authentication() const noexcept { return authentication_; }
 private:
     friend class SessionManager;
+    [[nodiscard]] Result set_chat_mute(ChatMute state,TimePoint now) noexcept;
     [[nodiscard]] Result mark_authenticated_ready(accounts::AccountId account, TimePoint now, accounts::Role role) noexcept;
     [[nodiscard]] bool valid_time(TimePoint now) const noexcept { return now >= last_; }
     SessionId id_;
@@ -122,6 +129,7 @@ private:
     TimePoint last_;
     std::optional<User> user_;
     std::optional<AuthSession> authentication_;
+    ChatMute chat_mute_{};
     std::optional<CloseCause> close_cause_, forced_cause_, final_cause_;
     CloseMode close_mode_{CloseMode::drain};
 };

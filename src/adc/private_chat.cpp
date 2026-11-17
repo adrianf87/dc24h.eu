@@ -22,6 +22,7 @@ std::variant<PrivateDelivery, PrivateChatError> PrivateChat::prepare(users::Sess
     if (const auto* error=std::get_if<chat::Error>(&prepared)) {
         switch (*error) {
         case chat::Error::missing_sender: case chat::Error::sender_not_ready: return PrivateChatError::invalid_state;
+        case chat::Error::muted: return PrivateChatError::muted;
         case chat::Error::wrong_source: return PrivateChatError::wrong_source;
         case chat::Error::recipient_unavailable: return PrivateChatError::recipient_unavailable;
         default: return PrivateChatError::invalid_message;
