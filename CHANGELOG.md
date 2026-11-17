@@ -1,5 +1,17 @@
 # Changelog
 
+## alpha-0.7.15 — 2026-11-17
+
+Configuration — database and account login, based directly on main `7e9e81de5aa0af0e92e5530638ac6dd3010f9cba`. No automatic merge.
+
+- Share effective database timeout resolution between Connector/C and the public startup-policy projection. Enforce authentication capacity bounds in disabled programmatic settings while preserving strict INI syntax, secret-file protections, ADCS requirements, schema v6 and existing guest/account behavior.
+- Add --show-configuration for language-independent redacted JSON without reading SQL/ADC/TLS credentials, contacting MariaDB, binding listeners or opening logs. Refuse conflicting operational actions and preserve normal configuration/CLI precedence; check-config and check-database retain their separate responsibilities.
+- Extend authenticated status snapshots with optional startup configuration containing only safe database/login switches, numeric timeouts, capacities, attempt budgets and actual hub/maintenance mode. Exclude database names/users/sockets and all private paths, passwords and keys by construction. Share the same projection with serving, maintenance and CLI paths.
+- Enable the bilingual Configuration page with effective values, restart guidance, ADCS/plaintext policy notice, safe export and backward-compatible unavailable states. Validate and allowlist the new nested data in both browser and local adapter; malformed new policy clears the snapshot rather than preserving stale settings. No configuration writes, hot reload, account-policy mutation or SQL health probe is added.
+- Add a provision-required account-enabled ADCS example, mirrored EN/US and PL documentation and release fixtures. Preserve GitHub Ubuntu 24.04 runners with four logical CPUs each, verified via nproc=4, and CPU-derived parallelism without a fixed test-worker cap. Remote CI completion is not awaited.
+
+Validation on Debian 13: all 203/203 CTest suites passed in both Debug and Release, including real ncdc ADC/ADCS, disposable MariaDB, the new side-effect-free configuration preview and Apache. Both C++ builds were warning-free. WebAdmin typecheck/production build, all 28 Node tests, all 18 Chromium tests and actual C++ API/adapter/React integration passed, including effective timeout rendering. Metadata, documentation UTF-8/language parity/local links, Python syntax, actionlint, unchanged migrations and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration or credential/account mutation is performed.
+
 ## CI CPU allocation clarification — 2026-11-17
 
 Use four logical CPUs per GitHub-hosted Ubuntu 24.04 runner for this public repository, rather than hardcoding a limit of four test workers. Verify nproc=4 separately in every job and restore CPU-derived build/CTest/Node/Playwright parallelism with nproc. Keep independent matrix/WebAdmin jobs without a max-parallel cap. This supersedes the previous worker-limit wording. Workflow, metadata and whitespace validation passed; remote CI completion is not awaited.

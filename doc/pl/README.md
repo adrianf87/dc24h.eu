@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.7.14: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.7.15: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [Database and Login Configuration — alpha-0.7.15](DATABASE_AUTH_CONFIGURATION.md)
 - [WebAdmin Accounts — alpha-0.7.14](WEBADMIN_ACCOUNTS.md)
 - [Database Resilience — alpha-0.7.13](DATABASE_RESILIENCE.md)
 - [Anti-Bruteforce — alpha-0.7.12](ANTI_BRUTEFORCE.md)

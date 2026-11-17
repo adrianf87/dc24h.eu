@@ -1,5 +1,7 @@
 # Odporność bazy danych — alpha-0.7.13
 
+**alpha-0.7.15 Configuration:** [startowe ustawienia bazy i logowania](DATABASE_AUTH_CONFIGURATION.md) dodają wspólne dziedziczenie timeoutów, zakresy także przy wyłączonym logowaniu, bezpieczny podgląd --show-configuration i stronę Konfiguracja EN/PL tylko do odczytu. Migawki nie zawierają poświadczeń ani prywatnych ścieżek; zmiany wymagają sprawdzenia i restartu. CI sprawdza cztery logiczne CPU na runner i używa nproc bez stałego limitu workerów. Nie czekamy na zdalne CI.
+
 Etap powstaje bezpośrednio z main `eb6b44e2` (integracja alpha-0.7.12).
 Zachowuje schemat v6, konta, formaty haseł i istniejący katalog uwierzytelniania
 ADC/ADCS ładowany przy starcie. Pełny SHA podstawy zapisano w CHANGELOG.md.

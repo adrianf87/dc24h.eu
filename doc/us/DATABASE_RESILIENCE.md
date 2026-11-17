@@ -1,5 +1,7 @@
 # Database Resilience — alpha-0.7.13
 
+**alpha-0.7.15 Configuration:** [database and login startup policy](DATABASE_AUTH_CONFIGURATION.md) adds shared effective timeout resolution, strict disabled-mode authentication bounds, a redacted --show-configuration preview and a bilingual read-only Configuration page. Secrets/private paths stay outside public snapshots; changes require validation and restart. CI verifies four logical CPUs per runner and derives parallelism from nproc, without a fixed test-worker cap or waiting for remote completion.
+
 This increment starts directly from main `eb6b44e2` (the alpha-0.7.12 integration).
 It retains schema v6, account data, password formats and the existing ADC/ADCS
 startup authentication directory. The complete base SHA is recorded in CHANGELOG.md.

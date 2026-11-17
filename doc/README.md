@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.7.14.
+Current development version: alpha-0.7.15.
+
+[Database and Login Configuration — alpha-0.7.15](us/DATABASE_AUTH_CONFIGURATION.md) · [PL](pl/DATABASE_AUTH_CONFIGURATION.md)
 
 [WebAdmin Accounts — alpha-0.7.14](us/WEBADMIN_ACCOUNTS.md) · [PL](pl/WEBADMIN_ACCOUNTS.md)
 
