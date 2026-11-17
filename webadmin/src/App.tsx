@@ -39,13 +39,14 @@ import { TransferConfiguration } from "./components/TransferConfiguration";
 import { TransferStatistics } from "./components/TransferStatistics";
 import { Roles } from "./components/Roles";
 import { StartupConfiguration } from "./components/StartupConfiguration";
+import {AdminCore} from "./components/AdminCore";
 import { Accounts } from "./components/Accounts";
 import { ChatStatistics } from "./components/ChatStatistics";
 import { useHub } from "./lib/useHub";
 import type { Sample } from "./lib/useHub";
 
-type Page = "overview" | "connections" | "chat" | "search" | "security" | "database" | "accounts" | "configuration" | "roles" | "operators";
-const pages: Page[] = ["overview", "connections", "chat", "search", "security", "database", "accounts", "configuration", "roles", "operators"];
+type Page = "overview" | "connections" | "chat" | "search" | "security" | "database" | "accounts" | "configuration" | "roles" | "operators" | "adminCore";
+const pages: Page[] = ["overview", "connections", "chat", "search", "security", "database", "accounts", "configuration", "roles", "operators", "adminCore"];
 const currentPage = (): Page =>
   pages.includes(location.hash.slice(1) as Page)
     ? (location.hash.slice(1) as Page)
@@ -334,6 +335,7 @@ export default function App() {
     { page: "accounts", icon: Users },
     { page: "roles", icon: ShieldCheck },
     { page: "operators", icon: Users },
+    { page: "adminCore", icon: ShieldCheck },
   ] as const;
   const titles = {
     overview: [t.overviewTitle, t.overviewSub],
@@ -345,6 +347,7 @@ export default function App() {
     accounts: [t.accountsTitle, t.accountsSub],
     roles: [t.rolesTitle, t.rolesSub],
     operators: [t.operatorsTitle, t.operatorsSub],
+    adminCore: [t.adminCoreTitle,t.adminCoreSub],
     configuration: [t.configurationTitle, t.configurationSub],
   };
   const exportSnapshot = () => {
@@ -728,6 +731,7 @@ export default function App() {
               <p>{t.securityNote}</p>
             </div>
           )}
+          {page === "adminCore" && <AdminCore t={t} />}
           {page === "roles" && <Roles snapshot={snapshot} t={t} />}
           {page === "configuration" && <StartupConfiguration snapshot={snapshot} t={t} number={number} />}
           {page === "accounts" && <Accounts key="accounts" t={t} />}

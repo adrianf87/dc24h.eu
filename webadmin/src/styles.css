@@ -1530,3 +1530,7 @@ th {
 .roles-table table { width:100%; border-collapse:collapse; text-align:left; }
 .roles-table caption { text-align:left; padding:12px 0; font-weight:600; }
 .roles-table th,.roles-table td { padding:12px; border-bottom:1px solid #e6eaf2; }
+
+.admin-counters { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-block: 1.5rem; }
+.admin-counters dt { font-size: .85rem; color: var(--muted, #64748b); }
+.admin-counters dd { margin: .4rem 0; font-size: 1.4rem; font-weight: 600; }

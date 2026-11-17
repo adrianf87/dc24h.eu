@@ -33,3 +33,5 @@ See [setup and architecture (US)](../doc/us/WEBADMIN.md) or
 and verification. Do not expose the Vite development server to a network.
 
 alpha-0.8.2 adds a filtered staff directory with proven maintenance operations; local ownership tooling is documented in [Operators](../doc/us/OPERATORS.md) ([PL](../doc/pl/OPERATORS.md)).
+
+alpha-0.8.3 adds the read-only [Admin Core](../doc/us/ADMIN_CORE.md) ([PL](../doc/pl/ADMIN_CORE.md)) command catalog and process outcomes through the private maintenance adapter.
