@@ -2,11 +2,13 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.7.14 (WebAdmin Account Management).**
+**Current development version: alpha-0.7.15 (Database and Login Configuration).**
 
 CI on `main`: [GitHub-hosted Ubuntu 24.04 runners](doc/us/GITHUB_CI.md) · [PL](doc/pl/GITHUB_CI.md).
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.7.15 Configuration**: validated database/login policy, shared effective timeouts, a redacted CLI preview and bilingual read-only WebAdmin startup configuration. See [Database and Login Configuration](doc/us/DATABASE_AUTH_CONFIGURATION.md).
 
 - **alpha-0.7.14 WebAdmin Accounts**: paginated account metadata and confirmed registration, activation, disable, reset and password changes through a separate local maintenance API. See [WebAdmin Accounts](doc/us/WEBADMIN_ACCOUNTS.md).
 

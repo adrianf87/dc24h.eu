@@ -32,6 +32,7 @@ struct CommandLine {
     bool check_database{false};
     bool migrate_database{false};
     bool database_status{false};
+    bool show_configuration{false};
     bool show_help{false};
     bool show_version{false};
 };
@@ -42,5 +43,7 @@ struct CommandLine {
 // Load --config first, then apply CLI overrides in argument order.
 [[nodiscard]] CommandLine parse_arguments(int argc, char* const argv[]);
 void validate(const Settings& settings);
+// Validates settings but never reads credentials, connects SQL, binds or logs.
+[[nodiscard]] api::ConfigurationSnapshot public_settings(const Settings& settings, bool maintenance = false);
 
 } // namespace dc24h::configuration

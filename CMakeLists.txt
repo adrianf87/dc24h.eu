@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.7.14 LANGUAGES CXX)
+project(dc24h VERSION 0.7.15 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -162,7 +162,7 @@ target_include_directories(dc24h_account_management PUBLIC include PRIVATE src/a
 target_link_libraries(dc24h_account_management PUBLIC dc24h_account_authentication dc24h_roles PRIVATE OpenSSL::Crypto)
 target_compile_options(dc24h_account_management PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 
-add_library(dc24h_api src/api/http.cpp src/api/server.cpp)
+add_library(dc24h_api src/api/http.cpp src/api/server.cpp src/api/configuration.cpp)
 target_compile_features(dc24h_api PUBLIC cxx_std_20)
 set_target_properties(dc24h_api PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_api PUBLIC include PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
@@ -204,7 +204,7 @@ endforeach()
 
 include(GNUInstallDirs)
 install(TARGETS dc24h dc24h-account-admin RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-install(FILES config/dc24h.ini.example config/apache2-webadmin-https.conf.example DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/dc24h)
+install(FILES config/dc24h.ini.example config/adc-accounts.ini.example config/apache2-webadmin-https.conf.example DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/dc24h)
 
 install(FILES ${DC24H_MIGRATION_FILES} DESTINATION ${CMAKE_INSTALL_DATADIR}/dc24h/migrations)
 
@@ -227,6 +227,9 @@ if(BUILD_TESTING)
     add_test(NAME project.metadata COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/project_checks.py")
     set_tests_properties(project.metadata PROPERTIES TIMEOUT 15)
+    add_test(NAME configuration.policy.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/configuration_policy_process_tests.py" "$<TARGET_FILE:dc24h>")
+    set_tests_properties(configuration.policy.process PROPERTIES TIMEOUT 30)
     add_test(NAME database.catalog COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/migration_catalog_tests.py")
     set_tests_properties(database.catalog PROPERTIES TIMEOUT 30)

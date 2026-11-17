@@ -2,7 +2,9 @@ import { parseTransfers } from "./transfer-status.ts";
 import type { TransferSnapshot } from "./transfer-status.ts";
 import { parseSearch } from "./search-status.ts";
 import type { SearchSnapshot } from "./search-status.ts";
-export const WEBADMIN_VERSION = "alpha-0.7.14";
+import { parseConfiguration } from "./configuration.ts";
+import type { StartupConfiguration } from "./configuration.ts";
+export const WEBADMIN_VERSION = "alpha-0.7.15";
 export interface HubSnapshot {
   api_version: "v1";
   server: {
@@ -39,6 +41,7 @@ export interface HubSnapshot {
   search?: SearchSnapshot;
   transfers?: TransferSnapshot;
   database: { enabled: boolean };
+  configuration?: StartupConfiguration;
 }
 const record = (value: unknown): Record<string, unknown> => {
   if (!value || typeof value !== "object" || Array.isArray(value))
@@ -67,6 +70,8 @@ export function parseSnapshot(value: unknown): HubSnapshot {
   ) {
     throw new Error("Invalid API schema");
   }
+  const configuration = root.configuration === undefined ? undefined : parseConfiguration(root.configuration);
+  if(configuration && configuration.database.enabled !== database.enabled) throw new Error("Inconsistent database configuration");
   // Normalize the allowlisted fields; never forward unknown data or credentials.
   return {
     api_version: "v1",
@@ -106,6 +111,7 @@ export function parseSnapshot(value: unknown): HubSnapshot {
       refused: counter(chat.refused),
     },
     database: { enabled: database.enabled },
+    ...(configuration === undefined ? {} : {configuration}),
     ...(root.search === undefined ? {} : { search: parseSearch(root.search) }),
     ...(root.transfers === undefined ? {} : { transfers: parseTransfers(root.transfers) }),
   };

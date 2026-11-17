@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
     for (int i = 1; i < argc; ++i) {
         const std::string_view key(argv[i]);
         if (key == "--help" || key == "--version" || key == "--check-config" ||
-            key == "--check-database" || key == "--migrate-database" || key == "--database-status") { continue; }
+            key == "--check-database" || key == "--migrate-database" || key == "--database-status" || key == "--show-configuration") { continue; }
         if (i + 1 < argc) {
             const std::string_view value(argv[++i]);
             if (key == "--language" && (value == "us" || value == "pl")) {
@@ -56,6 +56,10 @@ int main(int argc, char* argv[]) {
     }
     if (parsed.show_version) {
         std::cout << "dc24h.eu " << dc24h::version << '\n';
+        return EXIT_SUCCESS;
+    }
+    if (parsed.show_configuration) {
+        std::cout << dc24h::api::configuration_json(dc24h::configuration::public_settings(parsed.settings)) << '\n';
         return EXIT_SUCCESS;
     }
     if (parsed.check_only) {
@@ -139,6 +143,7 @@ int main(int argc, char* argv[]) {
                 logger.info("ADC account authentication enabled");
             }
             // Capture owning startup policy before Options moves its strings.
+            const auto public_settings = dc24h::configuration::public_settings(parsed.settings);
             const auto transfer_settings = parsed.settings.network.transfers;
             dc24h::network::TcpServer network(logger, std::move(parsed.settings.network));
             dc24h::core::Server server(logger, &network);
@@ -155,7 +160,7 @@ int main(int argc, char* argv[]) {
                         stats.active, stats.accepted, stats.adc_frames, stats.adcs_handshakes,
                         stats.security_rejected, stats.security_closed, database != nullptr,
                         stats.rejected, stats.closed, stats.received_bytes, stats.sent_bytes,
-                        stats.peak_connections, stats.online_users, stats.peak_online_users, stats.successful_logins, stats.chat, stats.search, parsed.settings.network.search, stats.transfers, transfer_settings};
+                        stats.peak_connections, stats.online_users, stats.peak_online_users, stats.successful_logins, stats.chat, stats.search, parsed.settings.network.search, stats.transfers, transfer_settings, public_settings};
                 }, [&] { signal_error.store(true); server.request_stop(); });
                 api->start();
             }

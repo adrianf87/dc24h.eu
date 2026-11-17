@@ -1,5 +1,6 @@
 """Disposable MariaDB only: never contacts the host's database or reads my.cnf."""
 import hashlib
+import json
 import os
 from pathlib import Path
 import pwd
@@ -359,6 +360,9 @@ def main():
                     log.extend(chunk)
             require(b'Database connected' in log, 'Database not connected before network startup')
             require(fetch_status(api_path, api_token)['database']['enabled'], 'API database status is incorrect')
+            published_policy = fetch_status(api_path, api_token)['configuration']
+            expected_policy = json.loads(cli(path, '--show-configuration').stdout)
+            require(published_policy == expected_policy, 'Serving and CLI effective policy differ')
             if RESILIENCE_TEST:
                 recovery = subprocess.Popen([RESILIENCE_TEST, str(db_socket), str(password), 'restart'],
                     stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1)

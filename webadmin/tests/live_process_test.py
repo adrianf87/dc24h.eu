@@ -26,6 +26,7 @@ with tempfile.TemporaryDirectory(prefix='dc24h-web-live-') as temp:
     endpoint = folder / 'admin.sock'
     config = folder / 'hub.ini'
     config.write_text('[network]\nlisten=127.0.0.1:0\n[chat]\nmax_text_bytes=64\n[api]\nenabled=on\nsocket=admin.sock\ntoken_file=admin.token\n')
+    config.write_text(config.read_text() + '[database]\nenabled=off\ntimeout=8\nread_timeout=2\nwrite_timeout=9\n')
     config.write_text(config.read_text() + '[transfers]\nallowed_protocols=ADC/1.0,ADCS/1.0,Future"\\Protocol/1.0\nrequest_rate=9\n')
     server = subprocess.Popen([binary, '--config', str(config)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
     vite = None

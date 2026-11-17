@@ -1511,3 +1511,13 @@ th {
 .accounts-buttons { display:flex; gap:12px; margin:16px 0; }
 .accounts-card button { cursor:pointer; }
 .accounts-card button:disabled { cursor:default; opacity:.55; }
+
+.startup-configuration { padding:24px; }
+.configuration-sections { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:28px; }
+.startup-configuration p { line-height:1.6; color:var(--muted,#64748b); }
+.startup-configuration dl>div { display:flex; justify-content:space-between; gap:20px; padding:12px 0; border-bottom:1px solid #e5eaf2; }
+.startup-configuration dt { overflow-wrap:anywhere; }
+.startup-configuration dd { font-variant-numeric:tabular-nums; margin:0; font-weight:600; }
+.configuration-alert { padding:12px; background:#fff6df; border-radius:8px; }
+.configuration-footnote { margin-top:24px; }
+@media(max-width:800px) { .configuration-sections { grid-template-columns:1fr; } }

@@ -1,6 +1,7 @@
 """Account-backed GPA/PAS on the actual TCP/TLS reactor and real ncdc."""
 import base64
 import configparser
+import json
 import ctypes
 import fcntl
 import os
@@ -246,6 +247,15 @@ class AuthenticationTests(unittest.TestCase):
                     'attempt_window_seconds=60\nattempts_per_second=100000\n')
                 endpoint, token = enable_api(ini, root)
                 hub = Hub(self, '--config', str(ini), '--log-connections', 'on')
+                configured = fetch_status(endpoint, token)['configuration']
+                self.assertTrue(configured['authentication']['enabled'])
+                self.assertFalse(configured['authentication']['require_tls'])
+                self.assertTrue(configured['database']['enabled'])
+                self.assertEqual(configured['authentication']['attempt_window_seconds'], 60)
+                for item in policy.strip().splitlines():
+                    name, value = item.split('=')
+                    self.assertEqual(configured['authentication'][name], int(value))
+                self.assertNotIn(str(KEY), json.dumps(configured))
                 for index, source in enumerate(sources):
                     peer = self.source_peer(hub, cert, source, index != 0)
                     first = self.identify(peer)

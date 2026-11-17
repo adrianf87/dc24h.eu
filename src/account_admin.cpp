@@ -25,7 +25,8 @@ int main(int argc,char* argv[]) {
         dc24h::logging::Logger logger(settings.logging);
         std::stop_source stop;
         settings.api.request_timeout=30;
-        dc24h::api::Server api(logger,settings.api,[]{dc24h::api::Snapshot s;s.database_enabled=true;return s;},
+        const auto public_settings=dc24h::configuration::public_settings(settings,true);
+        dc24h::api::Server api(logger,settings.api,[public_settings]{dc24h::api::Snapshot s;s.database_enabled=true;s.configuration=public_settings;return s;},
             [&]{stop.request_stop();},dc24h::api::account_handler(settings.database));
         api.start();logger.info("Account maintenance API ready; no hub listeners");
         (void)signals.wait(stop.get_token());return api.failed()?1:0;

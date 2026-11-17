@@ -5,10 +5,12 @@
 #include "dc24h/transfers/security.hpp"
 #include "dc24h/search/statistics.hpp"
 #include "dc24h/search/security.hpp"
+#include "dc24h/api/configuration.hpp"
 
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace dc24h::logging { class Logger; }
@@ -41,6 +43,7 @@ struct Snapshot {
     search::SecuritySettings search_settings{};
     transfers::Statistics transfers{};
     transfers::SecuritySettings transfer_settings{};
+    std::optional<ConfigurationSnapshot> configuration{};
 };
 using StatusProvider = std::function<Snapshot()>;
 using FailureHandler = std::function<void()>;

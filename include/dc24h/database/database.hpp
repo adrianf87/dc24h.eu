@@ -25,6 +25,9 @@ struct Options {
 };
 
 void validate(const Options& options);
+struct Timeouts { unsigned int connect, read, write; };
+// Resolve inherited values after validating Options; performs no I/O.
+[[nodiscard]] Timeouts effective_timeouts(const Options& options) noexcept;
 // Never embeds paths, passwords, SQL or server error text in diagnostics.
 [[nodiscard]] std::string read_password(const std::string& filename);
 

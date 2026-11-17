@@ -126,7 +126,8 @@ std::string status_json(const Snapshot& value) {
         ",\"peak_connections\":" + std::to_string(value.peak_connections) + "},\"users\":{\"online\":" +
         std::to_string(value.online_users) + ",\"peak_online\":" + std::to_string(value.peak_online_users) +
         ",\"successful_logins\":" + std::to_string(value.successful_logins) + "},\"chat\":" + chat_json + ",\"search\":" + search_json(value) + ",\"transfers\":" + transfers_json(value.transfers, value.transfer_settings) + ",\"database\":{\"enabled\":" +
-        (value.database_enabled ? "true" : "false") + "}}\n";
+        (value.database_enabled ? "true" : "false") + "}" +
+        (value.configuration ? ",\"configuration\":" + configuration_json(*value.configuration) : "") + "}\n";
 }
 } // namespace
 
