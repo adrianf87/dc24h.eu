@@ -1,5 +1,17 @@
 # Changelog
 
+## alpha-0.7.13 — 2026-11-17
+
+Database Resilience, based directly on main `eb6b44e27b8d05f32d5380bc52763a710d5f0b2c`; the existing alpha-0.7.1–alpha-0.7.12 work and history are retained. No automatic merge.
+
+- Add optional independent connect/read/write timeouts (1–60 seconds), inheriting the existing database timeout when omitted. Keep validation side-effect-free, local Unix-socket transport, private credentials, prepared values and schema v6. These are connector I/O limits, not a total SQL/transaction deadline.
+- Add explicit owner-thread `Connection::reconnect()` with exactly one new connection attempt and a freshly validated password-file read. Close the old session first, leave it retired on failure, restore checked connection defaults on success, and never replay statements, transactions or migrations. Preserve allocation exceptions and redact backend diagnostics.
+- Reject recovery while any active transaction scope remains, including after transport retirement. Safely expire old transaction links after recovery, isolate completed scopes from new work and retain foreign-thread retirement handling. Classify Connector/C read/write/compression faults as connection failures; retain uncertain execute/fetch/COMMIT outcomes without automatic retries.
+- Exercise killed connections, transaction and stale-scope guards, session/temporary-table/lock reset, unsafe or changed credentials, allocation failures, read/handshake/write stalls and actual MariaDB stop/start. A private fault proxy drops a successful COMMIT acknowledgement and independently proves exactly one committed write. The hub API and ADC reactor remain responsive while the disposable database is stopped; runtime authentication keeps its documented startup snapshot.
+- Restore the explicitly requested self-hosted Linux X64 `server-747585786` runner and verify Ubuntu 24.04 plus the github-runner service user. Serialize Debug, Release and WebAdmin checks in one repository-wide queue, retain nproc workers, avoid passwords/sudo provisioning in CI and exclude fork PR execution on the persistent host. Update release fixtures and mirrored EN/US and PL documentation.
+
+Validation on Debian 13: all 201/201 CTest suites passed in both Debug and Release, including real ncdc ADC/ADCS, private MariaDB and Apache. C++ builds were warning-free. WebAdmin typecheck/production build, all 23 Node tests, all 14 Chromium browser tests and real C++ API/React desktop/mobile integration passed. Metadata, documentation UTF-8/language parity/local links, Python syntax, actionlint, unchanged migration files and whitespace checks passed. Remote CI is configured for the requested self-hosted runner; local results do not establish its availability or outcome. No production deployment, account change or database migration is performed.
+
 ## alpha-0.7.12 — 2026-11-16
 
 Anti-Bruteforce, based directly on main `420715822970698018dd093d16b2f5486b676da1`; no automatic merge.

@@ -1,30 +1,36 @@
-# CI w GitHub Actions
+# GitHub Actions CI
 
-Workflow `Check status` w `.github/workflows/build.yml` korzysta z jednorazowych
-runnerów `ubuntu-24.04` utrzymywanych przez GitHub. Uruchamia się dla push i pull
-requestów do `main` lub `alpha-0.7.8` / `alpha-0.7.9` / `alpha-0.7.10` / `alpha-0.7.11` / `alpha-0.7.12`, także z forków, oraz ręcznie.
-Uprawnienia repozytorium są tylko do odczytu; checkout nie zachowuje poświadczeń.
+Od alpha-0.7.13 workflow `Check status` w `.github/workflows/build.yml` korzysta
+ze wskazanego własnego runnera `server-747585786`, z etykietami `self-hosted`,
+`Linux`, `X64` i `server-747585786`. Przed budowaniem sprawdza Ubuntu 24.04,
+nazwę runnera i konto usługi `github-runner`. Historyczne opisy innych runnerów
+nie określają bieżącej konfiguracji CI.
 
-Trzy zadania mogą działać niezależnie:
+Uruchomienie następuje po push, dla pull requestów z tego samego repozytorium
+do `main` lub `alpha-0.7.*` oraz ręcznie. Pull requesty z forków nie wykonują kodu
+na trwałym runnerze. Uprawnienia repozytorium są tylko do odczytu, a checkout
+nie zapisuje poświadczeń. Workflow nie zawiera hasła konta runnera ani bazy.
 
-- **C++ Debug** i **C++ Release**: osobne zadania macierzy instalują zależności
-  kompilacji oraz MariaDB, Apache i ncdc, konfigurują C++20 z `BUILD_TESTING=ON`
-  i `DC24H_REQUIRE_INTEGRATION_TESTS=ON`, kompilują projekt i uruchamiają wszystkie
-  zestawy CTest. Brak narzędzi integracyjnych przerywa konfigurację. Błąd jednego
-  wariantu nie anuluje drugiego.
-- **WebAdmin**: Node 22, `npm ci`, kontrola typów i kompilacja produkcyjna, testy
-  jednostkowe Node, testy przeglądarkowe Chromium oraz integracja rzeczywistego
-  API C++ z React. Zadanie kompiluje własny plik `dc24h` w Release z
-  `BUILD_TESTING=OFF`; pełne testy C++ wykonuje powyższa macierz. Playwright
-  instaluje Chromium i jego zależności systemowe.
+Jedna grupa współbieżności dla repozytorium wykonuje tylko jedno zadanie naraz.
+Debug i Release są budowane i testowane kolejno w osobnych katalogach, potem
+uruchamiany jest WebAdmin. Zapobiega to równoczesnej pracy checkout i kompilacji
+w tym samym katalogu własnego runnera. CMake, CTest, Node i Playwright korzystają
+z liczby procesorów podanej przez `nproc`.
 
-Kompilacja C++, CTest, testy Node i Playwright wykorzystują pełną dostępną
-liczbę CPU runnera (`nproc`) jako liczbę równoległych workerów. Testy uruchamiają własne, odizolowane usługi. Pakiety są
-instalowane przez sudo na jednorazowych maszynach GitHub; kompilacja i testy
-pracują jako użytkownik runnera. Rejestracja własnego runnera, host Contabo
-ani maszyny Proxmox nie są wymagane.
+Administrator powinien zapewnić narzędzia C++20, CMake, Python 3, OpenSSL,
+libutf8proc-dev, libgcrypt20-dev, libssl-dev, libmariadb-dev, serwer i klienta
+MariaDB, Apache2, ncdc i biblioteki systemowe Chromium. Workflow sprawdza narzędzia,
+a CMake nagłówki i biblioteki. Zadania nie instalują pakietów ani nie zmieniają
+usług przez sudo. setup-node wybiera Node 22, npm ci instaluje zależności według
+lockfile, a Playwright pobiera Chromium do katalogu użytkownika.
 
-Grupa współbieżności zależy od workflow i ref Git; `cancel-in-progress: false`.
-Limit czasu zadań C++ wynosi 120 minut, a WebAdmin 60 minut. Faktyczne wyniki
-każdego przebiegu są dostępne w
+Obie kompilacje wymagają `DC24H_REQUIRE_INTEGRATION_TESTS=ON` i uruchamiają
+wszystkie zestawy CTest, w tym odzyskanie i restart tymczasowej MariaDB,
+rzeczywiste ncdc ADC/ADCS oraz Apache. WebAdmin sprawdza typy, budowanie produkcyjne,
+testy jednostkowe, przeglądarkę i integrację z C++ API Release. Raporty awarii
+przechowywane są siedem dni. CI nie zmienia produkcyjnej bazy, kont, schematu,
+kluczy TLS ani usług. Całe zadanie ma limit 180 minut.
+
+Push gałęzi uruchamia workflow. Lokalne powodzenie nie potwierdza dostępności
+runnera ani wyniku zdalnego. Sprawdź odpowiedni commit w
 [GitHub Actions](https://github.com/adrianf87/dc24h.eu/actions/workflows/build.yml).
