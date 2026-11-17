@@ -19,7 +19,7 @@ Trzy zadania mogą działać niezależnie:
   instaluje Chromium i jego zależności systemowe.
 
 Kompilacja C++, CTest, testy Node i Playwright wykorzystują pełną dostępną
-liczbę CPU runnera (`nproc`) jako liczbę równoległych workerów. Testy uruchamiają własne, odizolowane usługi. Pakiety są
+stały limit czterech równoległych workerów. Nie czekamy na zakończenie CI. Testy uruchamiają własne, odizolowane usługi. Pakiety są
 instalowane przez sudo na jednorazowych maszynach GitHub; kompilacja i testy
 pracują jako użytkownik runnera. Rejestracja własnego runnera, host Contabo
 ani maszyny Proxmox nie są wymagane.

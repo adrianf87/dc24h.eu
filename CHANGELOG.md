@@ -1,5 +1,9 @@
 # Changelog
 
+## alpha-0.7.13 — CI parallelism — 2026-11-17
+
+Limit CMake builds, CTest, Node unit tests and Playwright to four workers per job on GitHub-hosted Ubuntu 24.04. Keep Debug, Release and WebAdmin jobs and existing triggers. CI completion is not awaited. Workflow syntax, documentation and whitespace validation passed; application code is unchanged.
+
 ## alpha-0.7.13 — CI runner update — 2026-11-17
 
 - Match main's GitHub-hosted `ubuntu-24.04` workflow for independent C++ Debug, C++ Release and WebAdmin jobs; explicitly enable alpha-0.7.13 push/PR triggers.
