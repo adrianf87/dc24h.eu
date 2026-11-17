@@ -1,49 +1,24 @@
 name: Check status
 on:
   push:
-    branches: [main, alpha-0.7.8, alpha-0.7.9, alpha-0.7.10, alpha-0.7.11, alpha-0.7.12]
+    branches: [main, 'alpha-0.7.*']
   pull_request:
-    branches: [main, alpha-0.7.8, alpha-0.7.9, alpha-0.7.10, alpha-0.7.11, alpha-0.7.12]
+    branches: [main, 'alpha-0.7.*']
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: dc24h-github-${{ github.workflow }}-${{ github.ref }}
+  group: dc24h-server-747585786
   cancel-in-progress: false
 jobs:
-  cpp:
-    name: C++ ${{ matrix.build_type }} - Ubuntu 24.04
-    runs-on: ubuntu-24.04
-    timeout-minutes: 120
-    strategy:
-      fail-fast: false
-      matrix:
-        build_type: [Debug, Release]
-    env:
-      CXX: g++
-      CI: 'true'
-      BUILD_TYPE: ${{ matrix.build_type }}
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-        with:
-          persist-credentials: false
-      - name: Install build and integration dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            build-essential cmake python3 libutf8proc-dev libgcrypt20-dev \
-            libssl-dev libmariadb-dev openssl ncdc mariadb-server apache2
-      - name: Configure C++20
-        run: cmake -S . -B "build/$BUILD_TYPE" -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DBUILD_TESTING=ON -DDC24H_REQUIRE_INTEGRATION_TESTS=ON
-      - name: Build
-        run: cmake --build "build/$BUILD_TYPE" --parallel "$(nproc)"
-      - name: Test
-        run: ctest --test-dir "build/$BUILD_TYPE" --parallel "$(nproc)" --output-on-failure
-
-  webadmin:
-    name: WebAdmin - Ubuntu 24.04
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
+  server:
+    name: server-747585786 - Ubuntu 24.04
+    if: >-
+      github.repository == 'adrianf87/dc24h.eu' &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, Linux, X64, server-747585786]
+    timeout-minutes: 180
     env:
       CXX: g++
       CI: 'true'
@@ -51,21 +26,31 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      - name: Install C++ API build dependencies
+      - name: Verify provisioned runner and integration tools
+        shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            build-essential cmake python3 libutf8proc-dev libgcrypt20-dev \
-            libssl-dev libmariadb-dev
+          test "$RUNNER_NAME" = server-747585786
+          test "$(id -un)" = github-runner
+          . /etc/os-release
+          test "$ID" = ubuntu
+          test "$VERSION_ID" = 24.04
+          for tool in g++ cmake python3 openssl ncdc mariadbd mariadb mariadb-admin mariadb-install-db apache2; do
+            command -v "$tool"
+          done
+      - name: Build and test C++20 Debug and Release
+        shell: bash
+        run: |
+          for build_type in Debug Release; do
+            cmake -S . -B "build/$build_type" -DCMAKE_BUILD_TYPE="$build_type" \
+              -DBUILD_TESTING=ON -DDC24H_REQUIRE_INTEGRATION_TESTS=ON
+            cmake --build "build/$build_type" --parallel "$(nproc)"
+            ctest --test-dir "build/$build_type" --parallel "$(nproc)" --output-on-failure
+          done
       - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: webadmin/package-lock.json
-      - name: Build Release C++ API for browser integration
-        run: |
-          cmake -S . -B build/Release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
-          cmake --build build/Release --target dc24h --parallel "$(nproc)"
       - name: Install frontend dependencies
         working-directory: webadmin
         run: npm ci
@@ -75,12 +60,21 @@ jobs:
       - name: Frontend unit tests
         working-directory: webadmin
         run: node --import tsx --test --test-concurrency="$(nproc)" tests/*.test.ts
-      - name: Install Chromium and system dependencies
+      - name: Install Chromium
         working-directory: webadmin
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
       - name: Browser tests
         working-directory: webadmin
         run: npm run test:e2e -- --workers="$(nproc)" --fully-parallel
       - name: Real C++ API integration
         working-directory: webadmin
         run: npm run test:integration -- ../build/Release/dc24h
+      - name: Retain test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            build/*/Testing/Temporary/LastTest.log
+            webadmin/playwright-report/
+          retention-days: 7
