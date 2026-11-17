@@ -1,10 +1,12 @@
+import {parseKick} from "./kick.ts";
+import type {KickSnapshot} from "./kick.ts";
 import { parseTransfers } from "./transfer-status.ts";
 import type { TransferSnapshot } from "./transfer-status.ts";
 import { parseSearch } from "./search-status.ts";
 import type { SearchSnapshot } from "./search-status.ts";
 import { parseConfiguration } from "./configuration.ts";
 import type { StartupConfiguration } from "./configuration.ts";
-export const WEBADMIN_VERSION = "alpha-0.8.3";
+export const WEBADMIN_VERSION = "alpha-0.8.4";
 export interface HubSnapshot {
   api_version: "v1";
   server: {
@@ -38,6 +40,7 @@ export interface HubSnapshot {
     unavailable: number;
     refused: number;
   };
+  kick?: KickSnapshot;
   search?: SearchSnapshot;
   transfers?: TransferSnapshot;
   database: { enabled: boolean };
@@ -75,6 +78,7 @@ export function parseSnapshot(value: unknown): HubSnapshot {
   // Normalize the allowlisted fields; never forward unknown data or credentials.
   return {
     api_version: "v1",
+    ...(root.kick===undefined?{}:{kick:parseKick(root.kick)}),
     server: {
       name: "dc24h.eu",
       version: server.version,

@@ -39,14 +39,15 @@ import { TransferConfiguration } from "./components/TransferConfiguration";
 import { TransferStatistics } from "./components/TransferStatistics";
 import { Roles } from "./components/Roles";
 import { StartupConfiguration } from "./components/StartupConfiguration";
+import {KickStatistics} from "./components/KickStatistics";
 import {AdminCore} from "./components/AdminCore";
 import { Accounts } from "./components/Accounts";
 import { ChatStatistics } from "./components/ChatStatistics";
 import { useHub } from "./lib/useHub";
 import type { Sample } from "./lib/useHub";
 
-type Page = "overview" | "connections" | "chat" | "search" | "security" | "database" | "accounts" | "configuration" | "roles" | "operators" | "adminCore";
-const pages: Page[] = ["overview", "connections", "chat", "search", "security", "database", "accounts", "configuration", "roles", "operators", "adminCore"];
+type Page = "overview" | "connections" | "chat" | "search" | "security" | "database" | "accounts" | "configuration" | "roles" | "operators" | "adminCore" | "kick";
+const pages: Page[] = ["overview", "connections", "chat", "search", "security", "database", "accounts", "configuration", "roles", "operators", "adminCore", "kick"];
 const currentPage = (): Page =>
   pages.includes(location.hash.slice(1) as Page)
     ? (location.hash.slice(1) as Page)
@@ -336,6 +337,7 @@ export default function App() {
     { page: "roles", icon: ShieldCheck },
     { page: "operators", icon: Users },
     { page: "adminCore", icon: ShieldCheck },
+    { page: "kick", icon: Users },
   ] as const;
   const titles = {
     overview: [t.overviewTitle, t.overviewSub],
@@ -348,6 +350,7 @@ export default function App() {
     roles: [t.rolesTitle, t.rolesSub],
     operators: [t.operatorsTitle, t.operatorsSub],
     adminCore: [t.adminCoreTitle,t.adminCoreSub],
+    kick: [t.kickTitle,t.kickSub],
     configuration: [t.configurationTitle, t.configurationSub],
   };
   const exportSnapshot = () => {
@@ -731,6 +734,7 @@ export default function App() {
               <p>{t.securityNote}</p>
             </div>
           )}
+          {page === "kick" && <KickStatistics snapshot={snapshot} t={t} />}
           {page === "adminCore" && <AdminCore t={t} />}
           {page === "roles" && <Roles snapshot={snapshot} t={t} />}
           {page === "configuration" && <StartupConfiguration snapshot={snapshot} t={t} number={number} />}
