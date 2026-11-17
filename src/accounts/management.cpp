@@ -7,6 +7,7 @@
 #include "adc_storage_internal.hpp"
 
 #include <openssl/crypto.h>
+#include <openssl/sha.h>
 #include <charconv>
 #include <limits>
 #include <type_traits>
@@ -46,6 +47,25 @@ void valid_credential(const database::Result& result, const StoredAccount& owner
     if (error != std::errc{} || end != encoded.data()+encoded.size() || std::to_string(time) != encoded ||
         time < owner.account.times().created_at || time > owner.account.times().updated_at) { fail(ManagementErrorKind::invalid_record); }
 }
+std::string ownership_lock_name(database::Connection& c) {
+    const auto name = c.scalar("SELECT DATABASE()");
+    if (!name) { fail(ManagementErrorKind::schema); }
+    unsigned char digest[SHA256_DIGEST_LENGTH];
+    SHA256(reinterpret_cast<const unsigned char*>(name->data()),name->size(),digest);
+    constexpr char hex[] = "0123456789abcdef";
+    std::string result = "dc24h:ownership:";
+    for (unsigned i = 0; i < 24; ++i) { result += hex[digest[i] >> 4]; result += hex[digest[i] & 15]; }
+    return result;
+}
+struct OwnershipLock {
+    database::Connection& connection;
+    std::string name;
+    ~OwnershipLock() { try { (void)connection.scalar("SELECT RELEASE_LOCK(?)",{name}); } catch (...) {} }
+};
+void acquire(database::Connection& c, const std::string& name) {
+    if (c.scalar("SELECT GET_LOCK(?, 0)",{name}) != "1") { fail(ManagementErrorKind::stale); }
+}
+
 }
 ManagementError::ManagementError(ManagementErrorKind kind) : std::runtime_error([kind] {
     switch (kind) {
@@ -177,5 +197,78 @@ StoredAccount AccountManagementService::perform(Action action,const StoredAccoun
         fail(error.kind() == RepositoryErrorKind::stale ? ManagementErrorKind::stale :
              error.kind() == RepositoryErrorKind::schema ? ManagementErrorKind::schema : ManagementErrorKind::invalid_record);
     }
+}
+
+StoredAccount AccountManagementService::bootstrap_owner(std::string_view name,
+    std::string_view password, Timestamp time) {
+    if (time < 0 || time > max_timestamp) { fail(ManagementErrorKind::invalid_input); }
+    const auto checked = AccountName::create(name);
+    if (!checked) { fail(ManagementErrorKind::invalid_input); }
+    detail::validate_password(password);
+    AccountRepository repository(connection_);
+    repository.require_schema();
+    RegistrationService(connection_).require_credentials_schema();
+    detail::require_adc_credentials_schema(connection_);
+    detail::EncodedPassword verifier;
+    detail::hash_password(password,verifier);
+    const auto lock = ownership_lock_name(connection_);
+    // MariaDB advisory locks are reference-counted; never borrow/release a
+    // caller's existing acquisition. The guard covers failed acquisition too.
+    if (connection_.scalar("SELECT IS_USED_LOCK(?) = CONNECTION_ID()",{lock}) == "1") { fail(ManagementErrorKind::stale); }
+    OwnershipLock guard{connection_,lock}; acquire(connection_,lock);
+    auto transaction = connection_.transaction();
+    if (connection_.scalar("SELECT COUNT(*) FROM dc24h_accounts WHERE role='owner'") != "0") { fail(ManagementErrorKind::unauthorized); }
+    auto result = repository.insert_in_transaction({checked->text(),Role::owner,Status::active,{time,time,{}}});
+    database::Parameters bound; EraseParameters erase{bound}; bound.reserve(3);
+    bound.emplace_back(result.account.id().value());
+    bound.emplace_back(database::Bytes(verifier.bytes.begin(),verifier.bytes.end())); bound.emplace_back(time);
+    if (connection_.execute_prepared("INSERT INTO dc24h_account_credentials(account_id,verifier,created_at) VALUES (?,?,?)",bound).affected_rows != 1) {
+        fail(ManagementErrorKind::invalid_record);
+    }
+    transaction.commit(); return result;
+}
+OwnershipTransfer AccountManagementService::transfer_ownership(const StoredAccount& owner,
+    std::string_view owner_password, const StoredAccount& successor,
+    std::string_view successor_password, Timestamp time) {
+    valid_snapshot(owner); valid_snapshot(successor);
+    if (owner.account.id() == successor.account.id() || owner.account.role() != Role::owner ||
+        successor.account.role() != Role::administrator || owner.account.status() != Status::active ||
+        successor.account.status() != Status::active) { fail(ManagementErrorKind::unauthorized); }
+    if (time < owner.account.times().updated_at || time < successor.account.times().updated_at || time > max_timestamp) {
+        fail(ManagementErrorKind::invalid_input);
+    }
+    detail::validate_password(owner_password); detail::validate_password(successor_password);
+    AccountRepository repository(connection_); repository.require_schema();
+    RegistrationService(connection_).require_credentials_schema(); detail::require_adc_credentials_schema(connection_);
+    if (repository.find_by_id(owner.account.id()) != owner || repository.find_by_id(successor.account.id()) != successor) { fail(ManagementErrorKind::stale); }
+    const auto capture = [&](const StoredAccount& account) {
+        return connection_.query("SELECT verifier,created_at FROM dc24h_account_credentials WHERE account_id=?",parameters(account.account.id().value()),{1,2,192,256});
+    };
+    auto owner_proof = capture(owner); EraseResult erase_owner{owner_proof}; valid_credential(owner_proof,owner);
+    auto target_proof = capture(successor); EraseResult erase_target{target_proof}; valid_credential(target_proof,successor);
+    if (!detail::verify_password(owner_password,*owner_proof.rows[0][0]) ||
+        !detail::verify_password(successor_password,*target_proof.rows[0][0])) { fail(ManagementErrorKind::unauthorized); }
+    const auto former = std::get<Account>(owner.account.with_access(Role::administrator,Status::disabled,time));
+    const auto next = std::get<Account>(successor.account.with_access(Role::owner,Status::active,time));
+    const auto lock = ownership_lock_name(connection_);
+    if (connection_.scalar("SELECT IS_USED_LOCK(?) = CONNECTION_ID()",{lock}) == "1") { fail(ManagementErrorKind::stale); }
+    OwnershipLock guard{connection_,lock}; acquire(connection_,lock);
+    auto transaction = connection_.transaction();
+    const auto check = [&](const StoredAccount& expected, const database::Result& proof) {
+        if (repository.locked_in_transaction(expected.account.id()) != expected) { fail(ManagementErrorKind::stale); }
+        auto current = connection_.query("SELECT verifier,created_at FROM dc24h_account_credentials WHERE account_id=? FOR UPDATE",parameters(expected.account.id().value()),{1,2,192,256});
+        EraseResult erase_current{current}; valid_credential(current,expected);
+        if (current.rows != proof.rows) { fail(ManagementErrorKind::stale); }
+    };
+    if (owner.account.id().value() < successor.account.id().value()) { check(owner,owner_proof); check(successor,target_proof); }
+    else { check(successor,target_proof); check(owner,owner_proof); }
+    OwnershipTransfer result{repository.update_in_transaction(owner,former),repository.update_in_transaction(successor,next)};
+    for (const auto& value : {owner.account.id(),successor.account.id()}) {
+        if (connection_.execute_prepared("DELETE FROM dc24h_account_adc_credentials WHERE account_id=?",parameters(value.value())).affected_rows > 1) {
+            fail(ManagementErrorKind::invalid_record);
+        }
+    }
+    static_assert(std::is_nothrow_move_constructible_v<OwnershipTransfer>);
+    transaction.commit(); return result;
 }
 } // namespace dc24h::accounts

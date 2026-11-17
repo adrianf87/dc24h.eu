@@ -2,11 +2,13 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.8.1 (Permissions and Role Hierarchy).**
+**Current development version: alpha-0.8.2 (Operators and Hub Ownership).**
 
 CI on `main`: [GitHub-hosted Ubuntu 24.04 runners](doc/us/GITHUB_CI.md) · [PL](doc/pl/GITHUB_CI.md).
 
 Completed increments (older bullets describe their original delivery scope):
+
+- **alpha-0.8.2 Operators**: SQL-filtered staff directory, first-Owner provisioning and dual-proof atomic ownership transfer through a private local CLI. Schema v7 is unchanged. See [Operators](doc/us/OPERATORS.md).
 
 - **alpha-0.8.1 Permissions**: seven-role hierarchy, seventeen exact capabilities, constrained VIP delegation, stronger-role enforcement, transactional maintenance role assignment and explicit schema v7. See [Permissions](doc/us/PERMISSIONS.md).
 

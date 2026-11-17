@@ -1,22 +1,22 @@
 import {ACCOUNT_ROLES} from "../lib/roles";
 import { useEffect, useRef, useState } from "react";
-import { parseAccount, parseAccounts, readAccountResponse } from "../lib/accounts";
+import { parseAccount, parseAccounts, parseStaff, isStaff, readAccountResponse } from "../lib/accounts";
 import type { Account } from "../lib/accounts";
 import type { Copy } from "../languages/us";
 
-export function Accounts({t}:{t:Copy}) {
+export function Accounts({t,staff=false}:{t:Copy;staff?:boolean}) {
   const [items,setItems]=useState<Account[]>([]), [next,setNext]=useState<string|null>(null);
   const [cursor,setCursor]=useState("0"),[selected,setSelected]=useState<Account|null>(null);
-  const [action,setAction]=useState("create"),[busy,setBusy]=useState(false),[available,setAvailable]=useState(false);
+  const [action,setAction]=useState(staff?"role":"create"),[busy,setBusy]=useState(false),[available,setAvailable]=useState(false);
   const [message,setMessage]=useState("");const form=useRef<HTMLFormElement>(null);
   const alive=useRef(true);const pending=useRef<AbortController|null>(null);
   async function load(after="0") {
     pending.current?.abort();const controller=new AbortController();pending.current=controller;
     setBusy(true);setMessage("");const timer=setTimeout(()=>controller.abort(),5000);
     try {
-      const response=await fetch(`./admin-api/v1/accounts?after=${after}`,{signal:controller.signal,cache:"no-store",credentials:"same-origin",redirect:"error"});
+      const response=await fetch(`./admin-api/v1/accounts?${staff?"staff_after":"after"}=${after}`,{signal:controller.signal,cache:"no-store",credentials:"same-origin",redirect:"error"});
       if(!response.ok)throw new Error();
-      const page=parseAccounts(await readAccountResponse(response));if(!alive.current||controller.signal.aborted)return;
+      const page=(staff?parseStaff:parseAccounts)(await readAccountResponse(response));if(!alive.current||controller.signal.aborted)return;
       setItems(page.accounts);setNext(page.next_after);setCursor(after);setAvailable(true);setSelected(null);
     }catch{if(alive.current&&pending.current===controller){setAvailable(false);setItems([]);setSelected(null);setNext(null);setMessage(t.accountsUnavailable);}}
     finally{clearTimeout(timer);if(alive.current&&pending.current===controller)setBusy(false);}
@@ -43,14 +43,14 @@ export function Accounts({t}:{t:Copy}) {
       if(!alive.current)return;
       if(!response.ok){setMessage(result.error==="outcome_unknown"?t.accountsUnknown:response.status===409?t.accountsStale:response.status===429?t.accountsRate:t.accountsRefused);return;}
       if(result.maintenance!==true)throw new Error();const account=parseAccount(result.account);
-      setItems(old=>old.map(a=>a.id===account.id?account:a));setSelected(account);setMessage(t.accountsSaved);
+      setItems(old=>old.map(a=>a.id===account.id?account:a).filter(a=>!staff||isStaff(a)));setSelected(staff&&!isStaff(account)?null:account);setMessage(t.accountsSaved);
     }catch{if(alive.current)setMessage(t.accountsUnknown);}
     finally{body.forEach((_,key)=>body.set(key,""));clearTimeout(timer);if(alive.current)setBusy(false);}
   }
-  return <section className="card accounts-card" aria-label={t.accountsTitle}>
-    <div className="card-heading"><div><h2>{t.accountsTitle}</h2><p>{t.accountsNote}</p></div>
+  return <section className="card accounts-card" aria-label={staff?t.operatorsTitle:t.accountsTitle}>
+    <div className="card-heading"><div><h2>{staff?t.operatorsTitle:t.accountsTitle}</h2><p>{staff?t.operatorsNote:t.accountsNote}</p></div>
       <button className="button secondary" disabled={busy} onClick={()=>void load(cursor)}>{t.accountsReload}</button></div>
-    <p className="accounts-maintenance">{t.accountsMaintenance} {t.accountsRoleNote}</p>
+    <p className="accounts-maintenance">{t.accountsMaintenance} {t.accountsRoleNote} {staff&&t.operatorsOwnership}</p>
     {message&&<p role="status" className="accounts-message">{message}</p>}
     <div className="accounts-table-wrap"><table><caption>{t.accountsTable}</caption><thead><tr>
       <th>ID</th><th>{t.accountsName}</th><th>{t.accountsRole}</th><th>{t.accountsStatus}</th><th>{t.accountsRevision}</th>
@@ -66,7 +66,7 @@ export function Accounts({t}:{t:Copy}) {
     <form ref={form} onSubmit={event=>void submit(event)}>
       <fieldset disabled={busy||!available}><legend>{t.accountsAction}</legend>
         <label>{t.accountsAction}<select aria-label={t.accountsAction} value={action} onChange={e=>{setAction(e.target.value);form.current?.reset();setMessage("");}}>
-          <option value="create">{t.accountsCreate}</option><option value="activate">{t.accountsActivate}</option>
+          {!staff&&<option value="create">{t.accountsCreate}</option>}<option value="activate">{t.accountsActivate}</option>
           <option value="disable">{t.accountsDisable}</option><option value="reset">{t.accountsReset}</option><option value="password">{t.accountsPassword}</option><option value="role">{t.accountsChangeRole}</option>
         </select></label>
         {action==="create"?<label>{t.accountsName}<input name="name" required maxLength={64} autoComplete="off"/></label>:<p>{selected?t.accountsSelected+": "+selected.name:t.accountsSelect}</p>}

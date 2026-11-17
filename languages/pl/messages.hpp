@@ -3,7 +3,12 @@
 #include <string_view>
 
 namespace dc24h::i18n::pl {
-inline constexpr std::array<std::string_view, 151> messages{{
+inline constexpr std::array<std::string_view, 155> messages{{
+    "Utworzono właściciela huba",
+    "Przekazano własność huba",
+    "Nieznany wynik przekazania własności; sprawdź bazę przed ponowieniem",
+    "Odmowa operacji właściciela",
+
     "Niepoprawna konfiguracja uprawnień ról",
     "Niepoprawna konfiguracja uwierzytelniania ADC",
     "Niepoprawne dane poświadczenia ADC",

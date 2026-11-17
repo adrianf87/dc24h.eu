@@ -31,3 +31,5 @@ sessions, roles, mutations and an authenticated Apache gateway remain planned.
 See [setup and architecture (US)](../doc/us/WEBADMIN.md) or
 [instrukcja PL](../doc/pl/WEBADMIN.md) for API connection, Apache2, installation
 and verification. Do not expose the Vite development server to a network.
+
+alpha-0.8.2 adds a filtered staff directory with proven maintenance operations; local ownership tooling is documented in [Operators](../doc/us/OPERATORS.md) ([PL](../doc/pl/OPERATORS.md)).

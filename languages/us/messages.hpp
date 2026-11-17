@@ -3,7 +3,12 @@
 #include <string_view>
 
 namespace dc24h::i18n::us {
-inline constexpr std::array<std::string_view, 151> messages{{
+inline constexpr std::array<std::string_view, 155> messages{{
+    "Owner provisioning completed",
+    "Ownership transfer completed",
+    "Ownership outcome unknown; inspect storage before retrying",
+    "Ownership operation refused",
+
     "Invalid role permission configuration",
     "Invalid ADC authentication configuration",
     "Invalid ADC credential input",

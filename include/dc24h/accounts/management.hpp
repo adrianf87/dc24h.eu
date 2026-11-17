@@ -4,6 +4,7 @@
 #include <string_view>
 
 namespace dc24h::accounts {
+struct OwnershipTransfer { StoredAccount former_owner, new_owner; };
 enum class ManagementErrorKind { invalid_input, invalid_password, unauthorized, stale, invalid_record, crypto, schema };
 class ManagementError final : public std::runtime_error {
 public:
@@ -41,6 +42,17 @@ public:
     // removes ADC credentials; ownership bootstrap/transfer is not this operation.
     [[nodiscard]] StoredAccount change_role(const StoredAccount& actor,
         std::string_view actor_password, const StoredAccount& expected, Role role, Timestamp changed_at);
+    // Local trusted provisioning only, never exposed through HTTP. First Owner
+    // is active with a separate account password and no ADC identity/credential.
+    // Refuses any existing Owner, including disabled ones. No schema changes.
+    [[nodiscard]] StoredAccount bootstrap_owner(std::string_view name,
+        std::string_view password, Timestamp created_at);
+    // Both active snapshots and password proofs are required. Target must be an
+    // Administrator. Atomically makes target active Owner, actor disabled Admin,
+    // increments both revisions and deletes both ADC credentials.
+    [[nodiscard]] OwnershipTransfer transfer_ownership(const StoredAccount& owner,
+        std::string_view owner_password, const StoredAccount& successor,
+        std::string_view successor_password, Timestamp changed_at);
 private:
     enum class Action { change, disable, reset, activate, role };
     [[nodiscard]] StoredAccount perform(Action action, const StoredAccount& actor,

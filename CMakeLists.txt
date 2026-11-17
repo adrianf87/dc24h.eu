@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.8.1 LANGUAGES CXX)
+project(dc24h VERSION 0.8.2 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -190,6 +190,10 @@ target_compile_features(dc24h_account_api PUBLIC cxx_std_20)
 target_include_directories(dc24h_account_api PUBLIC include)
 target_link_libraries(dc24h_account_api PUBLIC dc24h_api dc24h_account_management dc24h_password_security dc24h_registration)
 target_compile_options(dc24h_account_api PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+add_executable(dc24h-owner src/owner_admin.cpp)
+target_include_directories(dc24h-owner PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+target_link_libraries(dc24h-owner PRIVATE dc24h_account_management dc24h_configuration dc24h_security)
+target_compile_options(dc24h-owner PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 add_executable(dc24h-account-admin src/account_admin.cpp)
 target_include_directories(dc24h-account-admin PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 target_link_libraries(dc24h-account-admin PRIVATE dc24h_account_api dc24h_configuration dc24h_core)
@@ -203,7 +207,7 @@ foreach(target dc24h_transfers dc24h_text dc24h_search dc24h_chat dc24h_users dc
 endforeach()
 
 include(GNUInstallDirs)
-install(TARGETS dc24h dc24h-account-admin RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS dc24h dc24h-account-admin dc24h-owner RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES config/dc24h.ini.example config/adc-accounts.ini.example config/apache2-webadmin-https.conf.example DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/dc24h)
 
 install(FILES ${DC24H_MIGRATION_FILES} DESTINATION ${CMAKE_INSTALL_DATADIR}/dc24h/migrations)
@@ -844,6 +848,12 @@ if(BUILD_TESTING)
     find_program(MARIADB_CLIENT_EXECUTABLE mariadb)
     find_program(MARIADB_ADMIN_EXECUTABLE mariadb-admin)
     if(MARIADBD_EXECUTABLE AND MARIADB_INSTALL_DB_EXECUTABLE AND MARIADB_CLIENT_EXECUTABLE AND MARIADB_ADMIN_EXECUTABLE)
+        add_test(NAME accounts.owner_cli.process COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/database_process_tests.py"
+            "$<TARGET_FILE:dc24h>" "$<TARGET_FILE:database_tests>"
+            --owner-cli-test "$<TARGET_FILE:dc24h-owner>")
+        set_tests_properties(accounts.owner_cli.process PROPERTIES TIMEOUT 120
+            ENVIRONMENT "PATH=/usr/sbin:/usr/bin:/sbin:/bin:$ENV{PATH}")
         add_test(NAME accounts.management.process COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/database_process_tests.py"
             "$<TARGET_FILE:dc24h>" "$<TARGET_FILE:database_tests>"

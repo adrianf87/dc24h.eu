@@ -1,4 +1,9 @@
 export const us = {
+  operators: "Operators",
+  operatorsTitle: "Operators and hub owner",
+  operatorsSub: "Persistent staff accounts and controlled maintenance",
+  operatorsNote: "Moderator, Operator, Administrator and Owner accounts, including disabled accounts. This directory does not indicate online presence. Use Accounts to promote a non-staff account.",
+  operatorsOwnership: "First Owner creation and ownership transfer use the local dc24h-owner tool. Transfer requires both passwords and fresh revisions; the former Owner becomes a disabled Administrator. No ownership mutation is available in this browser.",
   roles: "Roles",
   rolesTitle: "Roles and permissions",
   rolesSub: "Named capabilities, authority hierarchy and configurable VIP grants.",

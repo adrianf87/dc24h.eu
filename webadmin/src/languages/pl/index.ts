@@ -1,5 +1,10 @@
 import type { Copy } from "../us";
 export const pl = {
+  operators: "Operatorzy",
+  operatorsTitle: "Operatorzy i właściciel huba",
+  operatorsSub: "Konta zespołu i kontrolowane operacje serwisowe",
+  operatorsNote: "Konta Moderator, Operator, Administrator i Owner, również wyłączone. Ten spis nie oznacza obecności online. Użyj Kont, aby awansować osobę spoza zespołu.",
+  operatorsOwnership: "Pierwszego Ownera i przekazanie własności obsługuje lokalne narzędzie dc24h-owner. Przekazanie wymaga obu haseł i aktualnych rewizji; poprzedni Owner staje się wyłączonym Administratorem. Przeglądarka nie zmienia właściciela.",
   roles: "Role",
   rolesTitle: "Role i uprawnienia",
   rolesSub: "Nazwane uprawnienia, hierarchia i konfigurowalne przywileje VIP.",

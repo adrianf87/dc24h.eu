@@ -15,3 +15,11 @@ test("account browser responses enforce byte and content-type bounds",async()=>{
  await assert.rejects(readAccountResponse(new Response("x".repeat(16385),{headers:{"Content-Type":"application/json"}})));
  assert.deepEqual(await readAccountResponse(new Response("{}",{headers:{"Content-Type":"application/json"}})),{});
 });
+
+test("staff pages require explicit server filtering and contain only staff roles",async()=>{
+ const {parseStaff}=await import("../src/lib/accounts.ts");
+ const owner={...record,role:"owner"};
+ assert.equal(parseStaff({accounts:[owner],maintenance:true,staff_only:true,next_after:null}).accounts[0].role,"owner");
+ for(const role of ["moderator","operator","administrator","owner"]) assert.equal(parseStaff({accounts:[{...record,role}],maintenance:true,staff_only:true,next_after:null}).accounts.length,1);
+ for(const patch of [{staff_only:false},{staff_only:undefined},{accounts:[record]},{accounts:[{...record,role:"vip"}]}]) assert.throws(()=>parseStaff({accounts:[owner],maintenance:true,staff_only:true,next_after:null,...patch}));
+});

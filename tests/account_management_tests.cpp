@@ -126,6 +126,86 @@ void allocation_failures(const Options& options,std::shared_ptr<const AdcSecretK
     }
     fake_kdf=false; require(success && failures>100 && scrubbed);
 }
+
+void ownership(const Options& options, const std::string& key_path) {
+    Connection c(options); AccountRepository repository(c); AccountManagementService service(c);
+    const auto key = AdcSecretKey::load(key_path);
+    // Independent connections prove simultaneous first-Owner requests. At most
+    // one creates an Owner, even before any account row exists to lock.
+    std::barrier gate(2); int wins[2]{},denials[2]{}; std::exception_ptr errors[2];
+    const auto run = [&](int i) {
+        try { Connection db(options); after_kdf = [&]{ gate.arrive_and_wait(); };
+            try { (void)AccountManagementService(db).bootstrap_owner("BootstrapOwner"+std::to_string(i),original,10); wins[i]=1; }
+            catch (const ManagementError& e) { require(e.kind()==ManagementErrorKind::stale || e.kind()==ManagementErrorKind::unauthorized); denials[i]=1; }
+        } catch (...) { errors[i]=std::current_exception(); gate.arrive_and_drop(); }
+    };
+    std::jthread first(run,0),second(run,1); first.join(); second.join();
+    for (auto error : errors) { if (error) { std::rethrow_exception(error); } }
+    require(wins[0]+wins[1]==1 && denials[0]+denials[1]==1);
+    require(c.scalar("SELECT COUNT(*) FROM dc24h_accounts WHERE role='owner'")=="1");
+    auto owner=*repository.find_by_name(*AccountName::create("BootstrapOwner"+std::to_string(wins[0]?0:1)));
+    require(owner.account.status()==Status::active && owner.revision==1 && adc_count(c,owner)=="0");
+    require(PasswordSecurityService(c).verify(owner.account.id(),original)==PasswordVerification::matched);
+    rejects(ManagementErrorKind::unauthorized,[&]{ (void)service.bootstrap_owner("AnotherOwner",original,20); });
+    const auto successor=create(c,"OwnershipSuccessor",Role::administrator);
+    const auto regular=create(c,"OwnershipRegular");
+    for (const auto& target : {owner,regular}) {
+        rejects(ManagementErrorKind::unauthorized,[&]{ (void)service.transfer_ownership(owner,original,target,original,20); });
+    }
+    rejects(ManagementErrorKind::unauthorized,[&]{ (void)service.transfer_ownership(owner,"Incorrect owner password!",successor,original,20); });
+    rejects(ManagementErrorKind::unauthorized,[&]{ (void)service.transfer_ownership(owner,original,successor,"Incorrect successor password!",20); });
+    rejects(ManagementErrorKind::invalid_input,[&]{ (void)service.transfer_ownership(owner,original,successor,original,9); });
+    enroll(c,*key,owner,original,"OwnershipOldADC",71,10);
+    enroll(c,*key,successor,original,"OwnershipNewADC",72,10);
+    const auto old_hash=verifier(c,owner),new_hash=verifier(c,successor);
+    auto limited=options; limited.user="management_limited";
+    { Connection db(limited);
+      try { (void)AccountManagementService(db).transfer_ownership(owner,original,successor,original,20); require(false); }
+      catch (const dc24h::database::Error&) {}
+      require(!db.in_transaction()); }
+    require(repository.find_by_id(owner.account.id())==owner && repository.find_by_id(successor.account.id())==successor);
+    require(adc_count(c,owner)=="1" && adc_count(c,successor)=="1");
+    // Exact credential rechecks cover a proof-only race without a revision edit.
+    Connection writer(options);
+    for (const auto& account : {owner,successor}) {
+        const auto original_hash=verifier(c,account);
+        after_kdf=[&]{ writer.execute("UPDATE dc24h_account_credentials SET verifier=CONCAT(LEFT(verifier,LENGTH(verifier)-1),IF(RIGHT(verifier,1)='a','b','a')) WHERE account_id=?",{std::to_string(account.account.id().value())}); };
+        rejects(ManagementErrorKind::stale,[&]{ (void)service.transfer_ownership(owner,original,successor,original,20); });
+        writer.execute("UPDATE dc24h_account_credentials SET verifier=? WHERE account_id=?",{original_hash,std::to_string(account.account.id().value())});
+        require(repository.find_by_id(owner.account.id())==owner && repository.find_by_id(successor.account.id())==successor);
+    }
+    // Contention and reentrant acquisitions must preserve the caller's lock.
+    const auto lock=*c.scalar("SELECT CONCAT('dc24h:ownership:',LEFT(SHA2(DATABASE(),256),48))");
+    require(c.scalar("SELECT GET_LOCK(?,0)",{lock})=="1");
+    rejects(ManagementErrorKind::stale,[&]{ (void)service.transfer_ownership(owner,original,successor,original,20); });
+    rejects(ManagementErrorKind::stale,[&]{ (void)AccountManagementService(writer).transfer_ownership(owner,original,successor,original,20); });
+    require(c.scalar("SELECT IS_USED_LOCK(?)=CONNECTION_ID()",{lock})=="1");
+    require(c.scalar("SELECT RELEASE_LOCK(?)",{lock})=="1");
+    // Atomic handover retains an active Owner, preserves secrets/mappings and
+    // invalidates both ADC credentials rather than granting live sessions.
+    const auto changed=service.transfer_ownership(owner,original,successor,original,20);
+    require(changed.former_owner.account.role()==Role::administrator && changed.former_owner.account.status()==Status::disabled);
+    require(changed.new_owner.account.role()==Role::owner && changed.new_owner.account.status()==Status::active);
+    require(changed.former_owner.revision==owner.revision+1 && changed.new_owner.revision==successor.revision+1);
+    require(verifier(c,owner)==old_hash && verifier(c,successor)==new_hash);
+    require(adc_count(c,owner)=="0" && adc_count(c,successor)=="0");
+    require(IdentityRepository(c).find_by_account(owner.account.id()).has_value());
+    require(c.scalar("SELECT COUNT(*) FROM dc24h_accounts WHERE role='owner' AND status='active'")=="1");
+    rejects(ManagementErrorKind::stale,[&]{ (void)service.transfer_ownership(owner,original,successor,original,21); });
+    rejects(ManagementErrorKind::unauthorized,[&]{ (void)service.disable_account(changed.former_owner,original,changed.new_owner,21); });
+    // Even a disabled existing Owner forbids a second bootstrap.
+    const auto disabled=repository.update(changed.new_owner,std::get<Account>(changed.new_owner.account.with_access(Role::owner,Status::disabled,21)));
+    rejects(ManagementErrorKind::unauthorized,[&]{ (void)service.bootstrap_owner("DisabledOwnerBypass",original,22); });
+    (void)repository.update(disabled,std::get<Account>(disabled.account.with_access(Role::owner,Status::active,22)));
+    for (int i=0;i<28;++i) { (void)repository.insert({"StaffGap"+std::to_string(i)}); }
+    const auto moderator=repository.insert({"StaffModerator",Role::moderator});
+    const auto op=repository.insert({"StaffOperator",Role::operator_});
+    auto page=repository.list_staff_after(0,2); require(page.size()==2);
+    const auto next=repository.list_staff_after(page.back().account.id().value(),2);
+    require(next.size()==2 && next[0]==moderator && next[1]==op);
+    require(repository.list_staff_after(op.account.id().value(),2).empty());
+    require(scrubbed && !c.in_transaction());
+}
 void integration(const Options& options,const std::string& key_path) {
     Connection c(options); AccountRepository repository(c); AccountManagementService service(c);
     const auto key=AdcSecretKey::load(key_path);
@@ -269,6 +349,6 @@ int main(int argc,char* argv[]) {
     try {
         if (argc!=4) { throw std::runtime_error("Invalid account management test arguments"); }
         Options options;options.enabled=true;options.socket=argv[1];options.password_file=argv[2];
-        integration(options,argv[3]);std::cout << "Account management, proof, atomicity and rollback checks passed\n";
+        ownership(options,argv[3]);integration(options,argv[3]);std::cout << "Account management, proof, atomicity and rollback checks passed\n";
     } catch (const std::exception& error) { fail_after=-1;std::cerr << error.what() << '\n';return 1; }
 }

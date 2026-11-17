@@ -36,3 +36,11 @@ export function parseAccounts(value: unknown): {accounts: Account[]; next_after:
       (page.next_after !== null && (accounts.length !== 25 || page.next_after !== accounts.at(-1)?.id))) throw new Error("Invalid account page");
   return {accounts, next_after:page.next_after as string|null, maintenance:true};
 }
+
+export const STAFF_ROLES = ["moderator", "operator", "administrator", "owner"] as const;
+export const isStaff = (account: Account) => (STAFF_ROLES as readonly string[]).includes(account.role);
+export function parseStaff(value: unknown) {
+  const page = parseAccounts(value);
+  if ((value as Record<string, unknown>).staff_only !== true || !page.accounts.every(isStaff)) throw new Error("Invalid staff page");
+  return {...page, staff_only: true as const};
+}
