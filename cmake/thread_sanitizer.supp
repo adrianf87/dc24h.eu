@@ -1,0 +1,5 @@
+# OpenSSL 3 is thread-safe. Its locks live in the uninstrumented library, so
+# ThreadSanitizer reports simultaneous password derivations as races.
+# called_from_lib matches the interceptor caller, not hub frames.
+called_from_lib:libcrypto.so
+called_from_lib:libssl.so

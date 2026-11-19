@@ -1,5 +1,6 @@
 # Testing
 
+**alpha-0.9.15 Memory safety:** [AddressSanitizer, UBSan and ThreadSanitizer](MEMORY_SAFETY.md) are separate build modes. The hub behavior stays the same. Schema v9 is unchanged.
 **alpha-0.9.14 Optimization:** [C++20 memory and routing](OPTIMIZATION.md) publishes each routed frame in one allocation and queues the welcome list from the encoding already measured. Protocol bytes stay the same. Schema v9 is unchanged.
 **alpha-0.9.13 Profiling:** [Alpha 0.8 bottleneck profile](PROFILING.md) ranks a fixed in-process set of permission, moderation and role decisions. This is not a sampling profiler or a capacity claim. Schema v9 is unchanged.
 **alpha-0.9.12 Benchmark:** [Alpha 0.8 performance measurements](BENCHMARK.md) times a fixed in-process set of permission and moderation decisions. This is not a capacity claim or a load test. Schema v9 is unchanged.
@@ -418,6 +419,7 @@ Run `ctest --test-dir build --output-on-failure` and the equivalent for `build-r
 | `logging.process` | TCP/TLS lifecycle, privacy, independent warnings, INI overrides, error sink, refused mode 0644 and a partial-frame security record |
 | `monitoring.unit` | Process stat parsing, tick and page conversion, overflow and a live `/proc/self/stat` sample |
 | `users.list` | Welcome order, retained wire encoding, exact byte budget, privacy and allocation rollback |
+| `memory.safety` | Heap round trip, synchronized atomic and mutex counters, and an in-range signed multiply |
 | `profile.unit` | Fixed in-process stage ranking, exact decision counts and a five-second ceiling |
 | `benchmark.unit` | Fixed in-process permission and moderation timings, exact decision counts and a five-second ceiling |
 | `security.unit` | Range boundaries, fake-clock windows, key/map bounds, pruning and slot reuse |

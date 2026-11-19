@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.9.14.
+Current development version: alpha-0.9.15.
+
+[Memory safety — alpha-0.9.15](us/MEMORY_SAFETY.md) · [PL](pl/MEMORY_SAFETY.md)
 
 [Optimization — alpha-0.9.14](us/OPTIMIZATION.md) · [PL](pl/OPTIMIZATION.md)
 

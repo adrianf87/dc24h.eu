@@ -1,5 +1,18 @@
 # Changelog
 
+## alpha-0.9.15 — 2026-11-19
+
+Memory safety — AddressSanitizer, UndefinedBehaviorSanitizer and ThreadSanitizer, based on main `a773395`. The branch name is `alpha-0.9.15`.
+
+- Select one sanitizer for a whole Debug build with `DC24H_SANITIZER=address`, `undefined` or `thread`. Leave the switch empty for the normal Debug and Release build. Any other value fails configuration. Each mode is a separate build. The normal build keeps the same hub behavior, ADC bytes, recipient sets and security decisions.
+- `memory.safety` checks a heap round trip, two threads updating an atomic and a mutex-guarded counter, and an in-range signed multiply. A passing probe is not a substitute for the suite. The hub executable does not link the probe.
+- AddressSanitizer and ThreadSanitizer skip only the live hub launch inside the example unit, because `MemoryDenyWriteExecute=yes` blocks those runtimes. The shipped unit stays unchanged. UndefinedBehaviorSanitizer, Debug and Release still launch the hub.
+- ThreadSanitizer suppresses reports whose interceptor caller is `libcrypto.so` or `libssl.so`. OpenSSL 3 is not instrumented. A race in hub code still fails the run.
+- This does not add a route, INI key, CLI flag, status field, WebAdmin page, Apache setting or schema migration. Schema v9 is unchanged. `configuration.manage` and `hub.manage` stay unimplemented. Browser kick and mute stay undispatched. Status and health stay bearer-only. `Require local` stays. No residual threat is closed. GitHub Check status still runs Debug and Release only.
+- Run Check status on GitHub-hosted Ubuntu 24.04. Add `alpha-0.9.15` to the push branches. Local validation uses eight CPU threads. Remote CI completion is not awaited.
+
+Validation on Debian 13: all 227/227 CTest suites passed in Debug (75.19 s real) and Release (74.27 s real), including disposable MariaDB, real ncdc ADC/ADCS, the Apache HTTPS reverse proxy, the sandboxed systemd example, and the memory-safety probe. The same 227 tests passed under AddressSanitizer (101.42 s real), UndefinedBehaviorSanitizer (95.83 s real) and ThreadSanitizer (88.61 s real). AddressSanitizer and ThreadSanitizer skipped the live hub launch inside `MemoryDenyWriteExecute`. UndefinedBehaviorSanitizer, Debug and Release still launched it. ThreadSanitizer suppressed uninstrumented OpenSSL 3 reports whose interceptor caller is `libcrypto.so` or `libssl.so`. The Release build log and the three sanitizer build logs contained no compiler warnings. WebAdmin typecheck and production build passed. All 49 Node tests passed. All 42 Chromium tests passed. Actual C++ API, adapter and React integration passed. Release metadata, documentation UTF-8, language parity, local Markdown links, Python syntax with warnings as errors and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration, host account or service activation is performed.
+
 ## alpha-0.9.14 — 2026-11-19
 
 Optimization — C++20 memory and routing, based on main `f7e465c`. The branch name is `alpha-0.9.14`.
