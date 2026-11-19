@@ -49,7 +49,7 @@ class TransferErrorsProcessTests(unittest.TestCase):
                 def exchange(origin, frame, expected):
                     nonlocal sequence
                     sequence += 1
-                    fence = b'BINF ' + origin.sid + b' DEErrorFence' + str(sequence).encode()
+                    fence = b'BSTA ' + origin.sid + b' 000 ErrorFence' + str(sequence).encode()
                     origin.peer.sendall(frame[:3])
                     origin.peer.sendall(frame[3:] + b'\n' + fence + b'\n')
                     for peer in peers:

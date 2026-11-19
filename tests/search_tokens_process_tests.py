@@ -45,7 +45,7 @@ class TokensProcessTests(unittest.TestCase):
                 request(source, token + b'hash', b'TR' + b'A' * 39)
                 for fields in (b'', b' TO' + token):
                     source.send(b'BSCH ' + source.sid + fields)
-                    fence = b'BINF ' + source.sid + b' DETokenFence'
+                    fence = b'BSTA ' + source.sid + b' 000 TokenFence'
                     source.send(fence)
                     for peer in (source, observer): self.assertEqual(peer.line(), fence)
                 source.peer.close()

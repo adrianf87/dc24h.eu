@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.9.3 LANGUAGES CXX)
+project(dc24h VERSION 0.9.4 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -98,12 +98,12 @@ target_include_directories(dc24h_moderation PUBLIC include)
 target_link_libraries(dc24h_moderation PUBLIC dc24h_users dc24h_roles)
 target_compile_options(dc24h_moderation PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 add_library(dc24h_adc src/adc/authentication.cpp src/adc/connection_errors.cpp src/adc/status_routing.cpp src/adc/parser.cpp src/adc/protocol_control.cpp src/adc/state.cpp src/adc/sup.cpp src/adc/sid.cpp src/adc/sid_session.cpp
-    src/adc/inf.cpp src/adc/serializer.cpp src/adc/login.cpp src/adc/status.cpp src/adc/msg.cpp src/adc/sch.cpp src/adc/res.cpp src/adc/connection_routing.cpp src/adc/ctm.cpp src/adc/ctm_routing.cpp src/adc/rcm.cpp src/adc/rcm_routing.cpp src/adc/result_routing.cpp src/adc/search_routing.cpp src/adc/msg_flags.cpp src/adc/chat_validation.cpp src/adc/public_chat.cpp src/adc/private_chat.cpp src/adc/message_routing.cpp src/adc/hub_messages.cpp src/adc/user.cpp src/adc/user_login.cpp src/adc/user_list.cpp src/adc/inf_updates.cpp src/adc/user_disconnect.cpp)
+    src/adc/inf.cpp src/adc/serializer.cpp src/adc/login.cpp src/adc/status.cpp src/adc/msg.cpp src/adc/sch.cpp src/adc/res.cpp src/adc/connection_routing.cpp src/adc/ctm.cpp src/adc/ctm_routing.cpp src/adc/rcm.cpp src/adc/rcm_routing.cpp src/adc/result_routing.cpp src/adc/search_routing.cpp src/adc/msg_flags.cpp src/adc/chat_validation.cpp src/adc/public_chat.cpp src/adc/private_chat.cpp src/adc/message_routing.cpp src/adc/hub_messages.cpp src/adc/user.cpp src/adc/user_login.cpp src/adc/user_list.cpp src/adc/inf_updates.cpp src/adc/user_disconnect.cpp src/adc/presence_flood.cpp)
 target_compile_features(dc24h_adc PUBLIC cxx_std_20)
 set_target_properties(dc24h_adc PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_adc PUBLIC include)
 target_link_libraries(dc24h_adc PUBLIC dc24h_identity dc24h_ban_model dc24h_moderation dc24h_users dc24h_chat dc24h_search dc24h_transfers dc24h_security PRIVATE dc24h_text UTF8Proc::UTF8Proc Gcrypt::Gcrypt OpenSSL::Crypto)
-set_source_files_properties(src/adc/protocol_control.cpp PROPERTIES
+set_source_files_properties(src/adc/protocol_control.cpp src/adc/presence_flood.cpp PROPERTIES
     COMPILE_OPTIONS "-Wall;-Wextra;-Wpedantic;-Wconversion;-Wshadow")
 
 add_library(dc24h_adcs src/adcs/tls.cpp)
@@ -521,6 +521,14 @@ if(BUILD_TESTING)
     add_test(NAME chat.anti_flood.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/anti_flood_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(chat.anti_flood chat.anti_flood.process PROPERTIES TIMEOUT 30)
+    add_executable(presence_flood_tests tests/presence_flood_tests.cpp)
+    target_link_libraries(presence_flood_tests PRIVATE dc24h_adc)
+    target_compile_options(presence_flood_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(presence_flood_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME adc.presence COMMAND presence_flood_tests)
+    add_test(NAME adc.presence.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/presence_flood_process_tests.py" "$<TARGET_FILE:dc24h>")
+    set_tests_properties(adc.presence adc.presence.process PROPERTIES TIMEOUT 30)
     add_executable(chat_validation_tests tests/chat_validation_tests.cpp)
     target_link_libraries(chat_validation_tests PRIVATE dc24h_adc)
     target_compile_options(chat_validation_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)

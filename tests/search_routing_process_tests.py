@@ -35,7 +35,7 @@ class RoutingProcessTests(unittest.TestCase):
                 before = fetch_status(endpoint, secret)['chat']
 
                 def fence():
-                    frame = b'BINF ' + source.sid + b' DERouteFence'
+                    frame = b'BSTA ' + source.sid + b' 000 RouteFence'
                     source.send(frame)
                     for peer in peers: self.assertEqual(peer.line(), frame)
 

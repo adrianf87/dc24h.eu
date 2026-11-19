@@ -1,5 +1,6 @@
 # Security — alpha-0.1.7
 
+**alpha-0.9.4 Traffic limits:** [Spam and excessive presence traffic](TRAFFIC_LIMITS.md) caps ready-session INF updates before fanout. Chat, search and transfer budgets stay. Schema v9 is unchanged. A bandwidth cap and a public gateway remain separate work.
 **alpha-0.9.3 Network security:** [TCP connection protection, timeouts and buffer limits](NETWORK_SECURITY.md) caps the listen backlog, each accepted socket's kernel send and receive buffers, and the TCP user timeout. The existing application timeouts and output queues stay. Schema v9 is unchanged. A bandwidth cap and a public gateway remain separate work.
 **alpha-0.9.2 ADC security:** [Parser validation, fuzzing and protocol control](ADC_SECURITY.md) checks every parsed client frame against the hub command profile before session state changes. A deterministic in-process fuzz campaign locks the parser, the stream decoder and that profile together. Schema v9 is unchanged. Coverage-guided fuzzing and a public gateway remain separate work.
 **alpha-0.9.1 Threat model:** [Hub and WebAdmin threat analysis](THREAT_MODEL.md) records assets, actors, trust boundaries and residual risk for the current hub and local WebAdmin. It does not add a control, a schema change, a public gateway or a production audit. Remote administrator access remains separate work.
@@ -205,6 +206,10 @@ Never put the API token in browser storage, JavaScript, URLs, VITE-prefixed vari
 ## Apache2 HTTPS example — alpha-0.1.11
 
 TLS and browser authentication are separate controls. The template selects TLS 1.2/1.3 with AEAD ciphers, fixes the HTTP redirect hostname, retains Require local, denies private/hidden/secret paths and disables directory indexes/symlinks. HTTPS-only HSTS is short and host-scoped; CSP/no-sniff/referrer/frame headers apply to errors too. Certificate trust/name/key matching must be verified before use; syntax checks alone do not prove matching keys. The template never exposes the service token or activates a production gateway. See [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
+
+## Traffic limits — alpha-0.9.4
+
+[Traffic limits](TRAFFIC_LIMITS.md) caps ready-session INF updates at 4 per second after a burst of 8, before the update is applied or relayed. Denial returns one recoverable status per second and leaves the session open. Login INF is not charged. Chat, search, transfer and status budgets stay separate. This is not a bandwidth cap and it does not close residual threat T13. Schema v9 is unchanged. No status counter, WebAdmin page, language string, INI key or Apache setting is added.
 
 ## Network security — alpha-0.9.3
 

@@ -31,7 +31,7 @@ class SearchSecurityProcessTests(unittest.TestCase):
         return hub, endpoint, secret, peers, cert
 
     def fence(self, peers):
-        frame = b'BINF ' + peers[1].sid + b' DESecurityFence'
+        frame = b'BSTA ' + peers[1].sid + b' 000 SecurityFence'
         peers[1].send(frame)
         for peer in peers: self.assertEqual(peer.line(), frame)
 

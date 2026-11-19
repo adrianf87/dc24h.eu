@@ -46,7 +46,7 @@ class ConnectivityProcessTests(unittest.TestCase):
                         for peer in peers: self.assertEqual(peer.line(), expected)
 
                     def fence():
-                        frame = b'BINF ' + responder.sid + b' DEPathFence'
+                        frame = b'BSTA ' + responder.sid + b' 000 PathFence'
                         responder.send(frame)
                         for peer in peers: self.assertEqual(peer.line(), frame)
 

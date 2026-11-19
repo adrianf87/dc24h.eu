@@ -3,6 +3,7 @@
 #include "dc24h/adc/res.hpp"
 #include "dc24h/adc/serializer.hpp"
 #include "dc24h/adc/status.hpp"
+#include "dc24h/adc/presence_flood.hpp"
 #include "dc24h/adc/connection_errors.hpp"
 #include "dc24h/adc/msg.hpp"
 #include "dc24h/security/moderation.hpp"
@@ -61,6 +62,7 @@ struct LoginHub::Peer {
     search::Permissions search_permissions;
     transfers::Permissions transfer_permissions;
     transfers::TransferGuard transfer_guard;
+    PresenceGuard presence{};
 };
 namespace {
 bool kick_command(const Message& message) noexcept {
@@ -305,6 +307,18 @@ void LoginHub::receive_impl(Id id, const Message& message, chat::FloodClock::tim
         }
     }
     if (before == ConnectionState::normal && message.kind == Command::inf) {
+        // Nickname collisions already returned. Login INF is not in NORMAL.
+        // Denial does not apply, relay or disconnect. STA stays outside this block.
+        const auto decision = peer.presence.admit(chat_now);
+        if (!decision.allowed) {
+            if (decision.notify) {
+                try { (void)enqueue(peer, make_status(*StatusCode::parse("100"), "Presence update rate limit exceeded", offending)); }
+                catch (const std::bad_alloc&) {
+                    check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::internal_error,users::Clock::now()));
+                }
+            }
+            return;
+        }
         std::optional<InfUpdateResult> update;
         try {
             update.emplace(inf_updates_.apply(peer.lifecycle.id(),peer.session,message,users::Clock::now()));

@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.9.3: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.9.4: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [Limity ruchu — alpha-0.9.4](TRAFFIC_LIMITS.md)
 - [Bezpieczeństwo sieci — alpha-0.9.3](NETWORK_SECURITY.md)
 - [Bezpieczeństwo ADC — alpha-0.9.2](ADC_SECURITY.md)
 - [Model zagrożeń — alpha-0.9.1](THREAT_MODEL.md)

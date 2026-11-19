@@ -44,7 +44,7 @@ class SearchStatisticsProcessTests(unittest.TestCase):
                 target.send(result);self.assertEqual(source.line(),result)
                 source.send(query);self.assertTrue(source.line().startswith(b'ISTA 100 Search\\stoken'))
                 source.send(b'BSCH '+source.sid+b' TOignored')
-                fence=b'BINF '+source.sid+b' DEStatsFence';source.send(fence)
+                fence=b'BSTA '+source.sid+b' 000 StatsFence';source.send(fence)
                 for peer in (source,target):self.assertEqual(peer.line(),fence)
                 target.send(b'DRES '+target.sid+b' '+source.sid+b' FNbad SI-1 TOStatsPrivateToken')
                 self.assertEqual(target.line(),b'ISTA 100 Invalid\\ssearch\\sresult FCDRES')

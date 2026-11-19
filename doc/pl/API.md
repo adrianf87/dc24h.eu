@@ -1,5 +1,6 @@
 # Lokalne API administracyjne — alpha-0.1.9
 
+**alpha-0.9.4 Limity ruchu:** [Spam i nadmierny ruch obecności](TRAFFIC_LIMITS.md) ogranicza aktualizacje INF gotowej sesji przed rozesłaniem. Budżety czatu, wyszukiwania i transferów zostają. Schemat v9 pozostaje bez zmian. Limit pasma i publiczna brama pozostają osobną pracą.
 **alpha-0.9.3 Bezpieczeństwo sieci:** [Ochrona połączeń TCP, timeouty i limity buforów](NETWORK_SECURITY.md) ogranicza kolejkę nasłuchu, bufory jądra wysyłania i odbioru każdego przyjętego gniazda oraz TCP user timeout. Dotychczasowe timeouty aplikacji i kolejki wyjścia zostają. Schemat v9 pozostaje bez zmian. Limit pasma i publiczna brama pozostają osobną pracą.
 **alpha-0.9.2 Bezpieczeństwo ADC:** [Walidacja parsera, fuzzing i kontrola protokołu](ADC_SECURITY.md) sprawdza każdą sparsowaną ramkę klienta względem profilu poleceń huba, zanim zmieni się stan sesji. Deterministyczna kampania fuzzingu w procesie spina parser, dekoder strumienia i ten profil. Schemat v9 pozostaje bez zmian. Fuzzing sterowany pokryciem i publiczna brama pozostają osobną pracą.
 **alpha-0.9.1 Model zagrożeń:** [Analiza zagrożeń huba i WebAdmin](THREAT_MODEL.md) zapisuje aktywa, aktorów, granice zaufania i ryzyko szczątkowe obecnego huba oraz lokalnego WebAdmin. Nie dodaje mechanizmu, zmiany schematu, publicznej bramy ani produkcyjnego audytu. Zdalny dostęp administratora pozostaje osobną pracą.
@@ -207,6 +208,8 @@ alpha-0.9.1 nie dodaje trasy ani pola statusu. Model zagrożeń opisuje istniej�
 alpha-0.9.2 nie dodaje trasy ani pola statusu. Walidacja parsera i kontrola protokołu zostają w hubie. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Bezpieczeństwo ADC](ADC_SECURITY.md).
 
 alpha-0.9.3 nie dodaje trasy ani pola statusu. Kolejka TCP, limity buforów jądra i TCP user timeout zostają w hubie. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Bezpieczeństwo sieci](NETWORK_SECURITY.md).
+
+alpha-0.9.4 nie dodaje trasy ani pola statusu. Budżet INF gotowej sesji zostaje w hubie. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Limity ruchu](TRAFFIC_LIMITS.md).
 
 Liczniki są niezależnymi odczytami atomowymi, nie jedną transakcją. `core_running` podaje tylko stan Core, nie pełne logowanie/gotowość ADC. Uptime pochodzi z zegara monotonicznego od przygotowania transportu/API po opcjonalnym połączeniu bazy; nie jest wiekiem procesu według zegara ściennego. `database.enabled` oznacza obecność skonfigurowanego połączenia startowego, nie bieżącą dostępność SQL. Żądania nie wykonują SQL. API nie zwraca adresów klientów, nicków, ramek, ścieżek, sekretów ani ustawień administracyjnych. Nieznane ścieżki (również query string) dają 404 po autoryzacji; inne metody dają 405 i `Allow: GET`. HEAD jest nieobsługiwane (405), bez treści odpowiedzi.
 

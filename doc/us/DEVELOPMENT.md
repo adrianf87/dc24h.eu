@@ -120,6 +120,10 @@ alpha-0.1.10 starts from main after alpha-0.1.9. Keep browser-safe schema/format
 
 alpha-0.1.11 starts from main after alpha-0.1.10. Keep host activation, real certificates and service reloads separate from example authoring/testing. Test the exact shipped TLS/access/header policy with temporary paths/ports and no host config. A successful apache2 -t is insufficient to claim certificate/key correspondence; exercise real initialization. Keep both documentation languages and version-sensitive fixtures aligned.
 
+## Traffic limits — alpha-0.9.4
+
+Branch from main. Cap ready-session INF before fanout at 4 per second with a burst of 8. Do not add a schema migration, a status counter, an INI key, a WebAdmin page or a language string. Do not charge login INF or STA. Do not claim a bandwidth cap or that residual threat T13 is closed.
+
 ## Network security — alpha-0.9.3
 
 Branch from main. Cap the listen backlog and set kernel send and receive buffers plus `TCP_USER_TIMEOUT` on each accepted socket the hub keeps. Use the existing idle timeout. Do not add a schema migration, a status counter, an INI key, a WebAdmin page or `TCP_NODELAY`. Do not claim a bandwidth cap or that residual threat T13 is closed.

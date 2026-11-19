@@ -39,7 +39,7 @@ class ConnectionSecurityProcessTests(unittest.TestCase):
         return hub, peers, suffix, endpoint, secret
 
     def exchange(self, peers, source, frame, expected):
-        fence = b'BINF ' + source.sid + b' DESecurityFence'
+        fence = b'BSTA ' + source.sid + b' 000 SecurityFence'
         source.peer.sendall(frame[:3])
         source.peer.sendall(frame[3:] + b'\n' + fence + b'\n')
         for peer in peers:

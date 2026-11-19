@@ -1,5 +1,6 @@
 # WebAdmin — alpha-0.4.12
 
+**alpha-0.9.4 Traffic limits:** [Spam and excessive presence traffic](TRAFFIC_LIMITS.md) caps ready-session INF updates before fanout. Chat, search and transfer budgets stay. Schema v9 is unchanged. A bandwidth cap and a public gateway remain separate work.
 **alpha-0.9.3 Network security:** [TCP connection protection, timeouts and buffer limits](NETWORK_SECURITY.md) caps the listen backlog, each accepted socket's kernel send and receive buffers, and the TCP user timeout. The existing application timeouts and output queues stay. Schema v9 is unchanged. A bandwidth cap and a public gateway remain separate work.
 **alpha-0.9.2 ADC security:** [Parser validation, fuzzing and protocol control](ADC_SECURITY.md) checks every parsed client frame against the hub command profile before session state changes. A deterministic in-process fuzz campaign locks the parser, the stream decoder and that profile together. Schema v9 is unchanged. Coverage-guided fuzzing and a public gateway remain separate work.
 **alpha-0.9.1 Threat model:** [Hub and WebAdmin threat analysis](THREAT_MODEL.md) records assets, actors, trust boundaries and residual risk for the current hub and local WebAdmin. It does not add a control, a schema change, a public gateway or a production audit. Remote administrator access remains separate work.
@@ -161,6 +162,10 @@ References: [Vite setup](https://vite.dev/guide/), [Vite server restrictions](ht
 ## HTTPS example — alpha-0.1.11
 
 A separate HTTP→HTTPS/TLS 1.2+ static-site template is now shipped and always installed with the C++ configuration examples. It keeps local access and API denial by default; it is not a production authenticated gateway. See [APACHE2_HTTPS.md](APACHE2_HTTPS.md) for certificate paths, customization, verified activation and automated tests.
+
+## Traffic limits — alpha-0.9.4
+
+WebAdmin is unchanged. The presence budget runs inside the hub process. No new page, grant or status field is added. See [Traffic limits](TRAFFIC_LIMITS.md).
 
 ## Network security — alpha-0.9.3
 

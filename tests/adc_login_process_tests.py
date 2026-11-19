@@ -181,8 +181,9 @@ class LoginProcessTests(unittest.TestCase):
                 slow.peer.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1024)
                 slow.login(b'Slow', 7)
                 slow.peer.settimeout(0.5)
-                wire = b'BINF ' + slow.sid + b' DE' + b'x' * 2048 + b'\n'
-                # This client keeps sending updates without reading its own public echoes.
+                wire = b'BSTA ' + slow.sid + b' 199 ' + b'x' * 2048 + b'\n'
+                # STA, not INF: presence updates are capped. This client keeps sending
+                # without reading its own public echoes.
                 # A closed slow reader may reset its sending side; that is expected.
                 try:
                     slow.peer.sendall(wire * 2000)

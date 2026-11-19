@@ -44,7 +44,7 @@ class CtmProcessTests(unittest.TestCase):
                         for peer in peers: self.assertEqual(peer.line(), wire)
 
                     def fence():
-                        wire = b'BINF '+other.sid+b' DECtmFence'
+                        wire = b'BSTA '+other.sid+b' 000 CtmFence'
                         other.send(wire)
                         for peer in peers: self.assertEqual(peer.line(), wire)
 

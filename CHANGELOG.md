@@ -1,5 +1,16 @@
 # Changelog
 
+## alpha-0.9.4 — 2026-11-19
+
+Anti-flood — protection against spam and excessive traffic, based on main `2daeb20`. The branch name is `alpha-0.9.4`.
+
+- Cap ready-session INF updates at 4 per second after a burst of 8, before the update is applied or relayed. Denial returns one recoverable `ISTA 100` per second, `Presence update rate limit exceeded`, and leaves the session open. Login INF is not charged. Nickname collisions stay fatal and return before the charge. Unknown-only and invalid field updates are charged. Chat, search, transfer, status and keepalive budgets stay separate. Schema v9 is unchanged.
+- Ordering tests that used many ready-session INF frames as fences now send broadcast STA. The slow-reader output-pressure test fills the queue with large public STA instead of INF. Real feature and SU updates stay INF.
+- This is not a bandwidth cap and it does not close residual threat T13. No status counter, WebAdmin page, language string, INI key or Apache setting is added.
+- Run Check status on GitHub-hosted Ubuntu 24.04. Add `alpha-0.9.4` to the push branches. Local validation uses eight CPU threads. Remote CI completion is not awaited.
+
+Validation on Debian 13: all 219/219 CTest suites passed in Debug (73.97 s real) and Release (74.20 s real), including disposable MariaDB, real ncdc ADC/ADCS, the Apache HTTPS reverse proxy and the ready-session presence budget. The Release C++ build log contained no compiler warnings. WebAdmin typecheck and production build passed. All 48 Node tests passed. All 41 Chromium tests passed. Actual C++ API, adapter and React integration passed. Release metadata, documentation UTF-8, language parity, local Markdown links, Python syntax with warnings as errors and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration or account/credential mutation is performed.
+
 ## alpha-0.9.3 — 2026-11-19
 
 Network security — TCP connection protection, timeouts and buffer limits, based on main `95abd7e`. The branch name is `alpha-0.9.3`.

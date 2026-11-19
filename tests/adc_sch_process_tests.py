@@ -32,7 +32,7 @@ class SchProcessTests(unittest.TestCase):
         return hub, cert, endpoint, token, source, observer
 
     def fence(self, source, observer):
-        frame = b'BINF ' + source.sid + b' DESchFence'
+        frame = b'BSTA ' + source.sid + b' 000 SchFence'
         source.send(frame)
         for peer in (source, observer): self.assertEqual(peer.line(), frame)
 
