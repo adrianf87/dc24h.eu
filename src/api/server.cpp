@@ -248,6 +248,37 @@ std::string transfers_json(const transfers::Statistics& statistics, const transf
     }
     json+="}}";return json;
 }
+std::string monitoring_json(const Snapshot& value) {
+    std::string json = std::string("{\"available\":") + (value.process_available ? "true" : "false");
+    const auto field = [&](std::string_view key, std::uint64_t count) {
+        json += ",\"";
+        json += key;
+        json += "\":\"";
+        json += std::to_string(count);
+        json += '"';
+    };
+    field("cpu_user_ms", value.cpu_user_ms);
+    field("cpu_system_ms", value.cpu_system_ms);
+    field("cpu_window_ms", value.cpu_window_ms);
+    field("cpu_delta_ms", value.cpu_delta_ms);
+    field("rss_bytes", value.rss_bytes);
+    field("sessions_accepted", value.sessions_accepted);
+    field("sessions_negotiating", value.sessions_negotiating);
+    field("sessions_identified", value.sessions_identified);
+    field("sessions_ready", value.sessions_ready);
+    field("sessions_closing", value.sessions_closing);
+    field("sessions_closed", value.sessions_closed);
+    field("sessions_created", value.sessions_created);
+    field("sessions_completed", value.sessions_completed);
+    field("login_samples", value.login_samples);
+    field("login_last_ms", value.login_last_ms);
+    field("login_max_ms", value.login_max_ms);
+    field("reactor_samples", value.reactor_samples);
+    field("reactor_last_ms", value.reactor_last_ms);
+    field("reactor_max_ms", value.reactor_max_ms);
+    json += '}';
+    return json;
+}
 std::string status_json(const Snapshot& value) {
     std::string chat_json{"{"};
     // Names are a fixed allowlist; values contain aggregate counters only.
@@ -282,7 +313,8 @@ std::string status_json(const Snapshot& value) {
         std::to_string(value.online_users) + ",\"peak_online\":" + std::to_string(value.peak_online_users) +
         ",\"successful_logins\":" + std::to_string(value.successful_logins) + "},\"chat\":" + chat_json + ",\"kick\":"+kick_json+",\"mute\":"+mute_json+",\"search\":" + search_json(value) + ",\"transfers\":" + transfers_json(value.transfers, value.transfer_settings) + ",\"database\":{\"enabled\":" +
         (value.database_enabled ? "true" : "false") + "},\"dashboard\":" + dashboard_json(value) +
-        (value.configuration ? ",\"configuration\":" + configuration_json(*value.configuration) : "") + "}\n";
+        (value.configuration ? ",\"configuration\":" + configuration_json(*value.configuration) : "") +
+        ",\"monitoring\":" + monitoring_json(value) + "}\n";
 }
 } // namespace
 

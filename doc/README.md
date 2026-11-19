@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.9.10.
+Current development version: alpha-0.9.11.
+
+[Monitoring — alpha-0.9.11](us/MONITORING.md) · [PL](pl/MONITORING.md)
 
 [Logging security — alpha-0.9.10](us/LOGGING_SECURITY.md) · [PL](pl/LOGGING_SECURITY.md)
 

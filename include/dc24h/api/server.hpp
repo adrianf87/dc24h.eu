@@ -48,6 +48,14 @@ struct Snapshot {
     std::optional<ConfigurationSnapshot> configuration{};
     admin::KickStatistics kick{};
     admin::MuteStatistics mute{};
+    // One process sample and session gauges. Independently sampled. Not a history.
+    bool process_available{};
+    std::uint64_t cpu_user_ms{}, cpu_system_ms{}, cpu_window_ms{}, cpu_delta_ms{}, rss_bytes{};
+    std::uint64_t sessions_accepted{}, sessions_negotiating{}, sessions_identified{};
+    std::uint64_t sessions_ready{}, sessions_closing{}, sessions_closed{};
+    std::uint64_t sessions_created{}, sessions_completed{};
+    std::uint64_t login_samples{}, login_last_ms{}, login_max_ms{};
+    std::uint64_t reactor_samples{}, reactor_last_ms{}, reactor_max_ms{};
 };
 // Fixed read-only summary of counters already stored on Snapshot. Decimal
 // strings keep the full uint64 range. No SQL, secrets, names or derived rates.

@@ -1,5 +1,6 @@
 # Security — alpha-0.1.7
 
+**alpha-0.9.11 Monitoring:** [CPU, memory, sessions and latency](MONITORING.md) publishes one process sample and session gauges on the existing bearer-only status route. This is not a host monitor or a stored history. Schema v9 is unchanged.
 **alpha-0.9.10 Logging:** [Secure logs and event recording](LOGGING_SECURITY.md) keeps a log file private to its owner and records fixed security outcomes without peer data. This is not a production audit. Schema v9 is unchanged.
 **alpha-0.9.9 System security:** [Debian and Ubuntu service hardening](SYSTEM_SECURITY.md) ships one systemd example that runs the hub as a locked system user with no new privileges and a strict filesystem. The build does not install or start that service. Schema v9 is unchanged.
 **alpha-0.9.8 Database security:** [MariaDB backup and failure handling](DATABASE_SECURITY.md) writes one consistent owner-only snapshot when the operator asks, and restores it only into empty tables of the same schema. A lost acknowledgement is not replayed. Off-host copies stay with the operator. Schema v9 is unchanged.
@@ -212,6 +213,10 @@ Never put the API token in browser storage, JavaScript, URLs, VITE-prefixed vari
 ## Apache2 HTTPS example — alpha-0.1.11
 
 TLS and browser authentication are separate controls. The template selects TLS 1.2/1.3 with AEAD ciphers, fixes the HTTP redirect hostname, retains Require local, denies private/hidden/secret paths and disables directory indexes/symlinks. HTTPS-only HSTS is short and host-scoped; CSP/no-sniff/referrer/frame headers apply to errors too. Certificate trust/name/key matching must be verified before use; syntax checks alone do not prove matching keys. The template never exposes the service token or activates a production gateway. See [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
+
+## Process sample — alpha-0.9.11
+
+[Monitoring](MONITORING.md) publishes one process sample and session gauges on the existing bearer-only status route. It does not read the command line, the environment, another process or a cgroup. This is not a host monitor and it does not store history, so residual threat T13 stays open. Schema v9 is unchanged. No new WebAdmin page, INI key or Apache setting is added. Status and health stay bearer-only.
 
 ## Logging security — alpha-0.9.10
 

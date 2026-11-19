@@ -7,8 +7,10 @@
 #include "dc24h/users/statistics.hpp"
 
 #include <array>
+#include <chrono>
 #include <map>
 #include <memory>
+#include <optional>
 #include <variant>
 #include <vector>
 
@@ -108,14 +110,23 @@ public:
 private:
     [[nodiscard]] Session* mutable_find(SessionId id) noexcept;
     void erase_identity(SessionId id) noexcept;
-    void record_transition(Phase before, Phase after) noexcept;
+    void record_transition(Phase before, Phase after, std::optional<std::uint64_t> login_ms) noexcept;
     template<class Operation>
     MutationResult mutate(SessionId id, Operation operation) noexcept {
         auto* model = mutable_find(id);
         if (!model) { return RegistryError::missing; }
         const auto before = model->phase();
         if (const auto error = operation(*model)) { return *error; }
-        record_transition(before, model->phase());
+        std::optional<std::uint64_t> login_ms;
+        if (before != model->phase() && model->phase() == Phase::ready) {
+            const auto& timeline = model->timeline();
+            if (timeline.ready && *timeline.ready >= timeline.accepted) {
+                const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    *timeline.ready - timeline.accepted);
+                if (elapsed.count() >= 0) { login_ms = static_cast<std::uint64_t>(elapsed.count()); }
+            }
+        }
+        record_transition(before, model->phase(), login_ms);
         return {};
     }
     Statistics statistics_{};

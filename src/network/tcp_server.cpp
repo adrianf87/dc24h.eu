@@ -15,6 +15,8 @@
 #include <array>
 #include <cerrno>
 #include <charconv>
+#include <chrono>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -257,6 +259,20 @@ Statistics TcpServer::statistics() const noexcept {
             adcs_handshakes_.load(), adcs_incomplete_.load(),
             security_rejected_.load(), security_closed_.load(), closed_.load(), sent_bytes_.load(),
             peak_connections_.load(), online_users_.load(), peak_online_users_.load(), successful_logins_.load()};
+    result.sessions_accepted = sessions_accepted_.load();
+    result.sessions_negotiating = sessions_negotiating_.load();
+    result.sessions_identified = sessions_identified_.load();
+    result.sessions_ready = sessions_ready_.load();
+    result.sessions_closing = sessions_closing_.load();
+    result.sessions_closed = sessions_closed_.load();
+    result.sessions_created = sessions_created_.load();
+    result.sessions_completed = sessions_completed_.load();
+    result.login_samples = login_samples_.load();
+    result.login_last_ms = login_last_ms_.load();
+    result.login_max_ms = login_max_ms_.load();
+    result.reactor_samples = reactor_samples_.load();
+    result.reactor_last_ms = reactor_last_ms_.load();
+    result.reactor_max_ms = reactor_max_ms_.load();
     for (std::size_t i = 0; i < chat_statistics_.size(); ++i) { result.chat.values[i] = chat_statistics_[i].load(); }
     for(std::size_t i=0;i<search_statistics_.size();++i){result.search.values[i]=search_statistics_[i].load();}
     result.search.tracked_searches=tracked_searches_.load();
@@ -343,6 +359,17 @@ void TcpServer::run() {
         online_users_.store(value.online());
         peak_online_users_.store(value.peak_online);
         successful_logins_.store(value.successful_logins);
+        sessions_accepted_.store(static_cast<std::uint64_t>(value.sessions.accepted));
+        sessions_negotiating_.store(static_cast<std::uint64_t>(value.sessions.negotiating));
+        sessions_identified_.store(static_cast<std::uint64_t>(value.sessions.identified));
+        sessions_ready_.store(static_cast<std::uint64_t>(value.sessions.ready));
+        sessions_closing_.store(static_cast<std::uint64_t>(value.sessions.closing));
+        sessions_closed_.store(static_cast<std::uint64_t>(value.sessions.closed));
+        sessions_created_.store(value.created_sessions);
+        sessions_completed_.store(value.completed_sessions);
+        login_samples_.store(value.login_samples);
+        login_last_ms_.store(value.login_last_ms);
+        login_max_ms_.store(value.login_max_ms);
         const auto search=login.search_statistics();
         for(std::size_t i=0;i<search_statistics_.size();++i){search_statistics_[i].store(search.values[i]);}
         tracked_searches_.store(search.tracked_searches);
@@ -461,6 +488,13 @@ void TcpServer::run() {
         }
         return true;
     };
+    std::optional<Clock::time_point> busy_from;
+    auto note_reactor = [&](std::uint64_t milliseconds) noexcept {
+        reactor_last_ms_.store(milliseconds);
+        if (milliseconds > reactor_max_ms_.load()) { reactor_max_ms_.store(milliseconds); }
+        const auto samples = reactor_samples_.load();
+        if (samples != std::numeric_limits<std::uint64_t>::max()) { reactor_samples_.store(samples + 1); }
+    };
     while (!stop_.load()) {
         if (!accepting && Clock::now() >= resume_accepting) {
             for (std::size_t i = 0; i < listeners.size(); ++i) {
@@ -507,12 +541,21 @@ void TcpServer::run() {
             }
         }
         publish_users();
+        if (busy_from) {
+            const auto elapsed = Clock::now() - *busy_from;
+            if (elapsed >= Clock::duration::zero()) {
+                const auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
+                note_reactor(milliseconds > 0 ? static_cast<std::uint64_t>(milliseconds) : 0);
+            }
+            busy_from.reset();
+        }
         const int count = ::epoll_wait(epoll.get(), events.data(), static_cast<int>(events.size()),
                                        buffered.empty() ? 250 : 0);
         if (count == -1) {
             if (errno == EINTR) { continue; }
             system_failure("epoll_wait");
         }
+        busy_from = Clock::now();
         std::vector<epoll_event> ready(events.begin(), events.begin() + count);
         for (const auto& pending : buffered) {
             if (std::none_of(ready.begin(), ready.begin() + count, [&](const auto& event) {

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.9.10 LANGUAGES CXX)
+project(dc24h VERSION 0.9.11 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -190,6 +190,11 @@ target_include_directories(dc24h_account_management PUBLIC include PRIVATE src/a
 target_link_libraries(dc24h_account_management PUBLIC dc24h_account_authentication dc24h_roles PRIVATE OpenSSL::Crypto dc24h_audit)
 target_compile_options(dc24h_account_management PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 
+add_library(dc24h_monitoring src/monitoring/process.cpp)
+target_compile_features(dc24h_monitoring PUBLIC cxx_std_20)
+set_target_properties(dc24h_monitoring PROPERTIES CXX_EXTENSIONS OFF)
+target_include_directories(dc24h_monitoring PUBLIC include)
+
 add_library(dc24h_api src/api/http.cpp src/api/server.cpp src/api/configuration.cpp)
 target_compile_features(dc24h_api PUBLIC cxx_std_20)
 set_target_properties(dc24h_api PROPERTIES CXX_EXTENSIONS OFF)
@@ -239,10 +244,10 @@ target_include_directories(dc24h-account-admin PRIVATE "${CMAKE_CURRENT_BINARY_D
 target_link_libraries(dc24h-account-admin PRIVATE dc24h_account_api dc24h_configuration dc24h_core)
 target_compile_options(dc24h-account-admin PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 set_target_properties(dc24h_account_api dc24h-account-admin PROPERTIES CXX_EXTENSIONS OFF)
-target_link_libraries(dc24h PRIVATE dc24h_bans dc24h_core dc24h_configuration dc24h_account_authentication)
+target_link_libraries(dc24h PRIVATE dc24h_bans dc24h_core dc24h_configuration dc24h_account_authentication dc24h_monitoring)
 set_target_properties(dc24h PROPERTIES CXX_EXTENSIONS OFF)
 
-foreach(target dc24h_transfers dc24h_text dc24h_search dc24h_chat dc24h_users dc24h_i18n dc24h_core dc24h_network dc24h_logging dc24h_adc dc24h_adcs dc24h_security dc24h_configuration dc24h_database dc24h_api dc24h)
+foreach(target dc24h_transfers dc24h_text dc24h_search dc24h_chat dc24h_users dc24h_i18n dc24h_core dc24h_network dc24h_logging dc24h_adc dc24h_adcs dc24h_security dc24h_configuration dc24h_database dc24h_api dc24h_monitoring dc24h)
     target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 endforeach()
 
@@ -852,6 +857,11 @@ if(BUILD_TESTING)
     target_link_options(logging_tests PRIVATE -Wl,--wrap=write)
     set_target_properties(logging_tests PROPERTIES CXX_EXTENSIONS OFF)
     target_compile_options(logging_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    add_executable(monitoring_tests tests/monitoring_tests.cpp)
+    target_link_libraries(monitoring_tests PRIVATE dc24h_monitoring)
+    target_compile_options(monitoring_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(monitoring_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME monitoring.unit COMMAND monitoring_tests)
     add_test(NAME logging.unit COMMAND logging_tests)
     add_test(NAME logging.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/logging_process_tests.py" "$<TARGET_FILE:dc24h>")

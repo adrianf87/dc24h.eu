@@ -86,6 +86,13 @@ struct Statistics {
     std::size_t online_users{};
     std::size_t peak_online_users{};
     std::uint64_t successful_logins{};
+    // Current phase gauges and accept-to-ready latency. Independently sampled.
+    std::uint64_t sessions_accepted{}, sessions_negotiating{}, sessions_identified{};
+    std::uint64_t sessions_ready{}, sessions_closing{}, sessions_closed{};
+    std::uint64_t sessions_created{}, sessions_completed{};
+    std::uint64_t login_samples{}, login_last_ms{}, login_max_ms{};
+    // Milliseconds of reactor work between waits. Not a client round trip.
+    std::uint64_t reactor_samples{}, reactor_last_ms{}, reactor_max_ms{};
     chat::Statistics chat{};
     search::Statistics search{};
     transfers::Statistics transfers{};
@@ -132,6 +139,11 @@ private:
     std::atomic<std::uint64_t> closed_{0}, sent_bytes_{0};
     std::atomic<std::size_t> peak_connections_{0}, online_users_{0}, peak_online_users_{0};
     std::atomic<std::uint64_t> successful_logins_{0};
+    std::atomic<std::uint64_t> sessions_accepted_{0}, sessions_negotiating_{0}, sessions_identified_{0};
+    std::atomic<std::uint64_t> sessions_ready_{0}, sessions_closing_{0}, sessions_closed_{0};
+    std::atomic<std::uint64_t> sessions_created_{0}, sessions_completed_{0};
+    std::atomic<std::uint64_t> login_samples_{0}, login_last_ms_{0}, login_max_ms_{0};
+    std::atomic<std::uint64_t> reactor_samples_{0}, reactor_last_ms_{0}, reactor_max_ms_{0};
     std::array<std::atomic<std::uint64_t>, chat::statistic_names.size()> chat_statistics_{};
     std::array<std::atomic<std::uint64_t>, search::statistic_names.size()> search_statistics_{};
     std::atomic<std::uint64_t> tracked_searches_{};

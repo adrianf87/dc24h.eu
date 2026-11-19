@@ -139,6 +139,10 @@ alpha-0.1.10 powstaje z main po alpha-0.1.9. Oddzielaj schemat/formatowanie prze
 
 alpha-0.1.11 powstaje z main po alpha-0.1.10. Oddzielaj aktywację hosta, rzeczywiste certyfikaty i reload od tworzenia/testowania przykładu. Testuj dokładnie dostarczaną politykę TLS/dostępu/nagłówków z tymczasowymi ścieżkami/portami, bez konfiguracji hosta. Sukces apache2 -t nie dowodzi zgodności certyfikatu/klucza; sprawdzaj inicjalizację. Zachowuj oba języki dokumentacji i spójne wersje fixture.
 
+## Monitorowanie — alpha-0.9.11
+
+Gałąź powstaje z main. Opublikuj jedną próbkę procesu i liczniki sesji na istniejącym statusie wymagającym bearer. Nie czytaj wiersza poleceń, środowiska, innego procesu ani cgroup. Nie dodawaj migracji schematu, klucza INI, nowej strony WebAdmin ani ustawienia Apache. Nie twierdź, że istnieje monitor hosta, zapisana historia albo że zagrożenie szczątkowe T13 jest zamknięte.
+
 ## Bezpieczeństwo logów — alpha-0.9.10
 
 Gałąź powstaje z main. Nowy plik logu zostaw w trybie 0600 i odrzuć istniejący plik, który nie ma już trybu 0600, nie należy do efektywnego użytkownika albo ma więcej niż jedno dowiązanie. Zapisuj stałe skutki bezpieczeństwa bez danych klienta, także przy wyłączonym logowaniu połączeń. Nie dodawaj migracji schematu, licznika statusu, klucza INI, strony WebAdmin ani ustawienia Apache. Nie twierdź, że istnieje produkcyjny audyt albo że zagrożenia szczątkowe T11 albo T13 są zamknięte.

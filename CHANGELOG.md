@@ -1,5 +1,17 @@
 # Changelog
 
+## alpha-0.9.11 — 2026-11-19
+
+Monitoring — CPU, memory, sessions and latency, based on main `402fa10`. The branch name is `alpha-0.9.11`.
+
+- Publish one process sample on the existing bearer-only `GET /api/v1/status`. The API thread reads only `/proc/self/stat`: cumulative user and system time, resident bytes, and the wall window since the previous successful sample. The first sample, a failed read and two reads in the same millisecond report a zero window. Several threads can make the CPU delta larger than the window. This is not host CPU and it is not a percentage.
+- Copy current session phase gauges and lifetime created and completed counts, plus accept-to-ready login latency and the reactor work between waits. The wait itself is not included. `sessions_ready` is sampled on its own, so it can differ from `users.online`. Health stays `{"status":"ok"}`.
+- The existing dashboard may show the optional object. The `dashboard` object itself is unchanged. No nickname, address, command line or environment is included. Nothing is written to MariaDB, a file or a remote collector.
+- This is not a host monitor and it does not store history, so residual threat T13 stays open. Schema v9 is unchanged. No new route, INI key, WebAdmin page or Apache setting is added. Status and health stay bearer-only. `Require local` stays.
+- Run Check status on GitHub-hosted Ubuntu 24.04. Add `alpha-0.9.11` to the push branches. Local validation uses eight CPU threads. Remote CI completion is not awaited.
+
+Validation on Debian 13: all 224/224 CTest suites passed in Debug (75.27 s real) and Release (73.97 s real), including disposable MariaDB, real ncdc ADC/ADCS, the Apache HTTPS reverse proxy, the sandboxed systemd example, and the process sample on the bearer status route. The Release C++ build log contained no compiler warnings. WebAdmin typecheck and production build passed. All 49 Node tests passed. All 42 Chromium tests passed. Actual C++ API, adapter and React integration passed. Release metadata, documentation UTF-8, language parity, local Markdown links, Python syntax with warnings as errors and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration, host account or service activation is performed.
+
 ## alpha-0.9.10 — 2026-11-19
 
 Logging — secure logs and event recording, based on main `3237062`. The branch name is `alpha-0.9.10`.

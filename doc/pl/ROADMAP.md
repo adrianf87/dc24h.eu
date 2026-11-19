@@ -1,5 +1,6 @@
 # Plan rozwoju
 
+**alpha-0.9.11 Monitorowanie:** [CPU, pamięć, sesje i opóźnienia](MONITORING.md) publikuje jedną próbkę procesu i liczniki sesji na istniejącym statusie z bearer. To nie jest monitor hosta ani zapisana historia. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.10 Logowanie:** [Bezpieczne logi i rejestrowanie zdarzeń](LOGGING_SECURITY.md) utrzymuje plik logu jako prywatny dla właściciela i zapisuje stałe skutki bezpieczeństwa bez danych klienta. To nie jest audyt produkcyjny. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.9 Bezpieczeństwo systemu:** [Utwardzenie usługi Debian i Ubuntu](SYSTEM_SECURITY.md) dodaje jeden przykład systemd, który uruchamia hub jako zablokowanego użytkownika systemowego bez nowych uprawnień i ze ścisłym systemem plików. Budowanie nie instaluje ani nie uruchamia tej usługi. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.8 Bezpieczeństwo bazy danych:** [Kopia MariaDB i obsługa awarii](DATABASE_SECURITY.md) zapisuje jedną spójną kopię tylko dla właściciela, gdy operator o to poprosi, i odtwarza ją wyłącznie do pustych tabel tego samego schematu. Utracone potwierdzenie nie jest powtarzane. Kopie poza hostem zostają przy operatorze. Schemat v9 pozostaje bez zmian.

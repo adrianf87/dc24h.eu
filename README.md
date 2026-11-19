@@ -2,12 +2,13 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.9.10 (Logging security).**
+**Current development version: alpha-0.9.11 (Monitoring).**
 
 CI on `main`: [GitHub-hosted Ubuntu 24.04](doc/us/GITHUB_CI.md) runs C++ Debug, C++ Release and WebAdmin · [PL](doc/pl/GITHUB_CI.md).
 
 Completed increments (older bullets describe their original delivery scope):
 
+- **alpha-0.9.11 Monitoring**: one process sample and session gauges appear on the existing bearer-only status route. This is not a host monitor or a stored history. See [Monitoring](doc/us/MONITORING.md).
 - **alpha-0.9.10 Logging security**: a log file stays mode 0600 and owned by the hub user. Fixed security outcomes are recorded without peer data. This is not a production audit. See [Logging security](doc/us/LOGGING_SECURITY.md).
 - **alpha-0.9.9 System security**: one systemd example runs the hub as a locked system user with an empty capability set and a strict read-only filesystem. The build does not install or start that service. See [System security](doc/us/SYSTEM_SECURITY.md).
 - **alpha-0.9.8 Database security**: one explicit command writes a consistent owner-only snapshot and restores it only into empty tables of the same schema. A lost acknowledgement is not replayed. Off-host copies stay with the operator. See [Database security](doc/us/DATABASE_SECURITY.md).

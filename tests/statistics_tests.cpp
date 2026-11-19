@@ -1,6 +1,7 @@
 #include "dc24h/adc/login.hpp"
 #include "dc24h/adc/identity_hash.hpp"
 
+#include <chrono>
 #include <cstdlib>
 #include <iostream>
 #include <new>
@@ -58,6 +59,8 @@ void lifecycle() {
     const auto before=manager.statistics();
     require(before.online()==1 && before.peak_online==2 && before.successful_logins==3 && before.completed_sessions==1,
             "Online, peak or historical totals conflate lifecycle phases");
+    require(before.login_samples==3 && before.login_last_ms==0 && before.login_max_ms==0,
+            "Epoch ready transitions did not record a zero-millisecond sample");
     require(manager.mark_ready(id(4),{}).has_value() && manager.mark_ready(id(99),{}).has_value(),"Invalid ready accepted");
     require(manager.begin_close(id(4),users::CloseCause::shutdown,users::TimePoint{}-std::chrono::seconds(1)).has_value(),"Backwards close accepted");
     require(!manager.begin_close(id(5),users::CloseCause::shutdown,{}) && !manager.finish_close(id(6),users::CloseCause::shutdown,{}),"Idempotent close failed");
@@ -78,10 +81,29 @@ void lifecycle() {
     const auto final=manager.statistics();
     fail_allocations=false;
     require(failed && noalloc==before && final.sessions==users::SessionCounts{} && final.completed_sessions==6 &&
-            final.created_sessions==6 && final.successful_logins==3 && final.peak_online==2,"Cleanup/history or no-allocation statistics failed");
+            final.created_sessions==6 && final.successful_logins==3 && final.peak_online==2 &&
+            final.login_samples==3 && final.login_max_ms==0,"Cleanup/history or no-allocation statistics failed");
     require(std::holds_alternative<const users::Session*>(manager.add(id(7),users::Transport::adcs,{})),"Retry add failed");
     reconcile(manager);
     users::SessionManager fresh(1);require(fresh.statistics()==users::Statistics{},"Statistics leaked across instances");
+}
+void login_latency() {
+    users::SessionManager manager(2);
+    const auto start = users::TimePoint{};
+    const auto ready = [&](users::SessionManager& sessions, std::uint64_t owner, users::TimePoint at) {
+        require(std::holds_alternative<const users::Session*>(sessions.add(id(owner), users::Transport::adc, start)), "Add failed");
+        require(!sessions.start_negotiation(id(owner), start + std::chrono::milliseconds(1)), "Negotiation failed");
+        require(!sessions.identify(id(owner), user(owner), start + std::chrono::milliseconds(2)), "Identification failed");
+        require(!sessions.mark_ready(id(owner), at), "Ready failed");
+    };
+    ready(manager, 1, start + std::chrono::milliseconds(250));
+    auto stats = manager.statistics();
+    require(stats.login_samples == 1 && stats.login_last_ms == 250 && stats.login_max_ms == 250, "First login latency");
+    ready(manager, 2, start + std::chrono::milliseconds(40));
+    stats = manager.statistics();
+    require(stats.login_samples == 2 && stats.login_last_ms == 40 && stats.login_max_ms == 250, "Later login kept the maximum");
+    require(manager.mark_ready(id(2), start + std::chrono::milliseconds(999)).has_value() && manager.statistics() == stats,
+            "Repeated ready changed the latency sample");
 }
 adc::Message parse(std::string_view value) { return std::get<adc::Message>(adc::parse_line(value)); }
 void welcome_boundary() {
@@ -118,6 +140,6 @@ void welcome_boundary() {
 }
 }
 int main() {
-    try { lifecycle();welcome_boundary();std::cout<<"PASS: lifecycle statistics, exact welcome boundary, allocation rollback and cleanup\n"; }
+    try { lifecycle();login_latency();welcome_boundary();std::cout<<"PASS: lifecycle statistics, exact welcome boundary, allocation rollback and cleanup\n"; }
     catch (const std::exception& error) { fail_allocations=false;std::cerr<<"FAIL: "<<error.what()<<'\n';return 1; }
 }

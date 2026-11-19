@@ -10,7 +10,7 @@ import { parseSearch } from "./search-status.ts";
 import type { SearchSnapshot } from "./search-status.ts";
 import { parseConfiguration } from "./configuration.ts";
 import type { StartupConfiguration } from "./configuration.ts";
-export const WEBADMIN_VERSION = "alpha-0.9.10";
+export const WEBADMIN_VERSION = "alpha-0.9.11";
 export interface HubSnapshot {
   api_version: "v1";
   server: {
@@ -51,6 +51,29 @@ export interface HubSnapshot {
   transfers?: TransferSnapshot;
   database: { enabled: boolean };
   configuration?: StartupConfiguration;
+  monitoring?: MonitoringSample;
+}
+export interface MonitoringSample {
+  available: boolean;
+  cpu_user_ms: string;
+  cpu_system_ms: string;
+  cpu_window_ms: string;
+  cpu_delta_ms: string;
+  rss_bytes: string;
+  sessions_accepted: string;
+  sessions_negotiating: string;
+  sessions_identified: string;
+  sessions_ready: string;
+  sessions_closing: string;
+  sessions_closed: string;
+  sessions_created: string;
+  sessions_completed: string;
+  login_samples: string;
+  login_last_ms: string;
+  login_max_ms: string;
+  reactor_samples: string;
+  reactor_last_ms: string;
+  reactor_max_ms: string;
 }
 const record = (value: unknown): Record<string, unknown> => {
   if (!value || typeof value !== "object" || Array.isArray(value))
@@ -62,6 +85,39 @@ const counter = (value: unknown): number => {
     throw new Error("Invalid API counter");
   return value;
 };
+const decimalText = /^(0|[1-9][0-9]{0,19})$/;
+const monitoringKeys = [
+  "cpu_user_ms",
+  "cpu_system_ms",
+  "cpu_window_ms",
+  "cpu_delta_ms",
+  "rss_bytes",
+  "sessions_accepted",
+  "sessions_negotiating",
+  "sessions_identified",
+  "sessions_ready",
+  "sessions_closing",
+  "sessions_closed",
+  "sessions_created",
+  "sessions_completed",
+  "login_samples",
+  "login_last_ms",
+  "login_max_ms",
+  "reactor_samples",
+  "reactor_last_ms",
+  "reactor_max_ms",
+] as const;
+function parseMonitoring(value: unknown): MonitoringSample {
+  const sample = record(value);
+  if (typeof sample.available !== "boolean") throw new Error("Invalid monitoring sample");
+  const parsed = { available: sample.available } as MonitoringSample;
+  for (const key of monitoringKeys) {
+    const field = sample[key];
+    if (typeof field !== "string" || !decimalText.test(field)) throw new Error("Invalid monitoring sample");
+    parsed[key] = field;
+  }
+  return parsed;
+}
 export function parseSnapshot(value: unknown): HubSnapshot {
   const root = record(value),
     server = record(root.server),
@@ -86,6 +142,7 @@ export function parseSnapshot(value: unknown): HubSnapshot {
   const search = root.search === undefined ? undefined : parseSearch(root.search);
   const transfers = root.transfers === undefined ? undefined : parseTransfers(root.transfers);
   const dashboard = root.dashboard === undefined ? undefined : parseDashboard(root.dashboard);
+  const monitoring = root.monitoring === undefined ? undefined : parseMonitoring(root.monitoring);
   const uptime = counter(server.uptime_seconds);
   const networkValues = {
     active_connections: counter(network.active_connections),
@@ -185,6 +242,7 @@ export function parseSnapshot(value: unknown): HubSnapshot {
     ...(configuration === undefined ? {} : {configuration}),
     ...(search === undefined ? {} : { search }),
     ...(transfers === undefined ? {} : { transfers }),
+    ...(monitoring === undefined ? {} : { monitoring }),
   };
 }
 export function duration(seconds: number): string {

@@ -23,6 +23,26 @@ function formatCounter(value: string, locale: string): string {
   return new Intl.NumberFormat(locale).format(BigInt(value));
 }
 
+function formatBytes(value: string, locale: string): string {
+  let amount = BigInt(value);
+  const units = ["B", "KiB", "MiB", "GiB", "TiB"];
+  let unit = 0;
+  let remainder = 0n;
+  while (amount >= 1024n && unit < units.length - 1) {
+    remainder = amount % 1024n;
+    amount /= 1024n;
+    unit += 1;
+  }
+  if (unit === 0) return `${new Intl.NumberFormat(locale).format(amount)} B`;
+  const shown = Number(amount) + Number((remainder * 10n) / 1024n) / 10;
+  return `${new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(shown)} ${units[unit]}`;
+}
+
+function formatLatency(samples: string, milliseconds: string, locale: string, empty: string): string {
+  if (samples === "0") return empty;
+  return `${formatCounter(milliseconds, locale)} ms`;
+}
+
 export function Dashboard({
   snapshot,
   t,
@@ -41,6 +61,7 @@ export function Dashboard({
     );
   }
   const number = (value: string) => formatCounter(value, locale);
+  const sample = snapshot?.monitoring;
   const uptime =
     BigInt(board.uptime_seconds) <= safeInteger
       ? duration(Number(board.uptime_seconds))
@@ -177,6 +198,31 @@ export function Dashboard({
           <Metric icon={LockKeyhole} label={t.dashboardPrivateBlocked} value={number(board.mutes_private_blocked)} hint={t.dashboardHintCounter} color="teal" />
         </div>
       </section>
+      {sample ? (
+        <section aria-label={t.monitoringTitle}>
+          <div className="section-heading">
+            <h2>{t.monitoringTitle}</h2>
+          </div>
+          <div className="metrics-grid" data-testid="dashboard-process">
+            <Metric icon={Activity} label={t.monitoringCpuUser} value={sample.available ? number(sample.cpu_user_ms) : "—"} hint={t.monitoringHintSample} />
+            <Metric icon={Activity} label={t.monitoringCpuSystem} value={sample.available ? number(sample.cpu_system_ms) : "—"} hint={t.monitoringHintSample} color="violet" />
+            <Metric icon={Clock3} label={t.monitoringCpuDelta} value={sample.available ? number(sample.cpu_delta_ms) : "—"} hint={t.monitoringHintSample} color="teal" />
+            <Metric icon={Clock3} label={t.monitoringCpuWindow} value={sample.available ? number(sample.cpu_window_ms) : "—"} hint={t.monitoringHintSample} />
+            <Metric icon={Server} label={t.monitoringRss} value={sample.available ? formatBytes(sample.rss_bytes, locale) : "—"} hint={t.monitoringHintSample} color="violet" />
+            <Metric icon={Users} label={t.monitoringAccepted} value={number(sample.sessions_accepted)} hint={t.monitoringHintSample} />
+            <Metric icon={Users} label={t.monitoringNegotiating} value={number(sample.sessions_negotiating)} hint={t.monitoringHintSample} color="teal" />
+            <Metric icon={Users} label={t.monitoringIdentified} value={number(sample.sessions_identified)} hint={t.monitoringHintSample} />
+            <Metric icon={Users} label={t.monitoringReady} value={number(sample.sessions_ready)} hint={t.monitoringHintSample} color="violet" />
+            <Metric icon={Users} label={t.monitoringClosing} value={number(sample.sessions_closing)} hint={t.monitoringHintSample} color="amber" />
+            <Metric icon={Activity} label={t.monitoringCreated} value={number(sample.sessions_created)} hint={t.monitoringHintSample} />
+            <Metric icon={Activity} label={t.monitoringCompleted} value={number(sample.sessions_completed)} hint={t.monitoringHintSample} color="teal" />
+            <Metric icon={Clock3} label={t.monitoringLoginLast} value={formatLatency(sample.login_samples, sample.login_last_ms, locale, t.monitoringNoSample)} hint={t.monitoringHintSample} />
+            <Metric icon={Clock3} label={t.monitoringLoginMax} value={formatLatency(sample.login_samples, sample.login_max_ms, locale, t.monitoringNoSample)} hint={t.monitoringHintSample} color="amber" />
+            <Metric icon={Activity} label={t.monitoringReactorLast} value={formatLatency(sample.reactor_samples, sample.reactor_last_ms, locale, t.monitoringNoSample)} hint={t.monitoringHintSample} color="violet" />
+            <Metric icon={Activity} label={t.monitoringReactorMax} value={formatLatency(sample.reactor_samples, sample.reactor_max_ms, locale, t.monitoringNoSample)} hint={t.monitoringHintSample} color="amber" />
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }
