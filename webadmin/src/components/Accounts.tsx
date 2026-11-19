@@ -38,7 +38,7 @@ export function Accounts({t,staff=false}:{t:Copy;staff?:boolean}) {
     element.reset();
     try {
       const response=await fetch(`./admin-api/v1/accounts${path}`,{method:"POST",signal:controller.signal,
-        credentials:"same-origin",redirect:"error",cache:"no-store",headers:{"Content-Type":"application/x-www-form-urlencoded","X-DC24H-Admin":"1",...adminHeaders(true)},body});
+        credentials:"same-origin",redirect:"error",cache:"no-store",headers:{"Content-Type":"application/x-www-form-urlencoded","X-DC24H-Admin":"1",...adminHeaders()},body});
       const value=await readAccountResponse(response);
       if(!value||typeof value!=="object")throw new Error();const result=value as Record<string,unknown>;
       if(!alive.current)return;

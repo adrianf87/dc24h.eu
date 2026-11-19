@@ -30,7 +30,7 @@ export function accountMiddleware(config: {socket:string; token:string}|null) {
         req.headers["content-type"] !== "application/x-www-form-urlencoded" || !/^[1-9]\d{0,3}$/.test(String(req.headers["content-length"])) || Number(req.headers["content-length"]) > 7000)) {
       reply(403,{error:"forbidden"});return;
     }
-    if(write && path !== "/admin-api/v1/admin/access" && (!session || !csrf)){reply(403,{error:"csrf_required"});return;}
+    if(path !== "/admin-api/v1/admin/access" && (write || grant) && (!session || !csrf)){reply(403,{error:"csrf_required"});return;}
     if(!config){reply(503,{error:"api_unconfigured"});return;}
     if(active >= 4){reply(429,{error:"api_busy"});return;}
     active++;

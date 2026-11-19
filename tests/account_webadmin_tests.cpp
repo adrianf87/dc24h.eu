@@ -34,7 +34,7 @@ void run(const database::Options& options) {
         request.method=std::move(method);request.target=std::move(path);request.body=std::move(body);
         if(use_grant){
             request.admin_grant=grant;
-            if(bind&&request.method=="POST"&&request.target!="/api/v1/admin/access"){
+            if(bind&&request.target!="/api/v1/admin/access"){
                 request.admin_session=session;request.admin_csrf=csrf;
             }
         }
@@ -56,6 +56,8 @@ void run(const database::Options& options) {
     std::this_thread::sleep_for(std::chrono::milliseconds(1100));
     const auto listed=call("GET","/api/v1/accounts?after=0");
     require(listed.starts_with("HTTP/1.1 200")&&listed.find("WebAdminTarget")!=std::string::npos&&listed.find("verifier")==std::string::npos);
+    const auto unbound_read=call("GET","/api/v1/accounts?after=0","",true,false);
+    require(unbound_read.find("csrf_required")!=std::string::npos&&unbound_read.find("WebAdminTarget")==std::string::npos);
     const auto management=call("GET","/api/v1/management");
     require(management.starts_with("HTTP/1.1 200"));
     require(management.find("\"schema\":1,\"maintenance\":true,\"restart_required\":true")!=std::string::npos);
@@ -76,6 +78,8 @@ void run(const database::Options& options) {
     std::this_thread::sleep_for(std::chrono::milliseconds(1100));
     const auto saved_csrf=csrf;csrf[0]=csrf[0]=='a'?'b':'a';
     require(call("POST","/api/v1/accounts","x=y").find("csrf_required")!=std::string::npos);
+    require(call("GET","/api/v1/accounts?after=0").find("csrf_required")!=std::string::npos);
+    require(call("GET","/api/v1/accounts?after=0").find("WebAdminTarget")==std::string::npos);
     csrf=saved_csrf;
     std::this_thread::sleep_for(std::chrono::milliseconds(1100));
     const auto saved_session=session;session[0]=session[0]=='a'?'b':'a';

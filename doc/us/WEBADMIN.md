@@ -1,5 +1,6 @@
 # WebAdmin — alpha-0.4.12
 
+**alpha-0.9.7 API security:** [Permissions, sessions and CSRF](API_SECURITY.md) requires the session id and the CSRF secret on every maintenance call except the password proof. A grant alone no longer reads. Copying all three values from page memory still works until the slot ends. Schema v9 is unchanged.
 **alpha-0.9.6 Account security:** [Passwords, GPA/PAS and secret protection](ACCOUNT_SECURITY.md) refuses an ADC password identical to the account password and decrypts that password only after the account attempt budget and an account ban check. Online guessing, a captured PAS with require_tls off, and buckets cleared by restart remain. Schema v9 is unchanged.
 **alpha-0.9.5 TLS security:** [ADCS certificate and cipher policy](TLS_SECURITY.md) checks the hub leaf before listen and limits ADCS to TLS 1.2 and 1.3 AEAD. Trust, hostname, HTTP/2, OCSP and automatic renewal stay separate. Schema v9 is unchanged.
 **alpha-0.9.4 Traffic limits:** [Spam and excessive presence traffic](TRAFFIC_LIMITS.md) caps ready-session INF updates before fanout. Chat, search and transfer budgets stay. Schema v9 is unchanged. A bandwidth cap and a public gateway remain separate work.
@@ -165,6 +166,10 @@ References: [Vite setup](https://vite.dev/guide/), [Vite server restrictions](ht
 
 A separate HTTP→HTTPS/TLS 1.2+ static-site template is now shipped and always installed with the C++ configuration examples. It keeps local access and API denial by default; it is not a production authenticated gateway. See [APACHE2_HTTPS.md](APACHE2_HTTPS.md) for certificate paths, customization, verified activation and automated tests.
 
+## API security — alpha-0.9.7
+
+Proved access still stores the grant, the session id and the CSRF secret in page memory. Every maintenance call sends all three. A read with only the grant is refused before the Unix socket. No new page is added. See [API security](API_SECURITY.md).
+
 ## Account security — alpha-0.9.6
 
 WebAdmin is unchanged. Password enrollment and GPA/PAS secret handling stay inside the hub and the trusted C++ provisioning API. No new page, grant or status field is added. See [Account security](ACCOUNT_SECURITY.md).
@@ -191,7 +196,7 @@ WebAdmin is unchanged. Parser validation and protocol control run inside the hub
 
 ## Security sessions — alpha-0.8.15
 
-Proved access stores the grant, the session id and the CSRF secret in page memory. Writers send `X-DC24H-Session` and `X-DC24H-Csrf` with the grant. Readers send only the grant. Forget clears all three. None of them is written to web storage. See [Security sessions](SECURITY_SESSIONS.md).
+Proved access stores the grant, the session id and the CSRF secret in page memory. Every maintenance call sends all three. Forget clears all three. None of them is written to web storage. See [API security](API_SECURITY.md).
 
 ## HTTPS reverse proxy — alpha-0.8.14
 

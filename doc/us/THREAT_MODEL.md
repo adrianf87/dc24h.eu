@@ -4,6 +4,8 @@ This analysis records how the hub and WebAdmin can be attacked, which controls a
 
 The analysis does not add a protocol check, a schema migration, an Apache setting or a WebAdmin control. Schema v9 is unchanged. `configuration.manage` and `hub.manage` stay unimplemented. Browser kick and mute are still not dispatched. This is not a public authenticated gateway and it is not a penetration test.
 
+alpha-0.9.7 API security, added after this analysis, requires the session id and the CSRF secret on every maintenance call except the password proof. A grant alone no longer reads. It does not close T04 or T05. Schema v9 is unchanged. See [API security](API_SECURITY.md).
+
 alpha-0.9.6 account security, added after this analysis, refuses an ADC password identical to the account password and decrypts that password on the reactor only after the account attempt budget and an account ban check. It does not close T02 or T03. Schema v9 is unchanged. See [Account security](ACCOUNT_SECURITY.md).
 
 Older sections of [Security](SECURITY.md) describe the release that wrote them. A sentence there that still says accounts, roles or bans are absent describes that earlier release. Current behavior is the set of documents linked below.
@@ -61,15 +63,15 @@ Current control: [ADC Authentication](ADC_AUTHENTICATION.md). Residual risk: an 
 
 ### T04 Stolen maintenance grant
 
-A grant is 64 hexadecimal characters in the maintenance process, with a 600-second lifetime and four slots. A new proof for the same actor drops the old slot. The password proof is the only maintenance body that returns the grant. WebAdmin does not put it in web storage. A stolen grant still authorizes maintenance reads until expiry or replacement. Reads do not require the CSRF secret.
+A grant is 64 hexadecimal characters in the maintenance process, with a 600-second lifetime and four slots. A new proof for the same actor drops the old slot. The password proof is the only maintenance body that returns the grant, the session id and the CSRF secret. WebAdmin does not put them in web storage. Every other maintenance call, including a read, requires all three from the same slot. A grant alone is refused with 403 `csrf_required`.
 
-Current control: [Security sessions](SECURITY_SESSIONS.md) and [Admin API](ADMIN_API.md). Residual risk: a grant copied from page memory or from a local process can read maintenance data until the slot ends.
+Current control: [API security](API_SECURITY.md), [Security sessions](SECURITY_SESSIONS.md) and [Admin API](ADMIN_API.md). Residual risk: copying the grant, the session id and the CSRF secret from page memory or from a local process still reads and writes maintenance data until the slot ends.
 
 ### T05 Cross-site maintenance write
 
-A browser on the same machine can try to submit a maintenance POST with a grant observed elsewhere. Writes require the session id and the CSRF secret from the same slot. A mismatch returns 403 `csrf_required`. The adapter refuses any other maintenance write that lacks both values before it uses the Unix socket. The access proof does not require CSRF, because that response issues the secret. GET stays grant-only, so a read is not CSRF-protected.
+A browser on the same machine can try to submit a maintenance call with a grant observed elsewhere. Reads and writes, other than the password proof, require the session id and the CSRF secret from the same slot. A mismatch returns 403 `csrf_required`. The adapter refuses a presented grant that lacks both values before it uses the Unix socket. The access proof does not require CSRF, because that response issues the secrets.
 
-Current control: [Security sessions](SECURITY_SESSIONS.md). Residual risk: reads are not CSRF-protected, and the proof response itself carries the secrets.
+Current control: [API security](API_SECURITY.md) and [Security sessions](SECURITY_SESSIONS.md). Residual risk: the proof response still carries the three secrets, and a caller who copies all three can use them until the slot ends. This does not close T05.
 
 ### T06 Service token in the browser or in Apache
 

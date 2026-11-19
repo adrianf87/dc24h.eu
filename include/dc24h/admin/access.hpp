@@ -82,8 +82,8 @@ public:
     [[nodiscard]] IssuedAccess issue(std::uint64_t actor, std::string_view proof);
     // Reloads the actor. A missing, expired or unknown token is missing.
     // A live account that no longer holds the route permission is forbidden.
-    // POST requires the session id and CSRF secret from the same slot.
-    // GET remains grant-only. A full session window is rate_limited.
+    // Every call requires the session id and CSRF secret from the same slot.
+    // The password proof does not call authorize. A full session window is rate_limited.
     [[nodiscard]] GrantCheck authorize(std::string_view token, std::string_view method, std::string_view target,
         std::string_view session, std::string_view csrf);
     // Reloads the actor after a live grant was accepted. A missing grant, a

@@ -1,5 +1,6 @@
 # Local administrative API — alpha-0.1.9
 
+**alpha-0.9.7 API security:** [Permissions, sessions and CSRF](API_SECURITY.md) requires the session id and the CSRF secret on every maintenance call except the password proof. A grant alone no longer reads. Copying all three values from page memory still works until the slot ends. Schema v9 is unchanged.
 **alpha-0.9.6 Account security:** [Passwords, GPA/PAS and secret protection](ACCOUNT_SECURITY.md) refuses an ADC password identical to the account password and decrypts that password only after the account attempt budget and an account ban check. Online guessing, a captured PAS with require_tls off, and buckets cleared by restart remain. Schema v9 is unchanged.
 **alpha-0.9.5 TLS security:** [ADCS certificate and cipher policy](TLS_SECURITY.md) checks the hub leaf before listen and limits ADCS to TLS 1.2 and 1.3 AEAD. Trust, hostname, HTTP/2, OCSP and automatic renewal stay separate. Schema v9 is unchanged.
 **alpha-0.9.4 Traffic limits:** [Spam and excessive presence traffic](TRAFFIC_LIMITS.md) caps ready-session INF updates before fanout. Chat, search and transfer budgets stay. Schema v9 is unchanged. A bandwidth cap and a public gateway remain separate work.
@@ -213,6 +214,8 @@ alpha-0.9.2 does not add a route or a status field. Parser validation and protoc
 alpha-0.9.3 does not add a route or a status field. TCP backlog, kernel buffer caps and the TCP user timeout stay inside the hub. The JSON example above is unchanged. See [Network security](NETWORK_SECURITY.md).
 
 alpha-0.9.4 does not add a route or a status field. The ready-session INF budget stays inside the hub. The JSON example above is unchanged. See [Traffic limits](TRAFFIC_LIMITS.md).
+
+alpha-0.9.7 does not add a route or a status field. Maintenance reads now require the same session id and CSRF secret as writes. The JSON example above is unchanged. See [API security](API_SECURITY.md).
 
 alpha-0.9.6 does not add a route or a status field. Account password separation and sealed GPA/PAS decryption stay inside the hub. The JSON example above is unchanged. See [Account security](ACCOUNT_SECURITY.md).
 

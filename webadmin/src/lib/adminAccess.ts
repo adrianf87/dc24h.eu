@@ -23,12 +23,11 @@ export function clearAdminGrant() {
   csrf = "";
 }
 
-export function adminHeaders(write = false): Record<string, string> {
+export function adminHeaders(): Record<string, string> {
   if (!grant) return {};
-  const headers: Record<string, string> = {"X-DC24H-Admin-Grant": grant};
-  if (write) {
-    headers["X-DC24H-Session"] = session;
-    headers["X-DC24H-Csrf"] = csrf;
-  }
-  return headers;
+  return {
+    "X-DC24H-Admin-Grant": grant,
+    "X-DC24H-Session": session,
+    "X-DC24H-Csrf": csrf,
+  };
 }

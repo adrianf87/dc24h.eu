@@ -2,6 +2,8 @@
 
 Maintenance access keeps the four in-memory grants from [Admin API](ADMIN_API.md). Each grant now has a public session id and a separate CSRF secret. This branch starts from main `6175458`. The branch name is `alpha-0.8.15`.
 
+alpha-0.9.7 requires this same binding on maintenance reads. See [API security](API_SECURITY.md).
+
 Schema v9 is unchanged. Nothing in this increment is written to SQL or to the audit table. `configuration.manage` and `hub.manage` stay unimplemented. Browser kick and mute are still not dispatched. The hub still does not trust proxy headers or `X-Forwarded-For`.
 
 ## What a proof returns
@@ -15,19 +17,19 @@ Schema v9 is unchanged. Nothing in this increment is written to SQL or to the au
 
 The password proof does not require a CSRF header. That response is the only maintenance body that contains these secrets.
 
-## Writes
+## Maintenance calls
 
-Every other maintenance POST requires three headers from the same slot:
+Every maintenance call except the password proof requires three headers from the same slot:
 
 - `X-DC24H-Admin-Grant`: 64 hexadecimal characters
 - `X-DC24H-Session`: 32 lowercase hexadecimal characters
 - `X-DC24H-Csrf`: 64 hexadecimal characters
 
-The grant is compared in constant time. The CSRF secret is then compared in constant time against that same slot. A missing or different session id or CSRF secret returns 403 `csrf_required`. Reads (`GET`) stay grant-only and do not require the CSRF secret. A header with the wrong shape is a bad request before the slot is consulted.
+The grant is compared in constant time. The session id and the CSRF secret are then compared in constant time against that same slot. A missing or different session id or CSRF secret returns 403 `csrf_required` and does not return maintenance rows. A header with the wrong shape is a bad request before the slot is consulted.
 
-WebAdmin keeps the grant, the session id and the CSRF secret in page memory. It does not write them to `localStorage`, `sessionStorage` or a cookie. Writers send the session and CSRF headers. Readers send only the grant. Forget clears all three together.
+WebAdmin keeps the grant, the session id and the CSRF secret in page memory. It does not write them to `localStorage`, `sessionStorage` or a cookie. Every maintenance call sends all three. Forget clears all three together.
 
-The loopback adapter forwards a well-formed session and CSRF header. Any other maintenance write is refused with `csrf_required` before the Unix socket. The access proof is the exception. The adapter still injects the service bearer and still ignores a browser `Authorization` header. It does not log these secrets.
+The loopback adapter forwards a well-formed session and CSRF header. A presented grant without both values is refused with `csrf_required` before the Unix socket. The access proof is the exception. The adapter still injects the service bearer and still ignores a browser `Authorization` header. It does not log these secrets.
 
 The [Apache proxy example](APACHE2_PROXY.md) forwards a session only when it is 32 lowercase hexadecimal characters, and a CSRF secret only when it is 64 hexadecimal characters. Any other value is removed. The example does not contain a grant or a CSRF secret. `Require local` stays.
 

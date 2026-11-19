@@ -1,5 +1,15 @@
 # Changelog
 
+## alpha-0.9.7 — 2026-11-19
+
+API security — permissions, sessions, CSRF and WebAdmin, based on main `14792f7`. The branch name is `alpha-0.9.7`.
+
+- Require the session id and the CSRF secret from the same slot on every maintenance call except the password proof. A grant alone returns 403 `csrf_required` and no maintenance rows. The stored role is loaded only after that binding matches. The loopback adapter refuses a presented grant without both values before the Unix socket. WebAdmin sends all three headers from page memory. Schema v9 is unchanged.
+- This does not close residual threats T04 or T05. Copying all three values from page memory still authorizes the slot until it expires or the actor replaces it. The proof response still carries the secrets. `configuration.manage` and `hub.manage` stay unimplemented. Browser kick and mute are still not dispatched. No status counter, new WebAdmin page, INI key or Apache setting is added. `Require local` stays. There is no cookie session and no public authenticated gateway.
+- Run Check status on GitHub-hosted Ubuntu 24.04. Add `alpha-0.9.7` to the push branches. Local validation uses eight CPU threads. Remote CI completion is not awaited.
+
+Validation on Debian 13: all 222/222 CTest suites passed in Debug (75.08 s real) and Release (73.01 s real), including disposable MariaDB, real ncdc ADC/ADCS, the Apache HTTPS reverse proxy and the maintenance session binding on reads. The Release C++ build log contained no compiler warnings. WebAdmin typecheck and production build passed. All 48 Node tests passed. All 41 Chromium tests passed. Actual C++ API, adapter and React integration passed. Release metadata, documentation UTF-8, language parity, local Markdown links, Python syntax with warnings as errors and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration or account/credential mutation is performed.
+
 ## alpha-0.9.6 — 2026-11-19
 
 Account security — passwords, GPA/PAS and secret protection, based on main `22bc5bc`. The branch name is `alpha-0.9.6`.

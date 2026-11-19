@@ -26,6 +26,7 @@ test("proved access stays out of web storage and marks pending permissions", asy
     }
     if (url.includes("/admin-api/v1/admin")) {
       seen.push(route.request().headers()["x-dc24h-admin-grant"] ?? "");
+      seen.push(route.request().headers()["x-dc24h-session"] ?? "");
       seen.push(route.request().headers()["x-dc24h-csrf"] ?? "");
       await route.fulfill({contentType: "application/json", body: JSON.stringify(administration)});
       return;
@@ -43,8 +44,9 @@ test("proved access stays out of web storage and marks pending permissions", asy
   await expect(page.getByTestId("admin-core")).not.toContainText(grant);
   await expect(page.getByTestId("admin-core")).not.toContainText(csrf);
   await expect(page.getByTestId("admin-core")).not.toContainText(session);
-  expect(seen.at(-2)).toBe(grant);
-  expect(seen.at(-1)).toBe("");
+  expect(seen.at(-3)).toBe(grant);
+  expect(seen.at(-2)).toBe(session);
+  expect(seen.at(-1)).toBe(csrf);
   const stored = await page.evaluate(() => JSON.stringify({...localStorage, ...sessionStorage}));
   expect(stored).not.toContain(grant);
   expect(stored).not.toContain(csrf);
