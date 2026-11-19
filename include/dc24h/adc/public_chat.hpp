@@ -13,15 +13,15 @@ enum class PublicChatError { invalid_message, unsupported_type, private_message,
 // queues share immutable ownership and keep their own byte offsets/charges.
 class PublicChatFrame final {
 public:
+    class Passkey { friend class PublicChat; Passkey() noexcept = default; };
     PublicChatFrame(const PublicChatFrame&) = delete;
     PublicChatFrame& operator=(const PublicChatFrame&) = delete;
     PublicChatFrame(PublicChatFrame&&) = delete;
     PublicChatFrame& operator=(PublicChatFrame&&) = delete;
+    PublicChatFrame(Passkey, Message message, std::string wire) : message_(std::move(message)), wire_(std::move(wire)) {}
     [[nodiscard]] const Message& message() const noexcept { return message_; }
     [[nodiscard]] const std::string& wire() const noexcept { return wire_; }
 private:
-    friend class PublicChat;
-    PublicChatFrame(Message message, std::string wire) : message_(std::move(message)), wire_(std::move(wire)) {}
     Message message_;
     std::string wire_;
 };

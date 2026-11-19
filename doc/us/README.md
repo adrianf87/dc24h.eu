@@ -1,7 +1,8 @@
 # dc24h.eu documentation
 
-alpha-0.9.13: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.9.14: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
+- [Optimization — alpha-0.9.14](OPTIMIZATION.md)
 - [Profiling — alpha-0.9.13](PROFILING.md)
 - [Benchmark — alpha-0.9.12](BENCHMARK.md)
 - [Monitoring — alpha-0.9.11](MONITORING.md)

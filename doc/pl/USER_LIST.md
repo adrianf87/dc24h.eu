@@ -22,7 +22,7 @@ Publiczne ramki pochodzą z ClientInfo::public_message. Zachowują zwalidowane p
 
 Builder serializuje każdy komunikat, mierząc faktyczne bajty UTF-8 po escapowaniu wraz z LF, i sprawdza odejmowanie przed dodaniem. Budżet obejmuje wszystkie ramki, w tym INF huba i własny INF. Dokładny rozmiar jest akceptowany, o bajt mniejszy odrzucany. Właściciel wyjścia podaje mniejszy pozostały limit klienta/huba, bez nowej opcji konfiguracji. Przygotowanie niczego nie kolejkuje, nie rezerwuje, nie rejestruje i nie zmienia gotowości/modelu. Błędy to invalid_state, invalid_identity, inconsistent_source i output_limit; błąd alokacji przekazuje bad_alloc. Częściowy plan tymczasowy jest niszczony przy błędzie.
 
-Komunikaty/ID są ograniczone limitem sesji (najwyżej 65535) i budżetem kolejki. Poza planem potrzebna jest jedna strona ID i jedna tymczasowa serializowana ramka. Narzut obiektów/ciągów/wektorów oznacza, że bajty wyjścia nie są dokładnym limitem pamięci. Przegląd członkostwa ma O(liczba sesji), dodatkowo występują ograniczone wyszukiwania i serializacja. Nie deklaruje się gwarancji obciążenia/przepustowości.
+Komunikaty/ID są ograniczone limitem sesji (najwyżej 65535) i budżetem kolejki. Poza planem potrzebna jest jedna strona ID. Zmierzone kodowanie zostaje w planie, a logowanie kolejkuje te bajty zamiast serializować te same komunikaty ponownie. Narzut obiektów/ciągów/wektorów oznacza, że bajty wyjścia nie są dokładnym limitem pamięci. Przegląd członkostwa ma O(liczba sesji), dodatkowo występują ograniczone wyszukiwania i serializacja. Nie deklaruje się gwarancji obciążenia/przepustowości.
 
 ## Synchronizacja i publikacja
 

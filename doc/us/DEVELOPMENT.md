@@ -120,6 +120,10 @@ alpha-0.1.10 starts from main after alpha-0.1.9. Keep browser-safe schema/format
 
 alpha-0.1.11 starts from main after alpha-0.1.10. Keep host activation, real certificates and service reloads separate from example authoring/testing. Test the exact shipped TLS/access/header policy with temporary paths/ports and no host config. A successful apache2 -t is insufficient to claim certificate/key correspondence; exercise real initialization. Keep both documentation languages and version-sensitive fixtures aligned.
 
+## Optimization — alpha-0.9.14
+
+Branch from main. Publish each routed frame with one allocation and queue the welcome list from the encoding already measured. Do not change ADC bytes, recipient sets or output quotas. Do not add a schema migration, a status field, an INI key, a WebAdmin page, a CLI flag or an Apache setting. Do not claim a capacity, a load test, or that any residual threat is closed. `configuration.manage` and `hub.manage` stay unimplemented.
+
 ## Profiling — alpha-0.9.13
 
 Branch from main. Rank a fixed in-process set of permission, moderation and role decisions from alpha-0.8 and name the slowest stage. Do not add a schema migration, a status field, an INI key, a WebAdmin page, a CLI flag or an Apache setting. Do not claim a sampling profiler, a capacity, a load test, or that any residual threat is closed. `configuration.manage` and `hub.manage` stay unimplemented.

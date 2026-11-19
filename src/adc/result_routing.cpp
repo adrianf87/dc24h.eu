@@ -1,4 +1,5 @@
 #include "dc24h/adc/result_routing.hpp"
+#include "dc24h/adc/shared_frame.hpp"
 #include "dc24h/adc/serializer.hpp"
 
 namespace dc24h::adc {
@@ -25,7 +26,7 @@ std::variant<RoutedResult, ResultRoutingError> ResultRouter::prepare(
     auto encoded = serialize(request->message());
     auto* wire = std::get_if<std::string>(&encoded);
     if (!wire) { return ResultRoutingError::invalid_message; }
-    auto frame = SharedResultFrame(new ResultFrame(request->message(), std::move(*wire)));
+    auto frame = share_frame<ResultFrame>(ResultFrame::Passkey{}, request->message(), std::move(*wire));
     return RoutedResult(domain_, sender, *recipient, std::move(frame), request->token(), active,
                         std::make_shared<RoutedResult::Attempt>());
 }

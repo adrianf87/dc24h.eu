@@ -1,5 +1,17 @@
 # Changelog
 
+## alpha-0.9.14 — 2026-11-19
+
+Optimization — C++20 memory and routing, based on main `f7e465c`. The branch name is `alpha-0.9.14`.
+
+- Publish each routed frame from one `std::make_shared` allocation. The frame and its control block share that allocation. A passkey keeps construction with the router that already owned it. Public chat, private chat, search, results, connect-to-me, reverse connect, hub messages and routed status use it. Dispatch still shares one frame. A zero allocation budget during dispatch does not allocate another frame.
+- Keep the welcome encoding that was measured for the output budget. Login queues those bytes and does not serialize the same messages again. The stored message stays a copy, so a later source rename does not change the plan. A fresh serialize of the stored message matches the retained wire.
+- ADC bytes, recipient sets and output quotas stay the same. This is not a capacity claim or a load test.
+- This does not add a route, INI key, CLI flag, status field, WebAdmin page, Apache setting or schema migration. Schema v9 is unchanged. `configuration.manage` and `hub.manage` stay unimplemented. Browser kick and mute stay undispatched. Status and health stay bearer-only. `Require local` stays. No residual threat is closed.
+- Run Check status on GitHub-hosted Ubuntu 24.04. Add `alpha-0.9.14` to the push branches. Local validation uses eight CPU threads. Remote CI completion is not awaited.
+
+Validation on Debian 13: all 226/226 CTest suites passed in Debug (75.75 s real) and Release (73.81 s real), including disposable MariaDB, real ncdc ADC/ADCS, the Apache HTTPS reverse proxy, the sandboxed systemd example, and the shared routed frames. The Release C++ build log contained no compiler warnings. WebAdmin typecheck and production build passed. All 49 Node tests passed. All 42 Chromium tests passed. Actual C++ API, adapter and React integration passed. Release metadata, documentation UTF-8, language parity, local Markdown links, Python syntax with warnings as errors and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration, host account or service activation is performed.
+
 ## alpha-0.9.13 — 2026-11-19
 
 Profiling — alpha-0.8 bottleneck detection, based on main `ac87fa2`. The branch name is `alpha-0.9.13`.

@@ -1,4 +1,5 @@
 #include "dc24h/adc/search_routing.hpp"
+#include "dc24h/adc/shared_frame.hpp"
 #include "dc24h/adc/serializer.hpp"
 
 namespace dc24h::adc {
@@ -38,7 +39,7 @@ std::variant<RoutedSearch,SearchRoutingError> SearchRouter::prepare(users::Sessi
     auto encoded = serialize(request.message());
     auto* wire = std::get_if<std::string>(&encoded);
     if (!wire) { return SearchRoutingError::invalid_message; }
-    auto frame = SharedSearchFrame(new SearchFrame(request.message(),std::move(*wire)));
+    auto frame = share_frame<SearchFrame>(SearchFrame::Passkey{}, request.message(), std::move(*wire));
     auto attempt = std::make_shared<RoutedSearch::Attempt>();
     if (request.criteria().token) {
         auto prepared = core_.start(sender,*message.source,request.criteria(),now,request.selection(),audience);

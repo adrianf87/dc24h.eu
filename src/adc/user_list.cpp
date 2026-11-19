@@ -21,14 +21,14 @@ UserListResult UserList::prepare(users::SessionId joining, const ClientSession& 
     }
     if (sessions_.by_sid(client.sid()) || sessions_.by_cid(*client.info()->field("ID")) ||
         sessions_.by_nickname(*client.info()->field("NI"))) { return UserListError::invalid_identity; }
-    std::vector<Message> frames;
+    std::vector<PreparedWelcomeFrame> frames;
     std::size_t bytes = 0;
     const auto append = [&](Message message) {
-        const auto encoded = serialize(message);
-        const auto* wire = std::get_if<std::string>(&encoded);
+        auto encoded = serialize(message);
+        auto* wire = std::get_if<std::string>(&encoded);
         if (!wire || wire->size() > budget - bytes) { return false; }
         bytes += wire->size();
-        frames.push_back(std::move(message));
+        frames.push_back(PreparedWelcomeFrame{std::move(message), std::move(*wire)});
         return true;
     };
     if (!append({MessageType::info, "INF", Command::inf, {}, {}, {},

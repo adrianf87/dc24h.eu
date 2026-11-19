@@ -139,6 +139,10 @@ alpha-0.1.10 powstaje z main po alpha-0.1.9. Oddzielaj schemat/formatowanie prze
 
 alpha-0.1.11 powstaje z main po alpha-0.1.10. Oddzielaj aktywację hosta, rzeczywiste certyfikaty i reload od tworzenia/testowania przykładu. Testuj dokładnie dostarczaną politykę TLS/dostępu/nagłówków z tymczasowymi ścieżkami/portami, bez konfiguracji hosta. Sukces apache2 -t nie dowodzi zgodności certyfikatu/klucza; sprawdzaj inicjalizację. Zachowuj oba języki dokumentacji i spójne wersje fixture.
 
+## Optymalizacja — alpha-0.9.14
+
+Gałąź powstaje z main. Publikuj każdą ramkę routingu jedną alokacją i kolejkuj listę powitalną z już zmierzonego kodowania. Nie zmieniaj bajtów ADC, zbiorów odbiorców ani kwot wyjścia. Nie dodawaj migracji schematu, pola statusu, klucza INI, strony WebAdmin, flagi CLI ani ustawienia Apache. Nie twierdź, że istnieje pojemność, test obciążenia albo że którekolwiek zagrożenie szczątkowe jest zamknięte. `configuration.manage` i `hub.manage` pozostają niezaimplementowane.
+
 ## Profilowanie — alpha-0.9.13
 
 Gałąź powstaje z main. Uszereguj stały zestaw decyzji uprawnień, moderacji i ról z alpha-0.8 w procesie i nazwij najwolniejszy etap. Nie dodawaj migracji schematu, pola statusu, klucza INI, strony WebAdmin, flagi CLI ani ustawienia Apache. Nie twierdź, że istnieje profiler próbkujący, pojemność, test obciążenia albo że którekolwiek zagrożenie szczątkowe jest zamknięte. `configuration.manage` i `hub.manage` pozostają niezaimplementowane.

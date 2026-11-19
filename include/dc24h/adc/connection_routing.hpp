@@ -11,10 +11,12 @@ enum class ConnectionRoutingError { invalid_state, wrong_source, invalid_message
 namespace detail { struct ConnectionDomain final {}; }
 class ConnectionFrame final {
 public:
+    class Passkey { friend class ConnectionRouter; Passkey() noexcept = default; };
     ConnectionFrame(const ConnectionFrame&) = delete;
     ConnectionFrame& operator=(const ConnectionFrame&) = delete;
     ConnectionFrame(ConnectionFrame&&) = delete;
     ConnectionFrame& operator=(ConnectionFrame&&) = delete;
+    ConnectionFrame(Passkey, Message message, std::string wire) : message_(std::move(message)), wire_(std::move(wire)) {}
     [[nodiscard]] const Message& message() const noexcept { return message_; }
     [[nodiscard]] const std::string& wire() const noexcept { return wire_; }
     [[nodiscard]] const std::string& token() const noexcept {
@@ -23,8 +25,6 @@ public:
     [[nodiscard]] transfers::ProtocolKind protocol_kind() const noexcept { return transfers::classify_protocol(message_.parameters[0]); }
     [[nodiscard]] transfers::Encryption encryption() const noexcept { return transfers::encryption(protocol_kind()); }
 private:
-    friend class ConnectionRouter;
-    ConnectionFrame(Message message, std::string wire) : message_(std::move(message)), wire_(std::move(wire)) {}
     Message message_;
     std::string wire_;
 };

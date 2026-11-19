@@ -139,6 +139,7 @@ private:
     void complete_login(Peer& peer);
     void limit_authentication(Peer& peer);
     bool enqueue(Peer& peer, Message message, Completion completion = Completion::observe);
+    bool enqueue_prepared(Peer& peer, const Message& message, std::string wire, Completion completion);
     template<class Packet> bool enqueue_shared(Peer& peer, std::shared_ptr<const Packet> frame);
     void reject(Peer& peer, std::string_view status, std::optional<std::string_view> command = {},
                 std::string_view description = {}, users::CloseCause cause = users::CloseCause::protocol_rejected,

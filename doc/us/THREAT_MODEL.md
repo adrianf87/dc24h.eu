@@ -4,6 +4,8 @@ This analysis records how the hub and WebAdmin can be attacked, which controls a
 
 The analysis does not add a protocol check, a schema migration, an Apache setting or a WebAdmin control. Schema v9 is unchanged. `configuration.manage` and `hub.manage` stay unimplemented. Browser kick and mute are still not dispatched. This is not a public authenticated gateway and it is not a penetration test.
 
+alpha-0.9.14 optimization, added after this analysis, allocates each routed frame once and reuses the measured welcome encoding. It does not add a control and it does not close any threat. Schema v9 is unchanged. See [Optimization](OPTIMIZATION.md).
+
 alpha-0.9.13 profiling, added after this analysis, ranks a fixed set of existing permission, moderation and role decisions in process and names the slowest stage. It does not add a control and it does not close any threat. Schema v9 is unchanged. See [Profiling](PROFILING.md).
 
 alpha-0.9.12 benchmark, added after this analysis, times a fixed set of existing permission and moderation decisions in process. It does not add a control and it does not close any threat. Schema v9 is unchanged. See [Benchmark](BENCHMARK.md).

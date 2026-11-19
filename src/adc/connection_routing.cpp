@@ -1,4 +1,5 @@
 #include "dc24h/adc/connection_routing.hpp"
+#include "dc24h/adc/shared_frame.hpp"
 #include "dc24h/adc/ctm.hpp"
 #include "dc24h/adc/rcm.hpp"
 #include "dc24h/adc/serializer.hpp"
@@ -61,7 +62,7 @@ ConnectionPreparation ConnectionRouter::admit(users::SessionId sender, const Mes
     auto encoded = serialize(checked);
     auto* wire = std::get_if<std::string>(&encoded);
     if (!wire) { return ConnectionRoutingError::invalid_message; }
-    auto frame = SharedConnectionFrame(new ConnectionFrame(checked, std::move(*wire)));
+    auto frame = share_frame<ConnectionFrame>(ConnectionFrame::Passkey{}, checked, std::move(*wire));
     return RoutedConnection(domain_, std::move(*plan), std::move(frame));
 }
 ConnectionDispatch ConnectionRouter::dispatch(const RoutedConnection& routed, const Sink& sink) {

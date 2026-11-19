@@ -1,4 +1,5 @@
 #include "dc24h/adc/hub_messages.hpp"
+#include "dc24h/adc/shared_frame.hpp"
 #include "dc24h/text/public_text.hpp"
 
 namespace dc24h::adc {
@@ -12,7 +13,7 @@ std::variant<SharedHubMessageFrame, HubMessageError> make_hub_message(std::strin
         return std::get<MsgError>(encoded) == MsgError::frame_too_long ?
             HubMessageError::frame_too_long : HubMessageError::invalid_text;
     }
-    return SharedHubMessageFrame(new HubMessageFrame(std::move(message), std::move(*wire)));
+    return share_frame<HubMessageFrame>(HubMessageFrame::Passkey{}, std::move(message), std::move(*wire));
 }
 
 std::variant<HubDelivery, HubMessageError> HubMessages::prepare(std::string_view text,

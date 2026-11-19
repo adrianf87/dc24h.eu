@@ -171,21 +171,25 @@ void LoginHub::transport_ready(Id id, users::TimePoint now) {
     check_model(sessions_.start_negotiation(peers_.at(id)->lifecycle.id(),now));
 }
 
+bool LoginHub::enqueue_prepared(Peer& peer, const Message& message, std::string wire, Completion completion) {
+    if (peer.lifecycle.immediate() || peer.quit_queued) { return false; }
+    if (wire.size() > limits_.output_per_client - peer.queued || wire.size() > limits_.output_total - queued_) {
+        check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::output_limit,users::Clock::now()));
+        // Owner closes immediately without disturbing a pinned TLS front.
+        return false;
+    }
+    const auto size = wire.size();
+    peer.output.push_back({Peer::Frame::Owned{message, std::move(wire)}, completion});
+    peer.queued += size;
+    queued_ += size;
+    return true;
+}
 bool LoginHub::enqueue(Peer& peer, Message message, Completion completion) {
     if (peer.lifecycle.immediate() || peer.quit_queued) { return false; }
     auto encoded = serialize(message);
     auto* wire = std::get_if<std::string>(&encoded);
     if (!wire) { throw std::logic_error("Invalid locally generated ADC output"); }
-    if (wire->size() > limits_.output_per_client - peer.queued || wire->size() > limits_.output_total - queued_) {
-        check_model(sessions_.force_close(peer.lifecycle.id(),users::CloseCause::output_limit,users::Clock::now()));
-        // Owner closes immediately without disturbing a pinned TLS front.
-        return false;
-    }
-    const auto size = wire->size();
-    peer.output.push_back({Peer::Frame::Owned{std::move(message), std::move(*wire)}, completion});
-    peer.queued += size;
-    queued_ += size;
-    return true;
+    return enqueue_prepared(peer, message, std::move(*wire), completion);
 }
 template<class Packet>
 bool LoginHub::enqueue_shared(Peer& peer, std::shared_ptr<const Packet> frame) {
@@ -451,6 +455,7 @@ void LoginHub::limit_authentication(Peer& peer) {
 }
 void LoginHub::complete_login(Peer& peer) {
     std::optional<InitialUserList> welcome;
+    std::optional<Message> published;
     try {
         const auto available = std::min(limits_.output_per_client - peer.queued, limits_.output_total - queued_);
         const auto notice_bytes = welcome_message_ ? welcome_message_->wire().size() : 0;
@@ -469,9 +474,11 @@ void LoginHub::complete_login(Peer& peer) {
             return;
         }
         welcome.emplace(std::move(std::get<InitialUserList>(result)));
-        const auto& frames = welcome->frames();
-        for (std::size_t i = 0; i < frames.size(); ++i) {
-            if (!enqueue(peer, frames[i], i + 1 == frames.size() ? Completion::welcome : Completion::observe)) { return; }
+        auto prepared = std::move(*welcome).release();
+        published = prepared.back().message;
+        for (std::size_t i = 0; i < prepared.size(); ++i) {
+            if (!enqueue_prepared(peer, prepared[i].message, std::move(prepared[i].wire),
+                    i + 1 == prepared.size() ? Completion::welcome : Completion::observe)) { return; }
         }
         // Client sees its own INF before system chat. Queue before the
         // registry commit/publication; readiness still ends at own INF.
@@ -487,7 +494,7 @@ void LoginHub::complete_login(Peer& peer) {
     }
     // Publication follows the complete prepared welcome and registry
     // commit. Subsequent FIFO joins/updates/quits follow own INF.
-    relay(peer.lifecycle.id().value(), welcome->frames().back());
+    relay(peer.lifecycle.id().value(), *published);
 }
 std::optional<users::AuthSession> LoginHub::authenticated_session(Id id) const noexcept {
     const auto key = users::SessionId::from_value(id);

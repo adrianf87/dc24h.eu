@@ -10,13 +10,17 @@ enum class StatusRoutingError { invalid_state, wrong_source, invalid_message, re
 namespace detail { struct StatusDomain final {}; }
 class StatusFrame final {
 public:
+    class Passkey { friend class StatusRouter; Passkey() noexcept = default; };
+    StatusFrame(const StatusFrame&) = delete;
+    StatusFrame& operator=(const StatusFrame&) = delete;
+    StatusFrame(StatusFrame&&) = delete;
+    StatusFrame& operator=(StatusFrame&&) = delete;
+    StatusFrame(Passkey, Message message, std::string wire, StatusCode code)
+        : message_(std::move(message)), wire_(std::move(wire)), code_(code) {}
     [[nodiscard]] const Message& message() const noexcept { return message_; }
     [[nodiscard]] const std::string& wire() const noexcept { return wire_; }
     [[nodiscard]] StatusCode code() const noexcept { return code_; }
 private:
-    friend class StatusRouter;
-    StatusFrame(Message message, std::string wire, StatusCode code)
-        : message_(std::move(message)), wire_(std::move(wire)), code_(code) {}
     Message message_;
     std::string wire_;
     StatusCode code_;

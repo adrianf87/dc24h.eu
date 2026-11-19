@@ -1,4 +1,5 @@
 #include "dc24h/adc/private_chat.hpp"
+#include "dc24h/adc/shared_frame.hpp"
 #include "dc24h/adc/chat_validation.hpp"
 
 namespace dc24h::adc {
@@ -34,7 +35,7 @@ std::variant<PrivateDelivery, PrivateChatError> PrivateChat::prepare(users::Sess
     auto encoded=serialize_msg(safe);
     auto* wire=std::get_if<std::string>(&encoded);
     if (!wire) { return PrivateChatError::invalid_message; }
-    auto frame=SharedPrivateChatFrame(new PrivateChatFrame(std::move(safe),std::move(*wire)));
+    auto frame=share_frame<PrivateChatFrame>(PrivateChatFrame::Passkey{},std::move(safe),std::move(*wire));
     return PrivateDelivery(std::move(admission),std::move(frame));
 }
 std::variant<chat::DispatchReport, chat::Error> PrivateChat::dispatch(const PrivateDelivery& message, const Sink& sink) const {
