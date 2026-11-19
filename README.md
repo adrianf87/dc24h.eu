@@ -4,7 +4,7 @@ Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
 **Current development version: alpha-0.8.8 (Moderation Rules).**
 
-CI on `main`: [GitHub-hosted Ubuntu 24.04 runners](doc/us/GITHUB_CI.md) · [PL](doc/pl/GITHUB_CI.md).
+CI on `main`: [custom runner `server-747585786`](doc/us/GITHUB_CI.md) with Docker — Ubuntu 22.04, 24.04 and 26.04, Debian 12 and 13, one container at a time, then stop · [PL](doc/pl/GITHUB_CI.md).
 
 Completed increments (older bullets describe their original delivery scope):
 
