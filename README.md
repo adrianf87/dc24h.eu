@@ -2,12 +2,13 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.9.7 (API security).**
+**Current development version: alpha-0.9.8 (Database security).**
 
 CI on `main`: [GitHub-hosted Ubuntu 24.04](doc/us/GITHUB_CI.md) runs C++ Debug, C++ Release and WebAdmin · [PL](doc/pl/GITHUB_CI.md).
 
 Completed increments (older bullets describe their original delivery scope):
 
+- **alpha-0.9.8 Database security**: one explicit command writes a consistent owner-only snapshot and restores it only into empty tables of the same schema. A lost acknowledgement is not replayed. Off-host copies stay with the operator. See [Database security](doc/us/DATABASE_SECURITY.md).
 - **alpha-0.9.7 API security**: every maintenance call except the password proof requires the session id and the CSRF secret from the same slot. A grant alone no longer reads. Copying all three values from page memory still works until the slot ends. See [API security](doc/us/API_SECURITY.md).
 - **alpha-0.9.6 Account security**: enrollment refuses an ADC password identical to the account password, and the reactor decrypts that password only after the account ban check and the per-account attempt budget. Online guessing and a captured PAS with require_tls off remain separate. See [Account security](doc/us/ACCOUNT_SECURITY.md).
 - **alpha-0.9.5 TLS security**: the hub refuses an expired, not-yet-valid or weak leaf certificate before listen, and offers only TLS 1.2 and 1.3 AEAD. Clients still check the name and the trust chain. HTTP/2, OCSP and automatic renewal remain separate work. See [TLS security](doc/us/TLS_SECURITY.md).

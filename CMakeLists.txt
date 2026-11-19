@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.9.7 LANGUAGES CXX)
+project(dc24h VERSION 0.9.8 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -135,7 +135,7 @@ set_target_properties(MariaDB::ConnectorC PROPERTIES
 include(cmake/Migrations.cmake)
 dc24h_generate_migrations("${CMAKE_CURRENT_SOURCE_DIR}/database/migrations"
     "${CMAKE_CURRENT_BINARY_DIR}/generated/dc24h/database/migrations.hpp")
-add_library(dc24h_database src/database/database.cpp src/database/connection.cpp src/database/migrations.cpp)
+add_library(dc24h_database src/database/database.cpp src/database/connection.cpp src/database/migrations.cpp src/database/backup.cpp)
 target_compile_features(dc24h_database PUBLIC cxx_std_20)
 set_target_properties(dc24h_database PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_database PUBLIC include PRIVATE src/database "${CMAKE_CURRENT_BINARY_DIR}/generated")

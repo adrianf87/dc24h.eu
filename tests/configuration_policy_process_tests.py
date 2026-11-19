@@ -55,7 +55,7 @@ class PolicyTests(unittest.TestCase):
             for secret in (directory, 'PrivateDatabase', 'PrivateUser', 'missing-', 'password_file', 'key_file', 'socket_path'):
                 self.assertNotIn(secret, result.stdout)
             self.assertEqual(self.call('--config', str(ini), '--check-config').returncode, 2)
-            for other in ('--check-config','--check-database','--migrate-database','--database-status','--help','--version'):
+            for other in ('--check-config','--check-database','--migrate-database','--database-status','--backup-database','--restore-database','--help','--version'):
                 self.assertEqual(self.call('--config', str(ini), '--show-configuration', other).returncode, 2)
 
     def test_strict_disabled_login_and_database_options(self):

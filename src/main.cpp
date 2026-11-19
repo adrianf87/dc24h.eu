@@ -81,13 +81,20 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    if (parsed.check_database || parsed.migrate_database || parsed.database_status) {
+    if (parsed.check_database || parsed.migrate_database || parsed.database_status ||
+        !parsed.backup_database.empty() || !parsed.restore_database.empty()) {
         try {
             dc24h::database::Connection database(parsed.settings.database);
             database.ping();
             if (parsed.migrate_database) {
                 const auto applied = dc24h::database::migrate(database);
                 std::cout << dc24h::i18n::translate("Database migrations applied=", language) << applied << '\n';
+            } else if (!parsed.backup_database.empty()) {
+                const auto report = dc24h::database::backup(database, parsed.backup_database);
+                std::cout << dc24h::i18n::translate("Database backup written bytes=", language) << report.bytes << '\n';
+            } else if (!parsed.restore_database.empty()) {
+                const auto report = dc24h::database::restore(database, parsed.restore_database);
+                std::cout << dc24h::i18n::translate("Database backup restored rows=", language) << report.rows << '\n';
             } else if (parsed.database_status) {
                 const auto status = dc24h::database::inspect_migrations(database);
                 std::cout << dc24h::i18n::translate("Database schema version=", language) << status.current_version

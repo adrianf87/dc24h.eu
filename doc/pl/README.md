@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.9.7: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.9.8: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [Bezpieczeństwo bazy danych — alpha-0.9.8](DATABASE_SECURITY.md)
 - [Bezpieczeństwo API — alpha-0.9.7](API_SECURITY.md)
 - [Bezpieczeństwo konta — alpha-0.9.6](ACCOUNT_SECURITY.md)
 - [Bezpieczeństwo TLS — alpha-0.9.5](TLS_SECURITY.md)
