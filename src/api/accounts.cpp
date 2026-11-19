@@ -108,7 +108,8 @@ std::string serve_bans(const Request& request,admin::Engine& engine,bool& writte
 }
 std::string access_json(const admin::IssuedAccess& issued, accounts::Role role) {
     std::string output = "{\"maintenance\":true,\"restart_required\":true,\"actor\":{\"id\":"+json_string(std::to_string(issued.id))+
-        ",\"role\":"+json_string(issued.role)+",\"status\":"+json_string(issued.status)+"},\"expires_in\":600,\"grant\":"+json_string(issued.grant)+",\"permissions\":[";
+        ",\"role\":"+json_string(issued.role)+",\"status\":"+json_string(issued.status)+"},\"expires_in\":600,\"grant\":"+json_string(issued.grant)+
+        ",\"session\":"+json_string(issued.session)+",\"csrf\":"+json_string(issued.csrf)+",\"permissions\":[";
     for (const auto& fact : admin::permission_facts(role)) {
         if (output.back() != '[') { output += ','; }
         output += "{\"key\":"+json_string(fact.key)+",\"granted\":"+(fact.granted?"true":"false")+",\"implemented\":"+(fact.implemented?"true":"false")+"}";
@@ -225,17 +226,21 @@ AccountHandler account_handler(database::Options options) {
                 const auto role=parse_role(issued.role);if(!role){throw HttpError{503,"account_unavailable"};}
                 std::string body=access_json(issued, *role);
                 OPENSSL_cleanse(issued.grant.data(),issued.grant.size());issued.grant.clear();
+                OPENSSL_cleanse(issued.csrf.data(),issued.csrf.size());issued.csrf.clear();
+                OPENSSL_cleanse(issued.session.data(),issued.session.size());issued.session.clear();
                 auto http=response(200,body);OPENSSL_cleanse(body.data(),body.size());
                 return http;
             }
             if(request.admin_grant.empty()){throw HttpError{401,"admin_grant_required"};}
-            switch(gate.authorize(request.admin_grant,request.method,request.target)) {
+            switch(gate.authorize(request.admin_grant,request.method,request.target,request.admin_session,request.admin_csrf)) {
             case admin::GrantCheck::accepted: break;
             case admin::GrantCheck::missing: throw HttpError{401,"admin_grant_required"};
             case admin::GrantCheck::forbidden: throw admin::Error(admin::ErrorKind::forbidden);
             case admin::GrantCheck::not_found: throw admin::Error(admin::ErrorKind::not_found);
             case admin::GrantCheck::unavailable: throw admin::Error(admin::ErrorKind::unavailable);
             case admin::GrantCheck::outcome_unknown: throw admin::Error(admin::ErrorKind::outcome_unknown);
+            case admin::GrantCheck::csrf_required: throw HttpError{403,"csrf_required"};
+            case admin::GrantCheck::rate_limited: throw HttpError{429,"rate_limited"};
             }
             if(request.target=="/api/v1/management"){
                 if(request.method!="GET"){throw HttpError{405,"method_not_allowed"};}

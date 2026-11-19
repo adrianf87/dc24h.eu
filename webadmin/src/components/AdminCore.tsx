@@ -2,7 +2,7 @@ import {useEffect, useRef, useState} from "react";
 import {parseAdmin, ADMIN_COUNTERS} from "../lib/admin";
 import type {AdminSnapshot} from "../lib/admin";
 import {parseAccess} from "../lib/access";
-import {adminHeaders, clearAdminGrant, setAdminGrant} from "../lib/adminAccess";
+import {adminHeaders, clearAdminGrant, setAdminAccess} from "../lib/adminAccess";
 import {readAccountResponse} from "../lib/accounts";
 import type {Copy} from "../languages/us";
 
@@ -38,7 +38,7 @@ export function AdminCore({t}:{t:Copy}) {
     headers:{"Content-Type":"application/x-www-form-urlencoded","X-DC24H-Admin":"1"},body});
    const value=parseAccess(await readAccountResponse(response));
    if(!response.ok||access.current!==controller)throw new Error();
-   setAdminGrant(value.grant);
+   setAdminAccess(value);
    setPending(value.permissions.filter(item=>!item.implemented).map(item=>item.key));
    setAccessMessage(t.accessGranted);
    void load();

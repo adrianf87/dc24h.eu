@@ -1,5 +1,16 @@
 # Changelog
 
+## alpha-0.8.15 — 2026-11-19
+
+Security — access control, CSRF, sessions and request limits, based on main `6175458`. The branch name is `alpha-0.8.15`.
+
+- Bind each in-memory maintenance grant to a public 32-hex session id and a separate 64-hex CSRF secret. Maintenance writes require `X-DC24H-Session` and `X-DC24H-Csrf` on that same slot and return 403 `csrf_required` otherwise. Reads stay grant-only. The password proof does not require CSRF. Schema v9 is unchanged and these values are not audited.
+- Keep the one-POST-per-second process gap. Add a separate budget of 24 requests in 10 seconds for each live session. A missing grant does not consume it. The budget does not use a client address or a proxy header. WebAdmin keeps the grant, session id and CSRF secret in page memory and sends the secrets only on writes.
+- The loopback adapter rejects other maintenance writes that lack a well-formed session and CSRF secret. The Apache proxy forwards those headers only when the shape matches and still does not contain a secret. `Require local` stays. This is not a public authenticated gateway.
+- Run Check status on GitHub-hosted Ubuntu 24.04. Add `alpha-0.8.15` to the push branches. Local validation uses eight CPU threads. Remote CI completion is not awaited.
+
+Validation on Debian 13: all 215/215 CTest suites passed in Debug (91.95 s real) and Release (90.89 s real), including disposable MariaDB, real ncdc ADC/ADCS, the Apache HTTPS reverse proxy and the maintenance session budget. The Release C++ build log contained no compiler warnings. WebAdmin typecheck and production build passed. All 48 Node tests passed. All 41 Chromium tests passed. Actual C++ API, adapter and React integration passed. Release metadata, documentation UTF-8, language parity, local Markdown links, Python syntax with warnings as errors and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration or account/credential mutation is performed.
+
 ## alpha-0.8.14 — 2026-11-19
 
 Apache2 HTTPS — reverse proxy and API protection, based on main `a542688`. The branch name is `alpha-0.8.14`.

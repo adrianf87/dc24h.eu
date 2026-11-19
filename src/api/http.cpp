@@ -87,6 +87,16 @@ ParseResult parse_request(std::string_view bytes, bool allow_form) {
             if (!valid_token(value)) { return {ParseState::invalid, {}}; }
             request.admin_grant = std::string(value);
         }
+        if (key == "x-dc24h-session") {
+            if (value.size() != 32 || !std::all_of(value.begin(), value.end(), [](unsigned char c) {
+                return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
+            })) { return {ParseState::invalid, {}}; }
+            request.admin_session = std::string(value);
+        }
+        if (key == "x-dc24h-csrf") {
+            if (!valid_token(value)) { return {ParseState::invalid, {}}; }
+            request.admin_csrf = std::string(value);
+        }
         offset = next + 2;
     }
     if (!host) { return {ParseState::invalid, {}}; }

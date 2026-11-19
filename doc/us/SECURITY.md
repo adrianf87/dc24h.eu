@@ -1,5 +1,6 @@
 # Security — alpha-0.1.7
 
+**alpha-0.8.15 Security sessions:** [Access control, CSRF, sessions and request limits](SECURITY_SESSIONS.md) binds each in-memory grant to a public session id and a separate CSRF secret. Maintenance writes require both on that same slot. Each session accepts 24 requests in 10 seconds. Reads stay grant-only. The values stay in process memory, not in SQL, cookies or web storage. A public authenticated gateway remains separate work.
 **alpha-0.8.14 Apache2 HTTPS proxy:** [HTTPS reverse proxy and API protection](APACHE2_PROXY.md) forwards an allowlisted WebAdmin API to the loopback adapter. Client bearer tokens, cookies and forwarded identity are removed. The C++ Unix socket and the service token stay out of Apache. Local access remains the default.
 **alpha-0.8.13 WebAdmin Management:** [Account, role and ban management](WEBADMIN_MANAGEMENT.md) shows which maintenance areas the current grant allows and links to the existing account, role and ban pages. The page does not perform those writes. Configuration writes, live hub administration and browser kick or mute stay outside this page.
 **alpha-0.8.12 WebAdmin Users:** [Online users and moderation actions](WEBADMIN_USERS.md) publishes the ready-session directory and a bilingual page of kick, mute and unmute decisions. The page does not dispatch those commands, create bans or reveal CID, IP, account or profile fields. Browser kick controls remain on an authenticated Direct Connect client.
@@ -201,6 +202,10 @@ Never put the API token in browser storage, JavaScript, URLs, VITE-prefixed vari
 ## Apache2 HTTPS example — alpha-0.1.11
 
 TLS and browser authentication are separate controls. The template selects TLS 1.2/1.3 with AEAD ciphers, fixes the HTTP redirect hostname, retains Require local, denies private/hidden/secret paths and disables directory indexes/symlinks. HTTPS-only HSTS is short and host-scoped; CSP/no-sniff/referrer/frame headers apply to errors too. Certificate trust/name/key matching must be verified before use; syntax checks alone do not prove matching keys. The template never exposes the service token or activates a production gateway. See [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
+
+## Security sessions — alpha-0.8.15
+
+Each of the four in-memory maintenance grants now has a public session id and a separate CSRF secret. Maintenance writes require the grant, the session id and the CSRF secret from the same slot. A mismatch returns 403 `csrf_required`. Reads stay grant-only. Each session accepts 24 requests in 10 seconds and then returns 429 `rate_limited`. The process still accepts at most one maintenance POST per second. The budget is not taken from a client address or a proxy header. WebAdmin keeps the three values in page memory and clears them together. They are not written to SQL, cookies or web storage. `Require local` stays. See [Security sessions](SECURITY_SESSIONS.md).
 
 ## Apache2 reverse proxy — alpha-0.8.14
 

@@ -1,5 +1,6 @@
 # Architektura
 
+**alpha-0.8.15 Sesje bezpieczeństwa:** [Kontrola dostępu, CSRF, sesje i limity żądań](SECURITY_SESSIONS.md) wiąże każdy grant w pamięci procesu z publicznym identyfikatorem sesji i osobnym sekretem CSRF. Zapisy utrzymaniowe wymagają obu wartości na tym samym slocie. Każda sesja przyjmuje 24 żądania w ciągu 10 sekund. Odczyty nadal wymagają tylko grantu. Wartości zostają w pamięci procesu, nie w SQL, ciasteczkach ani pamięci przeglądarki. Publiczna brama z uwierzytelnieniem pozostaje osobną pracą.
 **alpha-0.8.14 Proxy HTTPS Apache2:** [Odwrotne proxy HTTPS i ochrona API](APACHE2_PROXY.md) przekazuje dozwoloną listę API WebAdmin do adaptera na loopbacku. Token bearer klienta, ciasteczka i tożsamość z nagłówków proxy są usuwane. Gniazdo Unix C++ i token usługi pozostają poza Apache. Domyślnie dostęp jest lokalny.
 **alpha-0.8.13 Zarządzanie WebAdmin:** [Zarządzanie banami, kontami i rolami](WEBADMIN_MANAGEMENT.md) pokazuje, które obszary utrzymania dopuszcza bieżący grant, i prowadzi do istniejących stron kont, ról i banów. Strona nie wykonuje tych zapisów. Zapis konfiguracji, bieżąca administracja huba oraz kick i mute w przeglądarce pozostają poza tą stroną.
 **alpha-0.8.12 Użytkownicy WebAdmin:** [Lista użytkowników i działania moderacyjne](WEBADMIN_USERS.md) publikuje katalog gotowych sesji oraz dwujęzyczną stronę decyzji kick, mute i unmute. Strona nie wysyła tych poleceń, nie tworzy banów i nie ujawnia CID, IP, konta ani pól profilu. Polecenia kick pozostają w uwierzytelnionym kliencie Direct Connect.
@@ -266,6 +267,10 @@ Frontend jest niezależny od budowania/działania C++. Kod przeglądarki sprawdz
 ## Apache2 HTTPS — alpha-0.1.11
 
 Osobny instalowany przykład serwuje gotowe zasoby WebAdmin przez TLS 1.2/1.3 i przekierowuje HTTP na stałą nazwę kanoniczną. Zachowuje lokalny dostęp i blokadę prywatnych tras, bez proxy Unix API i zmian transportów C++. Testy ładują tę politykę pod niezależnym ServerRoot; certyfikaty i aktywacja usługi hosta należą do operatora. Zobacz [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
+
+## Sesje bezpieczeństwa — alpha-0.8.15
+
+Brama dostępu utrzymaniowego nadal trzyma cztery sloty w pamięci. Dowód zwraca teraz publiczny identyfikator sesji i sekret CSRF razem z grantem. Zapisy sprawdzają oba sekrety na tym slocie. Licznik sesji ogranicza ten grant do 24 żądań w ciągu 10 sekund. Trasy status i health procesu huba pozostają bez zmian. Zobacz [Sesje bezpieczeństwa](SECURITY_SESSIONS.md).
 
 ## Odwrotne proxy Apache2 — alpha-0.8.14
 

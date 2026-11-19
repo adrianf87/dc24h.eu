@@ -1,5 +1,6 @@
 # Bezpieczeństwo — alpha-0.1.7
 
+**alpha-0.8.15 Sesje bezpieczeństwa:** [Kontrola dostępu, CSRF, sesje i limity żądań](SECURITY_SESSIONS.md) wiąże każdy grant w pamięci procesu z publicznym identyfikatorem sesji i osobnym sekretem CSRF. Zapisy utrzymaniowe wymagają obu wartości na tym samym slocie. Każda sesja przyjmuje 24 żądania w ciągu 10 sekund. Odczyty nadal wymagają tylko grantu. Wartości zostają w pamięci procesu, nie w SQL, ciasteczkach ani pamięci przeglądarki. Publiczna brama z uwierzytelnieniem pozostaje osobną pracą.
 **alpha-0.8.14 Proxy HTTPS Apache2:** [Odwrotne proxy HTTPS i ochrona API](APACHE2_PROXY.md) przekazuje dozwoloną listę API WebAdmin do adaptera na loopbacku. Token bearer klienta, ciasteczka i tożsamość z nagłówków proxy są usuwane. Gniazdo Unix C++ i token usługi pozostają poza Apache. Domyślnie dostęp jest lokalny.
 **alpha-0.8.13 Zarządzanie WebAdmin:** [Zarządzanie banami, kontami i rolami](WEBADMIN_MANAGEMENT.md) pokazuje, które obszary utrzymania dopuszcza bieżący grant, i prowadzi do istniejących stron kont, ról i banów. Strona nie wykonuje tych zapisów. Zapis konfiguracji, bieżąca administracja huba oraz kick i mute w przeglądarce pozostają poza tą stroną.
 **alpha-0.8.12 Użytkownicy WebAdmin:** [Lista użytkowników i działania moderacyjne](WEBADMIN_USERS.md) publikuje katalog gotowych sesji oraz dwujęzyczną stronę decyzji kick, mute i unmute. Strona nie wysyła tych poleceń, nie tworzy banów i nie ujawnia CID, IP, konta ani pól profilu. Polecenia kick pozostają w uwierzytelnionym kliencie Direct Connect.
@@ -200,6 +201,10 @@ Nie umieszczaj tokena w pamięci przeglądarki, JavaScript, URL, zmiennych VITE 
 ## Przykład HTTPS Apache2 — alpha-0.1.11
 
 TLS i logowanie WWW są osobnymi mechanizmami. Szablon wybiera TLS 1.2/1.3 z AEAD, ustala host przekierowania, zachowuje Require local, blokuje prywatne/ukryte/sekretne ścieżki i wyłącza indeksy/symlinki. HSTS jest krótki, tylko dla hosta i HTTPS; CSP/no-sniff/referrer/frame obejmują błędy. Przed użyciem zweryfikuj zaufanie/nazwę/zgodność klucza; sama składnia nie dowodzi zgodności. Szablon nie ujawnia tokena i nie aktywuje bramy produkcyjnej. Zobacz [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
+
+## Sesje bezpieczeństwa — alpha-0.8.15
+
+Każdy z czterech grantów utrzymaniowych w pamięci ma teraz publiczny identyfikator sesji i osobny sekret CSRF. Zapis utrzymaniowy wymaga grantu, identyfikatora sesji i sekretu CSRF z tego samego slotu. Niezgodność zwraca 403 `csrf_required`. Odczyty nadal wymagają tylko grantu. Każda sesja przyjmuje 24 żądania w ciągu 10 sekund, a kolejne zwraca 429 `rate_limited`. Proces nadal przyjmuje co najwyżej jeden POST utrzymaniowy na sekundę. Budżet nie pochodzi z adresu klienta ani z nagłówka proxy. WebAdmin trzyma te trzy wartości w pamięci strony i czyści je razem. Nie są zapisywane do SQL, ciasteczek ani pamięci przeglądarki. `Require local` zostaje. Zobacz [Sesje bezpieczeństwa](SECURITY_SESSIONS.md).
 
 ## Odwrotne proxy Apache2 — alpha-0.8.14
 

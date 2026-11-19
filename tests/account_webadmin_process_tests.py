@@ -33,7 +33,9 @@ def exercise(binary, seed, config, db_socket, password, token, api_socket):
                 logs.extend(chunk)
         assert b'Network listening' not in logs and b'ADCS listening' not in logs
         grant = {'value': ''}
-        def request(method, target_path, data=None, authorized=True, delay=False, use_grant=True, grant_header=None):
+        session = {'value': ''}
+        csrf = {'value': ''}
+        def request(method, target_path, data=None, authorized=True, delay=False, use_grant=True, grant_header=None, bind=True, session_override=None, csrf_override=None):
             if delay:
                 time.sleep(1.05)
             body = urlencode(data or {}).encode() if data is not None else b''
@@ -48,6 +50,13 @@ def exercise(binary, seed, config, db_socket, password, token, api_socket):
                     header_value = grant['value']
                 if header_value is not None:
                     headers += f'X-DC24H-Admin-Grant: {header_value}\r\n'
+                if method == 'POST' and target_path != '/api/v1/admin/access' and bind and header_value:
+                    session_value = session['value'] if session_override is None else session_override
+                    csrf_value = csrf['value'] if csrf_override is None else csrf_override
+                    if session_value:
+                        headers += f'X-DC24H-Session: {session_value}\r\n'
+                    if csrf_value:
+                        headers += f'X-DC24H-Csrf: {csrf_value}\r\n'
                 if body:
                     headers += 'Content-Type: application/x-www-form-urlencoded\r\n'
                 peer.sendall(headers.encode() + f'Content-Length: {len(body)}\r\n\r\n'.encode() + body)
@@ -55,8 +64,12 @@ def exercise(binary, seed, config, db_socket, password, token, api_socket):
                 response.begin()
                 raw = response.read()
                 assert token.encode() not in raw and proof.encode() not in raw and b'verifier' not in raw
-                if grant['value']:
+                if grant['value'] and target_path != '/api/v1/admin/access':
                     assert grant['value'].encode() not in raw
+                if csrf['value'] and target_path != '/api/v1/admin/access':
+                    assert csrf['value'].encode() not in raw
+                if session['value'] and target_path != '/api/v1/admin/access':
+                    assert session['value'].encode() not in raw
                 return response.status, json.loads(raw)
         assert request('GET', '/api/v1/accounts', authorized=False)[0] == 401
         assert request('GET', '/api/v1/admin', authorized=False)[1]['error'] == 'unauthorized'
@@ -69,6 +82,8 @@ def exercise(binary, seed, config, db_socket, password, token, api_socket):
         assert code == 200 and access['expires_in'] == 600 and access['actor']['id'] == actor
         assert access['actor']['role'] == 'administrator' and access['actor']['status'] == 'active'
         assert len(access['grant']) == 64 and access['grant'].islower()
+        assert re.fullmatch(r'[0-9a-f]{32}', access['session'])
+        assert re.fullmatch(r'[0-9a-f]{64}', access['csrf']) and access['csrf'] != access['grant']
         permissions = {item['key']: item for item in access['permissions']}
         assert permissions['configuration.manage'] == {'key': 'configuration.manage', 'granted': True, 'implemented': False}
         assert permissions['hub.manage'] == {'key': 'hub.manage', 'granted': False, 'implemented': False}
@@ -76,9 +91,19 @@ def exercise(binary, seed, config, db_socket, password, token, api_socket):
         first = access['grant']
         code, replacement = request('POST', '/api/v1/admin/access', {'actor_id': actor, 'proof': proof}, delay=True, use_grant=False)
         assert code == 200 and replacement['grant'] != first and first.encode() not in json.dumps(replacement).encode()
+        assert replacement['session'] != access['session'] and replacement['csrf'] != access['csrf']
+        assert access['csrf'].encode() not in json.dumps(replacement).encode()
         grant['value'] = first
+        session['value'] = access['session']
+        csrf['value'] = access['csrf']
         assert request('GET', '/api/v1/admin')[1]['error'] == 'admin_grant_required'
         grant['value'] = replacement['grant']
+        session['value'] = replacement['session']
+        csrf['value'] = replacement['csrf']
+        assert request('POST', '/api/v1/accounts', {'x': 'y'}, delay=True, bind=False)[1]['error'] == 'csrf_required'
+        assert request('POST', '/api/v1/accounts', {'x': 'y'}, delay=True, csrf_override='ab' * 32)[1]['error'] == 'csrf_required'
+        assert request('POST', '/api/v1/accounts', {'x': 'y'}, delay=True, csrf_override='zz')[0] == 400
+        assert request('GET', '/api/v1/admin')[0] == 200
         code, core = request('GET', '/api/v1/admin')
         assert code == 200 and core['maintenance'] is True
         assert len(core['actions']) == 10 and [a['available'] for a in core['actions']] == [True]*6+[False]*2+[True]*2
