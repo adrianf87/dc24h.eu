@@ -94,6 +94,8 @@ alpha-0.2.4 dodaje niezależną [semantykę SUP i adapter stanów](ADC_SUP.md). 
 
 Odniesienie: [ADC 1.0.4](https://adc.sourceforge.io/ADC.html), gramatyka linii i opisy komend BASE. Niezależna biblioteka C++20 `dc24h_adc` parsuje składnię; nie wykonuje komend ani nie realizuje sesji.
 
+alpha-0.9.2 nazywa profil poleceń huba w [Bezpieczeństwie ADC](ADC_SECURITY.md). Parser nadal przyjmuje nieznane rozszerzenia i ramki legalne dla huba, w tym ISID i GET. Profil działa później, w automacie stanów, i nie zmienia tych wyników parsowania.
+
 ## Wynik i układ argumentów
 
 `parse_line(string_view)` przyjmuje jedną treść ramki **bez LF** i zwraca `KeepAlive`, `Message` albo `ParseError`. Pusty LF jest keepalive. Message jest właścicielem typu, oryginalnej komendy, klasyfikacji, opcjonalnego source/target, uporządkowanych selektorów i odkodowanych parametrów. Bufor wejścia można od razu zwolnić. Nieznane komendy zachowują nazwę i wszystkie parametry.

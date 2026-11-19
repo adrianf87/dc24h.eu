@@ -20,8 +20,10 @@ enum class StateError {
 using StateResult = std::optional<StateError>; // nullopt = accepted
 
 // Transport-independent, single-owner/thread, noncopyable and nonmovable.
-// Only parsed messages may enter observe(). No payloads, PID/PAS, capabilities,
-// users or credentials are retained. Rejection leaves all state unchanged.
+// Only parsed messages may enter observe(). The stateless command profile is
+// control_message(), applied before state and sequence checks. No payloads,
+// PID/PAS, capabilities, users or credentials are retained. Rejection leaves
+// all state unchanged.
 class ConnectionStateMachine final {
 public:
     ConnectionStateMachine() = default;

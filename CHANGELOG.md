@@ -1,5 +1,15 @@
 # Changelog
 
+## alpha-0.9.2 — 2026-11-19
+
+ADC security — parser validation, fuzzing and protocol control, based on main `6c26839`. The branch name is `alpha-0.9.2`.
+
+- Name the existing hub command profile as `control_message` and call it from `ConnectionStateMachine::observe` after the command name matches the kind and before state, source and sequence checks. Unknown commands and GET, GFI and SND stay unsupported. Outgoing PAS stays an invalid type. The parser still accepts unknown extensions and hub-legal frames. Schema v9 is unchanged.
+- Add deterministic in-process `adc.security`. Seed `0x0ADC0922` and exactly 4096 mutations lock the stream decoder, parser round-trip and profile agreement. This is not coverage-guided fuzzing and it does not close residual threats T01–T16. No status counter, WebAdmin page, language string or Apache setting is added.
+- Run Check status on GitHub-hosted Ubuntu 24.04. Add `alpha-0.9.2` to the push branches. Local validation uses eight CPU threads. Remote CI completion is not awaited.
+
+Validation on Debian 13: all 217/217 CTest suites passed in Debug (73.54 s real) and Release (72.43 s real), including disposable MariaDB, real ncdc ADC/ADCS, the Apache HTTPS reverse proxy and the ADC parser campaign. The Release C++ build log contained no compiler warnings. WebAdmin typecheck and production build passed. All 48 Node tests passed. All 41 Chromium tests passed. Actual C++ API, adapter and React integration passed. Release metadata, documentation UTF-8, language parity, local Markdown links, Python syntax with warnings as errors and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration or account/credential mutation is performed.
+
 ## alpha-0.9.1 — 2026-11-19
 
 Threat model — hub and WebAdmin analysis, based on main `7872471`. The branch name is `alpha-0.9.1`.

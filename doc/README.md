@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.9.1.
+Current development version: alpha-0.9.2.
+
+[ADC security — alpha-0.9.2](us/ADC_SECURITY.md) · [PL](pl/ADC_SECURITY.md)
 
 [Threat model — alpha-0.9.1](us/THREAT_MODEL.md) · [PL](pl/THREAT_MODEL.md)
 

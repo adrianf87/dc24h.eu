@@ -1,4 +1,5 @@
 #include "dc24h/adc/state.hpp"
+#include "dc24h/adc/protocol_control.hpp"
 #include "dc24h/adc/sid.hpp"
 #include "dc24h/adc/status.hpp"
 #include "dc24h/adc/msg.hpp"
@@ -10,26 +11,6 @@ namespace dc24h::adc {
 namespace {
 bool is(MessageType type, std::initializer_list<MessageType> types) noexcept {
     return std::find(types.begin(), types.end(), type) != types.end();
-}
-
-// Deliberately bounded BASE hub profile, not a generic extension dispatcher.
-bool valid_type(Direction direction, const Message& message) noexcept {
-    using enum MessageType;
-    const bool incoming = direction == Direction::from_client;
-    switch (message.kind) {
-    case Command::sup: case Command::pas:
-        return message.type == (incoming ? hub : info);
-    case Command::sid: case Command::gpa: case Command::qui:
-        return !incoming && message.type == info;
-    case Command::inf:
-        return incoming ? message.type == broadcast : is(message.type, {info, broadcast});
-    case Command::sta: case Command::msg:
-        return is(message.type, {direct, echo, broadcast, feature}) ||
-               message.type == (incoming ? hub : info);
-    case Command::sch: case Command::res: case Command::ctm: case Command::rcm:
-        return is(message.type, {broadcast, feature, direct, echo});
-    default: return false;
-    }
 }
 
 bool valid_state(ConnectionState state, Command command) noexcept {
@@ -58,12 +39,11 @@ StateResult ConnectionStateMachine::observe(Direction direction, const Message& 
     // Defense against inconsistent hand-built Message objects. Argument/text
     // syntax remains the parser's responsibility, not a second parser here.
     if (recognize_command(message.command) != message.kind) { return StateError::invalid_message; }
-    switch (message.kind) {
-    case Command::unknown: case Command::get: case Command::gfi: case Command::snd:
-        return StateError::unsupported_command;
-    default: break;
+    switch (control_message(direction, message)) {
+    case ControlCode::unsupported_command: return StateError::unsupported_command;
+    case ControlCode::invalid_type: return StateError::invalid_type;
+    case ControlCode::ok: break;
     }
-    if (!valid_type(direction, message)) { return StateError::invalid_type; }
     if (!valid_state(state_, message.kind)) { return StateError::invalid_state; }
     const bool incoming = direction == Direction::from_client;
     const bool routed = is(message.type, {MessageType::broadcast, MessageType::direct,
@@ -71,7 +51,6 @@ StateResult ConnectionStateMachine::observe(Direction direction, const Message& 
     if (incoming && routed && (sid_.empty() || message.source != sid_)) {
         return StateError::wrong_source;
     }
-    if (message.kind == Command::pas && !incoming) { return StateError::invalid_type; }
 
     if (message.kind == Command::msg && !std::holds_alternative<MsgView>(validate_msg(message))) {
         return StateError::invalid_message;

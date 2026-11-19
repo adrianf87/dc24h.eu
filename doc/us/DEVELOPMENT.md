@@ -120,6 +120,10 @@ alpha-0.1.10 starts from main after alpha-0.1.9. Keep browser-safe schema/format
 
 alpha-0.1.11 starts from main after alpha-0.1.10. Keep host activation, real certificates and service reloads separate from example authoring/testing. Test the exact shipped TLS/access/header policy with temporary paths/ports and no host config. A successful apache2 -t is insufficient to claim certificate/key correspondence; exercise real initialization. Keep both documentation languages and version-sensitive fixtures aligned.
 
+## ADC security — alpha-0.9.2
+
+Branch from main. Extract the existing stateless command profile into `control_message` and call it from `observe` without a new rejection class. Keep unknown extensions and hub-legal frames accepted by the parser. Add one bounded deterministic CTest, `adc.security`, with seed `0x0ADC0922` and 4096 mutations. Do not add libFuzzer, a schema migration, a status counter or a WebAdmin page. Do not claim that residual threats T01–T16 are closed.
+
 ## Threat model — alpha-0.9.1
 
 Branch from main. Record the current assets, actors, boundaries and residual risk in both languages. Do not add a protocol check, a schema migration, an Apache setting or a WebAdmin control. Do not mark `configuration.manage`, `hub.manage`, browser kick or mute, or a public gateway as done.
