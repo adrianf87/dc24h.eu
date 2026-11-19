@@ -4,7 +4,7 @@ The ncdc cross-interface fixtures reserve ports on both loopback addresses, reta
 
 The `Check status` workflow in `.github/workflows/build.yml` runs on the custom
 runner `server-747585786` with labels `self-hosted`, `Linux`, `X64` and
-`server-747585786`. Pushes to `main`, `alpha-0.8.7`, `alpha-0.8.8`, `alpha-0.8.9` and `alpha-0.8.10`, and
+`server-747585786`. Pushes to `main`, `alpha-0.8.7`, `alpha-0.8.8`, `alpha-0.8.9`, `alpha-0.8.10` and `alpha-0.8.11`, and
 manual dispatches, trigger CI. The workflow has read-only repository permissions
 and disables persisted checkout credentials.
 

@@ -20,11 +20,108 @@
 #include <cstring>
 #include <filesystem>
 #include <stdexcept>
+#include <string_view>
 #include <thread>
 #include <utility>
 #include <vector>
 
 namespace dc24h::api {
+namespace {
+template <std::size_t N>
+constexpr std::size_t named_index(const std::array<std::string_view, N>& names, std::string_view key) noexcept {
+    for (std::size_t i = 0; i < N; ++i) {
+        if (names[i] == key) { return i; }
+    }
+    return N;
+}
+constexpr auto chat_received_index = named_index(chat::statistic_names, "received");
+constexpr auto chat_public_index = named_index(chat::statistic_names, "public_dispatches");
+constexpr auto chat_private_index = named_index(chat::statistic_names, "private_dispatches");
+constexpr auto chat_rejected_index = named_index(chat::statistic_names, "rejected");
+constexpr auto chat_flood_index = named_index(chat::statistic_names, "flood_limited");
+constexpr auto search_queries_index = named_index(search::statistic_names, "queries_received");
+constexpr auto search_routed_index = named_index(search::statistic_names, "queries_routed");
+constexpr auto search_rejected_index = named_index(search::statistic_names, "queries_rejected");
+constexpr auto search_results_index = named_index(search::statistic_names, "results_received");
+constexpr auto transfer_ctm_index = named_index(transfers::statistic_names, "ctm_received");
+constexpr auto transfer_rcm_index = named_index(transfers::statistic_names, "rcm_received");
+constexpr auto transfer_unsupported_index = named_index(transfers::statistic_names, "peer_protocol_unsupported");
+constexpr auto transfer_failed_index = named_index(transfers::statistic_names, "peer_connection_failed");
+constexpr auto kick_succeeded_index = named_index(admin::kick_statistic_names, "succeeded");
+constexpr auto kick_refused_index = named_index(admin::kick_statistic_names, "refused");
+constexpr auto mute_applied_index = named_index(admin::mute_statistic_names, "applied");
+constexpr auto mute_public_index = named_index(admin::mute_statistic_names, "public_blocked");
+constexpr auto mute_private_index = named_index(admin::mute_statistic_names, "private_blocked");
+static_assert(chat_received_index < chat::statistic_names.size());
+static_assert(chat_public_index < chat::statistic_names.size());
+static_assert(chat_private_index < chat::statistic_names.size());
+static_assert(chat_rejected_index < chat::statistic_names.size());
+static_assert(chat_flood_index < chat::statistic_names.size());
+static_assert(search_queries_index < search::statistic_names.size());
+static_assert(search_routed_index < search::statistic_names.size());
+static_assert(search_rejected_index < search::statistic_names.size());
+static_assert(search_results_index < search::statistic_names.size());
+static_assert(transfer_ctm_index < transfers::statistic_names.size());
+static_assert(transfer_rcm_index < transfers::statistic_names.size());
+static_assert(transfer_unsupported_index < transfers::statistic_names.size());
+static_assert(transfer_failed_index < transfers::statistic_names.size());
+static_assert(kick_succeeded_index < admin::kick_statistic_names.size());
+static_assert(kick_refused_index < admin::kick_statistic_names.size());
+static_assert(mute_applied_index < admin::mute_statistic_names.size());
+static_assert(mute_public_index < admin::mute_statistic_names.size());
+static_assert(mute_private_index < admin::mute_statistic_names.size());
+}
+
+std::string dashboard_json(const Snapshot& value) {
+    std::string json{"{\"schema\":1,\"core_running\":"};
+    json += value.core_running ? "true" : "false";
+    json += ",\"database_enabled\":";
+    json += value.database_enabled ? "true" : "false";
+    const auto field = [&](std::string_view key, std::uint64_t count) {
+        json += ",\"";
+        json += key;
+        json += "\":\"";
+        json += std::to_string(count);
+        json += '"';
+    };
+    field("uptime_seconds", value.uptime_seconds);
+    field("users_online", value.online_users);
+    field("users_peak", value.peak_online_users);
+    field("users_logins", value.successful_logins);
+    field("connections_active", value.active_connections);
+    field("connections_peak", value.peak_connections);
+    field("connections_accepted", value.accepted_connections);
+    field("connections_rejected", value.rejected_connections);
+    field("connections_closed", value.closed_connections);
+    field("security_rejected", value.security_rejected);
+    field("security_closed", value.security_closed);
+    field("adc_frames", value.adc_frames);
+    field("adcs_handshakes", value.adcs_handshakes);
+    field("bytes_received", value.received_bytes);
+    field("bytes_sent", value.sent_bytes);
+    field("chat_received", value.chat.values[chat_received_index]);
+    field("chat_public", value.chat.values[chat_public_index]);
+    field("chat_private", value.chat.values[chat_private_index]);
+    field("chat_rejected", value.chat.values[chat_rejected_index]);
+    field("chat_flood_limited", value.chat.values[chat_flood_index]);
+    field("search_queries", value.search.values[search_queries_index]);
+    field("search_routed", value.search.values[search_routed_index]);
+    field("search_rejected", value.search.values[search_rejected_index]);
+    field("search_results", value.search.values[search_results_index]);
+    field("search_tracked", value.search.tracked_searches);
+    field("transfers_ctm", value.transfers.values[transfer_ctm_index]);
+    field("transfers_rcm", value.transfers.values[transfer_rcm_index]);
+    field("transfers_peer_unsupported", value.transfers.values[transfer_unsupported_index]);
+    field("transfers_peer_failed", value.transfers.values[transfer_failed_index]);
+    field("kicks_succeeded", value.kick.values[kick_succeeded_index]);
+    field("kicks_refused", value.kick.values[kick_refused_index]);
+    field("mutes_applied", value.mute.values[mute_applied_index]);
+    field("mutes_public_blocked", value.mute.values[mute_public_index]);
+    field("mutes_private_blocked", value.mute.values[mute_private_index]);
+    json += '}';
+    return json;
+}
+
 namespace {
 using Clock = std::chrono::steady_clock;
 struct Fd {
@@ -138,7 +235,7 @@ std::string status_json(const Snapshot& value) {
         ",\"peak_connections\":" + std::to_string(value.peak_connections) + "},\"users\":{\"online\":" +
         std::to_string(value.online_users) + ",\"peak_online\":" + std::to_string(value.peak_online_users) +
         ",\"successful_logins\":" + std::to_string(value.successful_logins) + "},\"chat\":" + chat_json + ",\"kick\":"+kick_json+",\"mute\":"+mute_json+",\"search\":" + search_json(value) + ",\"transfers\":" + transfers_json(value.transfers, value.transfer_settings) + ",\"database\":{\"enabled\":" +
-        (value.database_enabled ? "true" : "false") + "}" +
+        (value.database_enabled ? "true" : "false") + "},\"dashboard\":" + dashboard_json(value) +
         (value.configuration ? ",\"configuration\":" + configuration_json(*value.configuration) : "") + "}\n";
 }
 } // namespace

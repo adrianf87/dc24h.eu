@@ -12,6 +12,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <random>
 #include <source_location>
 #include <stdexcept>
@@ -87,6 +88,86 @@ void parser() {
         (void)parse_request(value);
     }
 }
+void dashboard_contract() {
+    const auto zero = dashboard_json(Snapshot{});
+    require(zero ==
+        "{\"schema\":1,\"core_running\":false,\"database_enabled\":false,\"uptime_seconds\":\"0\","
+        "\"users_online\":\"0\",\"users_peak\":\"0\",\"users_logins\":\"0\","
+        "\"connections_active\":\"0\",\"connections_peak\":\"0\",\"connections_accepted\":\"0\","
+        "\"connections_rejected\":\"0\",\"connections_closed\":\"0\",\"security_rejected\":\"0\","
+        "\"security_closed\":\"0\",\"adc_frames\":\"0\",\"adcs_handshakes\":\"0\","
+        "\"bytes_received\":\"0\",\"bytes_sent\":\"0\",\"chat_received\":\"0\",\"chat_public\":\"0\","
+        "\"chat_private\":\"0\",\"chat_rejected\":\"0\",\"chat_flood_limited\":\"0\","
+        "\"search_queries\":\"0\",\"search_routed\":\"0\",\"search_rejected\":\"0\","
+        "\"search_results\":\"0\",\"search_tracked\":\"0\",\"transfers_ctm\":\"0\",\"transfers_rcm\":\"0\","
+        "\"transfers_peer_unsupported\":\"0\",\"transfers_peer_failed\":\"0\","
+        "\"kicks_succeeded\":\"0\",\"kicks_refused\":\"0\",\"mutes_applied\":\"0\","
+        "\"mutes_public_blocked\":\"0\",\"mutes_private_blocked\":\"0\"}");
+    require(zero.size() < 900);
+    Snapshot value{};
+    value.core_running = true;
+    value.database_enabled = true;
+    value.uptime_seconds = 3661;
+    value.online_users = 4;
+    value.peak_online_users = 6;
+    value.successful_logins = 23;
+    value.active_connections = 7;
+    value.peak_connections = 9;
+    value.accepted_connections = 48;
+    value.rejected_connections = 5;
+    value.closed_connections = 41;
+    value.security_rejected = 2;
+    value.security_closed = 1;
+    value.adc_frames = 144;
+    value.adcs_handshakes = 3;
+    value.received_bytes = std::numeric_limits<std::uint64_t>::max();
+    value.sent_bytes = 8192;
+    value.chat.values[0] = 12;
+    value.chat.values[1] = 5;
+    value.chat.values[2] = 3;
+    value.chat.values[3] = 2;
+    value.chat.values[4] = 1;
+    value.search.values[0] = 1;
+    value.search.values[1] = 2;
+    value.search.values[2] = 3;
+    value.search.values[10] = 11;
+    value.search.tracked_searches = 4;
+    value.transfers.values[0] = 8;
+    value.transfers.values[10] = 9;
+    value.transfers.values[20] = 10;
+    value.transfers.values[21] = 11;
+    value.kick.values[1] = 12;
+    value.kick.values[2] = 13;
+    value.mute.values[1] = 14;
+    value.mute.values[6] = 15;
+    value.mute.values[7] = 16;
+    const auto json = dashboard_json(value);
+    require(json.find("\"core_running\":true") != std::string::npos);
+    require(json.find("\"database_enabled\":true") != std::string::npos);
+    require(json.find("\"uptime_seconds\":\"3661\"") != std::string::npos);
+    require(json.find("\"users_logins\":\"23\"") != std::string::npos);
+    require(json.find("\"bytes_received\":\"18446744073709551615\"") != std::string::npos);
+    require(json.find("\"bytes_sent\":\"8192\"") != std::string::npos);
+    require(json.find("\"chat_received\":\"12\"") != std::string::npos);
+    require(json.find("\"chat_public\":\"5\"") != std::string::npos);
+    require(json.find("\"chat_flood_limited\":\"1\"") != std::string::npos);
+    require(json.find("\"search_queries\":\"1\"") != std::string::npos);
+    require(json.find("\"search_routed\":\"2\"") != std::string::npos);
+    require(json.find("\"search_rejected\":\"3\"") != std::string::npos);
+    require(json.find("\"search_results\":\"11\"") != std::string::npos);
+    require(json.find("\"search_tracked\":\"4\"") != std::string::npos);
+    require(json.find("\"transfers_ctm\":\"8\"") != std::string::npos);
+    require(json.find("\"transfers_rcm\":\"9\"") != std::string::npos);
+    require(json.find("\"transfers_peer_unsupported\":\"10\"") != std::string::npos);
+    require(json.find("\"transfers_peer_failed\":\"11\"") != std::string::npos);
+    require(json.find("\"kicks_succeeded\":\"12\"") != std::string::npos);
+    require(json.find("\"kicks_refused\":\"13\"") != std::string::npos);
+    require(json.find("\"mutes_applied\":\"14\"") != std::string::npos);
+    require(json.find("\"mutes_public_blocked\":\"15\"") != std::string::npos);
+    require(json.find("\"mutes_private_blocked\":\"16\"") != std::string::npos);
+    require(json.find("password") == std::string::npos);
+    require(json.find("nickname") == std::string::npos);
+}
 void lifecycle() {
     char name[] = "/tmp/dc24h-api-unit-XXXXXX";
     require(::mkdtemp(name) != nullptr);
@@ -149,6 +230,6 @@ void lifecycle() {
 }
 }
 int main() {
-    try { parser(); lifecycle(); std::cout << "API parser, authentication and lifecycle OK\n"; }
+    try { parser(); dashboard_contract(); lifecycle(); std::cout << "API parser, authentication, dashboard and lifecycle OK\n"; }
     catch (const std::exception& error) { std::cerr << error.what() << '\n'; return 1; }
 }

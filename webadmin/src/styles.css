@@ -916,6 +916,15 @@ footer a {
 }
 .section-note svg {
   color: #8b9fc5;
+  flex: none;
+}
+.dashboard-note {
+  margin-bottom: 4px;
+}
+.dashboard-card {
+  padding: 28px;
+  color: #66758b;
+  line-height: 1.7;
 }
 .database-card {
   padding: 45px;

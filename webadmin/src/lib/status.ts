@@ -1,3 +1,5 @@
+import { parseDashboard } from "./dashboard.ts";
+import type { DashboardSnapshot } from "./dashboard.ts";
 import {parseMute} from "./mute.ts";
 import type {MuteSnapshot} from "./mute.ts";
 import {parseKick} from "./kick.ts";
@@ -8,7 +10,7 @@ import { parseSearch } from "./search-status.ts";
 import type { SearchSnapshot } from "./search-status.ts";
 import { parseConfiguration } from "./configuration.ts";
 import type { StartupConfiguration } from "./configuration.ts";
-export const WEBADMIN_VERSION = "alpha-0.8.10";
+export const WEBADMIN_VERSION = "alpha-0.8.11";
 export interface HubSnapshot {
   api_version: "v1";
   server: {
@@ -44,6 +46,7 @@ export interface HubSnapshot {
   };
   kick?: KickSnapshot;
   mute?: MuteSnapshot;
+  dashboard?: DashboardSnapshot;
   search?: SearchSnapshot;
   transfers?: TransferSnapshot;
   database: { enabled: boolean };
@@ -78,50 +81,110 @@ export function parseSnapshot(value: unknown): HubSnapshot {
   }
   const configuration = root.configuration === undefined ? undefined : parseConfiguration(root.configuration);
   if(configuration && configuration.database.enabled !== database.enabled) throw new Error("Inconsistent database configuration");
+  const kick = root.kick === undefined ? undefined : parseKick(root.kick);
+  const mute = root.mute === undefined ? undefined : parseMute(root.mute);
+  const search = root.search === undefined ? undefined : parseSearch(root.search);
+  const transfers = root.transfers === undefined ? undefined : parseTransfers(root.transfers);
+  const dashboard = root.dashboard === undefined ? undefined : parseDashboard(root.dashboard);
+  const uptime = counter(server.uptime_seconds);
+  const networkValues = {
+    active_connections: counter(network.active_connections),
+    accepted_connections: counter(network.accepted_connections),
+    adc_frames: counter(network.adc_frames),
+    adcs_handshakes: counter(network.adcs_handshakes),
+    security_rejected: counter(network.security_rejected),
+    security_closed: counter(network.security_closed),
+    rejected_connections: counter(network.rejected_connections),
+    closed_connections: counter(network.closed_connections),
+    received_bytes: counter(network.received_bytes),
+    sent_bytes: counter(network.sent_bytes),
+    peak_connections: counter(network.peak_connections),
+  };
+  const userValues = {
+    online: counter(users.online),
+    peak_online: counter(users.peak_online),
+    successful_logins: counter(users.successful_logins),
+  };
+  const chatValues = {
+    received: counter(chat.received),
+    public_dispatches: counter(chat.public_dispatches),
+    private_dispatches: counter(chat.private_dispatches),
+    rejected: counter(chat.rejected),
+    flood_limited: counter(chat.flood_limited),
+    errors: counter(chat.errors),
+    queued: counter(chat.queued),
+    unavailable: counter(chat.unavailable),
+    refused: counter(chat.refused),
+  };
+  if (dashboard) {
+    const agree = (decimal: string, value: number) => {
+      if (decimal !== String(value)) throw new Error("Inconsistent dashboard");
+    };
+    if (
+      dashboard.core_running !== server.core_running ||
+      dashboard.database_enabled !== database.enabled ||
+      dashboard.uptime_seconds !== String(uptime)
+    ) {
+      throw new Error("Inconsistent dashboard");
+    }
+    agree(dashboard.connections_active, networkValues.active_connections);
+    agree(dashboard.connections_peak, networkValues.peak_connections);
+    agree(dashboard.connections_accepted, networkValues.accepted_connections);
+    agree(dashboard.connections_rejected, networkValues.rejected_connections);
+    agree(dashboard.connections_closed, networkValues.closed_connections);
+    agree(dashboard.security_rejected, networkValues.security_rejected);
+    agree(dashboard.security_closed, networkValues.security_closed);
+    agree(dashboard.adc_frames, networkValues.adc_frames);
+    agree(dashboard.adcs_handshakes, networkValues.adcs_handshakes);
+    agree(dashboard.bytes_received, networkValues.received_bytes);
+    agree(dashboard.bytes_sent, networkValues.sent_bytes);
+    agree(dashboard.users_online, userValues.online);
+    agree(dashboard.users_peak, userValues.peak_online);
+    agree(dashboard.users_logins, userValues.successful_logins);
+    agree(dashboard.chat_received, chatValues.received);
+    agree(dashboard.chat_public, chatValues.public_dispatches);
+    agree(dashboard.chat_private, chatValues.private_dispatches);
+    agree(dashboard.chat_rejected, chatValues.rejected);
+    agree(dashboard.chat_flood_limited, chatValues.flood_limited);
+    if (!kick || !mute || !search || !transfers) throw new Error("Incomplete dashboard");
+    if (
+      dashboard.kicks_succeeded !== kick.succeeded ||
+      dashboard.kicks_refused !== kick.refused ||
+      dashboard.mutes_applied !== mute.applied ||
+      dashboard.mutes_public_blocked !== mute.public_blocked ||
+      dashboard.mutes_private_blocked !== mute.private_blocked
+    ) {
+      throw new Error("Inconsistent dashboard");
+    }
+    agree(dashboard.search_queries, search.statistics.queries_received);
+    agree(dashboard.search_routed, search.statistics.queries_routed);
+    agree(dashboard.search_rejected, search.statistics.queries_rejected);
+    agree(dashboard.search_results, search.statistics.results_received);
+    agree(dashboard.search_tracked, search.statistics.tracked_searches);
+    agree(dashboard.transfers_ctm, transfers.statistics.ctm_received);
+    agree(dashboard.transfers_rcm, transfers.statistics.rcm_received);
+    agree(dashboard.transfers_peer_unsupported, transfers.statistics.peer_protocol_unsupported);
+    agree(dashboard.transfers_peer_failed, transfers.statistics.peer_connection_failed);
+  }
   // Normalize the allowlisted fields; never forward unknown data or credentials.
   return {
     api_version: "v1",
-    ...(root.kick===undefined?{}:{kick:parseKick(root.kick)}),
-    ...(root.mute===undefined?{}:{mute:parseMute(root.mute)}),
+    ...(kick === undefined ? {} : { kick }),
+    ...(mute === undefined ? {} : { mute }),
+    ...(dashboard === undefined ? {} : { dashboard }),
     server: {
       name: "dc24h.eu",
       version: server.version,
       core_running: server.core_running,
-      uptime_seconds: counter(server.uptime_seconds),
+      uptime_seconds: uptime,
     },
-    network: {
-      active_connections: counter(network.active_connections),
-      accepted_connections: counter(network.accepted_connections),
-      adc_frames: counter(network.adc_frames),
-      adcs_handshakes: counter(network.adcs_handshakes),
-      security_rejected: counter(network.security_rejected),
-      security_closed: counter(network.security_closed),
-      rejected_connections: counter(network.rejected_connections),
-      closed_connections: counter(network.closed_connections),
-      received_bytes: counter(network.received_bytes),
-      sent_bytes: counter(network.sent_bytes),
-      peak_connections: counter(network.peak_connections),
-    },
-    users: {
-      online: counter(users.online),
-      peak_online: counter(users.peak_online),
-      successful_logins: counter(users.successful_logins),
-    },
-    chat: {
-      received: counter(chat.received),
-      public_dispatches: counter(chat.public_dispatches),
-      private_dispatches: counter(chat.private_dispatches),
-      rejected: counter(chat.rejected),
-      flood_limited: counter(chat.flood_limited),
-      errors: counter(chat.errors),
-      queued: counter(chat.queued),
-      unavailable: counter(chat.unavailable),
-      refused: counter(chat.refused),
-    },
+    network: networkValues,
+    users: userValues,
+    chat: chatValues,
     database: { enabled: database.enabled },
     ...(configuration === undefined ? {} : {configuration}),
-    ...(root.search === undefined ? {} : { search: parseSearch(root.search) }),
-    ...(root.transfers === undefined ? {} : { transfers: parseTransfers(root.transfers) }),
+    ...(search === undefined ? {} : { search }),
+    ...(transfers === undefined ? {} : { transfers }),
   };
 }
 export function duration(seconds: number): string {

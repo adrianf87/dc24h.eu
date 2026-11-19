@@ -96,8 +96,39 @@ class ApiProcessTests(unittest.TestCase):
         drain_until_eof(peer)
         snapshot = fetch_status(fx.endpoint, fx.token)
         self.assertEqual(snapshot['api_version'], 'v1')
-        self.assertEqual(snapshot['server']['version'], 'alpha-0.8.10')
+        self.assertEqual(snapshot['server']['version'], 'alpha-0.8.11')
         self.assertTrue(snapshot['server']['core_running'])
+        board = snapshot['dashboard']
+        self.assertEqual(board['schema'], 1)
+        self.assertEqual(board['core_running'], True)
+        self.assertEqual(board['database_enabled'], False)
+        self.assertEqual(board['uptime_seconds'], str(snapshot['server']['uptime_seconds']))
+        self.assertEqual(board['adc_frames'], '1')
+        self.assertEqual(board['connections_accepted'], str(snapshot['network']['accepted_connections']))
+        self.assertEqual(board['connections_active'], str(snapshot['network']['active_connections']))
+        self.assertEqual(board['bytes_received'], str(snapshot['network']['received_bytes']))
+        self.assertEqual(board['bytes_sent'], str(snapshot['network']['sent_bytes']))
+        self.assertEqual(board['users_online'], str(snapshot['users']['online']))
+        self.assertEqual(board['chat_received'], str(snapshot['chat']['received']))
+        self.assertEqual(board['search_queries'], str(snapshot['search']['statistics']['queries_received']))
+        self.assertEqual(board['search_tracked'], str(snapshot['search']['statistics']['tracked_searches']))
+        self.assertEqual(board['transfers_ctm'], str(snapshot['transfers']['statistics']['ctm_received']))
+        self.assertEqual(board['transfers_rcm'], str(snapshot['transfers']['statistics']['rcm_received']))
+        self.assertEqual(board['transfers_peer_unsupported'], str(snapshot['transfers']['statistics']['peer_protocol_unsupported']))
+        self.assertEqual(board['transfers_peer_failed'], str(snapshot['transfers']['statistics']['peer_connection_failed']))
+        self.assertEqual(board['kicks_succeeded'], snapshot['kick']['succeeded'])
+        self.assertEqual(board['kicks_refused'], snapshot['kick']['refused'])
+        self.assertEqual(board['mutes_applied'], snapshot['mute']['applied'])
+        self.assertEqual(board['mutes_public_blocked'], snapshot['mute']['public_blocked'])
+        self.assertEqual(board['mutes_private_blocked'], snapshot['mute']['private_blocked'])
+        self.assertEqual(set(board), {
+            'schema', 'core_running', 'database_enabled', 'uptime_seconds', 'users_online', 'users_peak',
+            'users_logins', 'connections_active', 'connections_peak', 'connections_accepted', 'connections_rejected',
+            'connections_closed', 'security_rejected', 'security_closed', 'adc_frames', 'adcs_handshakes',
+            'bytes_received', 'bytes_sent', 'chat_received', 'chat_public', 'chat_private', 'chat_rejected',
+            'chat_flood_limited', 'search_queries', 'search_routed', 'search_rejected', 'search_results',
+            'search_tracked', 'transfers_ctm', 'transfers_rcm', 'transfers_peer_unsupported', 'transfers_peer_failed',
+            'kicks_succeeded', 'kicks_refused', 'mutes_applied', 'mutes_public_blocked', 'mutes_private_blocked'})
         self.assertGreaterEqual(snapshot['network']['accepted_connections'], 1)
         self.assertEqual(snapshot['network']['adc_frames'], 1)
         self.assertEqual(snapshot['database'], {'enabled': False})

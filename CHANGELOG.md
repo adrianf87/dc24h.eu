@@ -1,5 +1,14 @@
 # Changelog
 
+## alpha-0.8.11 — 2026-11-19
+
+WebAdmin Dashboard — main panel and statistics, based on main `9f72152`. No automatic merge. The branch name is `alpha-0.8.11`.
+
+- Add `dashboard` to `GET /api/v1/status`. Schema 1 repeats `core_running` and `database_enabled` and copies existing process counters as decimal strings. The object does not sum counters, compute rates, read SQL or store history. Status and health stay bearer-only. Schema v9 is unchanged.
+- Add bilingual `#dashboard` as the first monitoring page. The default route remains `#overview`. A missing summary stays unavailable. A malformed summary, or one that disagrees with its source fields, rejects the snapshot. Unknown fields are dropped. Account lists, ban records, audit rows, configuration writes and live hub administration remain outside this panel.
+
+Validation on Debian 13: all 214/214 CTest suites passed in Debug (92.64 s real) and Release (71.38 s real), including disposable MariaDB, real ncdc ADC/ADCS and the status dashboard contract. The Release C++ build log contained no compiler warnings. WebAdmin typecheck and production build passed. All 44 Node tests passed. All 35 Chromium tests passed. Actual C++ API, adapter and React integration passed. Release metadata, documentation UTF-8, language parity, local Markdown links, Python syntax with warnings as errors and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration or account/credential mutation is performed.
+
 ## alpha-0.8.10 — 2026-11-19
 
 Admin API — proven administrative access in C++, based on main `d7c5908`. No automatic merge. The branch name is `alpha-0.8.10`.
