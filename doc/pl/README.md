@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.8.10: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.8.11: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [Panel WebAdmin — alpha-0.8.11](WEBADMIN_DASHBOARD.md)
 - [API administracyjne — alpha-0.8.10](ADMIN_API.md)
 - [Dziennik audytu — alpha-0.8.9](AUDIT_LOGS.md)
 - [Reguły moderacji — alpha-0.8.8](MODERATION_RULES.md)

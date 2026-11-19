@@ -49,6 +49,9 @@ struct Snapshot {
     admin::KickStatistics kick{};
     admin::MuteStatistics mute{};
 };
+// Fixed read-only summary of counters already stored on Snapshot. Decimal
+// strings keep the full uint64 range. No SQL, secrets, names or derived rates.
+[[nodiscard]] std::string dashboard_json(const Snapshot& value);
 using StatusProvider = std::function<Snapshot()>;
 using FailureHandler = std::function<void()>;
 using AccountHandler = std::function<std::string(const Request&)>;

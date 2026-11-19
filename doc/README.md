@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.8.10.
+Current development version: alpha-0.8.11.
+
+[WebAdmin Dashboard — alpha-0.8.11](us/WEBADMIN_DASHBOARD.md) · [PL](pl/WEBADMIN_DASHBOARD.md)
 
 [Admin API — alpha-0.8.10](us/ADMIN_API.md) · [PL](pl/ADMIN_API.md)
 
