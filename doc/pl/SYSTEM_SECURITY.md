@@ -12,7 +12,7 @@ Hub nadal działa na pierwszym planie i kończy po SIGTERM. Nie demonizuje się,
 
 - `/var/lib/dc24h`, tryb `0700`, na stan i pliki sekretów tylko dla właściciela
 - `/run/dc24h`, tryb `0700`, na gniazdo API
-- `/var/log/dc24h`, tryb `0750`, na plik dziennika
+- `/var/log/dc24h`, tryb `0750`, na plik dziennika. Hub dopisuje ten plik tylko wtedy, gdy sam plik ma tryb `0600` i należy do użytkownika usługi. Zobacz [Bezpieczeństwo logów](LOGGING_SECURITY.md).
 
 `/etc/dc24h` ma tryb `0755` i nie jest magazynem sekretów. Nie umieszczaj tam hasła bazy, tokena API ani klucza ADC. Trzymaj te pliki w trybie `0600` w `/var/lib/dc24h`. Skieruj gniazdo API na `/run/dc24h`, co spełnia dotychczasową regułę prywatnego katalogu. Ścieżka kopii też musi być w zapisywalnym katalogu stanu. Członkostwo w grupie gniazda MariaDB zostaje przy operatorze.
 

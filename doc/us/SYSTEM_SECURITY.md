@@ -12,7 +12,7 @@ The hub still runs in the foreground and stops on SIGTERM. It does not daemonize
 
 - `/var/lib/dc24h`, mode `0700`, for state and for owner-only secret files
 - `/run/dc24h`, mode `0700`, for the API socket
-- `/var/log/dc24h`, mode `0750`, for a log file
+- `/var/log/dc24h`, mode `0750`, for a log file. The hub appends that file only when the file itself is mode `0600` and owned by the service user. See [Logging security](LOGGING_SECURITY.md).
 
 `/etc/dc24h` is mode `0755` and is not a secret store. Do not put the database password, the API token or the ADC key there. Keep those files mode `0600` under `/var/lib/dc24h`. Point the API socket at `/run/dc24h`, which matches the existing private-directory rule. A backup path must also be under the writable state directory. Membership of the MariaDB socket group stays with the operator.
 

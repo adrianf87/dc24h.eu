@@ -29,7 +29,8 @@ struct Options {
     bool chat{false};
 };
 
-// Synchronized best-effort UTC logger. New files are created with mode 0600.
+// Synchronized best-effort UTC logger. A new file is mode 0600.
+// An existing file must already be mode 0600, owned by this user, with one link.
 // The caller must keep the log directory trusted and join users before destruction.
 class Logger final {
 public:
@@ -55,6 +56,8 @@ private:
     void write_unlocked(const char* severity, std::string_view message);
     void report_suppressed_unlocked();
     void report_chat_suppressed_unlocked();
+    void report_security_suppressed_unlocked();
+    void record_security_unlocked(std::string_view action);
     std::mutex mutex_;
     Level level_;
     i18n::Language language_;
@@ -70,6 +73,10 @@ private:
     bool window_started_{false};
     std::size_t connection_emitted_{0};
     std::uint64_t connection_suppressed_{0};
+    std::chrono::steady_clock::time_point security_window_{};
+    bool security_window_started_{false};
+    std::size_t security_emitted_{0};
+    std::uint64_t security_suppressed_{0};
 };
 
 } // namespace dc24h::logging

@@ -4,6 +4,8 @@ Ta analiza zapisuje, jak można atakować hub i WebAdmin, które mechanizmy już
 
 Analiza nie dodaje sprawdzenia protokołu, migracji schematu, ustawienia Apache ani mechanizmu WebAdmin. Schemat v9 pozostaje bez zmian. `configuration.manage` i `hub.manage` pozostają niezaimplementowane. Kick i mute w przeglądarce nadal nie są wysyłane. To nie jest publiczna uwierzytelniona brama i to nie jest test penetracyjny.
 
+alpha-0.9.10 bezpieczeństwo logów, dodane po tej analizie, utrzymuje plik logu jako prywatny dla właściciela i zapisuje stałe skutki bezpieczeństwa bez danych klienta. Te zapisy nie są produkcyjnym audytem. Nie zamyka T11 ani T13. Schemat v9 pozostaje bez zmian. Zobacz [Bezpieczeństwo logów](LOGGING_SECURITY.md).
+
 alpha-0.9.9 bezpieczeństwo systemu, dodane po tej analizie, dodaje jeden przykład systemd, który uruchamia hub jako zablokowanego użytkownika systemowego z pustym zbiorem uprawnień i ścisłą hierarchią tylko do odczytu. Budowanie nie instaluje ani nie uruchamia tej usługi. Nie zamyka T07. Schemat v9 pozostaje bez zmian. Zobacz [Bezpieczeństwo systemu](SYSTEM_SECURITY.md).
 
 alpha-0.9.8 bezpieczeństwo bazy danych, dodane po tej analizie, zapisuje jedną spójną kopię tylko dla właściciela, gdy operator o to poprosi, i odtwarza ją wyłącznie do pustych tabel tego samego schematu. Utracone potwierdzenie zatwierdzenia nie jest powtarzane. Nie zamyka T14. Schemat v9 pozostaje bez zmian. Zobacz [Bezpieczeństwo bazy danych](DATABASE_SECURITY.md).
@@ -109,9 +111,9 @@ Obecny mechanizm: [Uprawnienia](PERMISSIONS.md), [Reguły moderacji](MODERATION_
 
 ### T11 Brakujący audyt
 
-Udane utrzymanie kont, właściciela i banów może odczytać `audit.read`. Odmowy, hasła, dowody, powody w wolnym tekście, bieżący kick i bieżący mute nie są wierszami. Rejestracja poza Admin Core nie dodaje wiersza. Zdarzenia dziennika bezpieczeństwa są zbiorcze. Nie ma produkcyjnego audytu nieudanego CSRF ani użycia grantu.
+Udane utrzymanie kont, właściciela i banów może odczytać `audit.read`. Odmowy, hasła, dowody, powody w wolnym tekście, bieżący kick i bieżący mute nie są wierszami. Rejestracja poza Admin Core nie dodaje wiersza. Zdarzenia dziennika bezpieczeństwa są zbiorcze. Prywatny log może przechowywać stały zapis bezpieczeństwa bez aktora i bez celu. Nie ma produkcyjnego audytu nieudanego CSRF ani użycia grantu.
 
-Obecny mechanizm: [Dziennik audytu](AUDIT_LOGS.md). Ryzyko szczątkowe: tabela audytu nie odtworzy odmowy ani bieżącego kicka.
+Obecny mechanizm: [Dziennik audytu](AUDIT_LOGS.md) i [Bezpieczeństwo logów](LOGGING_SECURITY.md). Ryzyko szczątkowe: tabela audytu nie odtworzy odmowy ani bieżącego kicka.
 
 ### T12 Hub widzi routowane dane klienta
 

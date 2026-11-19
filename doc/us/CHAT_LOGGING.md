@@ -20,7 +20,7 @@ No message body, configured greeting, arbitrary ADC field, nickname, SID/CID/PID
 
 Each Logger has an independent, mutex-protected, steady-clock budget of 32 chat outcome records per one-second window. Excess records increment a saturating suppression counter without formatting. The next window's first event, or Logger destruction, writes one WARN `Chat log events suppressed=N` summary (PL: `Pominięte zdarzenia logu czatu=N`). Connection logging retains its separate 64/s budget. A summary may accompany the first record of the next window. No timer emits periodic idle summaries.
 
-The existing UTC logger provides bounded UTF-8 single-line formatting and best-effort failure handling. Allocation or write failures do not escape chat logging. A failed write still consumes its event allowance; suppression is a rate-limit count, not a disk-write success count. Existing trusted-directory, regular-file, no-symlink and newly-created mode-0600 rules apply. Logging uses the existing synchronous sink; this increment does not promise bounded disk latency or add log rotation/retention.
+The existing UTC logger provides bounded UTF-8 single-line formatting and best-effort failure handling. Allocation or write failures do not escape chat logging. A failed write still consumes its event allowance; suppression is a rate-limit count, not a disk-write success count. Existing trusted-directory, regular-file, no-symlink and mode-0600 rules apply. An existing log must already be mode 0600 and owned by this user. Logging uses the existing synchronous sink; this increment does not promise bounded disk latency or add log rotation/retention.
 
 ## Counter definitions
 

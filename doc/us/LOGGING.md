@@ -31,7 +31,7 @@ connections = off
   --log-level info --log-file /var/log/dc24h/hub.log --log-connections on
 ```
 
-Use `--log-file -` for stderr. File permissions, aliases, relative paths and INI/CLI precedence follow [CONFIGURATION.md](CONFIGURATION.md). New log files request 0600, existing permissions are preserved. A configured file is opened/validated even at `off`. No directory is created automatically.
+Use `--log-file -` for stderr. File permissions, aliases, relative paths and INI/CLI precedence follow [CONFIGURATION.md](CONFIGURATION.md). A new file is mode `0600`. An existing file is appended only when it is already mode `0600`, owned by this user, and has one link. See [Logging security](LOGGING_SECURITY.md). A configured file is opened/validated even at `off`. No directory is created automatically.
 
 ## Connection events and privacy
 

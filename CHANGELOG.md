@@ -1,5 +1,16 @@
 # Changelog
 
+## alpha-0.9.10 — 2026-11-19
+
+Logging — secure logs and event recording, based on main `3237062`. The branch name is `alpha-0.9.10`.
+
+- Create a new log file as mode 0600 even under a restrictive umask. Append an existing file only when it is already mode 0600, owned by the effective user, and has one link. Do not change the mode of an existing file. Refuse group or world access, another owner, a final symlink, a FIFO, a device, or a second hard link. stderr and `--check-config` stay unchanged.
+- At info or warning, write a fixed `Security record=` line for twelve security outcomes even when connection logging is off. The line has no connection id, address, port, nickname, CID, PID, password, or ADC text. At most 32 records are written each second. Further records are counted and reported once as `Suppressed security records=`. error and off do not write these records. Connection lines keep their own 64-per-second budget.
+- These records are not an audit trail. They have no actor and no target. This does not close residual threats T11 or T13. Production audit logging is not implemented. The file is not rotated, reopened, or sent to a remote collector. A slow disk can still block the caller. Schema v9 is unchanged. No status counter, WebAdmin page, INI key, CLI flag, or Apache setting is added. `Require local` stays.
+- Run Check status on GitHub-hosted Ubuntu 24.04. Add `alpha-0.9.10` to the push branches. Local validation uses eight CPU threads. Remote CI completion is not awaited.
+
+Validation on Debian 13: all 223/223 CTest suites passed in Debug (75.45 s real) and Release (73.93 s real), including disposable MariaDB, real ncdc ADC/ADCS, the Apache HTTPS reverse proxy, the sandboxed systemd example, and the private log with fixed security records. The Release C++ build log contained no compiler warnings. WebAdmin typecheck and production build passed. All 48 Node tests passed. All 41 Chromium tests passed. Actual C++ API, adapter and React integration passed. Release metadata, documentation UTF-8, language parity, local Markdown links, Python syntax with warnings as errors and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration, host account or service activation is performed.
+
 ## alpha-0.9.9 — 2026-11-19
 
 System security — Debian and Ubuntu hardening and a systemd service, based on main `21865ac`. The branch name is `alpha-0.9.9`.
