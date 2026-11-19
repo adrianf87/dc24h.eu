@@ -65,7 +65,7 @@ The HTTP virtual host returns a permanent 301 redirect to a fixed `https://dc24h
 
 CSP permits same-origin bundled scripts/styles/fonts/connections and forbids frames/objects. Additional headers set no-sniff, no-referrer and DENY framing. HTTPS responses (including errors) carry host-only HSTS `max-age=300`; no includeSubDomains/preload policy is imposed. This short example lifetime can be changed by the operator after validating their HTTPS deployment. These headers do not implement API authentication or constitute a security audit.
 
-Existing port-443/default/SNI virtual hosts and global Apache settings can affect real deployments; review the selected site rather than replacing unrelated configuration. The example does not configure HTTP/2, OCSP stapling, automatic certificate renewal, production audit logging or a reverse proxy.
+Existing port-443/default/SNI virtual hosts and global Apache settings can affect real deployments; review the selected site rather than replacing unrelated configuration. This static example does not configure HTTP/2, OCSP stapling, automatic certificate renewal, production audit logging or a reverse proxy. Allowlisted proxying of the loopback adapter is the separate [HTTPS reverse proxy](APACHE2_PROXY.md).
 
 ## Automated verification
 

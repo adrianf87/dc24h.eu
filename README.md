@@ -2,12 +2,13 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.8.13 (WebAdmin Management).**
+**Current development version: alpha-0.8.14 (Apache2 HTTPS proxy).**
 
 CI on `main`: [GitHub-hosted Ubuntu 24.04](doc/us/GITHUB_CI.md) runs C++ Debug, C++ Release and WebAdmin · [PL](doc/pl/GITHUB_CI.md).
 
 Completed increments (older bullets describe their original delivery scope):
 
+- **alpha-0.8.14 Apache2 HTTPS proxy**: an allowlisted reverse proxy to the loopback WebAdmin adapter, with client bearer tokens, cookies and forwarded identity removed. The service token and the C++ Unix socket stay out of Apache. Local access remains the default. See [Apache2 HTTPS proxy](doc/us/APACHE2_PROXY.md).
 - **alpha-0.8.13 WebAdmin Management**: a maintenance catalog of account, role and ban areas for the current grant, and a bilingual page that links to the existing flows. The page does not perform those writes. Configuration writes, live hub administration and browser kick or mute stay outside it. See [WebAdmin Management](doc/us/WEBADMIN_MANAGEMENT.md).
 - **alpha-0.8.12 WebAdmin Users**: a bearer-only directory of ready sessions and a bilingual page of kick, mute and unmute decisions. The page shows the client command and does not send it, create bans, or reveal CID, IP, account or profile fields. See [WebAdmin Users](doc/us/WEBADMIN_USERS.md).
 - **alpha-0.8.11 WebAdmin Dashboard**: a fixed read-only summary of existing process counters on the authenticated status API, and a bilingual main panel. Account lists, ban records, audit rows, configuration writes and live hub administration stay outside it. See [WebAdmin Dashboard](doc/us/WEBADMIN_DASHBOARD.md).
@@ -218,7 +219,7 @@ Security defaults: 128 active peers/IP, 256 admissions/IP/minute, 1024 decoder r
 
 MariaDB is disabled by default. Configure `[database]` to enable connection checks before listener startup. Use `--check-database` to connect/ping or `--migrate-database` to explicitly create/verify migration metadata; startup never migrates. Install `mariadb-server` to run disposable integration tests. See [database documentation](doc/us/DATABASE.md) for setup, privileges and limits.
 
-The administrative API is disabled by default. Enable `[api]` with a private Unix socket directory and a private 64-hex-character token file. Authenticated `GET /api/v1/health` and `GET /api/v1/status` are read-only. The read-only WebAdmin uses a local development adapter; production web authentication, a remote gateway and administrative mutations remain planned. See [API setup and contract](doc/us/API.md).
+The administrative API is disabled by default. Enable `[api]` with a private Unix socket directory and a private 64-hex-character token file. Authenticated `GET /api/v1/health` and `GET /api/v1/status` are read-only on the hub process. The WebAdmin adapter holds the service token outside the browser. The Apache proxy example is local and allowlisted. Public web authentication and remote administrator access remain separate work. See [API setup and contract](doc/us/API.md).
 
 ## WebAdmin
 
@@ -229,6 +230,6 @@ npm run build
 npm run dev
 ```
 
-Requires Node.js `^20.19.0 || >=22.12.0`. Open the local URL printed by Vite. Without API configuration the panel shows unavailable values. For the optional real C++ connection, use the same service UID and server-only socket/token-file path variables; never paste a service token into the browser. See [WebAdmin US](doc/us/WEBADMIN.md) / [WebAdmin PL](doc/pl/WEBADMIN.md) for setup, Apache2 and optional CMake asset installation. Production browser authentication, roles, mutations and an authenticated Apache gateway remain planned.
+Requires Node.js `^20.19.0 || >=22.12.0`. Open the local URL printed by Vite. Without API configuration the panel shows unavailable values. For the optional real C++ connection, use the same service UID and server-only socket/token-file path variables; never paste a service token into the browser. See [WebAdmin US](doc/us/WEBADMIN.md) / [WebAdmin PL](doc/pl/WEBADMIN.md) for setup, Apache2 and optional CMake asset installation. Public browser sessions and remote administrator access remain separate work.
 
-An Apache2 HTTPS template is included at [config/apache2-webadmin-https.conf.example](config/apache2-webadmin-https.conf.example) and installed with the configuration examples. Customize domain/certificate/asset paths before enabling it; default access is local and API routes remain denied. Setup: [HTTPS US](doc/us/APACHE2_HTTPS.md) / [HTTPS PL](doc/pl/APACHE2_HTTPS.md). No host site or certificate is activated automatically.
+An Apache2 HTTPS template is included at [config/apache2-webadmin-https.conf.example](config/apache2-webadmin-https.conf.example) and installed with the configuration examples. Customize domain/certificate/asset paths before enabling it; default access is local and API routes remain denied. The separate [proxy example](config/apache2-webadmin-https-proxy.conf.example) forwards an allowlisted API to the loopback adapter and does not contain the service token. Setup: [HTTPS US](doc/us/APACHE2_HTTPS.md) / [HTTPS PL](doc/pl/APACHE2_HTTPS.md) and [proxy US](doc/us/APACHE2_PROXY.md) / [proxy PL](doc/pl/APACHE2_PROXY.md). No host site or certificate is activated automatically.

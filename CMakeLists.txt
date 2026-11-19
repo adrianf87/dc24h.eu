@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.8.13 LANGUAGES CXX)
+project(dc24h VERSION 0.8.14 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -244,7 +244,7 @@ endforeach()
 
 include(GNUInstallDirs)
 install(TARGETS dc24h dc24h-account-admin dc24h-owner RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-install(FILES config/dc24h.ini.example config/adc-accounts.ini.example config/apache2-webadmin-https.conf.example DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/dc24h)
+install(FILES config/dc24h.ini.example config/adc-accounts.ini.example config/apache2-webadmin-https.conf.example config/apache2-webadmin-https-proxy.conf.example DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/dc24h)
 
 install(FILES ${DC24H_MIGRATION_FILES} DESTINATION ${CMAKE_INSTALL_DATADIR}/dc24h/migrations)
 
@@ -1029,6 +1029,17 @@ if(BUILD_TESTING)
             "${APACHE2_EXECUTABLE}" "${APACHE2_MODULE_DIR}"
             "${CMAKE_CURRENT_SOURCE_DIR}/config/apache2-webadmin-https.conf.example")
         set_tests_properties(apache2.https PROPERTIES TIMEOUT 60)
+        if(EXISTS "${APACHE2_MODULE_DIR}/mod_proxy_http.so")
+            add_test(NAME apache2.https.proxy COMMAND "${Python3_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/apache_https_proxy_tests.py"
+                "${APACHE2_EXECUTABLE}" "${APACHE2_MODULE_DIR}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/config/apache2-webadmin-https-proxy.conf.example")
+            set_tests_properties(apache2.https.proxy PROPERTIES TIMEOUT 90)
+        elseif(DC24H_REQUIRE_INTEGRATION_TESTS)
+            message(FATAL_ERROR "Required Apache2 mod_proxy_http not found: apache2.https.proxy unavailable")
+        else()
+            message(STATUS "Apache2 mod_proxy_http not found: apache2.https.proxy unavailable")
+        endif()
     elseif(DC24H_REQUIRE_INTEGRATION_TESTS)
         message(FATAL_ERROR "Required Apache2/mod_ssl not found: apache2.https unavailable")
     else()

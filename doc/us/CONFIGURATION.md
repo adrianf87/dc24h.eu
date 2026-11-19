@@ -148,6 +148,8 @@ Frontend settings are separate from INI: server-only `DC24H_API_SOCKET`/`DC24H_A
 
 The new `apache2-webadmin-https.conf.example` is independent of the INI. Set the actual hostname, static asset directory and external certificate/key paths in the Apache copy. It contains no Listen directives, relying on distro ports.conf, and defaults to local static access/API denial. No native C++ runtime setting is added. See [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
 
+`apache2-webadmin-https-proxy.conf.example` is also independent of the INI. It proxies an allowlisted API to `127.0.0.1:4173` and does not add a C++ setting, a service token or a Unix-socket upstream. See [APACHE2_PROXY.md](APACHE2_PROXY.md).
+
 
 ## alpha-0.2.8
 

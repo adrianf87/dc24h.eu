@@ -65,7 +65,7 @@ Vhost HTTP daje stałe 301 na `https://dc24h.eu/`, zachowując ścieżkę/query.
 
 CSP dopuszcza zasoby/skrypty/style/fonty/połączenia tego samego origin i zabrania ramek/obiektów. Dodatkowe nagłówki to no-sniff, no-referrer i DENY. Odpowiedzi HTTPS, także błędy, mają host-only HSTS `max-age=300`; brak includeSubDomains/preload. Operator może zmienić krótki czas przykładu po weryfikacji własnego wdrożenia. Nagłówki nie implementują uwierzytelniania API i nie są audytem bezpieczeństwa.
 
-Istniejące vhosty 443/default/SNI i globalne ustawienia Apache mogą wpływać na wdrożenie; sprawdź wybraną witrynę zamiast zastępować inne konfiguracje. Przykład nie konfiguruje HTTP/2, OCSP stapling, automatycznego odnawiania, produkcyjnego audytu i reverse proxy.
+Istniejące vhosty 443/default/SNI i globalne ustawienia Apache mogą wpływać na wdrożenie; sprawdź wybraną witrynę zamiast zastępować inne konfiguracje. Ten przykład statyczny nie konfiguruje HTTP/2, OCSP stapling, automatycznego odnawiania, produkcyjnego audytu ani reverse proxy. Dozwolone proxy adaptera loopback jest osobnym [odwrotnym proxy HTTPS](APACHE2_PROXY.md).
 
 ## Automatyczna weryfikacja
 
