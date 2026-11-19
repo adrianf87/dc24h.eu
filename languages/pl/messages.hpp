@@ -3,7 +3,7 @@
 #include <string_view>
 
 namespace dc24h::i18n::pl {
-inline constexpr std::array<std::string_view, 174> messages{{
+inline constexpr std::array<std::string_view, 180> messages{{
     "Nieprawidłowe dane blokady",
     "Odmowa uprawnień do blokady",
     "Nieaktualna rewizja blokady",
@@ -92,6 +92,12 @@ inline constexpr std::array<std::string_view, 174> messages{{
     "Nie można wczytać łańcucha certyfikatów TLS",
     "Nie można wczytać klucza prywatnego TLS",
     "Certyfikat TLS i klucz prywatny nie pasują do siebie",
+    "Certyfikat TLS nie jest ważny w chwili uruchomienia",
+    "Podpis certyfikatu TLS jest zbyt słaby",
+    "Klucz publiczny certyfikatu TLS jest zbyt słaby",
+    "Użycie klucza certyfikatu TLS nie pozwala na nasłuch huba",
+    "Certyfikat TLS nie jest uprawniony do uwierzytelnienia serwera",
+    "Nie można ustawić polityki szyfrów TLS",
     "Nie można utworzyć połączenia TLS",
     "Nie można przypisać gniazda TLS",
     "Oczekiwano IPv4:port lub [IPv6]:port",

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.9.4 LANGUAGES CXX)
+project(dc24h VERSION 0.9.5 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -111,6 +111,8 @@ target_compile_features(dc24h_adcs PUBLIC cxx_std_20)
 set_target_properties(dc24h_adcs PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_adcs PUBLIC include)
 target_link_libraries(dc24h_adcs PUBLIC OpenSSL::SSL OpenSSL::Crypto)
+set_source_files_properties(src/adcs/tls.cpp PROPERTIES
+    COMPILE_OPTIONS "-Wall;-Wextra;-Wpedantic;-Wconversion;-Wshadow")
 
 add_library(dc24h_security src/security/authentication_limits.cpp src/security/limits.cpp src/security/secret_file.cpp)
 target_compile_features(dc24h_security PUBLIC cxx_std_20)
@@ -829,6 +831,14 @@ if(BUILD_TESTING)
     add_test(NAME adcs.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/adcs_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(adcs.crypto adcs.process PROPERTIES TIMEOUT 45)
+    add_executable(tls_security_tests tests/tls_security_tests.cpp)
+    target_link_libraries(tls_security_tests PRIVATE dc24h_adcs)
+    target_compile_options(tls_security_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(tls_security_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME adcs.tls_security COMMAND tls_security_tests)
+    add_test(NAME adcs.tls_security.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/tls_security_process_tests.py" "$<TARGET_FILE:dc24h>")
+    set_tests_properties(adcs.tls_security adcs.tls_security.process PROPERTIES TIMEOUT 30)
     add_executable(configuration_tests tests/configuration_tests.cpp)
     target_link_libraries(configuration_tests PRIVATE dc24h_configuration)
     set_target_properties(configuration_tests PROPERTIES CXX_EXTENSIONS OFF)

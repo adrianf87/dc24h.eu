@@ -120,6 +120,10 @@ alpha-0.1.10 starts from main after alpha-0.1.9. Keep browser-safe schema/format
 
 alpha-0.1.11 starts from main after alpha-0.1.10. Keep host activation, real certificates and service reloads separate from example authoring/testing. Test the exact shipped TLS/access/header policy with temporary paths/ports and no host config. A successful apache2 -t is insufficient to claim certificate/key correspondence; exercise real initialization. Keep both documentation languages and version-sensitive fixtures aligned.
 
+## TLS security — alpha-0.9.5
+
+Branch from main. Refuse a hub leaf that is outside its validity window, signed with SHA-1, or weaker than RSA 2048, P-256, P-384, P-521, Ed25519 or Ed448. Require serverAuth when extended key usage is present. Offer only TLS 1.2 and 1.3 AEAD, with tickets off. Do not add a schema migration, a status counter, an INI key, a WebAdmin page or an Apache setting. Do not request a client certificate. Do not claim HTTP/2, OCSP, automatic renewal or that residual threat T15 is closed.
+
 ## Traffic limits — alpha-0.9.4
 
 Branch from main. Cap ready-session INF before fanout at 4 per second with a burst of 8. Do not add a schema migration, a status counter, an INI key, a WebAdmin page or a language string. Do not charge login INF or STA. Do not claim a bandwidth cap or that residual threat T13 is closed.

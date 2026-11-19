@@ -139,6 +139,10 @@ alpha-0.1.10 powstaje z main po alpha-0.1.9. Oddzielaj schemat/formatowanie prze
 
 alpha-0.1.11 powstaje z main po alpha-0.1.10. Oddzielaj aktywację hosta, rzeczywiste certyfikaty i reload od tworzenia/testowania przykładu. Testuj dokładnie dostarczaną politykę TLS/dostępu/nagłówków z tymczasowymi ścieżkami/portami, bez konfiguracji hosta. Sukces apache2 -t nie dowodzi zgodności certyfikatu/klucza; sprawdzaj inicjalizację. Zachowuj oba języki dokumentacji i spójne wersje fixture.
 
+## Bezpieczeństwo TLS — alpha-0.9.5
+
+Gałąź powstaje z main. Odrzuć liść huba poza oknem ważności, podpisany SHA-1 albo słabszy niż RSA 2048, P-256, P-384, P-521, Ed25519 lub Ed448. Wymagaj serverAuth, gdy extended key usage jest obecne. Oferuj tylko AEAD TLS 1.2 i 1.3, bez biletów sesji. Nie dodawaj migracji schematu, licznika statusu, klucza INI, strony WebAdmin ani ustawienia Apache. Nie żądaj certyfikatu klienta. Nie twierdź, że HTTP/2, OCSP albo automatyczne odnawianie jest gotowe, ani że zagrożenie szczątkowe T15 jest zamknięte.
+
 ## Limity ruchu — alpha-0.9.4
 
 Gałąź powstaje z main. Ogranicz INF gotowej sesji przed rozesłaniem do 4 na sekundę z zapasem 8. Nie dodawaj migracji schematu, licznika statusu, klucza INI, strony WebAdmin ani ciągu językowego. Nie naliczaj INF logowania ani STA. Nie twierdź, że jest limit pasma albo że zagrożenie szczątkowe T13 jest zamknięte.

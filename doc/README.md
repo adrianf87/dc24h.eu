@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.9.4.
+Current development version: alpha-0.9.5.
+
+[TLS security — alpha-0.9.5](us/TLS_SECURITY.md) · [PL](pl/TLS_SECURITY.md)
 
 [Traffic limits — alpha-0.9.4](us/TRAFFIC_LIMITS.md) · [PL](pl/TRAFFIC_LIMITS.md)
 
