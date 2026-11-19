@@ -120,6 +120,10 @@ alpha-0.1.10 starts from main after alpha-0.1.9. Keep browser-safe schema/format
 
 alpha-0.1.11 starts from main after alpha-0.1.10. Keep host activation, real certificates and service reloads separate from example authoring/testing. Test the exact shipped TLS/access/header policy with temporary paths/ports and no host config. A successful apache2 -t is insufficient to claim certificate/key correspondence; exercise real initialization. Keep both documentation languages and version-sensitive fixtures aligned.
 
+## Dependencies — alpha-0.9.17
+
+Branch from main. Check the direct shared libraries of the hub binaries, the exact WebAdmin lockfile and the registered security tests. Do not download packages and do not query a vulnerability database. Do not add a schema migration, a status field, an INI key, a WebAdmin page, a CLI flag or an Apache setting. Do not claim that the dependency set is free of bugs, or that any residual threat is closed. `configuration.manage` and `hub.manage` stay unimplemented.
+
 ## Stress testing — alpha-0.9.16
 
 Branch from main. Repeat the existing frame, peer, login, chat and session limits for a fixed number of rounds. Keep the refusals. Return occupancy to zero. Do not add a schema migration, a status field, an INI key, a WebAdmin page, a CLI flag or an Apache setting. Do not claim a capacity, a load test, a DDoS test, or that any residual threat is closed. `configuration.manage` and `hub.manage` stay unimplemented.

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.9.16 LANGUAGES CXX)
+project(dc24h VERSION 0.9.17 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -29,7 +29,7 @@ endif()
 set(DC24H_VERSION "alpha-${PROJECT_VERSION}")
 configure_file(cmake/version.hpp.in generated/dc24h/version.hpp @ONLY)
 find_package(Threads REQUIRED)
-find_package(OpenSSL 1.1.1 REQUIRED COMPONENTS SSL Crypto)
+find_package(OpenSSL 3 REQUIRED COMPONENTS SSL Crypto)
 
 add_library(dc24h_i18n src/i18n/messages.cpp)
 target_compile_features(dc24h_i18n PUBLIC cxx_std_20)
@@ -318,6 +318,13 @@ if(BUILD_TESTING)
     add_test(NAME project.metadata COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/project_checks.py")
     set_tests_properties(project.metadata PROPERTIES TIMEOUT 15)
+    add_test(NAME dependencies.audit COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/dependency_audit_tests.py"
+        "${CMAKE_BINARY_DIR}"
+        "$<TARGET_FILE:dc24h>"
+        "$<TARGET_FILE:dc24h-owner>"
+        "$<TARGET_FILE:dc24h-account-admin>")
+    set_tests_properties(dependencies.audit PROPERTIES TIMEOUT 30)
     add_test(NAME security.threat_model COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/threat_model_tests.py")
     set_tests_properties(security.threat_model PROPERTIES TIMEOUT 15)

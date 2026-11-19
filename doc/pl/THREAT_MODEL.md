@@ -4,6 +4,8 @@ Ta analiza zapisuje, jak można atakować hub i WebAdmin, które mechanizmy już
 
 Analiza nie dodaje sprawdzenia protokołu, migracji schematu, ustawienia Apache ani mechanizmu WebAdmin. Schemat v9 pozostaje bez zmian. `configuration.manage` i `hub.manage` pozostają niezaimplementowane. Kick i mute w przeglądarce nadal nie są wysyłane. To nie jest publiczna uwierzytelniona brama i to nie jest test penetracyjny.
 
+alpha-0.9.17 kontrola zależności, dodana po tej analizie, sprawdza bezpośrednie biblioteki dzielone plików huba, dokładny lockfile WebAdmin i zarejestrowane testy bezpieczeństwa. Nie dodaje mechanizmu i nie zamyka żadnego zagrożenia. Schemat v9 pozostaje bez zmian. Zobacz [Zależności](DEPENDENCIES.md).
+
 alpha-0.9.16 testy przeciążenia, dodane po tej analizie, powtarzają w procesie istniejące limity ramek, klientów, logowania, czatu i sesji. Nie dodają mechanizmu i nie zamykają żadnego zagrożenia. Schemat v9 pozostaje bez zmian. Zobacz [Testy przeciążenia](STRESS.md).
 
 alpha-0.9.15 bezpieczeństwo pamięci, dodane po tej analizie, buduje ten sam hub z jednym z AddressSanitizer, UndefinedBehaviorSanitizer albo ThreadSanitizer. Nie dodaje mechanizmu i nie zamyka żadnego zagrożenia. Schemat v9 pozostaje bez zmian. Zobacz [Bezpieczeństwo pamięci](MEMORY_SAFETY.md).

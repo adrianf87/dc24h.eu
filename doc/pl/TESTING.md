@@ -1,5 +1,6 @@
 # Testowanie
 
+**alpha-0.9.17 Zależności:** [Kontrola bibliotek i testy bezpieczeństwa](DEPENDENCIES.md) sprawdza pliki wykonywalne huba, lockfile WebAdmin i zarejestrowane testy bezpieczeństwa. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.16 Testy przeciążenia:** [Przeciążenie i długotrwała praca](STRESS.md) powtarza istniejące limity ramek, klientów, logowania, czatu i sesji przez stałą liczbę rund. Odmowy zostają. Zajętość wraca do zera. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.15 Bezpieczeństwo pamięci:** [AddressSanitizer, UBSan i ThreadSanitizer](MEMORY_SAFETY.md) są osobnymi trybami budowania. Zachowanie huba pozostaje takie same. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.14 Optymalizacja:** [Pamięć i routing C++20](OPTIMIZATION.md) publikuje każdą ramkę routingu w jednej alokacji i kolejkuje listę powitalną z już zmierzonego kodowania. Bajty protokołu pozostają takie same. Schemat v9 pozostaje bez zmian.
@@ -419,6 +420,7 @@ Uruchom `ctest --test-dir build --output-on-failure` i analogicznie dla `build-r
 | `logging.process` | Zdarzenia TCP/TLS, prywatność, niezależne ostrzeżenia, INI, błędy, odmowa trybu 0644 i zapis czasu częściowej ramki |
 | `monitoring.unit` | Parsowanie rekordu stat, konwersja taktów i stron, przepełnienie i żywa próbka `/proc/self/stat` |
 | `users.list` | Kolejność powitania, zachowane kodowanie, dokładny budżet bajtów, prywatność i wycofanie alokacji |
+| `dependencies.audit` | Bezpośrednie biblioteki dzielone plików huba, dokładne pakiety lockfile WebAdmin i zarejestrowane testy bezpieczeństwa |
 | `stress.unit` | Stałe rundy przeciążenia ramek, klientów, logowania, czatu i sesji, dokładne liczby odmów i pięciosekundowy sufit |
 | `memory.safety` | Obieg sterty, zsynchronizowane liczniki atomowy i z muteksem oraz mieszczące się mnożenie ze znakiem |
 | `profile.unit` | Stałe szeregowanie etapów w procesie, dokładne liczby decyzji i sufit pięciu sekund |

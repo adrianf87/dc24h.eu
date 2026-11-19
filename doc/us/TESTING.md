@@ -1,5 +1,6 @@
 # Testing
 
+**alpha-0.9.17 Dependencies:** [Library control and security tests](DEPENDENCIES.md) checks the hub binaries, the WebAdmin lockfile and the registered security tests. Schema v9 is unchanged.
 **alpha-0.9.16 Stress testing:** [Overload and sustained operation](STRESS.md) repeats the existing frame, peer, login, chat and session limits for a fixed number of rounds. Refusals stay on. Occupancy returns to zero. Schema v9 is unchanged.
 **alpha-0.9.15 Memory safety:** [AddressSanitizer, UBSan and ThreadSanitizer](MEMORY_SAFETY.md) are separate build modes. The hub behavior stays the same. Schema v9 is unchanged.
 **alpha-0.9.14 Optimization:** [C++20 memory and routing](OPTIMIZATION.md) publishes each routed frame in one allocation and queues the welcome list from the encoding already measured. Protocol bytes stay the same. Schema v9 is unchanged.
@@ -420,6 +421,7 @@ Run `ctest --test-dir build --output-on-failure` and the equivalent for `build-r
 | `logging.process` | TCP/TLS lifecycle, privacy, independent warnings, INI overrides, error sink, refused mode 0644 and a partial-frame security record |
 | `monitoring.unit` | Process stat parsing, tick and page conversion, overflow and a live `/proc/self/stat` sample |
 | `users.list` | Welcome order, retained wire encoding, exact byte budget, privacy and allocation rollback |
+| `dependencies.audit` | Direct shared libraries of the hub binaries, exact WebAdmin lockfile packages and the registered security tests |
 | `stress.unit` | Fixed overload rounds for frames, peers, login, chat and sessions, exact refusal counts and a five-second ceiling |
 | `memory.safety` | Heap round trip, synchronized atomic and mutex counters, and an in-range signed multiply |
 | `profile.unit` | Fixed in-process stage ranking, exact decision counts and a five-second ceiling |
