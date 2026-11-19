@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.9.12.
+Current development version: alpha-0.9.13.
+
+[Profiling — alpha-0.9.13](us/PROFILING.md) · [PL](pl/PROFILING.md)
 
 [Benchmark — alpha-0.9.12](us/BENCHMARK.md) · [PL](pl/BENCHMARK.md)
 

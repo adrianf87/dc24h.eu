@@ -1,5 +1,16 @@
 # Changelog
 
+## alpha-0.9.13 — 2026-11-19
+
+Profiling — alpha-0.8 bottleneck detection, based on main `ac87fa2`. The branch name is `alpha-0.9.13`.
+
+- Rank three fixed in-process stages: 256 `allows` calls, 512 `moderate` calls, and 1024 role predicates cycling `can_mute`, `can_revoke`, `can_manage` and `can_assign`. The greatest elapsed time is the bottleneck. Equal time uses the greater operation count. A remaining tie keeps the earlier stage. Accepted counts are recorded and do not choose the rank. A zero elapsed time means the stage finished inside one millisecond.
+- `profile.unit` checks those ranking rules directly, then repeats the same inputs and requires the accepted counts to match, at least one acceptance, and a finish within five seconds. The ceiling is a hang guard. It is not a capacity claim, a sampling profiler, or a load test. The hub executable does not link the library and does not run it. `can_revoke` is the kick rank check. Nothing is dispatched.
+- This does not add a route, INI key, CLI flag, status field, WebAdmin page, Apache setting or schema migration. Schema v9 is unchanged. `configuration.manage` and `hub.manage` stay unimplemented. Browser kick and mute stay undispatched. Status and health stay bearer-only. `Require local` stays. No residual threat is closed.
+- Run Check status on GitHub-hosted Ubuntu 24.04. Add `alpha-0.9.13` to the push branches. Local validation uses eight CPU threads. Remote CI completion is not awaited.
+
+Validation on Debian 13: all 226/226 CTest suites passed in Debug (75.32 s real) and Release (74.16 s real), including disposable MariaDB, real ncdc ADC/ADCS, the Apache HTTPS reverse proxy, the sandboxed systemd example, and the in-process bottleneck profile. The Release C++ build log contained no compiler warnings. WebAdmin typecheck and production build passed. All 49 Node tests passed. All 42 Chromium tests passed. Actual C++ API, adapter and React integration passed. Release metadata, documentation UTF-8, language parity, local Markdown links, Python syntax with warnings as errors and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration, host account or service activation is performed.
+
 ## alpha-0.9.12 — 2026-11-19
 
 Benchmark — alpha-0.8 permission and moderation measurements, based on main `76a093f`. The branch name is `alpha-0.9.12`.

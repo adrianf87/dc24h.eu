@@ -1,5 +1,6 @@
 # Architektura
 
+**alpha-0.9.13 Profilowanie:** [Wykrywanie wąskich gardeł alpha-0.8](PROFILING.md) szereguje stały zestaw decyzji uprawnień, moderacji i ról w procesie. To nie jest profiler próbkujący ani deklaracja pojemności. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.12 Pomiary:** [Pomiary wydajności alpha-0.8](BENCHMARK.md) mierzy stały zestaw decyzji uprawnień i moderacji w procesie. To nie jest deklaracja pojemności ani test obciążenia. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.11 Monitorowanie:** [CPU, pamięć, sesje i opóźnienia](MONITORING.md) publikuje jedną próbkę procesu i liczniki sesji na istniejącym statusie z bearer. To nie jest monitor hosta ani zapisana historia. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.10 Logowanie:** [Bezpieczne logi i rejestrowanie zdarzeń](LOGGING_SECURITY.md) utrzymuje plik logu jako prywatny dla właściciela i zapisuje stałe skutki bezpieczeństwa bez danych klienta. To nie jest audyt produkcyjny. Schemat v9 pozostaje bez zmian.
@@ -279,6 +280,10 @@ Frontend jest niezależny od budowania/działania C++. Kod przeglądarki sprawdz
 ## Apache2 HTTPS — alpha-0.1.11
 
 Osobny instalowany przykład serwuje gotowe zasoby WebAdmin przez TLS 1.2/1.3 i przekierowuje HTTP na stałą nazwę kanoniczną. Zachowuje lokalny dostęp i blokadę prywatnych tras, bez proxy Unix API i zmian transportów C++. Testy ładują tę politykę pod niezależnym ServerRoot; certyfikaty i aktywacja usługi hosta należą do operatora. Zobacz [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
+
+## Profilowanie — alpha-0.9.13
+
+`dc24h_profile` mierzy `allows`, `moderate` i istniejące predykaty ról dla stałej sekwencji wejść, a potem nazywa najwolniejszy etap. Plik wykonywalny huba nie łączy tej biblioteki i nie uruchamia jej przy starcie. Zobacz [Profilowanie](PROFILING.md).
 
 ## Pomiary — alpha-0.9.12
 
