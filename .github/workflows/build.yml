@@ -8,12 +8,16 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: dc24h-github-${{ github.workflow }}-${{ github.ref }}
+  group: dc24h-server-747585786-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   cpp:
-    name: C++ ${{ matrix.build_type }} - Ubuntu 24.04
-    runs-on: ubuntu-24.04
+    name: C++ ${{ matrix.build_type }} - server-747585786
+    if: >-
+      github.repository == 'adrianf87/dc24h.eu' &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, Linux, X64, server-747585786]
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -27,14 +31,16 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      - name: Verify four logical CPUs on the GitHub-hosted runner
-        run: test "$(nproc)" -eq 4
-      - name: Install build and integration dependencies
+      - name: Verify custom runner server-747585786
+        shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            build-essential cmake python3 libutf8proc-dev libgcrypt20-dev \
-            libssl-dev libmariadb-dev openssl ncdc mariadb-server apache2
+          test "$RUNNER_NAME" = server-747585786
+          . /etc/os-release
+          test "$ID" = ubuntu
+          test "$VERSION_ID" = 24.04
+          for tool in g++ cmake python3 openssl ncdc mariadbd mariadb mariadb-admin mariadb-install-db apache2; do
+            command -v "$tool"
+          done
       - name: Configure C++20
         run: cmake -S . -B "build/$BUILD_TYPE" -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DBUILD_TESTING=ON -DDC24H_REQUIRE_INTEGRATION_TESTS=ON
       - name: Build
@@ -43,8 +49,12 @@ jobs:
         run: ctest --test-dir "build/$BUILD_TYPE" --parallel "$(nproc)" --output-on-failure
 
   webadmin:
-    name: WebAdmin - Ubuntu 24.04
-    runs-on: ubuntu-24.04
+    name: WebAdmin - server-747585786
+    if: >-
+      github.repository == 'adrianf87/dc24h.eu' &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, Linux, X64, server-747585786]
     timeout-minutes: 60
     env:
       CXX: g++
@@ -53,14 +63,16 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      - name: Verify four logical CPUs on the GitHub-hosted runner
-        run: test "$(nproc)" -eq 4
-      - name: Install C++ API build dependencies
+      - name: Verify custom runner server-747585786
+        shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            build-essential cmake python3 libutf8proc-dev libgcrypt20-dev \
-            libssl-dev libmariadb-dev
+          test "$RUNNER_NAME" = server-747585786
+          . /etc/os-release
+          test "$ID" = ubuntu
+          test "$VERSION_ID" = 24.04
+          for tool in g++ cmake python3 openssl; do
+            command -v "$tool"
+          done
       - uses: actions/setup-node@v5
         with:
           node-version: 22
@@ -79,9 +91,9 @@ jobs:
       - name: Frontend unit tests
         working-directory: webadmin
         run: node --import tsx --test --test-concurrency="$(nproc)" tests/*.test.ts
-      - name: Install Chromium and system dependencies
+      - name: Install Chromium
         working-directory: webadmin
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
       - name: Browser tests
         working-directory: webadmin
         run: npm run test:e2e -- --workers="$(nproc)" --fully-parallel
