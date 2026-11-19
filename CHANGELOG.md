@@ -1,5 +1,16 @@
 # Changelog
 
+## alpha-0.9.3 — 2026-11-19
+
+Network security — TCP connection protection, timeouts and buffer limits, based on main `95abd7e`. The branch name is `alpha-0.9.3`.
+
+- Cap the listen backlog at 128. On each accepted socket the hub keeps, set kernel send and receive buffers to 65536 bytes and `TCP_USER_TIMEOUT` to the configured idle timeout, after a session id is acquired and before TLS. A failed option closes that socket. Existing application timeouts, frame budgets and output queues stay. Schema v9 is unchanged.
+- This is not a bandwidth cap and it does not close residual threat T13. No status counter, WebAdmin page, language string, INI key or Apache setting is added. `TCP_NODELAY` is not set.
+- The close-deadline fixture keeps a 1024-byte server send buffer and a 120-second user timeout so the application drain deadline stays observable.
+- Run Check status on GitHub-hosted Ubuntu 24.04. Add `alpha-0.9.3` to the push branches. Local validation uses eight CPU threads. Remote CI completion is not awaited.
+
+Validation on Debian 13: all 217/217 CTest suites passed in Debug (74.29 s real) and Release (72.62 s real), including disposable MariaDB, real ncdc ADC/ADCS, the Apache HTTPS reverse proxy and the TCP socket protection check. The Release C++ build log contained no compiler warnings. WebAdmin typecheck and production build passed. All 48 Node tests passed. All 41 Chromium tests passed. Actual C++ API, adapter and React integration passed. Release metadata, documentation UTF-8, language parity, local Markdown links, Python syntax with warnings as errors and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration or account/credential mutation is performed.
+
 ## alpha-0.9.2 — 2026-11-19
 
 ADC security — parser validation, fuzzing and protocol control, based on main `6c26839`. The branch name is `alpha-0.9.2`.

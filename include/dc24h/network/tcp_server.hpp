@@ -37,6 +37,18 @@ struct Endpoint {
 // Numeric IPv4:port or [IPv6]:port. Port 0 requests an ephemeral port.
 [[nodiscard]] Endpoint parse_endpoint(std::string_view text);
 
+// Kernel listen queue cap. The kernel may still use a smaller somaxconn.
+inline constexpr int listen_backlog = 128;
+// Requested SO_RCVBUF and SO_SNDBUF. Linux reports about twice this value.
+inline constexpr int socket_buffer_bytes = 65536;
+// One plaintext or decrypted read. The ADC decoder has its own frame cap.
+inline constexpr std::size_t read_buffer_bytes = 8192;
+
+// Caps the kernel send and receive buffers and sets TCP_USER_TIMEOUT.
+// Returns false for a bad descriptor or timeout, or when a setsockopt fails.
+// A false result may have applied an earlier option; the caller closes the socket.
+[[nodiscard]] bool protect_tcp_socket(int fd, std::chrono::milliseconds user_timeout) noexcept;
+
 struct Options {
     std::vector<Endpoint> listeners{{"127.0.0.1", 1511}};
     std::vector<Endpoint> tls_listeners{};

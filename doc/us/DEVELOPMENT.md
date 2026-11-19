@@ -120,6 +120,10 @@ alpha-0.1.10 starts from main after alpha-0.1.9. Keep browser-safe schema/format
 
 alpha-0.1.11 starts from main after alpha-0.1.10. Keep host activation, real certificates and service reloads separate from example authoring/testing. Test the exact shipped TLS/access/header policy with temporary paths/ports and no host config. A successful apache2 -t is insufficient to claim certificate/key correspondence; exercise real initialization. Keep both documentation languages and version-sensitive fixtures aligned.
 
+## Network security — alpha-0.9.3
+
+Branch from main. Cap the listen backlog and set kernel send and receive buffers plus `TCP_USER_TIMEOUT` on each accepted socket the hub keeps. Use the existing idle timeout. Do not add a schema migration, a status counter, an INI key, a WebAdmin page or `TCP_NODELAY`. Do not claim a bandwidth cap or that residual threat T13 is closed.
+
 ## ADC security — alpha-0.9.2
 
 Branch from main. Extract the existing stateless command profile into `control_message` and call it from `observe` without a new rejection class. Keep unknown extensions and hub-legal frames accepted by the parser. Add one bounded deterministic CTest, `adc.security`, with seed `0x0ADC0922` and 4096 mutations. Do not add libFuzzer, a schema migration, a status counter or a WebAdmin page. Do not claim that residual threats T01–T16 are closed.

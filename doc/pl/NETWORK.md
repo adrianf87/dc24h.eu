@@ -95,6 +95,8 @@ po poprawnym uruchomieniu wszystkich listenerów. `Core running` oznacza start
 silnika, a nie gotowość portów. Nie są obsługiwane nazwy DNS ani adresy IPv6
 z identyfikatorem strefy. IPv6 używa `IPV6_V6ONLY`; IPv4 konfiguruje się osobno.
 
+alpha-0.9.3 nazywa kolejkę nasłuchu 128 oraz, dla każdego przyjętego gniazda, które hub zatrzymuje, bufory jądra wysyłania i odbioru po 65536 bajtów i TCP user timeout równy timeoutowi bezczynności. Odczyt 8192 bajtów, partia 64 klientów i kolejki aplikacji zostają. Te limity jądra nie są limitem pasma. Zobacz [Bezpieczeństwo sieci](NETWORK_SECURITY.md).
+
 Serwer odbiera bajty i przekazuje je do osobnego dekodera ADC każdego klienta.
 Parsuje i zlicza ramki, ale nie odpowiada, nie wykonuje echo, nie uwierzytelnia
 i nie przekazuje wiadomości. Szczegóły: [ADC_PROTOCOL.md](ADC_PROTOCOL.md). TLS/ADCS obsługuje szyfrowany transport od alpha-0.1.4; brak buforów wyjściowych. Szczegóły: [ADCS_TLS.md](ADCS_TLS.md). Podłączenie

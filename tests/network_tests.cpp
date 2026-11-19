@@ -3,6 +3,8 @@
 #include "dc24h/logging/logger.hpp"
 
 #include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -63,6 +65,46 @@ void limits(dc24h::logging::Logger& logger) {
     }
 }
 
+int option_value(int fd, int level, int name) {
+    int value = 0;
+    socklen_t size = sizeof(value);
+    require(::getsockopt(fd, level, name, &value, &size) == 0 && size == sizeof(value), "getsockopt failed");
+    return value;
+}
+
+void tcp_protection() {
+    require(dc24h::network::listen_backlog == 128, "Listen backlog drifted");
+    require(dc24h::network::socket_buffer_bytes == 65536, "Socket buffer drifted");
+    require(dc24h::network::read_buffer_bytes == 8192, "Read buffer drifted");
+    require(!dc24h::network::protect_tcp_socket(-1, std::chrono::milliseconds(1000)), "Bad descriptor accepted");
+    require(!dc24h::network::protect_tcp_socket(0, std::chrono::milliseconds(0)), "Zero timeout accepted");
+    const int listener = ::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    require(listener >= 0, "Cannot create TCP listener");
+    struct ListenerCleanup { int fd; ~ListenerCleanup() { ::close(fd); } } listener_cleanup{listener};
+    sockaddr_in address{};
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    require(::bind(listener, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == 0, "Cannot bind TCP fixture");
+    require(::listen(listener, dc24h::network::listen_backlog) == 0, "Cannot listen on TCP fixture");
+    socklen_t size = sizeof(address);
+    require(::getsockname(listener, reinterpret_cast<sockaddr*>(&address), &size) == 0, "Cannot read fixture port");
+    const int client = ::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    require(client >= 0, "Cannot create TCP client");
+    struct ClientCleanup { int fd; ~ClientCleanup() { ::close(fd); } } client_cleanup{client};
+    require(::connect(client, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == 0, "Cannot connect TCP fixture");
+    const int accepted = ::accept4(listener, nullptr, nullptr, SOCK_CLOEXEC);
+    require(accepted >= 0, "Cannot accept TCP fixture");
+    struct AcceptedCleanup { int fd; ~AcceptedCleanup() { ::close(fd); } } accepted_cleanup{accepted};
+    require(dc24h::network::protect_tcp_socket(accepted, std::chrono::milliseconds(1500)), "TCP protection failed");
+    const int receive = option_value(accepted, SOL_SOCKET, SO_RCVBUF);
+    const int send = option_value(accepted, SOL_SOCKET, SO_SNDBUF);
+    require(receive >= dc24h::network::socket_buffer_bytes && receive <= dc24h::network::socket_buffer_bytes * 2,
+            "Receive buffer outside the requested cap");
+    require(send >= dc24h::network::socket_buffer_bytes && send <= dc24h::network::socket_buffer_bytes * 2,
+            "Send buffer outside the requested cap");
+    require(option_value(accepted, IPPROTO_TCP, TCP_USER_TIMEOUT) == 1500, "TCP user timeout was not applied");
+}
+
 void lifecycle_and_rollback(dc24h::logging::Logger& logger) {
     // Keep a real bound socket open so startup failure is deterministic, without a port race.
     const int occupied = ::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
@@ -108,8 +150,9 @@ int main() {
         dc24h::logging::Logger logger;
         parser();
         limits(logger);
+        tcp_protection();
         lifecycle_and_rollback(logger);
-        std::cout << "PASS: endpoints, limits, early stop, single use, Core failure state, descriptor rollback\n";
+        std::cout << "PASS: endpoints, limits, TCP protection, early stop, single use, Core failure state, descriptor rollback\n";
         return 0;
     } catch (const std::exception& error) {
         std::cerr << "FAIL: " << error.what() << '\n';
