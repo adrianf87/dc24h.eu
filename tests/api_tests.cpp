@@ -78,6 +78,13 @@ void parser() {
     require(granted.state == ParseState::complete && granted.request.admin_grant == grant);
     require(parse_request("GET / HTTP/1.1\r\nHost: x\r\nX-DC24H-Admin-Grant: ab\r\n\r\n").state == ParseState::invalid);
     require(parse_request("GET / HTTP/1.1\r\nHost: x\r\nX-DC24H-Admin-Grant: " + grant + "\r\nX-DC24H-Admin-Grant: " + grant + "\r\n\r\n").state == ParseState::invalid);
+    const auto session = std::string(32, 'a');
+    const auto csrf = std::string(64, 'b');
+    const auto bound = parse_request("POST / HTTP/1.1\r\nHost: x\r\nX-DC24H-Session: " + session + "\r\nX-DC24H-Csrf: " + csrf + "\r\n\r\n");
+    require(bound.state == ParseState::complete && bound.request.admin_session == session && bound.request.admin_csrf == csrf);
+    require(parse_request("GET / HTTP/1.1\r\nHost: x\r\nX-DC24H-Session: " + std::string(32, 'A') + "\r\n\r\n").state == ParseState::invalid);
+    require(parse_request("GET / HTTP/1.1\r\nHost: x\r\nX-DC24H-Csrf: ab\r\n\r\n").state == ParseState::invalid);
+    require(parse_request("GET / HTTP/1.1\r\nHost: x\r\nX-DC24H-Session: " + session + "\r\nX-DC24H-Session: " + session + "\r\n\r\n").state == ParseState::invalid);
     const auto head = response(405, "{}", true);
     require(head.ends_with("\r\n\r\n") && head.find("Allow: GET") != std::string::npos);
     require(response(401, "{}").find("WWW-Authenticate: Bearer") != std::string::npos);

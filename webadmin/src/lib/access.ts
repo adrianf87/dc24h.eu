@@ -27,6 +27,8 @@ export interface AccessSnapshot {
   actor: {id: string; role: AccountRole; status: "active"};
   expires_in: 600;
   grant: string;
+  session: string;
+  csrf: string;
   permissions: AccessPermission[];
   routes: AccessRoute[];
 }
@@ -44,6 +46,8 @@ export function parseAccess(value: unknown): AccessSnapshot {
     throw new Error("Invalid administrative access");
   }
   if (typeof body.grant !== "string" || !/^[0-9a-f]{64}$/.test(body.grant)) throw new Error("Invalid administrative access");
+  if (typeof body.session !== "string" || !/^[0-9a-f]{32}$/.test(body.session)) throw new Error("Invalid administrative access");
+  if (typeof body.csrf !== "string" || !/^[0-9a-f]{64}$/.test(body.csrf) || body.csrf === body.grant) throw new Error("Invalid administrative access");
   if (!Array.isArray(body.permissions) || body.permissions.length !== PERMISSION_KEYS.length || !Array.isArray(body.routes) || body.routes.length !== ACCESS_ROUTES.length) {
     throw new Error("Invalid administrative access");
   }
@@ -68,6 +72,8 @@ export function parseAccess(value: unknown): AccessSnapshot {
     actor: {id: actor.id, role: actor.role as AccountRole, status: "active"},
     expires_in: 600,
     grant: body.grant,
+    session: body.session,
+    csrf: body.csrf,
     permissions,
     routes,
   };

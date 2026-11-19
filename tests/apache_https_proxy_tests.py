@@ -20,6 +20,8 @@ APACHE, MODULES, EXAMPLE = sys.argv[1:4]
 del sys.argv[1:4]
 
 GRANT = "ab" * 32
+SESSION = "cd" * 16
+CSRF = "ef" * 32
 SECRET = "Bearer PROXYSECRETTOKEN"
 MARKER = b"UPSTREAM_MARKER"
 
@@ -59,6 +61,8 @@ class Backend(threading.Thread):
                     "forwarded": self.headers.get("X-Forwarded-For"),
                     "origin": self.headers.get("Origin"),
                     "grant": self.headers.get("X-DC24H-Admin-Grant"),
+                    "session": self.headers.get("X-DC24H-Session"),
+                    "csrf": self.headers.get("X-DC24H-Csrf"),
                     "admin": self.headers.get("X-DC24H-Admin"),
                     "body": body,
                 }
@@ -305,6 +309,8 @@ class ApacheHttpsProxyTests(unittest.TestCase):
             "X-Forwarded-Host": "evil.example",
             "Forwarded": "for=203.0.113.50",
             "X-DC24H-Admin-Grant": GRANT,
+            "X-DC24H-Session": SESSION,
+            "X-DC24H-Csrf": CSRF,
             "Origin": "https://dc24h.eu",
             "Sec-Fetch-Site": "same-origin",
         }
@@ -317,6 +323,8 @@ class ApacheHttpsProxyTests(unittest.TestCase):
         self.assertIsNone(item["cookie"])
         self.assertIsNone(item["forwarded"])
         self.assertEqual(item["grant"], GRANT)
+        self.assertEqual(item["session"], SESSION)
+        self.assertEqual(item["csrf"], CSRF)
         self.assertEqual(item["origin"], self.upstream)
         self.assertEqual(item["host"], self.upstream.removeprefix("http://"))
         status, _, body, seen = self.exchange(
@@ -326,6 +334,14 @@ class ApacheHttpsProxyTests(unittest.TestCase):
             b"a=b")
         self.assertEqual(status, 200, body)
         self.assertIsNone(seen[0]["grant"])
+        status, _, body, seen = self.exchange(
+            "POST", "/admin-api/v1/audit",
+            {"Content-Type": "application/x-www-form-urlencoded", "X-DC24H-Admin": "1",
+             "Origin": "https://dc24h.eu", "X-DC24H-Session": "CD" * 16, "X-DC24H-Csrf": "not-csrf"},
+            b"a=b")
+        self.assertEqual(status, 200, body)
+        self.assertIsNone(seen[0]["session"])
+        self.assertIsNone(seen[0]["csrf"])
 
     def test_disallowed_api_shapes_never_reach_the_adapter(self):
         form = {"Content-Type": "application/x-www-form-urlencoded", "X-DC24H-Admin": "1",

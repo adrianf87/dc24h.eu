@@ -405,6 +405,8 @@ struct Server::Impl {
                 ~Erase() {
                     OPENSSL_cleanse(request.body.data(), request.body.size());
                     OPENSSL_cleanse(request.admin_grant.data(), request.admin_grant.size());
+                    OPENSSL_cleanse(request.admin_csrf.data(), request.admin_csrf.size());
+                    OPENSSL_cleanse(request.admin_session.data(), request.admin_session.size());
                 }
             } erase{parsed.request};
             if (parsed.state == ParseState::complete) {

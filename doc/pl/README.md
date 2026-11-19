@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.8.14: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.8.15: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [Sesje bezpieczeństwa — alpha-0.8.15](SECURITY_SESSIONS.md)
 - [Proxy HTTPS Apache2 — alpha-0.8.14](APACHE2_PROXY.md)
 - [Zarządzanie WebAdmin — alpha-0.8.13](WEBADMIN_MANAGEMENT.md)
 - [Użytkownicy WebAdmin — alpha-0.8.12](WEBADMIN_USERS.md)

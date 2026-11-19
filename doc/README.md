@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.8.14.
+Current development version: alpha-0.8.15.
+
+[Security sessions — alpha-0.8.15](us/SECURITY_SESSIONS.md) · [PL](pl/SECURITY_SESSIONS.md)
 
 [Apache2 HTTPS proxy — alpha-0.8.14](us/APACHE2_PROXY.md) · [PL](pl/APACHE2_PROXY.md)
 

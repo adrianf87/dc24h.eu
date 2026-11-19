@@ -1,7 +1,8 @@
 # dc24h.eu documentation
 
-alpha-0.8.14: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.8.15: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
+- [Security sessions — alpha-0.8.15](SECURITY_SESSIONS.md)
 - [Apache2 HTTPS proxy — alpha-0.8.14](APACHE2_PROXY.md)
 - [WebAdmin Management — alpha-0.8.13](WEBADMIN_MANAGEMENT.md)
 - [WebAdmin Users — alpha-0.8.12](WEBADMIN_USERS.md)

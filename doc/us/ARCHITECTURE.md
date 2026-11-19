@@ -1,5 +1,6 @@
 # Architecture
 
+**alpha-0.8.15 Security sessions:** [Access control, CSRF, sessions and request limits](SECURITY_SESSIONS.md) binds each in-memory grant to a public session id and a separate CSRF secret. Maintenance writes require both on that same slot. Each session accepts 24 requests in 10 seconds. Reads stay grant-only. The values stay in process memory, not in SQL, cookies or web storage. A public authenticated gateway remains separate work.
 **alpha-0.8.14 Apache2 HTTPS proxy:** [HTTPS reverse proxy and API protection](APACHE2_PROXY.md) forwards an allowlisted WebAdmin API to the loopback adapter. Client bearer tokens, cookies and forwarded identity are removed. The C++ Unix socket and the service token stay out of Apache. Local access remains the default.
 **alpha-0.8.13 WebAdmin Management:** [Account, role and ban management](WEBADMIN_MANAGEMENT.md) shows which maintenance areas the current grant allows and links to the existing account, role and ban pages. The page does not perform those writes. Configuration writes, live hub administration and browser kick or mute stay outside this page.
 **alpha-0.8.12 WebAdmin Users:** [Online users and moderation actions](WEBADMIN_USERS.md) publishes the ready-session directory and a bilingual page of kick, mute and unmute decisions. The page does not dispatch those commands, create bans or reveal CID, IP, account or profile fields. Browser kick controls remain on an authenticated Direct Connect client.
@@ -188,6 +189,10 @@ The frontend is independent of C++ build/runtime. Browser code validates the API
 ## Apache2 HTTPS — alpha-0.1.11
 
 A separate installed configuration example serves prebuilt static WebAdmin through TLS 1.2/1.3 and redirects HTTP to a fixed canonical hostname. It retains local access and private-route denial, without proxying the Unix API or changing C++ transports. Disposable tests load the shipped policy under an independent ServerRoot; certificate provisioning and host service activation remain operator responsibilities. See [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
+
+## Security sessions — alpha-0.8.15
+
+The maintenance access gate still holds four in-memory slots. A proof now returns a public session id and a CSRF secret with the grant. Writes check both secrets on that slot. A per-session counter limits that grant to 24 requests in 10 seconds. The serving hub's status and health routes are unchanged. See [Security sessions](SECURITY_SESSIONS.md).
 
 ## Apache2 reverse proxy — alpha-0.8.14
 

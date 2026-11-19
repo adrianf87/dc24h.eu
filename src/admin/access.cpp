@@ -35,7 +35,8 @@ bool decode_grant(std::string_view text, std::array<unsigned char, 32>& out) noe
     }
     return true;
 }
-std::string hex_grant(const std::array<unsigned char, 32>& bytes) {
+template <std::size_t N>
+std::string hex_bytes(const std::array<unsigned char, N>& bytes) {
     constexpr char digits[] = "0123456789abcdef";
     std::string text(bytes.size() * 2, '\0');
     for (std::size_t i = 0; i < bytes.size(); ++i) {
@@ -43,6 +44,18 @@ std::string hex_grant(const std::array<unsigned char, 32>& bytes) {
         text[i * 2 + 1] = digits[bytes[i] & 0x0f];
     }
     return text;
+}
+bool decode_session(std::string_view text, std::array<unsigned char, 16>& out) noexcept {
+    if (text.size() != 32) { return false; }
+    for (std::size_t i = 0; i < out.size(); ++i) {
+        const char hi_c = text[i * 2];
+        const char lo_c = text[i * 2 + 1];
+        if (hi_c < '0' || (hi_c > '9' && hi_c < 'a') || hi_c > 'f' || lo_c < '0' || (lo_c > '9' && lo_c < 'a') || lo_c > 'f') {
+            return false;
+        }
+        out[i] = static_cast<unsigned char>((nibble(hi_c) << 4) | nibble(lo_c));
+    }
+    return true;
 }
 
 enum class Gate { discovery, accounts, roles, password, bans, audit };
@@ -86,19 +99,28 @@ std::optional<Gate> classify(std::string_view method, std::string_view target) n
 
 void AccessGate::Slot::clear() noexcept {
     OPENSSL_cleanse(secret.data(), secret.size());
+    OPENSSL_cleanse(csrf.data(), csrf.size());
+    OPENSSL_cleanse(session.data(), session.size());
     used = false;
     actor = 0;
     expires = {};
+    window_started = {};
+    window_count = 0;
 }
 AccessGate::Slot::Slot(const Slot& other) noexcept
-    : used(other.used), secret(other.secret), actor(other.actor), expires(other.expires) {}
+    : used(other.used), secret(other.secret), csrf(other.csrf), session(other.session), actor(other.actor),
+      expires(other.expires), window_started(other.window_started), window_count(other.window_count) {}
 AccessGate::Slot& AccessGate::Slot::operator=(const Slot& other) noexcept {
     if (this != &other) {
         clear();
         used = other.used;
         secret = other.secret;
+        csrf = other.csrf;
+        session = other.session;
         actor = other.actor;
         expires = other.expires;
+        window_started = other.window_started;
+        window_count = other.window_count;
     }
     return *this;
 }
@@ -108,8 +130,12 @@ AccessGate::Slot& AccessGate::Slot::operator=(Slot&& other) noexcept {
         clear();
         used = other.used;
         secret = other.secret;
+        csrf = other.csrf;
+        session = other.session;
         actor = other.actor;
         expires = other.expires;
+        window_started = other.window_started;
+        window_count = other.window_count;
         other.clear();
     }
     return *this;
@@ -146,11 +172,26 @@ IssuedAccess AccessGate::issue(std::uint64_t actor, std::string_view proof) {
         if (verdict == accounts::PasswordVerification::unavailable) { fail(ErrorKind::unavailable); }
         if (verdict != accounts::PasswordVerification::matched) { fail(ErrorKind::forbidden); }
         std::array<unsigned char, 32> bytes{};
-        struct Wipe { std::array<unsigned char, 32>& raw; ~Wipe() { OPENSSL_cleanse(raw.data(), raw.size()); } } wipe{bytes};
-        if (RAND_bytes(bytes.data(), static_cast<int>(bytes.size())) != 1) { fail(ErrorKind::unavailable); }
+        std::array<unsigned char, 32> csrf_bytes{};
+        std::array<unsigned char, 16> session_bytes{};
+        struct Wipe {
+            std::array<unsigned char, 32>& raw;
+            std::array<unsigned char, 32>& csrf_raw;
+            std::array<unsigned char, 16>& session_raw;
+            ~Wipe() {
+                OPENSSL_cleanse(raw.data(), raw.size());
+                OPENSSL_cleanse(csrf_raw.data(), csrf_raw.size());
+                OPENSSL_cleanse(session_raw.data(), session_raw.size());
+            }
+        } wipe{bytes, csrf_bytes, session_bytes};
+        if (RAND_bytes(bytes.data(), static_cast<int>(bytes.size())) != 1 ||
+            RAND_bytes(csrf_bytes.data(), static_cast<int>(csrf_bytes.size())) != 1 ||
+            RAND_bytes(session_bytes.data(), static_cast<int>(session_bytes.size())) != 1) { fail(ErrorKind::unavailable); }
         auto& slot = slots_[choose_slot(actor)];
         slot.clear();
         slot.secret = bytes;
+        slot.csrf = csrf_bytes;
+        slot.session = session_bytes;
         slot.used = true;
         slot.actor = actor;
         slot.expires = std::chrono::steady_clock::now() + access_grant_ttl;
@@ -158,7 +199,9 @@ IssuedAccess AccessGate::issue(std::uint64_t actor, std::string_view proof) {
         issued.id = actor;
         issued.role = std::string(accounts::role_key(stored->account.role()));
         issued.status = std::string(accounts::status_key(stored->account.status()));
-        issued.grant = hex_grant(bytes);
+        issued.grant = hex_bytes(bytes);
+        issued.session = hex_bytes(session_bytes);
+        issued.csrf = hex_bytes(csrf_bytes);
         return issued;
     } catch (const accounts::PasswordSecurityError& error) {
         fail(error.kind() == accounts::PasswordSecurityErrorKind::invalid_password ? ErrorKind::invalid_input : ErrorKind::unavailable);
@@ -169,7 +212,8 @@ IssuedAccess AccessGate::issue(std::uint64_t actor, std::string_view proof) {
     catch (...) { fail(ErrorKind::unavailable); }
 }
 
-GrantCheck AccessGate::authorize(std::string_view token, std::string_view method, std::string_view target) {
+GrantCheck AccessGate::authorize(std::string_view token, std::string_view method, std::string_view target,
+    std::string_view session, std::string_view csrf) {
     std::array<unsigned char, 32> raw{};
     struct Wipe { std::array<unsigned char, 32>& bytes; ~Wipe() { OPENSSL_cleanse(bytes.data(), bytes.size()); } } wipe{raw};
     if (!decode_grant(token, raw)) { return GrantCheck::missing; }
@@ -180,6 +224,30 @@ GrantCheck AccessGate::authorize(std::string_view token, std::string_view method
         if (equal == 0 && slots_[i].used && slots_[i].expires > now) { match = static_cast<int>(i); }
     }
     if (match < 0) { return GrantCheck::missing; }
+    auto& slot = slots_[static_cast<std::size_t>(match)];
+    if (slot.window_started.time_since_epoch().count() == 0 || now >= slot.window_started + session_request_window) {
+        slot.window_started = now;
+        slot.window_count = 0;
+    }
+    if (slot.window_count >= session_request_limit) { return GrantCheck::rate_limited; }
+    ++slot.window_count;
+    if (method == "POST") {
+        std::array<unsigned char, 32> csrf_raw{};
+        std::array<unsigned char, 16> session_raw{};
+        struct SecretWipe {
+            std::array<unsigned char, 32>& csrf_bytes;
+            std::array<unsigned char, 16>& session_bytes;
+            ~SecretWipe() {
+                OPENSSL_cleanse(csrf_bytes.data(), csrf_bytes.size());
+                OPENSSL_cleanse(session_bytes.data(), session_bytes.size());
+            }
+        } secret_wipe{csrf_raw, session_raw};
+        const bool csrf_ok = decode_grant(csrf, csrf_raw);
+        const bool session_ok = decode_session(session, session_raw);
+        const int csrf_diff = csrf_ok ? CRYPTO_memcmp(slot.csrf.data(), csrf_raw.data(), csrf_raw.size()) : 1;
+        const int session_diff = session_ok ? CRYPTO_memcmp(slot.session.data(), session_raw.data(), session_raw.size()) : 1;
+        if (!csrf_ok || !session_ok || csrf_diff != 0 || session_diff != 0) { return GrantCheck::csrf_required; }
+    }
     const auto gate = classify(method, target);
     if (!gate) { return GrantCheck::forbidden; }
     const auto actor = slots_[static_cast<std::size_t>(match)].actor;

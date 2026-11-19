@@ -1,3 +1,4 @@
+#include "dc24h/admin/access.hpp"
 #include "dc24h/api/accounts.hpp"
 #include "dc24h/api/http.hpp"
 #include "dc24h/accounts/management.hpp"
@@ -27,22 +28,31 @@ void run(const database::Options& options) {
     require(repository.list_after(actor.account.id().value(),1).at(0).account.id()==target.account.id());
     require(repository.list_after(target.account.id().value()).empty());
     auto handler=api::account_handler(options);
-    std::string grant;
-    auto call=[&](std::string method,std::string path,std::string body={},bool use_grant=true) {
+    std::string grant, session, csrf;
+    auto call=[&](std::string method,std::string path,std::string body={},bool use_grant=true,bool bind=true) {
         api::Request request;
         request.method=std::move(method);request.target=std::move(path);request.body=std::move(body);
-        if(use_grant){request.admin_grant=grant;}
+        if(use_grant){
+            request.admin_grant=grant;
+            if(bind&&request.method=="POST"&&request.target!="/api/v1/admin/access"){
+                request.admin_session=session;request.admin_csrf=csrf;
+            }
+        }
         return handler(request);
     };
-    auto take_grant=[&](const std::string& http) {
-        const auto marker=std::string("\"grant\":\"");
-        const auto at=http.find(marker);require(at!=std::string::npos&&http.size()>=at+marker.size()+64);
-        grant=http.substr(at+marker.size(),64);require(grant.find_first_not_of("0123456789abcdef")==std::string::npos);
+    auto take_field=[&](const std::string& http,const char* name,std::size_t size,std::string& out) {
+        const auto marker=std::string("\"")+name+"\":\"";
+        const auto at=http.find(marker);require(at!=std::string::npos&&http.size()>=at+marker.size()+size);
+        out=http.substr(at+marker.size(),size);require(out.find_first_not_of("0123456789abcdef")==std::string::npos);
+    };
+    auto take_secrets=[&](const std::string& http) {
+        take_field(http,"grant",64,grant);take_field(http,"session",32,session);take_field(http,"csrf",64,csrf);
+        require(grant!=csrf);
     };
     const auto actor_id=std::to_string(actor.account.id().value());
     const auto proved=call("POST","/api/v1/admin/access","actor_id="+actor_id+"&proof=WebAdmin+operator+password!",false);
     require(proved.starts_with("HTTP/1.1 200")&&proved.find("verifier")==std::string::npos);
-    take_grant(proved);
+    take_secrets(proved);
     std::this_thread::sleep_for(std::chrono::milliseconds(1100));
     const auto listed=call("GET","/api/v1/accounts?after=0");
     require(listed.starts_with("HTTP/1.1 200")&&listed.find("WebAdminTarget")!=std::string::npos&&listed.find("verifier")==std::string::npos);
@@ -58,9 +68,20 @@ void run(const database::Options& options) {
     require(call("GET","/api/v1/accounts/999999999").starts_with("HTTP/1.1 404"));
     require(call("POST","/api/v1/accounts","name=X&name=Y").starts_with("HTTP/1.1 400"));
     require(call("POST","/api/v1/accounts","x=y").starts_with("HTTP/1.1 429"));
-    handler=api::account_handler(options);grant.clear();
+    handler=api::account_handler(options);grant.clear();session.clear();csrf.clear();
     const auto proved_again=call("POST","/api/v1/admin/access","actor_id="+actor_id+"&proof=WebAdmin+operator+password!",false);
-    require(proved_again.starts_with("HTTP/1.1 200"));take_grant(proved_again);
+    require(proved_again.starts_with("HTTP/1.1 200"));take_secrets(proved_again);
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    require(call("POST","/api/v1/accounts","x=y",true,false).find("csrf_required")!=std::string::npos);
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    const auto saved_csrf=csrf;csrf[0]=csrf[0]=='a'?'b':'a';
+    require(call("POST","/api/v1/accounts","x=y").find("csrf_required")!=std::string::npos);
+    csrf=saved_csrf;
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    const auto saved_session=session;session[0]=session[0]=='a'?'b':'a';
+    require(call("POST","/api/v1/accounts","x=y").find("csrf_required")!=std::string::npos);
+    session=saved_session;
+    require(call("GET","/api/v1/admin").starts_with("HTTP/1.1 200"));
     std::this_thread::sleep_for(std::chrono::milliseconds(1100));
     require(call("POST","/api/v1/management","x=y").starts_with("HTTP/1.1 405"));
     std::this_thread::sleep_for(std::chrono::milliseconds(1100));
@@ -72,7 +93,15 @@ void run(const database::Options& options) {
     require(limited.find("\"key\":\"accounts\",\"permission\":\"accounts.manage\",\"allowed\":false")!=std::string::npos);
     require(limited.find("\"key\":\"roles\",\"permission\":\"roles.manage\",\"allowed\":false")!=std::string::npos);
     require(limited.find("\"key\":\"bans\",\"permission\":\"users.ban+blocks.manage\",\"allowed\":true")!=std::string::npos);
-    require(limited.find(grant)==std::string::npos&&limited.find("password")==std::string::npos);
+    require(limited.find(grant)==std::string::npos&&limited.find(csrf)==std::string::npos&&limited.find("password")==std::string::npos);
+    handler=api::account_handler(options);grant.clear();session.clear();csrf.clear();
+    const auto proved_budget=call("POST","/api/v1/admin/access","actor_id="+actor_id+"&proof=WebAdmin+operator+password!",false);
+    require(proved_budget.starts_with("HTTP/1.1 200"));take_secrets(proved_budget);
+    for(std::uint32_t i=0;i<admin::session_request_limit;++i){
+        require(call("GET","/api/v1/admin").starts_with("HTTP/1.1 200"));
+    }
+    const auto budget=call("GET","/api/v1/admin");
+    require(budget.starts_with("HTTP/1.1 429")&&budget.find("rate_limited")!=std::string::npos);
     actor=repository.update(actor,std::get<Account>(actor.account.with_access(Role::administrator,Status::active,now)));
     const auto stale_actor=actor;
     actor=repository.update(actor,std::get<Account>(actor.account.with_access(Role::administrator,Status::active,now)));

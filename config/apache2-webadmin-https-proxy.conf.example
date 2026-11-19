@@ -54,6 +54,8 @@ TraceEnable Off
     RequestHeader unset X-Real-IP
     RequestHeader unset X-DC24H-Admin "expr=%{HTTP:X-DC24H-Admin} != '1'"
     RequestHeader unset X-DC24H-Admin-Grant "expr=%{HTTP:X-DC24H-Admin-Grant} !~ m#^[0-9a-fA-F]{64}$#"
+    RequestHeader unset X-DC24H-Session "expr=%{HTTP:X-DC24H-Session} !~ m#^[0-9a-f]{32}$#"
+    RequestHeader unset X-DC24H-Csrf "expr=%{HTTP:X-DC24H-Csrf} !~ m#^[0-9a-fA-F]{64}$#"
     # The adapter accepts only an origin equal to its loopback Host.
     RequestHeader set Origin "http://127.0.0.1:4173" "expr=%{HTTP:Origin} == 'https://dc24h.eu'"
 
