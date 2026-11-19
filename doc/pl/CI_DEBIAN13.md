@@ -1,5 +1,5 @@
 # Konfiguracja CI
 
-CI w `main` korzysta teraz z runnerów Ubuntu 24.04 utrzymywanych przez GitHub.
-Aktualny workflow i zakres testów opisuje [CI w GitHub Actions](GITHUB_CI.md).
-Poprzednia konfiguracja własnych runnerów nie jest już używana w tej gałęzi.
+`Check status` używa własnego runnera `server-747585786`.
+Ten host włącza każdy kontener testowy tylko na czas sprawdzenia, z 16 wątkami
+CPU i 32 GiB RAM, a potem go wyłącza. Opis jest w [CI w GitHub Actions](GITHUB_CI.md).

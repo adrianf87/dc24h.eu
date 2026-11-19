@@ -1,4 +1,5 @@
 #include "dc24h/security/roles.hpp"
+#include "dc24h/security/moderation.hpp"
 #include <stdexcept>
 
 namespace dc24h::security {
@@ -70,12 +71,14 @@ bool allows(accounts::Role role,Permission p,RolePolicy policy) noexcept {
     return false;
 }
 bool can_mute(accounts::Role actor,accounts::Role target,RolePolicy policy) noexcept {
-    const auto a=role_rank(actor),t=role_rank(target);
-    return a&&t&&*a>*t&&allows(actor,Permission::mute_users,policy);
+    ModerationTarget view;
+    view.subject=ModerationSubject::session;view.role=target;
+    return moderate(ModerationOperation::mute,ModerationActor{actor},view,policy).refusal==ModerationRefusal::none;
 }
 bool can_revoke(accounts::Role actor,accounts::Role target,RolePolicy policy) noexcept {
-    const auto a=role_rank(actor),t=role_rank(target);
-    return a&&t&&*a>*t&&allows(actor,Permission::revoke_sessions,policy);
+    ModerationTarget view;
+    view.subject=ModerationSubject::session;view.role=target;
+    return moderate(ModerationOperation::kick,ModerationActor{actor},view,policy).refusal==ModerationRefusal::none;
 }
 bool can_manage(accounts::Role actor,accounts::Role target) noexcept {
     const auto a=role_rank(actor),t=role_rank(target);

@@ -12,7 +12,7 @@ import unittest
 
 from network_process_tests import BINARY, Hub, drain_until_eof
 from adc_process_tests import counters
-from tls_support import credentials, connect_tls, finish_tls, tls_endpoint
+from tls_support import credentials, connect_tls, finish_tls, tls_endpoint, assert_fatal_tls_alert_or_eof
 
 
 class LoggingProcessTests(unittest.TestCase):
@@ -24,7 +24,7 @@ class LoggingProcessTests(unittest.TestCase):
         hub.stop(signal.SIGINT)
         self.assertEqual(counters(self, hub), (2, 0, 1, 0))
         log = bytes(hub.log)
-        self.assertRegex(log, rb"\[INFO\] Starting dc24h.eu alpha-0.8.7")
+        self.assertRegex(log, rb"\[INFO\] Starting dc24h.eu alpha-0.8.8")
         self.assertIn(b"Startup settings: adc_listeners=", log)
         self.assertRegex(log, rb"Connection id=\d+ transport=ADC event=accepted")
         self.assertRegex(log, rb"Connection id=\d+ transport=ADC event=login_rejected")
@@ -93,10 +93,7 @@ class LoggingProcessTests(unittest.TestCase):
                       '--log-connections', 'on')
             with socket.create_connection(tls_endpoint(hub), timeout=3) as bad:
                 bad.sendall(b'NOT_TLS_SECRET_MARKER\n')
-                try:
-                    self.assertEqual(bad.recv(1024), b'')
-                except ConnectionResetError:
-                    pass
+                assert_fatal_tls_alert_or_eof(self, drain_until_eof(bad))
             with socket.create_connection(tls_endpoint(hub), timeout=3) as stalled:
                 self.assertEqual(stalled.recv(1), b'')
             peer = connect_tls(self, hub, cert)

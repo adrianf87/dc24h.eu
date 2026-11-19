@@ -1,5 +1,7 @@
 # Mute — alpha-0.8.7
 
+**alpha-0.8.8 Reguły moderacji:** [Wspólne sprawdzenie uprawnienia i celu](MODERATION_RULES.md) obejmuje kick, mute, unmute oraz bany konta, CID i adresu IP, razem z cofaniem. Schemat v8 pozostaje bez zmian.
+
 Etap dodaje wyciszenie czatu publicznego i prywatnego, rozwijając
 [Temporary Bans](TEMPORARY_BANS.md). Powstaje z main
 `bcbba253074ad7dbba8aa75752c51b1e68767475`, bez automatycznego scalenia.

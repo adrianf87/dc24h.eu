@@ -1,5 +1,6 @@
 #include "dc24h/configuration/configuration.hpp"
 #include "dc24h/logging/logger.hpp"
+#include "dc24h/security/moderation.hpp"
 
 #include <unistd.h>
 #include <sys/stat.h>
@@ -323,6 +324,23 @@ int main() {
             require(safe.connect_timeout_seconds==8&&safe.read_timeout_seconds==2&&safe.write_timeout_seconds==9,"Timeout inheritance differs");
             const auto text=dc24h::api::configuration_json(safe);
             require(text.find("Private")==std::string::npos&&text.find("private-")==std::string::npos,"Public settings leak paths/credentials");
+            std::string moderation="\"moderation\":[";
+            bool first_rule=true;
+            for(auto operation:dc24h::security::moderation_catalog){
+                const auto rule=dc24h::security::moderation_rule(operation);
+                if(!first_rule){moderation+=',';}first_rule=false;
+                moderation+="{\"operation\":\"";moderation+=dc24h::security::moderation_operation_key(operation);
+                moderation+="\",\"permission\":\"";moderation+=dc24h::security::permission_key(rule.permission);
+                moderation+="\",\"subject\":\"";moderation+=dc24h::security::moderation_subject_key(rule.subject);
+                moderation+="\",\"target\":\"";moderation+=dc24h::security::moderation_target_key(rule.target);
+                moderation+="\",\"guest_target\":";moderation+=rule.guest_target?"true":"false";
+                moderation+=",\"forbid_self\":";moderation+=rule.forbid_self?"true":"false";
+                moderation+=",\"vip_delegable\":";moderation+=rule.vip_delegable?"true":"false";
+                moderation+=",\"requires_blocks\":";moderation+=rule.requires_blocks?"true":"false";
+                moderation+='}';
+            }
+            moderation+="]";
+            require(text.find(moderation)!=std::string::npos,"Public moderation rules differ");
             for(auto capacity:{std::size_t{0},std::size_t{4097}}){settings.authentication.max_accounts=capacity;invalid([&]{dc24h::configuration::validate(settings);});}
             settings.authentication.max_accounts=4096;
             settings.authentication.enabled=true;invalid([&]{dc24h::configuration::validate(settings);});

@@ -1,4 +1,5 @@
 #include "dc24h/admin/mute.hpp"
+#include "dc24h/security/moderation.hpp"
 namespace dc24h::admin {
 std::string_view mute_scope_key(MuteScope scope) noexcept {
     switch(scope){case MuteScope::public_chat:return "public";case MuteScope::private_chat:return "private";case MuteScope::all:return "all";}return {};
@@ -14,7 +15,11 @@ MuteError MuteCore::check(users::SessionId actor,users::SessionId target,MuteSco
     if(!destination||!destination->ready()){return MuteError::unavailable;}
     if(now<source->established_at){return MuteError::invalid_time;}
     const auto auth=destination->authentication();
-    return security::can_mute(source->role,auth?auth->role:accounts::Role::guest,policy_)?MuteError::none:MuteError::forbidden;
+    // Unmute uses the same permission and target rule as mute.
+    security::ModerationTarget view;
+    view.subject=security::ModerationSubject::session;
+    view.role=auth?auth->role:accounts::Role::guest;
+    return security::moderate(security::ModerationOperation::mute,{source->role},view,policy_).refusal==security::ModerationRefusal::none?MuteError::none:MuteError::forbidden;
 }
 MuteError MuteCore::apply(users::SessionId actor,users::SessionId target,MuteScope scope,bool enabled,users::TimePoint now) noexcept {
     const auto error=check(actor,target,scope,now);if(error!=MuteError::none){return error;}

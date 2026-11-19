@@ -1,6 +1,6 @@
 #include "dc24h/bans/repository.hpp"
 #include "dc24h/accounts/registration.hpp"
-#include "dc24h/security/roles.hpp"
+#include "dc24h/security/moderation.hpp"
 #include "registration_internal.hpp"
 #include <openssl/crypto.h>
 #include <openssl/sha.h>
@@ -30,7 +30,23 @@ std::string lock_name(database::Connection& c){
     constexpr char hex[]="0123456789abcdef";std::string name="dc24h:bans:";for(unsigned i=0;i<24;++i){name+=hex[hash[i]>>4];name+=hex[hash[i]&15];}return name;
 }
 struct Unlock {database::Connection& c;const std::string& name;~Unlock(){try{(void)c.scalar("SELECT RELEASE_LOCK(?)",{name});}catch(...){}}};
-bool lower(accounts::Role actor,accounts::Role target){const auto a=security::role_rank(actor),t=security::role_rank(target);return a&&t&&*a>*t;}
+security::ModerationOperation ban_operation(Kind kind,bool revoke) noexcept {
+    if(revoke){return security::ModerationOperation::revoke_ban;}
+    switch(kind){
+    case Kind::account:return security::ModerationOperation::ban_account;
+    case Kind::cid:return security::ModerationOperation::ban_cid;
+    case Kind::ip:return security::ModerationOperation::ban_address;
+    }
+    return static_cast<security::ModerationOperation>(255);
+}
+security::ModerationSubject ban_subject(Kind kind) noexcept {
+    switch(kind){
+    case Kind::account:return security::ModerationSubject::account;
+    case Kind::cid:return security::ModerationSubject::cid;
+    case Kind::ip:return security::ModerationSubject::address;
+    }
+    return static_cast<security::ModerationSubject>(255);
+}
 }
 void Repository::require_schema(){
     const auto status=database::inspect_migrations(connection_);if(status.dirty||status.pending||status.current_version<8){fail(ErrorKind::schema);}
@@ -82,7 +98,9 @@ Record Service::revoke(const accounts::StoredAccount& actor,std::string_view pro
 Record Service::perform(const accounts::StoredAccount& actor,std::string_view proof,Record candidate,bool revoke,Timestamp now){
     using namespace accounts;
     if(!actor.account.valid()||!actor.revision||actor.revision>=std::uint64_t(std::numeric_limits<std::int64_t>::max())||now<actor.account.times().updated_at||now<0||now>max_timestamp){fail(ErrorKind::invalid_input);}
-    if(actor.account.status()!=Status::active||!security::allows(actor.account.role(),security::Permission::ban_users)||!security::allows(actor.account.role(),security::Permission::manage_blocks)){fail(ErrorKind::forbidden);}
+    const auto record_operation=ban_operation(candidate.kind,false);
+    const auto operation=revoke?security::ModerationOperation::revoke_ban:record_operation;
+    if(actor.account.status()!=Status::active||!security::actor_may(operation,actor.account.role())){fail(ErrorKind::forbidden);}
     if(revoke&&(candidate.revoked_at||now<candidate.created_at||candidate.revision>=std::uint64_t(std::numeric_limits<std::int64_t>::max()))){fail(ErrorKind::stale);}
     detail::validate_password(proof);Repository(connection_).require_schema();AccountRepository accounts(connection_);accounts.require_schema();RegistrationService(connection_).require_credentials_schema();
     if(accounts.find_by_id(actor.account.id())!=actor){fail(ErrorKind::stale);}
@@ -93,9 +111,13 @@ Record Service::perform(const accounts::StoredAccount& actor,std::string_view pr
         return result.rows.empty()?std::nullopt:std::optional<std::uint64_t>{number(result.rows[0][0])};
     };
     const auto target_id=mapped();if(target_id){target=accounts.find_by_id(*AccountId::from_value(*target_id));if(!target){fail(ErrorKind::not_found);}
-        if(target->account.id()==actor.account.id()||!lower(actor.account.role(),target->account.role())){fail(ErrorKind::forbidden);}}
-    if(revoke&&candidate.created_by!=actor.account.id().value()){
-        creator=accounts.find_by_id(*AccountId::from_value(candidate.created_by));if(!creator){fail(ErrorKind::invalid_record);}if(!lower(actor.account.role(),creator->account.role())){fail(ErrorKind::forbidden);}}
+        security::ModerationTarget view;view.subject=ban_subject(candidate.kind);view.role=target->account.role();view.same_actor=target->account.id()==actor.account.id();view.account_bound=true;
+        if(security::moderate(record_operation,{actor.account.role()},view).refusal!=security::ModerationRefusal::none){fail(ErrorKind::forbidden);}}
+    if(revoke){
+        security::ModerationTarget view;view.subject=ban_subject(candidate.kind);view.actor_is_creator=candidate.created_by==actor.account.id().value();
+        if(!view.actor_is_creator){creator=accounts.find_by_id(*AccountId::from_value(candidate.created_by));if(!creator){fail(ErrorKind::invalid_record);}view.role=creator->account.role();view.account_bound=true;}
+        else{view.role=actor.account.role();}
+        if(security::moderate(security::ModerationOperation::revoke_ban,{actor.account.role()},view).refusal!=security::ModerationRefusal::none){fail(ErrorKind::forbidden);}}
     auto captured=connection_.query("SELECT verifier,created_at FROM dc24h_account_credentials WHERE account_id=?",params(actor.account.id().value()),{1,2,192,256});Erase erase{captured};
     if(captured.rows.size()!=1||captured.rows[0].size()!=2||!captured.rows[0][0]||!captured.rows[0][1]||number(captured.rows[0][1],true)<std::uint64_t(actor.account.times().created_at)||number(captured.rows[0][1],true)>std::uint64_t(actor.account.times().updated_at)){fail(ErrorKind::invalid_record);}
     if(!detail::verify_password(proof,*captured.rows[0][0])){fail(ErrorKind::forbidden);}

@@ -5,6 +5,7 @@
 #include "dc24h/adc/status.hpp"
 #include "dc24h/adc/connection_errors.hpp"
 #include "dc24h/adc/msg.hpp"
+#include "dc24h/security/moderation.hpp"
 #include "dc24h/text/public_text.hpp"
 
 #include <deque>
@@ -496,7 +497,10 @@ bool LoginHub::revoke_auth_session_as(Id actor, Id target, users::TimePoint now)
     const auto* destination=key?sessions_.find(*key):nullptr;
     if(actor==target||!source||!destination||!destination->ready()||now<source->established_at){return false;}
     const auto auth=destination->authentication();
-    if(!security::can_revoke(source->role,auth?auth->role:accounts::Role::guest,limits_.roles)){return false;}
+    security::ModerationTarget view;
+    view.subject=security::ModerationSubject::session;
+    view.role=auth?auth->role:accounts::Role::guest;
+    if(security::moderate(security::ModerationOperation::kick,{source->role},view,limits_.roles).refusal!=security::ModerationRefusal::none){return false;}
     if(sessions_.force_close(*key,users::CloseCause::authentication_revoked,now)){return false;}
     (void)search_.forget_searches(*key);return true;
 }

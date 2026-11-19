@@ -8,7 +8,7 @@ import unittest
 
 from adc_login_process_tests import Peer
 from network_process_tests import Hub, drain_until_eof
-from tls_support import credentials, connect_tls, tls_endpoint
+from tls_support import credentials, connect_tls, tls_endpoint, assert_fatal_tls_alert_or_eof
 
 
 class UserDisconnectProcessTests(unittest.TestCase):
@@ -46,7 +46,8 @@ class UserDisconnectProcessTests(unittest.TestCase):
                     # A failed anonymous TLS handshake must release its sole
                     # pending slot and emit no user departure before the fence.
                     with socket.create_connection(tls_endpoint(hub),timeout=3) as bad:
-                        bad.sendall(b'NOT_TLS\n');self.assertEqual(drain_until_eof(bad),b'')
+                        bad.sendall(b'NOT_TLS\n')
+                        assert_fatal_tls_alert_or_eof(self, drain_until_eof(bad))
                     watcher.send(b'BINF '+watcher.sid+b' DEFence')
                     self.assertEqual(watcher.line(),b'BINF '+watcher.sid+b' DEFence')
                 final=peer(encrypted);final.login(b'ReuseIdentity',2)

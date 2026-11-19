@@ -1,5 +1,17 @@
 # Changelog
 
+## alpha-0.8.8 — 2026-11-19
+
+Moderation Rules — shared permission and target checks, based on alpha-0.8.7 `d8fbca4fbaa8a048886f075fd209c96dc6639049` (itself based on main `bcbba253074ad7dbba8aa75752c51b1e68767475`). No automatic merge. The branch name is `alpha-0.8.8`.
+
+- Add one allocation-free decision for kick, mute, unmute, account/CID/IP bans and ban revocation. Require the operation permission, including both users.ban and blocks.manage for bans, and refuse the wrong subject, self where forbidden, or a rank that is not strictly lower. Unknown operations, roles and VIP masks fail closed. Unmapped CID bans and exact IP bans keep their existing lack of a role target. Revocation still allows the creator and otherwise requires a strictly lower creator, while an account or mapped CID must also remain strictly lower.
+- Route KickCore, MuteCore, authenticated session revocation and Ban Core create/revoke through that decision. Preserve existing refusal order, wire messages, proof checks and result codes. Do not add a command, SQL migration, persistent mute, live +ban or a browser action.
+- Publish the fixed rule table as optional configuration.moderation and show it on a bilingual read-only WebAdmin page. Older APIs stay available; a malformed table clears the snapshot. Schema v8 and migrations 1–8 are unchanged.
+- Route Check status through the custom runner `server-747585786`. The Debian 13 host starts one test container at a time, gives it 16 CPU threads and 32 GiB RAM, runs C++ Debug/Release and WebAdmin inside it, then stops it. Containers: Ubuntu 22.04, 24.04 and 26.04, Debian 12 and 13. `main` keeps the host workflow that already performs that sequence and retires obsolete per-container runner services. Local validation still uses eight CPU threads. Remote CI completion is not awaited.
+- Accept the OpenSSL differences seen on that sequential run. Ubuntu 26.04 may answer non-TLS input with one fatal alert record; Debian 12 may make the test client's `unwrap()` return after the server closes the socket. EOF, connection reset, that single alert, `SSLEOFError` and a completed `unwrap()` are all valid. Arbitrary application data is still rejected. The server still does not call `SSL_shutdown()`.
+
+Validation on Debian 13: all 213/213 CTest suites passed in both Debug and Release, including disposable MariaDB, real ncdc ADC/ADCS, existing ban/mute checks and Apache. C++ builds were warning-free. WebAdmin production build/typecheck, all 39 Node tests, all 29 Chromium tests and actual C++ API/adapter/React integration passed. Release metadata, documentation UTF-8/language parity/local links, Python syntax with warnings as errors, actionlint, unchanged migrations/manifest and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration or account/credential mutation is performed.
+
 ## alpha-0.8.7 — 2026-11-17
 
 Mute — live public/private chat moderation, based directly on main `bcbba253074ad7dbba8aa75752c51b1e68767475`. No automatic merge.

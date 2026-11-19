@@ -1,5 +1,7 @@
 # Mute — alpha-0.8.7
 
+**alpha-0.8.8 Moderation Rules:** [Shared permission and target checks](MODERATION_RULES.md) decide kick, mute, unmute and account, CID and IP bans, including revocation. Schema v8 is unchanged.
+
 This increment adds live public/private chat moderation on top of
 [Temporary Bans](TEMPORARY_BANS.md). It starts from main
 `bcbba253074ad7dbba8aa75752c51b1e68767475`. There is no automatic merge.
