@@ -11,27 +11,22 @@ or `alpha-0.7.8` / `alpha-0.7.9` / `alpha-0.7.10` / `alpha-0.7.11` / `alpha-0.7.
 Fork pull requests do not run on this persistent host. The workflow has read-only
 repository permissions and disables persisted checkout credentials.
 
-Three jobs share that one runner:
+One job on that Debian 13 host starts each test container only for its own check,
+then stops it before the next one starts. The containers are
+`ubuntu2204-github-runner`, `ubuntu2404-github-runner`, `ubuntu2604-github-runner`,
+`debian12-github-runner` and `debian13-github-runner`. Each check sets 16 CPU
+threads and 32 GiB RAM, refuses to start when another of these containers is
+already running, and leaves the container stopped. Inside the container the job
+installs the toolchain, MariaDB, Apache and ncdc, then runs C++ Debug and Release
+with 16 build and CTest workers, plus WebAdmin typecheck, Node tests, Chromium
+and the live C++ API integration. The host itself is not the build machine.
 
-- **C++ Debug** and **C++ Release**: separate matrix jobs configure C++20 with
-  `BUILD_TESTING=ON` and `DC24H_REQUIRE_INTEGRATION_TESTS=ON`, then build and run
-  every CTest suite. The runner must already provide the compiler, MariaDB, Apache
-  and ncdc. Jobs do not install packages and do not use sudo. Missing tools fail
-  the runner check. Matrix failures do not cancel the other build.
-- **WebAdmin**: Node 22, `npm ci`, typecheck/production build, Node unit tests,
-  Chromium browser tests and real C++ API/React integration. This job builds
-  its own Release `dc24h` binary with `BUILD_TESTING=OFF`; the matrix above
-  covers the full C++ test suite. Playwright installs Chromium for the runner user
-  and does not install system packages.
-
-Each job checks that `RUNNER_NAME` is `server-747585786`, that the user is
-`github-runner`, and that the OS is Debian 13. Build and test commands use
-`nproc` on that machine. There is no
-fixed worker-count cap and no matrix max-parallel setting. CI completion is not
-awaited. Tests start their own isolated services.
+The job checks that `RUNNER_NAME` is `server-747585786`, that the user is
+`github-runner`, and that Docker can see all five stopped containers. CI
+completion is not awaited.
 
 Concurrency is grouped by workflow and Git ref with `cancel-in-progress: false`.
-C++ jobs have a 120-minute timeout; WebAdmin has 60 minutes. Check each run under
+The container job has a 360-minute timeout. Check each run under
 [GitHub Actions](https://github.com/adrianf87/dc24h.eu/actions/workflows/build.yml)
 for actual results.
 

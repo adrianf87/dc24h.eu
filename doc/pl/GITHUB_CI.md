@@ -10,28 +10,23 @@ samego repozytorium do `main` lub `alpha-0.7.8` / `alpha-0.7.9` / `alpha-0.7.10`
 Pull requesty z forków nie wykonują się na tym trwałym hoście. Uprawnienia
 repozytorium są tylko do odczytu; checkout nie zachowuje poświadczeń.
 
-Trzy zadania korzystają z tego jednego runnera:
+Jedno zadanie na tym hoście Debian 13 włącza każdy kontener testowy tylko na czas
+jego sprawdzenia i wyłącza go przed startem następnego. Kontenery to
+`ubuntu2204-github-runner`, `ubuntu2404-github-runner`, `ubuntu2604-github-runner`,
+`debian12-github-runner` i `debian13-github-runner`. Każde sprawdzenie ustawia 16
+wątków CPU i 32 GiB RAM, odmawia startu, gdy inny z tych kontenerów już działa, i
+zostawia kontener zatrzymany. W kontenerze zadanie instaluje narzędzia, MariaDB,
+Apache i ncdc, a potem uruchamia C++ Debug i Release z 16 workerami kompilacji i
+CTest oraz WebAdmin: typy, testy Node, Chromium i integrację żywego API C++.
+Sam host nie jest maszyną budującą.
 
-- **C++ Debug** i **C++ Release**: osobne zadania macierzy konfigurują C++20 z
-  `BUILD_TESTING=ON` i `DC24H_REQUIRE_INTEGRATION_TESTS=ON`, kompilują projekt i
-  uruchamiają wszystkie zestawy CTest. Runner musi już mieć kompilator, MariaDB,
-  Apache i ncdc. Zadania nie instalują pakietów i nie używają sudo. Brak narzędzi
-  kończy sprawdzenie runnera. Błąd jednego wariantu nie anuluje drugiego.
-- **WebAdmin**: Node 22, `npm ci`, kontrola typów i kompilacja produkcyjna, testy
-  jednostkowe Node, testy przeglądarkowe Chromium oraz integracja rzeczywistego
-  API C++ z React. Zadanie kompiluje własny plik `dc24h` w Release z
-  `BUILD_TESTING=OFF`; pełne testy C++ wykonuje powyższa macierz. Playwright
-  instaluje Chromium dla użytkownika runnera i nie instaluje pakietów systemowych.
-
-Każde zadanie sprawdza, że `RUNNER_NAME` to `server-747585786`, użytkownikiem jest
-`github-runner`, a systemem jest Debian 13. Kompilacja i testy korzystają z `nproc`
-tej maszyny, bez stałego
-limitu liczby workerów i bez max-parallel w macierzy. Nie czekamy na zakończenie CI.
-Testy uruchamiają własne, odizolowane usługi.
+Zadanie sprawdza, że `RUNNER_NAME` to `server-747585786`, użytkownikiem jest
+`github-runner` i że Docker widzi wszystkie pięć zatrzymanych kontenerów. Nie
+czekamy na zakończenie CI.
 
 Grupa współbieżności zależy od workflow i ref Git; `cancel-in-progress: false`.
-Limit czasu zadań C++ wynosi 120 minut, a WebAdmin 60 minut. Faktyczne wyniki
-każdego przebiegu są dostępne w
+Limit czasu zadania kontenerów wynosi 360 minut. Faktyczne wyniki każdego
+przebiegu są dostępne w
 [GitHub Actions](https://github.com/adrianf87/dc24h.eu/actions/workflows/build.yml).
 
 Ten wybór runnera zastępuje wcześniej opisane zadania GitHub-hosted Ubuntu 24.04.

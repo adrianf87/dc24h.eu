@@ -11,27 +11,21 @@ concurrency:
   group: dc24h-server-747585786-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 jobs:
-  cpp:
-    name: C++ ${{ matrix.build_type }} - server-747585786
+  containers:
+    name: Docker containers - server-747585786
     if: >-
       github.repository == 'adrianf87/dc24h.eu' &&
       (github.event_name != 'pull_request' ||
        github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: [self-hosted, Linux, X64, server-747585786]
-    timeout-minutes: 120
-    strategy:
-      fail-fast: false
-      matrix:
-        build_type: [Debug, Release]
+    timeout-minutes: 360
     env:
-      CXX: g++
       CI: 'true'
-      BUILD_TYPE: ${{ matrix.build_type }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      - name: Verify custom runner server-747585786
+      - name: Verify host runner server-747585786
         shell: bash
         run: |
           test "$RUNNER_NAME" = server-747585786
@@ -39,66 +33,31 @@ jobs:
           . /etc/os-release
           test "$ID" = debian
           test "$VERSION_ID" = 13
-          for tool in g++ cmake python3 openssl ncdc mariadbd mariadb mariadb-admin mariadb-install-db apache2; do
-            command -v "$tool"
-          done
-      - name: Configure C++20
-        run: cmake -S . -B "build/$BUILD_TYPE" -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DBUILD_TESTING=ON -DDC24H_REQUIRE_INTEGRATION_TESTS=ON
-      - name: Build
-        run: cmake --build "build/$BUILD_TYPE" --parallel "$(nproc)"
-      - name: Test
-        run: ctest --test-dir "build/$BUILD_TYPE" --parallel "$(nproc)" --output-on-failure
-
-  webadmin:
-    name: WebAdmin - server-747585786
-    if: >-
-      github.repository == 'adrianf87/dc24h.eu' &&
-      (github.event_name != 'pull_request' ||
-       github.event.pull_request.head.repo.full_name == github.repository)
-    runs-on: [self-hosted, Linux, X64, server-747585786]
-    timeout-minutes: 60
-    env:
-      CXX: g++
-      CI: 'true'
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-        with:
-          persist-credentials: false
-      - name: Verify custom runner server-747585786
-        shell: bash
-        run: |
-          test "$RUNNER_NAME" = server-747585786
-          test "$(id -un)" = github-runner
-          . /etc/os-release
-          test "$ID" = debian
-          test "$VERSION_ID" = 13
-          for tool in g++ cmake python3 openssl; do
-            command -v "$tool"
+          docker version
+          id -nG | tr ' ' '\n' | grep -Fx docker
+          for container in ubuntu2204-github-runner ubuntu2404-github-runner ubuntu2604-github-runner debian12-github-runner debian13-github-runner; do
+            docker container inspect "$container" >/dev/null
+            test "$(docker inspect -f '{{.State.Running}}' "$container")" = false
           done
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: webadmin/package-lock.json
-      - name: Build Release C++ API for browser integration
+      - name: Check one container at a time, then stop it
+        shell: bash
         run: |
-          cmake -S . -B build/Release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
-          cmake --build build/Release --target dc24h --parallel "$(nproc)"
-      - name: Install frontend dependencies
-        working-directory: webadmin
-        run: npm ci
-      - name: Typecheck and production build
-        working-directory: webadmin
-        run: npm run build
-      - name: Frontend unit tests
-        working-directory: webadmin
-        run: node --import tsx --test --test-concurrency="$(nproc)" tests/*.test.ts
-      - name: Install Chromium
-        working-directory: webadmin
-        run: npx playwright install chromium
-      - name: Browser tests
-        working-directory: webadmin
-        run: npm run test:e2e -- --workers="$(nproc)" --fully-parallel
-      - name: Real C++ API integration
-        working-directory: webadmin
-        run: npm run test:integration -- ../build/Release/dc24h
+          set -uo pipefail
+          failed=0
+          while read -r container os version; do
+            echo "=== $container ($os $version): 16 threads, 32 GiB ==="
+            if ! bash .github/scripts/run-one-container.sh "$container" "$os" "$version"; then
+              echo "::error::$container failed"
+              failed=1
+            fi
+          done <<'EOF'
+          ubuntu2204-github-runner ubuntu 22.04
+          ubuntu2404-github-runner ubuntu 24.04
+          ubuntu2604-github-runner ubuntu 26.04
+          debian12-github-runner debian 12
+          debian13-github-runner debian 13
+          EOF
+          exit "$failed"
