@@ -2,12 +2,13 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.9.12 (Benchmark).**
+**Current development version: alpha-0.9.13 (Profiling).**
 
 CI on `main`: [GitHub-hosted Ubuntu 24.04](doc/us/GITHUB_CI.md) runs C++ Debug, C++ Release and WebAdmin · [PL](doc/pl/GITHUB_CI.md).
 
 Completed increments (older bullets describe their original delivery scope):
 
+- **alpha-0.9.13 Profiling**: a fixed in-process ranking of permission, moderation and role decisions from alpha-0.8. The slowest stage is named. This is not a sampling profiler or a capacity claim. See [Profiling](doc/us/PROFILING.md).
 - **alpha-0.9.12 Benchmark**: a fixed in-process measurement of permission and moderation decisions from alpha-0.8. This is not a capacity claim or a load test. See [Benchmark](doc/us/BENCHMARK.md).
 - **alpha-0.9.11 Monitoring**: one process sample and session gauges appear on the existing bearer-only status route. This is not a host monitor or a stored history. See [Monitoring](doc/us/MONITORING.md).
 - **alpha-0.9.10 Logging security**: a log file stays mode 0600 and owned by the hub user. Fixed security outcomes are recorded without peer data. This is not a production audit. See [Logging security](doc/us/LOGGING_SECURITY.md).

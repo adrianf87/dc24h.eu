@@ -1,5 +1,6 @@
 # Local administrative API — alpha-0.1.9
 
+**alpha-0.9.13 Profiling:** [Alpha 0.8 bottleneck profile](PROFILING.md) ranks a fixed in-process set of permission, moderation and role decisions. This is not a sampling profiler or a capacity claim. Schema v9 is unchanged.
 **alpha-0.9.12 Benchmark:** [Alpha 0.8 performance measurements](BENCHMARK.md) times a fixed in-process set of permission and moderation decisions. This is not a capacity claim or a load test. Schema v9 is unchanged.
 **alpha-0.9.11 Monitoring:** [CPU, memory, sessions and latency](MONITORING.md) publishes one process sample and session gauges on the existing bearer-only status route. This is not a host monitor or a stored history. Schema v9 is unchanged.
 **alpha-0.9.10 Logging:** [Secure logs and event recording](LOGGING_SECURITY.md) keeps a log file private to its owner and records fixed security outcomes without peer data. This is not a production audit. Schema v9 is unchanged.
@@ -225,6 +226,8 @@ alpha-0.9.7 does not add a route or a status field. Maintenance reads now requir
 alpha-0.9.6 does not add a route or a status field. Account password separation and sealed GPA/PAS decryption stay inside the hub. The JSON example above is unchanged. See [Account security](ACCOUNT_SECURITY.md).
 
 alpha-0.9.5 does not add a route or a status field. The ADCS leaf and cipher policy stays inside the hub. The JSON example above is unchanged. See [TLS security](TLS_SECURITY.md).
+
+alpha-0.9.13 does not add a route or a status field. The profile runs only inside its unit test. The JSON example above is unchanged. See [Profiling](PROFILING.md).
 
 alpha-0.9.12 does not add a route or a status field. The benchmark runs only inside its unit test. The JSON example above is unchanged. See [Benchmark](BENCHMARK.md).
 

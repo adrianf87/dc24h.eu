@@ -1,5 +1,6 @@
 # Lokalne API administracyjne — alpha-0.1.9
 
+**alpha-0.9.13 Profilowanie:** [Wykrywanie wąskich gardeł alpha-0.8](PROFILING.md) szereguje stały zestaw decyzji uprawnień, moderacji i ról w procesie. To nie jest profiler próbkujący ani deklaracja pojemności. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.12 Pomiary:** [Pomiary wydajności alpha-0.8](BENCHMARK.md) mierzy stały zestaw decyzji uprawnień i moderacji w procesie. To nie jest deklaracja pojemności ani test obciążenia. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.11 Monitorowanie:** [CPU, pamięć, sesje i opóźnienia](MONITORING.md) publikuje jedną próbkę procesu i liczniki sesji na istniejącym statusie z bearer. To nie jest monitor hosta ani zapisana historia. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.10 Logowanie:** [Bezpieczne logi i rejestrowanie zdarzeń](LOGGING_SECURITY.md) utrzymuje plik logu jako prywatny dla właściciela i zapisuje stałe skutki bezpieczeństwa bez danych klienta. To nie jest audyt produkcyjny. Schemat v9 pozostaje bez zmian.
@@ -224,6 +225,8 @@ alpha-0.9.7 nie dodaje trasy ani pola statusu. Odczyty utrzymaniowe wymagają te
 alpha-0.9.6 nie dodaje trasy ani pola statusu. Rozdzielenie haseł konta i zapieczętowane odszyfrowanie GPA/PAS zostają w hubie. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Bezpieczeństwo konta](ACCOUNT_SECURITY.md).
 
 alpha-0.9.5 nie dodaje trasy ani pola statusu. Polityka liścia i szyfrów ADCS zostaje w hubie. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Bezpieczeństwo TLS](TLS_SECURITY.md).
+
+alpha-0.9.13 nie dodaje trasy ani pola statusu. Profil działa tylko w swoim teście jednostkowym. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Profilowanie](PROFILING.md).
 
 alpha-0.9.12 nie dodaje trasy ani pola statusu. Pomiar działa tylko w swoim teście jednostkowym. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Pomiary](BENCHMARK.md).
 
