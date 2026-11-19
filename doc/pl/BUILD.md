@@ -109,7 +109,7 @@
 
 Pełny zestaw integracji wymaga `-DDC24H_REQUIRE_INTEGRATION_TESTS=ON` przy włączonym BUILD_TESTING. Potrzebne są openssl, ncdc, narzędzia serwera/klienta MariaDB i Apache2/mod_ssl; CI używa tego trybu. Brak narzędzi przerywa konfigurację. Domyślne OFF zachowuje opcjonalność testów dla deweloperów. `project.metadata` potrzebuje tylko Pythona i sprawdza spójność wersji/dokumentacji. Zobacz [audyt](AUDIT_ALPHA_0.1.md).
 
-Wymagane: Linux, CMake >=3.22, kompilator C++20 (GCC >=11), pthreads, utf8proc 2.x i pliki deweloperskie OpenSSL >=1.1.1. Testy używają Pythona >=3.8 i programu openssl. ncdc dodaje dwa testy rzeczywistego klienta; bez niego CMake jawnie informuje o pominięciu. Zależności nie są pobierane podczas konfiguracji.
+Wymagane: Linux, CMake >=3.22, kompilator C++20 (GCC >=11), pthreads, utf8proc 2.x i pliki deweloperskie OpenSSL >=3. Testy używają Pythona >=3.8 i programu openssl. ncdc dodaje dwa testy rzeczywistego klienta; bez niego CMake jawnie informuje o pominięciu. Zależności nie są pobierane podczas konfiguracji. Dozwolone biblioteki dzielone i zarejestrowane testy bezpieczeństwa sprawdza [Zależności](DEPENDENCIES.md).
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug

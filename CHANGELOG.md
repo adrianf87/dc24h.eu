@@ -1,5 +1,18 @@
 # Changelog
 
+## alpha-0.9.17 — 2026-11-19
+
+CI and dependencies — library control and automatic security tests, based on main `6940992`. The branch name is `alpha-0.9.17`.
+
+- Configuration requires OpenSSL 3. `dependencies.audit` reads the dynamic section of `dc24h`, `dc24h-owner` and `dc24h-account-admin`. Each binary must need `libssl.so.3`, `libcrypto.so.3`, `libgcrypt.so.20`, `libmariadb.so.3` and `libutf8proc.so.3`. The C++ runtime may also need `libc.so.6`, `libstdc++.so.6`, `libgcc_s.so.1` and `libm.so.6`. Any other shared library fails. `RPATH` and `RUNPATH` fail.
+- An AddressSanitizer build may also need `libasan.so.8`. An UndefinedBehaviorSanitizer build may also need `libubsan.so.1`. A ThreadSanitizer build may also need `libtsan.so.2`. A normal build fails if one of those runtimes is present. The selected runtime must be present. GitHub Check status still runs Debug and Release only.
+- WebAdmin dependencies and devDependencies stay exact `major.minor.patch` versions and must match the lockfile root. Every locked package with a download URL must use `https://registry.npmjs.org/` and a `sha512` integrity. The audit does not install packages and does not run `npm audit`.
+- `tests/security_tests.manifest` names the security tests CMake always registers. A missing name fails the audit. `systemd.sandbox` stays conditional. The manifest is not a claim that those tests cover every threat.
+- This does not add a route, INI key, CLI flag, status field, WebAdmin page, Apache setting or schema migration. Schema v9 is unchanged. `configuration.manage` and `hub.manage` stay unimplemented. Browser kick and mute stay undispatched. Status and health stay bearer-only. `Require local` stays. No residual threat is closed. This is not a vulnerability database.
+- Run Check status on GitHub-hosted Ubuntu 24.04. Add `alpha-0.9.17` to the push branches. The audit runs inside the existing C++ test step. Local validation uses eight CPU threads. Remote CI completion is not awaited.
+
+Validation on Debian 13: all 229/229 CTest suites passed in Debug (75.32 s real) and Release (74.01 s real), including disposable MariaDB, real ncdc ADC/ADCS, the Apache HTTPS reverse proxy, the sandboxed systemd example, and the dependency audit. The Release C++ build log contained no compiler warnings. WebAdmin typecheck and production build passed. All 49 Node tests passed. All 42 Chromium tests passed. Actual C++ API, adapter and React integration passed. Release metadata, documentation UTF-8, language parity, local Markdown links, Python syntax with warnings as errors and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration, host account or service activation is performed.
+
 ## alpha-0.9.16 — 2026-11-19
 
 Stress testing — overload and sustained operation, based on main `cdc509a`. The branch name is `alpha-0.9.16`.

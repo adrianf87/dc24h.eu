@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.9.16.
+Current development version: alpha-0.9.17.
+
+[Dependencies — alpha-0.9.17](us/DEPENDENCIES.md) · [PL](pl/DEPENDENCIES.md)
 
 [Stress testing — alpha-0.9.16](us/STRESS.md) · [PL](pl/STRESS.md)
 
