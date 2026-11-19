@@ -1,5 +1,6 @@
 # WebAdmin — alpha-0.4.12
 
+**alpha-0.9.1 Threat model:** [Hub and WebAdmin threat analysis](THREAT_MODEL.md) records assets, actors, trust boundaries and residual risk for the current hub and local WebAdmin. It does not add a control, a schema change, a public gateway or a production audit. Remote administrator access remains separate work.
 **alpha-0.8.15 Security sessions:** [Access control, CSRF, sessions and request limits](SECURITY_SESSIONS.md) binds each in-memory grant to a public session id and a separate CSRF secret. Maintenance writes require both on that same slot. Each session accepts 24 requests in 10 seconds. Reads stay grant-only. The values stay in process memory, not in SQL, cookies or web storage. A public authenticated gateway remains separate work.
 **alpha-0.8.14 Apache2 HTTPS proxy:** [HTTPS reverse proxy and API protection](APACHE2_PROXY.md) forwards an allowlisted WebAdmin API to the loopback adapter. Client bearer tokens, cookies and forwarded identity are removed. The C++ Unix socket and the service token stay out of Apache. Local access remains the default.
 **alpha-0.8.13 WebAdmin Management:** [Account, role and ban management](WEBADMIN_MANAGEMENT.md) shows which maintenance areas the current grant allows and links to the existing account, role and ban pages. The page does not perform those writes. Configuration writes, live hub administration and browser kick or mute stay outside this page.
@@ -158,6 +159,10 @@ References: [Vite setup](https://vite.dev/guide/), [Vite server restrictions](ht
 ## HTTPS example — alpha-0.1.11
 
 A separate HTTP→HTTPS/TLS 1.2+ static-site template is now shipped and always installed with the C++ configuration examples. It keeps local access and API denial by default; it is not a production authenticated gateway. See [APACHE2_HTTPS.md](APACHE2_HTTPS.md) for certificate paths, customization, verified activation and automated tests.
+
+## Threat model — alpha-0.9.1
+
+[Threat model](THREAT_MODEL.md) records what the browser, the loopback adapter and the local Apache examples are trusted to do. Page memory still holds a maintenance grant only after a proof. No new page or control is added.
 
 ## Security sessions — alpha-0.8.15
 

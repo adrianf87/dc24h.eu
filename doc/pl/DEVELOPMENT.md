@@ -139,6 +139,10 @@ alpha-0.1.10 powstaje z main po alpha-0.1.9. Oddzielaj schemat/formatowanie prze
 
 alpha-0.1.11 powstaje z main po alpha-0.1.10. Oddzielaj aktywację hosta, rzeczywiste certyfikaty i reload od tworzenia/testowania przykładu. Testuj dokładnie dostarczaną politykę TLS/dostępu/nagłówków z tymczasowymi ścieżkami/portami, bez konfiguracji hosta. Sukces apache2 -t nie dowodzi zgodności certyfikatu/klucza; sprawdzaj inicjalizację. Zachowuj oba języki dokumentacji i spójne wersje fixture.
 
+## Model zagrożeń — alpha-0.9.1
+
+Gałąź powstaje z main. Zapisz bieżące aktywa, aktorów, granice i ryzyko szczątkowe w obu językach. Nie dodawaj sprawdzenia protokołu, migracji schematu, ustawienia Apache ani mechanizmu WebAdmin. Nie oznaczaj `configuration.manage`, `hub.manage`, kicka albo mute w przeglądarce ani publicznej bramy jako ukończonych.
+
 ## Sesje bezpieczeństwa — alpha-0.8.15
 
 Gałąź powstaje z main. Zostaw cztery sloty grantu w pamięci. Dodaj na slocie identyfikator sesji i sekret CSRF, wymagaj ich przy zapisach utrzymaniowych i licz 24 żądania na 10 sekund na slocie. Nie zapisuj ich w SQL, ciasteczkach, pamięci przeglądarki ani w przykładzie Apache. Nie ufaj nagłówkom proxy. Zostaw `Require local`. Odczyty nadal wymagają tylko grantu. Status i health nadal wymagają tylko bearer.

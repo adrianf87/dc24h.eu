@@ -120,6 +120,10 @@ alpha-0.1.10 starts from main after alpha-0.1.9. Keep browser-safe schema/format
 
 alpha-0.1.11 starts from main after alpha-0.1.10. Keep host activation, real certificates and service reloads separate from example authoring/testing. Test the exact shipped TLS/access/header policy with temporary paths/ports and no host config. A successful apache2 -t is insufficient to claim certificate/key correspondence; exercise real initialization. Keep both documentation languages and version-sensitive fixtures aligned.
 
+## Threat model — alpha-0.9.1
+
+Branch from main. Record the current assets, actors, boundaries and residual risk in both languages. Do not add a protocol check, a schema migration, an Apache setting or a WebAdmin control. Do not mark `configuration.manage`, `hub.manage`, browser kick or mute, or a public gateway as done.
+
 ## Security sessions — alpha-0.8.15
 
 Branch from main. Keep the four-slot in-memory grant. Add the session id and CSRF secret on that slot, require them on maintenance writes, and count 24 requests per 10 seconds on the slot. Do not store them in SQL, cookies, web storage or the Apache example. Do not trust proxy headers. Leave `Require local` in place. Reads stay grant-only. Status and health stay bearer-only.

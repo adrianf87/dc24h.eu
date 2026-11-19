@@ -1,5 +1,6 @@
 # Local administrative API — alpha-0.1.9
 
+**alpha-0.9.1 Threat model:** [Hub and WebAdmin threat analysis](THREAT_MODEL.md) records assets, actors, trust boundaries and residual risk for the current hub and local WebAdmin. It does not add a control, a schema change, a public gateway or a production audit. Remote administrator access remains separate work.
 **alpha-0.8.15 Security sessions:** [Access control, CSRF, sessions and request limits](SECURITY_SESSIONS.md) binds each in-memory grant to a public session id and a separate CSRF secret. Maintenance writes require both on that same slot. Each session accepts 24 requests in 10 seconds. Reads stay grant-only. The values stay in process memory, not in SQL, cookies or web storage. A public authenticated gateway remains separate work.
 **alpha-0.8.14 Apache2 HTTPS proxy:** [HTTPS reverse proxy and API protection](APACHE2_PROXY.md) forwards an allowlisted WebAdmin API to the loopback adapter. Client bearer tokens, cookies and forwarded identity are removed. The C++ Unix socket and the service token stay out of Apache. Local access remains the default.
 **alpha-0.8.13 WebAdmin Management:** [Account, role and ban management](WEBADMIN_MANAGEMENT.md) shows which maintenance areas the current grant allows and links to the existing account, role and ban pages. The page does not perform those writes. Configuration writes, live hub administration and browser kick or mute stay outside this page.
@@ -199,6 +200,8 @@ alpha-0.8.13 adds maintenance `GET /api/v1/management`. Any live grant can read 
 alpha-0.8.14 does not add a C++ route. The Apache reverse proxy forwards an allowlisted `/admin-api/v1` surface to the existing loopback adapter. The status JSON example above is unchanged. See [Apache2 HTTPS proxy](APACHE2_PROXY.md).
 
 alpha-0.8.15 does not add a status field. A maintenance proof adds `session` and `csrf` beside the existing grant. Other maintenance writes require those values on the same in-memory slot. Each session accepts 24 requests in 10 seconds. Status and health stay bearer-only. The JSON example above is unchanged. See [Security sessions](SECURITY_SESSIONS.md).
+
+alpha-0.9.1 does not add a route or a status field. The threat model records the existing bearer, grant and socket boundaries. The JSON example above is unchanged. See [Threat model](THREAT_MODEL.md).
 
 Counters are independently sampled atomics, not one transactional snapshot. `core_running` reports the Core lifecycle only, not complete ADC login/readiness. Uptime uses a steady clock from transport/API composition after optional database setup; it is not wall-clock process age. `database.enabled` reports configured startup connection presence, not ongoing SQL availability. No request runs SQL. Peer addresses, nicknames, frames, file paths, secrets and administrative settings are never returned. Unknown paths (including query strings) give 404 after authentication; other methods give 405 with `Allow: GET`. HEAD is unsupported (405), with no response body.
 

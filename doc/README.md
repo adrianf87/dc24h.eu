@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.8.15.
+Current development version: alpha-0.9.1.
+
+[Threat model — alpha-0.9.1](us/THREAT_MODEL.md) · [PL](pl/THREAT_MODEL.md)
 
 [Security sessions — alpha-0.8.15](us/SECURITY_SESSIONS.md) · [PL](pl/SECURITY_SESSIONS.md)
 

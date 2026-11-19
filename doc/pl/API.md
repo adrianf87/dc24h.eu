@@ -1,5 +1,6 @@
 # Lokalne API administracyjne — alpha-0.1.9
 
+**alpha-0.9.1 Model zagrożeń:** [Analiza zagrożeń huba i WebAdmin](THREAT_MODEL.md) zapisuje aktywa, aktorów, granice zaufania i ryzyko szczątkowe obecnego huba oraz lokalnego WebAdmin. Nie dodaje mechanizmu, zmiany schematu, publicznej bramy ani produkcyjnego audytu. Zdalny dostęp administratora pozostaje osobną pracą.
 **alpha-0.8.15 Sesje bezpieczeństwa:** [Kontrola dostępu, CSRF, sesje i limity żądań](SECURITY_SESSIONS.md) wiąże każdy grant w pamięci procesu z publicznym identyfikatorem sesji i osobnym sekretem CSRF. Zapisy utrzymaniowe wymagają obu wartości na tym samym slocie. Każda sesja przyjmuje 24 żądania w ciągu 10 sekund. Odczyty nadal wymagają tylko grantu. Wartości zostają w pamięci procesu, nie w SQL, ciasteczkach ani pamięci przeglądarki. Publiczna brama z uwierzytelnieniem pozostaje osobną pracą.
 **alpha-0.8.14 Proxy HTTPS Apache2:** [Odwrotne proxy HTTPS i ochrona API](APACHE2_PROXY.md) przekazuje dozwoloną listę API WebAdmin do adaptera na loopbacku. Token bearer klienta, ciasteczka i tożsamość z nagłówków proxy są usuwane. Gniazdo Unix C++ i token usługi pozostają poza Apache. Domyślnie dostęp jest lokalny.
 **alpha-0.8.13 Zarządzanie WebAdmin:** [Zarządzanie banami, kontami i rolami](WEBADMIN_MANAGEMENT.md) pokazuje, które obszary utrzymania dopuszcza bieżący grant, i prowadzi do istniejących stron kont, ról i banów. Strona nie wykonuje tych zapisów. Zapis konfiguracji, bieżąca administracja huba oraz kick i mute w przeglądarce pozostają poza tą stroną.
@@ -198,6 +199,8 @@ alpha-0.8.13 dodaje konserwacyjne `GET /api/v1/management`. Każdy żywy grant m
 alpha-0.8.14 nie dodaje trasy C++. Odwrotne proxy Apache przekazuje dozwoloną powierzchnię `/admin-api/v1` do istniejącego adaptera loopback. Powyższy przykład JSON statusu pozostaje bez zmian. Zobacz [proxy HTTPS Apache2](APACHE2_PROXY.md).
 
 alpha-0.8.15 nie dodaje pola statusu. Dowód utrzymaniowy dodaje `session` i `csrf` obok istniejącego grantu. Pozostałe zapisy utrzymaniowe wymagają tych wartości na tym samym slocie w pamięci. Każda sesja przyjmuje 24 żądania w ciągu 10 sekund. Status i health nadal wymagają tylko bearer. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Sesje bezpieczeństwa](SECURITY_SESSIONS.md).
+
+alpha-0.9.1 nie dodaje trasy ani pola statusu. Model zagrożeń opisuje istniejące granice bearer, grantu i gniazda. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Model zagrożeń](THREAT_MODEL.md).
 
 Liczniki są niezależnymi odczytami atomowymi, nie jedną transakcją. `core_running` podaje tylko stan Core, nie pełne logowanie/gotowość ADC. Uptime pochodzi z zegara monotonicznego od przygotowania transportu/API po opcjonalnym połączeniu bazy; nie jest wiekiem procesu według zegara ściennego. `database.enabled` oznacza obecność skonfigurowanego połączenia startowego, nie bieżącą dostępność SQL. Żądania nie wykonują SQL. API nie zwraca adresów klientów, nicków, ramek, ścieżek, sekretów ani ustawień administracyjnych. Nieznane ścieżki (również query string) dają 404 po autoryzacji; inne metody dają 405 i `Allow: GET`. HEAD jest nieobsługiwane (405), bez treści odpowiedzi.
 

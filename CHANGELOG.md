@@ -1,5 +1,16 @@
 # Changelog
 
+## alpha-0.9.1 — 2026-11-19
+
+Threat model — hub and WebAdmin analysis, based on main `7872471`. The branch name is `alpha-0.9.1`.
+
+- Record assets, actors, trust boundaries and sixteen residual threats for the serving hub, `dc24h-account-admin`, the loopback adapter and the local Apache examples. The analysis adds no protocol check, schema migration, Apache setting or WebAdmin control. Schema v9 is unchanged.
+- Keep the existing controls: sockaddr admission, GPA/PAS with separate ADC password storage, login buckets, role checks, in-memory grant/CSRF/session limits, bearer-only status, and `Require local`. Reads stay grant-only. The hub still does not trust proxy headers.
+- Leave `configuration.manage`, `hub.manage`, browser kick and mute, cookie sessions, HTTP/2, OCSP, automatic renewal and a public authenticated gateway unimplemented. The document does not mark them done.
+- Run Check status on GitHub-hosted Ubuntu 24.04. Add `alpha-0.9.1` to the push branches. Local validation uses eight CPU threads. Remote CI completion is not awaited.
+
+Validation on Debian 13: all 216/216 CTest suites passed in Debug (73.04 s real) and Release (72.66 s real), including disposable MariaDB, real ncdc ADC/ADCS, the Apache HTTPS reverse proxy and the threat-model boundary check. The Release C++ build log contained no compiler warnings. WebAdmin typecheck and production build passed. All 48 Node tests passed. All 41 Chromium tests passed. Actual C++ API, adapter and React integration passed. Release metadata, documentation UTF-8, language parity, local Markdown links, Python syntax with warnings as errors and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration or account/credential mutation is performed.
+
 ## alpha-0.8.15 — 2026-11-19
 
 Security — access control, CSRF, sessions and request limits, based on main `6175458`. The branch name is `alpha-0.8.15`.
