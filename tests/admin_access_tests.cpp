@@ -31,6 +31,12 @@ int main() {
     require(fact(Role::registered, "accounts.password.change", true, true));
     require(fact(Role::registered, "accounts.manage", false, true));
     require(admin::route_allowed(Role::registered, "GET", "/api/v1/admin"));
+    require(admin::route_allowed(Role::registered, "GET", "/api/v1/management"));
+    require(admin::route_allowed(Role::operator_, "GET", "/api/v1/management"));
+    require(!admin::route_allowed(Role::registered, "GET", "/api/v1/management?after=0"));
+    require(!admin::catalog_allowed(Role::operator_, "roles.manage"));
+    require(admin::catalog_allowed(Role::administrator, "accounts.manage"));
+    require(admin::catalog_allowed(Role::administrator, "roles.manage"));
     require(admin::route_allowed(Role::registered, "POST", "/api/v1/accounts/1/password"));
     require(!admin::route_allowed(Role::registered, "GET", "/api/v1/accounts"));
     require(!admin::route_allowed(Role::registered, "GET", "/api/v1/accounts?staff_after=0"));

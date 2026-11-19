@@ -1547,3 +1547,9 @@ th {
 .users-actions { display: flex; flex-direction: column; gap: 6px; }
 .users-command { font-family: ui-monospace, monospace; }
 .users-links { display: flex; gap: 16px; flex-wrap: wrap; }
+.management-note { margin-bottom: 12px; line-height: 1.6; }
+.management-areas { display: grid; gap: 16px; }
+.management-area, .management-card article { border: 1px solid #e6eaf2; border-radius: 12px; padding: 16px; min-width: 0; }
+.management-links { display: flex; gap: 16px; flex-wrap: wrap; }
+.management-card h3 { margin: 0 0 8px; }
+.management-card code { overflow-wrap: anywhere; }

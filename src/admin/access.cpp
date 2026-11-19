@@ -67,7 +67,7 @@ bool canonical_suffix(std::string_view action, Gate& gate) noexcept {
 }
 std::optional<Gate> classify(std::string_view method, std::string_view target) noexcept {
     constexpr std::string_view accounts = "/api/v1/accounts";
-    if (target == "/api/v1/admin") { return Gate::discovery; }
+    if (target == "/api/v1/admin" || target == "/api/v1/management") { return Gate::discovery; }
     if (target == "/api/v1/audit") { return Gate::audit; }
     if (target.starts_with("/api/v1/bans")) { return Gate::bans; }
     if (target == "/api/v1/admin/access" || !target.starts_with(accounts)) { return std::nullopt; }
@@ -201,6 +201,36 @@ GrantCheck AccessGate::authorize(std::string_view token, std::string_view method
     } catch (const accounts::RepositoryError&) { return GrantCheck::unavailable;
     } catch (const std::bad_alloc&) { throw; }
     catch (...) { return GrantCheck::unavailable; }
+}
+
+std::optional<accounts::Role> AccessGate::actor_role(std::string_view token) {
+    std::array<unsigned char, 32> raw{};
+    struct Wipe { std::array<unsigned char, 32>& bytes; ~Wipe() { OPENSSL_cleanse(bytes.data(), bytes.size()); } } wipe{raw};
+    if (!decode_grant(token, raw)) { return std::nullopt; }
+    const auto now = std::chrono::steady_clock::now();
+    int match = -1;
+    for (std::size_t i = 0; i < slots_.size(); ++i) {
+        const int equal = CRYPTO_memcmp(slots_[i].secret.data(), raw.data(), raw.size());
+        if (equal == 0 && slots_[i].used && slots_[i].expires > now) { match = static_cast<int>(i); }
+    }
+    if (match < 0) { return std::nullopt; }
+    const auto actor = slots_[static_cast<std::size_t>(match)].actor;
+    try {
+        database::Connection connection(options_);
+        accounts::AccountRepository repository(connection);
+        const auto id = accounts::AccountId::from_value(actor);
+        const auto stored = id ? repository.find_by_id(*id) : std::optional<accounts::StoredAccount>{};
+        if (!stored || stored->account.status() != accounts::Status::active) {
+            if (!stored) { slots_[static_cast<std::size_t>(match)].clear(); }
+            return std::nullopt;
+        }
+        return stored->account.role();
+    } catch (const database::Error& error) {
+        throw Error(error.outcome_unknown() ? ErrorKind::outcome_unknown : ErrorKind::unavailable);
+    } catch (const accounts::RepositoryError&) { throw Error(ErrorKind::unavailable);
+    } catch (const std::bad_alloc&) { throw; }
+    catch (const Error&) { throw; }
+    catch (...) { throw Error(ErrorKind::unavailable); }
 }
 
 std::array<PermissionFact, 17> permission_facts(accounts::Role role) noexcept {

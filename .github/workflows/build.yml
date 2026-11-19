@@ -2,43 +2,108 @@ name: Check status
 
 on:
   push:
-    branches: [main, alpha-0.8.7, alpha-0.8.8, alpha-0.8.9, alpha-0.8.10, alpha-0.8.11, alpha-0.8.12]
+    branches: [main, alpha-0.8.7, alpha-0.8.8, alpha-0.8.9, alpha-0.8.10, alpha-0.8.11, alpha-0.8.12, alpha-0.8.13]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: dc24h-eu-docker-host-sequential
+  group: dc24h-github-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  debian13:
-    name: dc24h.eu Debian 13 host - C++ and WebAdmin tests
+  cpp:
+    name: C++ ${{ matrix.build_type }} - Ubuntu 24.04
     if: github.repository == 'adrianf87/dc24h.eu'
-    runs-on: [self-hosted, Linux, X64, server-747585786]
-    timeout-minutes: 180
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: [Debug, Release]
+    env:
+      CXX: g++
+      CI: 'true'
+      BUILD_TYPE: ${{ matrix.build_type }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
 
+      - name: Verify four logical CPUs on the GitHub-hosted runner
+        run: test "$(nproc)" -eq 4
+
+      - name: Install build and integration dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake python3 libutf8proc-dev libgcrypt20-dev \
+            libssl-dev libmariadb-dev openssl ncdc mariadb-server apache2
+
+      - name: Configure C++20
+        run: cmake -S . -B "build/$BUILD_TYPE" -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DBUILD_TESTING=ON -DDC24H_REQUIRE_INTEGRATION_TESTS=ON
+
+      - name: Build
+        run: cmake --build "build/$BUILD_TYPE" --parallel "$(nproc)"
+
+      - name: Test
+        run: ctest --test-dir "build/$BUILD_TYPE" --parallel "$(nproc)" --output-on-failure
+
+  webadmin:
+    name: WebAdmin - Ubuntu 24.04
+    if: github.repository == 'adrianf87/dc24h.eu'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      CXX: g++
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - name: Verify four logical CPUs on the GitHub-hosted runner
+        run: test "$(nproc)" -eq 4
+
+      - name: Install C++ API build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake python3 libutf8proc-dev libgcrypt20-dev \
+            libssl-dev libmariadb-dev
+
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '22'
+          cache: npm
+          cache-dependency-path: webadmin/package-lock.json
 
-      - name: Debian 13 host - C++ Debug/Release and WebAdmin
-        id: debian13
-        env:
-          CI: true
-          CXX: g++
-        run: bash .github/scripts/run-debian13-host.sh
-
-      - name: Summarize the Debian 13 host result
-        if: always()
-        shell: bash
+      - name: Build Release C++ API for browser integration
         run: |
-          set -uo pipefail
-          echo '## dc24h.eu Debian 13 host' >> "$GITHUB_STEP_SUMMARY"
-          echo '- Debian 13: ${{ steps.debian13.outcome }}' >> "$GITHUB_STEP_SUMMARY"
-          test '${{ steps.debian13.outcome }}' = success
+          cmake -S . -B build/Release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
+          cmake --build build/Release --target dc24h --parallel "$(nproc)"
+
+      - name: Install frontend dependencies
+        working-directory: webadmin
+        run: npm ci
+
+      - name: Typecheck and production build
+        working-directory: webadmin
+        run: npm run build
+
+      - name: Frontend unit tests
+        working-directory: webadmin
+        run: node --import tsx --test --test-concurrency="$(nproc)" tests/*.test.ts
+
+      - name: Install Chromium and system dependencies
+        working-directory: webadmin
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser tests
+        working-directory: webadmin
+        run: npm run test:e2e -- --workers="$(nproc)" --fully-parallel
+
+      - name: Real C++ API integration
+        working-directory: webadmin
+        run: npm run test:integration -- ../build/Release/dc24h

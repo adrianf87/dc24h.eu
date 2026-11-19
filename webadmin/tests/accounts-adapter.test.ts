@@ -16,11 +16,12 @@ test("account adapter requires same-origin forms and redacts service credentials
  const account={id:"1",name:"Test",role:"registered",status:"disabled",revision:"1",created_at:1,updated_at:1,last_login_at:null};
  let writes=0, observed="", authorization="", staffMode=true, backendPath="", grantHeader="";
  const accessBody={maintenance:true,restart_required:true,expires_in:600,actor:{id:"1",role:"administrator",status:"active"},grant:"cd".repeat(32),permissions:PERMISSION_KEYS.map(key=>({key,granted:key!=="hub.manage",implemented:key!=="configuration.manage"&&key!=="hub.manage"})),routes:ACCESS_ROUTES.map(([method,path,permission])=>({method,path,permission,allowed:true})),token};
+ const managementBody={schema:1,maintenance:true,restart_required:true,areas:[{key:"accounts",permission:"accounts.manage",allowed:true,proof:"MgmtSecret"},{key:"roles",permission:"roles.manage",allowed:false},{key:"bans",permission:"users.ban+blocks.manage",allowed:true}],token};
  const backend=createServer((req,res)=>{authorization=String(req.headers.authorization);grantHeader=String(req.headers["x-dc24h-admin-grant"]??"");backendPath=req.url??"";let data="";req.on("data",c=>data+=c);req.on("end",()=>{
   if(req.method==="POST"){writes++;observed=data;}
   if(data.includes("deny-grant")){res.statusCode=401;res.setHeader("Content-Type","application/json");res.end(JSON.stringify({error:"admin_grant_required",token}));return;}
   const audit={maintenance:true,restart_required:true,events:[{id:"4",occurred_at:10,action:"accounts.create",actor_id:"1",target_kind:"account",target_id:"2",outcome:"succeeded",proof:"hidden-proof"}],next_after:null,token};
-  res.setHeader("Content-Type","application/json");res.end(JSON.stringify(req.url==="/api/v1/admin/access"?accessBody:req.url==="/api/v1/audit"?audit:req.url?.startsWith("/api/v1/bans")?(req.method==="GET"?{bans:[ban],next_after:null,maintenance:true,restart_required:true,observed_at:100,token}:{ban:{...ban,proof:"private"},maintenance:true,restart_required:true,observed_at:100,token}):req.url==="/api/v1/admin"?{...administration,token}:req.method==="POST"?{account:{...account,verifier:"private"},maintenance:true,token}:{accounts:[staffMode&&req.url?.includes("staff_after")?{...account,role:"owner"}:account],staff_only:staffMode&&req.url?.includes("staff_after"),next_after:null,maintenance:true,token}));
+  res.setHeader("Content-Type","application/json");res.end(JSON.stringify(req.url==="/api/v1/management"?managementBody:req.url==="/api/v1/admin/access"?accessBody:req.url==="/api/v1/audit"?audit:req.url?.startsWith("/api/v1/bans")?(req.method==="GET"?{bans:[ban],next_after:null,maintenance:true,restart_required:true,observed_at:100,token}:{ban:{...ban,proof:"private"},maintenance:true,restart_required:true,observed_at:100,token}):req.url==="/api/v1/admin"?{...administration,token}:req.method==="POST"?{account:{...account,verifier:"private"},maintenance:true,token}:{accounts:[staffMode&&req.url?.includes("staff_after")?{...account,role:"owner"}:account],staff_only:staffMode&&req.url?.includes("staff_after"),next_after:null,maintenance:true,token}));
  });});backend.listen(socket);await once(backend,"listening");
  const handler=middleware({socket,token}),adapter=createServer((req,res)=>handler(req,res,()=>res.end()));adapter.listen(0,"127.0.0.1");await once(adapter,"listening");
  const port=(adapter.address() as AddressInfo).port,host=`127.0.0.1:${port}`;
@@ -61,6 +62,11 @@ test("account adapter requires same-origin forms and redacts service credentials
   const accessForm="actor_id=1&proof=account+proof";
   const provedAccess=await call("POST",{...headers,"Content-Length":String(Buffer.byteLength(accessForm)),"X-DC24H-Admin-Grant":"CD".repeat(32)},accessForm,"/admin-api/v1/admin/access");
   assert.equal(provedAccess.code,200);assert.equal(JSON.parse(provedAccess.text).grant,"cd".repeat(32));assert.ok(!provedAccess.text.includes(token));assert.equal(grantHeader,"cd".repeat(32));
+  const listedManagement=await call("GET",{"X-DC24H-Admin-Grant":"AB".repeat(32)},"","/admin-api/v1/management");
+  assert.equal(listedManagement.code,200);assert.equal(backendPath,"/api/v1/management");assert.equal(grantHeader,"ab".repeat(32));
+  assert.deepEqual(JSON.parse(listedManagement.text).areas.map((area:{key:string;allowed:boolean})=>[area.key,area.allowed]),[["accounts",true],["roles",false],["bans",true]]);
+  assert.ok(!listedManagement.text.includes("MgmtSecret")&&!listedManagement.text.includes(token));
+  assert.equal((await call("POST",{},"","/admin-api/v1/management")).code,404);
   const denied=await call("POST",{...headers,"Content-Length":String(Buffer.byteLength("deny-grant=1"))},"deny-grant=1","/admin-api/v1/accounts");
   assert.equal(denied.code,401);assert.equal(JSON.parse(denied.text).error,"admin_grant_required");assert.ok(!denied.text.includes(token));
  } finally {adapter.close();backend.close();adapter.closeAllConnections();backend.closeAllConnections();await Promise.all([once(adapter,"close"),once(backend,"close")]);rmSync(dir,{recursive:true,force:true});}

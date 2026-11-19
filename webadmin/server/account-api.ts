@@ -4,6 +4,7 @@ import {parseAccess} from "../src/lib/access.ts";
 import {parseAudit} from "../src/lib/audit.ts";
 import {parseBanResult,parseBans} from "../src/lib/bans.ts";
 import {parseAdmin} from "../src/lib/admin.ts";
+import {parseManagement} from "../src/lib/management.ts";
 import { parseAccount, parseAccounts, parseStaff } from "../src/lib/accounts.ts";
 
 export function accountMiddleware(config: {socket:string; token:string}|null) {
@@ -15,7 +16,7 @@ export function accountMiddleware(config: {socket:string; token:string}|null) {
       res.end(JSON.stringify(data));
     };
     const path=req.url ?? "";
-    const read=req.method === "GET" && (path==="/admin-api/v1/admin" || /^\/admin-api\/v1\/bans(?:\?(?:after=(?:0|[1-9]\d{0,18})(?:&state=(?:all|active|permanent|temporary|expired|revoked))?|state=(?:all|active|permanent|temporary|expired|revoked)))?$/.test(path) || /^\/admin-api\/v1\/accounts(?:\?(?:after|staff_after)=(?:0|[1-9]\d{0,18})|\/[1-9]\d{0,18})?$/.test(path));
+    const read=req.method === "GET" && (path==="/admin-api/v1/admin" || path==="/admin-api/v1/management" || /^\/admin-api\/v1\/bans(?:\?(?:after=(?:0|[1-9]\d{0,18})(?:&state=(?:all|active|permanent|temporary|expired|revoked))?|state=(?:all|active|permanent|temporary|expired|revoked)))?$/.test(path) || /^\/admin-api\/v1\/accounts(?:\?(?:after|staff_after)=(?:0|[1-9]\d{0,18})|\/[1-9]\d{0,18})?$/.test(path));
     const write=req.method === "POST" && (path === "/admin-api/v1/admin/access" || path === "/admin-api/v1/audit" || /^\/admin-api\/v1\/bans(?:\/[1-9]\d{0,18}\/revoke)?$/.test(path) || /^\/admin-api\/v1\/accounts(?:\/[1-9]\d{0,18}\/(?:activate|disable|reset|password|role))?$/.test(path));
     const presented=req.headers["x-dc24h-admin-grant"];
     const grant=typeof presented==="string" && /^[0-9a-fA-F]{64}$/.test(presented)?presented.toLowerCase():"";
@@ -52,7 +53,7 @@ export function accountMiddleware(config: {socket:string; token:string}|null) {
             const error=["outcome_unknown","stale","rate_limited","unauthorized","admin_grant_required","management_refused","invalid_registration","invalid_input","account_unavailable","database_unavailable"].includes(data?.error)?data.error:"api_unavailable";
             finish();reply(status,{error});return;
           }
-          const safe=path==="/admin-api/v1/admin/access"?parseAccess(data):path==="/admin-api/v1/audit"?parseAudit(data):path.startsWith("/admin-api/v1/bans")?(req.method==="GET"?parseBans(data):parseBanResult(data)):path==="/admin-api/v1/admin"?parseAdmin(data):data && "accounts" in data?(path.includes("?staff_after=")?parseStaff(data):parseAccounts(data)):data?.maintenance===true?{account:parseAccount(data.account),maintenance:true}:null;
+          const safe=path==="/admin-api/v1/management"?parseManagement(data):path==="/admin-api/v1/admin/access"?parseAccess(data):path==="/admin-api/v1/audit"?parseAudit(data):path.startsWith("/admin-api/v1/bans")?(req.method==="GET"?parseBans(data):parseBanResult(data)):path==="/admin-api/v1/admin"?parseAdmin(data):data && "accounts" in data?(path.includes("?staff_after=")?parseStaff(data):parseAccounts(data)):data?.maintenance===true?{account:parseAccount(data.account),maintenance:true}:null;
           if(!safe)throw new Error();finish();reply(200,safe);
         }catch{finish();reply(503,{error:write?"outcome_unknown":"invalid_api_response"});}
       });

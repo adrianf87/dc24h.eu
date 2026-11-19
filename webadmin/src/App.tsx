@@ -49,11 +49,12 @@ import { Accounts } from "./components/Accounts";
 import { ChatStatistics } from "./components/ChatStatistics";
 import { Dashboard } from "./components/Dashboard";
 import { HubUsers } from "./components/HubUsers";
+import { Management } from "./components/Management";
 import { useHub } from "./lib/useHub";
 import type { Sample } from "./lib/useHub";
 
-type Page = "overview" | "dashboard" | "users" | "connections" | "chat" | "search" | "security" | "database" | "accounts" | "configuration" | "roles" | "moderation" | "operators" | "adminCore" | "kick" | "bans" | "mute" | "audit";
-const pages: Page[] = ["overview", "dashboard", "users", "connections", "chat", "search", "security", "database", "accounts", "configuration", "roles", "moderation", "operators", "adminCore", "kick", "bans", "mute", "audit"];
+type Page = "overview" | "dashboard" | "users" | "connections" | "chat" | "search" | "security" | "database" | "management" | "accounts" | "configuration" | "roles" | "moderation" | "operators" | "adminCore" | "kick" | "bans" | "mute" | "audit";
+const pages: Page[] = ["overview", "dashboard", "users", "connections", "chat", "search", "security", "database", "management", "accounts", "configuration", "roles", "moderation", "operators", "adminCore", "kick", "bans", "mute", "audit"];
 const currentPage = (): Page =>
   pages.includes(location.hash.slice(1) as Page)
     ? (location.hash.slice(1) as Page)
@@ -341,6 +342,7 @@ export default function App() {
     { page: "search", icon: Search },
     { page: "security", icon: ShieldCheck },
     { page: "database", icon: Database },
+    { page: "management", icon: ShieldCheck },
     { page: "accounts", icon: Users },
     { page: "roles", icon: ShieldCheck },
     { page: "moderation", icon: ShieldCheck },
@@ -360,6 +362,7 @@ export default function App() {
     search: [t.searchTitle, t.searchSub],
     security: [t.securityTitle, t.securitySub],
     database: [t.databaseTitle, t.databaseSub],
+    management: [t.managementTitle, t.managementSub],
     accounts: [t.accountsTitle, t.accountsSub],
     roles: [t.rolesTitle, t.rolesSub],
     moderation: [t.moderationTitle, t.moderationSub],
@@ -654,6 +657,7 @@ export default function App() {
             />
           )}
           {page === "users" && <HubUsers snapshot={snapshot} t={t} />}
+          {page === "management" && <Management t={t} />}
           {(page === "overview" || page === "connections" || page === "security") && (
             <div className={`metrics-grid ${page === "security" ? "two" : ""}`}>
               <Metric

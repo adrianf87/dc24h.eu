@@ -1,5 +1,6 @@
 # Local administrative API — alpha-0.1.9
 
+**alpha-0.8.13 WebAdmin Management:** [Account, role and ban management](WEBADMIN_MANAGEMENT.md) shows which maintenance areas the current grant allows and links to the existing account, role and ban pages. The page does not perform those writes. Configuration writes, live hub administration and browser kick or mute stay outside this page.
 **alpha-0.8.12 WebAdmin Users:** [Online users and moderation actions](WEBADMIN_USERS.md) publishes the ready-session directory and a bilingual page of kick, mute and unmute decisions. The page does not dispatch those commands, create bans or reveal CID, IP, account or profile fields. Browser kick controls remain on an authenticated Direct Connect client.
 **alpha-0.8.11 WebAdmin Dashboard:** [Main panel and statistics](WEBADMIN_DASHBOARD.md) adds a fixed read-only summary of existing process counters to the authenticated status snapshot and a bilingual WebAdmin page. Account lists, ban records, audit rows, configuration writes and live hub administration stay outside this panel.
 **alpha-0.8.10 Admin API:** [Proven administrative access](ADMIN_API.md) requires an active account password before maintenance reads and writes. The process token remains the transport credential. Configuration writes and live hub administration remain pending.
@@ -190,6 +191,8 @@ Both routes require authentication. JSON keys/protocol errors remain EN/US regar
 alpha-0.8.11 adds a `dashboard` object on this same response. Its fixed fields and the WebAdmin page are specified in [WebAdmin Dashboard](WEBADMIN_DASHBOARD.md). The JSON example above is the alpha-0.4.4 shape and does not list later objects.
 
 alpha-0.8.12 adds bearer-only `GET /api/v1/users`. Schema 1 lists at most 64 ready sessions. The fields and the WebAdmin page are specified in [WebAdmin Users](WEBADMIN_USERS.md). Status and health stay unchanged and still omit nicknames.
+
+alpha-0.8.13 adds maintenance `GET /api/v1/management`. Any live grant can read which account, role and ban areas that grant allows. The page and fields are specified in [WebAdmin Management](WEBADMIN_MANAGEMENT.md). The hub process does not publish the route. The alpha-0.4.4 status example above is unchanged.
 
 Counters are independently sampled atomics, not one transactional snapshot. `core_running` reports the Core lifecycle only, not complete ADC login/readiness. Uptime uses a steady clock from transport/API composition after optional database setup; it is not wall-clock process age. `database.enabled` reports configured startup connection presence, not ongoing SQL availability. No request runs SQL. Peer addresses, nicknames, frames, file paths, secrets and administrative settings are never returned. Unknown paths (including query strings) give 404 after authentication; other methods give 405 with `Allow: GET`. HEAD is unsupported (405), with no response body.
 
