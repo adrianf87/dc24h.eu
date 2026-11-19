@@ -2,12 +2,13 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.8.15 (security sessions).**
+**Current development version: alpha-0.9.1 (threat model).**
 
 CI on `main`: [GitHub-hosted Ubuntu 24.04](doc/us/GITHUB_CI.md) runs C++ Debug, C++ Release and WebAdmin · [PL](doc/pl/GITHUB_CI.md).
 
 Completed increments (older bullets describe their original delivery scope):
 
+- **alpha-0.9.1 Threat model**: a written analysis of assets, actors, trust boundaries and residual risk for the hub and local WebAdmin. It adds no control, schema change or public gateway. See [Threat model](doc/us/THREAT_MODEL.md).
 - **alpha-0.8.15 Security sessions**: each in-memory maintenance grant carries a public session id and a separate CSRF secret. Writes require both on that same slot. Each session accepts 24 requests in 10 seconds. Reads stay grant-only. The values stay in process memory, not in SQL, cookies or web storage. A public authenticated gateway remains separate work. See [Security sessions](doc/us/SECURITY_SESSIONS.md).
 - **alpha-0.8.14 Apache2 HTTPS proxy**: an allowlisted reverse proxy to the loopback WebAdmin adapter, with client bearer tokens, cookies and forwarded identity removed. The service token and the C++ Unix socket stay out of Apache. Local access remains the default. See [Apache2 HTTPS proxy](doc/us/APACHE2_PROXY.md).
 - **alpha-0.8.13 WebAdmin Management**: a maintenance catalog of account, role and ban areas for the current grant, and a bilingual page that links to the existing flows. The page does not perform those writes. Configuration writes, live hub administration and browser kick or mute stay outside it. See [WebAdmin Management](doc/us/WEBADMIN_MANAGEMENT.md).

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.8.15 LANGUAGES CXX)
+project(dc24h VERSION 0.9.1 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -270,6 +270,9 @@ if(BUILD_TESTING)
     add_test(NAME project.metadata COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/project_checks.py")
     set_tests_properties(project.metadata PROPERTIES TIMEOUT 15)
+    add_test(NAME security.threat_model COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/threat_model_tests.py")
+    set_tests_properties(security.threat_model PROPERTIES TIMEOUT 15)
     add_test(NAME configuration.policy.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/configuration_policy_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(configuration.policy.process PROPERTIES TIMEOUT 30)
