@@ -254,6 +254,11 @@ Statistics TcpServer::statistics() const noexcept {
     return result;
 }
 
+users::PresenceDirectory TcpServer::presence() const {
+    std::lock_guard lock(presence_mu_);
+    return presence_;
+}
+
 void TcpServer::run() {
     if (used_.exchange(true)) { throw std::logic_error("TcpServer::run() may only be called once"); }
     if (stop_.load()) { return; }
@@ -337,6 +342,12 @@ void TcpServer::run() {
         for(std::size_t i=0;i<kick_statistics_.size();++i){kick_statistics_[i].store(kick.values[i]);}
         const auto chat = login.chat_statistics();
         for (std::size_t i = 0; i < chat_statistics_.size(); ++i) { chat_statistics_[i].store(chat.values[i]); }
+        users::PresenceDirectory directory;
+        login.sessions().export_presence(directory);
+        if (presence_mu_.try_lock()) {
+            presence_ = directory;
+            presence_mu_.unlock();
+        }
     };
     // Publish the final committed model totals before LoginHub destruction,
     // including an exceptional reactor exit. Never expose models to API threads.

@@ -1,5 +1,14 @@
 # Changelog
 
+## alpha-0.8.12 — 2026-11-19
+
+WebAdmin Users — online user list and moderation decisions, based on main `708dc88`. No automatic merge. The branch name is `alpha-0.8.12`.
+
+- Add bearer-only `GET /api/v1/users`. Schema 1 lists at most 64 ready sessions copied by the reactor: lifetime id, SID, nickname, transport, role and mute flags. CID, IP, account, profile, passwords and reasons stay out. Status and health stay unchanged. Schema v9 is unchanged.
+- Add bilingual `#users`. Decisions for kick, mute and unmute use the shared lower-role rule and a browser-selected role. The page shows the client command and does not send it. Bans stay on their page. A missing directory stays unavailable.
+
+Validation on Debian 13: all 214/214 CTest suites passed in Debug (83.95 s real) and Release (71.23 s real), including disposable MariaDB, real ncdc ADC/ADCS and the ready-session directory contract. The Release C++ build log contained no compiler warnings. WebAdmin typecheck and production build passed. All 46 Node tests passed. All 38 Chromium tests passed. Actual C++ API, adapter and React integration passed. Release metadata, documentation UTF-8, language parity, local Markdown links, Python syntax with warnings as errors and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration or account/credential mutation is performed.
+
 ## alpha-0.8.11 — 2026-11-19
 
 WebAdmin Dashboard — main panel and statistics, based on main `9f72152`. No automatic merge. The branch name is `alpha-0.8.11`.

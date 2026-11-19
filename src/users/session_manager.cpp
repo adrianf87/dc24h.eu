@@ -1,4 +1,7 @@
 #include "dc24h/users/session_manager.hpp"
+#include "dc24h/accounts/account.hpp"
+
+#include <cstring>
 
 #include <algorithm>
 #include <stdexcept>
@@ -180,6 +183,38 @@ std::vector<SessionId> SessionManager::public_users(std::uint64_t after, std::si
         }
     }
     return result;
+}
+void SessionManager::export_presence(PresenceDirectory& out) const noexcept {
+    out = {};
+    for (const auto& entry : sessions_) {
+        const auto& model = *entry.second;
+        if (!model.ready() || !model.identity()) { continue; }
+        const auto& sid = model.identity()->sid();
+        const auto& nickname = model.identity()->nickname();
+        bool bad = sid.size() != 4 || nickname.empty() || nickname.size() > out.users[0].nickname.size();
+        for (const char value : sid) {
+            const auto byte = static_cast<unsigned char>(value);
+            bad = bad || !((byte >= 'A' && byte <= 'Z') || (byte >= '2' && byte <= '7'));
+        }
+        for (const char value : nickname) {
+            const auto byte = static_cast<unsigned char>(value);
+            bad = bad || byte < 0x20 || byte == 0x7f;
+        }
+        if (bad) { out.truncated = true; continue; }
+        if (out.count == presence_capacity) { out.truncated = true; return; }
+        auto& slot = out.users[out.count];
+        slot.session_id = model.id().value();
+        std::memcpy(slot.sid.data(), sid.data(), sid.size());
+        std::memcpy(slot.nickname.data(), nickname.data(), nickname.size());
+        slot.nickname_len = static_cast<std::uint8_t>(nickname.size());
+        slot.transport = model.transport();
+        const auto authentication = model.authentication();
+        slot.role = authentication ? authentication->role : accounts::Role::guest;
+        const auto mute = model.chat_mute();
+        slot.public_muted = mute.public_chat;
+        slot.private_muted = mute.private_chat;
+        ++out.count;
+    }
 }
 void SessionManager::record_transition(Phase before, Phase after) noexcept {
     if (before == after) { return; }

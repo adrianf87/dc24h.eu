@@ -6,6 +6,7 @@
 #include "dc24h/users/limits.hpp"
 #include "dc24h/users/statistics.hpp"
 
+#include <array>
 #include <map>
 #include <memory>
 #include <variant>
@@ -18,6 +19,23 @@ enum class RegistryError {
 };
 using Registration = std::variant<const Session*, RegistryError>;
 using MutationResult = std::optional<std::variant<RegistryError, SessionError>>;
+
+inline constexpr std::size_t presence_capacity = 64;
+struct PresenceUser {
+    std::uint64_t session_id{};
+    std::array<char, 4> sid{};
+    std::array<char, 64> nickname{};
+    std::uint8_t nickname_len{};
+    Transport transport{Transport::adc};
+    accounts::Role role{accounts::Role::guest};
+    bool public_muted{false};
+    bool private_muted{false};
+};
+struct PresenceDirectory {
+    bool truncated{false};
+    std::uint32_t count{0};
+    std::array<PresenceUser, presence_capacity> users{};
+};
 
 // One owner/thread. Models and public identity indexes have one owner. Borrowed
 // references are const; all managed mutations pass through this registry.
@@ -72,6 +90,11 @@ public:
     // Current identified/ready membership only, ordered by local lifetime ID.
     // No profile copies; the caller stays on the owner thread while resolving.
     [[nodiscard]] std::vector<SessionId> public_users(std::uint64_t after = 0, std::size_t limit = 64) const;
+    // Ready sessions only, in lifetime-id order. Fixed buffers, no allocation.
+    // A SID that is not 4 bytes, or a nickname outside 1..64 bytes without
+    // controls, is omitted and marks the directory truncated. No CID, address,
+    // account id or profile is copied.
+    void export_presence(PresenceDirectory& out) const noexcept;
     [[nodiscard]] SessionCounts counts() const noexcept { return statistics_.sessions; }
     // Constant-time owning snapshot, on the owner thread only. Failed/repeated
     // operations do not count as new transitions. Totals saturate at UINT64_MAX.

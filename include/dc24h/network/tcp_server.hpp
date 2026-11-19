@@ -19,6 +19,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -94,6 +95,9 @@ public:
     void request_stop() noexcept;
     // Atomic counters; fields are independently sampled, not a transaction.
     [[nodiscard]] Statistics statistics() const noexcept;
+    // Plain copy of ready sessions. The mutex guards this copy only.
+    // Session models stay on the reactor thread.
+    [[nodiscard]] users::PresenceDirectory presence() const;
 
 private:
     logging::Logger& logger_;
@@ -122,6 +126,8 @@ private:
     std::array<std::atomic<std::uint64_t>, transfers::statistic_names.size()> transfer_statistics_{};
     std::array<std::atomic<std::uint64_t>, admin::kick_statistic_names.size()> kick_statistics_{};
     std::array<std::atomic<std::uint64_t>, admin::mute_statistic_names.size()> mute_statistics_{};
+    mutable std::mutex presence_mu_;
+    users::PresenceDirectory presence_{};
 };
 
 } // namespace dc24h::network

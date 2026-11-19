@@ -1,7 +1,8 @@
 # dc24h.eu documentation
 
-alpha-0.8.11: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.8.12: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
+- [WebAdmin Users — alpha-0.8.12](WEBADMIN_USERS.md)
 - [WebAdmin Dashboard — alpha-0.8.11](WEBADMIN_DASHBOARD.md)
 - [Admin API — alpha-0.8.10](ADMIN_API.md)
 - [Audit Logs — alpha-0.8.9](AUDIT_LOGS.md)

@@ -48,11 +48,12 @@ import {AdminCore} from "./components/AdminCore";
 import { Accounts } from "./components/Accounts";
 import { ChatStatistics } from "./components/ChatStatistics";
 import { Dashboard } from "./components/Dashboard";
+import { HubUsers } from "./components/HubUsers";
 import { useHub } from "./lib/useHub";
 import type { Sample } from "./lib/useHub";
 
-type Page = "overview" | "dashboard" | "connections" | "chat" | "search" | "security" | "database" | "accounts" | "configuration" | "roles" | "moderation" | "operators" | "adminCore" | "kick" | "bans" | "mute" | "audit";
-const pages: Page[] = ["overview", "dashboard", "connections", "chat", "search", "security", "database", "accounts", "configuration", "roles", "moderation", "operators", "adminCore", "kick", "bans", "mute", "audit"];
+type Page = "overview" | "dashboard" | "users" | "connections" | "chat" | "search" | "security" | "database" | "accounts" | "configuration" | "roles" | "moderation" | "operators" | "adminCore" | "kick" | "bans" | "mute" | "audit";
+const pages: Page[] = ["overview", "dashboard", "users", "connections", "chat", "search", "security", "database", "accounts", "configuration", "roles", "moderation", "operators", "adminCore", "kick", "bans", "mute", "audit"];
 const currentPage = (): Page =>
   pages.includes(location.hash.slice(1) as Page)
     ? (location.hash.slice(1) as Page)
@@ -333,6 +334,7 @@ export default function App() {
   }, [menu]);
   const navigation = [
     { page: "dashboard", icon: LayoutDashboard },
+    { page: "users", icon: Users },
     { page: "overview", icon: Activity },
     { page: "connections", icon: Network },
     { page: "chat", icon: MessageSquare },
@@ -352,6 +354,7 @@ export default function App() {
   const titles = {
     overview: [t.overviewTitle, t.overviewSub],
     dashboard: [t.dashboardTitle, t.dashboardSub],
+    users: [t.usersTitle, t.usersSub],
     connections: [t.connectionsTitle, t.connectionsSub],
     chat: [t.chatTitle, t.chatSub],
     search: [t.searchTitle, t.searchSub],
@@ -650,6 +653,7 @@ export default function App() {
               locale={language === "pl" ? "pl-PL" : "en-US"}
             />
           )}
+          {page === "users" && <HubUsers snapshot={snapshot} t={t} />}
           {(page === "overview" || page === "connections" || page === "security") && (
             <div className={`metrics-grid ${page === "security" ? "two" : ""}`}>
               <Metric

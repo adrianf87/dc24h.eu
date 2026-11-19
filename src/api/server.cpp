@@ -122,6 +122,52 @@ std::string dashboard_json(const Snapshot& value) {
     return json;
 }
 
+std::string users_json(const users::PresenceDirectory& directory) {
+    auto escape = [](std::string_view text) {
+        std::string value = "\"";
+        for (const char value_byte : text) {
+            const auto byte = static_cast<unsigned char>(value_byte);
+            if (byte == '"' || byte == '\\') { value += '\\'; }
+            value += value_byte;
+        }
+        return value + '"';
+    };
+    std::string rows = "[";
+    bool truncated = directory.truncated;
+    bool first = true;
+    const auto cap = static_cast<std::uint32_t>(users::presence_capacity);
+    const auto limit = directory.count < cap ? directory.count : cap;
+    for (std::uint32_t index = 0; index < limit; ++index) {
+        const auto& user = directory.users[index];
+        if (user.nickname_len == 0 || static_cast<std::size_t>(user.nickname_len) > user.nickname.size()) { truncated = true; continue; }
+        bool controls = false;
+        for (std::uint8_t byte_index = 0; byte_index < user.nickname_len; ++byte_index) {
+            const auto byte = static_cast<unsigned char>(user.nickname[byte_index]);
+            controls = controls || byte < 0x20 || byte == 0x7f;
+        }
+        bool sid_ok = true;
+        for (const char value : user.sid) {
+            const auto byte = static_cast<unsigned char>(value);
+            sid_ok = sid_ok && ((byte >= 'A' && byte <= 'Z') || (byte >= '2' && byte <= '7'));
+        }
+        const auto role = accounts::role_key(user.role);
+        if (controls || !sid_ok || role.empty()) { truncated = true; continue; }
+        const std::string row = std::string("{\"session\":\"") + std::to_string(user.session_id) +
+            "\",\"sid\":" + escape(std::string_view(user.sid.data(), user.sid.size())) +
+            ",\"nickname\":" + escape(std::string_view(user.nickname.data(), user.nickname_len)) +
+            ",\"transport\":\"" + (user.transport == users::Transport::adcs ? "adcs" : "adc") +
+            "\",\"role\":" + escape(role) +
+            ",\"public_muted\":" + (user.public_muted ? "true" : "false") +
+            ",\"private_muted\":" + (user.private_muted ? "true" : "false") + "}";
+        if (rows.size() + row.size() > 11000) { truncated = true; break; }
+        if (!first) { rows += ','; }
+        first = false;
+        rows += row;
+    }
+    rows += ']';
+    return std::string("{\"schema\":1,\"truncated\":") + (truncated ? "true" : "false") + ",\"users\":" + rows + "}\n";
+}
+
 namespace {
 using Clock = std::chrono::steady_clock;
 struct Fd {
@@ -258,6 +304,7 @@ struct Server::Impl {
     StatusProvider status;
     FailureHandler failure;
     AccountHandler accounts;
+    UsersProvider users;
     std::string token;
     Fd directory;
     Fd listener;
@@ -268,8 +315,8 @@ struct Server::Impl {
     std::atomic<bool> failed{false};
     std::jthread worker;
 
-    Impl(logging::Logger& log, Options config, StatusProvider provider, FailureHandler handler, AccountHandler account_handler)
-        : logger(log), options(std::move(config)), status(std::move(provider)), failure(std::move(handler)), accounts(std::move(account_handler)) {
+    Impl(logging::Logger& log, Options config, StatusProvider provider, FailureHandler handler, AccountHandler account_handler, UsersProvider user_provider)
+        : logger(log), options(std::move(config)), status(std::move(provider)), failure(std::move(handler)), accounts(std::move(account_handler)), users(std::move(user_provider)) {
         validate(options);
         if (!options.enabled || !status || !failure) { throw std::invalid_argument("Invalid local API settings"); }
         try { token = security::read_private_secret(options.token_file); }
@@ -337,6 +384,7 @@ struct Server::Impl {
         if (request.method != "GET") { return response(405, "{\"error\":\"method_not_allowed\"}\n", head); }
         if (request.target == "/api/v1/health") { return response(200, "{\"status\":\"ok\"}\n"); }
         if (request.target == "/api/v1/status") { return response(200, status_json(status())); }
+        if (request.target == "/api/v1/users" && users) { return response(200, users_json(users())); }
         return response(404, "{\"error\":\"not_found\"}\n");
     }
     bool service(Peer& peer, short events) {
@@ -411,8 +459,8 @@ struct Server::Impl {
     }
 };
 
-Server::Server(logging::Logger& logger, Options options, StatusProvider status, FailureHandler failure, AccountHandler accounts)
-    : impl_(std::make_unique<Impl>(logger, std::move(options), std::move(status), std::move(failure), std::move(accounts))) {}
+Server::Server(logging::Logger& logger, Options options, StatusProvider status, FailureHandler failure, AccountHandler accounts, UsersProvider users)
+    : impl_(std::make_unique<Impl>(logger, std::move(options), std::move(status), std::move(failure), std::move(accounts), std::move(users))) {}
 Server::~Server() = default;
 void Server::start() {
     if (impl_->started) { throw std::logic_error("Local API start may only be called once"); }
