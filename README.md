@@ -2,12 +2,13 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.8.12 (WebAdmin Users).**
+**Current development version: alpha-0.8.13 (WebAdmin Management).**
 
-CI on `main`: [custom runner `server-747585786`](doc/us/GITHUB_CI.md) runs C++ and WebAdmin on its Debian 13 host · [PL](doc/pl/GITHUB_CI.md).
+CI on `main`: [GitHub-hosted Ubuntu 24.04](doc/us/GITHUB_CI.md) runs C++ Debug, C++ Release and WebAdmin · [PL](doc/pl/GITHUB_CI.md).
 
 Completed increments (older bullets describe their original delivery scope):
 
+- **alpha-0.8.13 WebAdmin Management**: a maintenance catalog of account, role and ban areas for the current grant, and a bilingual page that links to the existing flows. The page does not perform those writes. Configuration writes, live hub administration and browser kick or mute stay outside it. See [WebAdmin Management](doc/us/WEBADMIN_MANAGEMENT.md).
 - **alpha-0.8.12 WebAdmin Users**: a bearer-only directory of ready sessions and a bilingual page of kick, mute and unmute decisions. The page shows the client command and does not send it, create bans, or reveal CID, IP, account or profile fields. See [WebAdmin Users](doc/us/WEBADMIN_USERS.md).
 - **alpha-0.8.11 WebAdmin Dashboard**: a fixed read-only summary of existing process counters on the authenticated status API, and a bilingual main panel. Account lists, ban records, audit rows, configuration writes and live hub administration stay outside it. See [WebAdmin Dashboard](doc/us/WEBADMIN_DASHBOARD.md).
 - **alpha-0.8.10 Admin API**: a password proof issues a short-lived in-memory grant. Maintenance reads and writes require that grant in addition to the process token. Status and health stay token-only. Configuration writes and live hub administration remain pending. See [Admin API](doc/us/ADMIN_API.md).

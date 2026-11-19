@@ -1,5 +1,5 @@
 # Konfiguracja CI
 
-`Check status` używa własnego runnera `server-747585786`.
-Ten host Debian 13 uruchamia C++ Debug, C++ Release i WebAdmin na sobie,
-z co najwyżej 16 workerami. Opis jest w [CI w GitHub Actions](GITHUB_CI.md).
+`Check status` używa runnerów GitHub-hosted Ubuntu 24.04.
+Tam działają C++ Debug, C++ Release i WebAdmin. Każde zadanie sprawdza cztery logiczne CPU.
+Opis jest w [CI w GitHub Actions](GITHUB_CI.md).

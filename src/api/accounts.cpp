@@ -136,6 +136,17 @@ std::string administration(const admin::Engine& engine) {
         ",\"unavailable\":"+json_string(std::to_string(counters.unavailable))+",\"outcome_unknown\":"+json_string(std::to_string(counters.outcome_unknown))+"}}";
     return response(200,output);
 }
+std::string management_json(accounts::Role role) {
+    struct Area { const char* key; const char* permission; };
+    constexpr Area areas[]={{"accounts","accounts.manage"},{"roles","roles.manage"},{"bans","users.ban+blocks.manage"}};
+    std::string output="{\"schema\":1,\"maintenance\":true,\"restart_required\":true,\"areas\":[";
+    for(const auto& area:areas){
+        if(output.back()!='['){output+=',';}
+        const bool allowed=admin::catalog_allowed(role,area.permission);
+        output+="{\"key\":"+json_string(area.key)+",\"permission\":"+json_string(area.permission)+",\"allowed\":"+(allowed?"true":"false")+"}";
+    }
+    return response(200,output+"]}");
+}
 std::string serve(const Request& request,admin::Engine& engine,bool& written) {
     if(request.target=="/api/v1/audit"){
         if(request.method!="POST"){throw HttpError{405,"method_not_allowed"};}
@@ -225,6 +236,12 @@ AccountHandler account_handler(database::Options options) {
             case admin::GrantCheck::not_found: throw admin::Error(admin::ErrorKind::not_found);
             case admin::GrantCheck::unavailable: throw admin::Error(admin::ErrorKind::unavailable);
             case admin::GrantCheck::outcome_unknown: throw admin::Error(admin::ErrorKind::outcome_unknown);
+            }
+            if(request.target=="/api/v1/management"){
+                if(request.method!="GET"){throw HttpError{405,"method_not_allowed"};}
+                const auto role=gate.actor_role(request.admin_grant);
+                if(!role){throw admin::Error(admin::ErrorKind::forbidden);}
+                return management_json(*role);
             }
             return serve(request,engine,written);
         } catch(const HttpError& e){return response(e.status,"{\"error\":"+json_string(e.key)+"}");}

@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.8.12: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.8.13: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [Zarządzanie WebAdmin — alpha-0.8.13](WEBADMIN_MANAGEMENT.md)
 - [Użytkownicy WebAdmin — alpha-0.8.12](WEBADMIN_USERS.md)
 - [Panel WebAdmin — alpha-0.8.11](WEBADMIN_DASHBOARD.md)
 - [API administracyjne — alpha-0.8.10](ADMIN_API.md)

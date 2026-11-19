@@ -1,5 +1,15 @@
 # Changelog
 
+## alpha-0.8.13 — 2026-11-19
+
+WebAdmin Management — account, role and ban areas, based on main `64cabf8`. The branch name is `alpha-0.8.13`.
+
+- Add maintenance `GET /api/v1/management`. Schema 1 lists accounts, roles and bans and whether this grant allows each area. The hub process does not publish the route. The response has no actor id, grant, names or ban subjects. Schema v9 is unchanged.
+- Add bilingual `#management`. The page links to the existing account, role and ban flows and does not submit them. Configuration writes, live hub administration and browser kick or mute stay outside this page.
+- Run Check status on GitHub-hosted Ubuntu 24.04. Remove the custom runner `server-747585786` from the workflow. C++ Debug, C++ Release and WebAdmin are separate jobs. Each job checks four logical CPUs and uses `nproc` workers. Local validation uses eight CPU threads. Remote CI completion is not awaited.
+
+Validation on Debian 13: all 214/214 CTest suites passed in Debug (80.09 s real) and Release (71.43 s real), including disposable MariaDB, real ncdc ADC/ADCS and the management catalog. The Release C++ build log contained no compiler warnings. WebAdmin typecheck and production build passed. All 47 Node tests passed. All 41 Chromium tests passed. Actual C++ API, adapter and React integration passed. Release metadata, documentation UTF-8, language parity, local Markdown links, Python syntax with warnings as errors and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration or account/credential mutation is performed.
+
 ## alpha-0.8.12 — 2026-11-19
 
 WebAdmin Users — online user list and moderation decisions, based on main `708dc88`. No automatic merge. The branch name is `alpha-0.8.12`.

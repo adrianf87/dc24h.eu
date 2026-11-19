@@ -7,6 +7,7 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -73,6 +74,9 @@ public:
     // Reloads the actor. A missing, expired or unknown token is missing.
     // A live account that no longer holds the route permission is forbidden.
     [[nodiscard]] GrantCheck authorize(std::string_view token, std::string_view method, std::string_view target);
+    // Reloads the actor after a live grant was accepted. A missing grant, a
+    // missing row or an inactive account returns nullopt. Database failures throw.
+    [[nodiscard]] std::optional<accounts::Role> actor_role(std::string_view token);
 
 private:
     struct Slot {

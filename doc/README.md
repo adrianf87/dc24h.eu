@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.8.12.
+Current development version: alpha-0.8.13.
+
+[WebAdmin Management — alpha-0.8.13](us/WEBADMIN_MANAGEMENT.md) · [PL](pl/WEBADMIN_MANAGEMENT.md)
 
 [WebAdmin Users — alpha-0.8.12](us/WEBADMIN_USERS.md) · [PL](pl/WEBADMIN_USERS.md)
 
