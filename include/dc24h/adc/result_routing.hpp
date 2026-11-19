@@ -11,15 +11,15 @@ enum class ResultRoutingError {
 namespace detail { struct ResultDomain final {}; }
 class ResultFrame final {
 public:
+    class Passkey { friend class ResultRouter; Passkey() noexcept = default; };
     ResultFrame(const ResultFrame&) = delete;
     ResultFrame& operator=(const ResultFrame&) = delete;
     ResultFrame(ResultFrame&&) = delete;
     ResultFrame& operator=(ResultFrame&&) = delete;
+    ResultFrame(Passkey, Message message, std::string wire) : message_(std::move(message)), wire_(std::move(wire)) {}
     [[nodiscard]] const Message& message() const noexcept { return message_; }
     [[nodiscard]] const std::string& wire() const noexcept { return wire_; }
 private:
-    friend class ResultRouter;
-    ResultFrame(Message message, std::string wire) : message_(std::move(message)), wire_(std::move(wire)) {}
     Message message_;
     std::string wire_;
 };

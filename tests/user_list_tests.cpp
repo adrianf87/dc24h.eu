@@ -83,16 +83,18 @@ void contract() {
     require(std::holds_alternative<adc::InitialUserList>(result), "Valid list rejected");
     const auto plan = std::get<adc::InitialUserList>(std::move(result));
     const auto& frames = plan.frames();
-    require(frames.size() == 4 && frames.front().type == adc::MessageType::info && frames.front().kind == adc::Command::inf &&
-        frames[1].source == fixture.clients.at(1)->sid() && frames[2].source == fixture.clients.at(2)->sid() &&
-        frames.back().source == joining.sid(), "Welcome ordering or own-INF delimiter failed");
+    require(frames.size() == 4 && frames.front().message.type == adc::MessageType::info && frames.front().message.kind == adc::Command::inf &&
+        frames[1].message.source == fixture.clients.at(1)->sid() && frames[2].message.source == fixture.clients.at(2)->sid() &&
+        frames.back().message.source == joining.sid(), "Welcome ordering or own-INF delimiter failed");
     std::size_t bytes = 0;
-    for (const auto& message : frames) {
-        const auto wire = std::get<std::string>(adc::serialize(message)); bytes += wire.size();
-        require(wire.find(" PD") == std::string::npos && wire.find(" XX") == std::string::npos, "List leaked private/unknown fields");
+    for (const auto& frame : frames) {
+        const auto wire = std::get<std::string>(adc::serialize(frame.message));
+        require(frame.wire == wire, "Retained welcome encoding drifted");
+        bytes += frame.wire.size();
+        require(frame.wire.find(" PD") == std::string::npos && frame.wire.find(" XX") == std::string::npos, "List leaked private/unknown fields");
     }
-    require(std::get<std::string>(adc::serialize(frames[1])).find("I4127.0.0.1") != std::string::npos &&
-        std::get<std::string>(adc::serialize(frames[1])).find("US1024") != std::string::npos, "List lost validated ADC-only metadata");
+    require(frames[1].wire.find("I4127.0.0.1") != std::string::npos &&
+        frames[1].wire.find("US1024") != std::string::npos, "List lost validated ADC-only metadata");
     require(bytes == plan.wire_bytes() && std::holds_alternative<adc::InitialUserList>(fixture.prepare(6,bytes)) &&
         std::get<adc::UserListError>(fixture.prepare(6,bytes-1)) == adc::UserListError::output_limit &&
         std::get<adc::UserListError>(fixture.prepare(6,0)) == adc::UserListError::output_limit, "Exact aggregate wire budget failed");
@@ -104,7 +106,8 @@ void contract() {
     require(std::get<adc::UserListError>(fixture.list.prepare(id(6),*fixture.clients.at(1),{},bytes)) ==
         adc::UserListError::invalid_identity, "Already reserved own identity accepted");
     require(!fixture.clients.at(1)->observe(adc::Direction::from_client,parse("BINF " + std::string(fixture.clients.at(1)->sid()) + " NIRenamed")), "Fixture rename failed");
-    require(std::get<std::string>(adc::serialize(plan.frames()[1])).find("NIUser1") != std::string::npos, "Prepared plan borrowed mutable source strings");
+    require(plan.frames()[1].wire.find("NIUser1") != std::string::npos &&
+        std::get<std::string>(adc::serialize(plan.frames()[1].message)).find("NIUser1") != std::string::npos, "Prepared plan borrowed mutable source strings");
     require(std::get<adc::UserListError>(fixture.prepare(6)) == adc::UserListError::inconsistent_source, "Stale registry name accepted");
     require(std::get<adc::UserListError>(fixture.prepare(1)) == adc::UserListError::invalid_state, "Already registered user restarted its list");
 }
@@ -114,9 +117,10 @@ void pagination() {
     auto& joining = fixture.add(261,false);
     const auto result = fixture.prepare(261);
     const auto& plan = std::get<adc::InitialUserList>(result);
-    require(plan.frames().size() == 262 && plan.frames().back().source == joining.sid(), "User list truncated at a page boundary");
+    require(plan.frames().size() == 262 && plan.frames().back().message.source == joining.sid(), "User list truncated at a page boundary");
     for (std::size_t index = 1; index <= 260; ++index) {
-        require(plan.frames()[index].source == fixture.clients.at(index)->sid(), "User order changed across membership pages");
+        require(plan.frames()[index].message.source == fixture.clients.at(index)->sid(), "User order changed across membership pages");
+        require(plan.frames()[index].wire == std::get<std::string>(adc::serialize(plan.frames()[index].message)), "Paged welcome encoding drifted");
     }
 }
 void allocation_failures() {

@@ -1,5 +1,6 @@
 # Testowanie
 
+**alpha-0.9.14 Optymalizacja:** [Pamięć i routing C++20](OPTIMIZATION.md) publikuje każdą ramkę routingu w jednej alokacji i kolejkuje listę powitalną z już zmierzonego kodowania. Bajty protokołu pozostają takie same. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.13 Profilowanie:** [Wykrywanie wąskich gardeł alpha-0.8](PROFILING.md) szereguje stały zestaw decyzji uprawnień, moderacji i ról w procesie. To nie jest profiler próbkujący ani deklaracja pojemności. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.12 Pomiary:** [Pomiary wydajności alpha-0.8](BENCHMARK.md) mierzy stały zestaw decyzji uprawnień i moderacji w procesie. To nie jest deklaracja pojemności ani test obciążenia. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.11 Monitorowanie:** [CPU, pamięć, sesje i opóźnienia](MONITORING.md) publikuje jedną próbkę procesu i liczniki sesji na istniejącym statusie z bearer. To nie jest monitor hosta ani zapisana historia. Schemat v9 pozostaje bez zmian.
@@ -415,6 +416,7 @@ Uruchom `ctest --test-dir build --output-on-failure` i analogicznie dla `build-r
 | `logging.unit` | Poziomy, czyszczenie/UTF-8, współbieżność, odnowienie budżetu, prywatny plik 0600, stałe zapisy bezpieczeństwa i PL |
 | `logging.process` | Zdarzenia TCP/TLS, prywatność, niezależne ostrzeżenia, INI, błędy, odmowa trybu 0644 i zapis czasu częściowej ramki |
 | `monitoring.unit` | Parsowanie rekordu stat, konwersja taktów i stron, przepełnienie i żywa próbka `/proc/self/stat` |
+| `users.list` | Kolejność powitania, zachowane kodowanie, dokładny budżet bajtów, prywatność i wycofanie alokacji |
 | `profile.unit` | Stałe szeregowanie etapów w procesie, dokładne liczby decyzji i sufit pięciu sekund |
 | `benchmark.unit` | Stałe pomiary uprawnień i moderacji w procesie, dokładne liczby decyzji i sufit pięciu sekund |
 | `security.unit` | Zakresy, okna sztucznego zegara, limity klucza/mapy, czyszczenie i sloty |

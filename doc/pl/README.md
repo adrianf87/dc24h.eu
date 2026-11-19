@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.9.13: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.9.14: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [Optymalizacja — alpha-0.9.14](OPTIMIZATION.md)
 - [Profilowanie — alpha-0.9.13](PROFILING.md)
 - [Pomiary — alpha-0.9.12](BENCHMARK.md)
 - [Monitorowanie — alpha-0.9.11](MONITORING.md)

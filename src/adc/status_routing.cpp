@@ -1,4 +1,5 @@
 #include "dc24h/adc/status_routing.hpp"
+#include "dc24h/adc/shared_frame.hpp"
 #include "dc24h/adc/serializer.hpp"
 #include <algorithm>
 
@@ -43,7 +44,7 @@ std::variant<StatusDelivery, StatusRoutingError> StatusRouter::prepare(users::Se
     }
     auto safe = public_status(message);
     auto wire = std::get<std::string>(serialize(safe));
-    auto frame = SharedStatusFrame(new StatusFrame(std::move(safe), std::move(wire), status->code));
+    auto frame = share_frame<StatusFrame>(StatusFrame::Passkey{}, std::move(safe), std::move(wire), status->code);
     auto data = std::make_shared<const StatusDelivery::Data>(StatusDelivery::Data{sender, std::move(frame), std::move(recipients)});
     return StatusDelivery(domain_, std::move(data));
 }

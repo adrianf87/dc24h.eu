@@ -22,7 +22,7 @@ Public frames come from ClientInfo::public_message, retaining validated ADC-only
 
 The builder serializes each candidate message to measure its actual escaped UTF-8 wire bytes, including LF, and checks subtraction before adding. The budget covers every welcome frame, including hub and own INF. An exact-size budget succeeds; one byte less fails. The output owner supplies the smaller remaining per-client/hub queue allowance, so no new configurable limit is needed. Preparing does not enqueue, reserve keys, register a User, mark readiness or mutate any model. Errors are typed invalid_state, invalid_identity, inconsistent_source or output_limit; allocation failure propagates bad_alloc. Partial temporary plans are destroyed on failure.
 
-Messages/IDs are bounded by session capacity (at most 65535) and the supplied queue budget. Only one page of IDs and one temporary serialized frame are needed beyond the owned plan. Object/string/vector overhead means wire bytes are not an exact resident-memory quota. Membership scanning is O(number of sessions), plus bounded identity lookups and frame serialization. No load/throughput guarantee is claimed.
+Messages/IDs are bounded by session capacity (at most 65535) and the supplied queue budget. Only one page of IDs is needed beyond the owned plan. The measured encoding stays in that plan, and login queues those bytes instead of serializing the same messages again. Object/string/vector overhead means wire bytes are not an exact resident-memory quota. Membership scanning is O(number of sessions), plus bounded identity lookups and frame serialization. No load/throughput guarantee is claimed.
 
 ## Live synchronization and publication
 

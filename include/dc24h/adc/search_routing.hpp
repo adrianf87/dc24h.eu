@@ -8,15 +8,15 @@ enum class SearchRoutingError { invalid_state, wrong_source, invalid_message, no
                                 duplicate_token, search_limit, inactive_search, foreign_plan, already_dispatched, missing_sink };
 class SearchFrame final {
 public:
+    class Passkey { friend class SearchRouter; Passkey() noexcept = default; };
     SearchFrame(const SearchFrame&) = delete;
     SearchFrame& operator=(const SearchFrame&) = delete;
     SearchFrame(SearchFrame&&) = delete;
     SearchFrame& operator=(SearchFrame&&) = delete;
+    SearchFrame(Passkey, Message message, std::string wire) : message_(std::move(message)), wire_(std::move(wire)) {}
     [[nodiscard]] const Message& message() const noexcept { return message_; }
     [[nodiscard]] const std::string& wire() const noexcept { return wire_; }
 private:
-    friend class SearchRouter;
-    SearchFrame(Message message, std::string wire) : message_(std::move(message)), wire_(std::move(wire)) {}
     Message message_;
     std::string wire_;
 };

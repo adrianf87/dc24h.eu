@@ -4,23 +4,32 @@
 #include "dc24h/users/session_manager.hpp"
 
 #include <functional>
+#include <string>
 #include <utility>
 #include <vector>
 
 namespace dc24h::adc {
 enum class UserListError { invalid_state, invalid_identity, inconsistent_source, output_limit };
 
+// One prepared welcome frame. The wire is the encoding measured for the output
+// budget. Login queues that encoding and does not serialize the message again.
+struct PreparedWelcomeFrame {
+    Message message;
+    std::string wire;
+};
+
 // Owned, preflighted welcome: hub INF, existing users by local SessionId, own
 // INF last. Only the output owner may mark that final frame as a completion.
 class InitialUserList final {
 public:
-    [[nodiscard]] const std::vector<Message>& frames() const noexcept { return frames_; }
+    [[nodiscard]] const std::vector<PreparedWelcomeFrame>& frames() const noexcept { return frames_; }
     [[nodiscard]] std::size_t wire_bytes() const noexcept { return bytes_; }
+    [[nodiscard]] std::vector<PreparedWelcomeFrame> release() && { return std::move(frames_); }
 private:
     friend class UserList;
-    InitialUserList(std::vector<Message> frames, std::size_t bytes)
+    InitialUserList(std::vector<PreparedWelcomeFrame> frames, std::size_t bytes)
         : frames_(std::move(frames)), bytes_(bytes) {}
-    std::vector<Message> frames_;
+    std::vector<PreparedWelcomeFrame> frames_;
     std::size_t bytes_;
 };
 using UserListResult = std::variant<InitialUserList, UserListError>;

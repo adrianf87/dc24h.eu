@@ -12,13 +12,16 @@ enum class HubMessageError { invalid_text, frame_too_long, recipient_unavailable
 // is accepted. System output contains one text parameter and no PM/ME metadata.
 class HubMessageFrame final {
 public:
+    class Passkey {
+        friend std::variant<std::shared_ptr<const HubMessageFrame>, HubMessageError> make_hub_message(std::string_view);
+        Passkey() noexcept = default;
+    };
     HubMessageFrame(const HubMessageFrame&) = delete;
     HubMessageFrame& operator=(const HubMessageFrame&) = delete;
+    HubMessageFrame(Passkey, Message message, std::string wire) : message_(std::move(message)), wire_(std::move(wire)) {}
     [[nodiscard]] const Message& message() const noexcept { return message_; }
     [[nodiscard]] const std::string& wire() const noexcept { return wire_; }
 private:
-    friend std::variant<std::shared_ptr<const HubMessageFrame>, HubMessageError> make_hub_message(std::string_view);
-    HubMessageFrame(Message message, std::string wire) : message_(std::move(message)), wire_(std::move(wire)) {}
     Message message_;
     std::string wire_;
 };

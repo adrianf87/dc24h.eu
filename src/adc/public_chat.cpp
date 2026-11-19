@@ -1,4 +1,5 @@
 #include "dc24h/adc/public_chat.hpp"
+#include "dc24h/adc/shared_frame.hpp"
 #include "dc24h/adc/chat_validation.hpp"
 
 namespace dc24h::adc {
@@ -34,7 +35,7 @@ std::variant<PublicBroadcast, PublicChatError> PublicChat::prepare(users::Sessio
     auto encoded=serialize_msg(safe);
     auto* wire=std::get_if<std::string>(&encoded);
     if (!wire) { return PublicChatError::invalid_message; }
-    auto frame=SharedPublicChatFrame(new PublicChatFrame(std::move(safe),std::move(*wire)));
+    auto frame=share_frame<PublicChatFrame>(PublicChatFrame::Passkey{},std::move(safe),std::move(*wire));
     return PublicBroadcast(std::move(admission),std::move(frame));
 }
 std::variant<chat::DispatchReport, chat::Error> PublicChat::dispatch(const PublicBroadcast& message, const Sink& sink) const {
