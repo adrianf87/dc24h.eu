@@ -3,7 +3,7 @@
 #include <string_view>
 
 namespace dc24h::i18n::us {
-inline constexpr std::array<std::string_view, 174> messages{{
+inline constexpr std::array<std::string_view, 180> messages{{
     "Invalid ban input",
     "Ban authorization refused",
     "Ban revision is stale",
@@ -92,6 +92,12 @@ inline constexpr std::array<std::string_view, 174> messages{{
     "Cannot load TLS certificate chain",
     "Cannot load TLS private key",
     "TLS certificate and private key do not match",
+    "TLS certificate is not valid at startup",
+    "TLS certificate signature is too weak",
+    "TLS certificate public key is too weak",
+    "TLS certificate key usage does not allow a hub listener",
+    "TLS certificate is not authorized for server authentication",
+    "Cannot set TLS cipher policy",
     "Cannot initialize TLS connection",
     "Cannot attach TLS socket",
     "Expected IPv4:port or [IPv6]:port",

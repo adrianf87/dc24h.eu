@@ -1,5 +1,16 @@
 # Changelog
 
+## alpha-0.9.5 — 2026-11-19
+
+TLS security — ADCS certificate and cipher policy, based on main `9d66f47`. The branch name is `alpha-0.9.5`.
+
+- Check the hub leaf before listen. It must be inside its validity window, signed with SHA-256 or stronger, or Ed25519 or Ed448, and use RSA of at least 2048 bits, NIST P-256, P-384 or P-521, or Ed25519 or Ed448. Key usage, when present, must allow a TLS listener. Extended key usage, when present, must include serverAuth. A refusal stops startup and `--check-config` and does not open a port. The diagnostic does not include the certificate or the private key.
+- Limit ADCS to TLS 1.2 and 1.3 AEAD: ECDHE with AES-GCM or ChaCha20-Poly1305, and the three TLS 1.3 AEAD suites. Session tickets stay off. Hostname, trust and revocation stay with the client. No client certificate is requested.
+- This does not close residual threat T15. HTTP/2, OCSP and automatic certificate renewal remain unimplemented. Schema v9 is unchanged. No status counter, WebAdmin page, INI key or Apache setting is added.
+- Run Check status on GitHub-hosted Ubuntu 24.04. Add `alpha-0.9.5` to the push branches. Local validation uses eight CPU threads. Remote CI completion is not awaited.
+
+Validation on Debian 13: all 221/221 CTest suites passed in Debug (75.58 s real) and Release (73.18 s real), including disposable MariaDB, real ncdc ADC/ADCS, the Apache HTTPS reverse proxy and the ADCS leaf and cipher policy. The Release C++ build log contained no compiler warnings. WebAdmin typecheck and production build passed. All 48 Node tests passed. All 41 Chromium tests passed. Actual C++ API, adapter and React integration passed. Release metadata, documentation UTF-8, language parity, local Markdown links, Python syntax with warnings as errors and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration or account/credential mutation is performed.
+
 ## alpha-0.9.4 — 2026-11-19
 
 Anti-flood — protection against spam and excessive traffic, based on main `2daeb20`. The branch name is `alpha-0.9.4`.

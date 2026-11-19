@@ -1,5 +1,6 @@
 # Local administrative API — alpha-0.1.9
 
+**alpha-0.9.5 TLS security:** [ADCS certificate and cipher policy](TLS_SECURITY.md) checks the hub leaf before listen and limits ADCS to TLS 1.2 and 1.3 AEAD. Trust, hostname, HTTP/2, OCSP and automatic renewal stay separate. Schema v9 is unchanged.
 **alpha-0.9.4 Traffic limits:** [Spam and excessive presence traffic](TRAFFIC_LIMITS.md) caps ready-session INF updates before fanout. Chat, search and transfer budgets stay. Schema v9 is unchanged. A bandwidth cap and a public gateway remain separate work.
 **alpha-0.9.3 Network security:** [TCP connection protection, timeouts and buffer limits](NETWORK_SECURITY.md) caps the listen backlog, each accepted socket's kernel send and receive buffers, and the TCP user timeout. The existing application timeouts and output queues stay. Schema v9 is unchanged. A bandwidth cap and a public gateway remain separate work.
 **alpha-0.9.2 ADC security:** [Parser validation, fuzzing and protocol control](ADC_SECURITY.md) checks every parsed client frame against the hub command profile before session state changes. A deterministic in-process fuzz campaign locks the parser, the stream decoder and that profile together. Schema v9 is unchanged. Coverage-guided fuzzing and a public gateway remain separate work.
@@ -211,6 +212,8 @@ alpha-0.9.2 does not add a route or a status field. Parser validation and protoc
 alpha-0.9.3 does not add a route or a status field. TCP backlog, kernel buffer caps and the TCP user timeout stay inside the hub. The JSON example above is unchanged. See [Network security](NETWORK_SECURITY.md).
 
 alpha-0.9.4 does not add a route or a status field. The ready-session INF budget stays inside the hub. The JSON example above is unchanged. See [Traffic limits](TRAFFIC_LIMITS.md).
+
+alpha-0.9.5 does not add a route or a status field. The ADCS leaf and cipher policy stays inside the hub. The JSON example above is unchanged. See [TLS security](TLS_SECURITY.md).
 
 Counters are independently sampled atomics, not one transactional snapshot. `core_running` reports the Core lifecycle only, not complete ADC login/readiness. Uptime uses a steady clock from transport/API composition after optional database setup; it is not wall-clock process age. `database.enabled` reports configured startup connection presence, not ongoing SQL availability. No request runs SQL. Peer addresses, nicknames, frames, file paths, secrets and administrative settings are never returned. Unknown paths (including query strings) give 404 after authentication; other methods give 405 with `Allow: GET`. HEAD is unsupported (405), with no response body.
 
