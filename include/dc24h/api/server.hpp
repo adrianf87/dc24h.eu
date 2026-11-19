@@ -52,9 +52,12 @@ struct Snapshot {
 // Fixed read-only summary of counters already stored on Snapshot. Decimal
 // strings keep the full uint64 range. No SQL, secrets, names or derived rates.
 [[nodiscard]] std::string dashboard_json(const Snapshot& value);
+// Ready-session directory. Decimal session ids. No CID, address, account or profile.
+[[nodiscard]] std::string users_json(const users::PresenceDirectory& directory);
 using StatusProvider = std::function<Snapshot()>;
 using FailureHandler = std::function<void()>;
 using AccountHandler = std::function<std::string(const Request&)>;
+using UsersProvider = std::function<users::PresenceDirectory()>;
 
 // Owns one local HTTP worker. Call start() once; destructor stops, joins and
 // removes only this instance's socket inode. Dependencies/callback targets must
@@ -62,7 +65,7 @@ using AccountHandler = std::function<std::string(const Request&)>;
 class Server final {
 public:
     Server(logging::Logger& logger, Options options, StatusProvider status, FailureHandler failure,
-        AccountHandler accounts = {});
+        AccountHandler accounts = {}, UsersProvider users = {});
     ~Server();
     Server(const Server&) = delete;
     Server& operator=(const Server&) = delete;

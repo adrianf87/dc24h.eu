@@ -228,8 +228,45 @@ void lifecycle() {
     }
     require(!std::filesystem::exists(options.socket_path));
 }
+void users_contract() {
+    dc24h::users::PresenceDirectory empty;
+    require(users_json(empty) == "{\"schema\":1,\"truncated\":false,\"users\":[]}\n");
+    dc24h::users::PresenceDirectory filled;
+    filled.count = 1;
+    auto& user = filled.users[0];
+    user.session_id = std::numeric_limits<std::uint64_t>::max();
+    std::memcpy(user.sid.data(), "ABCD", 4);
+    const std::string nickname = "a\"b\\c";
+    std::memcpy(user.nickname.data(), nickname.data(), nickname.size());
+    user.nickname_len = static_cast<std::uint8_t>(nickname.size());
+    user.transport = dc24h::users::Transport::adcs;
+    user.role = dc24h::accounts::Role::owner;
+    user.public_muted = true;
+    const auto body = users_json(filled);
+    require(body.find("\"session\":\"18446744073709551615\"") != std::string::npos);
+    require(body.find("\"sid\":\"ABCD\"") != std::string::npos);
+    require(body.find("\"nickname\":\"a\\\"b\\\\c\"") != std::string::npos);
+    require(body.find("\"transport\":\"adcs\"") != std::string::npos);
+    require(body.find("\"role\":\"owner\"") != std::string::npos);
+    require(body.find("\"public_muted\":true") != std::string::npos);
+    require(body.find("\"private_muted\":false") != std::string::npos);
+    require(body.find("cid") == std::string::npos);
+    require(body.find("password") == std::string::npos);
+    require(body.find("email") == std::string::npos);
+    user.nickname[0] = '\n';
+    user.nickname_len = 1;
+    const auto rejected = users_json(filled);
+    require(rejected.find("\"truncated\":true") != std::string::npos);
+    require(rejected.find("nickname") == std::string::npos);
+    user.nickname[0] = 'a';
+    user.nickname_len = 1;
+    std::memcpy(user.sid.data(), "A00D", 4);
+    const auto bad_sid = users_json(filled);
+    require(bad_sid.find("\"truncated\":true") != std::string::npos);
+    require(bad_sid.find("nickname") == std::string::npos);
+}
 }
 int main() {
-    try { parser(); dashboard_contract(); lifecycle(); std::cout << "API parser, authentication, dashboard and lifecycle OK\n"; }
+    try { parser(); dashboard_contract(); users_contract(); lifecycle(); std::cout << "API parser, authentication, dashboard, users and lifecycle OK\n"; }
     catch (const std::exception& error) { std::cerr << error.what() << '\n'; return 1; }
 }

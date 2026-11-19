@@ -119,6 +119,37 @@ void managed_users() {
     require(!manager.start_negotiation(id(2),{}) && !manager.identify(id(2),user("S","C"),TimePoint{}+6ms) &&
         manager.by_cid("C")->id() == id(2) && !manager.find(id(1)), "Reconnect resolved the old lifetime");
 }
+void presence_directory() {
+    static_assert(noexcept(std::declval<const SessionManager&>().export_presence(std::declval<PresenceDirectory&>())));
+    SessionManager manager(80);
+    auto admit = [&](std::uint64_t number, std::string sid, std::string nickname, bool ready) {
+        (void)manager.add(id(number), number % 2 == 0 ? Transport::adc : Transport::adcs, {});
+        require(!manager.start_negotiation(id(number), {}), "Negotiation failed");
+        require(!manager.identify(id(number), user(sid, "C" + sid, nickname), TimePoint{} + std::chrono::milliseconds(number)), "Identify failed");
+        if (ready) { require(!manager.mark_ready(id(number), TimePoint{} + std::chrono::milliseconds(number) + 1ms), "Ready failed"); }
+    };
+    admit(1, "S", "Hidden", true);
+    admit(2, "AAAA", "Żółw", false);
+    for (std::uint64_t number = 0; number < 65; ++number) {
+        constexpr char alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+        std::string sid = "AAA2";
+        sid[1] = alphabet[(number / 32) % 32];
+        sid[2] = alphabet[number % 32];
+        admit(number + 3, sid, "User" + std::to_string(number), true);
+    }
+    PresenceDirectory directory;
+    allocation_budget = 0;
+    manager.export_presence(directory);
+    allocation_budget = -1;
+    require(directory.truncated && directory.count == presence_capacity, "Ready directory cap failed");
+    require(directory.users[0].session_id == 3 && directory.users[63].session_id == 66, "Ready directory order failed");
+    require(std::string(directory.users[0].nickname.data(), directory.users[0].nickname_len) == "User0", "Ready nickname failed");
+    require(directory.users[0].transport == Transport::adcs && directory.users[0].role == dc24h::accounts::Role::guest, "Ready transport or role failed");
+    require(!directory.users[0].public_muted && !directory.users[0].private_muted, "Ready mute flags failed");
+    for (std::uint32_t index = 0; index < directory.count; ++index) {
+        require(directory.users[index].session_id != 1 && directory.users[index].session_id != 2, "Omitted session was published");
+    }
+}
 void allocation_failures() {
     const auto candidate = user(std::string(max_session_key_bytes,'S'),std::string(max_client_key_bytes,'C'),std::string(200,'N'));
     bool success = false;
@@ -163,7 +194,7 @@ void allocation_failures() {
 }
 }
 int main() {
-    try { standalone_contract(); managed_users(); allocation_failures();
+    try { standalone_contract(); managed_users(); presence_directory(); allocation_failures();
         std::cout << "PASS: SID/CID registry, owner uniqueness, lifecycle, bounded lookup, reuse and allocation rollback\n";
     } catch (const std::exception& error) { allocation_budget = -1; std::cerr << "FAIL: " << error.what() << '\n'; return 1; }
 }

@@ -15,6 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from network_process_tests import Hub, BINARY, drain_until_eof
 from api_support import enable_api, fetch_status
+from adc_login_process_tests import Peer, pair
 
 
 class Fixture:
@@ -94,9 +95,11 @@ class ApiProcessTests(unittest.TestCase):
         self.assertEqual(health, {'status': 'ok'})
         peer = hub.connect(); peer.sendall(b'HSUP ADBASE ADTIGR\n'); peer.shutdown(socket.SHUT_WR)
         drain_until_eof(peer)
+        _, directory = fx.decode(fx.request(target='/api/v1/users'))
+        self.assertEqual(directory, {'schema': 1, 'truncated': False, 'users': []})
         snapshot = fetch_status(fx.endpoint, fx.token)
         self.assertEqual(snapshot['api_version'], 'v1')
-        self.assertEqual(snapshot['server']['version'], 'alpha-0.8.11')
+        self.assertEqual(snapshot['server']['version'], 'alpha-0.8.12')
         self.assertTrue(snapshot['server']['core_running'])
         board = snapshot['dashboard']
         self.assertEqual(board['schema'], 1)
@@ -148,6 +151,39 @@ class ApiProcessTests(unittest.TestCase):
         self.assertNotIn(str(fx.folder).encode(), hub.log)
         fx.start().stop(signal.SIGINT)
         self.assertFalse(fx.endpoint.exists())
+
+    def test_ready_user_directory_hides_identity_secrets(self):
+        fx = Fixture(self)
+        hub = fx.start()
+        peer = Peer(self, hub.connect())
+        peer.login(b'WebUser', 7)
+        body = None
+        deadline = time.time() + 2
+        while time.time() < deadline:
+            _, body = fx.decode(fx.request(target='/api/v1/users'))
+            if body['users']:
+                break
+            time.sleep(0.05)
+        self.assertEqual(body['schema'], 1)
+        self.assertFalse(body['truncated'])
+        self.assertEqual(len(body['users']), 1)
+        row = body['users'][0]
+        self.assertEqual(row['nickname'], 'WebUser')
+        self.assertEqual(row['sid'], peer.sid.decode())
+        self.assertEqual(row['transport'], 'adc')
+        self.assertEqual(row['role'], 'guest')
+        self.assertFalse(row['public_muted'])
+        self.assertFalse(row['private_muted'])
+        self.assertRegex(row['session'], r'^[1-9]\d{0,19}$')
+        self.assertEqual(set(row), {'session', 'sid', 'nickname', 'transport', 'role', 'public_muted', 'private_muted'})
+        encoded = json.dumps(body)
+        self.assertNotIn(pair(7)[1].decode(), encoded)
+        self.assertNotIn('password', encoded)
+        self.assertNotIn('email', encoded)
+        status = fetch_status(fx.endpoint, fx.token)
+        self.assertNotIn('WebUser', json.dumps(status))
+        fx.decode(fx.request(method='POST', target='/api/v1/users'), 405)
+        hub.stop()
 
     def test_strict_framing_limits_and_recovery(self):
         fx = Fixture(self); fx.start()

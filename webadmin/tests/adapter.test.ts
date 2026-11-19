@@ -42,6 +42,7 @@ test("private credentials and bounded local adapter never expose or accept brows
       return;
     }
     if (req.url === "/api/v1/health") res.end(JSON.stringify({ status: "ok" }));
+    else if (req.url === "/api/v1/users") res.end(JSON.stringify({ schema: 1, truncated: false, users: [], secret: token }));
     else res.end(JSON.stringify({ ...snapshot, secret: token }));
   });
   upstream.listen(socket);
@@ -96,6 +97,10 @@ test("private credentials and bounded local adapter never expose or accept brows
     assert.equal(observed, `Bearer ${token}`);
     assert.ok(!result.text.includes(token));
     assert.equal((await get("/admin-api/v1/status?extra=1")).status, 404);
+    const users = await get("/admin-api/v1/users");
+    assert.equal(users.status, 200);
+    assert.deepEqual(JSON.parse(users.text), { schema: 1, truncated: false, users: [] });
+    assert.ok(!users.text.includes(token));
     assert.equal(
       (
         await get("/admin-api/v1/status", {

@@ -12,6 +12,7 @@ import { request } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Plugin } from "vite";
 import { parseSnapshot } from "../src/lib/status.ts";
+import { parseHubUsers } from "../src/lib/users.ts";
 
 import { accountMiddleware } from "./account-api.ts";
 
@@ -123,7 +124,8 @@ export function middleware(config: Credentials | null) {
     }
     if (
       req.url !== "/admin-api/v1/status" &&
-      req.url !== "/admin-api/v1/health"
+      req.url !== "/admin-api/v1/health" &&
+      req.url !== "/admin-api/v1/users"
     ) {
       reply(res, 404, "not_found");
       return;
@@ -211,6 +213,8 @@ export function middleware(config: Credentials | null) {
           const result =
             req.url === "/admin-api/v1/status"
               ? parseSnapshot(data)
+              : req.url === "/admin-api/v1/users"
+                ? parseHubUsers(data)
               : data &&
                   typeof data === "object" &&
                   "status" in data &&

@@ -164,7 +164,7 @@ int main(int argc, char* argv[]) {
                         stats.security_rejected, stats.security_closed, database != nullptr,
                         stats.rejected, stats.closed, stats.received_bytes, stats.sent_bytes,
                         stats.peak_connections, stats.online_users, stats.peak_online_users, stats.successful_logins, stats.chat, stats.search, parsed.settings.network.search, stats.transfers, transfer_settings, public_settings, stats.kick, stats.mute};
-                }, [&] { signal_error.store(true); server.request_stop(); });
+                }, [&] { signal_error.store(true); server.request_stop(); }, dc24h::api::AccountHandler{}, [&] { return network.presence(); });
                 api->start();
             }
 
