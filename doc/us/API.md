@@ -1,5 +1,6 @@
 # Local administrative API — alpha-0.1.9
 
+**alpha-0.9.16 Stress testing:** [Overload and sustained operation](STRESS.md) repeats the existing frame, peer, login, chat and session limits for a fixed number of rounds. Refusals stay on. Occupancy returns to zero. Schema v9 is unchanged.
 **alpha-0.9.15 Memory safety:** [AddressSanitizer, UBSan and ThreadSanitizer](MEMORY_SAFETY.md) are separate build modes. The hub behavior stays the same. Schema v9 is unchanged.
 **alpha-0.9.14 Optimization:** [C++20 memory and routing](OPTIMIZATION.md) publishes each routed frame in one allocation and queues the welcome list from the encoding already measured. Protocol bytes stay the same. Schema v9 is unchanged.
 **alpha-0.9.13 Profiling:** [Alpha 0.8 bottleneck profile](PROFILING.md) ranks a fixed in-process set of permission, moderation and role decisions. This is not a sampling profiler or a capacity claim. Schema v9 is unchanged.
@@ -228,6 +229,8 @@ alpha-0.9.7 does not add a route or a status field. Maintenance reads now requir
 alpha-0.9.6 does not add a route or a status field. Account password separation and sealed GPA/PAS decryption stay inside the hub. The JSON example above is unchanged. See [Account security](ACCOUNT_SECURITY.md).
 
 alpha-0.9.5 does not add a route or a status field. The ADCS leaf and cipher policy stays inside the hub. The JSON example above is unchanged. See [TLS security](TLS_SECURITY.md).
+
+alpha-0.9.16 does not add a route or a status field. The stress soak runs only inside its unit test. The JSON example above is unchanged. See [Stress testing](STRESS.md).
 
 alpha-0.9.15 does not add a route or a status field. Sanitizer modes are build options. The JSON example above is unchanged. See [Memory safety](MEMORY_SAFETY.md).
 

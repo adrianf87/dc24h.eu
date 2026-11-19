@@ -1,5 +1,6 @@
 # Architektura
 
+**alpha-0.9.16 Testy przeciążenia:** [Przeciążenie i długotrwała praca](STRESS.md) powtarza istniejące limity ramek, klientów, logowania, czatu i sesji przez stałą liczbę rund. Odmowy zostają. Zajętość wraca do zera. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.15 Bezpieczeństwo pamięci:** [AddressSanitizer, UBSan i ThreadSanitizer](MEMORY_SAFETY.md) są osobnymi trybami budowania. Zachowanie huba pozostaje takie same. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.14 Optymalizacja:** [Pamięć i routing C++20](OPTIMIZATION.md) publikuje każdą ramkę routingu w jednej alokacji i kolejkuje listę powitalną z już zmierzonego kodowania. Bajty protokołu pozostają takie same. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.13 Profilowanie:** [Wykrywanie wąskich gardeł alpha-0.8](PROFILING.md) szereguje stały zestaw decyzji uprawnień, moderacji i ról w procesie. To nie jest profiler próbkujący ani deklaracja pojemności. Schemat v9 pozostaje bez zmian.
@@ -282,6 +283,10 @@ Frontend jest niezależny od budowania/działania C++. Kod przeglądarki sprawdz
 ## Apache2 HTTPS — alpha-0.1.11
 
 Osobny instalowany przykład serwuje gotowe zasoby WebAdmin przez TLS 1.2/1.3 i przekierowuje HTTP na stałą nazwę kanoniczną. Zachowuje lokalny dostęp i blokadę prywatnych tras, bez proxy Unix API i zmian transportów C++. Testy ładują tę politykę pod niezależnym ServerRoot; certyfikaty i aktywacja usługi hosta należą do operatora. Zobacz [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
+
+## Testy przeciążenia — alpha-0.9.16
+
+`dc24h_stress` powtarza istniejące limity ramek, klientów, logowania, czatu i sesji przez stałą liczbę rund i sprawdza, że zajętość wraca do zera. Plik wykonywalny huba nie łączy tej biblioteki i nie uruchamia jej przy starcie. Zobacz [Testy przeciążenia](STRESS.md).
 
 ## Bezpieczeństwo pamięci — alpha-0.9.15
 

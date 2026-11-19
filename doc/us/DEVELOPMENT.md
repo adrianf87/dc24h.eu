@@ -120,6 +120,10 @@ alpha-0.1.10 starts from main after alpha-0.1.9. Keep browser-safe schema/format
 
 alpha-0.1.11 starts from main after alpha-0.1.10. Keep host activation, real certificates and service reloads separate from example authoring/testing. Test the exact shipped TLS/access/header policy with temporary paths/ports and no host config. A successful apache2 -t is insufficient to claim certificate/key correspondence; exercise real initialization. Keep both documentation languages and version-sensitive fixtures aligned.
 
+## Stress testing — alpha-0.9.16
+
+Branch from main. Repeat the existing frame, peer, login, chat and session limits for a fixed number of rounds. Keep the refusals. Return occupancy to zero. Do not add a schema migration, a status field, an INI key, a WebAdmin page, a CLI flag or an Apache setting. Do not claim a capacity, a load test, a DDoS test, or that any residual threat is closed. `configuration.manage` and `hub.manage` stay unimplemented.
+
 ## Memory safety — alpha-0.9.15
 
 Branch from main. Offer AddressSanitizer, UndefinedBehaviorSanitizer and ThreadSanitizer as separate build modes. Do not combine them. Do not change hub behavior in the normal build. Do not weaken the systemd unit. Do not add a schema migration, a status field, an INI key, a WebAdmin page, a CLI flag or an Apache setting. Do not claim that a probe replaces the suite, or that any residual threat is closed. `configuration.manage` and `hub.manage` stay unimplemented.

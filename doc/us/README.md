@@ -1,7 +1,8 @@
 # dc24h.eu documentation
 
-alpha-0.9.15: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.9.16: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
+- [Stress testing — alpha-0.9.16](STRESS.md)
 - [Memory safety — alpha-0.9.15](MEMORY_SAFETY.md)
 - [Optimization — alpha-0.9.14](OPTIMIZATION.md)
 - [Profiling — alpha-0.9.13](PROFILING.md)

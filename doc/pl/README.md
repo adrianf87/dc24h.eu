@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.9.15: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.9.16: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [Testy przeciążenia — alpha-0.9.16](STRESS.md)
 - [Bezpieczeństwo pamięci — alpha-0.9.15](MEMORY_SAFETY.md)
 - [Optymalizacja — alpha-0.9.14](OPTIMIZATION.md)
 - [Profilowanie — alpha-0.9.13](PROFILING.md)

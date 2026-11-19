@@ -1,5 +1,6 @@
 # Testowanie
 
+**alpha-0.9.16 Testy przeciążenia:** [Przeciążenie i długotrwała praca](STRESS.md) powtarza istniejące limity ramek, klientów, logowania, czatu i sesji przez stałą liczbę rund. Odmowy zostają. Zajętość wraca do zera. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.15 Bezpieczeństwo pamięci:** [AddressSanitizer, UBSan i ThreadSanitizer](MEMORY_SAFETY.md) są osobnymi trybami budowania. Zachowanie huba pozostaje takie same. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.14 Optymalizacja:** [Pamięć i routing C++20](OPTIMIZATION.md) publikuje każdą ramkę routingu w jednej alokacji i kolejkuje listę powitalną z już zmierzonego kodowania. Bajty protokołu pozostają takie same. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.13 Profilowanie:** [Wykrywanie wąskich gardeł alpha-0.8](PROFILING.md) szereguje stały zestaw decyzji uprawnień, moderacji i ról w procesie. To nie jest profiler próbkujący ani deklaracja pojemności. Schemat v9 pozostaje bez zmian.
@@ -418,6 +419,7 @@ Uruchom `ctest --test-dir build --output-on-failure` i analogicznie dla `build-r
 | `logging.process` | Zdarzenia TCP/TLS, prywatność, niezależne ostrzeżenia, INI, błędy, odmowa trybu 0644 i zapis czasu częściowej ramki |
 | `monitoring.unit` | Parsowanie rekordu stat, konwersja taktów i stron, przepełnienie i żywa próbka `/proc/self/stat` |
 | `users.list` | Kolejność powitania, zachowane kodowanie, dokładny budżet bajtów, prywatność i wycofanie alokacji |
+| `stress.unit` | Stałe rundy przeciążenia ramek, klientów, logowania, czatu i sesji, dokładne liczby odmów i pięciosekundowy sufit |
 | `memory.safety` | Obieg sterty, zsynchronizowane liczniki atomowy i z muteksem oraz mieszczące się mnożenie ze znakiem |
 | `profile.unit` | Stałe szeregowanie etapów w procesie, dokładne liczby decyzji i sufit pięciu sekund |
 | `benchmark.unit` | Stałe pomiary uprawnień i moderacji w procesie, dokładne liczby decyzji i sufit pięciu sekund |

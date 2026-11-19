@@ -139,6 +139,10 @@ alpha-0.1.10 powstaje z main po alpha-0.1.9. Oddzielaj schemat/formatowanie prze
 
 alpha-0.1.11 powstaje z main po alpha-0.1.10. Oddzielaj aktywację hosta, rzeczywiste certyfikaty i reload od tworzenia/testowania przykładu. Testuj dokładnie dostarczaną politykę TLS/dostępu/nagłówków z tymczasowymi ścieżkami/portami, bez konfiguracji hosta. Sukces apache2 -t nie dowodzi zgodności certyfikatu/klucza; sprawdzaj inicjalizację. Zachowuj oba języki dokumentacji i spójne wersje fixture.
 
+## Testy przeciążenia — alpha-0.9.16
+
+Gałąź powstaje z main. Powtarzaj istniejące limity ramek, klientów, logowania, czatu i sesji przez stałą liczbę rund. Zachowaj odmowy. Zajętość ma wrócić do zera. Nie dodawaj migracji schematu, pola statusu, klucza INI, strony WebAdmin, flagi CLI ani ustawienia Apache. Nie twierdź, że istnieje pojemność, test obciążenia, test DDoS albo że którekolwiek zagrożenie szczątkowe jest zamknięte. `configuration.manage` i `hub.manage` pozostają niezaimplementowane.
+
 ## Bezpieczeństwo pamięci — alpha-0.9.15
 
 Gałąź powstaje z main. Udostępnij AddressSanitizer, UndefinedBehaviorSanitizer i ThreadSanitizer jako osobne tryby budowania. Nie łącz ich. Nie zmieniaj zachowania huba w zwykłym buildzie. Nie osłabiaj jednostki systemd. Nie dodawaj migracji schematu, pola statusu, klucza INI, strony WebAdmin, flagi CLI ani ustawienia Apache. Nie twierdź, że próba zastępuje zestaw albo że którekolwiek zagrożenie szczątkowe jest zamknięte. `configuration.manage` i `hub.manage` pozostają niezaimplementowane.
