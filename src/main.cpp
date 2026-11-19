@@ -4,6 +4,7 @@
 #include "dc24h/core/server.hpp"
 #include "dc24h/core/termination_signals.hpp"
 #include "dc24h/logging/logger.hpp"
+#include "dc24h/monitoring/process.hpp"
 #include "dc24h/network/tcp_server.hpp"
 #include "dc24h/version.hpp"
 #include "dc24h/bans/repository.hpp"
@@ -14,6 +15,7 @@
 #include <cstdlib>
 #include <exception>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -161,7 +163,37 @@ int main(int argc, char* argv[]) {
             const auto started = std::chrono::steady_clock::now();
             std::unique_ptr<dc24h::api::Server> api;
             if (parsed.settings.api.enabled) {
-                api = std::make_unique<dc24h::api::Server>(logger, parsed.settings.api, [&] {
+                struct CpuWindow {
+                    bool have{false};
+                    std::uint64_t cpu_ms{0};
+                    std::chrono::steady_clock::time_point at{};
+                };
+                api = std::make_unique<dc24h::api::Server>(logger, parsed.settings.api,
+                    [&, window = CpuWindow{}]() mutable {
+                    const auto process = dc24h::monitoring::read_process();
+                    std::uint64_t window_ms = 0;
+                    std::uint64_t delta_ms = 0;
+                    if (!process.available) {
+                        window = {};
+                    } else {
+                        const auto now = std::chrono::steady_clock::now();
+                        const auto total = process.cpu_user_ms >
+                            std::numeric_limits<std::uint64_t>::max() - process.cpu_system_ms
+                            ? std::numeric_limits<std::uint64_t>::max()
+                            : process.cpu_user_ms + process.cpu_system_ms;
+                        if (!window.have || now < window.at || total < window.cpu_ms) {
+                            window = CpuWindow{true, total, now};
+                        } else {
+                            const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                now - window.at).count();
+                            if (elapsed > 0) {
+                                window_ms = static_cast<std::uint64_t>(elapsed);
+                                delta_ms = total - window.cpu_ms;
+                                window.cpu_ms = total;
+                                window.at = now;
+                            }
+                        }
+                    }
                     const auto stats = network.statistics();
                     return dc24h::api::Snapshot{
                         server.state() == dc24h::core::State::running,
@@ -170,7 +202,13 @@ int main(int argc, char* argv[]) {
                         stats.active, stats.accepted, stats.adc_frames, stats.adcs_handshakes,
                         stats.security_rejected, stats.security_closed, database != nullptr,
                         stats.rejected, stats.closed, stats.received_bytes, stats.sent_bytes,
-                        stats.peak_connections, stats.online_users, stats.peak_online_users, stats.successful_logins, stats.chat, stats.search, parsed.settings.network.search, stats.transfers, transfer_settings, public_settings, stats.kick, stats.mute};
+                        stats.peak_connections, stats.online_users, stats.peak_online_users, stats.successful_logins, stats.chat, stats.search, parsed.settings.network.search, stats.transfers, transfer_settings, public_settings, stats.kick, stats.mute,
+                        process.available, process.cpu_user_ms, process.cpu_system_ms, window_ms, delta_ms, process.rss_bytes,
+                        stats.sessions_accepted, stats.sessions_negotiating, stats.sessions_identified,
+                        stats.sessions_ready, stats.sessions_closing, stats.sessions_closed,
+                        stats.sessions_created, stats.sessions_completed,
+                        stats.login_samples, stats.login_last_ms, stats.login_max_ms,
+                        stats.reactor_samples, stats.reactor_last_ms, stats.reactor_max_ms};
                 }, [&] { signal_error.store(true); server.request_stop(); }, dc24h::api::AccountHandler{}, [&] { return network.presence(); });
                 api->start();
             }

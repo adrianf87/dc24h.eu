@@ -14,6 +14,8 @@ struct Statistics {
     SessionCounts sessions{};
     std::size_t peak_online{};
     std::uint64_t created_sessions{}, successful_logins{}, completed_sessions{};
+    // Accept-to-ready samples. A repeated ready transition is not a new sample.
+    std::uint64_t login_samples{}, login_last_ms{}, login_max_ms{};
     [[nodiscard]] std::size_t online() const noexcept { return sessions.ready; }
     friend bool operator==(const Statistics&, const Statistics&) = default;
 };

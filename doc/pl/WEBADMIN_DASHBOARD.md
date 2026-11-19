@@ -37,3 +37,5 @@ Każda grupa prowadzi do istniejącej strony szczegółów: użytkownicy do Prze
 Gdy brakuje `dashboard`, ta strona mówi, że podsumowanie jest niedostępne, i nie wymyśla zer. Pozostałe strony nadal pokazują pola, które już rozumieją. Gdy `dashboard` jest obecny, ale błędny, albo którekolwiek skopiowane pole nie zgadza się ze źródłem, cała migawka jest odrzucana. Licznik, który już jest za duży dla bezpiecznej liczby JavaScript w `network`, `users`, `chat`, `search` lub `transfers`, nadal uniemożliwia odczyt migawki; zapis dziesiętny tego nie obchodzi. Nieznane pola są usuwane i nie trafiają do eksportu.
 
 Panel nie wyświetla kont, banów ani zdarzeń audytu i nie wysyła żądania konserwacji. Lokalne obserwacje wyszukiwania i transferów w przeglądarce zostają na swoich stronach i nie wchodzą do tego podsumowania.
+
+Strona może też pokazać opcjonalny obiekt `monitoring`, gdy status go zawiera. Sam obiekt `dashboard` pozostaje bez zmian i nadal nie czyta zegara ani nie liczy tempa. Gdy brakuje `monitoring`, strona nie wymyśla zer dla tej próbki. Zobacz [Monitorowanie](MONITORING.md).

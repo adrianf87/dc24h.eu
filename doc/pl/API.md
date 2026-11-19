@@ -1,5 +1,6 @@
 # Lokalne API administracyjne — alpha-0.1.9
 
+**alpha-0.9.11 Monitorowanie:** [CPU, pamięć, sesje i opóźnienia](MONITORING.md) publikuje jedną próbkę procesu i liczniki sesji na istniejącym statusie z bearer. To nie jest monitor hosta ani zapisana historia. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.10 Logowanie:** [Bezpieczne logi i rejestrowanie zdarzeń](LOGGING_SECURITY.md) utrzymuje plik logu jako prywatny dla właściciela i zapisuje stałe skutki bezpieczeństwa bez danych klienta. To nie jest audyt produkcyjny. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.9 Bezpieczeństwo systemu:** [Utwardzenie usługi Debian i Ubuntu](SYSTEM_SECURITY.md) dodaje jeden przykład systemd, który uruchamia hub jako zablokowanego użytkownika systemowego bez nowych uprawnień i ze ścisłym systemem plików. Budowanie nie instaluje ani nie uruchamia tej usługi. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.8 Bezpieczeństwo bazy danych:** [Kopia MariaDB i obsługa awarii](DATABASE_SECURITY.md) zapisuje jedną spójną kopię tylko dla właściciela, gdy operator o to poprosi, i odtwarza ją wyłącznie do pustych tabel tego samego schematu. Utracone potwierdzenie nie jest powtarzane. Kopie poza hostem zostają przy operatorze. Schemat v9 pozostaje bez zmian.
@@ -222,6 +223,8 @@ alpha-0.9.7 nie dodaje trasy ani pola statusu. Odczyty utrzymaniowe wymagają te
 alpha-0.9.6 nie dodaje trasy ani pola statusu. Rozdzielenie haseł konta i zapieczętowane odszyfrowanie GPA/PAS zostają w hubie. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Bezpieczeństwo konta](ACCOUNT_SECURITY.md).
 
 alpha-0.9.5 nie dodaje trasy ani pola statusu. Polityka liścia i szyfrów ADCS zostaje w hubie. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Bezpieczeństwo TLS](TLS_SECURITY.md).
+
+alpha-0.9.11 dodaje obiekt `monitoring` w tej samej odpowiedzi statusu. To jedna próbka procesu oraz liczniki sesji i opóźnień. Health pozostaje `{"status":"ok"}`. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Monitorowanie](MONITORING.md).
 
 Liczniki są niezależnymi odczytami atomowymi, nie jedną transakcją. `core_running` podaje tylko stan Core, nie pełne logowanie/gotowość ADC. Uptime pochodzi z zegara monotonicznego od przygotowania transportu/API po opcjonalnym połączeniu bazy; nie jest wiekiem procesu według zegara ściennego. `database.enabled` oznacza obecność skonfigurowanego połączenia startowego, nie bieżącą dostępność SQL. Żądania nie wykonują SQL. API nie zwraca adresów klientów, nicków, ramek, ścieżek, sekretów ani ustawień administracyjnych. Nieznane ścieżki (również query string) dają 404 po autoryzacji; inne metody dają 405 i `Allow: GET`. HEAD jest nieobsługiwane (405), bez treści odpowiedzi.
 

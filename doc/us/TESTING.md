@@ -1,5 +1,6 @@
 # Testing
 
+**alpha-0.9.11 Monitoring:** [CPU, memory, sessions and latency](MONITORING.md) publishes one process sample and session gauges on the existing bearer-only status route. This is not a host monitor or a stored history. Schema v9 is unchanged.
 **alpha-0.9.10 Logging:** [Secure logs and event recording](LOGGING_SECURITY.md) keeps a log file private to its owner and records fixed security outcomes without peer data. This is not a production audit. Schema v9 is unchanged.
 **alpha-0.9.9 System security:** [Debian and Ubuntu service hardening](SYSTEM_SECURITY.md) ships one systemd example that runs the hub as a locked system user with no new privileges and a strict filesystem. The build does not install or start that service. Schema v9 is unchanged.
 **alpha-0.9.8 Database security:** [MariaDB backup and failure handling](DATABASE_SECURITY.md) writes one consistent owner-only snapshot when the operator asks, and restores it only into empty tables of the same schema. A lost acknowledgement is not replayed. Off-host copies stay with the operator. Schema v9 is unchanged.
@@ -412,6 +413,7 @@ Run `ctest --test-dir build --output-on-failure` and the equivalent for `build-r
 | `configuration.process` | Actual limits, TLS configuration, dry-run side effects and file safety |
 | `logging.unit` | Severity, sanitization/UTF-8 boundaries, concurrency, budget rollover, private mode 0600 files, fixed security records and PL messages |
 | `logging.process` | TCP/TLS lifecycle, privacy, independent warnings, INI overrides, error sink, refused mode 0644 and a partial-frame security record |
+| `monitoring.unit` | Process stat parsing, tick and page conversion, overflow and a live `/proc/self/stat` sample |
 | `security.unit` | Range boundaries, fake-clock windows, key/map bounds, pruning and slot reuse |
 | `security.process` | Real IP/TLS quotas, frame/invalid budgets, absolute deadlines and INI/CLI |
 | `adc.ncdc` | Real ncdc initial HSUP through plaintext recording relay |

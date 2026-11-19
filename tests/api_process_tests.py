@@ -62,7 +62,7 @@ class Fixture:
                 if not part:
                     break
                 response.extend(part)
-                self.case.assertLess(len(response), 8192)
+                self.case.assertLess(len(response), 8448)
         return bytes(response)
 
     def decode(self, raw, expected=200, head=False):
@@ -99,7 +99,7 @@ class ApiProcessTests(unittest.TestCase):
         self.assertEqual(directory, {'schema': 1, 'truncated': False, 'users': []})
         snapshot = fetch_status(fx.endpoint, fx.token)
         self.assertEqual(snapshot['api_version'], 'v1')
-        self.assertEqual(snapshot['server']['version'], 'alpha-0.9.10')
+        self.assertEqual(snapshot['server']['version'], 'alpha-0.9.11')
         self.assertTrue(snapshot['server']['core_running'])
         board = snapshot['dashboard']
         self.assertEqual(board['schema'], 1)
@@ -144,6 +144,25 @@ class ApiProcessTests(unittest.TestCase):
         self.assertEqual(public['authentication']['login_timeout_seconds'], 30)
         self.assertFalse(public['authentication']['enabled'])
         self.assertNotIn(str(fx.folder), json.dumps(snapshot))
+        sample = snapshot['monitoring']
+        self.assertEqual(set(sample), {
+            'available', 'cpu_user_ms', 'cpu_system_ms', 'cpu_window_ms', 'cpu_delta_ms', 'rss_bytes',
+            'sessions_accepted', 'sessions_negotiating', 'sessions_identified', 'sessions_ready',
+            'sessions_closing', 'sessions_closed', 'sessions_created', 'sessions_completed',
+            'login_samples', 'login_last_ms', 'login_max_ms',
+            'reactor_samples', 'reactor_last_ms', 'reactor_max_ms'})
+        self.assertIs(sample['available'], True)
+        self.assertGreater(int(sample['rss_bytes']), 0)
+        self.assertEqual(sample['cpu_window_ms'], '0')
+        self.assertEqual(sample['login_samples'], '0')
+        self.assertGreater(int(sample['reactor_samples']), 0)
+        self.assertGreaterEqual(int(sample['reactor_max_ms']), int(sample['reactor_last_ms']))
+        self.assertNotIn('/proc', json.dumps(snapshot))
+        time.sleep(0.05)
+        _, again = fx.decode(fx.request())
+        self.assertGreaterEqual(int(again['monitoring']['cpu_window_ms']), 1)
+        self.assertGreaterEqual(int(again['monitoring']['cpu_user_ms']), int(sample['cpu_user_ms']))
+        self.assertGreaterEqual(int(again['monitoring']['cpu_system_ms']), int(sample['cpu_system_ms']))
         hub.stop(); self.assertFalse(fx.endpoint.exists())
         self.assertIn(b'Local API listening', hub.log)
         self.assertNotIn(fx.token.encode(), hub.log)

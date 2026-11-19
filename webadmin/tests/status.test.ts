@@ -78,3 +78,36 @@ test("search counters and settings reject malformed or unsafe values", async () 
   }
   for (const value of [null, {}, { statistics: searchSnapshot.statistics }]) assert.throws(() => parseSnapshot({ ...snapshot, search: value }));
 });
+
+const monitoring = {
+  available: true,
+  cpu_user_ms: "1024",
+  cpu_system_ms: "256",
+  cpu_window_ms: "1000",
+  cpu_delta_ms: "40",
+  rss_bytes: "1048576",
+  sessions_accepted: "1",
+  sessions_negotiating: "0",
+  sessions_identified: "2",
+  sessions_ready: "4",
+  sessions_closing: "0",
+  sessions_closed: "0",
+  sessions_created: "9",
+  sessions_completed: "3",
+  login_samples: "5",
+  login_last_ms: "40",
+  login_max_ms: "250",
+  reactor_samples: "8",
+  reactor_last_ms: "1",
+  reactor_max_ms: "12",
+};
+
+test("monitoring sample is optional, allowlisted and decimal", () => {
+  assert.equal(parseSnapshot(snapshot).monitoring, undefined);
+  const parsed = parseSnapshot({ ...snapshot, monitoring: { ...monitoring, cmdline: "/secret" } });
+  assert.deepEqual(parsed.monitoring, monitoring);
+  assert.ok(!JSON.stringify(parsed).includes("/secret"));
+  for (const value of [null, {}, { ...monitoring, available: "yes" }, { ...monitoring, rss_bytes: "01" }, { ...monitoring, cpu_user_ms: "-1" }]) {
+    assert.throws(() => parseSnapshot({ ...snapshot, monitoring: value }));
+  }
+});

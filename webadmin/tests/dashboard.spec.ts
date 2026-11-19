@@ -7,7 +7,7 @@ import { searchSnapshot } from "./fixtures.ts";
 
 const base = {
   api_version: "v1",
-  server: { name: "dc24h.eu", version: "alpha-0.9.10", core_running: true, uptime_seconds: 3661 },
+  server: { name: "dc24h.eu", version: "alpha-0.9.11", core_running: true, uptime_seconds: 3661 },
   network: {
     active_connections: 7, accepted_connections: 48, adc_frames: 144, adcs_handshakes: 3,
     security_rejected: 2, security_closed: 1, rejected_connections: 5, closed_connections: 41,
@@ -97,4 +97,27 @@ test("a malformed dashboard clears the snapshot", async ({ page }) => {
   await expect(page.getByText("Connection lost", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Export snapshot" })).toBeDisabled();
   await expect(page.getByTestId("hub-dashboard")).toContainText("does not publish the dashboard summary");
+});
+
+const monitoring = {
+  available: true,
+  cpu_user_ms: "1024", cpu_system_ms: "256", cpu_window_ms: "1000", cpu_delta_ms: "40", rss_bytes: "1048576",
+  sessions_accepted: "1", sessions_negotiating: "0", sessions_identified: "2", sessions_ready: "4",
+  sessions_closing: "0", sessions_closed: "0", sessions_created: "9", sessions_completed: "3",
+  login_samples: "5", login_last_ms: "40", login_max_ms: "250",
+  reactor_samples: "8", reactor_last_ms: "1", reactor_max_ms: "12",
+};
+
+test("dashboard shows the process sample without treating it as a host history", async ({ page }) => {
+  await page.route("**/admin-api/v1/status", (route) => route.fulfill({
+    json: { ...full, monitoring: { ...monitoring, cmdline: "ProcessSecret" } },
+  }));
+  await page.goto("/#dashboard");
+  const values = page.getByTestId("dashboard-process").locator(".metric-value");
+  await expect(values.nth(0)).toHaveText("1,024");
+  await expect(values.nth(4)).toHaveText("1.0 MiB");
+  await expect(values.nth(12)).toHaveText("40 ms");
+  await expect(values.nth(13)).toHaveText("250 ms");
+  await expect(page.getByText("ProcessSecret")).toHaveCount(0);
+  await expect(page.getByText("One sample of this process. Not a host total and not a stored history.").first()).toBeVisible();
 });

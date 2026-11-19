@@ -37,3 +37,5 @@ Each group links to the existing detail page: users to Overview, network and tra
 If `dashboard` is absent, this page says the summary is unavailable and does not invent zeros. The other pages still render the fields they already understand. If `dashboard` is present but malformed, or if any copied field disagrees with its source field, the whole snapshot is rejected. A counter that is already too large for a safe JavaScript number in `network`, `users`, `chat`, `search` or `transfers` still makes the snapshot unavailable; the decimal string does not bypass that existing check. Unknown fields are dropped and are not exported.
 
 The panel does not list accounts, bans or audit events, and it does not send a maintenance request. Browser-local search and transfer observations stay on their own pages and are not part of this summary.
+
+The page may also show the optional `monitoring` object when status includes it. The `dashboard` object itself is unchanged and still does not read the clock or compute rates. If `monitoring` is absent, the page does not invent zeros for that sample. See [Monitoring](MONITORING.md).

@@ -216,13 +216,18 @@ void SessionManager::export_presence(PresenceDirectory& out) const noexcept {
         ++out.count;
     }
 }
-void SessionManager::record_transition(Phase before, Phase after) noexcept {
+void SessionManager::record_transition(Phase before, Phase after, std::optional<std::uint64_t> login_ms) noexcept {
     if (before == after) { return; }
     --phase_count(statistics_.sessions, before);
     ++phase_count(statistics_.sessions, after);
     if (after == Phase::ready) {
         increment(statistics_.successful_logins);
         statistics_.peak_online = std::max(statistics_.peak_online, statistics_.online());
+        if (login_ms) {
+            increment(statistics_.login_samples);
+            statistics_.login_last_ms = *login_ms;
+            if (*login_ms > statistics_.login_max_ms) { statistics_.login_max_ms = *login_ms; }
+        }
     }
     if (after == Phase::closed) { increment(statistics_.completed_sessions); }
 }

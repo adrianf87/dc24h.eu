@@ -1,5 +1,6 @@
 # Local administrative API — alpha-0.1.9
 
+**alpha-0.9.11 Monitoring:** [CPU, memory, sessions and latency](MONITORING.md) publishes one process sample and session gauges on the existing bearer-only status route. This is not a host monitor or a stored history. Schema v9 is unchanged.
 **alpha-0.9.10 Logging:** [Secure logs and event recording](LOGGING_SECURITY.md) keeps a log file private to its owner and records fixed security outcomes without peer data. This is not a production audit. Schema v9 is unchanged.
 **alpha-0.9.9 System security:** [Debian and Ubuntu service hardening](SYSTEM_SECURITY.md) ships one systemd example that runs the hub as a locked system user with no new privileges and a strict filesystem. The build does not install or start that service. Schema v9 is unchanged.
 **alpha-0.9.8 Database security:** [MariaDB backup and failure handling](DATABASE_SECURITY.md) writes one consistent owner-only snapshot when the operator asks, and restores it only into empty tables of the same schema. A lost acknowledgement is not replayed. Off-host copies stay with the operator. Schema v9 is unchanged.
@@ -223,6 +224,8 @@ alpha-0.9.7 does not add a route or a status field. Maintenance reads now requir
 alpha-0.9.6 does not add a route or a status field. Account password separation and sealed GPA/PAS decryption stay inside the hub. The JSON example above is unchanged. See [Account security](ACCOUNT_SECURITY.md).
 
 alpha-0.9.5 does not add a route or a status field. The ADCS leaf and cipher policy stays inside the hub. The JSON example above is unchanged. See [TLS security](TLS_SECURITY.md).
+
+alpha-0.9.11 adds a `monitoring` object on this same status response. It is one process sample plus session and latency gauges. Health stays `{"status":"ok"}`. The JSON example above is unchanged. See [Monitoring](MONITORING.md).
 
 Counters are independently sampled atomics, not one transactional snapshot. `core_running` reports the Core lifecycle only, not complete ADC login/readiness. Uptime uses a steady clock from transport/API composition after optional database setup; it is not wall-clock process age. `database.enabled` reports configured startup connection presence, not ongoing SQL availability. No request runs SQL. Peer addresses, nicknames, frames, file paths, secrets and administrative settings are never returned. Unknown paths (including query strings) give 404 after authentication; other methods give 405 with `Allow: GET`. HEAD is unsupported (405), with no response body.
 
