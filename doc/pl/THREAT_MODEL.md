@@ -4,6 +4,8 @@ Ta analiza zapisuje, jak można atakować hub i WebAdmin, które mechanizmy już
 
 Analiza nie dodaje sprawdzenia protokołu, migracji schematu, ustawienia Apache ani mechanizmu WebAdmin. Schemat v9 pozostaje bez zmian. `configuration.manage` i `hub.manage` pozostają niezaimplementowane. Kick i mute w przeglądarce nadal nie są wysyłane. To nie jest publiczna uwierzytelniona brama i to nie jest test penetracyjny.
 
+alpha-0.9.15 bezpieczeństwo pamięci, dodane po tej analizie, buduje ten sam hub z jednym z AddressSanitizer, UndefinedBehaviorSanitizer albo ThreadSanitizer. Nie dodaje mechanizmu i nie zamyka żadnego zagrożenia. Schemat v9 pozostaje bez zmian. Zobacz [Bezpieczeństwo pamięci](MEMORY_SAFETY.md).
+
 alpha-0.9.14 optymalizacja, dodana po tej analizie, alokuje każdą ramkę routingu raz i używa ponownie zmierzonego kodowania listy powitalnej. Nie dodaje mechanizmu i nie zamyka żadnego zagrożenia. Schemat v9 pozostaje bez zmian. Zobacz [Optymalizacja](OPTIMIZATION.md).
 
 alpha-0.9.13 profilowanie, dodane po tej analizie, szereguje stały zestaw istniejących decyzji uprawnień, moderacji i ról w procesie i nazywa najwolniejszy etap. Nie dodaje mechanizmu i nie zamyka żadnego zagrożenia. Schemat v9 pozostaje bez zmian. Zobacz [Profilowanie](PROFILING.md).

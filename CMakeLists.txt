@@ -1,8 +1,29 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.9.14 LANGUAGES CXX)
+project(dc24h VERSION 0.9.15 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
+endif()
+
+# One sanitizer per build directory. AddressSanitizer and ThreadSanitizer cannot
+# share a binary. Empty is the normal Debug or Release build.
+set(DC24H_SANITIZER "" CACHE STRING
+    "One sanitizer for this build: address, undefined, or thread. Empty leaves the build uninstrumented.")
+if(DC24H_SANITIZER STREQUAL "")
+elseif(DC24H_SANITIZER STREQUAL "address")
+    add_compile_options(-fsanitize=address -fno-omit-frame-pointer -fno-sanitize-recover=address)
+    add_link_options(-fsanitize=address)
+    add_compile_definitions(DC24H_SANITIZE_ADDRESS=1)
+elseif(DC24H_SANITIZER STREQUAL "undefined")
+    add_compile_options(-fsanitize=undefined -fno-omit-frame-pointer -fno-sanitize-recover=undefined)
+    add_link_options(-fsanitize=undefined)
+    add_compile_definitions(DC24H_SANITIZE_UNDEFINED=1)
+elseif(DC24H_SANITIZER STREQUAL "thread")
+    add_compile_options(-fsanitize=thread -fno-omit-frame-pointer -fno-sanitize-recover=thread)
+    add_link_options(-fsanitize=thread)
+    add_compile_definitions(DC24H_SANITIZE_THREAD=1)
+else()
+    message(FATAL_ERROR "DC24H_SANITIZER must be address, undefined, thread, or empty")
 endif()
 
 set(DC24H_VERSION "alpha-${PROJECT_VERSION}")
@@ -874,6 +895,11 @@ if(BUILD_TESTING)
     target_compile_options(profile_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
     set_target_properties(profile_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME profile.unit COMMAND profile_tests)
+    add_executable(memory_safety_tests tests/memory_safety_tests.cpp)
+    target_link_libraries(memory_safety_tests PRIVATE Threads::Threads)
+    target_compile_options(memory_safety_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    set_target_properties(memory_safety_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME memory.safety COMMAND memory_safety_tests)
     add_executable(benchmark_tests tests/benchmark_tests.cpp)
     target_link_libraries(benchmark_tests PRIVATE dc24h_benchmark)
     target_compile_options(benchmark_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
@@ -1315,4 +1341,25 @@ if(BUILD_TESTING)
     set_tests_properties(adc.parser adc.syntax adc.process adc.security PROPERTIES TIMEOUT 30)
     set_tests_properties(core.lifecycle core.process network.unit PROPERTIES TIMEOUT 30)
     set_tests_properties(network.process PROPERTIES TIMEOUT 45)
+    if(DC24H_SANITIZER STREQUAL "address")
+        set(dc24h_sanitizer_runtime
+            "ASAN_OPTIONS=set:halt_on_error=1:abort_on_error=1:detect_leaks=1"
+            "DC24H_SANITIZER=set:address")
+    elseif(DC24H_SANITIZER STREQUAL "undefined")
+        set(dc24h_sanitizer_runtime
+            "UBSAN_OPTIONS=set:halt_on_error=1:abort_on_error=1:print_stacktrace=1"
+            "DC24H_SANITIZER=set:undefined")
+    elseif(DC24H_SANITIZER STREQUAL "thread")
+        set(dc24h_sanitizer_runtime
+            "TSAN_OPTIONS=set:halt_on_error=1:abort_on_error=1:suppressions=${CMAKE_SOURCE_DIR}/cmake/thread_sanitizer.supp"
+            "DC24H_SANITIZER=set:thread")
+    else()
+        set(dc24h_sanitizer_runtime "")
+    endif()
+    if(dc24h_sanitizer_runtime)
+        get_property(dc24h_tests DIRECTORY PROPERTY TESTS)
+        if(dc24h_tests)
+            set_tests_properties(${dc24h_tests} PROPERTIES ENVIRONMENT_MODIFICATION "${dc24h_sanitizer_runtime}")
+        endif()
+    endif()
 endif()

@@ -198,6 +198,8 @@ class SystemdSandboxTests(unittest.TestCase):
         return properties
 
     def test_hub_under_sandbox(self):
+        if os.environ.get("DC24H_SANITIZER") in {"address", "thread"}:
+            self.skipTest("MemoryDenyWriteExecute blocks this sanitizer runtime; the shipped unit is unchanged")
         if os.geteuid() != 0:
             self.skipTest("systemd sandbox requires root or passwordless sudo")
         name = "dc24h-sandbox-" + secrets.token_hex(4)

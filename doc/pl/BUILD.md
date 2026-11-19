@@ -122,7 +122,7 @@ ctest --test-dir build-release --output-on-failure
 
 `-DBUILD_TESTING=OFF` wyłącza testy i wymaganie Pythona. `cmake --install build-release --prefix /usr/local` instaluje sam program (może wymagać sudo). Katalogi językowe są wkompilowane. Wersja pochodzi z CMake; `--version` zwraca alpha-0.4.10. Dokładną kompilację identyfikuje także `git rev-parse HEAD`. Nie edytuj plików generowanych. Wymagane są biblioteki Connector/C MariaDB; działający serwer SQL jest opcjonalny. Node.js i Apache2 nie są wymagane do budowania C++; frontend ma osobne wymagania.
 
-Pełne polecenia konfiguracji AddressSanitizer/UndefinedBehaviorSanitizer: [BUILD US](../us/BUILD.md). Osobne budowanie frontendu: [WEBADMIN.md](WEBADMIN.md).
+Jeden sanitizer na build: [Bezpieczeństwo pamięci](MEMORY_SAFETY.md). `DC24H_SANITIZER` przyjmuje `address`, `undefined` albo `thread`. Zwykły Debug i Release zostawiają przełącznik pusty. Nie łącz sanitizerów w jednym programie. Osobne budowanie frontendu: [WEBADMIN.md](WEBADMIN.md).
 
 Instalacja obejmuje program i `etc/dc24h/dc24h.ini.example` względem wybranego prefiksu; nie instaluje aktywnej konfiguracji ani nie uruchamia usługi.
 

@@ -131,17 +131,7 @@ sudo cmake --install build-runtime --prefix /usr/local
 
 Language catalogs are compiled into the binary. CMake generates `dc24h/version.hpp` from project version 0.4.10; `--version` prints alpha-0.4.10. Identify an exact build with that version plus `git rev-parse HEAD`. Do not edit generated files. MariaDB Connector/C development/runtime libraries are required; a running SQL server is optional. Node.js and Apache2 are not required for the C++ build; the optional frontend has separate requirements.
 
-For sanitizers:
-
-```sh
-cmake -S . -B build-sanitize -DCMAKE_BUILD_TYPE=Debug \
-  -DCMAKE_CXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' \
-  -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=address,undefined'
-cmake --build build-sanitize --parallel 2
-ctest --test-dir build-sanitize --output-on-failure
-```
-
-GCC/Clang AddressSanitizer/UndefinedBehaviorSanitizer must be available. The optional frontend build is documented in [WEBADMIN.md](WEBADMIN.md).
+For one sanitizer at a time, see [Memory safety](MEMORY_SAFETY.md). `DC24H_SANITIZER` accepts `address`, `undefined` or `thread`. Leave it empty for the normal Debug and Release builds. Do not combine sanitizers in one binary. GCC or Clang must provide the selected runtime. The optional frontend build is documented in [WEBADMIN.md](WEBADMIN.md).
 
 Installation includes the binary and `etc/dc24h/dc24h.ini.example` relative to the selected prefix; it never installs an active configuration or starts a service.
 
