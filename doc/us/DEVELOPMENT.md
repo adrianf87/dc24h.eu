@@ -120,6 +120,10 @@ alpha-0.1.10 starts from main after alpha-0.1.9. Keep browser-safe schema/format
 
 alpha-0.1.11 starts from main after alpha-0.1.10. Keep host activation, real certificates and service reloads separate from example authoring/testing. Test the exact shipped TLS/access/header policy with temporary paths/ports and no host config. A successful apache2 -t is insufficient to claim certificate/key correspondence; exercise real initialization. Keep both documentation languages and version-sensitive fixtures aligned.
 
+## System security — alpha-0.9.9
+
+Branch from main. Ship one systemd example and one sysusers example. Do not install the unit, enable it, or create the host account from the build. Keep the capability set empty. Do not add a schema migration, a status counter, an INI key, a WebAdmin page or an Apache setting. Do not claim AppArmor, SELinux, a firewall, unattended upgrades, or that residual threat T07 is closed.
+
 ## Database security — alpha-0.9.8
 
 Branch from main. Write one consistent owner-only snapshot when the operator asks, and restore it only into empty application tables of the same clean schema v9. Do not replay a lost acknowledgement. Do not add a schema migration, a status counter, an INI key, a WebAdmin page or an Apache setting. Do not claim a schedule, a replica, an off-host copy, or that residual threat T14 is closed.

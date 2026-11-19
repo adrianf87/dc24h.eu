@@ -1,0 +1,2 @@
+# Example only. The build does not run systemd-sysusers against the host.
+u dc24h - "dc24h hub" /var/lib/dc24h /usr/sbin/nologin

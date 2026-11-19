@@ -4,6 +4,8 @@ Ta analiza zapisuje, jak można atakować hub i WebAdmin, które mechanizmy już
 
 Analiza nie dodaje sprawdzenia protokołu, migracji schematu, ustawienia Apache ani mechanizmu WebAdmin. Schemat v9 pozostaje bez zmian. `configuration.manage` i `hub.manage` pozostają niezaimplementowane. Kick i mute w przeglądarce nadal nie są wysyłane. To nie jest publiczna uwierzytelniona brama i to nie jest test penetracyjny.
 
+alpha-0.9.9 bezpieczeństwo systemu, dodane po tej analizie, dodaje jeden przykład systemd, który uruchamia hub jako zablokowanego użytkownika systemowego z pustym zbiorem uprawnień i ścisłą hierarchią tylko do odczytu. Budowanie nie instaluje ani nie uruchamia tej usługi. Nie zamyka T07. Schemat v9 pozostaje bez zmian. Zobacz [Bezpieczeństwo systemu](SYSTEM_SECURITY.md).
+
 alpha-0.9.8 bezpieczeństwo bazy danych, dodane po tej analizie, zapisuje jedną spójną kopię tylko dla właściciela, gdy operator o to poprosi, i odtwarza ją wyłącznie do pustych tabel tego samego schematu. Utracone potwierdzenie zatwierdzenia nie jest powtarzane. Nie zamyka T14. Schemat v9 pozostaje bez zmian. Zobacz [Bezpieczeństwo bazy danych](DATABASE_SECURITY.md).
 
 alpha-0.9.7 bezpieczeństwo API, dodane po tej analizie, wymaga identyfikatora sesji i sekretu CSRF przy każdym wywołaniu utrzymaniowym poza dowodem hasła. Sam grant nie czyta już danych. Nie zamyka T04 ani T05. Schemat v9 pozostaje bez zmian. Zobacz [Bezpieczeństwo API](API_SECURITY.md).
@@ -85,7 +87,7 @@ Obecny mechanizm: [API](API.md), [WebAdmin](WEBADMIN.md) i [proxy Apache2](APACH
 
 Katalog gniazda jest prywatny dla właściciela, a poświadczenie drugiej strony musi mieć ten sam efektywny UID. Root i każdy proces tego użytkownika może się połączyć i podać token, jeśli odczyta plik tokena. API ma mały limit połączeń i krótki czas żądania. Ten limit nie jest granicą uprawnień między programami tego samego użytkownika.
 
-Obecny mechanizm: [API](API.md). Ryzyko szczątkowe: przejęcie tego samego UID i roota zostaje wewnątrz granicy zaufania.
+Obecny mechanizm: [API](API.md) i [Bezpieczeństwo systemu](SYSTEM_SECURITY.md). Ryzyko szczątkowe: przejęcie tego samego UID i roota konta usługi zostaje wewnątrz granicy zaufania. Przykładowa jednostka nie jest włączana przez budowanie. To nie zamyka T07.
 
 ### T08 Zdalny WebAdmin
 
@@ -143,4 +145,4 @@ Obecny mechanizm: brakujące silniki są nieobecne, a strony tak mówią. Ryzyko
 
 ## Co pozostaje osobną pracą
 
-Publiczna uwierzytelniona brama, zdalny dostęp administratora, sesje w ciasteczkach, HTTP/2, OCSP, automatyczne odnawianie certyfikatu, produkcyjny dziennik audytu, `configuration.manage`, `hub.manage` oraz kick albo mute w przeglądarce. Ten dokument nie oznacza żadnego z nich jako ukończonego.
+Publiczna uwierzytelniona brama, zdalny dostęp administratora, sesje w ciasteczkach, HTTP/2, OCSP, automatyczne odnawianie certyfikatu, produkcyjny dziennik audytu, polityka AppArmor albo SELinux, zapora, nienadzorowane aktualizacje pakietów, `configuration.manage`, `hub.manage` oraz kick albo mute w przeglądarce. Ten dokument nie oznacza żadnego z nich jako ukończonego.

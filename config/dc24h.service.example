@@ -1,0 +1,57 @@
+# Example only. Copy to /etc/systemd/system/dc24h.service after review.
+# The build does not install this into the systemd unit directory and does not enable it.
+# Adjust ExecStart when the install prefix is not /usr/local.
+[Unit]
+Description=dc24h.eu Direct Connect hub
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=dc24h
+Group=dc24h
+UMask=0077
+WorkingDirectory=/var/lib/dc24h
+ExecStart=/usr/local/bin/dc24h --config /etc/dc24h/dc24h.ini
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=20
+KillMode=mixed
+KillSignal=SIGTERM
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+StateDirectory=dc24h
+StateDirectoryMode=0700
+RuntimeDirectory=dc24h
+RuntimeDirectoryMode=0700
+LogsDirectory=dc24h
+LogsDirectoryMode=0750
+ConfigurationDirectory=dc24h
+ConfigurationDirectoryMode=0755
+
+[Install]
+WantedBy=multi-user.target

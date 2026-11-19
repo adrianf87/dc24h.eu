@@ -4,6 +4,8 @@ This analysis records how the hub and WebAdmin can be attacked, which controls a
 
 The analysis does not add a protocol check, a schema migration, an Apache setting or a WebAdmin control. Schema v9 is unchanged. `configuration.manage` and `hub.manage` stay unimplemented. Browser kick and mute are still not dispatched. This is not a public authenticated gateway and it is not a penetration test.
 
+alpha-0.9.9 system security, added after this analysis, ships one systemd example that runs the hub as a locked system user with an empty capability set and a strict read-only hierarchy. The build does not install or start that service. It does not close T07. Schema v9 is unchanged. See [System security](SYSTEM_SECURITY.md).
+
 alpha-0.9.8 database security, added after this analysis, writes one consistent owner-only snapshot when the operator asks and restores it only into empty tables of the same schema. A lost commit acknowledgement is not replayed. It does not close T14. Schema v9 is unchanged. See [Database security](DATABASE_SECURITY.md).
 
 alpha-0.9.7 API security, added after this analysis, requires the session id and the CSRF secret on every maintenance call except the password proof. A grant alone no longer reads. It does not close T04 or T05. Schema v9 is unchanged. See [API security](API_SECURITY.md).
@@ -85,7 +87,7 @@ Current control: [API](API.md), [WebAdmin](WEBADMIN.md) and [Apache2 proxy](APAC
 
 The socket directory is private to the owner, and the peer credential must be the same effective UID. Root and any process of that user can connect and present the token if they can read the token file. The API has a small connection cap and a short request timeout. That cap is not an authorization boundary between programs of the same user.
 
-Current control: [API](API.md). Residual risk: same-UID and root compromise stay inside the trust boundary.
+Current control: [API](API.md) and [System security](SYSTEM_SECURITY.md). Residual risk: same-UID and root compromise of the service account stay inside the trust boundary. The example unit is not enabled by the build. That does not close T07.
 
 ### T08 Remote WebAdmin
 
@@ -143,4 +145,4 @@ Current control: the missing engines are absent, and the pages say so. Residual 
 
 ## What remains separate work
 
-A public authenticated gateway, remote administrator access, cookie sessions, HTTP/2, OCSP, automatic certificate renewal, production audit logging, `configuration.manage`, `hub.manage`, and browser kick or mute. This document does not mark any of them done.
+A public authenticated gateway, remote administrator access, cookie sessions, HTTP/2, OCSP, automatic certificate renewal, production audit logging, an AppArmor or SELinux policy, a firewall, unattended package upgrades, `configuration.manage`, `hub.manage`, and browser kick or mute. This document does not mark any of them done.

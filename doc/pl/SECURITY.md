@@ -1,5 +1,6 @@
 # Bezpieczeństwo — alpha-0.1.7
 
+**alpha-0.9.9 Bezpieczeństwo systemu:** [Utwardzenie usługi Debian i Ubuntu](SYSTEM_SECURITY.md) dodaje jeden przykład systemd, który uruchamia hub jako zablokowanego użytkownika systemowego bez nowych uprawnień i ze ścisłym systemem plików. Budowanie nie instaluje ani nie uruchamia tej usługi. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.8 Bezpieczeństwo bazy danych:** [Kopia MariaDB i obsługa awarii](DATABASE_SECURITY.md) zapisuje jedną spójną kopię tylko dla właściciela, gdy operator o to poprosi, i odtwarza ją wyłącznie do pustych tabel tego samego schematu. Utracone potwierdzenie nie jest powtarzane. Kopie poza hostem zostają przy operatorze. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.7 Bezpieczeństwo API:** [Uprawnienia, sesje i CSRF](API_SECURITY.md) wymaga identyfikatora sesji i sekretu CSRF przy każdym wywołaniu utrzymaniowym poza dowodem hasła. Sam grant nie czyta już danych. Skopiowanie wszystkich trzech wartości z pamięci strony nadal działa do końca slotu. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.6 Bezpieczeństwo konta:** [Hasła, GPA/PAS i ochrona sekretów](ACCOUNT_SECURITY.md) odmawia hasła ADC identycznego z hasłem konta i odszyfrowuje to hasło dopiero po budżecie prób konta i sprawdzeniu bana. Zgadywanie online, przechwycony PAS przy wyłączonym require_tls oraz kubełki czyszczone restartem zostają. Schemat v9 pozostaje bez zmian.
@@ -209,6 +210,10 @@ Nie umieszczaj tokena w pamięci przeglądarki, JavaScript, URL, zmiennych VITE 
 ## Przykład HTTPS Apache2 — alpha-0.1.11
 
 TLS i logowanie WWW są osobnymi mechanizmami. Szablon wybiera TLS 1.2/1.3 z AEAD, ustala host przekierowania, zachowuje Require local, blokuje prywatne/ukryte/sekretne ścieżki i wyłącza indeksy/symlinki. HSTS jest krótki, tylko dla hosta i HTTPS; CSP/no-sniff/referrer/frame obejmują błędy. Przed użyciem zweryfikuj zaufanie/nazwę/zgodność klucza; sama składnia nie dowodzi zgodności. Szablon nie ujawnia tokena i nie aktywuje bramy produkcyjnej. Zobacz [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
+
+## Bezpieczeństwo systemu — alpha-0.9.9
+
+[Bezpieczeństwo systemu](SYSTEM_SECURITY.md) dodaje jeden przykład systemd. Hub działa jako użytkownik `dc24h` z pustym zbiorem uprawnień, `NoNewPrivileges` i `ProtectSystem=strict`. Budowanie nie instaluje ani nie uruchamia usługi. Ścieżki zapisywalne to katalogi stanu, uruchomieniowy i dziennika tworzone dla tej jednostki. To nie zamyka zagrożenia szczątkowego T07. Schemat v9 pozostaje bez zmian. Nie dodano licznika statusu, strony WebAdmin, klucza INI ani ustawienia Apache.
 
 ## Bezpieczeństwo bazy danych — alpha-0.9.8
 

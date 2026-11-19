@@ -32,7 +32,7 @@ ctest --test-dir build --output-on-failure
 ./build/dc24h --language pl --listen 127.0.0.1:1511
 ```
 
-Uruchamiaj jako zwykły użytkownik. Program działa na pierwszym planie i kończy po Ctrl+C/SIGTERM. Nie tworzy PID-file, nie zmienia firewalla, nie instaluje i nie uruchamia usługi. Pod systemd można użyć Type=simple, pełnej ścieżki ExecStart, dedykowanego użytkownika i stderr w journalu.
+Uruchamiaj jako zwykły użytkownik. Program działa na pierwszym planie i kończy po Ctrl+C/SIGTERM. Nie tworzy PID-file, nie zmienia firewalla, nie instaluje i nie uruchamia usługi. [Bezpieczeństwo systemu](SYSTEM_SECURITY.md) dodaje przykład Type=simple z pełną ścieżką ExecStart, zablokowanym użytkownikiem i stderr w journalu. Budowanie nie włącza tej jednostki.
 
 ADCS wymaga własnego certyfikatu i klucza z prawami odczytu dla usługi; zobacz [ADCS_TLS.md](ADCS_TLS.md). Program nie pozyskuje ani nie odnawia certyfikatów. Apache2 jest opcjonalny dla statycznego WebAdmin i dla lokalnego proxy z listą dozwoloną. Publiczna uwierzytelniona brama pozostaje osobnym zadaniem. Połączenie MariaDB jest opcjonalne i domyślnie wyłączone. Zobacz [DATABASE.md](DATABASE.md). Opcje portów i języka: [CONFIGURATION.md](CONFIGURATION.md).
 
