@@ -1,3 +1,5 @@
+import {ACCESS_ROUTES} from "../src/lib/access.ts";
+import {PERMISSION_KEYS} from "../src/lib/roles.ts";
 import {administration} from "./admin-fixture.ts";
 import assert from "node:assert/strict";
 import {test} from "node:test";
@@ -12,11 +14,13 @@ test("account adapter requires same-origin forms and redacts service credentials
  const dir=mkdtempSync(join(tmpdir(),"dc24h-accounts-adapter-")),socket=join(dir,"api.sock"),token="b".repeat(64);
  const ban={id:"7",kind:"ip",subject:"192.0.2.1",reason:"Policy",created_at:1,expires_at:null,created_by:"1",revoked_at:null,revoked_by:null,revision:"1"};
  const account={id:"1",name:"Test",role:"registered",status:"disabled",revision:"1",created_at:1,updated_at:1,last_login_at:null};
- let writes=0, observed="", authorization="", staffMode=true, backendPath="";
- const backend=createServer((req,res)=>{authorization=String(req.headers.authorization);backendPath=req.url??"";let data="";req.on("data",c=>data+=c);req.on("end",()=>{
+ let writes=0, observed="", authorization="", staffMode=true, backendPath="", grantHeader="";
+ const accessBody={maintenance:true,restart_required:true,expires_in:600,actor:{id:"1",role:"administrator",status:"active"},grant:"cd".repeat(32),permissions:PERMISSION_KEYS.map(key=>({key,granted:key!=="hub.manage",implemented:key!=="configuration.manage"&&key!=="hub.manage"})),routes:ACCESS_ROUTES.map(([method,path,permission])=>({method,path,permission,allowed:true})),token};
+ const backend=createServer((req,res)=>{authorization=String(req.headers.authorization);grantHeader=String(req.headers["x-dc24h-admin-grant"]??"");backendPath=req.url??"";let data="";req.on("data",c=>data+=c);req.on("end",()=>{
   if(req.method==="POST"){writes++;observed=data;}
+  if(data.includes("deny-grant")){res.statusCode=401;res.setHeader("Content-Type","application/json");res.end(JSON.stringify({error:"admin_grant_required",token}));return;}
   const audit={maintenance:true,restart_required:true,events:[{id:"4",occurred_at:10,action:"accounts.create",actor_id:"1",target_kind:"account",target_id:"2",outcome:"succeeded",proof:"hidden-proof"}],next_after:null,token};
-  res.setHeader("Content-Type","application/json");res.end(JSON.stringify(req.url==="/api/v1/audit"?audit:req.url?.startsWith("/api/v1/bans")?(req.method==="GET"?{bans:[ban],next_after:null,maintenance:true,restart_required:true,observed_at:100,token}:{ban:{...ban,proof:"private"},maintenance:true,restart_required:true,observed_at:100,token}):req.url==="/api/v1/admin"?{...administration,token}:req.method==="POST"?{account:{...account,verifier:"private"},maintenance:true,token}:{accounts:[staffMode&&req.url?.includes("staff_after")?{...account,role:"owner"}:account],staff_only:staffMode&&req.url?.includes("staff_after"),next_after:null,maintenance:true,token}));
+  res.setHeader("Content-Type","application/json");res.end(JSON.stringify(req.url==="/api/v1/admin/access"?accessBody:req.url==="/api/v1/audit"?audit:req.url?.startsWith("/api/v1/bans")?(req.method==="GET"?{bans:[ban],next_after:null,maintenance:true,restart_required:true,observed_at:100,token}:{ban:{...ban,proof:"private"},maintenance:true,restart_required:true,observed_at:100,token}):req.url==="/api/v1/admin"?{...administration,token}:req.method==="POST"?{account:{...account,verifier:"private"},maintenance:true,token}:{accounts:[staffMode&&req.url?.includes("staff_after")?{...account,role:"owner"}:account],staff_only:staffMode&&req.url?.includes("staff_after"),next_after:null,maintenance:true,token}));
  });});backend.listen(socket);await once(backend,"listening");
  const handler=middleware({socket,token}),adapter=createServer((req,res)=>handler(req,res,()=>res.end()));adapter.listen(0,"127.0.0.1");await once(adapter,"listening");
  const port=(adapter.address() as AddressInfo).port,host=`127.0.0.1:${port}`;
@@ -51,5 +55,13 @@ test("account adapter requires same-origin forms and redacts service credentials
   const listed=await call("POST",{...headers,"Content-Length":String(Buffer.byteLength(auditBody))},auditBody,"/admin-api/v1/audit");
   assert.equal(listed.code,200);assert.equal(JSON.parse(listed.text).events[0].action,"accounts.create");
   assert.equal(observed,auditBody);assert.ok(!listed.text.includes("hidden-proof")&&!listed.text.includes("secret")&&!listed.text.includes(token));
+  const proved=await call("GET",{"X-DC24H-Admin-Grant":"AB".repeat(32)},"","/admin-api/v1/accounts");
+  assert.equal(proved.code,200);assert.equal(grantHeader,"ab".repeat(32));
+  assert.equal((await call("GET",{"X-DC24H-Admin-Grant":"zz"},"","/admin-api/v1/accounts")).code,200);assert.equal(grantHeader,"");
+  const accessForm="actor_id=1&proof=account+proof";
+  const provedAccess=await call("POST",{...headers,"Content-Length":String(Buffer.byteLength(accessForm)),"X-DC24H-Admin-Grant":"CD".repeat(32)},accessForm,"/admin-api/v1/admin/access");
+  assert.equal(provedAccess.code,200);assert.equal(JSON.parse(provedAccess.text).grant,"cd".repeat(32));assert.ok(!provedAccess.text.includes(token));assert.equal(grantHeader,"cd".repeat(32));
+  const denied=await call("POST",{...headers,"Content-Length":String(Buffer.byteLength("deny-grant=1"))},"deny-grant=1","/admin-api/v1/accounts");
+  assert.equal(denied.code,401);assert.equal(JSON.parse(denied.text).error,"admin_grant_required");assert.ok(!denied.text.includes(token));
  } finally {adapter.close();backend.close();adapter.closeAllConnections();backend.closeAllConnections();await Promise.all([once(adapter,"close"),once(backend,"close")]);rmSync(dir,{recursive:true,force:true});}
 });

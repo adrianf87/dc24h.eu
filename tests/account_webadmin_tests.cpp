@@ -6,6 +6,7 @@
 #include <chrono>
 #include <iostream>
 #include <source_location>
+#include <thread>
 
 namespace {
 using namespace dc24h;
@@ -26,15 +27,34 @@ void run(const database::Options& options) {
     require(repository.list_after(actor.account.id().value(),1).at(0).account.id()==target.account.id());
     require(repository.list_after(target.account.id().value()).empty());
     auto handler=api::account_handler(options);
-    auto call=[&](std::string method,std::string path,std::string body={}) {return handler(api::Request{std::move(method),std::move(path),{},std::move(body)});};
+    std::string grant;
+    auto call=[&](std::string method,std::string path,std::string body={},bool use_grant=true) {
+        api::Request request;
+        request.method=std::move(method);request.target=std::move(path);request.body=std::move(body);
+        if(use_grant){request.admin_grant=grant;}
+        return handler(request);
+    };
+    auto take_grant=[&](const std::string& http) {
+        const auto marker=std::string("\"grant\":\"");
+        const auto at=http.find(marker);require(at!=std::string::npos&&http.size()>=at+marker.size()+64);
+        grant=http.substr(at+marker.size(),64);require(grant.find_first_not_of("0123456789abcdef")==std::string::npos);
+    };
+    const auto actor_id=std::to_string(actor.account.id().value());
+    const auto proved=call("POST","/api/v1/admin/access","actor_id="+actor_id+"&proof=WebAdmin+operator+password!",false);
+    require(proved.starts_with("HTTP/1.1 200")&&proved.find("verifier")==std::string::npos);
+    take_grant(proved);
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
     const auto listed=call("GET","/api/v1/accounts?after=0");
     require(listed.starts_with("HTTP/1.1 200")&&listed.find("WebAdminTarget")!=std::string::npos&&listed.find("verifier")==std::string::npos);
     require(call("GET","/api/v1/accounts?after=-1").starts_with("HTTP/1.1 400"));
     require(call("GET","/api/v1/accounts/999999999").starts_with("HTTP/1.1 404"));
     require(call("POST","/api/v1/accounts","name=X&name=Y").starts_with("HTTP/1.1 400"));
     require(call("POST","/api/v1/accounts","x=y").starts_with("HTTP/1.1 429"));
-    handler=api::account_handler(options);
-    require(call("POST","/api/v1/accounts","actor_id="+std::to_string(actor.account.id().value())+"&proof=Incorrect+administrator+password!&name=NoAccount&password=WebAdmin+test+password!").starts_with("HTTP/1.1 403"));
+    handler=api::account_handler(options);grant.clear();
+    const auto proved_again=call("POST","/api/v1/admin/access","actor_id="+actor_id+"&proof=WebAdmin+operator+password!",false);
+    require(proved_again.starts_with("HTTP/1.1 200"));take_grant(proved_again);
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    require(call("POST","/api/v1/accounts","actor_id="+actor_id+"&proof=Incorrect+administrator+password!&name=NoAccount&password=WebAdmin+test+password!").starts_with("HTTP/1.1 403"));
     require(repository.list_after().size()==2);
     const auto stale_actor=actor;
     actor=repository.update(actor,std::get<Account>(actor.account.with_access(Role::administrator,Status::active,now)));

@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.8.9.
+Current development version: alpha-0.8.10.
+
+[Admin API — alpha-0.8.10](us/ADMIN_API.md) · [PL](pl/ADMIN_API.md)
 
 [Audit Logs — alpha-0.8.9](us/AUDIT_LOGS.md) · [PL](pl/AUDIT_LOGS.md)
 

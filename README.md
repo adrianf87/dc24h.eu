@@ -2,12 +2,13 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.8.9 (Audit Logs).**
+**Current development version: alpha-0.8.10 (Admin API).**
 
 CI on `main`: [custom runner `server-747585786`](doc/us/GITHUB_CI.md) runs C++ and WebAdmin on its Debian 13 host · [PL](doc/pl/GITHUB_CI.md).
 
 Completed increments (older bullets describe their original delivery scope):
 
+- **alpha-0.8.10 Admin API**: a password proof issues a short-lived in-memory grant. Maintenance reads and writes require that grant in addition to the process token. Status and health stay token-only. Configuration writes and live hub administration remain pending. See [Admin API](doc/us/ADMIN_API.md).
 - **alpha-0.8.9 Audit Logs**: schema v9 records successful account, ownership and ban maintenance. An active account with audit.read lists that history. Refusals, passwords, proofs, free-text reasons and live kick or mute stay outside the table. See [Audit Logs](doc/us/AUDIT_LOGS.md).
 - **alpha-0.8.8 Moderation Rules**: one allocation-free check of the actor permission and the operation target for kick, mute, unmute, account/CID/IP bans and ban revocation. Schema v8 is unchanged. See [Moderation Rules](doc/us/MODERATION_RULES.md).
 - **alpha-0.8.7 Mute**: independent live public/private chat mute, authenticated role hierarchy, +mute/+unmute, session lifetime and bilingual read-only monitoring. Schema v8 is unchanged. See [Mute](doc/us/MUTE.md).

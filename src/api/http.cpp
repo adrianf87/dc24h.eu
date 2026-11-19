@@ -83,6 +83,10 @@ ParseResult parse_request(std::string_view bytes, bool allow_form) {
             host = true;
         }
         if (key == "authorization") { request.authorization = value; }
+        if (key == "x-dc24h-admin-grant") {
+            if (!valid_token(value)) { return {ParseState::invalid, {}}; }
+            request.admin_grant = std::string(value);
+        }
         offset = next + 2;
     }
     if (!host) { return {ParseState::invalid, {}}; }

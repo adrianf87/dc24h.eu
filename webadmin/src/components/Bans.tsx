@@ -1,4 +1,5 @@
 import {useEffect,useRef,useState} from "react";
+import {adminHeaders} from "../lib/adminAccess";
 import {BAN_FILTERS,DURATION_UNITS,banState,durationSeconds,matchesFilter,parseBanResult,parseBans,remainingSeconds,serverTime} from "../lib/bans";
 import type {Ban,BanClock,BanFilter} from "../lib/bans";
 import {readAccountResponse} from "../lib/accounts";
@@ -13,7 +14,7 @@ export function Bans({t}:{t:Copy}){
  const pending=useRef<AbortController|null>(null);const form=useRef<HTMLFormElement>(null);
  async function load(after="0",state:BanFilter=filter){
   pending.current?.abort();const controller=new AbortController();pending.current=controller;setBusy(true);setMessage("");const timer=setTimeout(()=>controller.abort(),5000);
-  try{const response=await fetch(`./admin-api/v1/bans?after=${after}${state==="all"?"":`&state=${state}`}`,{cache:"no-store",credentials:"same-origin",redirect:"error",signal:controller.signal});if(!response.ok)throw new Error();
+  try{const response=await fetch(`./admin-api/v1/bans?after=${after}${state==="all"?"":`&state=${state}`}`,{cache:"no-store",credentials:"same-origin",redirect:"error",signal:controller.signal,headers:adminHeaders()});if(!response.ok)throw new Error();
    const result=parseBans(await readAccountResponse(response));if(pending.current!==controller||controller.signal.aborted)return;
    observe(result.observed_at);setExpiryMode("permanent");setItems(result.bans);setNext(result.next_after);setCursor(after);setSelected(null);setAvailable(true);
   }catch{if(pending.current===controller){setItems([]);setSelected(null);setNext(null);setAvailable(false);setClock(null);setMessage(t.accountsUnavailable);}}
@@ -28,7 +29,7 @@ export function Bans({t}:{t:Copy}){
   }else{const expiry=String(data.get("expires_at")??"");body.set("expires_at",expiryMode==="absolute"?String(Math.floor(new Date(expiry).getTime()/1000)):"");}}
   const path=selected?`/${selected.id}/revoke`:"";setBusy(true);setMessage("");element.reset();setExpiryMode("permanent");
   const controller=new AbortController();pending.current=controller;const timer=setTimeout(()=>controller.abort(),20000);
-  try{const response=await fetch(`./admin-api/v1/bans${path}`,{method:"POST",cache:"no-store",credentials:"same-origin",redirect:"error",signal:controller.signal,headers:{"Content-Type":"application/x-www-form-urlencoded","X-DC24H-Admin":"1"},body});
+  try{const response=await fetch(`./admin-api/v1/bans${path}`,{method:"POST",cache:"no-store",credentials:"same-origin",redirect:"error",signal:controller.signal,headers:{"Content-Type":"application/x-www-form-urlencoded","X-DC24H-Admin":"1",...adminHeaders()},body});
    const result=await readAccountResponse(response) as Record<string,unknown>;if(pending.current!==controller)return;
    if(!response.ok){setMessage(result.error==="outcome_unknown"?t.accountsUnknown:response.status===409?t.accountsStale:t.accountsRefused);return;}
    const saved=parseBanResult(result),ban=saved.ban;observe(saved.observed_at);setSelected(ban);

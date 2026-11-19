@@ -1,5 +1,15 @@
 # Changelog
 
+## alpha-0.8.10 — 2026-11-19
+
+Admin API — proven administrative access in C++, based on main `d7c5908`. No automatic merge. The branch name is `alpha-0.8.10`.
+
+- Add `POST /api/v1/admin/access`. An active account password issues one lowercase 64-hex grant for 600 monotonic seconds. The process keeps at most four grants. A new proof for the same actor replaces that grant. A full table replaces the soonest expiry. Restart clears the table. The grant is not stored in MariaDB and the proof does not append an audit row. Schema v9 is unchanged.
+- Require `X-DC24H-Admin-Grant` on maintenance account, ban, audit and discovery routes. A missing bearer token stays `unauthorized`. A missing, expired or unknown grant is `admin_grant_required`. The actor is loaded again and the route permission is recomputed. Status and health stay bearer-only. `configuration.manage` and `hub.manage` stay unimplemented and have no route. The staff directory requires `accounts.manage`.
+- Forward a well-formed grant through the private adapter and prove access from bilingual Admin Core. The password field is cleared, the grant is not shown, and it is not written to web storage. Configuration writes and live hub administration remain pending.
+
+Validation on Debian 13: all 214/214 CTest suites passed in Debug (109.45 s real) and Release (73.17 s real), including disposable MariaDB, real ncdc ADC/ADCS and proven administrative access. The Release C++ build log contained no compiler warnings. WebAdmin typecheck and production build passed. All 42 Node tests passed. All 32 Chromium tests passed. Actual C++ API, adapter and React integration passed. Release metadata, documentation UTF-8, language parity, local Markdown links and Python syntax with warnings as errors passed. Remote CI completion is not awaited. No production deployment, schema migration or account/credential mutation is performed.
+
 ## alpha-0.8.9 — 2026-11-19
 
 Audit Logs — administrative action history, based on main `e88e596`. No automatic merge. The branch name is `alpha-0.8.9`.

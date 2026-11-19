@@ -1,3 +1,4 @@
+import {adminHeaders} from "../lib/adminAccess";
 import {ACCOUNT_ROLES} from "../lib/roles";
 import { useEffect, useRef, useState } from "react";
 import { parseAccount, parseAccounts, parseStaff, isStaff, readAccountResponse } from "../lib/accounts";
@@ -14,7 +15,7 @@ export function Accounts({t,staff=false}:{t:Copy;staff?:boolean}) {
     pending.current?.abort();const controller=new AbortController();pending.current=controller;
     setBusy(true);setMessage("");const timer=setTimeout(()=>controller.abort(),5000);
     try {
-      const response=await fetch(`./admin-api/v1/accounts?${staff?"staff_after":"after"}=${after}`,{signal:controller.signal,cache:"no-store",credentials:"same-origin",redirect:"error"});
+      const response=await fetch(`./admin-api/v1/accounts?${staff?"staff_after":"after"}=${after}`,{signal:controller.signal,cache:"no-store",credentials:"same-origin",redirect:"error",headers:adminHeaders()});
       if(!response.ok)throw new Error();
       const page=(staff?parseStaff:parseAccounts)(await readAccountResponse(response));if(!alive.current||controller.signal.aborted)return;
       setItems(page.accounts);setNext(page.next_after);setCursor(after);setAvailable(true);setSelected(null);
@@ -37,7 +38,7 @@ export function Accounts({t,staff=false}:{t:Copy;staff?:boolean}) {
     element.reset();
     try {
       const response=await fetch(`./admin-api/v1/accounts${path}`,{method:"POST",signal:controller.signal,
-        credentials:"same-origin",redirect:"error",cache:"no-store",headers:{"Content-Type":"application/x-www-form-urlencoded","X-DC24H-Admin":"1"},body});
+        credentials:"same-origin",redirect:"error",cache:"no-store",headers:{"Content-Type":"application/x-www-form-urlencoded","X-DC24H-Admin":"1",...adminHeaders()},body});
       const value=await readAccountResponse(response);
       if(!value||typeof value!=="object")throw new Error();const result=value as Record<string,unknown>;
       if(!alive.current)return;

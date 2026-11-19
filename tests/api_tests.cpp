@@ -72,6 +72,11 @@ void parser() {
     for (unsigned int i = 0; i < 31; ++i) { headers += "X-" + std::to_string(i) + ": x\r\n"; }
     require(parse_request(headers + "\r\n").state == ParseState::complete);
     require(parse_request(headers + "Too-Many: x\r\n\r\n").state == ParseState::invalid);
+    const auto grant = std::string(64, 'A');
+    const auto granted = parse_request("GET / HTTP/1.1\r\nHost: x\r\nX-DC24H-Admin-Grant: " + grant + "\r\n\r\n");
+    require(granted.state == ParseState::complete && granted.request.admin_grant == grant);
+    require(parse_request("GET / HTTP/1.1\r\nHost: x\r\nX-DC24H-Admin-Grant: ab\r\n\r\n").state == ParseState::invalid);
+    require(parse_request("GET / HTTP/1.1\r\nHost: x\r\nX-DC24H-Admin-Grant: " + grant + "\r\nX-DC24H-Admin-Grant: " + grant + "\r\n\r\n").state == ParseState::invalid);
     const auto head = response(405, "{}", true);
     require(head.ends_with("\r\n\r\n") && head.find("Allow: GET") != std::string::npos);
     require(response(401, "{}").find("WWW-Authenticate: Bearer") != std::string::npos);

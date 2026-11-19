@@ -236,7 +236,7 @@ struct Server::Impl {
     std::string dispatch(const Request& request) {
         const bool head = request.method == "HEAD";
         if (!authenticate(request.authorization, token)) { return response(401, "{\"error\":\"unauthorized\"}\n", head); }
-        if (accounts && (request.target.starts_with("/api/v1/accounts") || request.target == "/api/v1/admin" || request.target.starts_with("/api/v1/bans") || request.target == "/api/v1/audit")) { return accounts(request); }
+        if (accounts && (request.target.starts_with("/api/v1/accounts") || request.target == "/api/v1/admin" || request.target == "/api/v1/admin/access" || request.target.starts_with("/api/v1/bans") || request.target == "/api/v1/audit")) { return accounts(request); }
         if (request.method != "GET") { return response(405, "{\"error\":\"method_not_allowed\"}\n", head); }
         if (request.target == "/api/v1/health") { return response(200, "{\"status\":\"ok\"}\n"); }
         if (request.target == "/api/v1/status") { return response(200, status_json(status())); }
@@ -255,7 +255,13 @@ struct Server::Impl {
             peer.input.append(buffer.data(), static_cast<std::size_t>(count));
             OPENSSL_cleanse(buffer.data(), buffer.size());
             auto parsed = parse_request(peer.input, bool(accounts));
-            struct Erase { std::string& body; ~Erase() { OPENSSL_cleanse(body.data(), body.size()); } } erase{parsed.request.body};
+            struct Erase {
+                Request& request;
+                ~Erase() {
+                    OPENSSL_cleanse(request.body.data(), request.body.size());
+                    OPENSSL_cleanse(request.admin_grant.data(), request.admin_grant.size());
+                }
+            } erase{parsed.request};
             if (parsed.state == ParseState::complete) {
                 peer.output = dispatch(parsed.request);
                 OPENSSL_cleanse(peer.input.data(), peer.input.size()); peer.input.clear();

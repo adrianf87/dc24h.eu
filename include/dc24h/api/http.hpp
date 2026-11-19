@@ -12,6 +12,8 @@ struct Request {
     std::string method;
     std::string target;
     std::string authorization;
+    // Exact 64 hex digits when the client sent X-DC24H-Admin-Grant. Empty when absent.
+    std::string admin_grant;
     std::string body;
 };
 enum class ParseState { incomplete, complete, invalid, too_large };

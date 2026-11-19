@@ -32,7 +32,8 @@ def exercise(binary, seed, config, db_socket, password, token, api_socket):
                 assert chunk, 'Maintenance startup failed'
                 logs.extend(chunk)
         assert b'Network listening' not in logs and b'ADCS listening' not in logs
-        def request(method, target_path, data=None, authorized=True, delay=False):
+        grant = {'value': ''}
+        def request(method, target_path, data=None, authorized=True, delay=False, use_grant=True, grant_header=None):
             if delay:
                 time.sleep(1.05)
             body = urlencode(data or {}).encode() if data is not None else b''
@@ -42,6 +43,11 @@ def exercise(binary, seed, config, db_socket, password, token, api_socket):
                 headers = f'{method} {target_path} HTTP/1.1\r\nHost: localhost\r\n'
                 if authorized:
                     headers += f'Authorization: Bearer {token}\r\n'
+                header_value = grant_header
+                if header_value is None and authorized and use_grant and grant['value']:
+                    header_value = grant['value']
+                if header_value is not None:
+                    headers += f'X-DC24H-Admin-Grant: {header_value}\r\n'
                 if body:
                     headers += 'Content-Type: application/x-www-form-urlencoded\r\n'
                 peer.sendall(headers.encode() + f'Content-Length: {len(body)}\r\n\r\n'.encode() + body)
@@ -49,9 +55,30 @@ def exercise(binary, seed, config, db_socket, password, token, api_socket):
                 response.begin()
                 raw = response.read()
                 assert token.encode() not in raw and proof.encode() not in raw and b'verifier' not in raw
+                if grant['value']:
+                    assert grant['value'].encode() not in raw
                 return response.status, json.loads(raw)
         assert request('GET', '/api/v1/accounts', authorized=False)[0] == 401
-        assert request('GET', '/api/v1/admin', authorized=False)[0] == 401
+        assert request('GET', '/api/v1/admin', authorized=False)[1]['error'] == 'unauthorized'
+        assert request('GET', '/api/v1/status', grant_header='ab', use_grant=False)[0] == 400
+        assert request('GET', '/api/v1/admin')[1]['error'] == 'admin_grant_required'
+        assert request('GET', '/api/v1/accounts')[1]['error'] == 'admin_grant_required'
+        assert request('GET', '/api/v1/admin/access')[0] == 405
+        assert request('POST', '/api/v1/admin/access', {'actor_id': actor, 'proof': 'not-the-password'}, use_grant=False)[0] == 403
+        code, access = request('POST', '/api/v1/admin/access', {'actor_id': actor, 'proof': proof}, delay=True, use_grant=False)
+        assert code == 200 and access['expires_in'] == 600 and access['actor']['id'] == actor
+        assert access['actor']['role'] == 'administrator' and access['actor']['status'] == 'active'
+        assert len(access['grant']) == 64 and access['grant'].islower()
+        permissions = {item['key']: item for item in access['permissions']}
+        assert permissions['configuration.manage'] == {'key': 'configuration.manage', 'granted': True, 'implemented': False}
+        assert permissions['hub.manage'] == {'key': 'hub.manage', 'granted': False, 'implemented': False}
+        assert len(access['permissions']) == 17 and len(access['routes']) == 12
+        first = access['grant']
+        code, replacement = request('POST', '/api/v1/admin/access', {'actor_id': actor, 'proof': proof}, delay=True, use_grant=False)
+        assert code == 200 and replacement['grant'] != first and first.encode() not in json.dumps(replacement).encode()
+        grant['value'] = first
+        assert request('GET', '/api/v1/admin')[1]['error'] == 'admin_grant_required'
+        grant['value'] = replacement['grant']
         code, core = request('GET', '/api/v1/admin')
         assert code == 200 and core['maintenance'] is True
         assert len(core['actions']) == 10 and [a['available'] for a in core['actions']] == [True]*6+[False]*2+[True]*2
@@ -63,7 +90,7 @@ def exercise(binary, seed, config, db_socket, password, token, api_socket):
         assert [a['id'] for a in staff['accounts']] == [actor]
         assert request('GET', '/api/v1/accounts?staff_after=00')[0] == 400
         assert request('POST', '/api/v1/accounts/owner', {'password':proof}, delay=True)[0] == 400
-        assert request('GET', '/api/v1/status')[1]['server']['core_running'] is False
+        assert request('GET', '/api/v1/status', use_grant=False)[1]['server']['core_running'] is False
         policy = request('GET', '/api/v1/status')[1]['configuration']
         assert policy['mode'] == 'maintenance' and not policy['authentication']['enabled']
         assert policy['database']['enabled'] and policy['restart_required']
@@ -132,6 +159,7 @@ def exercise(binary, seed, config, db_socket, password, token, api_socket):
         assert request('POST', '/api/v1/audit', {'actor_id': actor, 'proof': proof, 'after': '00'}, delay=True)[0] == 400
         before = request('GET', '/api/v1/admin')[1]['statistics']
         assert int(before['attempts']) > 0 and int(before['succeeded']) >= 6 and int(before['refused']) >= 4
+        assert request('POST', '/api/v1/admin', {'actor_id': actor, 'proof': proof}, delay=True)[0] == 405
         assert request('POST', '/api/v1/accounts', {'x':'y'})[0] == 429
         assert request('GET', '/api/v1/admin')[1]['statistics'] == before
         child.send_signal(signal.SIGTERM)

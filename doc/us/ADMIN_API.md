@@ -1,0 +1,17 @@
+# Admin API — alpha-0.8.10
+
+This increment adds a proven administrative grant in the C++ maintenance process. It starts from main `d7c5908`. There is no automatic merge. The branch name is `alpha-0.8.10`.
+
+Schema v9 is unchanged. The grant is not a SQL row and proving access does not append an audit row. `configuration.manage` and `hub.manage` stay unimplemented. They have no route. Configuration writes and live hub administration remain pending. Live kick and mute stay in their counters.
+
+The process bearer token remains the transport credential. `GET /api/v1/status` and `GET /api/v1/health` stay bearer-only. A grant header on those routes is ignored. A present grant header that is not 64 hexadecimal digits is a bad request on every route.
+
+`POST /api/v1/admin/access` accepts exactly `actor_id` and `proof`. The account must exist and be active. An inactive account is refused before the password is checked. A wrong password is forbidden. The response contains the actor id, role and status, `expires_in` of 600, a lowercase 64-hex grant, the seventeen permissions in catalog order, and twelve route templates. `granted` follows `allows()` with the default role table. A configured VIP mask is not applied. `implemented` is false only for `configuration.manage` and `hub.manage`. An owner would see `hub.manage` granted and unimplemented. An administrator sees it not granted. The password, proof and verifier are not in the JSON. `GET /api/v1/admin/access` is rejected. `POST /api/v1/admin` stays rejected.
+
+The process keeps at most four grants on the single API worker. A new proof for the same actor replaces that actor's grant, and the previous token stops working. A full table replaces the soonest expiry. Each comparison uses the raw 32 bytes. Restart clears the table. The grant is not written to MariaDB.
+
+Every other maintenance route requires `X-DC24H-Admin-Grant`. A missing, expired or unknown grant is `401` with `admin_grant_required`. The handler then reloads the actor, requires the account to still be active, and recomputes the route permission. A missing bearer token is still `401` with `unauthorized`, and it is checked first.
+
+`GET /api/v1/admin` accepts any live grant. Account reads, including `staff_after`, and account create, activate, disable and reset require `accounts.manage`. An operator does not have that permission, so the staff directory is not an operator route. Role changes require `roles.manage`; the engine still enforces the stronger-role rule. Password change requires `accounts.password.change`, so a registered user can still change that user's own password. The engine still refuses another account's password. Unknown account mutations accept any live grant and then return the existing not-found result. Ban reads, creates and revocations require both `users.ban` and `blocks.manage`. `POST /api/v1/audit` requires `audit.read` in addition to the existing password proof.
+
+The private adapter accepts `POST /admin-api/v1/admin/access` and forwards a well-formed grant header in lowercase. It does not invent a grant. `POST /admin-api/v1/admin` stays not found at the adapter. WebAdmin proves access from Admin Core. The password field is cleared after submit. The grant is held in page memory, is not shown, and is not written to web storage. Forget access or a reload drops it. Maintenance pages send the header when that memory holds a grant.

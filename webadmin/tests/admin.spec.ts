@@ -11,6 +11,6 @@ test("Admin Core shows process outcomes and local-only ownership, clears stale r
  await page.setViewportSize({width:390,height:844});await page.getByLabel("Interface language").selectOption("pl");
  await expect(page.getByRole("heading",{name:"Centralna administracja",level:1})).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
- available=false;await panel.getByRole("button").click();
+ available=false;await panel.getByRole("button",{name:"Odśwież konta"}).click();
  await expect(panel.locator("tbody tr")).toHaveCount(0);await expect(panel.getByRole("status")).toContainText("niedostępny");
 });

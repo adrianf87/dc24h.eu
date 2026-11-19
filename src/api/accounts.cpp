@@ -1,5 +1,6 @@
 #include "dc24h/api/accounts.hpp"
 #include "dc24h/api/http.hpp"
+#include "dc24h/admin/access.hpp"
 #include "dc24h/admin/core.hpp"
 #include "dc24h/accounts/password_security.hpp"
 #include "dc24h/accounts/registration.hpp"
@@ -105,6 +106,22 @@ std::string serve_bans(const Request& request,admin::Engine& engine,bool& writte
     const auto result=engine.execute(command);written=true;
     return response(200,"{\"maintenance\":true,\"restart_required\":true,\"observed_at\":"+std::to_string(bans::Directory::now())+",\"ban\":"+ban_json(std::get<bans::Record>(result))+"}");
 }
+std::string access_json(const admin::IssuedAccess& issued, accounts::Role role) {
+    std::string output = "{\"maintenance\":true,\"restart_required\":true,\"actor\":{\"id\":"+json_string(std::to_string(issued.id))+
+        ",\"role\":"+json_string(issued.role)+",\"status\":"+json_string(issued.status)+"},\"expires_in\":600,\"grant\":"+json_string(issued.grant)+",\"permissions\":[";
+    for (const auto& fact : admin::permission_facts(role)) {
+        if (output.back() != '[') { output += ','; }
+        output += "{\"key\":"+json_string(fact.key)+",\"granted\":"+(fact.granted?"true":"false")+",\"implemented\":"+(fact.implemented?"true":"false")+"}";
+    }
+    output += "],\"routes\":[";
+    for (const auto& route : admin::access_routes) {
+        if (output.back() != '[') { output += ','; }
+        const bool allowed = admin::catalog_allowed(role, route.permission);
+        output += "{\"method\":"+json_string(route.method)+",\"path\":"+json_string(route.path)+",\"permission\":"+json_string(route.permission)+
+            ",\"allowed\":"+(allowed?"true":"false")+"}";
+    }
+    return output+"]}";
+}
 std::string administration(const admin::Engine& engine) {
     const auto counters=engine.statistics();
     std::string output="{\"maintenance\":true,\"actions\":[";
@@ -182,12 +199,32 @@ std::string serve(const Request& request,admin::Engine& engine,bool& written) {
 }
 }
 AccountHandler account_handler(database::Options options) {
-    return [engine=admin::Engine(std::move(options),admin::Origin::maintenance_api),next=std::chrono::steady_clock::time_point{}](const Request& request) mutable {
+    admin::AccessGate gate(options);
+    return [engine=admin::Engine(std::move(options),admin::Origin::maintenance_api),gate=std::move(gate),next=std::chrono::steady_clock::time_point{}](const Request& request) mutable {
         bool written=false;
         try {
             if(request.method=="POST") {
                 const auto now=std::chrono::steady_clock::now();if(now<next){throw HttpError{429,"rate_limited"};}
                 next=now+std::chrono::seconds(1);
+            }
+            if(request.target=="/api/v1/admin/access") {
+                if(request.method!="POST"){throw HttpError{405,"method_not_allowed"};}
+                Fields fields;form(request.body,fields);fields.exact({"actor_id","proof"});
+                auto issued=gate.issue(number(fields.get("actor_id")),fields.get("proof"));
+                const auto role=parse_role(issued.role);if(!role){throw HttpError{503,"account_unavailable"};}
+                std::string body=access_json(issued, *role);
+                OPENSSL_cleanse(issued.grant.data(),issued.grant.size());issued.grant.clear();
+                auto http=response(200,body);OPENSSL_cleanse(body.data(),body.size());
+                return http;
+            }
+            if(request.admin_grant.empty()){throw HttpError{401,"admin_grant_required"};}
+            switch(gate.authorize(request.admin_grant,request.method,request.target)) {
+            case admin::GrantCheck::accepted: break;
+            case admin::GrantCheck::missing: throw HttpError{401,"admin_grant_required"};
+            case admin::GrantCheck::forbidden: throw admin::Error(admin::ErrorKind::forbidden);
+            case admin::GrantCheck::not_found: throw admin::Error(admin::ErrorKind::not_found);
+            case admin::GrantCheck::unavailable: throw admin::Error(admin::ErrorKind::unavailable);
+            case admin::GrantCheck::outcome_unknown: throw admin::Error(admin::ErrorKind::outcome_unknown);
             }
             return serve(request,engine,written);
         } catch(const HttpError& e){return response(e.status,"{\"error\":"+json_string(e.key)+"}");}

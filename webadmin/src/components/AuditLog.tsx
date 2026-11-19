@@ -1,4 +1,5 @@
 import {useEffect, useRef, useState} from "react";
+import {adminHeaders} from "../lib/adminAccess";
 import {parseAudit} from "../lib/audit";
 import type {AuditEvent} from "../lib/audit";
 import {readAccountResponse} from "../lib/accounts";
@@ -30,7 +31,7 @@ export function AuditLog({t}:{t:Copy}) {
     try {
       const response = await fetch("./admin-api/v1/audit", {
         method: "POST", cache: "no-store", credentials: "same-origin", redirect: "error", signal: controller.signal,
-        headers: {"Content-Type": "application/x-www-form-urlencoded", "X-DC24H-Admin": "1"}, body,
+        headers: {"Content-Type": "application/x-www-form-urlencoded", "X-DC24H-Admin": "1", ...adminHeaders()}, body,
       });
       const result = parseAudit(await readAccountResponse(response));
       if (pending.current !== controller) return;

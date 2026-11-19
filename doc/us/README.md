@@ -1,7 +1,8 @@
 # dc24h.eu documentation
 
-alpha-0.8.9: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.8.10: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
+- [Admin API — alpha-0.8.10](ADMIN_API.md)
 - [Audit Logs — alpha-0.8.9](AUDIT_LOGS.md)
 - [Moderation Rules — alpha-0.8.8](MODERATION_RULES.md)
 - [Mute — alpha-0.8.7](MUTE.md)
