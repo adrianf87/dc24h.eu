@@ -1,5 +1,6 @@
 # WebAdmin — alpha-0.4.12
 
+**alpha-0.9.2 ADC security:** [Parser validation, fuzzing and protocol control](ADC_SECURITY.md) checks every parsed client frame against the hub command profile before session state changes. A deterministic in-process fuzz campaign locks the parser, the stream decoder and that profile together. Schema v9 is unchanged. Coverage-guided fuzzing and a public gateway remain separate work.
 **alpha-0.9.1 Threat model:** [Hub and WebAdmin threat analysis](THREAT_MODEL.md) records assets, actors, trust boundaries and residual risk for the current hub and local WebAdmin. It does not add a control, a schema change, a public gateway or a production audit. Remote administrator access remains separate work.
 **alpha-0.8.15 Security sessions:** [Access control, CSRF, sessions and request limits](SECURITY_SESSIONS.md) binds each in-memory grant to a public session id and a separate CSRF secret. Maintenance writes require both on that same slot. Each session accepts 24 requests in 10 seconds. Reads stay grant-only. The values stay in process memory, not in SQL, cookies or web storage. A public authenticated gateway remains separate work.
 **alpha-0.8.14 Apache2 HTTPS proxy:** [HTTPS reverse proxy and API protection](APACHE2_PROXY.md) forwards an allowlisted WebAdmin API to the loopback adapter. Client bearer tokens, cookies and forwarded identity are removed. The C++ Unix socket and the service token stay out of Apache. Local access remains the default.
@@ -159,6 +160,10 @@ References: [Vite setup](https://vite.dev/guide/), [Vite server restrictions](ht
 ## HTTPS example — alpha-0.1.11
 
 A separate HTTP→HTTPS/TLS 1.2+ static-site template is now shipped and always installed with the C++ configuration examples. It keeps local access and API denial by default; it is not a production authenticated gateway. See [APACHE2_HTTPS.md](APACHE2_HTTPS.md) for certificate paths, customization, verified activation and automated tests.
+
+## ADC security — alpha-0.9.2
+
+WebAdmin is unchanged. Parser validation and protocol control run inside the hub process. No new page, grant or status field is added. See [ADC security](ADC_SECURITY.md).
 
 ## Threat model — alpha-0.9.1
 

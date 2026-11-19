@@ -94,6 +94,8 @@ alpha-0.2.4 adds the independent [SUP semantics and state adapter](ADC_SUP.md). 
 
 Reference: [ADC 1.0.4](https://adc.sourceforge.io/ADC.html), line grammar and BASE command descriptions. The independent C++20 `dc24h_adc` library parses syntax; it does not execute commands or implement a session.
 
+alpha-0.9.2 names the hub command profile in [ADC security](ADC_SECURITY.md). The parser still accepts unknown extensions and hub-legal frames, including ISID and GET. The profile runs later, in the state machine, and does not change those parse results.
+
 ## Owned result and argument layout
 
 `parse_line(string_view)` accepts one frame body **without LF** and returns `KeepAlive`, `Message` or `ParseError`. Empty LF is keepalive. A Message owns type, original command, recognized kind, optional routing source/target, ordered feature selectors and unescaped parameters. Input buffers may be released immediately. Unknown commands retain their original name and every parameter.

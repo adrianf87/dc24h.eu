@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.9.1: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.9.2: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [Bezpieczeństwo ADC — alpha-0.9.2](ADC_SECURITY.md)
 - [Model zagrożeń — alpha-0.9.1](THREAT_MODEL.md)
 - [Sesje bezpieczeństwa — alpha-0.8.15](SECURITY_SESSIONS.md)
 - [Proxy HTTPS Apache2 — alpha-0.8.14](APACHE2_PROXY.md)

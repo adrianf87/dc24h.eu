@@ -1,5 +1,7 @@
 # ADC State — alpha-0.2.3
 
+alpha-0.9.2 calls the hub command profile through [ADC security](ADC_SECURITY.md) before state and sequence checks. `control_message` is that same direction, type and command gate. Argument syntax stays in the parser.
+
 **Current increment — alpha-0.4.10:** [Chat Configuration](CHAT_CONFIGURATION.md) groups startup chat settings and adds decoded-text limits, independent public/private/action switches and optional/custom welcome. Defaults preserve previous behavior; recoverable policy refusals retain protocol validation and Anti-Flood.
 
 **Increment delivered in alpha-0.4.9:** [Anti-Flood](ANTI_FLOOD.md) adds enabled per-connection B/D/E message and decoded-byte buckets, configurable in `[chat]`. Excess messages are dropped before fanout with bounded recoverable notices; existing validation and general resource limits remain.

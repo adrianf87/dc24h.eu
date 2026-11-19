@@ -2,7 +2,7 @@ name: Check status
 
 on:
   push:
-    branches: [main, alpha-0.8.7, alpha-0.8.8, alpha-0.8.9, alpha-0.8.10, alpha-0.8.11, alpha-0.8.12, alpha-0.8.13, alpha-0.8.14, alpha-0.8.15, alpha-0.9.1]
+    branches: [main, alpha-0.8.7, alpha-0.8.8, alpha-0.8.9, alpha-0.8.10, alpha-0.8.11, alpha-0.8.12, alpha-0.8.13, alpha-0.8.14, alpha-0.8.15, alpha-0.9.1, alpha-0.9.2]
   workflow_dispatch:
 
 permissions:
