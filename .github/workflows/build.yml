@@ -35,9 +35,10 @@ jobs:
         shell: bash
         run: |
           test "$RUNNER_NAME" = server-747585786
+          test "$(id -un)" = github-runner
           . /etc/os-release
-          test "$ID" = ubuntu
-          test "$VERSION_ID" = 24.04
+          test "$ID" = debian
+          test "$VERSION_ID" = 13
           for tool in g++ cmake python3 openssl ncdc mariadbd mariadb mariadb-admin mariadb-install-db apache2; do
             command -v "$tool"
           done
@@ -67,9 +68,10 @@ jobs:
         shell: bash
         run: |
           test "$RUNNER_NAME" = server-747585786
+          test "$(id -un)" = github-runner
           . /etc/os-release
-          test "$ID" = ubuntu
-          test "$VERSION_ID" = 24.04
+          test "$ID" = debian
+          test "$VERSION_ID" = 13
           for tool in g++ cmake python3 openssl; do
             command -v "$tool"
           done

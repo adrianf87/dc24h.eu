@@ -23,8 +23,9 @@ Trzy zadania korzystają z tego jednego runnera:
   `BUILD_TESTING=OFF`; pełne testy C++ wykonuje powyższa macierz. Playwright
   instaluje Chromium dla użytkownika runnera i nie instaluje pakietów systemowych.
 
-Każde zadanie sprawdza, że `RUNNER_NAME` to `server-747585786` i że systemem jest
-Ubuntu 24.04. Kompilacja i testy korzystają z `nproc` tej maszyny, bez stałego
+Każde zadanie sprawdza, że `RUNNER_NAME` to `server-747585786`, użytkownikiem jest
+`github-runner`, a systemem jest Debian 13. Kompilacja i testy korzystają z `nproc`
+tej maszyny, bez stałego
 limitu liczby workerów i bez max-parallel w macierzy. Nie czekamy na zakończenie CI.
 Testy uruchamiają własne, odizolowane usługi.
 

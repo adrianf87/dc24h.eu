@@ -24,8 +24,9 @@ Three jobs share that one runner:
   covers the full C++ test suite. Playwright installs Chromium for the runner user
   and does not install system packages.
 
-Each job checks that `RUNNER_NAME` is `server-747585786` and that the OS is
-Ubuntu 24.04. Build and test commands use `nproc` on that machine. There is no
+Each job checks that `RUNNER_NAME` is `server-747585786`, that the user is
+`github-runner`, and that the OS is Debian 13. Build and test commands use
+`nproc` on that machine. There is no
 fixed worker-count cap and no matrix max-parallel setting. CI completion is not
 awaited. Tests start their own isolated services.
 
