@@ -1,5 +1,9 @@
 # Changelog
 
+## CI host — 2026-11-19
+
+`Check status` on custom runner `server-747585786` runs on the Debian 13 host. The job installs the toolchain, MariaDB, Apache and ncdc on that host, then runs C++ Debug, C++ Release and WebAdmin there with up to 16 workers. The earlier container checks for Ubuntu 22.04, Ubuntu 24.04, Ubuntu 26.04, Debian 12 and Debian 13 are retired. Local validation uses eight CPU threads. Remote CI completion is not awaited.
+
 ## alpha-0.8.8 — 2026-11-19
 
 Moderation Rules — shared permission and target checks, based on alpha-0.8.7 `d8fbca4fbaa8a048886f075fd209c96dc6639049` (itself based on main `bcbba253074ad7dbba8aa75752c51b1e68767475`). No automatic merge. The branch name is `alpha-0.8.8`.

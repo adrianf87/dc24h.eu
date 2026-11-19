@@ -13,11 +13,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  sequential:
-    name: dc24h.eu Docker - C++ and WebAdmin tests
+  debian13:
+    name: dc24h.eu Debian 13 host - C++ and WebAdmin tests
     if: github.repository == 'adrianf87/dc24h.eu'
     runs-on: [self-hosted, Linux, X64, server-747585786]
-    timeout-minutes: 360
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -27,133 +27,18 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Configure 16 CPU threads and 32 GiB RAM; isolate five containers
-        id: prepare
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          sudo -n true
-
-          containers=(
-            ubuntu2204-github-runner
-            ubuntu2404-github-runner
-            ubuntu2604-github-runner
-            debian12-github-runner
-            debian13-github-runner
-          )
-
-          # Legacy per-container runner services can unexpectedly restart a stopped
-          # container. Retire these services; CI controls containers via Docker only.
-          for container in "${containers[@]}"; do
-            legacy_unit="system-${container}-program-github-runner.service"
-            if systemctl is-enabled --quiet "$legacy_unit"; then
-              echo "Disabling obsolete autostart: $legacy_unit"
-              sudo -n systemctl disable "$legacy_unit"
-            fi
-            if systemctl is-active --quiet "$legacy_unit"; then
-              echo "Stopping competing runner service: $legacy_unit"
-              sudo -n systemctl stop "$legacy_unit"
-            fi
-          done
-
-          # Do not interrupt a job already executing inside an existing runner.
-          for container in "${containers[@]}"; do
-            docker inspect "$container" >/dev/null
-            if [ "$(docker inspect -f '{{.State.Running}}' "$container")" = true ] && \
-               docker exec "$container" pgrep -f '[R]unner.Worker' >/dev/null 2>&1; then
-              echo "::error::Runner in $container is executing another job; retry later."
-              exit 1
-            fi
-          done
-
-          for container in "${containers[@]}"; do
-            if [ "$(docker inspect -f '{{.State.Running}}' "$container")" = true ]; then
-              docker stop --timeout 60 "$container"
-            fi
-            test "$(docker inspect -f '{{.HostConfig.RestartPolicy.Name}}' "$container")" = no
-            test "$(docker inspect -f '{{.State.Running}}' "$container")" = false
-
-            # Persist container limits even while it is stopped.
-            docker update --cpuset-cpus=0-15 --cpus=16 \
-              --memory=32g --memory-swap=32g "$container"
-            test "$(docker inspect -f '{{.HostConfig.CpusetCpus}}' "$container")" = 0-15
-            test "$(docker inspect -f '{{.HostConfig.NanoCpus}}' "$container")" = 16000000000
-            test "$(docker inspect -f '{{.HostConfig.Memory}}' "$container")" = 34359738368
-            test "$(docker inspect -f '{{.HostConfig.MemorySwap}}' "$container")" = 34359738368
-            echo "$container: 16 CPU threads, 32 GiB RAM, autostart disabled"
-          done
-
-      - name: Ubuntu 22.04 - C++ Debug/Release and WebAdmin
-        if: steps.prepare.outcome == 'success'
-        id: ubuntu2204
-        continue-on-error: true
-        run: bash .github/scripts/contabo-run-one-container.sh ubuntu2204-github-runner ubuntu 22.04
-
-      - name: Ubuntu 24.04 - C++ Debug/Release and WebAdmin
-        if: steps.prepare.outcome == 'success'
-        id: ubuntu2404
-        continue-on-error: true
-        run: bash .github/scripts/contabo-run-one-container.sh ubuntu2404-github-runner ubuntu 24.04
-
-      - name: Ubuntu 26.04 - C++ Debug/Release and WebAdmin
-        if: steps.prepare.outcome == 'success'
-        id: ubuntu2604
-        continue-on-error: true
-        run: bash .github/scripts/contabo-run-one-container.sh ubuntu2604-github-runner ubuntu 26.04
-
-      - name: Debian 12 - C++ Debug/Release and WebAdmin
-        if: steps.prepare.outcome == 'success'
-        id: debian12
-        continue-on-error: true
-        run: bash .github/scripts/contabo-run-one-container.sh debian12-github-runner debian 12
-
-      - name: Debian 13 - C++ Debug/Release and WebAdmin
-        if: steps.prepare.outcome == 'success'
+      - name: Debian 13 host - C++ Debug/Release and WebAdmin
         id: debian13
-        continue-on-error: true
-        run: bash .github/scripts/contabo-run-one-container.sh debian13-github-runner debian 13
+        env:
+          CI: true
+          CXX: g++
+        run: bash .github/scripts/run-debian13-host.sh
 
-      - name: Verify every Docker container is stopped and summarize
-        if: ${{ always() && steps.prepare.outcome == 'success' }}
+      - name: Summarize the Debian 13 host result
+        if: always()
         shell: bash
         run: |
           set -uo pipefail
-          failed=0
-          for container in \
-            ubuntu2204-github-runner ubuntu2404-github-runner \
-            ubuntu2604-github-runner \
-            debian12-github-runner debian13-github-runner; do
-            if [ "$(docker inspect -f '{{.State.Running}}' "$container")" = true ]; then
-              docker stop --timeout 60 "$container" || failed=1
-            fi
-            if [ "$(docker inspect -f '{{.State.Running}}' "$container")" != false ]; then
-              echo "::error::Container $container is still running after tests"
-              failed=1
-            fi
-            if [ "$(docker inspect -f '{{.HostConfig.RestartPolicy.Name}}' "$container")" != no ]; then
-              echo "::error::Container $container has automatic restart enabled"
-              failed=1
-            fi
-            if [ "$(docker inspect -f '{{.HostConfig.CpusetCpus}}' "$container")" != 0-15 ] ||
-               [ "$(docker inspect -f '{{.HostConfig.NanoCpus}}' "$container")" != 16000000000 ] ||
-               [ "$(docker inspect -f '{{.HostConfig.Memory}}' "$container")" != 34359738368 ] ||
-               [ "$(docker inspect -f '{{.HostConfig.MemorySwap}}' "$container")" != 34359738368 ]; then
-              echo "::error::Container $container lost its 16 CPU / 32 GiB limits"
-              failed=1
-            fi
-          done
-
-          echo '## dc24h.eu Docker - sequential five-system test results' >> "$GITHUB_STEP_SUMMARY"
-          for entry in \
-            'Ubuntu 22.04:${{ steps.ubuntu2204.outcome }}' \
-            'Ubuntu 24.04:${{ steps.ubuntu2404.outcome }}' \
-            'Ubuntu 26.04:${{ steps.ubuntu2604.outcome }}' \
-            'Debian 12:${{ steps.debian12.outcome }}' \
-            'Debian 13:${{ steps.debian13.outcome }}'; do
-            echo "- $entry" >> "$GITHUB_STEP_SUMMARY"
-            case "$entry" in
-              *:success) ;;
-              *) failed=1 ;;
-            esac
-          done
-          exit "$failed"
+          echo '## dc24h.eu Debian 13 host' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Debian 13: ${{ steps.debian13.outcome }}' >> "$GITHUB_STEP_SUMMARY"
+          test '${{ steps.debian13.outcome }}' = success

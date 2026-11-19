@@ -1,5 +1,5 @@
 # Konfiguracja CI
 
 `Check status` używa własnego runnera `server-747585786`.
-Ten host włącza każdy kontener testowy tylko na czas sprawdzenia, z 16 wątkami
-CPU i 32 GiB RAM, a potem go wyłącza. Opis jest w [CI w GitHub Actions](GITHUB_CI.md).
+Ten host Debian 13 uruchamia C++ Debug, C++ Release i WebAdmin na sobie,
+z co najwyżej 16 workerami. Opis jest w [CI w GitHub Actions](GITHUB_CI.md).
