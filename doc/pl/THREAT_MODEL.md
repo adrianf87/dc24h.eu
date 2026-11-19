@@ -4,6 +4,8 @@ Ta analiza zapisuje, jak można atakować hub i WebAdmin, które mechanizmy już
 
 Analiza nie dodaje sprawdzenia protokołu, migracji schematu, ustawienia Apache ani mechanizmu WebAdmin. Schemat v9 pozostaje bez zmian. `configuration.manage` i `hub.manage` pozostają niezaimplementowane. Kick i mute w przeglądarce nadal nie są wysyłane. To nie jest publiczna uwierzytelniona brama i to nie jest test penetracyjny.
 
+alpha-0.9.6 bezpieczeństwo konta, dodane po tej analizie, odmawia hasła ADC identycznego z hasłem konta i odszyfrowuje to hasło w reaktorze dopiero po budżecie prób konta i sprawdzeniu bana konta. Nie zamyka T02 ani T03. Schemat v9 pozostaje bez zmian. Zobacz [Bezpieczeństwo konta](ACCOUNT_SECURITY.md).
+
 Starsze części [Bezpieczeństwa](SECURITY.md) opisują wydanie, które je napisało. Zdanie, które nadal mówi, że konta, role albo bany są nieobecne, opisuje tamto wcześniejsze wydanie. Bieżące zachowanie jest zbiorem dokumentów podlinkowanych poniżej.
 
 ## Aktywa

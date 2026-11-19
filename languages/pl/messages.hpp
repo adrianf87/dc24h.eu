@@ -3,7 +3,7 @@
 #include <string_view>
 
 namespace dc24h::i18n::pl {
-inline constexpr std::array<std::string_view, 180> messages{{
+inline constexpr std::array<std::string_view, 181> messages{{
     "Nieprawidłowe dane blokady",
     "Odmowa uprawnień do blokady",
     "Nieaktualna rewizja blokady",
@@ -40,6 +40,7 @@ inline constexpr std::array<std::string_view, 180> messages{{
     "Uwierzytelnianie ADC wymaga zgodnego aktualnego schematu bazy",
     "Niepoprawne zapisane poświadczenie lub tożsamość ADC",
     "Błąd operacji kryptograficznej poświadczenia ADC",
+    "Hasło ADC musi różnić się od hasła konta",
     "Uwierzytelnianie ADC nie powiodło się",
     "Włączono uwierzytelnianie kont ADC",
     "Uwierzytelnianie ADC wymaga bazy, prywatnego klucza i zgodnych portów nasłuchu",

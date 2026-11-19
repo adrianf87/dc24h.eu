@@ -1,5 +1,6 @@
 # Architektura
 
+**alpha-0.9.6 Bezpieczeństwo konta:** [Hasła, GPA/PAS i ochrona sekretów](ACCOUNT_SECURITY.md) odmawia hasła ADC identycznego z hasłem konta i odszyfrowuje to hasło dopiero po budżecie prób konta i sprawdzeniu bana. Zgadywanie online, przechwycony PAS przy wyłączonym require_tls oraz kubełki czyszczone restartem zostają. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.5 Bezpieczeństwo TLS:** [Polityka certyfikatu i szyfrów ADCS](TLS_SECURITY.md) sprawdza certyfikat liścia huba przed nasłuchem i ogranicza ADCS do TLS 1.2 i 1.3 AEAD. Zaufanie, nazwa hosta, HTTP/2, OCSP i automatyczne odnawianie pozostają osobną pracą. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.4 Limity ruchu:** [Spam i nadmierny ruch obecności](TRAFFIC_LIMITS.md) ogranicza aktualizacje INF gotowej sesji przed rozesłaniem. Budżety czatu, wyszukiwania i transferów zostają. Schemat v9 pozostaje bez zmian. Limit pasma i publiczna brama pozostają osobną pracą.
 **alpha-0.9.3 Bezpieczeństwo sieci:** [Ochrona połączeń TCP, timeouty i limity buforów](NETWORK_SECURITY.md) ogranicza kolejkę nasłuchu, bufory jądra wysyłania i odbioru każdego przyjętego gniazda oraz TCP user timeout. Dotychczasowe timeouty aplikacji i kolejki wyjścia zostają. Schemat v9 pozostaje bez zmian. Limit pasma i publiczna brama pozostają osobną pracą.
@@ -272,6 +273,10 @@ Frontend jest niezależny od budowania/działania C++. Kod przeglądarki sprawdz
 ## Apache2 HTTPS — alpha-0.1.11
 
 Osobny instalowany przykład serwuje gotowe zasoby WebAdmin przez TLS 1.2/1.3 i przekierowuje HTTP na stałą nazwę kanoniczną. Zachowuje lokalny dostęp i blokadę prywatnych tras, bez proxy Unix API i zmian transportów C++. Testy ładują tę politykę pod niezależnym ServerRoot; certyfikaty i aktywacja usługi hosta należą do operatora. Zobacz [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
+
+## Bezpieczeństwo konta — alpha-0.9.6
+
+`AdcAuthenticationDirectory::prepare` rozpoznaje konto i zostawia sekret ADC zapieczętowany. `LoginHub` woła `open_challenge` dopiero po sprawdzeniu bana konta i `admit_account`. Zapis odmawia identycznego hasła konta i hasła ADC po dowodzie scrypt. Gniazdo Unix API pozostaje bez zmian. Zobacz [Bezpieczeństwo konta](ACCOUNT_SECURITY.md).
 
 ## Bezpieczeństwo TLS — alpha-0.9.5
 

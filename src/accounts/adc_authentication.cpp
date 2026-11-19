@@ -121,6 +121,7 @@ AdcCredentialError::AdcCredentialError(AdcCredentialErrorKind kind) : std::runti
     case AdcCredentialErrorKind::schema: return "ADC authentication requires compatible current storage";
     case AdcCredentialErrorKind::invalid_record: return "Invalid stored ADC credential or identity";
     case AdcCredentialErrorKind::crypto: return "ADC credential cryptography failed";
+    case AdcCredentialErrorKind::same_password: return "ADC password must differ from the account password";
     }
     return "ADC authentication failed";
 }()),kind_(kind) {}
@@ -162,6 +163,10 @@ void AdcCredentialService::enroll(AccountId account,std::string_view account_pas
     } catch (const PasswordSecurityError&) { fail(AdcCredentialErrorKind::invalid_record);
     } catch (const RegistrationError& error) {
         fail(error.kind() == RegistrationErrorKind::crypto ? AdcCredentialErrorKind::crypto : AdcCredentialErrorKind::input);
+    }
+    if (account_password.size() == adc_password.size() &&
+        CRYPTO_memcmp(account_password.data(),adc_password.data(),account_password.size()) == 0) {
+        fail(AdcCredentialErrorKind::same_password);
     }
     if (!IdentityRepository(connection_).find_by_account(account)) { fail(AdcCredentialErrorKind::mapping); }
     auto encrypted = seal(key_.bytes_,account,time,adc_password); EraseString erase{encrypted};
@@ -226,16 +231,22 @@ std::shared_ptr<const AdcAuthenticationDirectory> AdcAuthenticationDirectory::lo
     return std::shared_ptr<const AdcAuthenticationDirectory>(new AdcAuthenticationDirectory(std::move(impl)));
 }
 adc::AuthenticationPreparation AdcAuthenticationDirectory::prepare(std::string_view nickname,std::string_view cid,
-    users::Transport transport,adc::PasswordChallenge& challenge) const {
+    users::Transport transport,adc::PasswordChallenge&) const {
     const auto nick = impl_->nicknames.find(nickname), client = impl_->cids.find(cid);
     if (nick == impl_->nicknames.end() && client == impl_->cids.end()) { return adc::GuestAuthentication{}; }
     if (nick == impl_->nicknames.end() || client == impl_->cids.end() || nick->second != client->second) { return adc::DeniedAuthentication{}; }
     const auto& record = impl_->records[nick->second];
     if (record.status != Status::active || !record.secret || (impl_->require_tls && transport != users::Transport::adcs)) { return adc::DeniedAuthentication{}; }
-    PlainSecret plain; open(impl_->key->bytes_,record.id,record.created_at,*record.secret,plain);
+    return adc::PasswordAuthentication{record.id.value(),adc::Message{adc::MessageType::info,{},adc::Command::unknown,{},{},{},{},{}},record.role,true};
+}
+std::optional<adc::Message> AdcAuthenticationDirectory::open_challenge(std::uint64_t account,adc::PasswordChallenge& challenge) const {
+    const Impl::Record* found = nullptr;
+    for (const auto& record : impl_->records) { if (record.id.value() == account) { found = &record; break; } }
+    if (!found || found->status != Status::active || !found->secret) { fail(AdcCredentialErrorKind::invalid_record); }
+    PlainSecret plain; open(impl_->key->bytes_,found->id,found->created_at,*found->secret,plain);
     auto prepared = challenge.issue(plain.view(),adc::SessionHash::tiger192);
     if (!std::holds_alternative<adc::Message>(prepared)) { fail(AdcCredentialErrorKind::crypto); }
-    return adc::PasswordAuthentication{record.id.value(),std::get<adc::Message>(std::move(prepared)),record.role};
+    return std::get<adc::Message>(std::move(prepared));
 }
 bool AdcAuthenticationDirectory::allows_identity(std::string_view nickname,std::string_view cid,std::optional<std::uint64_t> account) const noexcept {
     const auto nick = impl_->nicknames.find(nickname), client = impl_->cids.find(cid);

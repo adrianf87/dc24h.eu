@@ -1,5 +1,6 @@
 # Architecture
 
+**alpha-0.9.6 Account security:** [Passwords, GPA/PAS and secret protection](ACCOUNT_SECURITY.md) refuses an ADC password identical to the account password and decrypts that password only after the account attempt budget and an account ban check. Online guessing, a captured PAS with require_tls off, and buckets cleared by restart remain. Schema v9 is unchanged.
 **alpha-0.9.5 TLS security:** [ADCS certificate and cipher policy](TLS_SECURITY.md) checks the hub leaf before listen and limits ADCS to TLS 1.2 and 1.3 AEAD. Trust, hostname, HTTP/2, OCSP and automatic renewal stay separate. Schema v9 is unchanged.
 **alpha-0.9.4 Traffic limits:** [Spam and excessive presence traffic](TRAFFIC_LIMITS.md) caps ready-session INF updates before fanout. Chat, search and transfer budgets stay. Schema v9 is unchanged. A bandwidth cap and a public gateway remain separate work.
 **alpha-0.9.3 Network security:** [TCP connection protection, timeouts and buffer limits](NETWORK_SECURITY.md) caps the listen backlog, each accepted socket's kernel send and receive buffers, and the TCP user timeout. The existing application timeouts and output queues stay. Schema v9 is unchanged. A bandwidth cap and a public gateway remain separate work.
@@ -194,6 +195,10 @@ The frontend is independent of C++ build/runtime. Browser code validates the API
 ## Apache2 HTTPS — alpha-0.1.11
 
 A separate installed configuration example serves prebuilt static WebAdmin through TLS 1.2/1.3 and redirects HTTP to a fixed canonical hostname. It retains local access and private-route denial, without proxying the Unix API or changing C++ transports. Disposable tests load the shipped policy under an independent ServerRoot; certificate provisioning and host service activation remain operator responsibilities. See [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
+
+## Account security — alpha-0.9.6
+
+`AdcAuthenticationDirectory::prepare` identifies the account and leaves the ADC secret sealed. `LoginHub` calls `open_challenge` only after the account ban check and `admit_account`. Enrollment refuses an identical account and ADC password after the scrypt proof. The Unix API socket is unchanged. See [Account security](ACCOUNT_SECURITY.md).
 
 ## TLS security — alpha-0.9.5
 

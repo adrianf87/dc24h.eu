@@ -1,5 +1,6 @@
 # Lokalne API administracyjne — alpha-0.1.9
 
+**alpha-0.9.6 Bezpieczeństwo konta:** [Hasła, GPA/PAS i ochrona sekretów](ACCOUNT_SECURITY.md) odmawia hasła ADC identycznego z hasłem konta i odszyfrowuje to hasło dopiero po budżecie prób konta i sprawdzeniu bana. Zgadywanie online, przechwycony PAS przy wyłączonym require_tls oraz kubełki czyszczone restartem zostają. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.5 Bezpieczeństwo TLS:** [Polityka certyfikatu i szyfrów ADCS](TLS_SECURITY.md) sprawdza certyfikat liścia huba przed nasłuchem i ogranicza ADCS do TLS 1.2 i 1.3 AEAD. Zaufanie, nazwa hosta, HTTP/2, OCSP i automatyczne odnawianie pozostają osobną pracą. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.4 Limity ruchu:** [Spam i nadmierny ruch obecności](TRAFFIC_LIMITS.md) ogranicza aktualizacje INF gotowej sesji przed rozesłaniem. Budżety czatu, wyszukiwania i transferów zostają. Schemat v9 pozostaje bez zmian. Limit pasma i publiczna brama pozostają osobną pracą.
 **alpha-0.9.3 Bezpieczeństwo sieci:** [Ochrona połączeń TCP, timeouty i limity buforów](NETWORK_SECURITY.md) ogranicza kolejkę nasłuchu, bufory jądra wysyłania i odbioru każdego przyjętego gniazda oraz TCP user timeout. Dotychczasowe timeouty aplikacji i kolejki wyjścia zostają. Schemat v9 pozostaje bez zmian. Limit pasma i publiczna brama pozostają osobną pracą.
@@ -211,6 +212,8 @@ alpha-0.9.2 nie dodaje trasy ani pola statusu. Walidacja parsera i kontrola prot
 alpha-0.9.3 nie dodaje trasy ani pola statusu. Kolejka TCP, limity buforów jądra i TCP user timeout zostają w hubie. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Bezpieczeństwo sieci](NETWORK_SECURITY.md).
 
 alpha-0.9.4 nie dodaje trasy ani pola statusu. Budżet INF gotowej sesji zostaje w hubie. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Limity ruchu](TRAFFIC_LIMITS.md).
+
+alpha-0.9.6 nie dodaje trasy ani pola statusu. Rozdzielenie haseł konta i zapieczętowane odszyfrowanie GPA/PAS zostają w hubie. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Bezpieczeństwo konta](ACCOUNT_SECURITY.md).
 
 alpha-0.9.5 nie dodaje trasy ani pola statusu. Polityka liścia i szyfrów ADCS zostaje w hubie. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Bezpieczeństwo TLS](TLS_SECURITY.md).
 

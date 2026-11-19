@@ -139,6 +139,10 @@ alpha-0.1.10 powstaje z main po alpha-0.1.9. Oddzielaj schemat/formatowanie prze
 
 alpha-0.1.11 powstaje z main po alpha-0.1.10. Oddzielaj aktywację hosta, rzeczywiste certyfikaty i reload od tworzenia/testowania przykładu. Testuj dokładnie dostarczaną politykę TLS/dostępu/nagłówków z tymczasowymi ścieżkami/portami, bez konfiguracji hosta. Sukces apache2 -t nie dowodzi zgodności certyfikatu/klucza; sprawdzaj inicjalizację. Zachowuj oba języki dokumentacji i spójne wersje fixture.
 
+## Bezpieczeństwo konta — alpha-0.9.6
+
+Gałąź powstaje z main. Odmów hasła ADC zgodnego bajt w bajt z potwierdzonym hasłem konta. Odszyfruj hasło ADC w reaktorze dopiero po sprawdzeniu bana konta i budżecie prób tego konta. Nie dodawaj migracji schematu, licznika statusu, klucza INI, strony WebAdmin ani ustawienia Apache. Nie twierdź, że zagrożenia szczątkowe T02 albo T03 są zamknięte.
+
 ## Bezpieczeństwo TLS — alpha-0.9.5
 
 Gałąź powstaje z main. Odrzuć liść huba poza oknem ważności, podpisany SHA-1 albo słabszy niż RSA 2048, P-256, P-384, P-521, Ed25519 lub Ed448. Wymagaj serverAuth, gdy extended key usage jest obecne. Oferuj tylko AEAD TLS 1.2 i 1.3, bez biletów sesji. Nie dodawaj migracji schematu, licznika statusu, klucza INI, strony WebAdmin ani ustawienia Apache. Nie żądaj certyfikatu klienta. Nie twierdź, że HTTP/2, OCSP albo automatyczne odnawianie jest gotowe, ani że zagrożenie szczątkowe T15 jest zamknięte.

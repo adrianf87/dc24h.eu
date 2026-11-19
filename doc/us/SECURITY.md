@@ -1,5 +1,6 @@
 # Security — alpha-0.1.7
 
+**alpha-0.9.6 Account security:** [Passwords, GPA/PAS and secret protection](ACCOUNT_SECURITY.md) refuses an ADC password identical to the account password and decrypts that password only after the account attempt budget and an account ban check. Online guessing, a captured PAS with require_tls off, and buckets cleared by restart remain. Schema v9 is unchanged.
 **alpha-0.9.5 TLS security:** [ADCS certificate and cipher policy](TLS_SECURITY.md) checks the hub leaf before listen and limits ADCS to TLS 1.2 and 1.3 AEAD. Trust, hostname, HTTP/2, OCSP and automatic renewal stay separate. Schema v9 is unchanged.
 **alpha-0.9.4 Traffic limits:** [Spam and excessive presence traffic](TRAFFIC_LIMITS.md) caps ready-session INF updates before fanout. Chat, search and transfer budgets stay. Schema v9 is unchanged. A bandwidth cap and a public gateway remain separate work.
 **alpha-0.9.3 Network security:** [TCP connection protection, timeouts and buffer limits](NETWORK_SECURITY.md) caps the listen backlog, each accepted socket's kernel send and receive buffers, and the TCP user timeout. The existing application timeouts and output queues stay. Schema v9 is unchanged. A bandwidth cap and a public gateway remain separate work.
@@ -207,6 +208,10 @@ Never put the API token in browser storage, JavaScript, URLs, VITE-prefixed vari
 ## Apache2 HTTPS example — alpha-0.1.11
 
 TLS and browser authentication are separate controls. The template selects TLS 1.2/1.3 with AEAD ciphers, fixes the HTTP redirect hostname, retains Require local, denies private/hidden/secret paths and disables directory indexes/symlinks. HTTPS-only HSTS is short and host-scoped; CSP/no-sniff/referrer/frame headers apply to errors too. Certificate trust/name/key matching must be verified before use; syntax checks alone do not prove matching keys. The template never exposes the service token or activates a production gateway. See [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
+
+## Account security — alpha-0.9.6
+
+[Account security](ACCOUNT_SECURITY.md) refuses an ADC password that matches the account password byte for byte, and decrypts the ADC password only after the account ban check and the per-account attempt budget admit the connection. An account-throttled or account-banned attempt receives no GPA. This does not close residual threats T02 or T03. Schema v9 is unchanged. No status counter, WebAdmin page, INI key or Apache setting is added.
 
 ## TLS security — alpha-0.9.5
 

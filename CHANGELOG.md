@@ -1,5 +1,16 @@
 # Changelog
 
+## alpha-0.9.6 — 2026-11-19
+
+Account security — passwords, GPA/PAS and secret protection, based on main `22bc5bc`. The branch name is `alpha-0.9.6`.
+
+- Refuse enrollment when the ADC password is the same byte string as the account password proved in that call. Equal lengths are compared with `CRYPTO_memcmp`. A wrong proof stays a proof failure. The diagnostic does not include either password. Rows already stored are not rewritten. An account-password change still deletes the ADC credential. Schema v9 is unchanged.
+- Decrypt the ADC password on the reactor only in `open_challenge`, after the account ban check and the per-account attempt budget both admit the connection. `prepare` identifies a guest, a denial or an account and does not decrypt. An account-throttled or account-banned attempt receives no GPA. Startup still decrypts each stored record once, to reject a bad envelope before listen, and then wipes that copy.
+- This does not close residual threats T02 or T03. `require_tls=off` still lets a captured PAS be attacked offline. Attempt buckets still reset when the process restarts. No status counter, WebAdmin page, INI key, public password endpoint, CLI password argument or Apache setting is added. Automatic key rotation is not implemented.
+- Run Check status on GitHub-hosted Ubuntu 24.04. Add `alpha-0.9.6` to the push branches. Local validation uses eight CPU threads. Remote CI completion is not awaited.
+
+Validation on Debian 13: all 222/222 CTest suites passed in Debug (75.35 s real) and Release (73.20 s real), including disposable MariaDB, real ncdc ADC/ADCS, the Apache HTTPS reverse proxy and the account password and sealed GPA/PAS checks. The Release C++ build log contained no compiler warnings. WebAdmin typecheck and production build passed. All 48 Node tests passed. All 41 Chromium tests passed. Actual C++ API, adapter and React integration passed. Release metadata, documentation UTF-8, language parity, local Markdown links, Python syntax with warnings as errors and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration or account/credential mutation is performed.
+
 ## alpha-0.9.5 — 2026-11-19
 
 TLS security — ADCS certificate and cipher policy, based on main `9d66f47`. The branch name is `alpha-0.9.5`.
