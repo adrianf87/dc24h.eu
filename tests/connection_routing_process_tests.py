@@ -37,8 +37,8 @@ class ConnectionRoutingProcessTests(unittest.TestCase):
                 token=b'SameRoutingPrivateToken'
 
                 def wave(first_source,first,second_source,second,expected):
-                    fence_a=b'BINF '+first_source.sid+b' DERoutingFenceA'
-                    fence_b=b'BINF '+second_source.sid+b' DERoutingFenceB'
+                    fence_a=b'BSTA '+first_source.sid+b' 000 RoutingFenceA'
+                    fence_b=b'BSTA '+second_source.sid+b' 000 RoutingFenceB'
                     # Each stream fences its own request; readers allow cross-stream
                     # interleaving while proving both requests finished processing.
                     first_source.peer.sendall(first+b'\n'+fence_a+b'\n')

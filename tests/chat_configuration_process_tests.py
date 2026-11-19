@@ -34,7 +34,7 @@ class ChatConfigurationProcessTests(unittest.TestCase):
         return peers
 
     def fence(self, peers, source):
-        wire=b'BINF '+source.sid+b' DEConfigFence'
+        wire=b'BSTA '+source.sid+b' 000 ConfigFence'
         source.send(wire)
         for peer in peers: self.assertEqual(peer.line(),wire)
 

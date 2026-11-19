@@ -32,7 +32,7 @@ class ResProcessTests(unittest.TestCase):
                 prefix = b'DRES ' + source.sid + b' ' + target.sid + b' '
 
                 def fence():
-                    marker = b'BINF ' + source.sid + b' DEResFence'
+                    marker = b'BSTA ' + source.sid + b' 000 ResFence'
                     source.send(marker)
                     for peer in (source, target): self.assertEqual(peer.line(), marker)
 

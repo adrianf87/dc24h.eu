@@ -54,7 +54,7 @@ class TransferTokensProcessTests(unittest.TestCase):
                     fences = set()
                     for origin, frame in requests:
                         serial += 1
-                        fence = b'BINF ' + origin.sid + b' DETokenFence' + str(serial).encode()
+                        fence = b'BSTA ' + origin.sid + b' 000 TokenFence' + str(serial).encode()
                         fences.add(fence)
                         # Exercise stream fragmentation with source-local ordering.
                         origin.peer.sendall(frame[:3])

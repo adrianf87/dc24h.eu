@@ -36,7 +36,7 @@ class TransferLimitsProcessTests(unittest.TestCase):
         return hub, peers, suffix, endpoint, secret
 
     def exchange(self, peers, origin, frames, expected):
-        fence = b'BINF ' + origin.sid + b' DELimitsFence' + str(time.monotonic_ns()).encode()
+        fence = b'BSTA ' + origin.sid + b' 000 LimitsFence' + str(time.monotonic_ns()).encode()
         wire = b'\n'.join(frames + [fence]) + b'\n'
         origin.peer.sendall(wire[:3])
         origin.peer.sendall(wire[3:])

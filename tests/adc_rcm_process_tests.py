@@ -40,7 +40,7 @@ class RcmProcessTests(unittest.TestCase):
                         for recipient in peers:self.assertEqual(recipient.line(),wire)
 
                     def fence():
-                        wire=b'BINF '+other.sid+b' DERcmFence';other.send(wire)
+                        wire=b'BSTA '+other.sid+b' 000 RcmFence';other.send(wire)
                         for peer in peers:self.assertEqual(peer.line(),wire)
 
                     def rcm(kind=b'DRCM',protocol=b'ADC/1.0',token=b'RcmSecret\\stoken',recipient=None):

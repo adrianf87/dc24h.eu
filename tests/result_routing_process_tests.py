@@ -34,7 +34,7 @@ class ResultRoutingProcessTests(unittest.TestCase):
                 fields = 'XXunknown XXagain FN/ResultPrivate/Żółw\\s😀.txt SI00042 SL-0'.encode() + b' TR' + root
 
                 def fence():
-                    marker = b'BINF ' + responder.sid + b' DEResultFence'
+                    marker = b'BSTA ' + responder.sid + b' 000 ResultFence'
                     responder.send(marker)
                     for peer in peers: self.assertEqual(peer.line(), marker)
 

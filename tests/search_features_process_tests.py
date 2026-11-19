@@ -38,7 +38,7 @@ class FeatureProcessTests(unittest.TestCase):
                     for receiver in peers: self.assertEqual(receiver.line(), frame)
 
                 def fence():
-                    frame = b'BINF ' + source.sid + b' DEFeatureFence'
+                    frame = b'BSTA ' + source.sid + b' 000 FeatureFence'
                     source.send(frame)
                     for receiver in peers: self.assertEqual(receiver.line(), frame)
 

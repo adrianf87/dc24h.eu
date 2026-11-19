@@ -53,7 +53,7 @@ class ClientCapabilitiesProcessTests(unittest.TestCase):
                             wire = scope + command + b' ' + origin.sid + b' ' + recipient.sid + b' ' + protocol + (b' 01515 ' if command == b'CTM' else b' ') + token
                             # Fragment the header across TCP/TLS writes.
                             origin.peer.sendall(wire[:3])
-                            fence = b'BINF ' + origin.sid + b' DECapabilityFence' + str(sequence).encode()
+                            fence = b'BSTA ' + origin.sid + b' 000 CapabilityFence' + str(sequence).encode()
                             origin.peer.sendall(wire[3:] + b'\n' + fence + b'\n')
                             for peer in peers:
                                 messages = []

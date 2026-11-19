@@ -44,7 +44,8 @@ class ProtocolNegotiationProcessTests(unittest.TestCase):
                 def fence():
                     nonlocal serial
                     serial += 1
-                    frame = b'BINF ' + bystander.sid + b' DEProtocolFence' + str(serial).encode()
+                    # STA, not INF: ready-session presence has a separate budget.
+                    frame = b'BSTA ' + bystander.sid + b' 000 ProtocolFence' + str(serial).encode()
                     bystander.send(frame)
                     for peer in peers:
                         self.assertEqual(peer.line(), frame)

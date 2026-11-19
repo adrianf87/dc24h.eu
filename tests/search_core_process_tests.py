@@ -36,7 +36,7 @@ class SearchCoreProcessTests(unittest.TestCase):
                         recipients = (source, observer) if kind in (b'BSCH', b'ESCH') else ((observer,) if kind == b'DSCH' else ())
                         for peer in recipients: self.assertEqual(peer.line(), wire)
                     # Ordered INF fence proves that only the intended query copies were relayed.
-                    fence = b'BINF ' + source.sid + b' DESearchFence'
+                    fence = b'BSTA ' + source.sid + b' 000 SearchFence'
                     source.send(fence)
                     for peer in (source, observer): self.assertEqual(peer.line(), fence)
                 waiting = Peer(self, hub.connect()); waiting.handshake()
