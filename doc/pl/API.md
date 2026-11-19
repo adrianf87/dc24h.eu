@@ -1,5 +1,6 @@
 # Lokalne API administracyjne — alpha-0.1.9
 
+**alpha-0.8.14 Proxy HTTPS Apache2:** [Odwrotne proxy HTTPS i ochrona API](APACHE2_PROXY.md) przekazuje dozwoloną listę API WebAdmin do adaptera na loopbacku. Token bearer klienta, ciasteczka i tożsamość z nagłówków proxy są usuwane. Gniazdo Unix C++ i token usługi pozostają poza Apache. Domyślnie dostęp jest lokalny.
 **alpha-0.8.13 Zarządzanie WebAdmin:** [Zarządzanie banami, kontami i rolami](WEBADMIN_MANAGEMENT.md) pokazuje, które obszary utrzymania dopuszcza bieżący grant, i prowadzi do istniejących stron kont, ról i banów. Strona nie wykonuje tych zapisów. Zapis konfiguracji, bieżąca administracja huba oraz kick i mute w przeglądarce pozostają poza tą stroną.
 **alpha-0.8.12 Użytkownicy WebAdmin:** [Lista użytkowników i działania moderacyjne](WEBADMIN_USERS.md) publikuje katalog gotowych sesji oraz dwujęzyczną stronę decyzji kick, mute i unmute. Strona nie wysyła tych poleceń, nie tworzy banów i nie ujawnia CID, IP, konta ani pól profilu. Polecenia kick pozostają w uwierzytelnionym kliencie Direct Connect.
 **alpha-0.8.11 Panel WebAdmin:** [Panel główny i statystyki](WEBADMIN_DASHBOARD.md) dodaje stałe podsumowanie istniejących liczników procesu do uwierzytelnionej migawki statusu oraz dwujęzyczną stronę WebAdmin. Listy kont, rekordy banów, wiersze audytu, zapisy konfiguracji i bieżąca administracja huba pozostają poza tym panelem.
@@ -192,6 +193,8 @@ alpha-0.8.11 dodaje obiekt `dashboard` w tej samej odpowiedzi. Stałe pola i str
 alpha-0.8.12 dodaje `GET /api/v1/users` chronione tokenem bearer. Schemat 1 wymienia co najwyżej 64 gotowe sesje. Pola i strona WebAdmin są opisane w [Użytkownikach WebAdmin](WEBADMIN_USERS.md). Status i health pozostają bez zmian i nadal nie zawierają nicków.
 
 alpha-0.8.13 dodaje konserwacyjne `GET /api/v1/management`. Każdy żywy grant może odczytać, które obszary kont, ról i banów ten grant dopuszcza. Strona i pola są opisane w [Zarządzaniu WebAdmin](WEBADMIN_MANAGEMENT.md). Proces huba nie publikuje tej trasy. Powyższy przykład statusu alpha-0.4.4 pozostaje bez zmian.
+
+alpha-0.8.14 nie dodaje trasy C++. Odwrotne proxy Apache przekazuje dozwoloną powierzchnię `/admin-api/v1` do istniejącego adaptera loopback. Powyższy przykład JSON statusu pozostaje bez zmian. Zobacz [proxy HTTPS Apache2](APACHE2_PROXY.md).
 
 Liczniki są niezależnymi odczytami atomowymi, nie jedną transakcją. `core_running` podaje tylko stan Core, nie pełne logowanie/gotowość ADC. Uptime pochodzi z zegara monotonicznego od przygotowania transportu/API po opcjonalnym połączeniu bazy; nie jest wiekiem procesu według zegara ściennego. `database.enabled` oznacza obecność skonfigurowanego połączenia startowego, nie bieżącą dostępność SQL. Żądania nie wykonują SQL. API nie zwraca adresów klientów, nicków, ramek, ścieżek, sekretów ani ustawień administracyjnych. Nieznane ścieżki (również query string) dają 404 po autoryzacji; inne metody dają 405 i `Allow: GET`. HEAD jest nieobsługiwane (405), bez treści odpowiedzi.
 

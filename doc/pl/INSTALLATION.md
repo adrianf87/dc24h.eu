@@ -34,8 +34,8 @@ ctest --test-dir build --output-on-failure
 
 Uruchamiaj jako zwykły użytkownik. Program działa na pierwszym planie i kończy po Ctrl+C/SIGTERM. Nie tworzy PID-file, nie zmienia firewalla, nie instaluje i nie uruchamia usługi. Pod systemd można użyć Type=simple, pełnej ścieżki ExecStart, dedykowanego użytkownika i stderr w journalu.
 
-ADCS wymaga własnego certyfikatu i klucza z prawami odczytu dla usługi; zobacz [ADCS_TLS.md](ADCS_TLS.md). Program nie pozyskuje ani nie odnawia certyfikatów. Apache2 jest opcjonalny dla statycznego WebAdmin, produkcyjna brama uwierzytelniona jest planowana; połączenie MariaDB jest opcjonalne i domyślnie wyłączone. Zobacz [DATABASE.md](DATABASE.md). Opcje portów i języka: [CONFIGURATION.md](CONFIGURATION.md).
+ADCS wymaga własnego certyfikatu i klucza z prawami odczytu dla usługi; zobacz [ADCS_TLS.md](ADCS_TLS.md). Program nie pozyskuje ani nie odnawia certyfikatów. Apache2 jest opcjonalny dla statycznego WebAdmin i dla lokalnego proxy z listą dozwoloną. Publiczna uwierzytelniona brama pozostaje osobnym zadaniem. Połączenie MariaDB jest opcjonalne i domyślnie wyłączone. Zobacz [DATABASE.md](DATABASE.md). Opcje portów i języka: [CONFIGURATION.md](CONFIGURATION.md).
 
 Aby użyć pliku, skopiuj [przykład](../../config/dc24h.ini.example), dostosuj ścieżki i wykonaj `./build/dc24h --config config/dc24h.ini --check-config`, a następnie uruchom z tym samym `--config`. Lokalne INI są ignorowane przez Git.
 
-Instalowany szablon HTTPS, ścieżki certyfikatów, dostęp lokalny i jawna aktywacja Apache: [APACHE2_HTTPS.md](APACHE2_HTTPS.md). Przykład zawsze trafia do `etc/dc24h`; CMake nie aktywuje certyfikatu/witryny/usługi.
+Instalowany szablon HTTPS, ścieżki certyfikatów, dostęp lokalny i jawna aktywacja Apache: [APACHE2_HTTPS.md](APACHE2_HTTPS.md). Przykład odwrotnego proxy jest instalowany obok niego: [APACHE2_PROXY.md](APACHE2_PROXY.md). Oba zawsze trafiają do `etc/dc24h`; CMake nie aktywuje certyfikatu, witryny ani usługi.

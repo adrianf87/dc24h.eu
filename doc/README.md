@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.8.13.
+Current development version: alpha-0.8.14.
+
+[Apache2 HTTPS proxy — alpha-0.8.14](us/APACHE2_PROXY.md) · [PL](pl/APACHE2_PROXY.md)
 
 [WebAdmin Management — alpha-0.8.13](us/WEBADMIN_MANAGEMENT.md) · [PL](pl/WEBADMIN_MANAGEMENT.md)
 

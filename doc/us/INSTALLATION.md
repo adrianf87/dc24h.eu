@@ -34,8 +34,8 @@ ctest --test-dir build --output-on-failure
 
 Run as an unprivileged account. The process stays in the foreground and stops with Ctrl+C or SIGTERM. It does not daemonize, create a PID file, edit firewall rules or install/start a system service automatically. A future deployment can use systemd Type=simple, an absolute ExecStart path, a dedicated user and journal capture of stderr.
 
-For ADCS configure readable certificate/key paths with the correct service-user permissions; see [ADCS_TLS.md](ADCS_TLS.md). The executable does not obtain or renew certificates. Apache2 is optional for static WebAdmin assets; the authenticated production gateway remains planned; MariaDB connections are optional and disabled by default. See [DATABASE.md](DATABASE.md). See [CONFIGURATION.md](CONFIGURATION.md) for port and language options.
+For ADCS configure readable certificate/key paths with the correct service-user permissions; see [ADCS_TLS.md](ADCS_TLS.md). The executable does not obtain or renew certificates. Apache2 is optional for static WebAdmin assets and for the local allowlisted reverse proxy. A public authenticated gateway remains separate work. MariaDB connections are optional and disabled by default. See [DATABASE.md](DATABASE.md). See [CONFIGURATION.md](CONFIGURATION.md) for port and language options.
 
 For explicit file settings, copy the [example](../../config/dc24h.ini.example), adjust paths and run `./build/dc24h --config config/dc24h.ini --check-config` before normal startup with the same `--config`. Local INI files are ignored by Git.
 
-For the installed static HTTPS template, certificate paths, local access policy and explicit Apache activation, see [APACHE2_HTTPS.md](APACHE2_HTTPS.md). The example is always installed under `etc/dc24h`; no certificate/site/service is activated by CMake.
+For the installed static HTTPS template, certificate paths, local access policy and explicit Apache activation, see [APACHE2_HTTPS.md](APACHE2_HTTPS.md). The reverse-proxy example is installed beside it; see [APACHE2_PROXY.md](APACHE2_PROXY.md). Both are always installed under `etc/dc24h`; no certificate, site or service is activated by CMake.

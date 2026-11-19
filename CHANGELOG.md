@@ -1,5 +1,15 @@
 # Changelog
 
+## alpha-0.8.14 — 2026-11-19
+
+Apache2 HTTPS — reverse proxy and API protection, based on main `a542688`. The branch name is `alpha-0.8.14`.
+
+- Add `config/apache2-webadmin-https-proxy.conf.example`. TLS 1.2/1.3 and the fixed HTTP redirect stay. An allowlist of `/admin-api/v1` reads and maintenance writes is proxied to the loopback HTTP adapter. Other `/admin-api` and `/api` paths stay denied. The static HTTPS example is unchanged and still denies API routes.
+- Strip client Authorization, Cookie and forwarded-identity headers. A grant that is not 64 hexadecimal characters is removed. The canonical HTTPS origin is rewritten to the adapter's loopback origin; any other origin is denied. The service token and the C++ Unix socket are not in the example. Access stays `Require local`.
+- Run Check status on GitHub-hosted Ubuntu 24.04. Add `alpha-0.8.14` to the push branches. Local validation uses eight CPU threads. Remote CI completion is not awaited.
+
+Validation on Debian 13: all 215/215 CTest suites passed in Debug (72.97 s real) and Release (72.47 s real), including disposable MariaDB, real ncdc ADC/ADCS and the Apache HTTPS reverse proxy. The Release C++ build log contained no compiler warnings. WebAdmin typecheck and production build passed. All 47 Node tests passed. All 41 Chromium tests passed. Actual C++ API, adapter and React integration passed. Release metadata, documentation UTF-8, language parity, local Markdown links, Python syntax with warnings as errors and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration or account/credential mutation is performed.
+
 ## alpha-0.8.13 — 2026-11-19
 
 WebAdmin Management — account, role and ban areas, based on main `64cabf8`. The branch name is `alpha-0.8.13`.

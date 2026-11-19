@@ -142,6 +142,8 @@ Frontend jest niezależny od INI: serwerowe `DC24H_API_SOCKET`/`DC24H_API_TOKEN_
 
 Nowy `apache2-webadmin-https.conf.example` jest niezależny od INI. Ustaw nazwę hosta, katalog zasobów i ścieżki certyfikatu/klucza w kopii Apache. Nie zawiera Listen, korzysta z ports.conf dystrybucji; domyślnie dostęp lokalny/statyczny z blokadą API. Brak nowego parametru wykonawczego C++. Zobacz [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
 
+`apache2-webadmin-https-proxy.conf.example` też jest niezależny od INI. Przekazuje dozwoloną listę API na `127.0.0.1:4173` i nie dodaje ustawienia C++, tokena usługi ani upstreamu gniazda Unix. Zobacz [APACHE2_PROXY.md](APACHE2_PROXY.md).
+
 
 ## alpha-0.2.8
 
