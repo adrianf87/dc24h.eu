@@ -17,7 +17,8 @@ import tempfile
 import time
 import unittest
 
-BINARY, SERVICE, SYSUSERS = sys.argv[1:4]
+LAUNCH = sys.argv[:]
+BINARY, SERVICE, SYSUSERS = LAUNCH[1:4]
 del sys.argv[1:4]
 
 SANDBOX_KEYS = (
@@ -130,7 +131,8 @@ def become_root():
         return
     sudo = shutil.which("sudo")
     if sudo and subprocess.run([sudo, "-n", "true"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
-        os.execv(sudo, [sudo, "-n", sys.executable, *sys.argv])
+        # sys.argv no longer has the hub and example paths; pass the saved launch line.
+        os.execv(sudo, [sudo, "-n", "--", sys.executable, *LAUNCH])
 
 
 def run(command, check=True, timeout=15):
