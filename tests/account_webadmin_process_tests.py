@@ -122,6 +122,14 @@ def exercise(binary, seed, config, db_socket, password, token, api_socket):
         assert code == 200 and expired['observed_at'] >= record['expires_at'] and expired['bans'] == [record]
         assert request('GET', '/api/v1/bans?state=active')[1]['bans'] == []
         assert request('GET', '/api/v1/bans?state=revoked')[1]['bans'] == [revoked['ban']]
+        assert request('GET', '/api/v1/audit')[0] == 405
+        code, history = request('POST', '/api/v1/audit', {'actor_id': actor, 'proof': proof, 'after': '0'}, delay=True)
+        assert code == 200 and history['maintenance'] is True and history['restart_required'] is True
+        recorded = [event['action'] for event in history['events']]
+        assert 'accounts.create' in recorded and 'bans.create' in recorded and 'bans.revoke' in recorded
+        assert proof not in json.dumps(history) and 'Private account ban' not in json.dumps(history) and 'Temporary HTTP' not in json.dumps(history)
+        assert request('POST', '/api/v1/audit', {'actor_id': target, 'proof': proof, 'after': '0'}, delay=True)[0] == 403
+        assert request('POST', '/api/v1/audit', {'actor_id': actor, 'proof': proof, 'after': '00'}, delay=True)[0] == 400
         before = request('GET', '/api/v1/admin')[1]['statistics']
         assert int(before['attempts']) > 0 and int(before['succeeded']) >= 6 and int(before['refused']) >= 4
         assert request('POST', '/api/v1/accounts', {'x':'y'})[0] == 429

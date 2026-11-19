@@ -2,6 +2,7 @@
 #include "dc24h/accounts/adc_authentication.hpp"
 #include "dc24h/accounts/password_security.hpp"
 #include "dc24h/accounts/registration.hpp"
+#include "dc24h/audit/repository.hpp"
 #include "dc24h/security/roles.hpp"
 #include "registration_internal.hpp"
 #include "adc_storage_internal.hpp"
@@ -65,6 +66,15 @@ struct OwnershipLock {
 void acquire(database::Connection& c, const std::string& name) {
     if (c.scalar("SELECT GET_LOCK(?, 0)",{name}) != "1") { fail(ManagementErrorKind::stale); }
 }
+void audit_ready(database::Connection& connection) {
+    try { audit::Repository(connection).require_schema(); }
+    catch (const audit::Error&) { fail(ManagementErrorKind::schema); }
+}
+void audit_append(database::Connection& connection, std::string_view action, std::uint64_t actor,
+    std::uint64_t target, Timestamp time) {
+    try { audit::Repository(connection).append_in_transaction(action, actor, "account", target, time); }
+    catch (const audit::Error&) { fail(ManagementErrorKind::schema); }
+}
 
 }
 ManagementError::ManagementError(ManagementErrorKind kind) : std::runtime_error([kind] {
@@ -89,6 +99,7 @@ StoredAccount AccountManagementService::create_account(const StoredAccount& acto
     detail::validate_password(proof);detail::validate_password(password);
     AccountRepository repository(connection_);repository.require_schema();
     RegistrationService(connection_).require_credentials_schema();
+    audit_ready(connection_);
     if(repository.find_by_id(actor.account.id())!=actor){fail(ManagementErrorKind::stale);}
     const auto key=parameters(actor.account.id().value());
     auto captured=connection_.query("SELECT verifier,created_at FROM dc24h_account_credentials WHERE account_id=?",key,{1,2,192,256});
@@ -107,6 +118,7 @@ StoredAccount AccountManagementService::create_account(const StoredAccount& acto
     if(connection_.execute_prepared("INSERT INTO dc24h_account_credentials(account_id,verifier,created_at) VALUES (?,?,?)",bound).affected_rows!=1){
         fail(ManagementErrorKind::invalid_record);
     }
+    audit_append(connection_, "accounts.create", actor.account.id().value(), result.account.id().value(), time);
     transaction.commit();return result;
 }
 StoredAccount AccountManagementService::change_password(const StoredAccount& expected,
@@ -151,6 +163,7 @@ StoredAccount AccountManagementService::perform(Action action,const StoredAccoun
         repository.require_schema();
         RegistrationService(connection_).require_credentials_schema();
         detail::require_adc_credentials_schema(connection_);
+        audit_ready(connection_);
         if (repository.find_by_id(actor.account.id()) != actor || repository.find_by_id(target.account.id()) != target) {
             fail(ManagementErrorKind::stale);
         }
@@ -185,8 +198,12 @@ StoredAccount AccountManagementService::perform(Action action,const StoredAccoun
         if (connection_.execute_prepared("DELETE FROM dc24h_account_adc_credentials WHERE account_id=?",
             parameters(target.account.id().value())).affected_rows > 1) { fail(ManagementErrorKind::invalid_record); }
         static_assert(std::is_nothrow_move_constructible_v<StoredAccount>);
+        const auto audit_key = action == Action::change ? "accounts.password" : action == Action::disable ? "accounts.disable" :
+            action == Action::reset ? "accounts.reset" : action == Action::activate ? "accounts.activate" : "accounts.role";
+        audit_append(connection_, audit_key, actor.account.id().value(), target.account.id().value(), time);
         transaction.commit();
         return result;
+    } catch (const audit::Error&) { fail(ManagementErrorKind::schema);
     } catch (const RegistrationError& error) {
         fail(error.kind() == RegistrationErrorKind::crypto ? ManagementErrorKind::crypto :
              error.kind() == RegistrationErrorKind::invalid_password ? ManagementErrorKind::invalid_password : ManagementErrorKind::schema);
@@ -209,6 +226,7 @@ StoredAccount AccountManagementService::bootstrap_owner(std::string_view name,
     repository.require_schema();
     RegistrationService(connection_).require_credentials_schema();
     detail::require_adc_credentials_schema(connection_);
+    audit_ready(connection_);
     detail::EncodedPassword verifier;
     detail::hash_password(password,verifier);
     const auto lock = ownership_lock_name(connection_);
@@ -225,6 +243,7 @@ StoredAccount AccountManagementService::bootstrap_owner(std::string_view name,
     if (connection_.execute_prepared("INSERT INTO dc24h_account_credentials(account_id,verifier,created_at) VALUES (?,?,?)",bound).affected_rows != 1) {
         fail(ManagementErrorKind::invalid_record);
     }
+    audit_append(connection_, "ownership.bootstrap", result.account.id().value(), result.account.id().value(), time);
     transaction.commit(); return result;
 }
 OwnershipTransfer AccountManagementService::transfer_ownership(const StoredAccount& owner,
@@ -240,6 +259,7 @@ OwnershipTransfer AccountManagementService::transfer_ownership(const StoredAccou
     detail::validate_password(owner_password); detail::validate_password(successor_password);
     AccountRepository repository(connection_); repository.require_schema();
     RegistrationService(connection_).require_credentials_schema(); detail::require_adc_credentials_schema(connection_);
+    audit_ready(connection_);
     if (repository.find_by_id(owner.account.id()) != owner || repository.find_by_id(successor.account.id()) != successor) { fail(ManagementErrorKind::stale); }
     const auto capture = [&](const StoredAccount& account) {
         return connection_.query("SELECT verifier,created_at FROM dc24h_account_credentials WHERE account_id=?",parameters(account.account.id().value()),{1,2,192,256});
@@ -269,6 +289,7 @@ OwnershipTransfer AccountManagementService::transfer_ownership(const StoredAccou
         }
     }
     static_assert(std::is_nothrow_move_constructible_v<OwnershipTransfer>);
+    audit_append(connection_, "ownership.transfer", owner.account.id().value(), successor.account.id().value(), time);
     transaction.commit(); return result;
 }
 } // namespace dc24h::accounts

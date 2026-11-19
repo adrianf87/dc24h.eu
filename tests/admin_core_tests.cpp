@@ -1,5 +1,7 @@
 #include "dc24h/admin/core.hpp"
 #include "dc24h/accounts/registration.hpp"
+#include "dc24h/audit/repository.hpp"
+#include <array>
 #include <iostream>
 #include <source_location>
 #include <type_traits>
@@ -31,6 +33,8 @@ void unit() {
         require(!available(a,static_cast<Origin>(99)));
     }
     require(!parse_action("ownership.force")&&!parse_action("ACCOUNTS.CREATE"));
+    for(auto action:action_catalog){require(audit::known_action(action_key(action)));}
+    require(!audit::known_action("users.kick")&&!audit::known_action("users.mute")&&!audit::known_action("accounts.password "));
     require(action_key(static_cast<Action>(99)).empty());
     Command c;c.action=Action::bootstrap_owner;c.name="Owner";c.password=proof;
     rejects(ErrorKind::forbidden,[&]{(void)api.execute(c);});
@@ -80,6 +84,7 @@ void integration(const database::Options& options) {
     managed=account(api.execute(c));require(managed.account.status()==Status::disabled);
     c.action=Action::disable;c.target=ref(managed);c.password={};
     managed=account(api.execute(c));require(api.statistics().succeeded==7);
+    require(db.scalar("SELECT COUNT(*) FROM dc24h_audit_events")=="8");
     rejects(ErrorKind::stale,[&]{(void)api.execute(c);});
     c.target={99999999,1};rejects(ErrorKind::not_found,[&]{(void)api.execute(c);});
     c.target=ref(managed);c.action=Action::role;c.role=Role::owner;
@@ -89,8 +94,28 @@ void integration(const database::Options& options) {
     c.proof=proof;++c.actor.revision;rejects(ErrorKind::stale,[&]{(void)api.execute(c);});
     c={};c.action=Action::transfer_owner;c.actor=ref(owner);c.target=ref(successor);c.proof=proof;c.successor_proof=proof;c.time=30;
     rejects(ErrorKind::forbidden,[&]{(void)api.execute(c);});
+    require(db.scalar("SELECT COUNT(*) FROM dc24h_audit_events")=="8");
     const auto transfer=std::get<OwnershipTransfer>(local.execute(c));
     require(transfer.new_owner.account.role()==Role::owner&&transfer.former_owner.account.status()==Status::disabled);
+    require(db.scalar("SELECT COUNT(*) FROM dc24h_audit_events")=="9");
+    const auto attempts=api.statistics().attempts;
+    const auto history=api.audit_list(transfer.new_owner.account.id().value(),proof,0);
+    require(api.statistics().attempts==attempts&&history.size()==9);
+    constexpr std::array<std::string_view,9> expected{"ownership.bootstrap","accounts.create","accounts.activate","accounts.password","accounts.role","accounts.activate","accounts.reset","accounts.disable","ownership.transfer"};
+    for(std::size_t i=0;i<expected.size();++i){
+        require(history[i].action==expected[i]&&history[i].target_kind=="account");
+        require(history[i].action.find(proof)==std::string::npos&&history[i].action.find(replacement)==std::string::npos);
+    }
+    require(history.back().actor_id==transfer.former_owner.account.id().value()&&history.back().target_id==transfer.new_owner.account.id().value());
+    require(db.scalar("SELECT COUNT(*) FROM dc24h_audit_events WHERE CAST(action AS CHAR) LIKE '%42!%' OR CAST(target_kind AS CHAR) LIKE '%42!%'")=="0");
+    rejects(ErrorKind::forbidden,[&]{(void)api.audit_list(transfer.former_owner.account.id().value(),proof,0);});
+    rejects(ErrorKind::forbidden,[&]{(void)api.audit_list(transfer.new_owner.account.id().value(),replacement,0);});
+    rejects(ErrorKind::not_found,[&]{(void)api.audit_list(99999999,proof,0);});
+    for(int i=0;i<8;++i){db.execute("INSERT INTO dc24h_audit_events(occurred_at,action,actor_id,target_kind,target_id,outcome) VALUES (40,'accounts.create',?,'account',?,'succeeded')",{std::to_string(transfer.new_owner.account.id().value()),std::to_string(transfer.new_owner.account.id().value())});}
+    const auto first=api.audit_list(transfer.new_owner.account.id().value(),proof,0);
+    require(first.size()==16);
+    const auto second=api.audit_list(transfer.new_owner.account.id().value(),proof,first.back().id);
+    require(second.size()==1&&second.front().id>first.back().id);
     require(local.statistics().succeeded==2&&api.statistics().refused==6);
     auto limited=options;limited.user="management_limited";Engine restricted(limited,Origin::maintenance_api);
     c={};c.action=Action::role;c.actor=ref(transfer.new_owner);c.target=ref(transfer.former_owner);c.proof=proof;c.role=Role::operator_;c.time=40;

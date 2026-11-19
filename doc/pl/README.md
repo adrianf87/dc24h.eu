@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.8.8: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.8.9: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [Dziennik audytu — alpha-0.8.9](AUDIT_LOGS.md)
 - [Reguły moderacji — alpha-0.8.8](MODERATION_RULES.md)
 - [Mute — alpha-0.8.7](MUTE.md)
 - [Temporary Bans — alpha-0.8.6](TEMPORARY_BANS.md)

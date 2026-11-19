@@ -55,6 +55,13 @@
       "files": [
         "0008_bans.sql"
       ]
+    },
+    {
+      "version": 9,
+      "name": "audit_events",
+      "files": [
+        "0009_audit_events.sql"
+      ]
     }
   ]
 }

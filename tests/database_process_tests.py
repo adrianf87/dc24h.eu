@@ -186,7 +186,7 @@ def main():
                 result = cli(path, action)
                 require(result.returncode == 0, result.stderr)
                 no_secrets(result)
-            require('version=0 latest=8 pending=8 dirty=no' in cli(path, '--database-status').stdout,
+            require('version=0 latest=9 pending=9 dirty=no' in cli(path, '--database-status').stdout,
                     'Fresh schema status is incorrect')
             require(sql('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema="dc24h"') == '0',
                     'Check command modified schema')
@@ -209,7 +209,7 @@ def main():
                     'Migration checksum differs from SQL source')
             result = cli(path, '--migrate-database')
             require(result.returncode == 0 and 'applied=0' in result.stdout, result.stderr)
-            require('version=8 latest=8 pending=0 dirty=no' in cli(path, '--database-status').stdout,
+            require('version=9 latest=9 pending=0 dirty=no' in cli(path, '--database-status').stdout,
                     'Schema status does not match applied migrations')
             if OWNER_CLI_TEST:
                 from owner_cli_process_tests import exercise
@@ -364,7 +364,8 @@ def main():
                 require(result.returncode == 0, result.stderr)
                 no_secrets(result)
             # A legacy registry requires ALTER; inspection never upgrades it.
-            sql('DROP TABLE dc24h.dc24h_bans;'
+            sql('DROP TABLE dc24h.dc24h_audit_events;'
+                'DROP TABLE dc24h.dc24h_bans;'
                 'DROP TABLE dc24h.dc24h_account_adc_credentials;'
                 'DROP TABLE dc24h.dc24h_account_identities;'
                 'DROP TABLE dc24h.dc24h_account_credentials;'
@@ -373,10 +374,10 @@ def main():
                 'ALTER TABLE dc24h.dc24h_schema_migrations DROP COLUMN state;')
             result = cli(path, '--migrate-database')
             require(result.returncode == 1, 'Upgrade accepted without ALTER privileges'); no_secrets(result)
-            require('version=1 latest=8 pending=7 dirty=no' in cli(path, '--database-status').stdout,
+            require('version=1 latest=9 pending=8 dirty=no' in cli(path, '--database-status').stdout,
                     'Read-only status changed legacy schema')
             config()
-            require('applied=7' in cli(path, '--migrate-database').stdout, 'Legacy upgrade failed')
+            require('applied=8' in cli(path, '--migrate-database').stdout, 'Legacy upgrade failed')
             api_path, api_token = enable_api(path, folder)
             if NCDC:
                 for transport in ([], ['--tls']):
@@ -447,7 +448,7 @@ def main():
             result = cli(path, '--language', 'pl', '--check-database')
             require(result.returncode == 0 and 'Połączenie z bazą' in result.stdout, result.stderr)
             result = cli(path, '--language', 'pl', '--database-status')
-            require(result.returncode == 0 and 'Wersja schematu bazy danych=8' in result.stdout, result.stderr)
+            require(result.returncode == 0 and 'Wersja schematu bazy danych=9' in result.stdout, result.stderr)
             config(db_user='missing_private_user')
             result = cli(path, '--check-database')
             require(result.returncode == 1, 'Missing user accepted'); no_secrets(result)

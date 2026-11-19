@@ -81,10 +81,12 @@ void integration(const Options& options) {
     c.execute("ALTER TABLE dc24h_account_adc_credentials DROP FOREIGN KEY dc24h_adc_credentials_account");
     c.execute("ALTER TABLE dc24h_account_identities DROP FOREIGN KEY dc24h_identities_account");
     c.execute("ALTER TABLE dc24h_bans DROP FOREIGN KEY dc24h_bans_creator, DROP FOREIGN KEY dc24h_bans_revoker");
+    c.execute("ALTER TABLE dc24h_audit_events DROP FOREIGN KEY dc24h_audit_events_actor");
     c.execute("ALTER TABLE dc24h_accounts ENGINE=MyISAM");
     rejects(RepositoryErrorKind::schema,[&] { (void)repository.find_by_id(first.account.id()); });
     c.execute("ALTER TABLE dc24h_accounts ENGINE=InnoDB");
     c.execute("ALTER TABLE dc24h_bans ADD CONSTRAINT dc24h_bans_creator FOREIGN KEY(created_by) REFERENCES dc24h_accounts(id) ON DELETE RESTRICT ON UPDATE RESTRICT, ADD CONSTRAINT dc24h_bans_revoker FOREIGN KEY(revoked_by) REFERENCES dc24h_accounts(id) ON DELETE RESTRICT ON UPDATE RESTRICT");
+    c.execute("ALTER TABLE dc24h_audit_events ADD CONSTRAINT dc24h_audit_events_actor FOREIGN KEY(actor_id) REFERENCES dc24h_accounts(id) ON DELETE RESTRICT ON UPDATE RESTRICT");
     c.execute("ALTER TABLE dc24h_account_adc_credentials ADD CONSTRAINT dc24h_adc_credentials_account FOREIGN KEY(account_id) REFERENCES dc24h_accounts(id) ON UPDATE RESTRICT ON DELETE RESTRICT");
     c.execute("ALTER TABLE dc24h_account_identities ADD CONSTRAINT dc24h_identities_account FOREIGN KEY(account_id) REFERENCES dc24h_accounts(id) ON DELETE RESTRICT ON UPDATE RESTRICT");
     c.execute("ALTER TABLE dc24h_account_credentials ADD CONSTRAINT dc24h_credentials_account FOREIGN KEY(account_id) REFERENCES dc24h_accounts(id) ON DELETE RESTRICT ON UPDATE RESTRICT");
@@ -171,9 +173,9 @@ void integration(const Options& options) {
     c.execute("UPDATE dc24h_accounts SET revision=1 WHERE id=?",{std::to_string(first.account.id().value())});
     c.execute("SET check_constraint_checks=ON");
     require(repository.find_by_id(first.account.id()) == first);
-    c.execute("UPDATE dc24h_schema_migrations SET state='applying' WHERE version=8");
+    c.execute("UPDATE dc24h_schema_migrations SET state='applying' WHERE version=9");
     rejects(RepositoryErrorKind::schema,[&] { (void)repository.find_by_id(first.account.id()); });
-    c.execute("UPDATE dc24h_schema_migrations SET state='applied' WHERE version=8");
+    c.execute("UPDATE dc24h_schema_migrations SET state='applied' WHERE version=9");
     c.execute("DELETE FROM dc24h_accounts WHERE id=?",{std::to_string(first.account.id().value())});
     require(!repository.find_by_id(first.account.id()));
     rejects(RepositoryErrorKind::stale,[&] { (void)repository.update(first,first.account); });

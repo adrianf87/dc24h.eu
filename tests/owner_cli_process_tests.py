@@ -52,4 +52,4 @@ def exercise(binary, config, folder, sql):
     call(*flags)  # Stale IDs/revisions never replay a successful write.
     assert sql("SELECT COUNT(*) FROM dc24h.dc24h_accounts WHERE role='owner' AND status='active'") == '1'
     # Empty/current migration history and serving config must not be altered.
-    assert sql('SELECT COUNT(*) FROM dc24h.dc24h_schema_migrations') == '8'
+    assert sql('SELECT COUNT(*) FROM dc24h.dc24h_schema_migrations') == '9'

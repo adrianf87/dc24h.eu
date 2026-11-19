@@ -1,5 +1,6 @@
 #pragma once
 #include "dc24h/accounts/management.hpp"
+#include "dc24h/audit/repository.hpp"
 #include "dc24h/bans/repository.hpp"
 #include <array>
 #include <exception>
@@ -46,9 +47,11 @@ struct Statistics {
 };
 // Central synchronous maintenance dispatcher. Opens one owner-thread SQL
 // connection per call; never runs on the ADC reactor. Serving hubs must be stopped.
-// No secret, command, account ID or exception text is retained. No write replay,
-// reconnect, hot grant, schema migration or implicit ownership entry point.
-// A single caller/thread at a time owns an Engine, just like its HTTP worker.
+// No secret, command text or exception text is retained. A successful maintenance
+// action appends one audit row in its own SQL transaction: action, actor, target
+// kind and id, and time. Refusals, passwords, proofs and free-text reasons are
+// not rows. No write replay, reconnect, hot grant, schema migration or implicit
+// ownership entry point. A single caller/thread at a time owns an Engine.
 class Engine final {
 public:
     Engine(database::Options options, Origin origin);
@@ -56,6 +59,8 @@ public:
     [[nodiscard]] accounts::StoredAccount account(std::uint64_t id);
     [[nodiscard]] std::vector<accounts::StoredAccount> list(std::uint64_t after = 0, bool staff = false);
     [[nodiscard]] std::vector<bans::Record> bans_list(std::uint64_t after=0,bans::Filter filter=bans::Filter::all,bans::Timestamp now=bans::Directory::now());
+    // Proven read. Does not append a row and does not change maintenance counters.
+    [[nodiscard]] std::vector<audit::Event> audit_list(std::uint64_t actor, std::string_view proof, std::uint64_t after);
     [[nodiscard]] Statistics statistics() const noexcept { return statistics_; }
     [[nodiscard]] Origin origin() const noexcept { return origin_; }
 private:

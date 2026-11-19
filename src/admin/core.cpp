@@ -1,6 +1,7 @@
 #include "dc24h/admin/core.hpp"
 #include "dc24h/accounts/password_security.hpp"
 #include "dc24h/accounts/registration.hpp"
+#include "dc24h/security/roles.hpp"
 #include <limits>
 #include <new>
 #include <type_traits>
@@ -158,5 +159,28 @@ std::vector<accounts::StoredAccount> Engine::list(std::uint64_t after, bool staf
 }
 std::vector<bans::Record> Engine::bans_list(std::uint64_t after,bans::Filter filter,bans::Timestamp now){
     database::Connection connection(options_);return bans::Repository(connection).list(after,filter,now);
+}
+std::vector<audit::Event> Engine::audit_list(std::uint64_t actor, std::string_view proof, std::uint64_t after) {
+    if (!valid_id(actor) || after > maximum || proof.size() > 1024) { fail(ErrorKind::invalid_input); }
+    try {
+        database::Connection connection(options_);
+        accounts::AccountRepository repository(connection);
+        const auto stored = repository.find_by_id(*accounts::AccountId::from_value(actor));
+        if (!stored) { fail(ErrorKind::not_found); }
+        if (stored->account.status() != accounts::Status::active || !security::allows(stored->account.role(), security::Permission::read_audit)) {
+            fail(ErrorKind::forbidden);
+        }
+        const auto verdict = accounts::PasswordSecurityService(connection).verify(stored->account.id(), proof);
+        if (verdict == accounts::PasswordVerification::unavailable) { fail(ErrorKind::unavailable); }
+        if (verdict != accounts::PasswordVerification::matched) { fail(ErrorKind::forbidden); }
+        return audit::Repository(connection).list(after);
+    } catch (const audit::Error&) { fail(ErrorKind::unavailable);
+    } catch (const accounts::PasswordSecurityError& error) {
+        fail(error.kind() == accounts::PasswordSecurityErrorKind::invalid_password ? ErrorKind::invalid_input : ErrorKind::unavailable);
+    } catch (const accounts::RepositoryError&) { fail(ErrorKind::unavailable);
+    } catch (const database::Error& error) { fail(error.outcome_unknown() ? ErrorKind::outcome_unknown : ErrorKind::unavailable);
+    } catch (const Error&) { throw; }
+    catch (const std::bad_alloc&) { throw; }
+    catch (...) { fail(ErrorKind::unavailable); }
 }
 } // namespace dc24h::admin

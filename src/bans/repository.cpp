@@ -1,4 +1,5 @@
 #include "dc24h/bans/repository.hpp"
+#include "dc24h/audit/repository.hpp"
 #include "dc24h/accounts/registration.hpp"
 #include "dc24h/security/moderation.hpp"
 #include "registration_internal.hpp"
@@ -102,7 +103,9 @@ Record Service::perform(const accounts::StoredAccount& actor,std::string_view pr
     const auto operation=revoke?security::ModerationOperation::revoke_ban:record_operation;
     if(actor.account.status()!=Status::active||!security::actor_may(operation,actor.account.role())){fail(ErrorKind::forbidden);}
     if(revoke&&(candidate.revoked_at||now<candidate.created_at||candidate.revision>=std::uint64_t(std::numeric_limits<std::int64_t>::max()))){fail(ErrorKind::stale);}
-    detail::validate_password(proof);Repository(connection_).require_schema();AccountRepository accounts(connection_);accounts.require_schema();RegistrationService(connection_).require_credentials_schema();
+    detail::validate_password(proof);Repository(connection_).require_schema();
+    try { audit::Repository(connection_).require_schema(); } catch (const audit::Error&) { fail(ErrorKind::schema); }
+    AccountRepository accounts(connection_);accounts.require_schema();RegistrationService(connection_).require_credentials_schema();
     if(accounts.find_by_id(actor.account.id())!=actor){fail(ErrorKind::stale);}
     std::optional<StoredAccount> target,creator;
     const auto mapped=[&]()->std::optional<std::uint64_t>{
@@ -138,6 +141,8 @@ Record Service::perform(const accounts::StoredAccount& actor,std::string_view pr
         const auto written=connection_.execute_prepared("INSERT INTO dc24h_bans(kind,subject,reason,created_at,expires_at,created_by) VALUES (?,?,?,?,?,?)",params(std::string(kind_key(candidate.kind)),candidate.subject,candidate.reason,now,candidate.expires_at?database::Parameter{*candidate.expires_at}:database::Parameter{nullptr},actor.account.id().value()));
         if(written.affected_rows!=1||!written.insert_id){fail(ErrorKind::invalid_record);}candidate.id=written.insert_id;
     }
+    try { audit::Repository(connection_).append_in_transaction(revoke?"bans.revoke":"bans.create", actor.account.id().value(), "ban", candidate.id, now); }
+    catch (const audit::Error&) { fail(ErrorKind::schema); }
     static_assert(std::is_nothrow_move_constructible_v<Record>);transaction.commit();return candidate;
 }
 }

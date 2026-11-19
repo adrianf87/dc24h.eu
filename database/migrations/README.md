@@ -22,3 +22,5 @@ Schema v5 adds immutable account/nickname/CID bindings in `0005_account_identiti
 Migration v7 widens the stored account-role CHECK to six persistent roles. Guest is session-only. Migration SQL 1–6 remains immutable; see [Permissions](../../doc/us/PERMISSIONS.md).
 
 alpha-0.8.5 adds explicit v8 `0008_bans.sql` for account/CID/exact-IP blocks. Earlier SQL files 1–7 are unchanged. See [Ban Core](../../doc/us/BAN_CORE.md) ([PL](../../doc/pl/BAN_CORE.md)).
+
+alpha-0.8.9 adds explicit v9 `0009_audit_events.sql` for successful maintenance history. Earlier SQL files 1–8 are unchanged. See [Audit Logs](../../doc/us/AUDIT_LOGS.md) ([PL](../../doc/pl/AUDIT_LOGS.md)).

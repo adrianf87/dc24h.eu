@@ -4,7 +4,7 @@ Testy ncdc z konfliktem interfejsów rezerwują porty na obu adresach loopback i
 
 Workflow `Check status` w `.github/workflows/build.yml` działa na własnym runnerze
 `server-747585786` z etykietami `self-hosted`, `Linux`, `X64` i `server-747585786`.
-Push do `main`, `alpha-0.8.7` i `alpha-0.8.8` oraz ręczne uruchomienie włączają CI.
+Push do `main`, `alpha-0.8.7`, `alpha-0.8.8` i `alpha-0.8.9` oraz ręczne uruchomienie włączają CI.
 Uprawnienia repozytorium są tylko do odczytu; checkout nie zachowuje poświadczeń.
 
 Jedno zadanie na tym hoście Debian 13 wyłącza przestarzałe usługi runnerów

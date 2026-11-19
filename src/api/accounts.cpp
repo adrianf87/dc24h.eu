@@ -120,6 +120,20 @@ std::string administration(const admin::Engine& engine) {
     return response(200,output);
 }
 std::string serve(const Request& request,admin::Engine& engine,bool& written) {
+    if(request.target=="/api/v1/audit"){
+        if(request.method!="POST"){throw HttpError{405,"method_not_allowed"};}
+        Fields fields;form(request.body,fields);fields.exact({"actor_id","proof","after"});
+        const auto rows=engine.audit_list(number(fields.get("actor_id")),fields.get("proof"),number(fields.get("after"),true));
+        std::string output="{\"maintenance\":true,\"restart_required\":true,\"events\":[";
+        for(const auto& event:rows){
+            if(output.back()!='['){output+=',';}
+            output+="{\"id\":"+json_string(std::to_string(event.id))+",\"occurred_at\":"+std::to_string(event.occurred_at)+
+                ",\"action\":"+json_string(event.action)+",\"actor_id\":"+json_string(std::to_string(event.actor_id))+
+                ",\"target_kind\":"+json_string(event.target_kind)+",\"target_id\":"+json_string(std::to_string(event.target_id))+
+                ",\"outcome\":\"succeeded\"}";
+        }
+        return response(200,output+"],\"next_after\":"+(rows.size()==audit::page_size?json_string(std::to_string(rows.back().id)):"null")+"}");
+    }
     if(request.target.starts_with("/api/v1/bans")){return serve_bans(request,engine,written);}
     if(request.target=="/api/v1/admin") {
         if(request.method!="GET"){throw HttpError{405,"method_not_allowed"};}

@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.8.8.
+Current development version: alpha-0.8.9.
+
+[Audit Logs — alpha-0.8.9](us/AUDIT_LOGS.md) · [PL](pl/AUDIT_LOGS.md)
 
 [Moderation Rules — alpha-0.8.8](us/MODERATION_RULES.md) · [PL](pl/MODERATION_RULES.md)
 

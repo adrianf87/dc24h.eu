@@ -201,6 +201,9 @@ class AuthenticationTests(unittest.TestCase):
         self.assertTrue(implemented['roles.manage'])
         self.assertTrue(implemented['users.ban'])
         self.assertTrue(implemented['users.mute'])
+        self.assertTrue(implemented['audit.read'])
+        self.assertFalse(implemented['configuration.manage'])
+        self.assertFalse(implemented['hub.manage'])
         hub.stop()
 
 

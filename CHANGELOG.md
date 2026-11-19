@@ -1,5 +1,16 @@
 # Changelog
 
+## alpha-0.8.9 — 2026-11-19
+
+Audit Logs — administrative action history, based on main `e88e596`. No automatic merge. The branch name is `alpha-0.8.9`.
+
+- Add schema v9 `dc24h_audit_events`. Each successful Admin Core account, ownership or ban maintenance action inserts one fixed row in the same SQL transaction before commit. Store the action code, actor account id, target kind and id, time and outcome `succeeded`. Refusals, passwords, proofs, account names, free-text reasons, registration outside Admin Core and live kick or mute do not create rows.
+- Mark `audit.read` implemented for an active moderator-or-higher account, or a VIP account when that key is delegated. `POST /api/v1/audit` returns pages of 16 rows after a password proof. The read does not append a row and does not change Admin Core counters. `GET` is rejected. The private adapter strips extra fields.
+- Add a bilingual read-only WebAdmin history page. The password is kept only for the next page request, cleared from the form, and left out of web storage. Configuration writes and live hub administration remain pending.
+- Route pushes of `alpha-0.8.9` through the custom runner `server-747585786`. The Debian 13 host still starts one Docker test container at a time, gives it 16 CPU threads and 32 GiB RAM, runs C++ Debug/Release and WebAdmin inside it, then stops it. Local validation uses eight CPU threads. Remote CI completion is not awaited.
+
+Validation on Debian 13: all 213/213 CTest suites passed in both Debug and Release, including disposable MariaDB, schema v8-to-v9 preservation, proven audit reads, real ncdc ADC/ADCS and Apache. C++ builds were warning-free. WebAdmin production build/typecheck, all 41 Node tests, all 31 Chromium tests and actual C++ API/adapter/React integration passed. Release metadata, documentation UTF-8/language parity/local links and Python syntax with warnings as errors passed. Remote CI completion is not awaited. No production deployment or account/credential mutation is performed.
+
 ## alpha-0.8.8 — 2026-11-19
 
 Moderation Rules — shared permission and target checks, based on alpha-0.8.7 `d8fbca4fbaa8a048886f075fd209c96dc6639049` (itself based on main `bcbba253074ad7dbba8aa75752c51b1e68767475`). No automatic merge. The branch name is `alpha-0.8.8`.

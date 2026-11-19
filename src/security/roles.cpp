@@ -32,7 +32,7 @@ std::optional<unsigned> role_rank(accounts::Role role) noexcept {
 }
 bool permission_implemented(Permission p) noexcept {
     if(permission_key(p).empty())return false;
-    return p!=Permission::read_audit&&p!=Permission::manage_configuration&&p!=Permission::manage_hub;
+    return p!=Permission::manage_configuration&&p!=Permission::manage_hub;
 }
 void validate(const RolePolicy& policy) {
     if(policy.vip_permissions&~vip_mask)throw std::invalid_argument("Invalid role permission configuration");
