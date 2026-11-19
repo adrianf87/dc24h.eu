@@ -53,6 +53,64 @@ std::string sanitize(std::string_view text, bool clipped) {
     return result;
 }
 
+bool security_outcome(ConnectionEvent event) noexcept {
+    switch (event) {
+    case ConnectionEvent::tls_handshake_failed:
+    case ConnectionEvent::handshake_timeout:
+    case ConnectionEvent::security_quota:
+    case ConnectionEvent::partial_frame_timeout:
+    case ConnectionEvent::login_rejected:
+    case ConnectionEvent::login_timeout:
+    case ConnectionEvent::negotiation_limit:
+    case ConnectionEvent::identity_limit:
+    case ConnectionEvent::authentication_revoked:
+    case ConnectionEvent::authentication_limit:
+    case ConnectionEvent::kicked:
+    case ConnectionEvent::banned:
+        return true;
+    default:
+        return false;
+    }
+}
+
+int open_log_file(const std::string& path) {
+    if (path.find('\0') != std::string::npos) {
+        throw std::invalid_argument("Log file path contains a NUL byte");
+    }
+    const int created = ::open(path.c_str(),
+        O_WRONLY | O_CREAT | O_EXCL | O_APPEND | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK | O_NOCTTY, 0600);
+    if (created >= 0) {
+        struct stat state{};
+        const bool private_file = ::fchmod(created, 0600) == 0 && ::fstat(created, &state) == 0 &&
+            S_ISREG(state.st_mode) && state.st_nlink == 1 && state.st_uid == ::geteuid() &&
+            (state.st_mode & 0777) == 0600;
+        if (!private_file) {
+            ::close(created);
+            ::unlink(path.c_str());
+            throw std::runtime_error("Configured log file must be private");
+        }
+        return created;
+    }
+    if (errno != EEXIST) {
+        throw std::system_error(errno, std::generic_category(), "Cannot open configured log file");
+    }
+    const int opened = ::open(path.c_str(),
+        O_WRONLY | O_APPEND | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK | O_NOCTTY);
+    if (opened < 0) {
+        throw std::system_error(errno, std::generic_category(), "Cannot open configured log file");
+    }
+    struct stat state{};
+    if (::fstat(opened, &state) != 0 || !S_ISREG(state.st_mode) || state.st_nlink != 1) {
+        ::close(opened);
+        throw std::runtime_error("Configured log destination must be a regular file with one link");
+    }
+    if (state.st_uid != ::geteuid() || (state.st_mode & 0777) != 0600) {
+        ::close(opened);
+        throw std::runtime_error("Configured log file must be private");
+    }
+    return opened;
+}
+
 std::string_view event_name(ConnectionEvent event) noexcept {
     switch (event) {
     case ConnectionEvent::accepted: return "accepted";
@@ -95,20 +153,7 @@ Logger::Logger(Options options)
         throw std::invalid_argument("Invalid log level");
     }
     if (options.file_path.empty()) { return; }
-    if (options.file_path.find('\0') != std::string::npos) {
-        throw std::invalid_argument("Log file path contains a NUL byte");
-    }
-    const int opened = ::open(options.file_path.c_str(),
-                              O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK | O_NOCTTY, 0600);
-    if (opened < 0) {
-        throw std::system_error(errno, std::generic_category(), "Cannot open configured log file");
-    }
-    struct stat state{};
-    if (::fstat(opened, &state) != 0 || !S_ISREG(state.st_mode) || state.st_nlink != 1) {
-        ::close(opened);
-        throw std::runtime_error("Configured log destination must be a regular file with one link");
-    }
-    fd_ = opened;
+    fd_ = open_log_file(options.file_path);
     owned_ = true;
 }
 
@@ -117,6 +162,7 @@ Logger::~Logger() {
         const std::lock_guard lock(mutex_);
         report_suppressed_unlocked();
         report_chat_suppressed_unlocked();
+        report_security_suppressed_unlocked();
     } catch (...) { /* Best effort during shutdown too. */ }
     if (owned_) { ::close(fd_); }
 }
@@ -173,12 +219,36 @@ void Logger::report_suppressed_unlocked() {
     write_unlocked("WARN", "Connection log events suppressed=" + std::to_string(suppressed));
 }
 
+void Logger::report_security_suppressed_unlocked() {
+    if (security_suppressed_ == 0) { return; }
+    const auto suppressed = std::exchange(security_suppressed_, 0);
+    write_unlocked("WARN", "Suppressed security records=" + std::to_string(suppressed));
+}
+
+void Logger::record_security_unlocked(std::string_view action) {
+    if (level_ != Level::info && level_ != Level::warning) { return; }
+    const auto now = std::chrono::steady_clock::now();
+    if (!security_window_started_ || now - security_window_ >= std::chrono::seconds(1)) {
+        report_security_suppressed_unlocked();
+        security_window_ = now;
+        security_window_started_ = true;
+        security_emitted_ = 0;
+    }
+    if (security_emitted_ == 32) {
+        if (security_suppressed_ != std::numeric_limits<std::uint64_t>::max()) { ++security_suppressed_; }
+        return;
+    }
+    ++security_emitted_;
+    write_unlocked("WARN", "Security record=" + std::string(action));
+}
+
 void Logger::connection(ConnectionEvent event, std::uint64_t id, bool secure) noexcept {
-    if (!connection_enabled()) { return; }
     const auto action = event_name(event);
     if (action.empty()) { return; }
     try {
         const std::lock_guard lock(mutex_);
+        if (security_outcome(event)) { record_security_unlocked(action); }
+        if (!connection_enabled()) { return; }
         const auto now = std::chrono::steady_clock::now();
         if (!window_started_ || now - connection_window_ >= std::chrono::seconds(1)) {
             report_suppressed_unlocked();

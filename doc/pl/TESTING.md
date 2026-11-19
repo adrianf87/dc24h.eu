@@ -1,5 +1,6 @@
 # Testowanie
 
+**alpha-0.9.10 Logowanie:** [Bezpieczne logi i rejestrowanie zdarzeń](LOGGING_SECURITY.md) utrzymuje plik logu jako prywatny dla właściciela i zapisuje stałe skutki bezpieczeństwa bez danych klienta. To nie jest audyt produkcyjny. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.9 Bezpieczeństwo systemu:** [Utwardzenie usługi Debian i Ubuntu](SYSTEM_SECURITY.md) dodaje jeden przykład systemd, który uruchamia hub jako zablokowanego użytkownika systemowego bez nowych uprawnień i ze ścisłym systemem plików. Budowanie nie instaluje ani nie uruchamia tej usługi. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.8 Bezpieczeństwo bazy danych:** [Kopia MariaDB i obsługa awarii](DATABASE_SECURITY.md) zapisuje jedną spójną kopię tylko dla właściciela, gdy operator o to poprosi, i odtwarza ją wyłącznie do pustych tabel tego samego schematu. Utracone potwierdzenie nie jest powtarzane. Kopie poza hostem zostają przy operatorze. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.7 Bezpieczeństwo API:** [Uprawnienia, sesje i CSRF](API_SECURITY.md) wymaga identyfikatora sesji i sekretu CSRF przy każdym wywołaniu utrzymaniowym poza dowodem hasła. Sam grant nie czyta już danych. Skopiowanie wszystkich trzech wartości z pamięci strony nadal działa do końca slotu. Schemat v9 pozostaje bez zmian.
@@ -408,8 +409,8 @@ Uruchom `ctest --test-dir build --output-on-failure` i analogicznie dla `build-r
 | `adcs.process` | Weryfikacja nazwy/certyfikatu, TLS 1.2/1.3, samo TLS, mieszane porty, fragmentacja, odrzucenie starego TLS, timeout negocjacji, błędne/zaszyfrowane klucze, reset w trakcie zapisu TLS, wielu klientów, duże strumienie i stop |
 | `configuration.unit` | Składanie INI/CLI, ścieżki, granice i współbieżność loggera |
 | `configuration.process` | Rzeczywiste limity, konfiguracja TLS, tryb sprawdzania i bezpieczeństwo plików |
-| `logging.unit` | Poziomy, czyszczenie/UTF-8, współbieżność, odnowienie budżetu i PL |
-| `logging.process` | Zdarzenia TCP/TLS, prywatność, niezależne ostrzeżenia, INI i błędy |
+| `logging.unit` | Poziomy, czyszczenie/UTF-8, współbieżność, odnowienie budżetu, prywatny plik 0600, stałe zapisy bezpieczeństwa i PL |
+| `logging.process` | Zdarzenia TCP/TLS, prywatność, niezależne ostrzeżenia, INI, błędy, odmowa trybu 0644 i zapis czasu częściowej ramki |
 | `security.unit` | Zakresy, okna sztucznego zegara, limity klucza/mapy, czyszczenie i sloty |
 | `security.process` | Rzeczywiste IP/TLS, ramki/błędy, terminy bezwzględne i INI/CLI |
 | `adc.ncdc` | Początkowy HSUP rzeczywistego ncdc przez zwykły TCP |

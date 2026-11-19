@@ -24,7 +24,7 @@ class LoggingProcessTests(unittest.TestCase):
         hub.stop(signal.SIGINT)
         self.assertEqual(counters(self, hub), (2, 0, 1, 0))
         log = bytes(hub.log)
-        self.assertRegex(log, rb"\[INFO\] Starting dc24h.eu alpha-0.9.9")
+        self.assertRegex(log, rb"\[INFO\] Starting dc24h.eu alpha-0.9.10")
         self.assertIn(b"Startup settings: adc_listeners=", log)
         self.assertRegex(log, rb"Connection id=\d+ transport=ADC event=accepted")
         self.assertRegex(log, rb"Connection id=\d+ transport=ADC event=login_rejected")
@@ -149,6 +149,55 @@ class LoggingProcessTests(unittest.TestCase):
                                     capture_output=True, timeout=3)
             self.assertEqual(result.returncode, 2)
             self.assertNotIn(b'SECRET_VALUE', result.stderr)
+
+    def test_private_log_and_security_record(self):
+        with tempfile.TemporaryDirectory(prefix='dc24h-log-private-') as directory:
+            blocked = pathlib.Path(directory) / 'open.log'
+            blocked.write_bytes(b'earlier\n')
+            blocked.chmod(0o644)
+            refused = subprocess.run([BINARY, '--listen', '127.0.0.1:0', '--log-file', str(blocked)],
+                                     capture_output=True, timeout=3)
+            self.assertEqual(refused.returncode, 1, refused.stderr)
+            self.assertIn(b'Configured log file must be private', refused.stderr)
+            self.assertNotIn(b'earlier', refused.stderr)
+            self.assertEqual(blocked.read_bytes(), b'earlier\n')
+            self.assertEqual(blocked.stat().st_mode & 0o777, 0o644)
+
+            logfile = pathlib.Path(directory) / 'hub.log'
+            logfile.write_bytes(b'kept\n')
+            logfile.chmod(0o600)
+            with socket.socket() as available:
+                available.bind(('127.0.0.1', 0))
+                port = available.getsockname()[1]
+            process = subprocess.Popen(
+                [BINARY, '--listen', f'127.0.0.1:{port}', '--partial-frame-timeout', '1',
+                 '--log-file', str(logfile)],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            self.addCleanup(self.cleanup, process)
+            deadline = time.monotonic() + 3
+            while True:
+                self.assertIsNone(process.poll(), logfile.read_bytes())
+                try:
+                    peer = socket.create_connection(('127.0.0.1', port), timeout=0.1)
+                    break
+                except OSError:
+                    self.assertLess(time.monotonic(), deadline)
+                    time.sleep(0.01)
+            with peer:
+                peer.settimeout(3)
+                peer.sendall(b'HMSG PRIVATE_PARTIAL_DO_NOT_LOG')
+                drain_until_eof(peer)
+            process.terminate()
+            stdout, stderr = process.communicate(timeout=3)
+            self.assertEqual(process.returncode, 0, stderr)
+            self.assertEqual((stdout, stderr), (b'', b''))
+            data = logfile.read_bytes()
+            self.assertTrue(data.startswith(b'kept\n'), data)
+            self.assertIn(b'[INFO] Starting dc24h.eu alpha-0.9.10', data)
+            self.assertIn(b'[WARN] Security record=partial_frame_timeout', data)
+            self.assertNotIn(b'Connection id=', data)
+            self.assertNotIn(b'PRIVATE_PARTIAL_DO_NOT_LOG', data)
+            self.assertEqual(logfile.stat().st_mode & 0o777, 0o600)
 
     def test_invalid_log_configuration_values(self):
         for value in ("TRACE", "debug", "", "INVALID"):

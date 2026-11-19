@@ -1,4 +1,5 @@
 #include "dc24h/logging/logger.hpp"
+#include <pwd.h>
 #include <sys/stat.h>
 #include <cerrno>
 #include <unistd.h>
@@ -257,6 +258,147 @@ void chat_budget_levels_and_localization() {
         occurrences(pl,"Pominięte zdarzenia logu czatu=1")==1,"Chat localization/window rollover differs");
 }
 
+void private_file_and_security_records() {
+    Fixture f;
+    {
+        const auto previous = ::umask(0377);
+        try {
+            dc24h::logging::Logger logger({dc24h::logging::Level::info, (f.dir / "umask.log").string()});
+            logger.info("writable");
+        } catch (...) {
+            ::umask(previous);
+            throw;
+        }
+        ::umask(previous);
+    }
+    struct stat created{};
+    require(::stat((f.dir / "umask.log").c_str(), &created) == 0, "umask log missing");
+    require((created.st_mode & 0777) == 0600, "restrictive umask left the new log unwritable");
+    require(f.contents("umask.log").find("writable") != std::string::npos, "new private log was not written");
+
+    const auto kept = f.dir / "kept.log";
+    {
+        std::ofstream seed(kept);
+        seed << "kept\n";
+    }
+    require(::chmod(kept.c_str(), 0600) == 0, "chmod 0600 failed");
+    {
+        dc24h::logging::Logger logger({dc24h::logging::Level::info, kept.string(), Language::us, false});
+        logger.connection(Event::accepted, 4, false);
+        logger.connection(Event::banned, 4, true);
+    }
+    const auto kept_text = f.contents("kept.log");
+    require(kept_text.rfind("kept\n", 0) == 0, "existing private log was replaced");
+    require(kept_text.find("[WARN] Security record=banned") != std::string::npos, "security record missing");
+    require(kept_text.find("Connection id=") == std::string::npos, "connection logging no longer opt-in");
+    require(kept_text.find("id=") == std::string::npos, "security record includes a connection id");
+    struct stat kept_state{};
+    require(::stat(kept.c_str(), &kept_state) == 0 && (kept_state.st_mode & 0777) == 0600,
+            "existing private mode was changed");
+
+    const auto open = f.dir / "open.log";
+    {
+        std::ofstream seed(open);
+        seed << "earlier\n";
+    }
+    require(::chmod(open.c_str(), 0644) == 0, "chmod 0644 failed");
+    bool refused = false;
+    try {
+        dc24h::logging::Logger logger({dc24h::logging::Level::info, open.string()});
+    } catch (const std::runtime_error& error) {
+        refused = std::string(error.what()) == "Configured log file must be private";
+    }
+    require(refused, "group-readable log was accepted");
+    require(f.contents("open.log") == "earlier\n", "refused log was modified");
+
+    if (::geteuid() == 0) {
+        const auto foreign = f.dir / "foreign.log";
+        {
+            std::ofstream seed(foreign);
+            seed << "owner\n";
+        }
+        require(::chmod(foreign.c_str(), 0600) == 0, "chmod foreign failed");
+        const passwd* nobody = ::getpwnam("nobody");
+        require(nobody != nullptr, "nobody account missing");
+        require(::chown(foreign.c_str(), nobody->pw_uid, nobody->pw_gid) == 0, "chown failed");
+        bool foreign_refused = false;
+        try {
+            dc24h::logging::Logger logger({dc24h::logging::Level::info, foreign.string()});
+        } catch (const std::runtime_error& error) {
+            foreign_refused = std::string(error.what()) == "Configured log file must be private";
+        }
+        require(foreign_refused, "another owner's private log was accepted");
+        require(::chown(foreign.c_str(), ::geteuid(), ::getegid()) == 0, "restore owner failed");
+    }
+
+    const auto linked = f.dir / "linked.log";
+    {
+        std::ofstream seed(linked);
+    }
+    require(::chmod(linked.c_str(), 0600) == 0, "chmod linked failed");
+    require(::link(linked.c_str(), (f.dir / "alias.log").c_str()) == 0, "link failed");
+    bool linked_refused = false;
+    try {
+        dc24h::logging::Logger logger({dc24h::logging::Level::info, linked.string()});
+    } catch (const std::runtime_error& error) {
+        linked_refused = std::string(error.what()) ==
+            "Configured log destination must be a regular file with one link";
+    }
+    require(linked_refused, "hard-linked log was accepted");
+
+    {
+        dc24h::logging::Logger logger({dc24h::logging::Level::info,
+                                      (f.dir / "budget.log").string(), Language::pl, true});
+        for (int i = 0; i < 40; ++i) {
+            logger.connection(Event::kicked, static_cast<std::uint64_t>(i), false);
+        }
+    }
+    const auto budget = f.contents("budget.log");
+    require(occurrences(budget, "Zapis bezpieczeństwa=kicked") == 32, "security budget mismatch");
+    require(occurrences(budget, "Pominięte zapisy bezpieczeństwa=8") == 1, "security suppression mismatch");
+    require(occurrences(budget, "event=kicked") == 40, "security budget capped connection records");
+    std::size_t security_lines = 0;
+    for (std::size_t at = 0; at < budget.size();) {
+        const auto end = budget.find('\n', at);
+        const auto line = budget.substr(at, end == std::string::npos ? std::string::npos : end - at);
+        if (line.find("Zapis bezpieczeństwa=") != std::string::npos) {
+            ++security_lines;
+            require(line.find("id=") == std::string::npos, "localized security record includes an id");
+            require(line.find("transport=") == std::string::npos, "localized security record includes a transport");
+        }
+        if (end == std::string::npos) { break; }
+        at = end + 1;
+    }
+    require(security_lines == 32, "security lines were not counted");
+
+    {
+        dc24h::logging::Logger logger({dc24h::logging::Level::error,
+                                      (f.dir / "quiet.log").string(), Language::us, false});
+        logger.connection(Event::banned, 1, false);
+        logger.error("KEEP");
+    }
+    const auto quiet = f.contents("quiet.log");
+    require(quiet.find("Security record=") == std::string::npos, "error level recorded a security event");
+    require(quiet.find("[ERROR] KEEP") != std::string::npos, "error level dropped errors");
+    {
+        dc24h::logging::Logger logger({dc24h::logging::Level::off,
+                                      (f.dir / "silent.log").string(), Language::us, true});
+        logger.connection(Event::banned, 1, false);
+    }
+    require(f.contents("silent.log").empty(), "off level recorded a security event");
+    {
+        dc24h::logging::Logger logger({dc24h::logging::Level::warning,
+                                      (f.dir / "warn-only.log").string(), Language::us, true});
+        logger.connection(Event::login_rejected, 3, true);
+        logger.connection(Event::accepted, 3, false);
+    }
+    const auto warn = f.contents("warn-only.log");
+    require(warn.find("[WARN] Security record=login_rejected") != std::string::npos,
+            "warning level omitted the security record");
+    require(warn.find("Connection id=") == std::string::npos, "warning level emitted connection info");
+    require(warn.find("[INFO]") == std::string::npos, "warning level emitted info");
+}
+
 }
 int main() {
     if (dc24h::i18n::translate("Users stopped; online=0", dc24h::i18n::Language::pl) !=
@@ -269,6 +411,7 @@ int main() {
         window_rollover_and_polish();
         concurrent_peer_budget();
         chat_budget_levels_and_localization();
+        private_file_and_security_records();
         std::cout << "Logging levels, sanitization, connection events and rate budget OK\n";
     } catch (const std::exception& error) {
         std::cerr << "FAIL: " << error.what() << '\n';

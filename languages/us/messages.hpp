@@ -3,7 +3,7 @@
 #include <string_view>
 
 namespace dc24h::i18n::us {
-inline constexpr std::array<std::string_view, 186> messages{{
+inline constexpr std::array<std::string_view, 189> messages{{
     "Invalid ban input",
     "Ban authorization refused",
     "Ban revision is stale",
@@ -139,9 +139,12 @@ inline constexpr std::array<std::string_view, 186> messages{{
     "Help/version cannot be combined with operational options",
     "Cannot open configured log file",
     "Configured log destination must be a regular file with one link",
+    "Configured log file must be private",
     "Startup settings: adc_listeners=",
     "Connection id=",
     "Connection log events suppressed=",
+    "Security record=",
+    "Suppressed security records=",
     "ADC invalid frame rejected; payload omitted",
     "Network connection limit reached; excess peer rejected",
     "ADCS session initialization failed; peer rejected",

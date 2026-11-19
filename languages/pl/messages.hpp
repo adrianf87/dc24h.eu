@@ -3,7 +3,7 @@
 #include <string_view>
 
 namespace dc24h::i18n::pl {
-inline constexpr std::array<std::string_view, 186> messages{{
+inline constexpr std::array<std::string_view, 189> messages{{
     "Nieprawidłowe dane blokady",
     "Odmowa uprawnień do blokady",
     "Nieaktualna rewizja blokady",
@@ -139,9 +139,12 @@ inline constexpr std::array<std::string_view, 186> messages{{
     "Pomocy/wersji nie można łączyć z opcjami operacyjnymi",
     "Nie można otworzyć skonfigurowanego pliku logu",
     "Log musi wskazywać zwykły plik z jednym dowiązaniem",
+    "Plik logu musi być prywatny",
     "Ustawienia startowe: adc_listeners=",
     "Połączenie id=",
     "Pominięte zdarzenia połączeń: suppressed=",
+    "Zapis bezpieczeństwa=",
+    "Pominięte zapisy bezpieczeństwa=",
     "Odrzucono nieprawidłową ramkę ADC; treść pominięta",
     "Osiągnięto limit połączeń; nadmiarowy klient odrzucony",
     "Nie udało się utworzyć sesji ADCS; klient odrzucony",

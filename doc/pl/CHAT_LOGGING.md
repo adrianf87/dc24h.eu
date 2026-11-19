@@ -20,7 +20,7 @@ Logger czatu nie otrzymuje treści wiadomości ani powitania, dowolnych pól ADC
 
 Każdy Logger ma osobny budżet 32 zdarzeń czatu na jednosekundowe okno zegara monotonicznego, chroniony mutexem. Nadmiar zwiększa nasycany licznik bez formatowania rekordów. Pierwsze zdarzenie kolejnego okna lub destruktor zapisuje jeden WARN `Chat log events suppressed=N` (PL: `Pominięte zdarzenia logu czatu=N`). Logowanie połączeń zachowuje niezależny budżet 64/s. Podsumowanie może towarzyszyć pierwszemu rekordowi kolejnego okna; nie ma okresowego zegara dla bezczynnych logów.
 
-Dotychczasowy logger zapewnia UTC, ograniczone poprawne UTF-8 w jednym wierszu i obsługę błędów best effort. Błędy alokacji/zapisu nie wychodzą z loggera czatu. Nieudany zapis nadal zużywa budżet; licznik pominięć dotyczy limitu tempa, nie sukcesu zapisu na dysk. Obowiązują zaufany katalog, zwykły plik, brak dowiązań symbolicznych i tryb 0600 dla nowych plików. Zapis pozostaje synchroniczny; etap nie zapewnia ograniczonego opóźnienia dysku ani rotacji/retencji logów.
+Dotychczasowy logger zapewnia UTC, ograniczone poprawne UTF-8 w jednym wierszu i obsługę błędów best effort. Błędy alokacji/zapisu nie wychodzą z loggera czatu. Nieudany zapis nadal zużywa budżet; licznik pominięć dotyczy limitu tempa, nie sukcesu zapisu na dysk. Obowiązują zaufany katalog, zwykły plik, brak dowiązań symbolicznych i tryb 0600. Istniejący log musi już mieć tryb 0600 i należeć do tego użytkownika. Zapis pozostaje synchroniczny; etap nie zapewnia ograniczonego opóźnienia dysku ani rotacji/retencji logów.
 
 ## Znaczenie liczników
 

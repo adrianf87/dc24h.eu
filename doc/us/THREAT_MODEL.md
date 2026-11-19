@@ -4,6 +4,8 @@ This analysis records how the hub and WebAdmin can be attacked, which controls a
 
 The analysis does not add a protocol check, a schema migration, an Apache setting or a WebAdmin control. Schema v9 is unchanged. `configuration.manage` and `hub.manage` stay unimplemented. Browser kick and mute are still not dispatched. This is not a public authenticated gateway and it is not a penetration test.
 
+alpha-0.9.10 logging security, added after this analysis, keeps the log file private to its owner and records fixed security outcomes without peer data. Those records are not a production audit. It does not close T11 or T13. Schema v9 is unchanged. See [Logging security](LOGGING_SECURITY.md).
+
 alpha-0.9.9 system security, added after this analysis, ships one systemd example that runs the hub as a locked system user with an empty capability set and a strict read-only hierarchy. The build does not install or start that service. It does not close T07. Schema v9 is unchanged. See [System security](SYSTEM_SECURITY.md).
 
 alpha-0.9.8 database security, added after this analysis, writes one consistent owner-only snapshot when the operator asks and restores it only into empty tables of the same schema. A lost commit acknowledgement is not replayed. It does not close T14. Schema v9 is unchanged. See [Database security](DATABASE_SECURITY.md).
@@ -109,9 +111,9 @@ Current control: [Permissions](PERMISSIONS.md), [Moderation rules](MODERATION_RU
 
 ### T11 Missing audit
 
-Successful account, ownership and ban maintenance can be listed by `audit.read`. Refusals, passwords, proofs, free-text reasons, live kick and live mute are not rows. Registration outside Admin Core does not add a row. Security log events are aggregates. There is no production audit of CSRF failures or of grant use.
+Successful account, ownership and ban maintenance can be listed by `audit.read`. Refusals, passwords, proofs, free-text reasons, live kick and live mute are not rows. Registration outside Admin Core does not add a row. Security log events are aggregates. A private log can store a fixed security record with no actor and no target. There is no production audit of CSRF failures or of grant use.
 
-Current control: [Audit logs](AUDIT_LOGS.md). Residual risk: the audit table cannot reconstruct a refused action or a live kick.
+Current control: [Audit logs](AUDIT_LOGS.md) and [Logging security](LOGGING_SECURITY.md). Residual risk: the audit table cannot reconstruct a refused action or a live kick.
 
 ### T12 Hub sees routed client data
 

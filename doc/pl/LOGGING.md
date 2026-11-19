@@ -31,7 +31,7 @@ connections = off
   --log-level info --log-file /var/log/dc24h/hub.log --log-connections on --language pl
 ```
 
-`--log-file -` wybiera stderr. Prawa, aliasy, ścieżki względne i pierwszeństwo INI/CLI opisuje [CONFIGURATION.md](CONFIGURATION.md). Nowy plik żąda praw 0600; istniejące nie są zmieniane. Plik jest otwierany/sprawdzany także przy `off`. Katalogi nie powstają automatycznie.
+`--log-file -` wybiera stderr. Prawa, aliasy, ścieżki względne i pierwszeństwo INI/CLI opisuje [CONFIGURATION.md](CONFIGURATION.md). Nowy plik ma tryb `0600`. Istniejący plik jest dopisywany tylko wtedy, gdy ma już tryb `0600`, należy do tego użytkownika i ma jedno dowiązanie. Zobacz [Bezpieczeństwo logów](LOGGING_SECURITY.md). Plik jest otwierany/sprawdzany także przy `off`. Katalogi nie powstają automatycznie.
 
 ## Zdarzenia połączeń i prywatność
 
