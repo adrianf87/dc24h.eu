@@ -82,6 +82,8 @@ There are at most 16 listeners, shared across TCP and TLS. Port 0 requests an ep
 
 RAII owns all sockets; SOCK_NONBLOCK and SOCK_CLOEXEC are used. Excess clients are closed once accepted by the application; the kernel TCP handshake may have completed earlier. Counters track accepted/rejected connections and plaintext application bytes. TLS negotiation bytes are excluded. Peer FIN, reset and read errors release only that connection. Idle checks run about every 250 ms; scheduling may add delay. TLS handshake limits are in [ADCS_TLS.md](ADCS_TLS.md).
 
+alpha-0.9.3 names a listen backlog of 128 and, for each accepted socket the hub keeps, kernel send and receive buffers of 65536 bytes plus a TCP user timeout equal to the idle timeout. The 8192-byte read, the 64-client accept batch and the application queues stay. These kernel caps are not a bandwidth limit. See [Network security](NETWORK_SECURITY.md).
+
 Each accept batch handles at most 64 clients, each client read turn at most 8 × 8192 bytes. Every ADC decoder buffers at most 16 KiB of unfinished frame body. OpenSSL has additional per-session buffers. Buffered decrypted data is explicitly rescheduled. These budgets preserve stop/peer progress during sustained traffic; they are not DDoS protection or bandwidth limits.
 
 Transient accept errors retry. Descriptor/memory/watch pressure suspends listener watches for one second while existing clients and stop continue. Fatal reactor/listener errors propagate and produce exit code 1 after cleanup. Application limits do not change RLIMIT_NOFILE. Eventfd wakes epoll on stop; listeners close before clients, without waiting for peers or draining application messages. No output queues exist yet.

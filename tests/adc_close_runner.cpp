@@ -3,14 +3,30 @@
 #include "dc24h/core/termination_signals.hpp"
 #include "dc24h/logging/logger.hpp"
 
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <signal.h>
 #include <iostream>
 #include <thread>
 
-// Executable-local fault fixture: production accept4 and socket tuning are
-// untouched. A tiny server send buffer forces real TCP/SSL write backpressure.
+// Executable-local fault fixture. Production still caps kept sockets.
+// This runner forces a tiny send buffer after that cap and keeps the TCP user
+// timeout longer than the one-second drain deadline, so stalled output is
+// closed by the application deadline rather than by the kernel.
 extern "C" int __real_accept4(int, sockaddr*, socklen_t*, int);
+extern "C" int __real_setsockopt(int, int, int, const void*, socklen_t);
+extern "C" int __wrap_setsockopt(int fd, int level, int name, const void* value, socklen_t length) {
+    if (level == SOL_SOCKET && name == SO_SNDBUF) {
+        const int capacity = 1024;
+        return __real_setsockopt(fd, level, name, &capacity, sizeof(capacity));
+    }
+    if (level == IPPROTO_TCP && name == TCP_USER_TIMEOUT) {
+        const unsigned int timeout = 120000;
+        return __real_setsockopt(fd, level, name, &timeout, sizeof(timeout));
+    }
+    return __real_setsockopt(fd, level, name, value, length);
+}
 extern "C" int __wrap_accept4(int fd, sockaddr* address, socklen_t* length, int flags) {
     const int client=__real_accept4(fd,address,length,flags);
     if (client>=0) {

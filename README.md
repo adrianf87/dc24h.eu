@@ -2,12 +2,13 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.9.2 (ADC security).**
+**Current development version: alpha-0.9.3 (Network security).**
 
 CI on `main`: [GitHub-hosted Ubuntu 24.04](doc/us/GITHUB_CI.md) runs C++ Debug, C++ Release and WebAdmin · [PL](doc/pl/GITHUB_CI.md).
 
 Completed increments (older bullets describe their original delivery scope):
 
+- **alpha-0.9.3 Network security**: the listen backlog is 128. Each accepted socket the hub keeps gets kernel send and receive buffers of 65536 bytes and a TCP user timeout equal to the idle timeout. Existing application timeouts and output queues stay. A bandwidth cap remains separate work. See [Network security](doc/us/NETWORK_SECURITY.md).
 - **alpha-0.9.2 ADC security**: the hub command profile is one function, called before session state changes. A deterministic in-process fuzz campaign locks the parser, the stream decoder and that profile. Unknown extensions still parse. Coverage-guided fuzzing remains separate work. See [ADC security](doc/us/ADC_SECURITY.md).
 - **alpha-0.9.1 Threat model**: a written analysis of assets, actors, trust boundaries and residual risk for the hub and local WebAdmin. It adds no control, schema change or public gateway. See [Threat model](doc/us/THREAT_MODEL.md).
 - **alpha-0.8.15 Security sessions**: each in-memory maintenance grant carries a public session id and a separate CSRF secret. Writes require both on that same slot. Each session accepts 24 requests in 10 seconds. Reads stay grant-only. The values stay in process memory, not in SQL, cookies or web storage. A public authenticated gateway remains separate work. See [Security sessions](doc/us/SECURITY_SESSIONS.md).

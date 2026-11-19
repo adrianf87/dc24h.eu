@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.9.2 LANGUAGES CXX)
+project(dc24h VERSION 0.9.3 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -616,7 +616,7 @@ if(BUILD_TESTING)
     set_tests_properties(adc.sid PROPERTIES TIMEOUT 60)
     add_executable(adc_close_runner tests/adc_close_runner.cpp)
     target_link_libraries(adc_close_runner PRIVATE dc24h_core)
-    target_link_options(adc_close_runner PRIVATE -Wl,--wrap=accept4)
+    target_link_options(adc_close_runner PRIVATE -Wl,--wrap=accept4 -Wl,--wrap=setsockopt)
     target_compile_options(adc_close_runner PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
     set_target_properties(adc_close_runner PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME adc.close.process COMMAND "${Python3_EXECUTABLE}"

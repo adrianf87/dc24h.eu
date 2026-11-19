@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
+#include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -164,7 +165,7 @@ struct Connection {
     security::FrameLimiter frame_budget{1024};
     bool security_violation{false};
     std::optional<adcs::IoStatus> write_wait;
-    std::array<char, 8192> input{};
+    std::array<char, read_buffer_bytes> input{};
     std::optional<Clock::time_point> output_progress;
     std::uint32_t interest{EPOLLIN | EPOLLRDHUP};
     bool security_counted{false};
@@ -173,6 +174,17 @@ struct Connection {
     bool identity_violation{false};
 };
 } // namespace
+
+bool protect_tcp_socket(int fd, std::chrono::milliseconds user_timeout) noexcept {
+    if (fd < 0) { return false; }
+    const auto milliseconds = user_timeout.count();
+    if (milliseconds < 1 || milliseconds > 86400000) { return false; }
+    const int buffer = socket_buffer_bytes;
+    if (::setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &buffer, sizeof(buffer)) != 0) { return false; }
+    if (::setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &buffer, sizeof(buffer)) != 0) { return false; }
+    const auto timeout = static_cast<unsigned int>(milliseconds);
+    return ::setsockopt(fd, IPPROTO_TCP, TCP_USER_TIMEOUT, &timeout, sizeof(timeout)) == 0;
+}
 
 Endpoint parse_endpoint(std::string_view text) {
     const bool bracketed = text.starts_with('[');
@@ -302,7 +314,7 @@ void TcpServer::run() {
         if (::bind(listener.get(), reinterpret_cast<const sockaddr*>(&storage), size) == -1) {
             system_failure("bind TCP listener");
         }
-        if (::listen(listener.get(), SOMAXCONN) == -1) { system_failure("listen"); }
+        if (::listen(listener.get(), listen_backlog) == -1) { system_failure("listen"); }
         watch(epoll.get(), listener.get(), listeners.size() + 1, EPOLLIN);
         addresses.push_back(std::string(secure ? "ADCS" : "Network") +
                             " listening on " + bound_address(listener.get()));
@@ -361,7 +373,7 @@ void TcpServer::run() {
     bool accepting = true;
     Clock::time_point resume_accepting{};
 
-    enum class Warning { invalid_frame, connection_limit, idle, tls_failure, handshake_timeout, peer_io, admission_quota, frame_quota, partial_frame, login_timeout, output_timeout, negotiation_limit, identity_limit, authentication_limit, session_id_limit, session_limit, count };
+    enum class Warning { invalid_frame, connection_limit, idle, tls_failure, handshake_timeout, peer_io, admission_quota, frame_quota, partial_frame, login_timeout, output_timeout, negotiation_limit, identity_limit, authentication_limit, session_id_limit, session_limit, tcp_protection, count };
     std::array<std::optional<Clock::time_point>, static_cast<std::size_t>(Warning::count)> last_warnings{};
     auto warn_once = [&](Warning category, std::string_view message) {
         const auto now = Clock::now();
@@ -568,6 +580,12 @@ void TcpServer::run() {
                         continue;
                     }
                     const auto client_token = allocated->value();
+                    if (!protect_tcp_socket(client.get(), options_.idle_timeout)) {
+                        peer_limiter.release(key);
+                        rejected_.fetch_add(1);
+                        warn_once(Warning::tcp_protection, "TCP socket protection failed; peer rejected");
+                        continue;
+                    }
                     const bool secure = secure_listeners[static_cast<std::size_t>(token - 1)];
                     std::unique_ptr<adcs::Connection> tls;
                     if (secure) {

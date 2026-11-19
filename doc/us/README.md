@@ -1,7 +1,8 @@
 # dc24h.eu documentation
 
-alpha-0.9.2: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.9.3: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
+- [Network security — alpha-0.9.3](NETWORK_SECURITY.md)
 - [ADC security — alpha-0.9.2](ADC_SECURITY.md)
 - [Threat model — alpha-0.9.1](THREAT_MODEL.md)
 - [Security sessions — alpha-0.8.15](SECURITY_SESSIONS.md)

@@ -139,6 +139,10 @@ alpha-0.1.10 powstaje z main po alpha-0.1.9. Oddzielaj schemat/formatowanie prze
 
 alpha-0.1.11 powstaje z main po alpha-0.1.10. Oddzielaj aktywację hosta, rzeczywiste certyfikaty i reload od tworzenia/testowania przykładu. Testuj dokładnie dostarczaną politykę TLS/dostępu/nagłówków z tymczasowymi ścieżkami/portami, bez konfiguracji hosta. Sukces apache2 -t nie dowodzi zgodności certyfikatu/klucza; sprawdzaj inicjalizację. Zachowuj oba języki dokumentacji i spójne wersje fixture.
 
+## Bezpieczeństwo sieci — alpha-0.9.3
+
+Gałąź powstaje z main. Ogranicz kolejkę nasłuchu i ustaw bufory jądra wysyłania i odbioru oraz `TCP_USER_TIMEOUT` na każdym przyjętym gnieździe, które hub zatrzymuje. Użyj istniejącego timeoutu bezczynności. Nie dodawaj migracji schematu, licznika statusu, klucza INI, strony WebAdmin ani `TCP_NODELAY`. Nie twierdź, że jest limit pasma albo że zagrożenie szczątkowe T13 jest zamknięte.
+
 ## Bezpieczeństwo ADC — alpha-0.9.2
 
 Gałąź powstaje z main. Wydziel istniejący bezstanowy profil poleceń do `control_message` i wywołuj go z `observe` bez nowej klasy odrzuceń. Parser nadal przyjmuje nieznane rozszerzenia i ramki legalne dla huba. Dodaj jeden ograniczony deterministyczny CTest `adc.security` z ziarnem `0x0ADC0922` i 4096 mutacjami. Nie dodawaj libFuzzer, migracji schematu, licznika statusu ani strony WebAdmin. Nie twierdź, że zagrożenia szczątkowe T01–T16 są zamknięte.
