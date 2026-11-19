@@ -188,6 +188,12 @@ def main():
                 no_secrets(result)
             require('version=0 latest=9 pending=9 dirty=no' in cli(path, '--database-status').stdout,
                     'Fresh schema status is incorrect')
+            early = folder / 'early.bk'
+            refused = cli(path, '--backup-database', str(early))
+            require(refused.returncode == 1, refused.stderr)
+            require(not early.exists(), 'Unfinished schema left a backup file')
+            no_secrets(refused)
+            require(str(folder) not in refused.stderr, 'Backup path leaked')
             require(sql('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema="dc24h"') == '0',
                     'Check command modified schema')
             if RESILIENCE_TEST:
@@ -211,6 +217,46 @@ def main():
             require(result.returncode == 0 and 'applied=0' in result.stdout, result.stderr)
             require('version=9 latest=9 pending=0 dirty=no' in cli(path, '--database-status').stdout,
                     'Schema status does not match applied migrations')
+            sql("INSERT INTO dc24h.dc24h_accounts (id,name,role,status,created_at,updated_at,revision) "
+                "VALUES (7,'backup-user','registered','active',1,1,1)")
+            sql("INSERT INTO dc24h.dc24h_account_credentials (account_id,verifier,created_at) "
+                "VALUES (7,UNHEX('00FF61'),1)")
+            snapshot = folder / 'cli-backup.bk'
+            saved = cli(path, '--backup-database', str(snapshot))
+            require(saved.returncode == 0 and saved.stdout.startswith('Database backup written bytes='), saved.stderr)
+            no_secrets(saved)
+            require(str(folder) not in saved.stdout + saved.stderr, 'Backup path leaked')
+            require((snapshot.stat().st_mode & 0o777) == 0o600, 'Backup file is not owner-only')
+            payload = snapshot.read_bytes()
+            require(secret.encode() not in payload, 'Database password stored in the backup')
+            require(b'backup-user' in payload and b'\x00\xffa' in payload, 'Backup omitted stored rows')
+            again = cli(path, '--backup-database', str(snapshot))
+            require(again.returncode == 1 and snapshot.read_bytes() == payload, again.stderr)
+            no_secrets(again)
+            link = folder / 'cli-backup.link'
+            link.symlink_to(snapshot)
+            linked = cli(path, '--backup-database', str(link))
+            require(linked.returncode == 1 and snapshot.read_bytes() == payload, linked.stderr)
+            sql('DELETE FROM dc24h.dc24h_account_credentials')
+            sql('DELETE FROM dc24h.dc24h_accounts')
+            snapshot.chmod(0o640)
+            exposed = cli(path, '--restore-database', str(snapshot))
+            require(exposed.returncode == 1 and sql('SELECT COUNT(*) FROM dc24h.dc24h_accounts') == '0', exposed.stderr)
+            no_secrets(exposed)
+            snapshot.chmod(0o600)
+            loaded = cli(path, '--language', 'pl', '--restore-database', str(snapshot))
+            require(loaded.returncode == 0 and 'wiersze=' in loaded.stdout, loaded.stderr)
+            require(str(folder) not in loaded.stdout + loaded.stderr, 'Restore path leaked')
+            require(sql("SELECT HEX(verifier) FROM dc24h.dc24h_account_credentials WHERE account_id=7") == '00FF61',
+                    'Restored credential bytes differ')
+            repeat = cli(path, '--restore-database', str(snapshot))
+            require(repeat.returncode == 1 and sql('SELECT COUNT(*) FROM dc24h.dc24h_accounts') == '1', repeat.stderr)
+            sql('DELETE FROM dc24h.dc24h_account_credentials')
+            sql('DELETE FROM dc24h.dc24h_accounts')
+            require(sql('SELECT COUNT(*) FROM dc24h.dc24h_accounts') == '0', 'Backup test left an account')
+            sql('ALTER TABLE dc24h.dc24h_accounts AUTO_INCREMENT=1')
+            snapshot.unlink()
+            link.unlink()
             if OWNER_CLI_TEST:
                 from owner_cli_process_tests import exercise
                 exercise(OWNER_CLI_TEST, path, folder, sql)
@@ -477,6 +523,11 @@ def main():
             for action in ['--check-config', '--check-database', '--database-status']:
                 result = cli(path, action, '--migrate-database')
                 require(result.returncode == 2, 'Conflicting database action accepted')
+            require(cli(path, '--backup-database', str(folder / 'conflict.bk'), '--migrate-database').returncode == 2,
+                    'Backup accepted with migration')
+            require(cli(path, '--restore-database', str(folder / 'conflict.bk'), '--database-status').returncode == 2,
+                    'Restore accepted with status')
+            require(not (folder / 'conflict.bk').exists(), 'Conflicting backup created a file')
             for action in ['--check-config', '--check-database', '--migrate-database']:
                 require(cli(path, '--database-status', action).returncode == 2, 'Conflicting status action accepted')
             for action in ['--help', '--version']:
@@ -490,6 +541,11 @@ def main():
             require(cli(path, '--check-config').returncode == 0, 'Disabled database read credentials')
             for action in ['--check-database', '--migrate-database', '--database-status']:
                 require(cli(path, action).returncode == 2, 'Database action accepted in disabled mode')
+            require(cli(path, '--backup-database', str(folder / 'disabled.bk')).returncode == 2,
+                    'Backup accepted while the database is disabled')
+            require(cli(path, '--restore-database', str(folder / 'disabled.bk')).returncode == 2,
+                    'Restore accepted while the database is disabled')
+            require(not (folder / 'disabled.bk').exists(), 'Disabled backup created a file')
             config(password='missing-private-password')
             result = cli(path, '--check-database')
             require(result.returncode == 1, 'Missing private password accepted'); no_secrets(result)

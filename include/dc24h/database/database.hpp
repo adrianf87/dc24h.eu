@@ -64,6 +64,8 @@ using Row = std::vector<Cell>;
 struct Result { std::vector<std::string> columns; std::vector<Row> rows; };
 struct Execution { std::uint64_t affected_rows{}, insert_id{}; };
 class Transaction;
+// Snapshot::consistent starts one InnoDB read view. Scope exit still rolls back.
+enum class Snapshot { ordinary, consistent };
 
 // Synchronous, single-thread-owned connection. No use on the Network reactor.
 // RAII keeps Connector/C details out of the public interface; implicit reconnect is disabled.
@@ -80,8 +82,8 @@ public:
     void reconnect();
     [[nodiscard]] Execution execute_prepared(std::string_view sql, const Parameters& parameters = {});
     [[nodiscard]] Result query(std::string_view sql, const Parameters& parameters = {}, QueryLimits limits = {});
-    [[nodiscard]] Transaction transaction();
     [[nodiscard]] bool in_transaction() const;
+    [[nodiscard]] Transaction transaction(Snapshot snapshot = Snapshot::ordinary);
     void execute(std::string_view sql, const std::vector<std::string>& parameters = {});
     // Exactly one row/column, at most 4096 bytes; SQL NULL maps to nullopt.
     [[nodiscard]] std::optional<std::string> scalar(
@@ -108,7 +110,7 @@ public:
     void rollback();
 private:
     friend class Connection;
-    explicit Transaction(const std::shared_ptr<Connection::Impl>& impl);
+    explicit Transaction(const std::shared_ptr<Connection::Impl>& impl, Snapshot snapshot);
     std::weak_ptr<Connection::Impl> impl_;
     bool active_{true};
 };
@@ -133,5 +135,16 @@ private:
 // Explicit operator action only. Applies a checked contiguous prefix under the
 // schema advisory lock; refuses dirty history, never repairs/replays DDL blindly.
 [[nodiscard]] unsigned int migrate(Connection& connection);
+
+struct BackupReport { std::uint64_t bytes{}, rows{}; };
+// Explicit operator action. One consistent snapshot, then rollback. Creates a new
+// owner-only file and removes it unless the snapshot finishes. Refuses a live
+// transaction, a dirty or non-current schema, and any path that is not a new
+// regular 0600 file owned by this user. Does not reconnect or replay SQL.
+[[nodiscard]] BackupReport backup(Connection& connection, const std::string& path);
+// Explicit operator action. Checks the private file before any write. Refuses a
+// dirty schema, a different schema, or an application row that is already stored.
+// One transaction. A lost commit acknowledgement is not replayed.
+[[nodiscard]] BackupReport restore(Connection& connection, const std::string& path);
 
 } // namespace dc24h::database

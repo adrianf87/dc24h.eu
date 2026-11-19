@@ -345,13 +345,13 @@ std::optional<std::string> Connection::scalar(std::string_view sql, const std::v
     });
 }
 bool Connection::in_transaction() const { impl_->check(Operation::begin, true); return impl_->transaction_active; }
-Transaction Connection::transaction() { return Transaction(impl_); }
+Transaction Connection::transaction(Snapshot snapshot) { return Transaction(impl_, snapshot); }
 
-Transaction::Transaction(const std::shared_ptr<Connection::Impl>& impl) : impl_(impl) {
+Transaction::Transaction(const std::shared_ptr<Connection::Impl>& impl, Snapshot snapshot) : impl_(impl) {
     impl->check(Operation::begin);
     if (impl->transaction_active) { throw Error(ErrorKind::transaction, Operation::begin); }
     try {
-        impl->control("START TRANSACTION", Operation::begin);
+        impl->control(snapshot == Snapshot::consistent ? "START TRANSACTION WITH CONSISTENT SNAPSHOT" : "START TRANSACTION", Operation::begin);
         impl->transaction_active = true;
         impl->after(Operation::begin);
         impl->scope_active.store(true);

@@ -3,7 +3,7 @@
 #include <string_view>
 
 namespace dc24h::i18n::us {
-inline constexpr std::array<std::string_view, 181> messages{{
+inline constexpr std::array<std::string_view, 186> messages{{
     "Invalid ban input",
     "Ban authorization refused",
     "Ban revision is stale",
@@ -134,6 +134,8 @@ inline constexpr std::array<std::string_view, 181> messages{{
     "Duplicate configuration key at line ",
     "Invalid or unknown configuration key/value at line ",
     "Provide --config only once with a file",
+    "Provide --backup-database only once",
+    "Provide --restore-database only once",
     "Help/version cannot be combined with operational options",
     "Cannot open configured log file",
     "Configured log destination must be a regular file with one link",
@@ -170,6 +172,9 @@ inline constexpr std::array<std::string_view, 181> messages{{
     "Database migrations applied=",
     "Database connection OK\n",
     "Database connected",
+    "Database backup refused",
+    "Database backup written bytes=",
+    "Database backup restored rows=",
     "Invalid local API settings",
     "Cannot read private API token file",
     "API token must contain 64 hexadecimal characters",
@@ -191,7 +196,7 @@ inline constexpr std::array<std::string_view, 181> messages{{
     "Invalid user/session limits",
     "User session limit reached; excess peer rejected",
 }};
-inline constexpr std::string_view help = R"HELP(Usage: dc24h [--config FILE] [--check-config | --check-database | --database-status | --migrate-database]
+inline constexpr std::string_view help = R"HELP(Usage: dc24h [--config FILE] [--check-config | --check-database | --database-status | --migrate-database | --backup-database FILE | --restore-database FILE]
              [--listen IPv4:port | [IPv6]:port | none] ...
              [--adcs-listen IPv4:port | [IPv6]:port | none] ...
              [--tls-cert CHAIN.pem --tls-key KEY.pem]
@@ -249,6 +254,8 @@ Group chat remains planned.
 Database settings use [database] in INI; disabled by default.
 --check-database connects/pings; --database-status reads version/latest/pending/dirty.
 --migrate-database explicitly applies the ordered compiled SQL catalog; dirty history requires operator recovery.
+--backup-database FILE writes one consistent owner-only snapshot and removes a partial file on failure.
+--restore-database FILE reloads that snapshot into empty application tables of the same schema and does not migrate.
 Database Core provides typed bound parameters, bounded results and owner-thread RAII transactions.
 SQL/result errors require rollback; lost connections are retired without reconnect or write replay.
 --check-config never connects to MariaDB or reads the password file.

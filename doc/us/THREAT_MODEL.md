@@ -4,6 +4,8 @@ This analysis records how the hub and WebAdmin can be attacked, which controls a
 
 The analysis does not add a protocol check, a schema migration, an Apache setting or a WebAdmin control. Schema v9 is unchanged. `configuration.manage` and `hub.manage` stay unimplemented. Browser kick and mute are still not dispatched. This is not a public authenticated gateway and it is not a penetration test.
 
+alpha-0.9.8 database security, added after this analysis, writes one consistent owner-only snapshot when the operator asks and restores it only into empty tables of the same schema. A lost commit acknowledgement is not replayed. It does not close T14. Schema v9 is unchanged. See [Database security](DATABASE_SECURITY.md).
+
 alpha-0.9.7 API security, added after this analysis, requires the session id and the CSRF secret on every maintenance call except the password proof. A grant alone no longer reads. It does not close T04 or T05. Schema v9 is unchanged. See [API security](API_SECURITY.md).
 
 alpha-0.9.6 account security, added after this analysis, refuses an ADC password identical to the account password and decrypts that password on the reactor only after the account attempt budget and an account ban check. It does not close T02 or T03. Schema v9 is unchanged. See [Account security](ACCOUNT_SECURITY.md).
@@ -125,7 +127,7 @@ Current control: [Security](SECURITY.md) and [Security sessions](SECURITY_SESSIO
 
 The database password, the API token and the ADC key come from owner-controlled files, not from the command line. SQL uses bound parameters. Errors omit server text. A backup, a world-readable copy or a copy in a log defeats that separation. Migrations run only when an operator asks for them. Ordinary startup does not migrate.
 
-Current control: [Database](DATABASE.md). Residual risk: file permissions and backup handling stay with the operator.
+Current control: [Database security](DATABASE_SECURITY.md) and [Database](DATABASE.md). Residual risk: off-host copies and MariaDB datadir permissions stay with the operator. The hub writes one owner-only snapshot only when asked. That does not close T14.
 
 ### T15 TLS policy gaps
 

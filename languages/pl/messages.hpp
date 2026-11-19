@@ -3,7 +3,7 @@
 #include <string_view>
 
 namespace dc24h::i18n::pl {
-inline constexpr std::array<std::string_view, 181> messages{{
+inline constexpr std::array<std::string_view, 186> messages{{
     "Nieprawidłowe dane blokady",
     "Odmowa uprawnień do blokady",
     "Nieaktualna rewizja blokady",
@@ -134,6 +134,8 @@ inline constexpr std::array<std::string_view, 181> messages{{
     "Powtórzony klucz konfiguracji w wierszu ",
     "Nieprawidłowy lub nieznany klucz/wartość konfiguracji w wierszu ",
     "Podaj --config tylko raz ze ścieżką pliku",
+    "Podaj --backup-database tylko raz",
+    "Podaj --restore-database tylko raz",
     "Pomocy/wersji nie można łączyć z opcjami operacyjnymi",
     "Nie można otworzyć skonfigurowanego pliku logu",
     "Log musi wskazywać zwykły plik z jednym dowiązaniem",
@@ -170,6 +172,9 @@ inline constexpr std::array<std::string_view, 181> messages{{
     "Zastosowane migracje bazy danych=",
     "Połączenie z bazą danych poprawne\n",
     "Połączono z bazą danych",
+    "Kopia bazy danych odrzucona",
+    "Zapisano kopię bazy danych, bajty=",
+    "Przywrócono kopię bazy danych, wiersze=",
     "Nieprawidłowe ustawienia lokalnego API",
     "Nie można odczytać prywatnego pliku tokena API",
     "Token API musi zawierać 64 znaki szesnastkowe",
@@ -191,7 +196,7 @@ inline constexpr std::array<std::string_view, 181> messages{{
     "Nieprawidłowe limity użytkowników/sesji",
     "Osiągnięto limit sesji użytkowników; nadmiarowy klient odrzucony",
 }};
-inline constexpr std::string_view help = R"HELP(Użycie: dc24h [--config PLIK] [--check-config | --check-database | --database-status | --migrate-database]
+inline constexpr std::string_view help = R"HELP(Użycie: dc24h [--config PLIK] [--check-config | --check-database | --database-status | --migrate-database | --backup-database PLIK | --restore-database PLIK]
               [--listen IPv4:port | [IPv6]:port | none] ...
               [--adcs-listen IPv4:port | [IPv6]:port | none] ...
               [--tls-cert ŁAŃCUCH.pem --tls-key KLUCZ.pem]
@@ -249,6 +254,8 @@ Czat grupowy pozostaje planowany.
 Ustawienia bazy w sekcji INI [database]; domyślnie wyłączona.
 --check-database sprawdza połączenie; --database-status odczytuje wersję/latest/pending/dirty.
 --migrate-database stosuje uporządkowany katalog SQL; stan dirty wymaga interwencji operatora.
+--backup-database PLIK zapisuje jedną spójną kopię tylko dla właściciela i usuwa niepełny plik po błędzie.
+--restore-database PLIK wczytuje tę kopię do pustych tabel aplikacji tego samego schematu i nie migruje.
 --check-config nie łączy z MariaDB ani nie odczytuje pliku hasła.
 Lokalne API: INI [api], domyślnie wyłączone; gniazdo Unix i prywatny token Bearer.
 Tylko GET /api/v1/health i /api/v1/status. Brak operacji zmieniających stan.

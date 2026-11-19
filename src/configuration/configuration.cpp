@@ -504,7 +504,8 @@ CommandLine parse_arguments(int argc, char* const argv[]) {
             key == "--max-connections" || key == "--max-sessions" || key == "--max-users" || key == "--idle-timeout" || key == "--log-file" ||
             key == "--log-level" || key == "--log-chat" || key == "--log-connections" || key == "--language" ||
             key == "--max-per-ip" || key == "--accepts-per-minute" || key == "--frames-per-second" ||
-            key == "--max-invalid-frames" || key == "--tls-handshake-timeout" || key == "--partial-frame-timeout") {
+            key == "--max-invalid-frames" || key == "--tls-handshake-timeout" || key == "--partial-frame-timeout" ||
+            key == "--backup-database" || key == "--restore-database") {
             if (i + 1 == argc) { throw std::invalid_argument("Missing option value"); }
             if (key != "--language") { operational = true; }
             ++i; continue;
@@ -558,12 +559,21 @@ CommandLine parse_arguments(int argc, char* const argv[]) {
         else if (key == "--log-file") {
             path_text(value); result.settings.logging.file_path = value == "-" ? "" : std::string(value);
         } else if (key == "--language") { result.settings.logging.language = i18n::parse_language(value); }
+        else if (key == "--backup-database") {
+            if (!result.backup_database.empty()) { throw std::invalid_argument("Provide --backup-database only once"); }
+            path_text(value); result.backup_database = std::string(value);
+        } else if (key == "--restore-database") {
+            if (!result.restore_database.empty()) { throw std::invalid_argument("Provide --restore-database only once"); }
+            path_text(value); result.restore_database = std::string(value);
+        }
     }
     if (static_cast<int>(result.check_only) + static_cast<int>(result.check_database) +
-        static_cast<int>(result.migrate_database) + static_cast<int>(result.database_status) + static_cast<int>(result.show_configuration) > 1) {
+        static_cast<int>(result.migrate_database) + static_cast<int>(result.database_status) + static_cast<int>(result.show_configuration) +
+        static_cast<int>(!result.backup_database.empty()) + static_cast<int>(!result.restore_database.empty()) > 1) {
         throw std::invalid_argument("Database actions and configuration check are mutually exclusive");
     }
-    if ((result.check_database || result.migrate_database || result.database_status) && !result.settings.database.enabled) {
+    if ((result.check_database || result.migrate_database || result.database_status ||
+         !result.backup_database.empty() || !result.restore_database.empty()) && !result.settings.database.enabled) {
         throw std::invalid_argument("Database is disabled");
     }
     validate(result.settings);

@@ -1,5 +1,15 @@
 # Changelog
 
+## alpha-0.9.8 — 2026-11-19
+
+Database security — MariaDB failure handling and backup, based on main `2a2737b`. The branch name is `alpha-0.9.8`.
+
+- Write one consistent owner-only snapshot when the operator asks. `--backup-database FILE` takes the migration advisory lock, requires a clean schema v9, starts `START TRANSACTION WITH CONSISTENT SNAPSHOT`, and rolls that snapshot back. The new file is mode 0600 with one link. A partial file is removed when the snapshot does not finish. Restore checks the SHA-256 trailer before any SQL and inserts only into empty application tables of that same schema. A lost commit acknowledgement stays `outcome_unknown` and is not replayed.
+- This does not close residual threat T14. There is no schedule, replica, or off-host copy. MariaDB datadir permissions stay with the operator. Schema v9 is unchanged. No status counter, WebAdmin page, INI key or Apache setting is added. Startup still does not migrate. `Require local` stays.
+- Run Check status on GitHub-hosted Ubuntu 24.04. Add `alpha-0.9.8` to the push branches. Local validation uses eight CPU threads. Remote CI completion is not awaited.
+
+Validation on Debian 13: all 222/222 CTest suites passed in Debug (79.56 s real) and Release (73.89 s real), including disposable MariaDB, real ncdc ADC/ADCS, the Apache HTTPS reverse proxy and the owner-only MariaDB snapshot. The Release C++ build log contained no compiler warnings. WebAdmin typecheck and production build passed. All 48 Node tests passed. All 41 Chromium tests passed. Actual C++ API, adapter and React integration passed. Release metadata, documentation UTF-8, language parity, local Markdown links, Python syntax with warnings as errors and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration or account/credential mutation is performed.
+
 ## alpha-0.9.7 — 2026-11-19
 
 API security — permissions, sessions, CSRF and WebAdmin, based on main `14792f7`. The branch name is `alpha-0.9.7`.

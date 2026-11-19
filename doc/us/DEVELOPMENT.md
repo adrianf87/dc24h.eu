@@ -120,6 +120,10 @@ alpha-0.1.10 starts from main after alpha-0.1.9. Keep browser-safe schema/format
 
 alpha-0.1.11 starts from main after alpha-0.1.10. Keep host activation, real certificates and service reloads separate from example authoring/testing. Test the exact shipped TLS/access/header policy with temporary paths/ports and no host config. A successful apache2 -t is insufficient to claim certificate/key correspondence; exercise real initialization. Keep both documentation languages and version-sensitive fixtures aligned.
 
+## Database security — alpha-0.9.8
+
+Branch from main. Write one consistent owner-only snapshot when the operator asks, and restore it only into empty application tables of the same clean schema v9. Do not replay a lost acknowledgement. Do not add a schema migration, a status counter, an INI key, a WebAdmin page or an Apache setting. Do not claim a schedule, a replica, an off-host copy, or that residual threat T14 is closed.
+
 ## API security — alpha-0.9.7
 
 Branch from main. Require the session id and CSRF secret on maintenance reads and writes. Leave the password proof unbound, because it issues those secrets. Do not add a schema migration, a status counter, an INI key, a new WebAdmin page or an Apache setting. Do not store the secrets in SQL, cookies or web storage. Leave `Require local` in place. Do not claim that residual threats T04 or T05 are closed. Status and health stay bearer-only. `configuration.manage` and `hub.manage` stay unimplemented.

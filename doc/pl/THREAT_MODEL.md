@@ -4,6 +4,8 @@ Ta analiza zapisuje, jak można atakować hub i WebAdmin, które mechanizmy już
 
 Analiza nie dodaje sprawdzenia protokołu, migracji schematu, ustawienia Apache ani mechanizmu WebAdmin. Schemat v9 pozostaje bez zmian. `configuration.manage` i `hub.manage` pozostają niezaimplementowane. Kick i mute w przeglądarce nadal nie są wysyłane. To nie jest publiczna uwierzytelniona brama i to nie jest test penetracyjny.
 
+alpha-0.9.8 bezpieczeństwo bazy danych, dodane po tej analizie, zapisuje jedną spójną kopię tylko dla właściciela, gdy operator o to poprosi, i odtwarza ją wyłącznie do pustych tabel tego samego schematu. Utracone potwierdzenie zatwierdzenia nie jest powtarzane. Nie zamyka T14. Schemat v9 pozostaje bez zmian. Zobacz [Bezpieczeństwo bazy danych](DATABASE_SECURITY.md).
+
 alpha-0.9.7 bezpieczeństwo API, dodane po tej analizie, wymaga identyfikatora sesji i sekretu CSRF przy każdym wywołaniu utrzymaniowym poza dowodem hasła. Sam grant nie czyta już danych. Nie zamyka T04 ani T05. Schemat v9 pozostaje bez zmian. Zobacz [Bezpieczeństwo API](API_SECURITY.md).
 
 alpha-0.9.6 bezpieczeństwo konta, dodane po tej analizie, odmawia hasła ADC identycznego z hasłem konta i odszyfrowuje to hasło w reaktorze dopiero po budżecie prób konta i sprawdzeniu bana konta. Nie zamyka T02 ani T03. Schemat v9 pozostaje bez zmian. Zobacz [Bezpieczeństwo konta](ACCOUNT_SECURITY.md).
@@ -125,7 +127,7 @@ Obecny mechanizm: [Bezpieczeństwo](SECURITY.md) i [Sesje bezpieczeństwa](SECUR
 
 Hasło bazy, token API i klucz ADC pochodzą z plików właściciela, nie z wiersza poleceń. SQL używa wiązanych parametrów. Błędy pomijają tekst serwera. Kopia zapasowa, kopia czytelna dla wszystkich albo kopia w dzienniku niweczy ten rozdział. Migracje biegną tylko wtedy, gdy operator o nie poprosi. Zwykły start nie migruje.
 
-Obecny mechanizm: [Baza danych](DATABASE.md). Ryzyko szczątkowe: uprawnienia plików i kopie zapasowe zostają przy operatorze.
+Obecny mechanizm: [Bezpieczeństwo bazy danych](DATABASE_SECURITY.md) i [Baza danych](DATABASE.md). Ryzyko szczątkowe: kopie poza hostem i uprawnienia katalogu danych MariaDB zostają przy operatorze. Hub zapisuje jedną kopię tylko dla właściciela wyłącznie na żądanie. To nie zamyka T14.
 
 ### T15 Luki polityki TLS
 

@@ -32,6 +32,8 @@ struct CommandLine {
     bool check_database{false};
     bool migrate_database{false};
     bool database_status{false};
+    std::string backup_database;
+    std::string restore_database;
     bool show_configuration{false};
     bool show_help{false};
     bool show_version{false};
