@@ -16,7 +16,10 @@ then stops it before the next one starts. The containers are
 `ubuntu2204-github-runner`, `ubuntu2404-github-runner`, `ubuntu2604-github-runner`,
 `debian12-github-runner` and `debian13-github-runner`. Each check sets 16 CPU
 threads and 32 GiB RAM, refuses to start when another of these containers is
-already running, and leaves the container stopped. Inside the container the job
+already running, and leaves the container stopped. Non-TLS bytes on a TLS port
+may end as EOF or one fatal alert record, depending on that container's OpenSSL.
+A test client close accepts abrupt EOF or a completed unwrap(); the server still
+does not call SSL_shutdown(). Inside the container the job
 installs the toolchain, MariaDB, Apache and ncdc, then runs C++ Debug and Release
 with 16 build and CTest workers, plus WebAdmin typecheck, Node tests, Chromium
 and the live C++ API integration. The host itself is not the build machine.

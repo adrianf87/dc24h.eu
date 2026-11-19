@@ -52,9 +52,26 @@ def finish_tls(case, peer):
         pass
     finally:
         peer.settimeout(old_timeout)
+    # The transport closes the socket without an explicit SSL_shutdown().
+    # OpenSSL/Python versions can expose that as an EOF or allow unwrap() to
+    # complete normally. Neither result is a protocol failure in this helper.
+    # The individual process tests still verify replies, counters and logs.
     try:
         peer.unwrap()
     except ssl.SSLEOFError:
         pass
-    else:
-        case.fail('server unexpectedly completed TLS shutdown; update test contract')
+
+
+def assert_fatal_tls_alert_or_eof(case, response):
+    """Invalid TLS input may yield EOF or a fatal alert before close.
+
+    Different OpenSSL versions differ here. Reject arbitrary application data:
+    a fatal alert is exactly one TLS alert record containing a two-byte alert.
+    """
+    if not response:
+        return
+    case.assertEqual(len(response), 7, response)
+    case.assertEqual(response[:2], b'\x15\x03', response)
+    case.assertIn(response[2], (0, 1, 2, 3, 4), response)
+    case.assertEqual(response[3:6], b'\x00\x02\x02', response)
+    case.assertNotEqual(response[6], 0, response)

@@ -15,7 +15,10 @@ jego sprawdzenia i wyłącza go przed startem następnego. Kontenery to
 `ubuntu2204-github-runner`, `ubuntu2404-github-runner`, `ubuntu2604-github-runner`,
 `debian12-github-runner` i `debian13-github-runner`. Każde sprawdzenie ustawia 16
 wątków CPU i 32 GiB RAM, odmawia startu, gdy inny z tych kontenerów już działa, i
-zostawia kontener zatrzymany. W kontenerze zadanie instaluje narzędzia, MariaDB,
+zostawia kontener zatrzymany. Niepoprawny tekst na porcie TLS może skończyć się
+EOF albo jednym rekordem fatal alert, zależnie od OpenSSL w kontenerze.
+Zamknięcie klienta akceptuje nagłe EOF albo zakończone unwrap(); serwer nadal
+nie wywołuje SSL_shutdown(). W kontenerze zadanie instaluje narzędzia, MariaDB,
 Apache i ncdc, a potem uruchamia C++ Debug i Release z 16 workerami kompilacji i
 CTest oraz WebAdmin: typy, testy Node, Chromium i integrację żywego API C++.
 Sam host nie jest maszyną budującą.
