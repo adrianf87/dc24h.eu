@@ -1,5 +1,6 @@
 # Architecture
 
+**alpha-0.9.16 Stress testing:** [Overload and sustained operation](STRESS.md) repeats the existing frame, peer, login, chat and session limits for a fixed number of rounds. Refusals stay on. Occupancy returns to zero. Schema v9 is unchanged.
 **alpha-0.9.15 Memory safety:** [AddressSanitizer, UBSan and ThreadSanitizer](MEMORY_SAFETY.md) are separate build modes. The hub behavior stays the same. Schema v9 is unchanged.
 **alpha-0.9.14 Optimization:** [C++20 memory and routing](OPTIMIZATION.md) publishes each routed frame in one allocation and queues the welcome list from the encoding already measured. Protocol bytes stay the same. Schema v9 is unchanged.
 **alpha-0.9.13 Profiling:** [Alpha 0.8 bottleneck profile](PROFILING.md) ranks a fixed in-process set of permission, moderation and role decisions. This is not a sampling profiler or a capacity claim. Schema v9 is unchanged.
@@ -204,6 +205,10 @@ The frontend is independent of C++ build/runtime. Browser code validates the API
 ## Apache2 HTTPS — alpha-0.1.11
 
 A separate installed configuration example serves prebuilt static WebAdmin through TLS 1.2/1.3 and redirects HTTP to a fixed canonical hostname. It retains local access and private-route denial, without proxying the Unix API or changing C++ transports. Disposable tests load the shipped policy under an independent ServerRoot; certificate provisioning and host service activation remain operator responsibilities. See [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
+
+## Stress testing — alpha-0.9.16
+
+`dc24h_stress` repeats the existing frame, peer, login, chat and session limits for a fixed number of rounds and checks that occupancy returns to zero. The hub executable does not link this library and does not run it at startup. See [Stress testing](STRESS.md).
 
 ## Memory safety — alpha-0.9.15
 

@@ -1,5 +1,17 @@
 # Changelog
 
+## alpha-0.9.16 — 2026-11-19
+
+Stress testing — overload and sustained operation, based on main `cdc509a`. The branch name is `alpha-0.9.16`.
+
+- Repeat the existing frame limiter, peer limiter, login budget, chat flood guard and session table for 24 in-process rounds. Each round accepts the current budget and refuses the next admission. A failed login budget stays failed. One minute later the idle peer key is pruned. Two seconds later the same chat guard accepts its burst again. The session table closes and removes every session it accepted.
+- One frame limiter, one peer limiter, one chat guard and one session table stay alive for every round. After the last round no peer is tracked, no login is pending, and no session is open. Created sessions equal completed sessions. `stress.unit` repeats the soak and requires the same counts. The five-second ceiling is a hang guard.
+- This is not a capacity claim, a load test, or a DDoS test. The hub executable does not link the library and does not run it at startup.
+- This does not add a route, INI key, CLI flag, status field, WebAdmin page, Apache setting or schema migration. Schema v9 is unchanged. `configuration.manage` and `hub.manage` stay unimplemented. Browser kick and mute stay undispatched. Status and health stay bearer-only. `Require local` stays. No residual threat is closed.
+- Run Check status on GitHub-hosted Ubuntu 24.04. Add `alpha-0.9.16` to the push branches. Local validation uses eight CPU threads. Remote CI completion is not awaited.
+
+Validation on Debian 13: all 228/228 CTest suites passed in Debug (75.43 s real) and Release (73.66 s real), including disposable MariaDB, real ncdc ADC/ADCS, the Apache HTTPS reverse proxy, the sandboxed systemd example, and the in-process stress soak. The Release C++ build log contained no compiler warnings. WebAdmin typecheck and production build passed. All 49 Node tests passed. All 42 Chromium tests passed. Actual C++ API, adapter and React integration passed. Release metadata, documentation UTF-8, language parity, local Markdown links, Python syntax with warnings as errors and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration, host account or service activation is performed.
+
 ## alpha-0.9.15 — 2026-11-19
 
 Memory safety — AddressSanitizer, UndefinedBehaviorSanitizer and ThreadSanitizer, based on main `a773395`. The branch name is `alpha-0.9.15`.

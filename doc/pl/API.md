@@ -1,5 +1,6 @@
 # Lokalne API administracyjne — alpha-0.1.9
 
+**alpha-0.9.16 Testy przeciążenia:** [Przeciążenie i długotrwała praca](STRESS.md) powtarza istniejące limity ramek, klientów, logowania, czatu i sesji przez stałą liczbę rund. Odmowy zostają. Zajętość wraca do zera. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.15 Bezpieczeństwo pamięci:** [AddressSanitizer, UBSan i ThreadSanitizer](MEMORY_SAFETY.md) są osobnymi trybami budowania. Zachowanie huba pozostaje takie same. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.14 Optymalizacja:** [Pamięć i routing C++20](OPTIMIZATION.md) publikuje każdą ramkę routingu w jednej alokacji i kolejkuje listę powitalną z już zmierzonego kodowania. Bajty protokołu pozostają takie same. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.13 Profilowanie:** [Wykrywanie wąskich gardeł alpha-0.8](PROFILING.md) szereguje stały zestaw decyzji uprawnień, moderacji i ról w procesie. To nie jest profiler próbkujący ani deklaracja pojemności. Schemat v9 pozostaje bez zmian.
@@ -227,6 +228,8 @@ alpha-0.9.7 nie dodaje trasy ani pola statusu. Odczyty utrzymaniowe wymagają te
 alpha-0.9.6 nie dodaje trasy ani pola statusu. Rozdzielenie haseł konta i zapieczętowane odszyfrowanie GPA/PAS zostają w hubie. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Bezpieczeństwo konta](ACCOUNT_SECURITY.md).
 
 alpha-0.9.5 nie dodaje trasy ani pola statusu. Polityka liścia i szyfrów ADCS zostaje w hubie. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Bezpieczeństwo TLS](TLS_SECURITY.md).
+
+alpha-0.9.16 nie dodaje trasy ani pola statusu. Próba przeciążenia działa tylko w swoim teście jednostkowym. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Testy przeciążenia](STRESS.md).
 
 alpha-0.9.15 nie dodaje trasy ani pola statusu. Tryby sanitizerów są opcjami budowania. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Bezpieczeństwo pamięci](MEMORY_SAFETY.md).
 

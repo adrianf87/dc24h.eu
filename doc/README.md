@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.9.15.
+Current development version: alpha-0.9.16.
+
+[Stress testing — alpha-0.9.16](us/STRESS.md) · [PL](pl/STRESS.md)
 
 [Memory safety — alpha-0.9.15](us/MEMORY_SAFETY.md) · [PL](pl/MEMORY_SAFETY.md)
 
