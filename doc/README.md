@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.9.11.
+Current development version: alpha-0.9.12.
+
+[Benchmark — alpha-0.9.12](us/BENCHMARK.md) · [PL](pl/BENCHMARK.md)
 
 [Monitoring — alpha-0.9.11](us/MONITORING.md) · [PL](pl/MONITORING.md)
 

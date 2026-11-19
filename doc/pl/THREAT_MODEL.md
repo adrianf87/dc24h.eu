@@ -4,6 +4,8 @@ Ta analiza zapisuje, jak można atakować hub i WebAdmin, które mechanizmy już
 
 Analiza nie dodaje sprawdzenia protokołu, migracji schematu, ustawienia Apache ani mechanizmu WebAdmin. Schemat v9 pozostaje bez zmian. `configuration.manage` i `hub.manage` pozostają niezaimplementowane. Kick i mute w przeglądarce nadal nie są wysyłane. To nie jest publiczna uwierzytelniona brama i to nie jest test penetracyjny.
 
+alpha-0.9.12 pomiary, dodane po tej analizie, mierzą stały zestaw istniejących decyzji uprawnień i moderacji w procesie. Nie dodają mechanizmu i nie zamykają żadnego zagrożenia. Schemat v9 pozostaje bez zmian. Zobacz [Pomiary](BENCHMARK.md).
+
 alpha-0.9.11 monitorowanie, dodane po tej analizie, publikuje jedną próbkę procesu i liczniki sesji na istniejącym statusie z bearer. To nie jest monitor hosta i nie zapisuje historii. Nie zamyka T13. Schemat v9 pozostaje bez zmian. Zobacz [Monitorowanie](MONITORING.md).
 
 alpha-0.9.10 bezpieczeństwo logów, dodane po tej analizie, utrzymuje plik logu jako prywatny dla właściciela i zapisuje stałe skutki bezpieczeństwa bez danych klienta. Te zapisy nie są produkcyjnym audytem. Nie zamyka T11 ani T13. Schemat v9 pozostaje bez zmian. Zobacz [Bezpieczeństwo logów](LOGGING_SECURITY.md).

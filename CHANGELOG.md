@@ -1,5 +1,16 @@
 # Changelog
 
+## alpha-0.9.12 — 2026-11-19
+
+Benchmark — alpha-0.8 permission and moderation measurements, based on main `76a093f`. The branch name is `alpha-0.9.12`.
+
+- Time a fixed in-process sequence: 1024 `allows` calls and 1024 `moderate` calls. The role, permission and operation walk the existing catalogs. The moderation actor is five role steps ahead of the target. The target subject is the one the operation already requires. Account and CID subjects are account-bound. Accepted counts are what those functions already return. A zero elapsed time means the sequence finished inside one millisecond.
+- `benchmark.unit` repeats the same inputs and requires the accepted counts to match, at least one acceptance, and a finish within five seconds. The ceiling is a hang guard. It is not a capacity claim or a load test. The hub executable does not link the library and does not run it.
+- This does not add a route, INI key, CLI flag, status field, WebAdmin page, Apache setting or schema migration. Schema v9 is unchanged. `configuration.manage` and `hub.manage` stay unimplemented. Browser kick and mute stay undispatched. Status and health stay bearer-only. `Require local` stays. No residual threat is closed.
+- Run Check status on GitHub-hosted Ubuntu 24.04. Add `alpha-0.9.12` to the push branches. Local validation uses eight CPU threads. Remote CI completion is not awaited.
+
+Validation on Debian 13: all 225/225 CTest suites passed in Debug (75.82 s real) and Release (74.07 s real), including disposable MariaDB, real ncdc ADC/ADCS, the Apache HTTPS reverse proxy, the sandboxed systemd example, and the in-process permission and moderation benchmark. The Release C++ build log contained no compiler warnings. WebAdmin typecheck and production build passed. All 49 Node tests passed. All 42 Chromium tests passed. Actual C++ API, adapter and React integration passed. Release metadata, documentation UTF-8, language parity, local Markdown links, Python syntax with warnings as errors and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration, host account or service activation is performed.
+
 ## alpha-0.9.11 — 2026-11-19
 
 Monitoring — CPU, memory, sessions and latency, based on main `402fa10`. The branch name is `alpha-0.9.11`.
