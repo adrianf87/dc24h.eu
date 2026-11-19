@@ -2,12 +2,13 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.9.5 (TLS security).**
+**Current development version: alpha-0.9.6 (Account security).**
 
 CI on `main`: [GitHub-hosted Ubuntu 24.04](doc/us/GITHUB_CI.md) runs C++ Debug, C++ Release and WebAdmin · [PL](doc/pl/GITHUB_CI.md).
 
 Completed increments (older bullets describe their original delivery scope):
 
+- **alpha-0.9.6 Account security**: enrollment refuses an ADC password identical to the account password, and the reactor decrypts that password only after the account ban check and the per-account attempt budget. Online guessing and a captured PAS with require_tls off remain separate. See [Account security](doc/us/ACCOUNT_SECURITY.md).
 - **alpha-0.9.5 TLS security**: the hub refuses an expired, not-yet-valid or weak leaf certificate before listen, and offers only TLS 1.2 and 1.3 AEAD. Clients still check the name and the trust chain. HTTP/2, OCSP and automatic renewal remain separate work. See [TLS security](doc/us/TLS_SECURITY.md).
 - **alpha-0.9.4 Traffic limits**: each ready session may send 8 INF updates at once, then 4 per second. A denial is one recoverable status per second and does not disconnect or relay. Chat, search and transfer budgets stay. A bandwidth cap remains separate work. See [Traffic limits](doc/us/TRAFFIC_LIMITS.md).
 - **alpha-0.9.3 Network security**: the listen backlog is 128. Each accepted socket the hub keeps gets kernel send and receive buffers of 65536 bytes and a TCP user timeout equal to the idle timeout. Existing application timeouts and output queues stay. A bandwidth cap remains separate work. See [Network security](doc/us/NETWORK_SECURITY.md).

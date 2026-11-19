@@ -1,5 +1,7 @@
 # Anti-Bruteforce — alpha-0.7.12
 
+**alpha-0.9.6 Account security:** the production directory no longer decrypts the ADC password before the per-account budget admits the attempt. An account-throttled attempt receives no GPA and does not open the secret. The sentence below that a throttled attempt may have prepared a challenge describes the earlier stage and test doubles that still issue inside `prepare`. Buckets still reset on restart. This does not close T02.
+
 This stage starts from main `420715822970698018dd093d16b2f5486b676da1`.
 It adds bounded authentication-attempt token buckets to the existing single
 ADC/ADCS LoginHub, preserving one-shot GPA/PAS, TLS policy, roles and account

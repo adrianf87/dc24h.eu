@@ -1,5 +1,7 @@
 # Anti-Bruteforce — alpha-0.7.12
 
+**alpha-0.9.6 Bezpieczeństwo konta:** katalog produkcyjny nie odszyfrowuje już hasła ADC, zanim budżet konta zaakceptuje próbę. Próba ograniczona dla konta nie dostaje GPA i nie otwiera sekretu. Zdanie poniżej, że ograniczona próba mogła przygotować wyzwanie, opisuje wcześniejszy etap i dublery testowe, które nadal wystawiają je w `prepare`. Kubełki nadal zerują się przy restarcie. To nie zamyka T02.
+
 Etap powstaje z main `420715822970698018dd093d16b2f5486b676da1`. Dodaje ograniczone
 pamięciowo budżety prób uwierzytelnienia w dotychczasowym LoginHub ADC/ADCS,
 zachowując jednorazowe GPA/PAS, TLS, role i zarządzanie kontami. Bez automatycznego

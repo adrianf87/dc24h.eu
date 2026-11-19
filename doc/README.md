@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.9.5.
+Current development version: alpha-0.9.6.
+
+[Account security — alpha-0.9.6](us/ACCOUNT_SECURITY.md) · [PL](pl/ACCOUNT_SECURITY.md)
 
 [TLS security — alpha-0.9.5](us/TLS_SECURITY.md) · [PL](pl/TLS_SECURITY.md)
 

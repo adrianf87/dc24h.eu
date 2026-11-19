@@ -30,15 +30,23 @@ struct PasswordAuthentication {
     std::uint64_t account_id;
     Message challenge;
     accounts::Role role{accounts::Role::registered};
+    // prepare identified the account and left its ADC secret sealed.
+    bool challenge_deferred{false};
 };
 using AuthenticationPreparation = std::variant<GuestAuthentication,DeniedAuthentication,PasswordAuthentication>;
 // Immutable trusted startup policy: no SQL, blocking work or password KDF on
-// the reactor. A bounded secret may be decrypted to prepare a Tiger challenge.
+// the reactor. prepare may identify an account without decrypting. A bounded
+// secret is decrypted only in open_challenge, after admission has been granted.
 class AuthenticationSource {
 public:
     virtual ~AuthenticationSource() = default;
     [[nodiscard]] virtual AuthenticationPreparation prepare(std::string_view nickname, std::string_view cid,
         users::Transport transport, PasswordChallenge& challenge) const = 0;
+    // Default: prepare already issued the challenge. A deferred directory
+    // decrypts here and returns the IGPA message. Null means it cannot.
+    [[nodiscard]] virtual std::optional<Message> open_challenge(std::uint64_t, PasswordChallenge&) const {
+        return std::nullopt;
+    }
     [[nodiscard]] virtual bool allows_identity(std::string_view nickname, std::string_view cid,
         std::optional<std::uint64_t> account) const noexcept = 0;
 };

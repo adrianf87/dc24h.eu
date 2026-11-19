@@ -1,7 +1,8 @@
 # dc24h.eu documentation
 
-alpha-0.9.5: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
+alpha-0.9.6: implemented behavior and clearly identified future modules. Default development language: EN/US UTF-8.
 
+- [Account security — alpha-0.9.6](ACCOUNT_SECURITY.md)
 - [TLS security — alpha-0.9.5](TLS_SECURITY.md)
 - [Traffic limits — alpha-0.9.4](TRAFFIC_LIMITS.md)
 - [Network security — alpha-0.9.3](NETWORK_SECURITY.md)

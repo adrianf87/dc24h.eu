@@ -390,13 +390,18 @@ void LoginHub::receive_impl(Id id, const Message& message, chat::FloodClock::tim
                     auto decision = limits_.authentication->prepare(*metadata.field("NI"),cid,peer.lifecycle.transport(),peer.authentication);
                     if (std::holds_alternative<DeniedAuthentication>(decision)) { reject(peer,"223"); return; }
                     if (auto* required = std::get_if<PasswordAuthentication>(&decision)) {
-                        if (required->account_id == 0 || required->account_id > 9223372036854775807ULL || !accounts::account_role(required->role) || !peer.authentication.pending() ||
-                            peer.session.approve_identity(IdentityMode::password_required)) { reject(peer,"210"); return; }
+                        if (required->account_id == 0 || required->account_id > 9223372036854775807ULL || !accounts::account_role(required->role)) { reject(peer,"210"); return; }
                         if(limits_.bans){if(const auto ban=limits_.bans->account(required->account_id,bans::Directory::now())){
                             const auto left=ban->expires_at?std::max<std::int64_t>(1,*ban->expires_at-bans::Directory::now()):-1;
                             reject(peer,ban->expires_at?"232":"231",{},"Access blocked",users::CloseCause::banned,users::Clock::now(),left);return;
                         }}
                         if (!authentication_limiter_.admit_account(required->account_id,chat_now)) { limit_authentication(peer); return; }
+                        if (required->challenge_deferred) {
+                            auto issued = limits_.authentication->open_challenge(required->account_id,peer.authentication);
+                            if (!issued) { reject(peer,"210"); return; }
+                            required->challenge = std::move(*issued);
+                        }
+                        if (!peer.authentication.pending() || peer.session.approve_identity(IdentityMode::password_required)) { reject(peer,"210"); return; }
                         peer.pending_account = required->account_id;
                         peer.authentication_role = required->role;
                         (void)enqueue(peer,std::move(required->challenge),Completion::authentication);

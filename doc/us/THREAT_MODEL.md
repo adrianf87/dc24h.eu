@@ -4,6 +4,8 @@ This analysis records how the hub and WebAdmin can be attacked, which controls a
 
 The analysis does not add a protocol check, a schema migration, an Apache setting or a WebAdmin control. Schema v9 is unchanged. `configuration.manage` and `hub.manage` stay unimplemented. Browser kick and mute are still not dispatched. This is not a public authenticated gateway and it is not a penetration test.
 
+alpha-0.9.6 account security, added after this analysis, refuses an ADC password identical to the account password and decrypts that password on the reactor only after the account attempt budget and an account ban check. It does not close T02 or T03. Schema v9 is unchanged. See [Account security](ACCOUNT_SECURITY.md).
+
 Older sections of [Security](SECURITY.md) describe the release that wrote them. A sentence there that still says accounts, roles or bans are absent describes that earlier release. Current behavior is the set of documents linked below.
 
 ## Assets

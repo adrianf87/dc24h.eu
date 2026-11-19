@@ -3,7 +3,7 @@
 #include <string_view>
 
 namespace dc24h::i18n::us {
-inline constexpr std::array<std::string_view, 180> messages{{
+inline constexpr std::array<std::string_view, 181> messages{{
     "Invalid ban input",
     "Ban authorization refused",
     "Ban revision is stale",
@@ -40,6 +40,7 @@ inline constexpr std::array<std::string_view, 180> messages{{
     "ADC authentication requires compatible current storage",
     "Invalid stored ADC credential or identity",
     "ADC credential cryptography failed",
+    "ADC password must differ from the account password",
     "ADC authentication failed",
     "ADC account authentication enabled",
     "ADC authentication requires database, private key and compatible listeners",

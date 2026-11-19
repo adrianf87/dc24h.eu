@@ -73,6 +73,12 @@ void integration(const Options& options,const std::string& key_path) {
     require(AccountRepository(c).find_by_id(one.account.id()) == one);
     rejects(AdcCredentialErrorKind::conflict,[&] { service.enroll(one.account.id(),account_password,adc_password,42); });
     rejects(AdcCredentialErrorKind::proof,[&] { service.enroll(absent.account.id(),"Wrong ownership password!",adc_password,42); });
+    rejects(AdcCredentialErrorKind::proof,[&] { service.enroll(absent.account.id(),adc_password,adc_password,42); });
+    rejects(AdcCredentialErrorKind::same_password,[&] { service.enroll(absent.account.id(),account_password,account_password,42); });
+    require(std::string(AdcCredentialError(AdcCredentialErrorKind::same_password).what()).find(account_password) == std::string::npos);
+    require(c.scalar("SELECT COUNT(*) FROM dc24h_account_adc_credentials WHERE account_id=?",{std::to_string(absent.account.id().value())}) == "0");
+    const auto mixed = create(c,"AuthAccountMixedCase","MixedCaseADC",21);
+    service.enroll(mixed.account.id(),account_password,"account ownership password 42!",42);
     random_failure = true;
     rejects(AdcCredentialErrorKind::crypto,[&] { service.enroll(absent.account.id(),account_password,adc_password,42); });
     random_failure = false;
@@ -87,9 +93,19 @@ void integration(const Options& options,const std::string& key_path) {
                                 Expected{"AdministratorADC",13,Role::administrator}, Expected{"VipADC",14,Role::vip}, Expected{"OperatorADC",15,Role::operator_}, Expected{"OwnerADC",16,Role::owner}}) {
         dc24h::adc::PasswordChallenge challenge;
         const auto prepared = source->prepare(expected.nickname,cid(expected.seed),dc24h::users::Transport::adcs,challenge);
-        require(std::holds_alternative<dc24h::adc::PasswordAuthentication>(prepared));
-        require(std::get<dc24h::adc::PasswordAuthentication>(prepared).role == expected.role);
+        require(std::holds_alternative<dc24h::adc::PasswordAuthentication>(prepared) && !challenge.pending());
+        const auto& authentication = std::get<dc24h::adc::PasswordAuthentication>(prepared);
+        require(authentication.role == expected.role && authentication.challenge_deferred);
+        const auto opened = source->open_challenge(authentication.account_id,challenge);
+        require(opened && opened->command == "GPA" && challenge.pending());
+        require(opened->parameters.size() == 1 && opened->parameters[0].find(adc_password) == std::string::npos);
     }
+    { dc24h::adc::PasswordChallenge challenge;
+      const auto opened = source->open_challenge(one.account.id().value(),challenge);
+      require(opened && challenge.pending());
+      rejects(AdcCredentialErrorKind::crypto,[&] { (void)source->open_challenge(one.account.id().value(),challenge); });
+      dc24h::adc::PasswordChallenge unknown;
+      rejects(AdcCredentialErrorKind::invalid_record,[&] { (void)source->open_challenge(0,unknown); }); }
     // Role changes affect only new startup directories, never an existing snapshot.
     auto downgraded_account = AccountRepository(c).update(moderator,std::get<Account>(moderator.account.with_access(Role::registered,Status::active,43)));
     { dc24h::adc::PasswordChallenge old_challenge,new_challenge;

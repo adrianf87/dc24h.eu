@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.9.5: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.9.6: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [Bezpieczeństwo konta — alpha-0.9.6](ACCOUNT_SECURITY.md)
 - [Bezpieczeństwo TLS — alpha-0.9.5](TLS_SECURITY.md)
 - [Limity ruchu — alpha-0.9.4](TRAFFIC_LIMITS.md)
 - [Bezpieczeństwo sieci — alpha-0.9.3](NETWORK_SECURITY.md)
