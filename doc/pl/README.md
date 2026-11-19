@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.9.11: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+alpha-0.9.12: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
 
+- [Pomiary — alpha-0.9.12](BENCHMARK.md)
 - [Monitorowanie — alpha-0.9.11](MONITORING.md)
 - [Bezpieczeństwo logów — alpha-0.9.10](LOGGING_SECURITY.md)
 - [Bezpieczeństwo systemu — alpha-0.9.9](SYSTEM_SECURITY.md)

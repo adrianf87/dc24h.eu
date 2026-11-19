@@ -1,5 +1,6 @@
 # Lokalne API administracyjne — alpha-0.1.9
 
+**alpha-0.9.12 Pomiary:** [Pomiary wydajności alpha-0.8](BENCHMARK.md) mierzy stały zestaw decyzji uprawnień i moderacji w procesie. To nie jest deklaracja pojemności ani test obciążenia. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.11 Monitorowanie:** [CPU, pamięć, sesje i opóźnienia](MONITORING.md) publikuje jedną próbkę procesu i liczniki sesji na istniejącym statusie z bearer. To nie jest monitor hosta ani zapisana historia. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.10 Logowanie:** [Bezpieczne logi i rejestrowanie zdarzeń](LOGGING_SECURITY.md) utrzymuje plik logu jako prywatny dla właściciela i zapisuje stałe skutki bezpieczeństwa bez danych klienta. To nie jest audyt produkcyjny. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.9 Bezpieczeństwo systemu:** [Utwardzenie usługi Debian i Ubuntu](SYSTEM_SECURITY.md) dodaje jeden przykład systemd, który uruchamia hub jako zablokowanego użytkownika systemowego bez nowych uprawnień i ze ścisłym systemem plików. Budowanie nie instaluje ani nie uruchamia tej usługi. Schemat v9 pozostaje bez zmian.
@@ -223,6 +224,8 @@ alpha-0.9.7 nie dodaje trasy ani pola statusu. Odczyty utrzymaniowe wymagają te
 alpha-0.9.6 nie dodaje trasy ani pola statusu. Rozdzielenie haseł konta i zapieczętowane odszyfrowanie GPA/PAS zostają w hubie. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Bezpieczeństwo konta](ACCOUNT_SECURITY.md).
 
 alpha-0.9.5 nie dodaje trasy ani pola statusu. Polityka liścia i szyfrów ADCS zostaje w hubie. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Bezpieczeństwo TLS](TLS_SECURITY.md).
+
+alpha-0.9.12 nie dodaje trasy ani pola statusu. Pomiar działa tylko w swoim teście jednostkowym. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Pomiary](BENCHMARK.md).
 
 alpha-0.9.11 dodaje obiekt `monitoring` w tej samej odpowiedzi statusu. To jedna próbka procesu oraz liczniki sesji i opóźnień. Health pozostaje `{"status":"ok"}`. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Monitorowanie](MONITORING.md).
 
