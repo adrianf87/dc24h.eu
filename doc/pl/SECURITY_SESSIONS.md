@@ -2,6 +2,8 @@
 
 Dostęp utrzymaniowy zachowuje cztery granty w pamięci z [API administracyjnego](ADMIN_API.md). Każdy grant ma teraz publiczny identyfikator sesji i osobny sekret CSRF. Ta gałąź powstaje z main `6175458`. Nazwa gałęzi to `alpha-0.8.15`.
 
+alpha-0.9.7 wymaga tego samego wiązania przy odczytach utrzymaniowych. Zobacz [Bezpieczeństwo API](API_SECURITY.md).
+
 Schemat v9 pozostaje bez zmian. Ten etap nic nie zapisuje do SQL ani do tabeli audytu. `configuration.manage` i `hub.manage` pozostają niewdrożone. Przeglądarka nadal nie wysyła kicka ani wyciszenia. Hub nadal nie ufa nagłówkom proxy ani `X-Forwarded-For`.
 
 ## Co zwraca dowód
@@ -15,19 +17,19 @@ Schemat v9 pozostaje bez zmian. Ten etap nic nie zapisuje do SQL ani do tabeli a
 
 Dowód hasłem nie wymaga nagłówka CSRF. Ta odpowiedź jest jedynym ciałem utrzymaniowym, które zawiera te sekrety.
 
-## Zapisy
+## Wywołania utrzymaniowe
 
-Każdy inny POST utrzymaniowy wymaga trzech nagłówków z tego samego slotu:
+Każde wywołanie utrzymaniowe poza dowodem hasła wymaga trzech nagłówków z tego samego slotu:
 
 - `X-DC24H-Admin-Grant`: 64 znaki szesnastkowe
 - `X-DC24H-Session`: 32 małe znaki szesnastkowe
 - `X-DC24H-Csrf`: 64 znaki szesnastkowe
 
-Grant jest porównywany w czasie stałym. Sekret CSRF jest potem porównywany w czasie stałym z tym samym slotem. Brakujący albo inny identyfikator sesji lub sekret CSRF zwraca 403 `csrf_required`. Odczyty (`GET`) nadal wymagają tylko grantu i nie wymagają sekretu CSRF. Nagłówek o złym kształcie jest błędnym żądaniem, zanim kod zajrzy do slotu.
+Grant jest porównywany w czasie stałym. Identyfikator sesji i sekret CSRF są potem porównywane w czasie stałym z tym samym slotem. Brakujący albo inny identyfikator sesji lub sekret CSRF zwraca 403 `csrf_required` i nie zwraca wierszy utrzymaniowych. Nagłówek o złym kształcie jest błędnym żądaniem, zanim kod zajrzy do slotu.
 
-WebAdmin trzyma grant, identyfikator sesji i sekret CSRF w pamięci strony. Nie zapisuje ich do `localStorage`, `sessionStorage` ani ciasteczka. Zapis wysyła nagłówki sesji i CSRF. Odczyt wysyła tylko grant. Zapomnienie czyści wszystkie trzy naraz.
+WebAdmin trzyma grant, identyfikator sesji i sekret CSRF w pamięci strony. Nie zapisuje ich do `localStorage`, `sessionStorage` ani ciasteczka. Każde wywołanie utrzymaniowe wysyła wszystkie trzy. Zapomnienie czyści wszystkie trzy naraz.
 
-Adapter loopback przekazuje poprawnie ukształtowaną sesję i sekret CSRF. Każdy inny zapis utrzymaniowy jest odrzucany z `csrf_required` przed gniazdem Unix. Wyjątkiem jest dowód dostępu. Adapter nadal wstawia własny bearer usługi i nadal ignoruje przeglądarkowy nagłówek `Authorization`. Tych sekretów nie zapisuje w dzienniku.
+Adapter loopback przekazuje poprawnie ukształtowaną sesję i sekret CSRF. Podany grant bez obu wartości jest odrzucany z `csrf_required` przed gniazdem Unix. Wyjątkiem jest dowód dostępu. Adapter nadal wstawia własny bearer usługi i nadal ignoruje przeglądarkowy nagłówek `Authorization`. Tych sekretów nie zapisuje w dzienniku.
 
 [Przykład proxy Apache](APACHE2_PROXY.md) przekazuje sesję tylko wtedy, gdy ma 32 małe znaki szesnastkowe, a sekret CSRF tylko wtedy, gdy ma 64 znaki szesnastkowe. Każda inna wartość jest usuwana. Przykład nie zawiera grantu ani sekretu CSRF. `Require local` zostaje.
 

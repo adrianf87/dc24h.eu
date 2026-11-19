@@ -29,7 +29,7 @@ export function Bans({t}:{t:Copy}){
   }else{const expiry=String(data.get("expires_at")??"");body.set("expires_at",expiryMode==="absolute"?String(Math.floor(new Date(expiry).getTime()/1000)):"");}}
   const path=selected?`/${selected.id}/revoke`:"";setBusy(true);setMessage("");element.reset();setExpiryMode("permanent");
   const controller=new AbortController();pending.current=controller;const timer=setTimeout(()=>controller.abort(),20000);
-  try{const response=await fetch(`./admin-api/v1/bans${path}`,{method:"POST",cache:"no-store",credentials:"same-origin",redirect:"error",signal:controller.signal,headers:{"Content-Type":"application/x-www-form-urlencoded","X-DC24H-Admin":"1",...adminHeaders(true)},body});
+  try{const response=await fetch(`./admin-api/v1/bans${path}`,{method:"POST",cache:"no-store",credentials:"same-origin",redirect:"error",signal:controller.signal,headers:{"Content-Type":"application/x-www-form-urlencoded","X-DC24H-Admin":"1",...adminHeaders()},body});
    const result=await readAccountResponse(response) as Record<string,unknown>;if(pending.current!==controller)return;
    if(!response.ok){setMessage(result.error==="outcome_unknown"?t.accountsUnknown:response.status===409?t.accountsStale:t.accountsRefused);return;}
    const saved=parseBanResult(result),ban=saved.ban;observe(saved.observed_at);setSelected(ban);

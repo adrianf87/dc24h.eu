@@ -1,5 +1,6 @@
 # Architektura
 
+**alpha-0.9.7 Bezpieczeństwo API:** [Uprawnienia, sesje i CSRF](API_SECURITY.md) wymaga identyfikatora sesji i sekretu CSRF przy każdym wywołaniu utrzymaniowym poza dowodem hasła. Sam grant nie czyta już danych. Skopiowanie wszystkich trzech wartości z pamięci strony nadal działa do końca slotu. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.6 Bezpieczeństwo konta:** [Hasła, GPA/PAS i ochrona sekretów](ACCOUNT_SECURITY.md) odmawia hasła ADC identycznego z hasłem konta i odszyfrowuje to hasło dopiero po budżecie prób konta i sprawdzeniu bana. Zgadywanie online, przechwycony PAS przy wyłączonym require_tls oraz kubełki czyszczone restartem zostają. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.5 Bezpieczeństwo TLS:** [Polityka certyfikatu i szyfrów ADCS](TLS_SECURITY.md) sprawdza certyfikat liścia huba przed nasłuchem i ogranicza ADCS do TLS 1.2 i 1.3 AEAD. Zaufanie, nazwa hosta, HTTP/2, OCSP i automatyczne odnawianie pozostają osobną pracą. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.4 Limity ruchu:** [Spam i nadmierny ruch obecności](TRAFFIC_LIMITS.md) ogranicza aktualizacje INF gotowej sesji przed rozesłaniem. Budżety czatu, wyszukiwania i transferów zostają. Schemat v9 pozostaje bez zmian. Limit pasma i publiczna brama pozostają osobną pracą.
@@ -273,6 +274,10 @@ Frontend jest niezależny od budowania/działania C++. Kod przeglądarki sprawdz
 ## Apache2 HTTPS — alpha-0.1.11
 
 Osobny instalowany przykład serwuje gotowe zasoby WebAdmin przez TLS 1.2/1.3 i przekierowuje HTTP na stałą nazwę kanoniczną. Zachowuje lokalny dostęp i blokadę prywatnych tras, bez proxy Unix API i zmian transportów C++. Testy ładują tę politykę pod niezależnym ServerRoot; certyfikaty i aktywacja usługi hosta należą do operatora. Zobacz [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
+
+## Bezpieczeństwo API — alpha-0.9.7
+
+`AccessGate::authorize` porównuje identyfikator sesji i sekret CSRF przy każdym wywołaniu utrzymaniowym, także przy odczycie. Dowód hasła nie wywołuje `authorize`. Adapter loopback odrzuca podany grant bez obu wartości, zanim otworzy gniazdo Unix. Status i health nadal wymagają tylko bearer. Zobacz [Bezpieczeństwo API](API_SECURITY.md).
 
 ## Bezpieczeństwo konta — alpha-0.9.6
 

@@ -1,5 +1,6 @@
 # WebAdmin — alpha-0.4.12
 
+**alpha-0.9.7 Bezpieczeństwo API:** [Uprawnienia, sesje i CSRF](API_SECURITY.md) wymaga identyfikatora sesji i sekretu CSRF przy każdym wywołaniu utrzymaniowym poza dowodem hasła. Sam grant nie czyta już danych. Skopiowanie wszystkich trzech wartości z pamięci strony nadal działa do końca slotu. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.6 Bezpieczeństwo konta:** [Hasła, GPA/PAS i ochrona sekretów](ACCOUNT_SECURITY.md) odmawia hasła ADC identycznego z hasłem konta i odszyfrowuje to hasło dopiero po budżecie prób konta i sprawdzeniu bana. Zgadywanie online, przechwycony PAS przy wyłączonym require_tls oraz kubełki czyszczone restartem zostają. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.5 Bezpieczeństwo TLS:** [Polityka certyfikatu i szyfrów ADCS](TLS_SECURITY.md) sprawdza certyfikat liścia huba przed nasłuchem i ogranicza ADCS do TLS 1.2 i 1.3 AEAD. Zaufanie, nazwa hosta, HTTP/2, OCSP i automatyczne odnawianie pozostają osobną pracą. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.4 Limity ruchu:** [Spam i nadmierny ruch obecności](TRAFFIC_LIMITS.md) ogranicza aktualizacje INF gotowej sesji przed rozesłaniem. Budżety czatu, wyszukiwania i transferów zostają. Schemat v9 pozostaje bez zmian. Limit pasma i publiczna brama pozostają osobną pracą.
@@ -165,6 +166,10 @@ Przy zainstalowanym Chromium można ustawić `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/us
 
 Osobny szablon statycznej witryny HTTP→HTTPS/TLS 1.2+ jest dostępny i zawsze instalowany z przykładami konfiguracji C++. Zachowuje domyślny dostęp lokalny/blokadę API; nie jest produkcyjną bramą uwierzytelnioną. Ścieżki certyfikatów, dostosowanie, włączenie i testy: [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
 
+## Bezpieczeństwo API — alpha-0.9.7
+
+Udowodniony dostęp nadal trzyma grant, identyfikator sesji i sekret CSRF w pamięci strony. Każde wywołanie utrzymaniowe wysyła wszystkie trzy. Odczyt z samym grantem jest odrzucany przed gniazdem Unix. Nie dodano nowej strony. Zobacz [Bezpieczeństwo API](API_SECURITY.md).
+
 ## Bezpieczeństwo konta — alpha-0.9.6
 
 WebAdmin pozostaje bez zmian. Zapis haseł i ochrona sekretu GPA/PAS zostają w hubie i w zaufanym API C++. Nie dodano strony, grantu ani pola statusu. Zobacz [Bezpieczeństwo konta](ACCOUNT_SECURITY.md).
@@ -191,7 +196,7 @@ WebAdmin pozostaje bez zmian. Walidacja parsera i kontrola protokołu działają
 
 ## Sesje bezpieczeństwa — alpha-0.8.15
 
-Udowodniony dostęp trzyma grant, identyfikator sesji i sekret CSRF w pamięci strony. Zapis wysyła `X-DC24H-Session` i `X-DC24H-Csrf` razem z grantem. Odczyt wysyła tylko grant. Zapomnienie czyści wszystkie trzy. Żadna z tych wartości nie trafia do pamięci przeglądarki. Zobacz [Sesje bezpieczeństwa](SECURITY_SESSIONS.md).
+Udowodniony dostęp trzyma grant, identyfikator sesji i sekret CSRF w pamięci strony. Każde wywołanie utrzymaniowe wysyła wszystkie trzy. Zapomnienie czyści wszystkie trzy. Żadna z tych wartości nie trafia do pamięci przeglądarki. Zobacz [Bezpieczeństwo API](API_SECURITY.md).
 
 ## Odwrotne proxy HTTPS — alpha-0.8.14
 

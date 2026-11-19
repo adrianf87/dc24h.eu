@@ -50,7 +50,7 @@ def exercise(binary, seed, config, db_socket, password, token, api_socket):
                     header_value = grant['value']
                 if header_value is not None:
                     headers += f'X-DC24H-Admin-Grant: {header_value}\r\n'
-                if method == 'POST' and target_path != '/api/v1/admin/access' and bind and header_value:
+                if target_path != '/api/v1/admin/access' and bind and header_value:
                     session_value = session['value'] if session_override is None else session_override
                     csrf_value = csrf['value'] if csrf_override is None else csrf_override
                     if session_value:
@@ -103,6 +103,10 @@ def exercise(binary, seed, config, db_socket, password, token, api_socket):
         assert request('POST', '/api/v1/accounts', {'x': 'y'}, delay=True, bind=False)[1]['error'] == 'csrf_required'
         assert request('POST', '/api/v1/accounts', {'x': 'y'}, delay=True, csrf_override='ab' * 32)[1]['error'] == 'csrf_required'
         assert request('POST', '/api/v1/accounts', {'x': 'y'}, delay=True, csrf_override='zz')[0] == 400
+        unbound_read = request('GET', '/api/v1/accounts', bind=False)
+        assert unbound_read[1]['error'] == 'csrf_required' and 'WebAdmin' not in json.dumps(unbound_read[1])
+        assert request('GET', '/api/v1/accounts', session_override='ab' * 16)[1]['error'] == 'csrf_required'
+        assert request('GET', '/api/v1/admin', csrf_override='zz')[0] == 400
         assert request('GET', '/api/v1/admin')[0] == 200
         code, core = request('GET', '/api/v1/admin')
         assert code == 200 and core['maintenance'] is True

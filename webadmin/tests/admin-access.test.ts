@@ -43,15 +43,17 @@ test("administrative access keeps the grant and drops transport secrets", () => 
   assert.throws(() => parseAccess(body({routes: body().routes.slice(1)})));
 });
 
-test("session secrets stay in page memory and are sent only on writes", () => {
+test("session secrets stay in page memory and are sent with the grant", () => {
   clearAdminGrant();
-  assert.deepEqual(adminHeaders(true), {});
+  assert.deepEqual(adminHeaders(), {});
   setAdminAccess({grant: "ab".repeat(32), session: "cd".repeat(16), csrf: "ef".repeat(32)});
-  assert.deepEqual(adminHeaders(), {"X-DC24H-Admin-Grant": "ab".repeat(32)});
-  assert.equal(adminHeaders(true)["X-DC24H-Session"], "cd".repeat(16));
-  assert.equal(adminHeaders(true)["X-DC24H-Csrf"], "ef".repeat(32));
+  assert.deepEqual(adminHeaders(), {
+    "X-DC24H-Admin-Grant": "ab".repeat(32),
+    "X-DC24H-Session": "cd".repeat(16),
+    "X-DC24H-Csrf": "ef".repeat(32),
+  });
   clearAdminGrant();
-  assert.deepEqual(adminHeaders(true), {});
+  assert.deepEqual(adminHeaders(), {});
   setAdminAccess({grant: "ab".repeat(32), session: "CD".repeat(16), csrf: "ef".repeat(32)});
   assert.deepEqual(adminHeaders(), {});
 });

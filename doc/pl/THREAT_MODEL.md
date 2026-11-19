@@ -4,6 +4,8 @@ Ta analiza zapisuje, jak można atakować hub i WebAdmin, które mechanizmy już
 
 Analiza nie dodaje sprawdzenia protokołu, migracji schematu, ustawienia Apache ani mechanizmu WebAdmin. Schemat v9 pozostaje bez zmian. `configuration.manage` i `hub.manage` pozostają niezaimplementowane. Kick i mute w przeglądarce nadal nie są wysyłane. To nie jest publiczna uwierzytelniona brama i to nie jest test penetracyjny.
 
+alpha-0.9.7 bezpieczeństwo API, dodane po tej analizie, wymaga identyfikatora sesji i sekretu CSRF przy każdym wywołaniu utrzymaniowym poza dowodem hasła. Sam grant nie czyta już danych. Nie zamyka T04 ani T05. Schemat v9 pozostaje bez zmian. Zobacz [Bezpieczeństwo API](API_SECURITY.md).
+
 alpha-0.9.6 bezpieczeństwo konta, dodane po tej analizie, odmawia hasła ADC identycznego z hasłem konta i odszyfrowuje to hasło w reaktorze dopiero po budżecie prób konta i sprawdzeniu bana konta. Nie zamyka T02 ani T03. Schemat v9 pozostaje bez zmian. Zobacz [Bezpieczeństwo konta](ACCOUNT_SECURITY.md).
 
 Starsze części [Bezpieczeństwa](SECURITY.md) opisują wydanie, które je napisało. Zdanie, które nadal mówi, że konta, role albo bany są nieobecne, opisuje tamto wcześniejsze wydanie. Bieżące zachowanie jest zbiorem dokumentów podlinkowanych poniżej.
@@ -61,15 +63,15 @@ Obecny mechanizm: [Uwierzytelnianie ADC](ADC_AUTHENTICATION.md). Ryzyko szczątk
 
 ### T04 Skradziony grant utrzymaniowy
 
-Grant to 64 znaki szesnastkowe w procesie utrzymaniowym, z czasem życia 600 sekund i czterema slotami. Nowy dowód tego samego aktora usuwa stary slot. Dowód hasła jest jedyną odpowiedzią utrzymaniową, która zwraca grant. WebAdmin nie wkłada go do pamięci przeglądarki. Skradziony grant nadal autoryzuje odczyty utrzymaniowe do wygaśnięcia albo wymiany. Odczyty nie wymagają sekretu CSRF.
+Grant to 64 znaki szesnastkowe w procesie utrzymaniowym, z czasem życia 600 sekund i czterema slotami. Nowy dowód tego samego aktora usuwa stary slot. Dowód hasła jest jedyną odpowiedzią utrzymaniową, która zwraca grant, identyfikator sesji i sekret CSRF. WebAdmin nie wkłada ich do pamięci przeglądarki. Każde inne wywołanie utrzymaniowe, także odczyt, wymaga wszystkich trzech z tego samego slotu. Sam grant jest odrzucany z 403 `csrf_required`.
 
-Obecny mechanizm: [Sesje bezpieczeństwa](SECURITY_SESSIONS.md) i [API administracyjne](ADMIN_API.md). Ryzyko szczątkowe: grant skopiowany z pamięci strony albo z lokalnego procesu może czytać dane utrzymaniowe do końca slotu.
+Obecny mechanizm: [Bezpieczeństwo API](API_SECURITY.md), [Sesje bezpieczeństwa](SECURITY_SESSIONS.md) i [API administracyjne](ADMIN_API.md). Ryzyko szczątkowe: skopiowanie grantu, identyfikatora sesji i sekretu CSRF z pamięci strony albo z lokalnego procesu nadal czyta i zapisuje dane utrzymaniowe do końca slotu.
 
 ### T05 Zapis utrzymaniowy z innej strony
 
-Przeglądarka na tej samej maszynie może spróbować wysłać POST utrzymaniowy z grantem zaobserwowanym gdzie indziej. Zapisy wymagają identyfikatora sesji i sekretu CSRF z tego samego slotu. Niezgodność zwraca 403 `csrf_required`. Adapter odrzuca każdy inny zapis utrzymaniowy bez obu wartości, zanim użyje gniazda Unix. Dowód dostępu nie wymaga CSRF, bo ta odpowiedź wydaje sekret. GET nadal wymaga tylko grantu, więc odczyt nie jest chroniony przez CSRF.
+Przeglądarka na tej samej maszynie może spróbować wysłać wywołanie utrzymaniowe z grantem zaobserwowanym gdzie indziej. Odczyty i zapisy, poza dowodem hasła, wymagają identyfikatora sesji i sekretu CSRF z tego samego slotu. Niezgodność zwraca 403 `csrf_required`. Adapter odrzuca podany grant bez obu wartości, zanim użyje gniazda Unix. Dowód dostępu nie wymaga CSRF, bo ta odpowiedź wydaje sekrety.
 
-Obecny mechanizm: [Sesje bezpieczeństwa](SECURITY_SESSIONS.md). Ryzyko szczątkowe: odczyty nie są chronione przez CSRF, a sama odpowiedź dowodu niesie sekrety.
+Obecny mechanizm: [Bezpieczeństwo API](API_SECURITY.md) i [Sesje bezpieczeństwa](SECURITY_SESSIONS.md). Ryzyko szczątkowe: odpowiedź dowodu nadal niesie te trzy sekrety, a wywołujący, który skopiuje wszystkie trzy, może ich używać do końca slotu. To nie zamyka T05.
 
 ### T06 Token usługi w przeglądarce albo w Apache
 

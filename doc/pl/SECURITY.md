@@ -1,5 +1,6 @@
 # Bezpieczeństwo — alpha-0.1.7
 
+**alpha-0.9.7 Bezpieczeństwo API:** [Uprawnienia, sesje i CSRF](API_SECURITY.md) wymaga identyfikatora sesji i sekretu CSRF przy każdym wywołaniu utrzymaniowym poza dowodem hasła. Sam grant nie czyta już danych. Skopiowanie wszystkich trzech wartości z pamięci strony nadal działa do końca slotu. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.6 Bezpieczeństwo konta:** [Hasła, GPA/PAS i ochrona sekretów](ACCOUNT_SECURITY.md) odmawia hasła ADC identycznego z hasłem konta i odszyfrowuje to hasło dopiero po budżecie prób konta i sprawdzeniu bana. Zgadywanie online, przechwycony PAS przy wyłączonym require_tls oraz kubełki czyszczone restartem zostają. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.5 Bezpieczeństwo TLS:** [Polityka certyfikatu i szyfrów ADCS](TLS_SECURITY.md) sprawdza certyfikat liścia huba przed nasłuchem i ogranicza ADCS do TLS 1.2 i 1.3 AEAD. Zaufanie, nazwa hosta, HTTP/2, OCSP i automatyczne odnawianie pozostają osobną pracą. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.4 Limity ruchu:** [Spam i nadmierny ruch obecności](TRAFFIC_LIMITS.md) ogranicza aktualizacje INF gotowej sesji przed rozesłaniem. Budżety czatu, wyszukiwania i transferów zostają. Schemat v9 pozostaje bez zmian. Limit pasma i publiczna brama pozostają osobną pracą.
@@ -208,6 +209,10 @@ Nie umieszczaj tokena w pamięci przeglądarki, JavaScript, URL, zmiennych VITE 
 
 TLS i logowanie WWW są osobnymi mechanizmami. Szablon wybiera TLS 1.2/1.3 z AEAD, ustala host przekierowania, zachowuje Require local, blokuje prywatne/ukryte/sekretne ścieżki i wyłącza indeksy/symlinki. HSTS jest krótki, tylko dla hosta i HTTPS; CSP/no-sniff/referrer/frame obejmują błędy. Przed użyciem zweryfikuj zaufanie/nazwę/zgodność klucza; sama składnia nie dowodzi zgodności. Szablon nie ujawnia tokena i nie aktywuje bramy produkcyjnej. Zobacz [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
 
+## Bezpieczeństwo API — alpha-0.9.7
+
+[Bezpieczeństwo API](API_SECURITY.md) wymaga identyfikatora sesji i sekretu CSRF przy każdym wywołaniu utrzymaniowym poza dowodem hasła. Sam grant zwraca 403 `csrf_required` i żadnych wierszy utrzymaniowych. Rola jest ładowana dopiero po zgodności tego wiązania. Skopiowanie wszystkich trzech wartości z pamięci strony nadal działa do końca slotu, więc zagrożenia szczątkowe T04 i T05 zostają otwarte. Schemat v9 pozostaje bez zmian. Nie dodano licznika statusu, nowej strony WebAdmin, klucza INI ani ustawienia Apache. `configuration.manage` i `hub.manage` pozostają niezaimplementowane.
+
 ## Bezpieczeństwo konta — alpha-0.9.6
 
 [Bezpieczeństwo konta](ACCOUNT_SECURITY.md) odmawia hasła ADC zgodnego bajt w bajt z hasłem konta i odszyfrowuje hasło ADC dopiero po sprawdzeniu bana konta i akceptacji budżetu prób tego konta. Próba ograniczona albo zbanowana nie dostaje GPA. To nie zamyka zagrożeń szczątkowych T02 ani T03. Schemat v9 pozostaje bez zmian. Nie dodano licznika statusu, strony WebAdmin, klucza INI ani ustawienia Apache.
@@ -234,7 +239,7 @@ TLS i logowanie WWW są osobnymi mechanizmami. Szablon wybiera TLS 1.2/1.3 z AEA
 
 ## Sesje bezpieczeństwa — alpha-0.8.15
 
-Każdy z czterech grantów utrzymaniowych w pamięci ma teraz publiczny identyfikator sesji i osobny sekret CSRF. Zapis utrzymaniowy wymaga grantu, identyfikatora sesji i sekretu CSRF z tego samego slotu. Niezgodność zwraca 403 `csrf_required`. Odczyty nadal wymagają tylko grantu. Każda sesja przyjmuje 24 żądania w ciągu 10 sekund, a kolejne zwraca 429 `rate_limited`. Proces nadal przyjmuje co najwyżej jeden POST utrzymaniowy na sekundę. Budżet nie pochodzi z adresu klienta ani z nagłówka proxy. WebAdmin trzyma te trzy wartości w pamięci strony i czyści je razem. Nie są zapisywane do SQL, ciasteczek ani pamięci przeglądarki. `Require local` zostaje. Zobacz [Sesje bezpieczeństwa](SECURITY_SESSIONS.md).
+Każdy z czterech grantów utrzymaniowych w pamięci ma teraz publiczny identyfikator sesji i osobny sekret CSRF. Zapis utrzymaniowy wymaga grantu, identyfikatora sesji i sekretu CSRF z tego samego slotu. Niezgodność zwraca 403 `csrf_required`. alpha-0.9.7 wymaga tego samego wiązania przy odczytach. Każda sesja przyjmuje 24 żądania w ciągu 10 sekund, a kolejne zwraca 429 `rate_limited`. Proces nadal przyjmuje co najwyżej jeden POST utrzymaniowy na sekundę. Budżet nie pochodzi z adresu klienta ani z nagłówka proxy. WebAdmin trzyma te trzy wartości w pamięci strony i czyści je razem. Nie są zapisywane do SQL, ciasteczek ani pamięci przeglądarki. `Require local` zostaje. Zobacz [Sesje bezpieczeństwa](SECURITY_SESSIONS.md).
 
 ## Odwrotne proxy Apache2 — alpha-0.8.14
 

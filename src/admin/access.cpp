@@ -231,23 +231,22 @@ GrantCheck AccessGate::authorize(std::string_view token, std::string_view method
     }
     if (slot.window_count >= session_request_limit) { return GrantCheck::rate_limited; }
     ++slot.window_count;
-    if (method == "POST") {
-        std::array<unsigned char, 32> csrf_raw{};
-        std::array<unsigned char, 16> session_raw{};
-        struct SecretWipe {
-            std::array<unsigned char, 32>& csrf_bytes;
-            std::array<unsigned char, 16>& session_bytes;
-            ~SecretWipe() {
-                OPENSSL_cleanse(csrf_bytes.data(), csrf_bytes.size());
-                OPENSSL_cleanse(session_bytes.data(), session_bytes.size());
-            }
-        } secret_wipe{csrf_raw, session_raw};
-        const bool csrf_ok = decode_grant(csrf, csrf_raw);
-        const bool session_ok = decode_session(session, session_raw);
-        const int csrf_diff = csrf_ok ? CRYPTO_memcmp(slot.csrf.data(), csrf_raw.data(), csrf_raw.size()) : 1;
-        const int session_diff = session_ok ? CRYPTO_memcmp(slot.session.data(), session_raw.data(), session_raw.size()) : 1;
-        if (!csrf_ok || !session_ok || csrf_diff != 0 || session_diff != 0) { return GrantCheck::csrf_required; }
-    }
+    std::array<unsigned char, 32> csrf_raw{};
+    std::array<unsigned char, 16> session_raw{};
+    struct SecretWipe {
+        std::array<unsigned char, 32>& csrf_bytes;
+        std::array<unsigned char, 16>& session_bytes;
+        ~SecretWipe() {
+            OPENSSL_cleanse(csrf_bytes.data(), csrf_bytes.size());
+            OPENSSL_cleanse(session_bytes.data(), session_bytes.size());
+        }
+    } secret_wipe{csrf_raw, session_raw};
+    const bool csrf_ok = decode_grant(csrf, csrf_raw);
+    const bool session_ok = decode_session(session, session_raw);
+    const int csrf_diff = csrf_ok ? CRYPTO_memcmp(slot.csrf.data(), csrf_raw.data(), csrf_raw.size()) : 1;
+    const int session_diff = session_ok ? CRYPTO_memcmp(slot.session.data(), session_raw.data(), session_raw.size()) : 1;
+    // Binding is checked before the role reload, for reads and writes.
+    if (!csrf_ok || !session_ok || csrf_diff != 0 || session_diff != 0) { return GrantCheck::csrf_required; }
     const auto gate = classify(method, target);
     if (!gate) { return GrantCheck::forbidden; }
     const auto actor = slots_[static_cast<std::size_t>(match)].actor;
