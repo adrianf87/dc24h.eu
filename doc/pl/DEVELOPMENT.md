@@ -139,6 +139,10 @@ alpha-0.1.10 powstaje z main po alpha-0.1.9. Oddzielaj schemat/formatowanie prze
 
 alpha-0.1.11 powstaje z main po alpha-0.1.10. Oddzielaj aktywację hosta, rzeczywiste certyfikaty i reload od tworzenia/testowania przykładu. Testuj dokładnie dostarczaną politykę TLS/dostępu/nagłówków z tymczasowymi ścieżkami/portami, bez konfiguracji hosta. Sukces apache2 -t nie dowodzi zgodności certyfikatu/klucza; sprawdzaj inicjalizację. Zachowuj oba języki dokumentacji i spójne wersje fixture.
 
+## Bezpieczeństwo systemu — alpha-0.9.9
+
+Gałąź powstaje z main. Dodaj jeden przykład systemd i jeden przykład sysusers. Nie instaluj jednostki, nie włączaj jej i nie twórz konta hosta z budowania. Zostaw pusty zbiór uprawnień. Nie dodawaj migracji schematu, licznika statusu, klucza INI, strony WebAdmin ani ustawienia Apache. Nie twierdź, że istnieje AppArmor, SELinux, zapora, nienadzorowane aktualizacje albo że zagrożenie szczątkowe T07 jest zamknięte.
+
 ## Bezpieczeństwo bazy danych — alpha-0.9.8
 
 Gałąź powstaje z main. Zapisuj jedną spójną kopię tylko dla właściciela, gdy operator o to poprosi, i odtwarzaj ją wyłącznie do pustych tabel aplikacji tego samego czystego schematu v9. Nie powtarzaj utraconego potwierdzenia. Nie dodawaj migracji schematu, licznika statusu, klucza INI, strony WebAdmin ani ustawienia Apache. Nie twierdź, że istnieje harmonogram, replika, kopia poza hostem albo że zagrożenie szczątkowe T14 jest zamknięte.

@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.9.8.
+Current development version: alpha-0.9.9.
+
+[System security — alpha-0.9.9](us/SYSTEM_SECURITY.md) · [PL](pl/SYSTEM_SECURITY.md)
 
 [Database security — alpha-0.9.8](us/DATABASE_SECURITY.md) · [PL](pl/DATABASE_SECURITY.md)
 

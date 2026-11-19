@@ -32,7 +32,7 @@ ctest --test-dir build --output-on-failure
 ./build/dc24h --listen 127.0.0.1:1511
 ```
 
-Run as an unprivileged account. The process stays in the foreground and stops with Ctrl+C or SIGTERM. It does not daemonize, create a PID file, edit firewall rules or install/start a system service automatically. A future deployment can use systemd Type=simple, an absolute ExecStart path, a dedicated user and journal capture of stderr.
+Run as an unprivileged account. The process stays in the foreground and stops with Ctrl+C or SIGTERM. It does not daemonize, create a PID file, edit firewall rules or install/start a system service automatically. [System security](SYSTEM_SECURITY.md) ships a Type=simple example with an absolute ExecStart path, a locked user and journal capture of stderr. The build does not enable that unit.
 
 For ADCS configure readable certificate/key paths with the correct service-user permissions; see [ADCS_TLS.md](ADCS_TLS.md). The executable does not obtain or renew certificates. Apache2 is optional for static WebAdmin assets and for the local allowlisted reverse proxy. A public authenticated gateway remains separate work. MariaDB connections are optional and disabled by default. See [DATABASE.md](DATABASE.md). See [CONFIGURATION.md](CONFIGURATION.md) for port and language options.
 

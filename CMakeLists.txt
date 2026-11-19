@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.9.8 LANGUAGES CXX)
+project(dc24h VERSION 0.9.9 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -248,7 +248,7 @@ endforeach()
 
 include(GNUInstallDirs)
 install(TARGETS dc24h dc24h-account-admin dc24h-owner RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-install(FILES config/dc24h.ini.example config/adc-accounts.ini.example config/apache2-webadmin-https.conf.example config/apache2-webadmin-https-proxy.conf.example DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/dc24h)
+install(FILES config/dc24h.ini.example config/adc-accounts.ini.example config/apache2-webadmin-https.conf.example config/apache2-webadmin-https-proxy.conf.example config/dc24h.service.example config/dc24h.sysusers.example DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/dc24h)
 
 install(FILES ${DC24H_MIGRATION_FILES} DESTINATION ${CMAKE_INSTALL_DATADIR}/dc24h/migrations)
 
@@ -1078,6 +1078,21 @@ if(BUILD_TESTING)
         message(FATAL_ERROR "Required Apache2/mod_ssl not found: apache2.https unavailable")
     else()
         message(STATUS "Apache2/mod_ssl not found: apache2.https unavailable")
+    endif()
+    find_program(SYSTEMD_ANALYZE_EXECUTABLE systemd-analyze)
+    find_program(SYSTEMD_RUN_EXECUTABLE systemd-run)
+    find_program(SYSTEMD_SYSUSERS_EXECUTABLE systemd-sysusers)
+    if(SYSTEMD_ANALYZE_EXECUTABLE AND SYSTEMD_RUN_EXECUTABLE AND SYSTEMD_SYSUSERS_EXECUTABLE)
+        add_test(NAME systemd.sandbox COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/systemd_sandbox_tests.py"
+            "$<TARGET_FILE:dc24h>"
+            "${CMAKE_CURRENT_SOURCE_DIR}/config/dc24h.service.example"
+            "${CMAKE_CURRENT_SOURCE_DIR}/config/dc24h.sysusers.example")
+        set_tests_properties(systemd.sandbox PROPERTIES TIMEOUT 60)
+    elseif(DC24H_REQUIRE_INTEGRATION_TESTS)
+        message(FATAL_ERROR "Required systemd tools missing: systemd.sandbox unavailable")
+    else()
+        message(STATUS "systemd tools missing: systemd.sandbox unavailable")
     endif()
     find_program(NCDC_EXECUTABLE ncdc)
     if(NCDC_EXECUTABLE)
