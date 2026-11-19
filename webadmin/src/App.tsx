@@ -38,6 +38,7 @@ import { TransferMonitoring } from "./components/TransferMonitoring";
 import { TransferConfiguration } from "./components/TransferConfiguration";
 import { TransferStatistics } from "./components/TransferStatistics";
 import { Roles } from "./components/Roles";
+import { ModerationRules } from "./components/ModerationRules";
 import { StartupConfiguration } from "./components/StartupConfiguration";
 import {Bans} from "./components/Bans";
 import {MuteStatistics} from "./components/MuteStatistics";
@@ -48,8 +49,8 @@ import { ChatStatistics } from "./components/ChatStatistics";
 import { useHub } from "./lib/useHub";
 import type { Sample } from "./lib/useHub";
 
-type Page = "overview" | "connections" | "chat" | "search" | "security" | "database" | "accounts" | "configuration" | "roles" | "operators" | "adminCore" | "kick" | "bans" | "mute";
-const pages: Page[] = ["overview", "connections", "chat", "search", "security", "database", "accounts", "configuration", "roles", "operators", "adminCore", "kick", "bans", "mute"];
+type Page = "overview" | "connections" | "chat" | "search" | "security" | "database" | "accounts" | "configuration" | "roles" | "moderation" | "operators" | "adminCore" | "kick" | "bans" | "mute";
+const pages: Page[] = ["overview", "connections", "chat", "search", "security", "database", "accounts", "configuration", "roles", "moderation", "operators", "adminCore", "kick", "bans", "mute"];
 const currentPage = (): Page =>
   pages.includes(location.hash.slice(1) as Page)
     ? (location.hash.slice(1) as Page)
@@ -337,6 +338,7 @@ export default function App() {
     { page: "database", icon: Database },
     { page: "accounts", icon: Users },
     { page: "roles", icon: ShieldCheck },
+    { page: "moderation", icon: ShieldCheck },
     { page: "operators", icon: Users },
     { page: "adminCore", icon: ShieldCheck },
     { page: "kick", icon: Users },
@@ -352,6 +354,7 @@ export default function App() {
     database: [t.databaseTitle, t.databaseSub],
     accounts: [t.accountsTitle, t.accountsSub],
     roles: [t.rolesTitle, t.rolesSub],
+    moderation: [t.moderationTitle, t.moderationSub],
     operators: [t.operatorsTitle, t.operatorsSub],
     adminCore: [t.adminCoreTitle,t.adminCoreSub],
     kick: [t.kickTitle,t.kickSub],
@@ -745,6 +748,7 @@ export default function App() {
           {page === "kick" && <KickStatistics snapshot={snapshot} t={t} />}
           {page === "adminCore" && <AdminCore t={t} />}
           {page === "roles" && <Roles snapshot={snapshot} t={t} />}
+          {page === "moderation" && <ModerationRules snapshot={snapshot} t={t} />}
           {page === "configuration" && <StartupConfiguration snapshot={snapshot} t={t} number={number} />}
           {page === "accounts" && <Accounts key="accounts" t={t} />}
           {page === "operators" && <Accounts key="operators" t={t} staff />}

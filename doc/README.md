@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.8.7.
+Current development version: alpha-0.8.8.
+
+[Moderation Rules — alpha-0.8.8](us/MODERATION_RULES.md) · [PL](pl/MODERATION_RULES.md)
 
 [Mute — alpha-0.8.7](us/MUTE.md) · [PL](pl/MUTE.md)
 

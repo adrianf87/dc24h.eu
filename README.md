@@ -2,12 +2,13 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.8.7 (Mute).**
+**Current development version: alpha-0.8.8 (Moderation Rules).**
 
 CI on `main`: [GitHub-hosted Ubuntu 24.04 runners](doc/us/GITHUB_CI.md) · [PL](doc/pl/GITHUB_CI.md).
 
 Completed increments (older bullets describe their original delivery scope):
 
+- **alpha-0.8.8 Moderation Rules**: one allocation-free check of the actor permission and the operation target for kick, mute, unmute, account/CID/IP bans and ban revocation. Schema v8 is unchanged. See [Moderation Rules](doc/us/MODERATION_RULES.md).
 - **alpha-0.8.7 Mute**: independent live public/private chat mute, authenticated role hierarchy, +mute/+unmute, session lifetime and bilingual read-only monitoring. Schema v8 is unchanged. See [Mute](doc/us/MUTE.md).
 - **alpha-0.8.6 Temporary Bans**: relative durations, automatic admission expiry, filtered history and server-clock WebAdmin countdown. Schema v8 is unchanged. See [Temporary Bans](doc/us/TEMPORARY_BANS.md).
 - **alpha-0.8.5 Ban Core**: persistent account/CID/exact-IP blocks, permanent/expiring admission policy, proven maintenance create/revoke, WebAdmin and explicit schema v8. See [Ban Core](doc/us/BAN_CORE.md).

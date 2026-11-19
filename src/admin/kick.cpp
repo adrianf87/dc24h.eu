@@ -1,4 +1,5 @@
 #include "dc24h/admin/kick.hpp"
+#include "dc24h/security/moderation.hpp"
 namespace dc24h::admin {
 KickError KickCore::check(users::SessionId actor,users::SessionId target,users::TimePoint now) const noexcept {
     const auto source=sessions_.authenticated(actor);
@@ -8,7 +9,10 @@ KickError KickCore::check(users::SessionId actor,users::SessionId target,users::
     if(!destination||!destination->ready()){return KickError::unavailable;}
     if(now<source->established_at){return KickError::invalid_time;}
     const auto auth=destination->authentication();
-    if(!security::can_revoke(source->role,auth?auth->role:accounts::Role::guest,policy_)){return KickError::forbidden;}
+    security::ModerationTarget view;
+    view.subject=security::ModerationSubject::session;
+    view.role=auth?auth->role:accounts::Role::guest;
+    if(security::moderate(security::ModerationOperation::kick,{source->role},view,policy_).refusal!=security::ModerationRefusal::none){return KickError::forbidden;}
     return KickError::none;
 }
 KickError KickCore::apply(users::SessionId actor,users::SessionId target,users::TimePoint now) noexcept {

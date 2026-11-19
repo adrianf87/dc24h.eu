@@ -1,4 +1,5 @@
 #include "dc24h/api/configuration.hpp"
+#include "dc24h/security/moderation.hpp"
 
 namespace dc24h::api {
 std::string configuration_json(const ConfigurationSnapshot& s) {
@@ -45,6 +46,20 @@ std::string configuration_json(const ConfigurationSnapshot& s) {
         json+="{\"key\":\"";json+=security::permission_key(p);json+="\",\"implemented\":";
         json+=security::permission_implemented(p)?"true}":"false}";
     }
-    json+="]}}";return json;
+    json+="]},\"moderation\":[";first=true;
+    for(auto operation:security::moderation_catalog) {
+        const auto rule=security::moderation_rule(operation);
+        if(!first){json+=',';}first=false;
+        json+="{\"operation\":\"";json+=security::moderation_operation_key(operation);
+        json+="\",\"permission\":\"";json+=security::permission_key(rule.permission);
+        json+="\",\"subject\":\"";json+=security::moderation_subject_key(rule.subject);
+        json+="\",\"target\":\"";json+=security::moderation_target_key(rule.target);
+        json+="\",\"guest_target\":";json+=rule.guest_target?"true":"false";
+        json+=",\"forbid_self\":";json+=rule.forbid_self?"true":"false";
+        json+=",\"vip_delegable\":";json+=rule.vip_delegable?"true":"false";
+        json+=",\"requires_blocks\":";json+=rule.requires_blocks?"true":"false";
+        json+='}';
+    }
+    json+="]}";return json;
 }
 }
