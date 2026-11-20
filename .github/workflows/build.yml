@@ -14,13 +14,14 @@ concurrency:
 
 jobs:
   cpp:
-    name: C++ ${{ matrix.build_type }} - Ubuntu 24.04
+    name: C++ ${{ matrix.build_type }} - ${{ matrix.os }}
     if: github.repository == 'adrianf87/dc24h.eu'
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
         build_type: [Debug, Release]
     env:
       CXX: g++
@@ -51,10 +52,14 @@ jobs:
         run: ctest --test-dir "build/$BUILD_TYPE" --parallel "$(nproc)" --output-on-failure
 
   webadmin:
-    name: WebAdmin - Ubuntu 24.04
+    name: WebAdmin - ${{ matrix.os }}
     if: github.repository == 'adrianf87/dc24h.eu'
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
     env:
       CXX: g++
       CI: 'true'

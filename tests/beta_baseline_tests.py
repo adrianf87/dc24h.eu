@@ -32,10 +32,20 @@ def main():
     require('set(DC24H_VERSION "alpha-' not in cmake, "CMakeLists.txt: alpha version string remains", errors)
     check(ROOT / "cmake/version.hpp.in", ('inline constexpr std::string_view version = "@DC24H_VERSION@";',), errors)
     workflow = check(ROOT / ".github/workflows/build.yml", (
-        "runs-on: ubuntu-24.04",
+        "os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]",
+        "runs-on: ${{ matrix.os }}",
+        'test "$(nproc)" -eq 4',
         "beta-0.1",
     ), errors)
+    require(workflow.count("os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]") == 2,
+            "build.yml: both jobs must list the three public images", errors)
+    require(workflow.count("runs-on: ${{ matrix.os }}") == 2,
+            "build.yml: both jobs must use the public image matrix", errors)
+    require(workflow.count('test "$(nproc)" -eq 4') == 2,
+            "build.yml: both jobs must require four logical CPUs", errors)
     require("server-747585786" not in workflow, "build.yml: custom runner is selected", errors)
+    require("self-hosted" not in workflow, "build.yml: self-hosted runner is selected", errors)
+    require("ubuntu-latest" not in workflow, "build.yml: ubuntu-latest is selected", errors)
     check(ROOT / "doc/us/BETA.md", (
         "# Beta baseline — beta-0.1",
         "The branch starts from main `423a958`.",
@@ -45,7 +55,8 @@ def main():
         "`configuration.manage` and `hub.manage` stay unimplemented",
         "This is not a production release.",
         "No residual threat is closed.",
-        "GitHub-hosted Ubuntu 24.04",
+        "public GitHub-hosted runners `ubuntu-22.04`, `ubuntu-24.04` and `ubuntu-26.04`",
+        "four logical CPUs and 16 GB",
     ), errors)
     check(ROOT / "doc/pl/BETA.md", (
         "# Linia beta — beta-0.1",
@@ -56,7 +67,8 @@ def main():
         "`configuration.manage` i `hub.manage` pozostają niezaimplementowane",
         "To nie jest wydanie produkcyjne.",
         "Żadne zagrożenie szczątkowe nie jest zamknięte.",
-        "GitHub-hosted Ubuntu 24.04",
+        "publicznych runnerach GitHub-hosted `ubuntu-22.04`, `ubuntu-24.04` i `ubuntu-26.04`",
+        "cztery logiczne CPU i 16 GB",
     ), errors)
     check(ROOT / "include/dc24h/admin/access.hpp", (
         "inline constexpr std::array<RouteTemplate, 12> access_routes{{",

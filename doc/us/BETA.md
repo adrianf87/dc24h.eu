@@ -12,4 +12,4 @@ Hub behavior, ADC bytes, recipient sets and security decisions stay the ones del
 
 This does not add a route, INI key, CLI flag, status field, WebAdmin page, Apache setting or schema migration. Browser kick and mute stay undispatched. Status and health stay bearer-only. `Require local` stays. No residual threat is closed. A public authenticated gateway, remote administrator access, `configuration.manage` and `hub.manage` stay separate work.
 
-Run Check status on GitHub-hosted Ubuntu 24.04. Add `beta-0.1` to the push branches. Local validation uses eight CPU threads. Remote CI completion is not awaited.
+Run Check status on public GitHub-hosted runners `ubuntu-22.04`, `ubuntu-24.04` and `ubuntu-26.04`. Each runner is specified with four logical CPUs and 16 GB of memory. Each job checks that `nproc` equals 4 and uses `nproc` workers. Add `beta-0.1` to the push branches. Local validation uses eight CPU threads. Remote CI completion is not awaited.

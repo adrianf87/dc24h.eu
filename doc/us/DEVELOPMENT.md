@@ -122,7 +122,7 @@ alpha-0.1.11 starts from main after alpha-0.1.10. Keep host activation, real cer
 
 ## Beta baseline — beta-0.1
 
-Branch from main. Report `beta-0.1` from the hub, the API and WebAdmin. Keep the CMake and package tuple at `0.1.0`. Do not change hub behavior, ADC bytes or schema v9. Do not add a schema migration, a status field, an INI key, a WebAdmin page, a CLI flag or an Apache setting. Do not claim a production release or that any residual threat is closed. `configuration.manage` and `hub.manage` stay unimplemented.
+Branch from main. Report `beta-0.1` from the hub, the API and WebAdmin. Keep the CMake and package tuple at `0.1.0`. Do not change hub behavior, ADC bytes or schema v9. Do not add a schema migration, a status field, an INI key, a WebAdmin page, a CLI flag or an Apache setting. Do not claim a production release or that any residual threat is closed. `configuration.manage` and `hub.manage` stay unimplemented. Run Check status on public GitHub-hosted runners `ubuntu-22.04`, `ubuntu-24.04` and `ubuntu-26.04`. Each job checks four logical CPUs with `nproc`.
 
 ## Dependencies — alpha-0.9.17
 

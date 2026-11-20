@@ -12,4 +12,4 @@ Zachowanie huba, bajty ADC, zbiory odbiorców i decyzje bezpieczeństwa zostają
 
 To nie dodaje trasy, klucza INI, flagi CLI, pola statusu, strony WebAdmin, ustawienia Apache ani migracji schematu. Kick i mute w przeglądarce pozostają niewysyłane. Status i health zostają tylko z bearer. `Require local` zostaje. Żadne zagrożenie szczątkowe nie jest zamknięte. Publiczna uwierzytelniona brama, zdalny dostęp administratora, `configuration.manage` i `hub.manage` pozostają osobną pracą.
 
-Check status działa na GitHub-hosted Ubuntu 24.04. Dodaj `beta-0.1` do gałęzi push. Lokalna walidacja używa ośmiu wątków CPU. Nie czekamy na zakończenie zdalnego CI.
+Check status działa na publicznych runnerach GitHub-hosted `ubuntu-22.04`, `ubuntu-24.04` i `ubuntu-26.04`. Każdy runner ma w specyfikacji cztery logiczne CPU i 16 GB pamięci. Każde zadanie sprawdza, że `nproc` równa się 4, i używa workerów `nproc`. Dodaj `beta-0.1` do gałęzi push. Lokalna walidacja używa ośmiu wątków CPU. Nie czekamy na zakończenie zdalnego CI.
