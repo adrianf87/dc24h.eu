@@ -27,7 +27,7 @@ else()
 endif()
 
 # The VERSION tuple above is the package number; operators see the beta version.
-set(DC24H_VERSION "beta-0.1.4")
+set(DC24H_VERSION "beta-0.1.5")
 configure_file(cmake/version.hpp.in generated/dc24h/version.hpp @ONLY)
 find_package(Threads REQUIRED)
 find_package(OpenSSL 3 REQUIRED COMPONENTS SSL Crypto)
@@ -284,6 +284,11 @@ target_include_directories(dc24h-account-admin PRIVATE "${CMAKE_CURRENT_BINARY_D
 target_link_libraries(dc24h-account-admin PRIVATE dc24h_account_api dc24h_configuration dc24h_core)
 target_compile_options(dc24h-account-admin PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 set_target_properties(dc24h_account_api dc24h-account-admin PROPERTIES CXX_EXTENSIONS OFF)
+add_executable(dc24h-service-controller src/service_control/controller.cpp)
+target_include_directories(dc24h-service-controller PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+target_compile_features(dc24h-service-controller PRIVATE cxx_std_20)
+set_target_properties(dc24h-service-controller PROPERTIES CXX_EXTENSIONS OFF)
+target_compile_options(dc24h-service-controller PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 target_link_libraries(dc24h PRIVATE dc24h_bans dc24h_core dc24h_configuration dc24h_account_authentication dc24h_monitoring)
 set_target_properties(dc24h PROPERTIES CXX_EXTENSIONS OFF)
 
@@ -292,8 +297,8 @@ foreach(target dc24h_transfers dc24h_text dc24h_search dc24h_chat dc24h_users dc
 endforeach()
 
 include(GNUInstallDirs)
-install(TARGETS dc24h dc24h-account-admin dc24h-owner RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-install(FILES config/dc24h.ini.example config/adc-accounts.ini.example config/apache2-webadmin-https.conf.example config/apache2-webadmin-https-proxy.conf.example config/dc24h.service.example config/dc24h.sysusers.example DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/dc24h)
+install(TARGETS dc24h dc24h-account-admin dc24h-owner dc24h-service-controller RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(FILES config/dc24h.ini.example config/adc-accounts.ini.example config/apache2-webadmin-https.conf.example config/apache2-webadmin-https-proxy.conf.example config/dc24h.service.example config/dc24h.sysusers.example config/dc24h-control.service.example config/dc24h-control.sysusers.example DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/dc24h)
 
 install(FILES ${DC24H_MIGRATION_FILES} DESTINATION ${CMAKE_INSTALL_DATADIR}/dc24h/migrations)
 
@@ -332,6 +337,10 @@ if(BUILD_TESTING)
     add_test(NAME beta.baseline COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/beta_baseline_tests.py")
     set_tests_properties(beta.baseline PROPERTIES TIMEOUT 15)
+    add_test(NAME service.controller.process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/service_controller_process_tests.py"
+        "$<TARGET_FILE:dc24h-service-controller>")
+    set_tests_properties(service.controller.process PROPERTIES TIMEOUT 25)
     add_test(NAME configuration.policy.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/configuration_policy_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(configuration.policy.process PROPERTIES TIMEOUT 30)

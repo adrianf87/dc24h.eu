@@ -2,12 +2,13 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: beta-0.1.4 (WebAdmin configuration editor).**
+**Current development version: beta-0.1.5 (read-only hub service controller).**
 
 CI on `main`: [public GitHub-hosted Ubuntu 22.04, 24.04 and 26.04](doc/us/GITHUB_CI.md) runs C++ Debug, C++ Release and WebAdmin on each image · [PL](doc/pl/GITHUB_CI.md).
 
 Completed increments (older bullets describe their original delivery scope):
 
+- **beta-0.1.5 Service controller**: a separate, local-only, Unix-socket status process reads the fixed systemd `dc24h.service` state even with the hub stopped. It has no Start/Stop/Restart commands or public API. See [Service controller](doc/us/SERVICE_CONTROLLER.md) | [PL](doc/pl/SERVICE_CONTROLLER.md).
 - **beta-0.1.4 Configuration editor**: local-only WebAdmin review, validation, change preview, confirmed save and backup restore for four nonsecret settings with PL/US interface and restart warning. No live reload or service commands. See [Configuration editor](doc/us/CONFIGURATION_EDITOR.md).
 - **beta-0.1.3 Configuration storage**: privileged local maintenance write/restore with revision conflicts, atomic INI replacement, private backup/undo and v10 audit intentions/outcomes. See [Configuration write](doc/us/CONFIGURATION_WRITE.md).
 - **beta-0.1.2 Configuration review**: branch `beta-0.1.2` adds privileged local read-only saved/maintenance-active comparisons, allowlisted in-memory proposal validation and stale-file detection. No file writes, WebAdmin editor, hub control or migration. See [Configuration review](doc/us/CONFIGURATION_REVIEW.md).

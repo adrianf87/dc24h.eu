@@ -13,6 +13,7 @@ security.moderation
 security.negotiation
 security.negotiation.process
 security.process
+service.controller.process
 security.roles
 security.threat_model
 security.unit
