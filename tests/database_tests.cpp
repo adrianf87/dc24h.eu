@@ -137,7 +137,8 @@ void integration(char* argv[]) {
         {std::int64_t{7}, verifier, std::int64_t{1}}).affected_rows == 1);
     const auto snap = dir / "backup-roundtrip.bk";
     const auto report = backup(connection, snap.string());
-    require(report.rows == 12 && report.bytes > 32 && report.bytes == std::filesystem::file_size(snap));
+    require(report.rows == migration_catalog().size() + 2 && report.bytes > 32 &&
+            report.bytes == std::filesystem::file_size(snap));
     struct stat state{};
     require(::stat(snap.c_str(), &state) == 0 && (state.st_mode & 0777) == 0600 && state.st_nlink == 1);
     const auto body = [&] {
