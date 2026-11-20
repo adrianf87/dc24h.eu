@@ -40,6 +40,7 @@ import { TransferStatistics } from "./components/TransferStatistics";
 import { Roles } from "./components/Roles";
 import { ModerationRules } from "./components/ModerationRules";
 import { StartupConfiguration } from "./components/StartupConfiguration";
+import { ConfigurationEditor } from "./components/ConfigurationEditor";
 import {Bans} from "./components/Bans";
 import {AuditLog} from "./components/AuditLog";
 import {MuteStatistics} from "./components/MuteStatistics";
@@ -780,7 +781,7 @@ export default function App() {
           {page === "adminCore" && <AdminCore t={t} />}
           {page === "roles" && <Roles snapshot={snapshot} t={t} />}
           {page === "moderation" && <ModerationRules snapshot={snapshot} t={t} />}
-          {page === "configuration" && <StartupConfiguration snapshot={snapshot} t={t} number={number} />}
+          {page === "configuration" && <><StartupConfiguration snapshot={snapshot} t={t} number={number} /><ConfigurationEditor t={t} /></>}
           {page === "accounts" && <Accounts key="accounts" t={t} />}
           {page === "operators" && <Accounts key="operators" t={t} staff />}
           {page === "database" && (
@@ -813,11 +814,11 @@ export default function App() {
             </span>
             <div>
               <strong>{t.localNote}</strong>
-              <p>{(page === "accounts" || page === "operators" || page === "bans") ? t.accountsNote : t.localNoteSub}</p>
+              <p>{(page === "accounts" || page === "operators" || page === "bans") ? t.accountsNote : page === "configuration" ? t.configEditLocal : t.localNoteSub}</p>
             </div>
             <span className="outline-label">
               <LockKeyhole size={11} />
-              {(page === "accounts" || page === "operators" || page === "bans") ? t.accountsAction : t.readOnly}
+              {(page === "accounts" || page === "operators" || page === "bans" || page === "configuration") ? t.accountsAction : t.readOnly}
             </span>
           </div>
           <footer>

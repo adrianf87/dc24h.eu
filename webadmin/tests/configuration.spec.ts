@@ -5,7 +5,7 @@ test("read-only DB/login policy reflects startup values, safe export and Polish 
  let policy:unknown=configuration;
  await page.route("**/admin-api/v1/status",route=>route.fulfill({contentType:"application/json",body:JSON.stringify({...snapshot,configuration:policy})}));
  await page.goto("/#configuration");
- await expect(page.getByRole("heading",{level:1,name:"Database and authentication"})).toBeVisible();
+ await expect(page.getByRole("heading",{level:1,name:"Configuration"})).toBeVisible();
  const view=page.getByTestId("startup-configuration");
  await expect(view.locator('[data-configuration-setting="connect_timeout_seconds"] dd')).toHaveText("8");
  await expect(view.locator('[data-configuration-setting="read_timeout_seconds"] dd')).toHaveText("2");
@@ -17,7 +17,7 @@ test("read-only DB/login policy reflects startup values, safe export and Polish 
  policy={...configuration,mode:"maintenance"};await page.getByRole("button",{name:"Refresh now"}).click();
  await expect(view.getByText("Account maintenance (hub stopped)",{exact:true})).toBeVisible();
  await page.setViewportSize({width:390,height:844});await page.getByLabel("Interface language").selectOption("pl");
- await expect(page.getByRole("heading",{level:1,name:"Baza danych i uwierzytelnianie"})).toBeVisible();
+ await expect(page.getByRole("heading",{level:1,name:"Konfiguracja"})).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
 test("older APIs and malformed policy never fabricate configuration",async({page})=>{

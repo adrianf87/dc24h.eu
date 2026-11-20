@@ -1,4 +1,4 @@
-# dc24h.eu alpha-0.8.14 — HTTPS reverse proxy for the loopback WebAdmin adapter.
+# dc24h.eu beta-0.1.4 — HTTPS reverse proxy for the loopback WebAdmin adapter.
 # Debian/Ubuntu: ports.conf owns Listen 80/443; do not duplicate those here.
 # Modules: ssl, headers, alias, dir, mime, authz_core, authz_host, proxy, proxy_http.
 # Replace the domain, asset path, certificate paths and loopback adapter port before enabling this file.
@@ -61,17 +61,17 @@ TraceEnable Off
 
     # Path allowlist. Method, host, origin, body and local-client checks are below.
     # ProxyPassMatch cannot distinguish GET from POST, so authorization runs first.
-    ProxyPassMatch "^(/admin-api/v1/(?:admin/access|audit|status|health|users|admin|management(?:/authorize)?|accounts(?:/[1-9][0-9]{0,18}(?:/(?:activate|disable|reset|password|role))?)?|bans(?:/[1-9][0-9]{0,18}/revoke)?))$" "http://127.0.0.1:4173$1"
+    ProxyPassMatch "^(/admin-api/v1/(?:admin/access|audit|status|health|users|admin|management(?:/authorize|/configuration(?:/(?:write|restore))?)?|accounts(?:/[1-9][0-9]{0,18}(?:/(?:activate|disable|reset|password|role))?)?|bans(?:/[1-9][0-9]{0,18}/revoke)?))$" "http://127.0.0.1:4173$1"
     ProxyPassReverse /admin-api/ "http://127.0.0.1:4173/admin-api/"
 
     <LocationMatch "^/(?:admin-api|api)(?:/|$)">
         LimitRequestBody 7000
         Header set Cache-Control "no-store"
         Header always set Cache-Control "no-store"
-        # GET: status, health, users, admin, management, accounts, accounts/{id}, bans.
-        # POST: admin/access, audit, management/authorize, accounts, accounts/{id}/{action}, bans, bans/{id}/revoke.
+        # GET: status, health, users, admin, management, configuration review, accounts, accounts/{id}, bans.
+        # POST: admin/access, audit, management/authorize, configuration validate/write/restore, accounts, accounts/{id}/{action}, bans, bans/{id}/revoke.
         # POST requires the canonical HTTPS origin, the form type, X-DC24H-Admin: 1 and 1..7000 bytes.
-        <If "%{HTTP_HOST} == 'dc24h.eu' && %{HTTP:Transfer-Encoding} == '' && (%{HTTP:Sec-Fetch-Site} == '' || %{HTTP:Sec-Fetch-Site} == 'same-origin' || %{HTTP:Sec-Fetch-Site} == 'none') && ((%{REQUEST_METHOD} == 'GET' && (%{HTTP:Origin} == '' || %{HTTP:Origin} == 'https://dc24h.eu') && (%{HTTP:Content-Length} == '' || %{HTTP:Content-Length} == '0') && (%{REQUEST_URI} =~ m#^/admin-api/v1/(?:status|health|users|admin|management)$# || %{REQUEST_URI} =~ m#^/admin-api/v1/accounts(?:/[1-9][0-9]{0,18})?$# || %{REQUEST_URI} =~ m#^/admin-api/v1/bans$#)) || (%{REQUEST_METHOD} == 'POST' && %{HTTP:Origin} == 'https://dc24h.eu' && %{HTTP:Content-Type} == 'application/x-www-form-urlencoded' && %{HTTP:X-DC24H-Admin} == '1' && %{HTTP:Content-Length} =~ m#^[1-9][0-9]{0,3}$# && %{HTTP:Content-Length} -le 7000 && %{REQUEST_URI} =~ m#^/admin-api/v1/(?:admin/access|audit|management/authorize|accounts(?:/[1-9][0-9]{0,18}/(?:activate|disable|reset|password|role))?|bans(?:/[1-9][0-9]{0,18}/revoke)?)$#))">
+        <If "%{HTTP_HOST} == 'dc24h.eu' && %{HTTP:Transfer-Encoding} == '' && (%{HTTP:Sec-Fetch-Site} == '' || %{HTTP:Sec-Fetch-Site} == 'same-origin' || %{HTTP:Sec-Fetch-Site} == 'none') && ((%{REQUEST_METHOD} == 'GET' && (%{HTTP:Origin} == '' || %{HTTP:Origin} == 'https://dc24h.eu') && (%{HTTP:Content-Length} == '' || %{HTTP:Content-Length} == '0') && (%{REQUEST_URI} =~ m#^/admin-api/v1/(?:status|health|users|admin|management(?:/configuration)?)$# || %{REQUEST_URI} =~ m#^/admin-api/v1/accounts(?:/[1-9][0-9]{0,18})?$# || %{REQUEST_URI} =~ m#^/admin-api/v1/bans$#)) || (%{REQUEST_METHOD} == 'POST' && %{HTTP:Origin} == 'https://dc24h.eu' && %{HTTP:Content-Type} == 'application/x-www-form-urlencoded' && %{HTTP:X-DC24H-Admin} == '1' && %{HTTP:Content-Length} =~ m#^[1-9][0-9]{0,3}$# && %{HTTP:Content-Length} -le 7000 && %{REQUEST_URI} =~ m#^/admin-api/v1/(?:admin/access|audit|management/(?:authorize|configuration(?:/(?:write|restore))?)|accounts(?:/[1-9][0-9]{0,18}/(?:activate|disable|reset|password|role))?|bans(?:/[1-9][0-9]{0,18}/revoke)?)$#))">
             Require local
         </If>
         <Else>

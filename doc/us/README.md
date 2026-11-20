@@ -1,7 +1,8 @@
 # dc24h.eu documentation
 
-beta-0.1.3: release channel Beta. Hub, API and WebAdmin report beta-0.1.3. The local maintenance API supports guarded atomic configuration changes and restore; the running hub is never reloaded in place. Default development language: EN/US UTF-8.
+beta-0.1.4: release channel Beta. Hub, API and WebAdmin report beta-0.1.4. The loopback WebAdmin editor supports reviewed, confirmed configuration changes through the separate maintenance API; the running hub is never reloaded in place. Default development language: EN/US UTF-8.
 
+- [Configuration editor — beta-0.1.4](CONFIGURATION_EDITOR.md)
 - [Configuration write — beta-0.1.3](CONFIGURATION_WRITE.md)
 - [Configuration review — beta-0.1.2](CONFIGURATION_REVIEW.md)
 - [Management foundation — beta-0.1.1](MANAGEMENT_FOUNDATION.md)

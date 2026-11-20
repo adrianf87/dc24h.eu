@@ -1529,7 +1529,22 @@ th {
 .startup-configuration dd { font-variant-numeric:tabular-nums; margin:0; font-weight:600; }
 .configuration-alert { padding:12px; background:#fff6df; border-radius:8px; }
 .configuration-footnote { margin-top:24px; }
+.configuration-editor { padding:24px; }
+.configuration-editor p { line-height:1.6; }
+.configuration-edit-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px 24px; margin:22px 0; }
+.configuration-edit-field { display:flex; flex-direction:column; align-items:stretch; gap:8px; min-width:0; font-weight:600; }
+.configuration-edit-field input,.configuration-edit-field select { width:100%; min-width:0; padding:10px; border:1px solid #aebacf; border-radius:8px; font:inherit; background:var(--surface,#fff); }
+.configuration-edit-field input[aria-invalid="true"] { border-color:#b91c1c; }
+.configuration-edit-field small { font-weight:400; color:var(--muted,#64748b); overflow-wrap:anywhere; }
+.configuration-preview,.configuration-restore { border:1px solid #dbe2ed; border-radius:12px; padding:18px; margin-top:22px; overflow-x:auto; }
+.configuration-preview table { width:100%; border-collapse:collapse; text-align:left; }
+.configuration-preview th,.configuration-preview td { padding:10px; border-bottom:1px solid #e6eaf2; }
+.configuration-confirm { display:flex; align-items:flex-start; gap:10px; margin:16px 0; font-weight:500; }
+.configuration-confirm input { margin-top:4px; }
+.configuration-editor button { cursor:pointer; }
+.configuration-editor button:disabled { cursor:default; opacity:.55; }
 @media(max-width:800px) { .configuration-sections { grid-template-columns:1fr; } }
+@media(max-width:800px) { .configuration-edit-grid { grid-template-columns:1fr; } }
 
 .roles-card { padding:24px; }
 .roles-card p { line-height:1.6; }

@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: beta-0.1.3.
+Current development version: beta-0.1.4.
+
+[Configuration editor — beta-0.1.4](us/CONFIGURATION_EDITOR.md) · [PL](pl/CONFIGURATION_EDITOR.md)
 
 [Configuration write — beta-0.1.3](us/CONFIGURATION_WRITE.md) · [PL](pl/CONFIGURATION_WRITE.md)
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lock beta-0.1.3 metadata, configuration storage and safety limits."""
+"""Lock beta-0.1.4 editor metadata and established configuration safety limits."""
 
 from pathlib import Path
 import sys
@@ -57,7 +57,7 @@ def main():
     errors = []
     cmake = check(ROOT / "CMakeLists.txt", (
         "project(dc24h VERSION 0.1.0 LANGUAGES CXX)",
-        'set(DC24H_VERSION "beta-0.1.3")',
+        'set(DC24H_VERSION "beta-0.1.4")',
         "add_test(NAME beta.baseline ",
     ), errors)
     require('set(DC24H_VERSION "alpha-' not in cmake, "CMakeLists.txt: alpha version string remains", errors)
@@ -80,6 +80,8 @@ def main():
     require("self-hosted" not in workflow, "build.yml: self-hosted runner is selected", errors)
     require("ubuntu-latest" not in workflow, "build.yml: ubuntu-latest is selected", errors)
     check(ROOT / "doc/us/BETA.md", (
+        "# WebAdmin configuration editor — beta-0.1.4",
+        "Branch `beta-0.1.4` starts from main `3f7f03d`.",
         "# Atomic configuration write — beta-0.1.3",
         "Branch `beta-0.1.3` starts from main `83b224c`.",
         "# Configuration review — beta-0.1.2",
@@ -98,6 +100,8 @@ def main():
         "four logical CPUs and 16 GB",
     ), errors)
     check(ROOT / "doc/pl/BETA.md", (
+        "# Edytor konfiguracji WebAdmin — beta-0.1.4",
+        "Gałąź `beta-0.1.4` powstaje z main `3f7f03d`.",
         "# Atomowy zapis konfiguracji — beta-0.1.3",
         "Gałąź `beta-0.1.3` powstaje z main `83b224c`.",
         "# Przegląd konfiguracji — beta-0.1.2",
@@ -153,20 +157,30 @@ def main():
     check(ROOT / "doc/pl/CONFIGURATION_WRITE.md", (
         "beta-0.1.3", "configuration.write", "outcome_unknown", ".dc24h.bak",
     ), errors)
+    check(ROOT / "doc/us/CONFIGURATION_EDITOR.md", (
+        "beta-0.1.4", "configuration.manage", "409 stale", "503 outcome_unknown", "Require local",
+    ), errors)
+    check(ROOT / "doc/pl/CONFIGURATION_EDITOR.md", (
+        "beta-0.1.4", "configuration.manage", "409 stale", "503 outcome_unknown", "Require local",
+    ), errors)
     check(ROOT / "config/apache2-webadmin-https-proxy.conf.example", (
-        "management(?:/authorize)?",
+        "management(?:/authorize|/configuration",
         "management/authorize",
     ), errors)
     check(ROOT / "webadmin/server/account-api.ts", (
         "/admin-api/v1/management/authorize",
         "not_implemented",
+        "parseConfigurationReview", "parseConfigurationValidation", "parseConfigurationWrite",
+    ), errors)
+    check(ROOT / "webadmin/src/components/ConfigurationEditor.tsx", (
+        "configurationChanges", "configEditConfirm", "configEditRestoreConfirm", "adminHeaders()",
     ), errors)
     check(ROOT / "include/dc24h/admin/access.hpp", (
         "inline constexpr std::array<RouteTemplate, 12> access_routes{{",
         "configuration.manage and hub.manage stay",
     ), errors)
     check(ROOT / "webadmin/src/lib/status.ts", (
-        'export const WEBADMIN_VERSION = "beta-0.1.3";',
+        'export const WEBADMIN_VERSION = "beta-0.1.4";',
         '!/^(?:alpha-\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|beta-\\d{1,3}\\.\\d{1,3}(?:\\.\\d{1,3})?)$/.test(server.version)',
     ), errors)
     check(ROOT / "src/security/roles.cpp", (
@@ -181,7 +195,7 @@ def main():
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1
-    print("Beta 0.1.3 configuration storage, version and safety limits passed")
+    print("Beta 0.1.4 editor, version and safety limits passed")
     return 0
 
 

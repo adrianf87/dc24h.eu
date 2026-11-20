@@ -19,11 +19,21 @@ test("account adapter requires same-origin forms and redacts service credentials
  const bound={"X-DC24H-Session":sessionId,"X-DC24H-Csrf":csrfToken};
  const accessBody={maintenance:true,restart_required:true,expires_in:600,actor:{id:"1",role:"administrator",status:"active"},grant:"cd".repeat(32),session:sessionId,csrf:csrfToken,permissions:PERMISSION_KEYS.map(key=>({key,granted:key!=="hub.manage",implemented:key!=="configuration.manage"&&key!=="hub.manage"})),routes:ACCESS_ROUTES.map(([method,path,permission])=>({method,path,permission,allowed:true})),token};
  const managementBody={schema:2,maintenance:true,restart_required:true,areas:[{key:"accounts",permission:"accounts.manage",allowed:true,implemented:true,proof:"MgmtSecret"},{key:"roles",permission:"roles.manage",allowed:false,implemented:true},{key:"bans",permission:"users.ban+blocks.manage",allowed:true,implemented:true},{key:"configuration",permission:"configuration.manage",allowed:true,implemented:false},{key:"hub",permission:"hub.manage",allowed:false,implemented:false}],token};
+ const configRevision="a".repeat(64),configSaved={network_max_connections:"128",network_idle_timeout:"120",logging_level:"info",general_language:"us"};
+ const configReview={schema:1,maintenance:true,read_only:true,restart_required:true,active_scope:"maintenance_process",hub_active_available:false,
+  revision:configRevision,matches_active:true,saved:configSaved,active:configSaved,token};
  const backend=createServer((req,res)=>{authorization=String(req.headers.authorization);grantHeader=String(req.headers["x-dc24h-admin-grant"]??"");sessionHeader=String(req.headers["x-dc24h-session"]??"");csrfHeader=String(req.headers["x-dc24h-csrf"]??"");backendPath=req.url??"";let data="";req.on("data",c=>data+=c);req.on("end",()=>{
   if(req.method==="POST"){writes++;observed=data;}
   if(req.url==="/api/v1/management/authorize"){res.statusCode=501;res.setHeader("Content-Type","application/json");res.end(JSON.stringify({error:"not_implemented",token,proof:"hidden"}));return;}
   if(data.includes("deny-grant")){res.statusCode=401;res.setHeader("Content-Type","application/json");res.end(JSON.stringify({error:"admin_grant_required",token}));return;}
   if(data.includes("need-csrf")){res.statusCode=403;res.setHeader("Content-Type","application/json");res.end(JSON.stringify({error:"csrf_required",token}));return;}
+  if(req.url?.startsWith("/api/v1/management/configuration")){
+   if(data.includes("network_max_connections=0")){res.statusCode=422;res.setHeader("Content-Type","application/json");res.end(JSON.stringify({error:"invalid_configuration",token}));return;}
+   if(data.includes("revision="+"0".repeat(64))){res.statusCode=409;res.setHeader("Content-Type","application/json");res.end(JSON.stringify({error:"stale",token}));return;}
+   const result=req.url.endsWith("/write")||req.url.endsWith("/restore")?{written:true,restart_required:true,revision:"d".repeat(64),backup_available:true,token}:
+    req.method==="POST"?{valid:true,written:false,restart_required:true,token}:configReview;
+   res.setHeader("Content-Type","application/json");res.end(JSON.stringify(result));return;
+  }
   const audit={maintenance:true,restart_required:true,events:[{id:"4",occurred_at:10,action:"accounts.create",actor_id:"1",target_kind:"account",target_id:"2",outcome:"succeeded",proof:"hidden-proof"}],next_after:null,token};
   res.setHeader("Content-Type","application/json");res.end(JSON.stringify(req.url==="/api/v1/management"?managementBody:req.url==="/api/v1/admin/access"?accessBody:req.url==="/api/v1/audit"?audit:req.url?.startsWith("/api/v1/bans")?(req.method==="GET"?{bans:[ban],next_after:null,maintenance:true,restart_required:true,observed_at:100,token}:{ban:{...ban,proof:"private"},maintenance:true,restart_required:true,observed_at:100,token}):req.url==="/api/v1/admin"?{...administration,token}:req.method==="POST"?{account:{...account,verifier:"private"},maintenance:true,token}:{accounts:[staffMode&&req.url?.includes("staff_after")?{...account,role:"owner"}:account],staff_only:staffMode&&req.url?.includes("staff_after"),next_after:null,maintenance:true,token}));
  });});backend.listen(socket);await once(backend,"listening");
@@ -76,6 +86,31 @@ test("account adapter requires same-origin forms and redacts service credentials
   assert.equal(listedManagement.code,200);assert.equal(backendPath,"/api/v1/management");assert.equal(grantHeader,"ab".repeat(32));assert.equal(sessionHeader,sessionId);assert.equal(csrfHeader,csrfToken);
   assert.deepEqual(JSON.parse(listedManagement.text).areas.map((area:{key:string;allowed:boolean;implemented:boolean})=>[area.key,area.allowed,area.implemented]),[["accounts",true,true],["roles",false,true],["bans",true,true],["configuration",true,false],["hub",false,false]]);
   assert.ok(!listedManagement.text.includes("MgmtSecret")&&!listedManagement.text.includes(token));
+  const configPath="/admin-api/v1/management/configuration",configHeaders={"X-DC24H-Admin-Grant":"AB".repeat(32),...bound};
+  assert.equal((await call("GET",{},"",configPath)).code,403);
+  assert.equal((await call("GET",{"X-DC24H-Admin-Grant":"AB".repeat(32)},"",configPath)).code,403);
+  const configRead=await call("GET",configHeaders,"",configPath);
+  assert.equal(configRead.code,200);assert.equal(JSON.parse(configRead.text).revision,configRevision);
+  assert.ok(!configRead.text.includes(token));assert.equal(backendPath,"/api/v1/management/configuration");
+  const configForm="revision="+configRevision+"&network_max_connections=256";
+  const configPost={...headers,...configHeaders,"Content-Length":String(Buffer.byteLength(configForm))};
+  assert.equal((await call("POST",{...configPost,Origin:"https://evil.example"},configForm,configPath)).code,403);
+  assert.equal((await call("POST",configPost,configForm,configPath)).code,200);
+  assert.equal(observed,configForm);assert.equal(grantHeader,"ab".repeat(32));
+  const configWrite=await call("POST",configPost,configForm,configPath+"/write");
+  assert.equal(configWrite.code,200);assert.equal(JSON.parse(configWrite.text).backup_available,true);
+  assert.ok(!configWrite.text.includes(token));assert.equal(backendPath,"/api/v1/management/configuration/write");
+  const restoreForm="revision="+configRevision;
+  const restore=await call("POST",{...configPost,"Content-Length":String(restoreForm.length)},restoreForm,configPath+"/restore");
+  assert.equal(restore.code,200);assert.equal(backendPath,"/api/v1/management/configuration/restore");
+  const invalidForm=configForm.replace("256","0");
+  const invalid=await call("POST",{...configPost,"Content-Length":String(invalidForm.length)},invalidForm,configPath+"/write");
+  assert.equal(invalid.code,422);assert.deepEqual(JSON.parse(invalid.text),{error:"invalid_configuration"});
+  const staleForm="revision="+"0".repeat(64)+"&network_max_connections=256";
+  const stale=await call("POST",{...configPost,"Content-Length":String(staleForm.length)},staleForm,configPath+"/write");
+  assert.equal(stale.code,409);assert.deepEqual(JSON.parse(stale.text),{error:"stale"});
+  assert.equal((await call("GET",configHeaders,"",configPath+"/write")).code,404);
+  assert.equal((await call("POST",configPost,configForm,configPath+"/write/extra")).code,405);
   assert.equal((await call("POST",{},"","/admin-api/v1/management")).code,404);
   const authorizeBody="operation=configuration.read";
   const authorized=await call("POST",{...headers,...bound,"Content-Length":String(Buffer.byteLength(authorizeBody))},authorizeBody,"/admin-api/v1/management/authorize");

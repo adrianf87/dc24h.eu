@@ -1,3 +1,9 @@
+# Edytor konfiguracji WebAdmin — beta-0.1.4
+
+Gałąź `beta-0.1.4` powstaje z main `3f7f03d`. Hub, API i WebAdmin zgłaszają `beta-0.1.4`. Ograniczony edytor na stronie Konfiguracja odczytuje INI z oddzielnego procesu administracyjnego, pokazuje cztery niesekretne ustawienia i wartości startowe tego procesu, waliduje oraz prezentuje różnice, a następnie wymaga potwierdzenia zapisu atomowego albo przywrócenia kopii. Apache i adapter Node przekazują wyłącznie dokładne lokalne trasy z kontrolą pochodzenia, grantu, sesji, CSRF i uprawnienia po stronie C++. Nadal wymagany jest kontrolowany restart huba; brak przeładowywania na żywo i kontrolera usługi. Schemat v10 bez zmian. Zobacz [Edytor konfiguracji](CONFIGURATION_EDITOR.md).
+
+## Poprzedni etap
+
 # Atomowy zapis konfiguracji — beta-0.1.3
 
 Gałąź `beta-0.1.3` powstaje z main `83b224c`. Hub, API i WebAdmin zgłaszają `beta-0.1.3`. Oddzielne lokalne API administracyjne umożliwia atomowy zapis/przywrócenie INI z ograniczonej listy ustawień i rewizją zawartości. Migracja v10 rejestruje rozpoczęcie i wyniki operacji; historia v9 pozostaje nienaruszona. Zobacz [Zapis konfiguracji](CONFIGURATION_WRITE.md). Nie dodano edytora WWW, przeładowywania huba ani kontrolera usługi.
