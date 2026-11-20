@@ -4,17 +4,10 @@
 #include "dc24h/accounts/management.hpp"
 #include "dc24h/accounts/password_security.hpp"
 #include "dc24h/accounts/registration.hpp"
-#include "dc24h/configuration/configuration.hpp"
-#include <unistd.h>
 #include <chrono>
-#include <cstdlib>
-#include <filesystem>
-#include <fstream>
 #include <iostream>
-#include <memory>
 #include <source_location>
 #include <thread>
-#include <vector>
 
 namespace {
 using namespace dc24h;
@@ -23,13 +16,6 @@ void require(bool v,std::source_location at=std::source_location::current()) {
 }
 void run(const database::Options& options) {
     using namespace accounts;
-    const auto path_template=(std::filesystem::temp_directory_path()/"dc24h-account-review-XXXXXX").string();
-    std::vector<char> path_bytes(path_template.begin(),path_template.end());path_bytes.push_back('\0');
-    const int fd=::mkstemp(path_bytes.data());require(fd>=0);::close(fd);
-    struct Temp { std::string path; ~Temp(){(void)::unlink(path.c_str());} } ini{path_bytes.data()};
-    auto write_ini=[&](std::string_view content){std::ofstream out(ini.path,std::ios::trunc);out<<content;require(out.good());};
-    write_ini("[network]\nmax_connections=128\nidle_timeout=120\n[logging]\nlevel=info\n[general]\nlanguage=us\n");
-    const auto review=std::make_shared<configuration::Review>(configuration::load_file(ini.path));
     database::Connection connection(options);AccountRepository repository(connection);
     const auto now=std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     auto actor=RegistrationService(connection).create_account("WebAdminOperator","WebAdmin operator password!",now);
@@ -41,7 +27,7 @@ void run(const database::Options& options) {
     auto page=repository.list_after(0,1);require(page.size()==1&&page[0].account.id()==actor.account.id());
     require(repository.list_after(actor.account.id().value(),1).at(0).account.id()==target.account.id());
     require(repository.list_after(target.account.id().value()).empty());
-    auto handler=api::account_handler(options,review);
+    auto handler=api::account_handler(options);
     std::string grant, session, csrf;
     auto call=[&](std::string method,std::string path,std::string body={},bool use_grant=true,bool bind=true) {
         api::Request request;
@@ -67,23 +53,6 @@ void run(const database::Options& options) {
     const auto proved=call("POST","/api/v1/admin/access","actor_id="+actor_id+"&proof=WebAdmin+operator+password!",false);
     require(proved.starts_with("HTTP/1.1 200")&&proved.find("verifier")==std::string::npos);
     take_secrets(proved);
-    const auto config_view=call("GET","/api/v1/management/configuration");
-    require(config_view.starts_with("HTTP/1.1 200")&&config_view.find("\"hub_active_available\":false")!=std::string::npos);
-    require(config_view.find("\"saved\":{")!=std::string::npos&&config_view.find("\"active\":{")!=std::string::npos);
-    require(config_view.find(ini.path)==std::string::npos&&config_view.find(grant)==std::string::npos);
-    std::string revision;take_field(config_view,"revision",64,revision);
-    require(call("GET","/api/v1/management/configuration","",true,false).find("csrf_required")!=std::string::npos);
-    require(call("GET","/api/v1/management/configuration","",false).starts_with("HTTP/1.1 401"));
-    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
-    const auto valid_config=call("POST","/api/v1/management/configuration","revision="+revision+"&network_max_connections=256");
-    require(valid_config.starts_with("HTTP/1.1 200")&&valid_config.find("\"valid\":true")!=std::string::npos);
-    require(valid_config.find("\"written\":false")!=std::string::npos);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
-    require(call("POST","/api/v1/management/configuration","revision="+revision+"&network_max_connections=0").find("\"valid\":false")!=std::string::npos);
-    write_ini("[network]\nmax_connections=256\nidle_timeout=120\n");
-    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
-    require(call("POST","/api/v1/management/configuration","revision="+revision+"&network_max_connections=512").starts_with("HTTP/1.1 409"));
-    require(call("GET","/api/v1/management/configuration").find("\"matches_active\":false")!=std::string::npos);
     std::this_thread::sleep_for(std::chrono::milliseconds(1100));
     const auto listed=call("GET","/api/v1/accounts?after=0");
     require(listed.starts_with("HTTP/1.1 200")&&listed.find("WebAdminTarget")!=std::string::npos&&listed.find("verifier")==std::string::npos);
@@ -103,7 +72,7 @@ void run(const database::Options& options) {
     require(call("GET","/api/v1/accounts/999999999").starts_with("HTTP/1.1 404"));
     require(call("POST","/api/v1/accounts","name=X&name=Y").starts_with("HTTP/1.1 400"));
     require(call("POST","/api/v1/accounts","x=y").starts_with("HTTP/1.1 429"));
-    handler=api::account_handler(options,review);grant.clear();session.clear();csrf.clear();
+    handler=api::account_handler(options);grant.clear();session.clear();csrf.clear();
     const auto proved_again=call("POST","/api/v1/admin/access","actor_id="+actor_id+"&proof=WebAdmin+operator+password!",false);
     require(proved_again.starts_with("HTTP/1.1 200"));take_secrets(proved_again);
     std::this_thread::sleep_for(std::chrono::milliseconds(1100));
@@ -133,7 +102,7 @@ void run(const database::Options& options) {
     require(limited.find("\"key\":\"configuration\",\"permission\":\"configuration.manage\",\"allowed\":false,\"implemented\":false")!=std::string::npos);
     require(limited.find("\"key\":\"hub\",\"permission\":\"hub.manage\",\"allowed\":false,\"implemented\":false")!=std::string::npos);
     require(limited.find(grant)==std::string::npos&&limited.find(csrf)==std::string::npos&&limited.find("password")==std::string::npos);
-    handler=api::account_handler(options,review);grant.clear();session.clear();csrf.clear();
+    handler=api::account_handler(options);grant.clear();session.clear();csrf.clear();
     actor=repository.update(actor,std::get<Account>(actor.account.with_access(Role::administrator,Status::active,now)));
     const auto proved_contract=call("POST","/api/v1/admin/access","actor_id="+actor_id+"&proof=WebAdmin+operator+password!",false);
     require(proved_contract.starts_with("HTTP/1.1 200"));take_secrets(proved_contract);
@@ -172,7 +141,7 @@ void run(const database::Options& options) {
     require(denied_management.starts_with("HTTP/1.1 405"));
     require(denied_management.find("Allow: GET")!=std::string::npos);
     actor=repository.update(actor,std::get<Account>(actor.account.with_access(Role::operator_,Status::active,now)));
-    handler=api::account_handler(options,review);grant.clear();session.clear();csrf.clear();
+    handler=api::account_handler(options);grant.clear();session.clear();csrf.clear();
     const auto proved_budget=call("POST","/api/v1/admin/access","actor_id="+actor_id+"&proof=WebAdmin+operator+password!",false);
     require(proved_budget.starts_with("HTTP/1.1 200"));take_secrets(proved_budget);
     for(std::uint32_t i=0;i<admin::session_request_limit;++i){

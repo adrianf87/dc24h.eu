@@ -1,16 +1,5 @@
 # Changelog
 
-## beta-0.1.2 — 2026-11-20
-
-Configuration review — development branch `chatgpt-beta-0.1.2`, from main `cefb2d8`.
-
-- Hub, local API and WebAdmin report `beta-0.1.2`. The CMake and WebAdmin package tuple remains `0.1.0`.
-- The separate maintenance process adds exact `GET` and `POST /api/v1/management/configuration`. Only Administrator/Owner with an existing process token, grant, session and CSRF secret can access them. The route is not forwarded through Apache or WebAdmin.
-- The read response separates allowlisted settings reloaded from disk (`saved`) from the maintenance process's startup settings (`active`). The running hub's live configuration is explicitly **unavailable**, not guessed from disk. No secrets or paths are returned.
-- Proposals may change one to four allowlisted nonsensitive settings for validation in memory. The existing parser and cross-field checks are reused. An HMAC-based content revision detects concurrent edits and returns `409 stale`. Reads refuse symlinks, invalid INI data and oversized files.
-- No configuration file is written. Full `configuration.manage` and `hub.manage` remain unimplemented, and `POST /api/v1/management/authorize` retains its compatibility response. No WebAdmin editor, backup, rollback, service controller or schema migration; v9 stays unchanged. This is not a production release.
-- Local configuration review unit tests and existing release/CI checks cover the new API surface. Required GitHub checks must pass before merging to `main`.
-
 ## beta-0.1.1 — 2026-11-20
 
 Management foundation — administrative contracts, based on main `075081f`. The branch name is `beta-0.1.1`.
