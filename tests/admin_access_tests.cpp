@@ -40,6 +40,13 @@ int main() {
     require(!admin::route_allowed(Role::owner, "POST", "/api/v1/management/authorize?operation=hub.start"));
     require(!admin::route_allowed(Role::owner, "POST", "/api/v1/management/authorize/extra"));
     require(!admin::route_allowed(Role::owner, "GET", "/api/v1/management/write"));
+    require(admin::route_allowed(Role::administrator, "GET", "/api/v1/management/configuration"));
+    require(admin::route_allowed(Role::administrator, "POST", "/api/v1/management/configuration"));
+    require(admin::route_allowed(Role::owner, "GET", "/api/v1/management/configuration"));
+    require(!admin::route_allowed(Role::operator_, "GET", "/api/v1/management/configuration"));
+    require(!admin::route_allowed(Role::registered, "POST", "/api/v1/management/configuration"));
+    require(!admin::route_allowed(Role::owner, "GET", "/api/v1/management/configuration?x=1"));
+    require(!admin::route_allowed(Role::owner, "POST", "/api/v1/management/configuration/extra"));
     require(admin::catalog_allowed(Role::administrator, "configuration.manage"));
     require(!admin::catalog_allowed(Role::administrator, "hub.manage"));
     require(!admin::catalog_allowed(Role::operator_, "configuration.manage"));
