@@ -35,7 +35,7 @@ Wykonaj kopię zapasową i zatrzymaj zapisy przed jawną migracją z poświadcze
 
 Pusta baza stosuje 3 wersje, v1 stosuje 2, a v2 jedną. Stan docelowy: `version=3 latest=3 pending=0 dirty=no`. Bajty zastosowanych migracji 1/2 pozostają niezmienione. v3 zapisuje trwałe `applying` przed DDL; częściowy błąd wymaga naprawy przez operatora, bez automatycznego odtwarzania i założenia `CREATE IF NOT EXISTS`. Patrz [Migracje](DATABASE_MIGRATIONS.md).
 
-Migracje wymagają dotychczasowych SELECT/INSERT/UPDATE/CREATE/ALTER; konto wykonawcze repozytorium potrzebuje SELECT/INSERT/UPDATE tabeli kont i SELECT metadanych migracji. Konto tylko do odczytu nie zapisuje. Oddziel poświadczenia migracji i wykonania; hasła nie trafiają do repozytorium, testy aplikacji nie potrzebują sudo, a przygotowanie klonów używa ograniczonego helpera. Bezpośredni SQL administratora, triggery, równoczesne DDL, zmiany trybu sesji i usunięte/ponownie użyte ID omijają kontrakt adaptera. Sprawdzenie schematu nie jest pełnym audytem triggerów, CHECK, wartości domyślnych i zewnętrznych zapisów; konto wykonawcze nie powinno mieć tych uprawnień.
+Migracje wymagają dotychczasowych SELECT/INSERT/UPDATE/CREATE/ALTER; konto wykonawcze repozytorium potrzebuje SELECT/INSERT/UPDATE tabeli kont i SELECT metadanych migracji. Konto tylko do odczytu nie zapisuje. Oddziel poświadczenia migracji i wykonania; hasła nie trafiają do repozytorium, testy aplikacji nie potrzebują sudo. Bezpośredni SQL administratora, triggery, równoczesne DDL, zmiany trybu sesji i usunięte/ponownie użyte ID omijają kontrakt adaptera. Sprawdzenie schematu nie jest pełnym audytem triggerów, CHECK, wartości domyślnych i zewnętrznych zapisów; konto wykonawcze nie powinno mieć tych uprawnień.
 
 ## Weryfikacja i kolejne etapy
 

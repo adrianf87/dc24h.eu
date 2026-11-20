@@ -10,7 +10,7 @@
 
 The alpha-0.7.3 delivery scope below is retained for history. See [Account Repository](ACCOUNT_REPOSITORY.md) for persistence delivered in alpha-0.7.4.
 
-Based directly on main `aabe5ddcbc47a4c65a5069b077fd0b5e71a9281c`, including Database Core, Database Migrations and the unprivileged self-hosted CI fix.
+Based directly on main `aabe5ddcbc47a4c65a5069b077fd0b5e71a9281c`, including Database Core and Database Migrations.
 
 ## Purpose and ownership
 
@@ -69,5 +69,3 @@ ctest --test-dir build -R '^accounts.model$' --output-on-failure
 ```
 
 `accounts.model` checks checked-type construction, ID limits, byte-exact Unicode/NFC boundaries, control/separator rejection, stable role/status keys, unknown values, absent/epoch/range/order timestamps, snapshot ownership, candidate immutability, moved/self-assigned values and allocation failures during construction, export, updates and assignment. Existing full CTest suites, including real ncdc ADC/ADCS, MariaDB and Apache integrations, remain enabled. See [Testing](TESTING.md) and [Changelog](../../CHANGELOG.md) for actual results. Remote Check status is not awaited.
-
-All GitHub Actions jobs continue to target the existing Ubuntu 24.04 self-hosted runner. Dependency preparation is an explicit administrator action; jobs run without sudo. See [CI setup](CI_DEBIAN13.md).

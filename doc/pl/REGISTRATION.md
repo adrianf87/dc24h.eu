@@ -49,6 +49,6 @@ ctest --test-dir build --output-on-failure --parallel 4
 ctest --test-dir build -R '^accounts.registration' --output-on-failure
 ```
 
-Nadal wymagane są rzeczywiste testy ncdc ADC/ADCS, MariaDB i Apache. Przypięty workflow Proxmox z `github-runner-v0.1` testuje Ubuntu 24.04/22.04; gałąź jest używana bez scalania. Zakres rzeczywistej weryfikacji: [CI](CI_DEBIAN13.md) i [Testowanie](TESTING.md).
+Nadal wymagane są rzeczywiste testy ncdc ADC/ADCS, MariaDB i Apache. Zakres rzeczywistej weryfikacji: [Testowanie](TESTING.md).
 
 Publiczne limity rejestracji, sprawdzanie wyciekłych haseł, uwierzytelniona aktywacja, weryfikacja/reset hasła, powiązanie konta z sesją, uprawnienia roli i UI/API kont pozostają dalszą pracą. Przyszły publiczny endpoint musi ograniczać równoczesnych pracowników KDF i zabezpieczać transport przed przyjęciem sekretów. Testy nie wdrażają produkcyjnego huba, bazy hosta ani kont użytkowników.

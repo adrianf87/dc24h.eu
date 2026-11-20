@@ -12,6 +12,6 @@ The Management page shows those three areas and links to Accounts, the read-only
 
 A missing grant, a hub API or a malformed catalog shows the page as unavailable instead of an empty allow-list. The grant remains in page memory and is not written to web storage.
 
-Check status for this branch uses GitHub-hosted Ubuntu 24.04 runners. The custom runner is not selected. Each job checks four logical CPUs and uses `nproc` workers. Remote completion is not awaited.
+Check status for this branch uses GitHub-hosted Ubuntu 24.04 runners. Each job checks four logical CPUs and uses `nproc` workers. Remote completion is not awaited.
 
 No production deployment, schema migration or account mutation is part of this increment.

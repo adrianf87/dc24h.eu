@@ -8,4 +8,4 @@ Two jobs run on each of those three images. C++ Debug, C++ Release and WebAdmin 
 
 Concurrency uses one group per workflow and ref, `dc24h-github-` plus the workflow name and ref, with `cancel-in-progress: false`. The C++ job has a 120-minute timeout and the WebAdmin job has a 60-minute timeout. Check each run under [GitHub Actions](https://github.com/adrianf87/dc24h.eu/actions/workflows/build.yml) for actual results. CI completion is not awaited.
 
-This selection replaces the custom runner `server-747585786` for new pushes of these branches. Push triggers CI; remote completion is not awaited.
+Push triggers CI; remote completion is not awaited.

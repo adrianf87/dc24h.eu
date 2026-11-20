@@ -22,6 +22,37 @@ def check(path, phrases, errors):
     return text
 
 
+def check_no_custom_workers(errors):
+    needles = (
+        "contabo",
+        "hetzner",
+        "747585786",
+        "proxmox",
+        "github-runner",
+        "ci-controller",
+        "custom-runner",
+        "custom runner",
+        "self-hosted",
+        "własnego runnera",
+        "własny runner",
+        "własnym runner",
+    )
+    paths = [ROOT / "README.md", ROOT / "CHANGELOG.md"]
+    paths.extend((ROOT / "doc").rglob("*.md"))
+    paths.extend((ROOT / ".github" / "workflows").glob("*.yml"))
+    for path in paths:
+        folded = path.read_text(encoding="utf-8").casefold()
+        relative = path.relative_to(ROOT)
+        for needle in needles:
+            require(needle.casefold() not in folded,
+                    f"{relative}: custom worker term {needle!r}", errors)
+    actionlint = (ROOT / ".github" / "actionlint.yaml").read_text(encoding="utf-8")
+    require("server-747585786" not in actionlint,
+            "actionlint.yaml: custom runner label remains", errors)
+    require("ubuntu-26.04" in actionlint,
+            "actionlint.yaml: public ubuntu-26.04 label is missing", errors)
+
+
 def main():
     errors = []
     cmake = check(ROOT / "CMakeLists.txt", (
@@ -85,6 +116,7 @@ def main():
         "require(migration_catalog().size() == 9 && entries[0].info.version == 1 && entries[1].info.version == 2);",
         'require(entries[8].info.version == 9 && entries[8].info.name == "audit_events");',
     ), errors)
+    check_no_custom_workers(errors)
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1

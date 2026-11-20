@@ -114,10 +114,8 @@ The product has no such configuration.
 
 Release metadata validation now also checks the CLI/log/API and browser version
 fixtures, preventing a version bump from leaving old test expectations.
-See [Testing](TESTING.md), [Contabo CI](CONTABO_CI.md) and
-[Changelog](../../CHANGELOG.md) for actual results. Remote CI runs Debug/Release,
-ncdc ADC/ADCS and WebAdmin on the single Ubuntu 24.04 runner with six parallel
-workers. Its completion is not awaited during this task.
+See [Testing](TESTING.md) and
+[Changelog](../../CHANGELOG.md) for actual results. Remote CI completion is not awaited during this task.
 
 Credential rotation/reset, adaptive rehashing, alternate formats, breached-password
 screening, authenticated account activation/session admission and public

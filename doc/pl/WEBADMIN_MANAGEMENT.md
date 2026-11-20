@@ -12,6 +12,6 @@ Strona Zarządzanie pokazuje te trzy obszary i prowadzi do Kont, katalogu ról t
 
 Brak grantu, API huba albo zniekształcony katalog pokazuje stronę jako niedostępną, a nie jako pustą listę zezwoleń. Grant pozostaje w pamięci strony i nie jest zapisywany w pamięci przeglądarki.
 
-Check status tej gałęzi używa runnerów GitHub-hosted Ubuntu 24.04. Własny runner nie jest wybierany. Każde zadanie sprawdza cztery logiczne CPU i używa workerów `nproc`. Nie czekamy na zakończenie zdalnego CI.
+Check status tej gałęzi używa runnerów GitHub-hosted Ubuntu 24.04. Każde zadanie sprawdza cztery logiczne CPU i używa workerów `nproc`. Nie czekamy na zakończenie zdalnego CI.
 
 Ten etap nie obejmuje wdrożenia produkcyjnego, migracji schematu ani zmiany kont.
