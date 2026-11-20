@@ -58,6 +58,10 @@ int main() {
             require(field.value.find("secret-marker") == std::string::npos);
         }
         require(review.validate_candidate(first.revision, {{"network_max_connections", "256"}, {"logging_level", "warning"}}));
+        refused([&] { (void)review.validate_candidate(first.revision,
+            {{"network_max_connections", "256"}, {"network_max_connections", "300"}}); });
+        refused([&] { (void)review.validate_candidate(first.revision,
+            {{"logging_level", "warning"}, {"logging_level", "warning"}}); });
         require(!review.validate_candidate(first.revision, {{"network_max_connections", "0"}}));
         require(!review.validate_candidate(first.revision, {{"network_max_connections", "65536"}}));
         require(!review.validate_candidate(first.revision, {{"general_language", "en"}}));

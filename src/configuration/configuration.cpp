@@ -582,6 +582,14 @@ ReviewSnapshot Review::read() const {
 bool Review::validate_candidate(std::string_view revision,
     const std::vector<std::pair<std::string, std::string>>& changes) const {
     if (changes.empty() || changes.size() > 4) { throw std::invalid_argument("Invalid review change set"); }
+    // Keep direct C++ validation consistent with write_candidate(). The HTTP
+    // form parser already refuses duplicates, but callers of Review need the
+    // same guarantee even when they bypass that transport boundary.
+    for (std::size_t i = 0; i < changes.size(); ++i) {
+        for (std::size_t j = 0; j < i; ++j) {
+            if (changes[i].first == changes[j].first) { throw std::invalid_argument("Duplicate review option"); }
+        }
+    }
     const auto data = read_file(filename_);
     if (revision_for(data) != revision) { throw StaleReview(); }
     auto candidate = parse_file_data(filename_, data);

@@ -79,7 +79,8 @@ public:
     Review(const Review&) = delete;
     Review& operator=(const Review&) = delete;
     [[nodiscard]] ReviewSnapshot read() const;
-    // Validates a bounded set of allowlisted changes in memory; never writes.
+    // Validates one to four distinct allowlisted changes in memory; never writes.
+    // Repeated keys are rejected, consistent with write_candidate().
     // Throws StaleReview if the file changed after the caller's read.
     [[nodiscard]] bool validate_candidate(std::string_view revision,
         const std::vector<std::pair<std::string, std::string>>& changes) const;
