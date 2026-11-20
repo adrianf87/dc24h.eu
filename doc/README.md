@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: beta-0.1.5.
+Current development version: beta-0.1.6.
+
+[Owner-gated service operations — beta-0.1.6](us/SERVICE_OPERATIONS.md) · [PL](pl/SERVICE_OPERATIONS.md)
 
 [Service controller — beta-0.1.5](us/SERVICE_CONTROLLER.md) · [PL](pl/SERVICE_CONTROLLER.md)
 

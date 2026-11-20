@@ -1,7 +1,8 @@
 # dc24h.eu documentation
 
-beta-0.1.5: release channel Beta. Hub, API and WebAdmin report beta-0.1.5. The independent, local-only controller can read systemd hub state with the hub stopped. No service actions or new HTTP routes. The established WebAdmin configuration editor remains unchanged. Default development language: EN/US UTF-8.
+beta-0.1.6: release channel Beta. Hub, API and WebAdmin report beta-0.1.6. The independent local controller now supports Owner-gated Start, Stop and Restart of the fixed dc24h.service unit through a separate maintenance API. MariaDB schema v11 records the action intentions and outcomes. No public WebAdmin action routes or buttons were added. Default development language: EN/US UTF-8.
 
+- [Owner-gated service operations — beta-0.1.6](SERVICE_OPERATIONS.md)
 - [Service controller — beta-0.1.5](SERVICE_CONTROLLER.md)
 - [Configuration editor — beta-0.1.4](CONFIGURATION_EDITOR.md)
 - [Configuration write — beta-0.1.3](CONFIGURATION_WRITE.md)
