@@ -141,7 +141,7 @@ alpha-0.1.11 powstaje z main po alpha-0.1.10. Oddzielaj aktywację hosta, rzeczy
 
 ## Linia beta — beta-0.1
 
-Gałąź powstaje z main. Hub, API i WebAdmin zgłaszają `beta-0.1`. Krotka CMake i pakietu zostaje `0.1.0`. Nie zmieniaj zachowania huba, bajtów ADC ani schematu v9. Nie dodawaj migracji schematu, pola statusu, klucza INI, strony WebAdmin, flagi CLI ani ustawienia Apache. Nie twierdź, że to wydanie produkcyjne albo że którekolwiek zagrożenie szczątkowe jest zamknięte. `configuration.manage` i `hub.manage` pozostają niezaimplementowane.
+Gałąź powstaje z main. Hub, API i WebAdmin zgłaszają `beta-0.1`. Krotka CMake i pakietu zostaje `0.1.0`. Nie zmieniaj zachowania huba, bajtów ADC ani schematu v9. Nie dodawaj migracji schematu, pola statusu, klucza INI, strony WebAdmin, flagi CLI ani ustawienia Apache. Nie twierdź, że to wydanie produkcyjne albo że którekolwiek zagrożenie szczątkowe jest zamknięte. `configuration.manage` i `hub.manage` pozostają niezaimplementowane. Uruchamiaj Check status na publicznych runnerach GitHub-hosted `ubuntu-22.04`, `ubuntu-24.04` i `ubuntu-26.04`. Każde zadanie sprawdza cztery logiczne CPU przez `nproc`.
 
 ## Zależności — alpha-0.9.17
 
