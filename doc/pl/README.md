@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-beta-0.1: kanał wydania Beta. Hub zgłasza beta-0.1 i zachowuje zachowanie alpha-0.9.17.
+beta-0.1.1: kanał wydania Beta. Hub zgłasza beta-0.1.1. Kontrakt autoryzacji zarządzania nie wykonuje operacji konfiguracji ani huba.
 
+- [Fundament zarządzania — beta-0.1.1](MANAGEMENT_FOUNDATION.md)
 - [Linia beta — beta-0.1](BETA.md)
 - [Zależności — alpha-0.9.17](DEPENDENCIES.md)
 - [Testy przeciążenia — alpha-0.9.16](STRESS.md)

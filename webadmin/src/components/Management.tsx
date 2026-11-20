@@ -2,16 +2,32 @@ import { useEffect, useState } from "react";
 import type { Copy } from "../languages/us";
 import { adminHeaders } from "../lib/adminAccess";
 import { parseManagement } from "../lib/management";
-import type { ManagementCatalog } from "../lib/management";
+import type { ManagementArea, ManagementCatalog } from "../lib/management";
 
-const links = {
-  accounts: [{ href: "#accounts", label: "managementOpenAccounts" as const }],
+const links: Partial<Record<ManagementArea["key"], { href: string; label: "managementOpenAccounts" | "managementOpenRoles" | "managementOpenBans" }[]>> = {
+  accounts: [{ href: "#accounts", label: "managementOpenAccounts" }],
   roles: [
-    { href: "#accounts", label: "managementOpenAccounts" as const },
-    { href: "#roles", label: "managementOpenRoles" as const },
+    { href: "#accounts", label: "managementOpenAccounts" },
+    { href: "#roles", label: "managementOpenRoles" },
   ],
-  bans: [{ href: "#bans", label: "managementOpenBans" as const }],
+  bans: [{ href: "#bans", label: "managementOpenBans" }],
 };
+
+function title(area: ManagementArea, t: Copy) {
+  if (area.key === "accounts") return t.managementAccounts;
+  if (area.key === "roles") return t.managementRoles;
+  if (area.key === "bans") return t.managementBans;
+  if (area.key === "configuration") return t.managementConfiguration;
+  return t.managementHub;
+}
+
+function body(area: ManagementArea, t: Copy) {
+  if (area.key === "accounts") return t.managementAccountsBody;
+  if (area.key === "roles") return t.managementRolesBody;
+  if (area.key === "bans") return t.managementBansBody;
+  if (area.key === "configuration") return t.managementConfigurationBody;
+  return t.managementHubBody;
+}
 
 export function Management({ t }: { t: Copy }) {
   const [catalog, setCatalog] = useState<ManagementCatalog | null>(null);
@@ -47,15 +63,18 @@ export function Management({ t }: { t: Copy }) {
     <p className="management-note">{t.managementNote}</p>
     {!available && <p>{t.managementUnavailable}</p>}
     {available && catalog && <div className="management-areas">
-      {catalog.areas.map((area) => <article key={area.key} data-testid={`management-${area.key}`}>
-        <h3>{area.key === "accounts" ? t.managementAccounts : area.key === "roles" ? t.managementRoles : t.managementBans}</h3>
-        <p>{area.key === "accounts" ? t.managementAccountsBody : area.key === "roles" ? t.managementRolesBody : t.managementBansBody}</p>
-        <p><span>{t.managementPermission}</span> <code>{area.permission}</code></p>
-        <p>{area.allowed ? t.managementAllowed : t.managementDenied}</p>
-        <p className="management-links">
-          {links[area.key].map((link) => <a key={link.href} href={link.href}>{t[link.label]}</a>)}
-        </p>
-      </article>)}
+      {catalog.areas.map((area) => {
+        const areaLinks = area.implemented ? links[area.key] : undefined;
+        return <article key={area.key} data-testid={`management-${area.key}`}>
+          <h3>{title(area, t)}</h3>
+          <p>{body(area, t)}</p>
+          <p><span>{t.managementPermission}</span> <code>{area.permission}</code></p>
+          <p>{area.allowed ? t.managementAllowed : t.managementDenied}</p>
+          {areaLinks ? <p className="management-links">
+            {areaLinks.map((link) => <a key={link.href + link.label} href={link.href}>{t[link.label]}</a>)}
+          </p> : <p>{t.managementNotImplemented}</p>}
+        </article>;
+      })}
     </div>}
   </section>;
 }

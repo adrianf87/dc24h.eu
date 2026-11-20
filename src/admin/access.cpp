@@ -58,11 +58,12 @@ bool decode_session(std::string_view text, std::array<unsigned char, 16>& out) n
     return true;
 }
 
-enum class Gate { discovery, accounts, roles, password, bans, audit };
+enum class Gate { discovery, accounts, roles, password, bans, audit, contract };
 bool allows_gate(accounts::Role role, Gate gate) noexcept {
     using security::Permission;
     switch (gate) {
     case Gate::discovery: return true;
+    case Gate::contract: return true;
     case Gate::accounts: return security::allows(role, Permission::manage_accounts);
     case Gate::roles: return security::allows(role, Permission::manage_roles);
     case Gate::password: return security::allows(role, Permission::change_own_password);
@@ -81,6 +82,7 @@ bool canonical_suffix(std::string_view action, Gate& gate) noexcept {
 std::optional<Gate> classify(std::string_view method, std::string_view target) noexcept {
     constexpr std::string_view accounts = "/api/v1/accounts";
     if (target == "/api/v1/admin" || target == "/api/v1/management") { return Gate::discovery; }
+    if (target == "/api/v1/management/authorize") { return Gate::contract; }
     if (target == "/api/v1/audit") { return Gate::audit; }
     if (target.starts_with("/api/v1/bans")) { return Gate::bans; }
     if (target == "/api/v1/admin/access" || !target.starts_with(accounts)) { return std::nullopt; }

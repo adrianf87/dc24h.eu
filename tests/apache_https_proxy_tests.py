@@ -288,6 +288,7 @@ class ApacheHttpsProxyTests(unittest.TestCase):
             ("/admin-api/v1/accounts/15/role", b"role=operator"),
             ("/admin-api/v1/bans", b"subject=1"),
             ("/admin-api/v1/bans/15/revoke", b"proof=abc"),
+            ("/admin-api/v1/management/authorize", b"operation=configuration.read"),
         ]
         boundary = b"a=" + b"b" * 6998
         self.assertEqual(len(boundary), 7000)
@@ -358,6 +359,10 @@ class ApacheHttpsProxyTests(unittest.TestCase):
             ("GET", "/admin-api/v1/bans/15/revoke", None, None),
             ("POST", "/admin-api/v1/status", form, b"x=y"),
             ("POST", "/admin-api/v1/accounts/15", form, b"x=y"),
+            ("POST", "/admin-api/v1/management", form, b"operation=configuration.read"),
+            ("GET", "/admin-api/v1/management/authorize", None, None),
+            ("POST", "/admin-api/v1/management/authorize/extra", form, b"operation=configuration.read"),
+            ("POST", "/admin-api/v1/management/write", form, b"operation=configuration.write"),
             ("GET", "/admin-api/v1/status", {"Origin": "https://evil.example"}, None),
             ("GET", "/admin-api/v1/status", {"Sec-Fetch-Site": "cross-site"}, None),
             ("GET", "/admin-api/v1/status", {"Host": "evil.example"}, None),

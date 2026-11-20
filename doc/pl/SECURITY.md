@@ -224,6 +224,10 @@ TLS i logowanie WWW są osobnymi mechanizmami. Szablon wybiera TLS 1.2/1.3 z AEA
 
 [Linia beta](BETA.md) zmienia zgłaszany napis wydania na `beta-0.1`. Nie dodaje trasy, grantu ani obejścia. `configuration.manage` i `hub.manage` pozostają niezaimplementowane. Schemat v9 pozostaje bez zmian. Nie dodano pola statusu, strony WebAdmin, klucza INI ani ustawienia Apache. To nie zamyka zagrożenia szczątkowego. To nie jest wydanie produkcyjne.
 
+## Fundament zarządzania — beta-0.1.1
+
+[Fundament zarządzania](MANAGEMENT_FOUNDATION.md) sprawdza grant, sesję, sekret CSRF i uprawnienie operacji, zanim odpowie `not_implemented`. `configuration.manage` i `hub.manage` pozostają niezaimplementowane. Obsługa nie otwiera pliku, nie uruchamia procesu i nie przyjmuje ścieżki ani polecenia od wywołującego. Schemat v9 pozostaje bez zmian. Nie dodano pola statusu ani klucza INI. Apache przekazuje tylko dokładną ścieżkę autoryzacji. To nie zamyka zagrożenia szczątkowego. To nie jest wydanie produkcyjne.
+
 ## Zależności — alpha-0.9.17
 
 [Zależności](DEPENDENCIES.md) sprawdzają bezpośrednie biblioteki dzielone plików huba, dokładny lockfile WebAdmin i zarejestrowane testy bezpieczeństwa. Nie dodają trasy, grantu ani obejścia. Nie odpytują bazy podatności. `configuration.manage` i `hub.manage` pozostają niezaimplementowane. Schemat v9 pozostaje bez zmian. Nie dodano pola statusu, strony WebAdmin, klucza INI ani ustawienia Apache. To nie zamyka zagrożenia szczątkowego.

@@ -34,5 +34,6 @@ struct ParseResult {
 [[nodiscard]] ParseResult parse_request(std::string_view bytes, bool allow_form = false);
 [[nodiscard]] bool valid_token(std::string_view token) noexcept;
 [[nodiscard]] bool authenticate(std::string_view authorization, std::string_view token) noexcept;
-[[nodiscard]] std::string response(unsigned int status, std::string_view json, bool head = false);
+[[nodiscard]] std::string response(unsigned int status, std::string_view json, bool head = false,
+    std::string_view allow = {});
 } // namespace dc24h::api

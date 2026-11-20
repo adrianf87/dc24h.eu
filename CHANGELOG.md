@@ -1,5 +1,19 @@
 # Changelog
 
+## beta-0.1.1 — 2026-11-20
+
+Management foundation — administrative contracts, based on main `075081f`. The branch name is `beta-0.1.1`.
+
+- The hub, the API and WebAdmin report `beta-0.1.1`. The CMake project number and the WebAdmin package number stay `0.1.0`.
+- `GET /api/v1/management` is schema 2. Areas are accounts, roles, bans, configuration and hub. The first three stay implemented. `configuration.manage` and `hub.manage` stay unimplemented. `allowed` follows the live grant and the default role table.
+- `POST /api/v1/management/authorize` accepts exactly `operation`. The allowlist is `configuration.read`, `configuration.validate`, `configuration.write`, `configuration.restore`, `hub.status`, `hub.start`, `hub.stop` and `hub.restart`. A missing permission is `403`. A permitted operation is `501` `not_implemented`. An unknown operation or an extra field is `400`. The handler does not open a file and does not spawn a process.
+- The call requires the grant, `X-DC24H-Session` and `X-DC24H-Csrf`. `POST /api/v1/management` stays `405`. The twelve route templates stay unchanged. Apache and the loopback adapter forward only the exact authorize path.
+- WebAdmin lists configuration and hub as not implemented. The page has no configuration form and no Start, Stop or Restart button.
+- Schema v9 is unchanged. No audit row is added. Browser kick and mute stay undispatched. Status and health stay bearer-only. `Require local` stays. No residual threat is closed. This is not a production release.
+- Pull requests to `main` run Check status on public GitHub-hosted runners `ubuntu-22.04`, `ubuntu-24.04` and `ubuntu-26.04`. Each matrix job checks that `nproc` equals 4. Local validation uses eight CPU threads.
+
+Validation on Debian 13: all 230/230 CTest suites passed in Debug (77.65 s real) and Release (114.38 s real), including disposable MariaDB, real ncdc ADC/ADCS, the Apache HTTPS reverse proxy, the sandboxed systemd example, and the management authorize contract. The Release C++ build log contained no compiler warnings. WebAdmin typecheck and production build passed. All 49 Node tests passed. All 42 Chromium tests passed. actionlint 1.7.12 passed. Release metadata, documentation UTF-8, language parity, local Markdown links, Python syntax and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration, host account or service activation is performed.
+
 ## beta-0.1 — 2026-11-20
 
 Beta baseline — release channel Beta, based on main `423a958`. The branch name is `beta-0.1`.

@@ -18,9 +18,10 @@ test("account adapter requires same-origin forms and redacts service credentials
  const sessionId="ab".repeat(16), csrfToken="ef".repeat(32);
  const bound={"X-DC24H-Session":sessionId,"X-DC24H-Csrf":csrfToken};
  const accessBody={maintenance:true,restart_required:true,expires_in:600,actor:{id:"1",role:"administrator",status:"active"},grant:"cd".repeat(32),session:sessionId,csrf:csrfToken,permissions:PERMISSION_KEYS.map(key=>({key,granted:key!=="hub.manage",implemented:key!=="configuration.manage"&&key!=="hub.manage"})),routes:ACCESS_ROUTES.map(([method,path,permission])=>({method,path,permission,allowed:true})),token};
- const managementBody={schema:1,maintenance:true,restart_required:true,areas:[{key:"accounts",permission:"accounts.manage",allowed:true,proof:"MgmtSecret"},{key:"roles",permission:"roles.manage",allowed:false},{key:"bans",permission:"users.ban+blocks.manage",allowed:true}],token};
+ const managementBody={schema:2,maintenance:true,restart_required:true,areas:[{key:"accounts",permission:"accounts.manage",allowed:true,implemented:true,proof:"MgmtSecret"},{key:"roles",permission:"roles.manage",allowed:false,implemented:true},{key:"bans",permission:"users.ban+blocks.manage",allowed:true,implemented:true},{key:"configuration",permission:"configuration.manage",allowed:true,implemented:false},{key:"hub",permission:"hub.manage",allowed:false,implemented:false}],token};
  const backend=createServer((req,res)=>{authorization=String(req.headers.authorization);grantHeader=String(req.headers["x-dc24h-admin-grant"]??"");sessionHeader=String(req.headers["x-dc24h-session"]??"");csrfHeader=String(req.headers["x-dc24h-csrf"]??"");backendPath=req.url??"";let data="";req.on("data",c=>data+=c);req.on("end",()=>{
   if(req.method==="POST"){writes++;observed=data;}
+  if(req.url==="/api/v1/management/authorize"){res.statusCode=501;res.setHeader("Content-Type","application/json");res.end(JSON.stringify({error:"not_implemented",token,proof:"hidden"}));return;}
   if(data.includes("deny-grant")){res.statusCode=401;res.setHeader("Content-Type","application/json");res.end(JSON.stringify({error:"admin_grant_required",token}));return;}
   if(data.includes("need-csrf")){res.statusCode=403;res.setHeader("Content-Type","application/json");res.end(JSON.stringify({error:"csrf_required",token}));return;}
   const audit={maintenance:true,restart_required:true,events:[{id:"4",occurred_at:10,action:"accounts.create",actor_id:"1",target_kind:"account",target_id:"2",outcome:"succeeded",proof:"hidden-proof"}],next_after:null,token};
@@ -73,9 +74,16 @@ test("account adapter requires same-origin forms and redacts service credentials
   assert.equal(unboundManagement.code,403);assert.equal(JSON.parse(unboundManagement.text).error,"csrf_required");
   const listedManagement=await call("GET",{"X-DC24H-Admin-Grant":"AB".repeat(32),...bound},"","/admin-api/v1/management");
   assert.equal(listedManagement.code,200);assert.equal(backendPath,"/api/v1/management");assert.equal(grantHeader,"ab".repeat(32));assert.equal(sessionHeader,sessionId);assert.equal(csrfHeader,csrfToken);
-  assert.deepEqual(JSON.parse(listedManagement.text).areas.map((area:{key:string;allowed:boolean})=>[area.key,area.allowed]),[["accounts",true],["roles",false],["bans",true]]);
+  assert.deepEqual(JSON.parse(listedManagement.text).areas.map((area:{key:string;allowed:boolean;implemented:boolean})=>[area.key,area.allowed,area.implemented]),[["accounts",true,true],["roles",false,true],["bans",true,true],["configuration",true,false],["hub",false,false]]);
   assert.ok(!listedManagement.text.includes("MgmtSecret")&&!listedManagement.text.includes(token));
   assert.equal((await call("POST",{},"","/admin-api/v1/management")).code,404);
+  const authorizeBody="operation=configuration.read";
+  const authorized=await call("POST",{...headers,...bound,"Content-Length":String(Buffer.byteLength(authorizeBody))},authorizeBody,"/admin-api/v1/management/authorize");
+  assert.equal(authorized.code,501);assert.equal(JSON.parse(authorized.text).error,"not_implemented");assert.equal(backendPath,"/api/v1/management/authorize");assert.equal(observed,authorizeBody);
+  assert.ok(!authorized.text.includes(token)&&!authorized.text.includes("hidden"));
+  const beforeExtra=writes;
+  assert.equal((await call("POST",{...headers,...bound,"Content-Length":String(Buffer.byteLength(authorizeBody))},authorizeBody,"/admin-api/v1/management/authorize/extra")).code,405);
+  assert.equal(writes,beforeExtra);
   const denied=await call("POST",{...headers,...bound,"Content-Length":String(Buffer.byteLength("deny-grant=1"))},"deny-grant=1","/admin-api/v1/accounts");
   assert.equal(denied.code,401);assert.equal(JSON.parse(denied.text).error,"admin_grant_required");assert.ok(!denied.text.includes(token));
   const passed=await call("POST",{...headers,...bound,"Content-Length":String(Buffer.byteLength("need-csrf=1"))},"need-csrf=1","/admin-api/v1/accounts");

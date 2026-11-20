@@ -120,6 +120,10 @@ alpha-0.1.10 starts from main after alpha-0.1.9. Keep browser-safe schema/format
 
 alpha-0.1.11 starts from main after alpha-0.1.10. Keep host activation, real certificates and service reloads separate from example authoring/testing. Test the exact shipped TLS/access/header policy with temporary paths/ports and no host config. A successful apache2 -t is insufficient to claim certificate/key correspondence; exercise real initialization. Keep both documentation languages and version-sensitive fixtures aligned.
 
+## Management foundation — beta-0.1.1
+
+Branch from main. Report `beta-0.1.1` from the hub, the API and WebAdmin. Keep the CMake and package tuple at `0.1.0`. Extend the management catalog and add the authorize contract. Do not mark `configuration.manage` or `hub.manage` implemented. Do not read or write configuration. Do not start, stop or restart the hub. Do not add a schema migration, a status field, an INI key or a CLI flag. Do not claim a production release or that any residual threat is closed. Open a pull request to `main` and merge only after the required checks succeed.
+
 ## Beta baseline — beta-0.1
 
 Branch from main. Report `beta-0.1` from the hub, the API and WebAdmin. Keep the CMake and package tuple at `0.1.0`. Do not change hub behavior, ADC bytes or schema v9. Do not add a schema migration, a status field, an INI key, a WebAdmin page, a CLI flag or an Apache setting. Do not claim a production release or that any residual threat is closed. `configuration.manage` and `hub.manage` stay unimplemented. Run Check status on public GitHub-hosted runners `ubuntu-22.04`, `ubuntu-24.04` and `ubuntu-26.04`. Each job checks four logical CPUs with `nproc`.

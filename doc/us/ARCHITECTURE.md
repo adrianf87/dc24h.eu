@@ -212,6 +212,10 @@ A separate installed configuration example serves prebuilt static WebAdmin throu
 
 The hub reports `beta-0.1`. CMake and the WebAdmin package use `0.1.0`. Behavior, ADC bytes and schema v9 stay at alpha-0.9.17. `beta.baseline` checks that string and that `configuration.manage` and `hub.manage` stay unimplemented. See [Beta baseline](BETA.md).
 
+## Management foundation — beta-0.1.1
+
+The hub reports `beta-0.1.1`. CMake and the WebAdmin package stay at `0.1.0`. The maintenance catalog is schema 2. `POST /api/v1/management/authorize` checks the grant and returns `not_implemented`. `configuration.manage` and `hub.manage` stay unimplemented. Schema v9 stays. See [Management foundation](MANAGEMENT_FOUNDATION.md).
+
 ## Dependencies — alpha-0.9.17
 
 `dependencies.audit` reads the dynamic section of the three hub binaries and compares it with the allowed sonames. It also checks the WebAdmin lockfile and the security tests CMake always registers. The hub executable does not gain a library for this check. See [Dependencies](DEPENDENCIES.md).

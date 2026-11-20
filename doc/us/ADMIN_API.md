@@ -2,7 +2,7 @@
 
 This increment adds a proven administrative grant in the C++ maintenance process. It starts from main `d7c5908`. There is no automatic merge. The branch name is `alpha-0.8.10`.
 
-Schema v9 is unchanged. The grant is not a SQL row and proving access does not append an audit row. `configuration.manage` and `hub.manage` stay unimplemented. They have no route. Configuration writes and live hub administration remain pending. Live kick and mute stay in their counters.
+Schema v9 is unchanged. The grant is not a SQL row and proving access does not append an audit row. `configuration.manage` and `hub.manage` stay unimplemented. At alpha-0.8.10 they have no route. Configuration writes and live hub administration remain pending. Live kick and mute stay in their counters.
 
 The process bearer token remains the transport credential. `GET /api/v1/status` and `GET /api/v1/health` stay bearer-only. A grant header on those routes is ignored. A present grant header that is not 64 hexadecimal digits is a bad request on every route.
 
@@ -17,3 +17,5 @@ Every other maintenance route requires `X-DC24H-Admin-Grant`. A missing, expired
 The private adapter accepts `POST /admin-api/v1/admin/access` and forwards a well-formed grant header in lowercase. It does not invent a grant. `POST /admin-api/v1/admin` stays not found at the adapter. WebAdmin proves access from Admin Core. The password field is cleared after submit. The grant is held in page memory, is not shown, and is not written to web storage. Forget access or a reload drops it. Maintenance pages send the header when that memory holds a grant.
 
 alpha-0.8.13 adds exact `GET /api/v1/management` as another discovery read. It is not one of the twelve route templates. [WebAdmin Management](WEBADMIN_MANAGEMENT.md) specifies the catalog. Configuration writes and live hub administration remain pending.
+
+beta-0.1.1 extends that catalog to schema 2 and adds exact `POST /api/v1/management/authorize`. The contract checks the grant, the session, the CSRF secret and the operation permission, then returns `501` `not_implemented`. It does not read or write configuration and it does not start, stop or restart the hub. See [Management foundation](MANAGEMENT_FOUNDATION.md).
