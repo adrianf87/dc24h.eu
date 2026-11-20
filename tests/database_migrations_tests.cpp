@@ -156,7 +156,7 @@ void future(Connection& c, const Options& options) {
     rejects(MigrationErrorKind::dirty,[&] { (void)detail::run(c,crash); });
     c.execute("DROP TABLE dc24h_interrupted_fixture");
     c.execute("DELETE FROM dc24h_schema_migrations WHERE version=3");
-    require(migrate(c) == 8); // Restore accounts, credentials, mappings, ADC secrets, roles, bans and audit v9/v10.
+    require(migrate(c) == migration_catalog().size() - 2); // Restore the current catalog after the v2 fixture.
 }
 void adc_upgrade(Connection& c) {
     c.execute("INSERT INTO dc24h_accounts(name,role,status,created_at,updated_at) VALUES ('AdcMigrationSentinel','registered','disabled',1,1)");
