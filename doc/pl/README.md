@@ -1,8 +1,7 @@
 # Dokumentacja dc24h.eu
 
-beta-0.1.2: kanał wydania Beta. Hub zgłasza beta-0.1.2. Lokalny podgląd konfiguracji waliduje propozycje, ale ich nie zapisuje.
+beta-0.1.1: kanał wydania Beta. Hub zgłasza beta-0.1.1. Kontrakt autoryzacji zarządzania nie wykonuje operacji konfiguracji ani huba.
 
-- [Przegląd konfiguracji — beta-0.1.2](CONFIGURATION_REVIEW.md)
 - [Fundament zarządzania — beta-0.1.1](MANAGEMENT_FOUNDATION.md)
 - [Linia beta — beta-0.1](BETA.md)
 - [Zależności — alpha-0.9.17](DEPENDENCIES.md)

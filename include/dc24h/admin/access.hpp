@@ -21,8 +21,6 @@ namespace dc24h::admin {
 // is not applied to a grant. configuration.manage and hub.manage stay
 // unimplemented. POST /api/v1/management/authorize checks the live grant and
 // does not execute the operation. That contract is not one of the twelve routes.
-// beta-0.1.2 separately gates exact GET/POST /management/configuration for
-// read-only maintenance review and in-memory validation; no writes are enabled.
 inline constexpr std::size_t access_grant_limit = 4;
 inline constexpr std::chrono::seconds access_grant_ttl{600};
 // Requests that present one live grant. The window is not derived from a

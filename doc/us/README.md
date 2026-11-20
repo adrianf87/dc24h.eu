@@ -1,8 +1,7 @@
 # dc24h.eu documentation
 
-beta-0.1.2: release channel Beta. The hub reports beta-0.1.2. Local configuration review validates proposals but never saves them. Default development language: EN/US UTF-8.
+beta-0.1.1: release channel Beta. The hub reports beta-0.1.1. The management authorize contract does not execute configuration or hub operations. Default development language: EN/US UTF-8.
 
-- [Configuration review — beta-0.1.2](CONFIGURATION_REVIEW.md)
 - [Management foundation — beta-0.1.1](MANAGEMENT_FOUNDATION.md)
 - [Beta baseline — beta-0.1](BETA.md)
 - [Dependencies — alpha-0.9.17](DEPENDENCIES.md)

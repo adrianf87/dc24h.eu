@@ -6,11 +6,6 @@
 #include "dc24h/network/tcp_server.hpp"
 
 #include <string>
-#include <array>
-#include <stdexcept>
-#include <string_view>
-#include <utility>
-#include <vector>
 
 namespace dc24h::configuration {
 struct AuthenticationSettings {
@@ -52,38 +47,5 @@ struct CommandLine {
 void validate(const Settings& settings);
 // Validates settings but never reads credentials, connects SQL, binds or logs.
 [[nodiscard]] api::ConfigurationSnapshot public_settings(const Settings& settings, bool maintenance = false);
-
-// Read-only maintenance configuration review. No passwords, private paths,
-// file bytes or arbitrary INI keys are exposed. The active values belong to
-// the maintenance process, not to a separately running hub.
-struct ReviewOption { std::string key; std::string value; };
-using ReviewOptions = std::array<ReviewOption, 4>;
-struct ReviewSnapshot {
-    std::string revision;
-    ReviewOptions saved;
-    ReviewOptions active;
-    bool matches_active{};
-};
-class StaleReview : public std::runtime_error {
-public:
-    StaleReview() : std::runtime_error("Stale configuration revision") {}
-};
-class Review final {
-public:
-    explicit Review(const Settings& active);
-    ~Review();
-    Review(const Review&) = delete;
-    Review& operator=(const Review&) = delete;
-    [[nodiscard]] ReviewSnapshot read() const;
-    // Validates a bounded set of allowlisted changes in memory; never writes.
-    // Throws StaleReview if the file changed after the caller's read.
-    [[nodiscard]] bool validate_candidate(std::string_view revision,
-        const std::vector<std::pair<std::string, std::string>>& changes) const;
-private:
-    std::string filename_;
-    ReviewOptions active_;
-    std::array<unsigned char, 32> revision_key_{};
-    [[nodiscard]] std::string revision_for(std::string_view file) const;
-};
 
 } // namespace dc24h::configuration

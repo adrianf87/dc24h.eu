@@ -5,9 +5,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <utf8proc.h>
-#include <openssl/crypto.h>
-#include <openssl/hmac.h>
-#include <openssl/rand.h>
 
 #include <array>
 #include <cerrno>
@@ -243,8 +240,8 @@ api::ConfigurationSnapshot public_settings(const Settings& settings, bool mainte
     out.login=settings.network.security;out.roles=settings.network.roles;return out;
 }
 
-namespace {
-Settings parse_file_data(const std::string& filename, const std::string& data) {
+Settings load_file(const std::string& filename) {
+    const auto data = read_file(filename);
     std::error_code ec;
     const auto path = fs::canonical(filename, ec);
     if (ec) { throw std::invalid_argument("Cannot resolve configuration file path"); }
@@ -485,111 +482,6 @@ Settings parse_file_data(const std::string& filename, const std::string& data) {
         }
     }
     return settings; // Cross-field validation follows CLI overrides.
-}
-} // namespace
-
-Settings load_file(const std::string& filename) {
-    return parse_file_data(filename, read_file(filename));
-}
-
-namespace {
-ReviewOptions review_options(const Settings& settings) {
-    const auto log_level = [&] {
-        switch (settings.logging.level) {
-        case logging::Level::info: return "info";
-        case logging::Level::warning: return "warning";
-        case logging::Level::error: return "error";
-        case logging::Level::off: return "off";
-        }
-        throw std::invalid_argument("Invalid logging level");
-    }();
-    return {{{"network_max_connections", std::to_string(settings.network.max_connections)},
-             {"network_idle_timeout", std::to_string(settings.network.idle_timeout.count())},
-             {"logging_level", log_level},
-             {"general_language", settings.logging.language == i18n::Language::pl ? "pl" : "us"}}};
-}
-
-bool apply_review_change(Settings& settings, std::string_view key, std::string_view value) {
-    try {
-        if (key == "network_max_connections") {
-            settings.network.max_connections = positive_number(value, 65535);
-        } else if (key == "network_idle_timeout") {
-            settings.network.idle_timeout = std::chrono::seconds(positive_number(value, 86400));
-        } else if (key == "logging_level") {
-            settings.logging.level = level(value);
-        } else if (key == "general_language") {
-            if (value != "us" && value != "pl") { return false; }
-            settings.logging.language = value == "pl" ? i18n::Language::pl : i18n::Language::us;
-        } else {
-            throw std::invalid_argument("Unknown review option");
-        }
-    } catch (const std::invalid_argument&) {
-        // Unknown keys are rejected at the HTTP boundary. Bad values are a
-        // validation result, not an invitation to reveal the INI parser error.
-        return false;
-    }
-    return true;
-}
-} // namespace
-
-Review::Review(const Settings& active)
-    : filename_(active.source_file), active_(review_options(active)) {
-    if (filename_.empty()) { throw std::invalid_argument("Configuration review needs --config"); }
-    validate(active);
-    if (RAND_bytes(revision_key_.data(), static_cast<int>(revision_key_.size())) != 1) {
-        throw std::runtime_error("Cannot initialize configuration revision");
-    }
-}
-
-Review::~Review() { OPENSSL_cleanse(revision_key_.data(), revision_key_.size()); }
-
-std::string Review::revision_for(std::string_view file) const {
-    unsigned char digest[EVP_MAX_MD_SIZE]{};
-    unsigned int length{};
-    const auto* bytes = HMAC(EVP_sha256(), revision_key_.data(), static_cast<int>(revision_key_.size()),
-        reinterpret_cast<const unsigned char*>(file.data()), file.size(), digest, &length);
-    if (!bytes || length != 32) { throw std::runtime_error("Cannot compute configuration revision"); }
-    constexpr char hex[] = "0123456789abcdef";
-    std::string result(64, '0');
-    for (std::size_t i = 0; i < 32; ++i) {
-        result[2 * i] = hex[digest[i] >> 4];
-        result[2 * i + 1] = hex[digest[i] & 0x0f];
-    }
-    OPENSSL_cleanse(digest, sizeof(digest));
-    return result;
-}
-
-ReviewSnapshot Review::read() const {
-    const auto data = read_file(filename_);
-    const auto saved_settings = parse_file_data(filename_, data);
-    validate(saved_settings);
-    ReviewSnapshot result;
-    result.revision = revision_for(data);
-    result.saved = review_options(saved_settings);
-    result.active = active_;
-    result.matches_active = true;
-    for (std::size_t i = 0; i < result.saved.size(); ++i) {
-        if (result.saved[i].value != result.active[i].value) { result.matches_active = false; }
-    }
-    return result;
-}
-
-bool Review::validate_candidate(std::string_view revision,
-    const std::vector<std::pair<std::string, std::string>>& changes) const {
-    if (changes.empty() || changes.size() > 4) { throw std::invalid_argument("Invalid review change set"); }
-    const auto data = read_file(filename_);
-    if (revision_for(data) != revision) { throw StaleReview(); }
-    auto candidate = parse_file_data(filename_, data);
-    validate(candidate); // Reject an already invalid saved file.
-    for (const auto& [key, value] : changes) {
-        if (!apply_review_change(candidate, key, value)) { return false; }
-    }
-    try {
-        validate(candidate);
-    } catch (const std::invalid_argument&) {
-        return false;
-    }
-    return true;
 }
 
 CommandLine parse_arguments(int argc, char* const argv[]) {

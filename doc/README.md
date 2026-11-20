@@ -1,8 +1,6 @@
 # dc24h.eu technical documentation
 
-Current development version: beta-0.1.2.
-
-[Configuration review — beta-0.1.2](us/CONFIGURATION_REVIEW.md) · [PL](pl/CONFIGURATION_REVIEW.md)
+Current development version: beta-0.1.1.
 
 [Management foundation — beta-0.1.1](us/MANAGEMENT_FOUNDATION.md) · [PL](pl/MANAGEMENT_FOUNDATION.md)
 
