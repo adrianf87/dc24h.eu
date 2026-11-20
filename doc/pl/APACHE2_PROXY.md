@@ -1,4 +1,4 @@
-# Odwrotne proxy HTTPS Apache2 — alpha-0.8.14
+# Odwrotne proxy HTTPS Apache2 — aktualna lista beta-0.1.4
 
 Dostarczany [przykład proxy](../../config/apache2-webadmin-https-proxy.conf.example) jest osobną witryną HTTPS wobec [przykładu statycznego HTTPS](APACHE2_HTTPS.md). Zachowuje TLS 1.2/1.3, stałe przekierowanie HTTP na HTTPS, dostęp lokalny, blokadę plików sekretów i te same nagłówki ochronne. Dodatkowo przekazuje dozwoloną listę API WebAdmin do adaptera HTTP na loopbacku.
 
@@ -18,11 +18,11 @@ Ten plik nie aktywuje witryny hosta, nie uzyskuje certyfikatu, nie uruchamia ada
 
 ## Lista dozwolona
 
-GET z pustym body: `/admin-api/v1/status`, `/health`, `/users`, `/admin`, `/management`, `/accounts`, `/accounts/{id}` i `/bans`. `{id}` to zapis dziesiętny od 1 do 19 cyfr. Query string na tych dokładnych ścieżkach jest przekazywany.
+GET z pustym body: `/admin-api/v1/status`, `/health`, `/users`, `/admin`, `/management`, `/management/configuration`, `/accounts`, `/accounts/{id}` i `/bans`. `{id}` to zapis dziesiętny od 1 do 19 cyfr. Odczyt konfiguracji wymaga istniejącego uprawnienia `configuration.manage`; pozostałe odczyty utrzymaniowe zachowują własne kontrole uprawnień. Istniejące filtry list kont i banów mogą używać opisanych parametrów zapytania; ścieżki zarządzania i konfiguracji wymagają dokładnych celów bez parametrów query.
 
-POST z `Content-Type: application/x-www-form-urlencoded`, `X-DC24H-Admin: 1`, kanonicznym origin i treścią od 1 do 7000 bajtów: `/admin-api/v1/admin/access`, `/audit`, `/accounts`, `/accounts/{id}/{action}`, `/bans` i `/bans/{id}/revoke`. `{action}` to `activate`, `disable`, `reset`, `password` albo `role`.
+POST z `Content-Type: application/x-www-form-urlencoded`, `X-DC24H-Admin: 1`, kanonicznym origin i treścią od 1 do 7000 bajtów: `/admin-api/v1/admin/access`, `/audit`, `/management/authorize`, `/management/configuration`, `/management/configuration/write`, `/management/configuration/restore`, `/accounts`, `/accounts/{id}/{action}`, `/bans` i `/bans/{id}/revoke`. `{action}` to `activate`, `disable`, `reset`, `password` albo `role`. Wszystkie ścieżki w tym akapicie mają prefiks `/admin-api/v1`.
 
-`/accounts/{id}` bez akcji jest odczytem, nie zapisem. `/bans/{id}` bez `/revoke` nie jest przekazywane. Proces huba nadal publikuje tylko health, status i users. Trasy kont, banów, audytu, odkrywania i zarządzania pozostają w procesie utrzymania. Status i health wewnątrz adaptera nadal wymagają bearer. Ten przykład nie dodaje sesji w ciasteczku, zdalnego dostępu administratorów, zapisu konfiguracji, bieżącej administracji huba ani kick/mute w przeglądarce. Sesje utrzymaniowe w pamięci strony opisują [Sesje bezpieczeństwa](SECURITY_SESSIONS.md) i nadal wymagają `Require local`.
+`/accounts/{id}` bez akcji jest odczytem, nie zapisem. `/bans/{id}` bez `/revoke` nie jest przekazywane. Proces huba nadal publikuje tylko health, status i users. Trasy kont, banów, audytu, odkrywania i zarządzania pozostają w procesie utrzymania. Status i health wewnątrz adaptera nadal wymagają bearer. Trasy konfiguracji udostępniają tylko cztery dozwolone ustawienia bez sekretów i wymagają grantu Administratora/Ownera, jego sesji i sekretu CSRF; atomowy zapis wymaga późniejszego kontrolowanego restartu huba. Starszy kontrakt `/management/authorize` nadal zwraca `501` dla dozwolonych operacji i nigdy nie wykonuje poleceń usługi. Ten przykład nie dodaje sesji w ciasteczku, zdalnego dostępu administratorów, uruchamiania/zatrzymywania/restartowania huba ani kick/mute w przeglądarce. Sesje utrzymaniowe w pamięci strony opisują [Sesje bezpieczeństwa](SECURITY_SESSIONS.md) i nadal wymagają `Require local`.
 
 `Require local` zostaje na katalogu statycznym i na bramie API. Usunięcie go pozwoliłoby zdalnemu klientowi użyć tokena usługi adaptera, bo adapter traktuje połączenie Apache jako loopback. Nie rób tego. Publiczna uwierzytelniona brama pozostaje osobnym zadaniem.
 

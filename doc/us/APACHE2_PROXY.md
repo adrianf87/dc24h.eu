@@ -1,4 +1,4 @@
-# Apache2 HTTPS reverse proxy — alpha-0.8.14
+# Apache2 HTTPS reverse proxy — current beta-0.1.4 allowlist
 
 The shipped [proxy example](../../config/apache2-webadmin-https-proxy.conf.example) is a separate HTTPS site from the [static HTTPS example](APACHE2_HTTPS.md). It keeps TLS 1.2/1.3, the fixed HTTP-to-HTTPS redirect, local access, secret-file denial and the same security headers. It additionally reverse-proxies an allowlisted WebAdmin API to a loopback HTTP adapter.
 
@@ -18,11 +18,11 @@ This file does not activate a host site, obtain a certificate, start the adapter
 
 ## Allowlist
 
-GET, with an empty body: `/admin-api/v1/status`, `/health`, `/users`, `/admin`, `/management`, `/accounts`, `/accounts/{id}` and `/bans`. `{id}` is a decimal string from 1 through 19 digits. Query strings on those exact paths are forwarded.
+GET, with an empty body: `/admin-api/v1/status`, `/health`, `/users`, `/admin`, `/management`, `/management/configuration`, `/accounts`, `/accounts/{id}` and `/bans`. `{id}` is a decimal string from 1 through 19 digits. The configuration read uses the existing `configuration.manage` permission; the other maintenance reads retain their respective permission checks. Existing account and ban listing filters can use their specified query strings; the management and configuration paths require exact targets without query parameters.
 
-POST, with `Content-Type: application/x-www-form-urlencoded`, `X-DC24H-Admin: 1`, the canonical origin and a body of 1 through 7000 bytes: `/admin-api/v1/admin/access`, `/audit`, `/accounts`, `/accounts/{id}/{action}`, `/bans` and `/bans/{id}/revoke`. `{action}` is `activate`, `disable`, `reset`, `password` or `role`.
+POST, with `Content-Type: application/x-www-form-urlencoded`, `X-DC24H-Admin: 1`, the canonical origin and a body of 1 through 7000 bytes: `/admin-api/v1/admin/access`, `/audit`, `/management/authorize`, `/management/configuration`, `/management/configuration/write`, `/management/configuration/restore`, `/accounts`, `/accounts/{id}/{action}`, `/bans` and `/bans/{id}/revoke`. `{action}` is `activate`, `disable`, `reset`, `password` or `role`. All paths in this paragraph use the `/admin-api/v1` prefix.
 
-`/accounts/{id}` without an action is a read, not a write. `/bans/{id}` without `/revoke` is not proxied. The hub process still publishes only health, status and users. Account, ban, audit, discovery and management routes remain on the maintenance process. Status and health stay bearer-only inside the adapter. This example does not add cookie sessions, remote administrator access, configuration writes, live hub administration or browser kick/mute. Page-memory maintenance sessions are specified in [Security sessions](SECURITY_SESSIONS.md) and still require `Require local`.
+`/accounts/{id}` without an action is a read, not a write. `/bans/{id}` without `/revoke` is not proxied. The hub process still publishes only health, status and users. Account, ban, audit, discovery and management routes remain on the maintenance process. Status and health stay bearer-only inside the adapter. The configuration routes expose only four allowlisted nonsecret settings and require a valid Administrator/Owner grant, its session and its CSRF secret; writes are atomic and require a later controlled hub restart. The legacy `/management/authorize` contract still returns `501` for permitted operations and never executes service commands. This example does not add cookie sessions, remote administrator access, live hub Start/Stop/Restart or browser kick/mute. Page-memory maintenance sessions are specified in [Security sessions](SECURITY_SESSIONS.md) and still require `Require local`.
 
 `Require local` remains on the static directory and on the API gate. Removing it would let a remote client use the adapter's service token, because the adapter treats the Apache connection as loopback. Do not do that. A public authenticated gateway remains separate work.
 

@@ -486,7 +486,7 @@ export const us = {
   managementTitle: "Account, role, ban, configuration and hub management",
   managementSub: "Which maintenance areas this grant may open.",
   managementAreas: "Maintenance areas",
-  managementNote: "This page reads one maintenance catalog. It does not create accounts, assign roles, create bans, write configuration, or start, stop or restart the hub. Account, role and ban writes stay on their own pages. Configuration and hub are listed so the grant can be checked. Their engines are not implemented. Browser kick or mute stays outside this page.",
+  managementNote: "This page reads the maintenance permissions catalog but does not execute administrative operations. Account, role and ban writes stay on their own pages. Authorized local administrators can use the separate Configuration page for four nonsecret settings. The broad management/authorize contract and hub Start, Stop and Restart remain unimplemented. Browser kick or mute stays outside this page.",
   managementUnavailable: "The management catalog is not available. Prove access on Admin Core, then open this page again.",
   managementAllowed: "Allowed for this grant",
   managementDenied: "Not allowed for this grant",

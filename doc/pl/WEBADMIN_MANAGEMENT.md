@@ -14,4 +14,8 @@ Brak grantu, API huba albo zniekształcony katalog pokazuje stronę jako niedost
 
 Check status tej gałęzi używa runnerów GitHub-hosted Ubuntu 24.04. Każde zadanie sprawdza cztery logiczne CPU i używa workerów `nproc`. Nie czekamy na zakończenie zdalnego CI.
 
-Ten etap nie obejmuje wdrożenia produkcyjnego, migracji schematu ani zmiany kont.
+Ten historyczny etap alpha-0.8.13 nie obejmuje wdrożenia produkcyjnego, migracji schematu ani zmiany kont.
+
+## Aktualne zachowanie po beta-0.1.4
+
+Katalog pięciu obszarów i jego flagi `implemented` nadal opisują pierwotny ogólny kontrakt zarządzania. Obszar `configuration` pozostaje zatem `implemented: false` dla tego kontraktu, choć osobny, wąsko autoryzowany edytor czterech ustawień jest już dostępny ze strony Konfiguracja dla grantów Administratora/Ownera. Strona Zarządzanie prowadzi do tego edytora tylko wtedy, gdy grant zezwala na `configuration.manage`; sama nie wysyła zmian konfiguracji. Obszar huba pozostaje niezaimplementowany i nie ma przycisków Start/Stop/Restart. Zobacz [Edytor konfiguracji](CONFIGURATION_EDITOR.md) i [Fundament zarządzania](MANAGEMENT_FOUNDATION.md). Schemat v10 należy do późniejszego audytu konfiguracji, a nie do pierwotnego wydania katalogu.
