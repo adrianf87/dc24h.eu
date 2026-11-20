@@ -2,12 +2,13 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: alpha-0.9.17 (CI and dependencies).**
+**Current development version: beta-0.1 (Beta baseline).**
 
 CI on `main`: [GitHub-hosted Ubuntu 24.04](doc/us/GITHUB_CI.md) runs C++ Debug, C++ Release and WebAdmin · [PL](doc/pl/GITHUB_CI.md).
 
 Completed increments (older bullets describe their original delivery scope):
 
+- **beta-0.1 Beta baseline**: the hub reports `beta-0.1` and keeps the alpha-0.9.17 behavior. Schema v9 is unchanged. This is not a production release. See [Beta baseline](doc/us/BETA.md).
 - **alpha-0.9.17 CI and dependencies**: the hub binaries, the WebAdmin lockfile and the registered security tests are checked from the existing test jobs. This is not a vulnerability database. See [Dependencies](doc/us/DEPENDENCIES.md).
 - **alpha-0.9.16 Stress testing**: a fixed in-process soak repeats the existing frame, peer, login, chat and session limits. Refusals stay on and occupancy returns to zero. This is not a capacity claim or a load test. See [Stress testing](doc/us/STRESS.md).
 - **alpha-0.9.15 Memory safety**: AddressSanitizer, UndefinedBehaviorSanitizer and ThreadSanitizer are separate build modes. The normal build is unchanged. See [Memory safety](doc/us/MEMORY_SAFETY.md).

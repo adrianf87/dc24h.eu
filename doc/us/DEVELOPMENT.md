@@ -120,6 +120,10 @@ alpha-0.1.10 starts from main after alpha-0.1.9. Keep browser-safe schema/format
 
 alpha-0.1.11 starts from main after alpha-0.1.10. Keep host activation, real certificates and service reloads separate from example authoring/testing. Test the exact shipped TLS/access/header policy with temporary paths/ports and no host config. A successful apache2 -t is insufficient to claim certificate/key correspondence; exercise real initialization. Keep both documentation languages and version-sensitive fixtures aligned.
 
+## Beta baseline — beta-0.1
+
+Branch from main. Report `beta-0.1` from the hub, the API and WebAdmin. Keep the CMake and package tuple at `0.1.0`. Do not change hub behavior, ADC bytes or schema v9. Do not add a schema migration, a status field, an INI key, a WebAdmin page, a CLI flag or an Apache setting. Do not claim a production release or that any residual threat is closed. `configuration.manage` and `hub.manage` stay unimplemented.
+
 ## Dependencies — alpha-0.9.17
 
 Branch from main. Check the direct shared libraries of the hub binaries, the exact WebAdmin lockfile and the registered security tests. Do not download packages and do not query a vulnerability database. Do not add a schema migration, a status field, an INI key, a WebAdmin page, a CLI flag or an Apache setting. Do not claim that the dependency set is free of bugs, or that any residual threat is closed. `configuration.manage` and `hub.manage` stay unimplemented.

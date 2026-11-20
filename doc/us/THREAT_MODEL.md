@@ -4,6 +4,8 @@ This analysis records how the hub and WebAdmin can be attacked, which controls a
 
 The analysis does not add a protocol check, a schema migration, an Apache setting or a WebAdmin control. Schema v9 is unchanged. `configuration.manage` and `hub.manage` stay unimplemented. Browser kick and mute are still not dispatched. This is not a public authenticated gateway and it is not a penetration test.
 
+beta-0.1 changes the reported release string to `beta-0.1`. It does not add a control and it does not close any threat. Schema v9 is unchanged. See [Beta baseline](BETA.md).
+
 alpha-0.9.17 dependency control, added after this analysis, checks the direct shared libraries of the hub binaries, the exact WebAdmin lockfile and the registered security tests. It does not add a control and it does not close any threat. Schema v9 is unchanged. See [Dependencies](DEPENDENCIES.md).
 
 alpha-0.9.16 stress testing, added after this analysis, repeats the existing frame, peer, login, chat and session limits in process. It does not add a control and it does not close any threat. Schema v9 is unchanged. See [Stress testing](STRESS.md).

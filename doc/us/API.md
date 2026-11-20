@@ -1,5 +1,6 @@
 # Local administrative API — alpha-0.1.9
 
+**beta-0.1 Beta baseline:** [Release channel](BETA.md) reports `beta-0.1` and keeps the alpha-0.9.17 behavior. Schema v9 is unchanged.
 **alpha-0.9.17 Dependencies:** [Library control and security tests](DEPENDENCIES.md) checks the hub binaries, the WebAdmin lockfile and the registered security tests. Schema v9 is unchanged.
 **alpha-0.9.16 Stress testing:** [Overload and sustained operation](STRESS.md) repeats the existing frame, peer, login, chat and session limits for a fixed number of rounds. Refusals stay on. Occupancy returns to zero. Schema v9 is unchanged.
 **alpha-0.9.15 Memory safety:** [AddressSanitizer, UBSan and ThreadSanitizer](MEMORY_SAFETY.md) are separate build modes. The hub behavior stays the same. Schema v9 is unchanged.
@@ -230,6 +231,8 @@ alpha-0.9.7 does not add a route or a status field. Maintenance reads now requir
 alpha-0.9.6 does not add a route or a status field. Account password separation and sealed GPA/PAS decryption stay inside the hub. The JSON example above is unchanged. See [Account security](ACCOUNT_SECURITY.md).
 
 alpha-0.9.5 does not add a route or a status field. The ADCS leaf and cipher policy stays inside the hub. The JSON example above is unchanged. See [TLS security](TLS_SECURITY.md).
+
+beta-0.1 does not add a route or a status field. The reported version string is `beta-0.1`. WebAdmin accepts that beta form and the existing alpha form. The JSON example above is unchanged. See [Beta baseline](BETA.md).
 
 alpha-0.9.17 does not add a route or a status field. The dependency audit runs only inside its test. The JSON example above is unchanged. See [Dependencies](DEPENDENCIES.md).
 

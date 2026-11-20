@@ -1,5 +1,6 @@
 # Architecture
 
+**beta-0.1 Beta baseline:** [Release channel](BETA.md) reports `beta-0.1` and keeps the alpha-0.9.17 behavior. Schema v9 is unchanged.
 **alpha-0.9.17 Dependencies:** [Library control and security tests](DEPENDENCIES.md) checks the hub binaries, the WebAdmin lockfile and the registered security tests. Schema v9 is unchanged.
 **alpha-0.9.16 Stress testing:** [Overload and sustained operation](STRESS.md) repeats the existing frame, peer, login, chat and session limits for a fixed number of rounds. Refusals stay on. Occupancy returns to zero. Schema v9 is unchanged.
 **alpha-0.9.15 Memory safety:** [AddressSanitizer, UBSan and ThreadSanitizer](MEMORY_SAFETY.md) are separate build modes. The hub behavior stays the same. Schema v9 is unchanged.
@@ -206,6 +207,10 @@ The frontend is independent of C++ build/runtime. Browser code validates the API
 ## Apache2 HTTPS — alpha-0.1.11
 
 A separate installed configuration example serves prebuilt static WebAdmin through TLS 1.2/1.3 and redirects HTTP to a fixed canonical hostname. It retains local access and private-route denial, without proxying the Unix API or changing C++ transports. Disposable tests load the shipped policy under an independent ServerRoot; certificate provisioning and host service activation remain operator responsibilities. See [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
+
+## Beta baseline — beta-0.1
+
+The hub reports `beta-0.1`. CMake and the WebAdmin package use `0.1.0`. Behavior, ADC bytes and schema v9 stay at alpha-0.9.17. `beta.baseline` checks that string and that `configuration.manage` and `hub.manage` stay unimplemented. See [Beta baseline](BETA.md).
 
 ## Dependencies — alpha-0.9.17
 

@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-alpha-0.9.17: działająca implementacja oraz jawnie oznaczone plany kolejnych modułów.
+beta-0.1: kanał wydania Beta. Hub zgłasza beta-0.1 i zachowuje zachowanie alpha-0.9.17.
 
+- [Linia beta — beta-0.1](BETA.md)
 - [Zależności — alpha-0.9.17](DEPENDENCIES.md)
 - [Testy przeciążenia — alpha-0.9.16](STRESS.md)
 - [Bezpieczeństwo pamięci — alpha-0.9.15](MEMORY_SAFETY.md)

@@ -1,5 +1,6 @@
 # Bezpieczeństwo — alpha-0.1.7
 
+**beta-0.1 Linia beta:** [Kanał wydania](BETA.md) zgłasza `beta-0.1` i zachowuje zachowanie alpha-0.9.17. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.17 Zależności:** [Kontrola bibliotek i testy bezpieczeństwa](DEPENDENCIES.md) sprawdza pliki wykonywalne huba, lockfile WebAdmin i zarejestrowane testy bezpieczeństwa. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.16 Testy przeciążenia:** [Przeciążenie i długotrwała praca](STRESS.md) powtarza istniejące limity ramek, klientów, logowania, czatu i sesji przez stałą liczbę rund. Odmowy zostają. Zajętość wraca do zera. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.15 Bezpieczeństwo pamięci:** [AddressSanitizer, UBSan i ThreadSanitizer](MEMORY_SAFETY.md) są osobnymi trybami budowania. Zachowanie huba pozostaje takie same. Schemat v9 pozostaje bez zmian.
@@ -218,6 +219,10 @@ Nie umieszczaj tokena w pamięci przeglądarki, JavaScript, URL, zmiennych VITE 
 ## Przykład HTTPS Apache2 — alpha-0.1.11
 
 TLS i logowanie WWW są osobnymi mechanizmami. Szablon wybiera TLS 1.2/1.3 z AEAD, ustala host przekierowania, zachowuje Require local, blokuje prywatne/ukryte/sekretne ścieżki i wyłącza indeksy/symlinki. HSTS jest krótki, tylko dla hosta i HTTPS; CSP/no-sniff/referrer/frame obejmują błędy. Przed użyciem zweryfikuj zaufanie/nazwę/zgodność klucza; sama składnia nie dowodzi zgodności. Szablon nie ujawnia tokena i nie aktywuje bramy produkcyjnej. Zobacz [APACHE2_HTTPS.md](APACHE2_HTTPS.md).
+
+## Linia beta — beta-0.1
+
+[Linia beta](BETA.md) zmienia zgłaszany napis wydania na `beta-0.1`. Nie dodaje trasy, grantu ani obejścia. `configuration.manage` i `hub.manage` pozostają niezaimplementowane. Schemat v9 pozostaje bez zmian. Nie dodano pola statusu, strony WebAdmin, klucza INI ani ustawienia Apache. To nie zamyka zagrożenia szczątkowego. To nie jest wydanie produkcyjne.
 
 ## Zależności — alpha-0.9.17
 
