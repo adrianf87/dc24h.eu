@@ -30,7 +30,7 @@ test("account adapter requires same-origin forms and redacts service credentials
   if(req.url?.startsWith("/api/v1/management/configuration")){
    if(data.includes("network_max_connections=0")){res.statusCode=422;res.setHeader("Content-Type","application/json");res.end(JSON.stringify({error:"invalid_configuration",token}));return;}
    if(data.includes("revision="+"0".repeat(64))){res.statusCode=409;res.setHeader("Content-Type","application/json");res.end(JSON.stringify({error:"stale",token}));return;}
-   const result=req.url.endsWith("/write")||req.url.endsWith("/restore")?{written:true,restart_required:true,revision:"b".repeat(64),backup_available:true,token}:
+   const result=req.url.endsWith("/write")||req.url.endsWith("/restore")?{written:true,restart_required:true,revision:"d".repeat(64),backup_available:true,token}:
     req.method==="POST"?{valid:true,written:false,restart_required:true,token}:configReview;
    res.setHeader("Content-Type","application/json");res.end(JSON.stringify(result));return;
   }
