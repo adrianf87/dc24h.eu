@@ -100,6 +100,16 @@ void run(const database::Options& options) {
     require(restored_config.starts_with("HTTP/1.1 200")&&restored_config.find("\"written\":true")!=std::string::npos);
     { std::ifstream input(ini.path);const std::string data(std::istreambuf_iterator<char>{input},std::istreambuf_iterator<char>{});
       require(data.find("max_connections=256")!=std::string::npos); }
+    const auto undo_path=ini.path+".dc24h.undo";
+    std::ifstream undo_stream(undo_path,std::ios::binary);
+    const std::string undo_bytes(std::istreambuf_iterator<char>{undo_stream},std::istreambuf_iterator<char>{});
+    require(undo_bytes.find("max_connections = 512")!=std::string::npos);
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    const auto duplicate_restore=call("POST","/api/v1/management/configuration/restore","revision="+fresh_revision);
+    require(duplicate_restore.starts_with("HTTP/1.1 409"));
+    { std::ifstream input(undo_path,std::ios::binary);
+      const std::string still_undo(std::istreambuf_iterator<char>{input},std::istreambuf_iterator<char>{});
+      require(still_undo==undo_bytes); }
     std::this_thread::sleep_for(std::chrono::milliseconds(1100));
     const auto config_history=call("POST","/api/v1/audit","actor_id="+actor_id+
         "&proof=WebAdmin+operator+password!&after=0");
@@ -107,6 +117,7 @@ void run(const database::Options& options) {
         config_history.find("configuration.write")!=std::string::npos&&
         config_history.find("configuration.restore")!=std::string::npos&&
         config_history.find("\"outcome\":\"succeeded\"")!=std::string::npos&&
+        config_history.find("\"outcome\":\"failed\"")!=std::string::npos&&
         config_history.find(ini.path)==std::string::npos);
     std::this_thread::sleep_for(std::chrono::milliseconds(1100));
     const auto listed=call("GET","/api/v1/accounts?after=0");
