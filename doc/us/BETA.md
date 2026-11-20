@@ -1,3 +1,9 @@
+# Atomic configuration write — beta-0.1.3
+
+Branch `beta-0.1.3` starts from main `83b224c`. Hub, API and WebAdmin report `beta-0.1.3`. The isolated maintenance API supports atomic INI write/restore using the fixed, reviewed allowlist and a content revision. Migration v10 records configuration audit intentions and results; v9 history is preserved. See [Configuration write](CONFIGURATION_WRITE.md). No WebAdmin editor, live hub reload or service controller is included.
+
+## Previous stage
+
 # Configuration review — beta-0.1.2
 
 The branch name is `beta-0.1.2`. Hub, API and WebAdmin report `beta-0.1.2`. The maintenance API can read four non-secret settings, distinguish saved from maintenance-process active values and validate proposed values against a content revision without writing. The running hub's active configuration is not available from maintenance. See [Configuration review](CONFIGURATION_REVIEW.md). Full configuration management and hub management remain unimplemented. Schema v9 is unchanged.

@@ -1,3 +1,9 @@
+# Atomowy zapis konfiguracji — beta-0.1.3
+
+Gałąź `beta-0.1.3` powstaje z main `83b224c`. Hub, API i WebAdmin zgłaszają `beta-0.1.3`. Oddzielne lokalne API administracyjne umożliwia atomowy zapis/przywrócenie INI z ograniczonej listy ustawień i rewizją zawartości. Migracja v10 rejestruje rozpoczęcie i wyniki operacji; historia v9 pozostaje nienaruszona. Zobacz [Zapis konfiguracji](CONFIGURATION_WRITE.md). Nie dodano edytora WWW, przeładowywania huba ani kontrolera usługi.
+
+## Poprzedni etap
+
 # Przegląd konfiguracji — beta-0.1.2
 
 Nazwa gałęzi to `beta-0.1.2`. Hub, API i WebAdmin zgłaszają `beta-0.1.2`. Lokalny interfejs administracyjny czyta cztery niesekretne ustawienia, rozróżnia zapisane od aktywnych w procesie administracyjnym oraz waliduje propozycje na podstawie rewizji zawartości, bez zapisu. Aktywna konfiguracja pracującego huba jest niedostępna w procesie administracyjnym. Zobacz [Przegląd konfiguracji](CONFIGURATION_REVIEW.md). Pełne zarządzanie konfiguracją i hubem pozostaje niezaimplementowane. Schemat v9 pozostaje bez zmian.

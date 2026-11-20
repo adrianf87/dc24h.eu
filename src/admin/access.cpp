@@ -84,7 +84,9 @@ std::optional<Gate> classify(std::string_view method, std::string_view target) n
     constexpr std::string_view accounts = "/api/v1/accounts";
     if (target == "/api/v1/admin" || target == "/api/v1/management") { return Gate::discovery; }
     if (target == "/api/v1/management/authorize") { return Gate::contract; }
-    if (target == "/api/v1/management/configuration" && (method == "GET" || method == "POST")) {
+    if ((target == "/api/v1/management/configuration" && (method == "GET" || method == "POST")) ||
+        ((target == "/api/v1/management/configuration/write" ||
+          target == "/api/v1/management/configuration/restore") && method == "POST")) {
         return Gate::configuration;
     }
     if (target == "/api/v1/audit") { return Gate::audit; }
@@ -304,6 +306,19 @@ std::optional<accounts::Role> AccessGate::actor_role(std::string_view token) {
     } catch (const std::bad_alloc&) { throw; }
     catch (const Error&) { throw; }
     catch (...) { throw Error(ErrorKind::unavailable); }
+}
+
+std::optional<std::uint64_t> AccessGate::authorized_actor(std::string_view token) const noexcept {
+    std::array<unsigned char, 32> raw{};
+    struct Wipe { std::array<unsigned char,32>& value; ~Wipe(){OPENSSL_cleanse(value.data(),value.size());} } wipe{raw};
+    if (!decode_grant(token, raw)) { return std::nullopt; }
+    const auto now = std::chrono::steady_clock::now();
+    for (const auto& slot : slots_) {
+        if (slot.used && slot.expires > now && CRYPTO_memcmp(slot.secret.data(),raw.data(),raw.size()) == 0) {
+            return slot.actor;
+        }
+    }
+    return std::nullopt;
 }
 
 std::array<PermissionFact, 17> permission_facts(accounts::Role role) noexcept {

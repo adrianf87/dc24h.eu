@@ -1,7 +1,8 @@
 # dc24h.eu documentation
 
-beta-0.1.2: release channel Beta. The hub reports beta-0.1.2. Local configuration review validates proposals but never saves them. Default development language: EN/US UTF-8.
+beta-0.1.3: release channel Beta. Hub, API and WebAdmin report beta-0.1.3. The local maintenance API supports guarded atomic configuration changes and restore; the running hub is never reloaded in place. Default development language: EN/US UTF-8.
 
+- [Configuration write — beta-0.1.3](CONFIGURATION_WRITE.md)
 - [Configuration review — beta-0.1.2](CONFIGURATION_REVIEW.md)
 - [Management foundation — beta-0.1.1](MANAGEMENT_FOUNDATION.md)
 - [Beta baseline — beta-0.1](BETA.md)

@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <memory>
 #include <source_location>
 #include <thread>
@@ -25,8 +26,8 @@ void run(const database::Options& options) {
     using namespace accounts;
     const auto path_template=(std::filesystem::temp_directory_path()/"dc24h-account-review-XXXXXX").string();
     std::vector<char> path_bytes(path_template.begin(),path_template.end());path_bytes.push_back('\0');
-    const int fd=::mkstemp(path_bytes.data());require(fd>=0);::close(fd);
-    struct Temp { std::string path; ~Temp(){(void)::unlink(path.c_str());} } ini{path_bytes.data()};
+    require(::mkdtemp(path_bytes.data())!=nullptr);
+    struct Temp { std::string path; ~Temp(){std::error_code ignored;std::filesystem::remove_all(std::filesystem::path(path).parent_path(),ignored);} } ini{std::string(path_bytes.data())+"/hub.ini"};
     auto write_ini=[&](std::string_view content){std::ofstream out(ini.path,std::ios::trunc);out<<content;require(out.good());};
     write_ini("[network]\nmax_connections=128\nidle_timeout=120\n[logging]\nlevel=info\n[general]\nlanguage=us\n");
     const auto review=std::make_shared<configuration::Review>(configuration::load_file(ini.path));
@@ -83,7 +84,30 @@ void run(const database::Options& options) {
     write_ini("[network]\nmax_connections=256\nidle_timeout=120\n");
     std::this_thread::sleep_for(std::chrono::milliseconds(1100));
     require(call("POST","/api/v1/management/configuration","revision="+revision+"&network_max_connections=512").starts_with("HTTP/1.1 409"));
-    require(call("GET","/api/v1/management/configuration").find("\"matches_active\":false")!=std::string::npos);
+    const auto changed_view=call("GET","/api/v1/management/configuration");
+    require(changed_view.find("\"matches_active\":false")!=std::string::npos);
+    std::string fresh_revision;take_field(changed_view,"revision",64,fresh_revision);
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    const auto saved_config=call("POST","/api/v1/management/configuration/write",
+        "revision="+fresh_revision+"&network_max_connections=512");
+    require(saved_config.starts_with("HTTP/1.1 200")&&saved_config.find("\"written\":true")!=std::string::npos);
+    std::string saved_revision;take_field(saved_config,"revision",64,saved_revision);
+    require(saved_revision!=fresh_revision);
+    { std::ifstream input(ini.path);const std::string data(std::istreambuf_iterator<char>{input},std::istreambuf_iterator<char>{});
+      require(data.find("max_connections = 512")!=std::string::npos); }
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    const auto restored_config=call("POST","/api/v1/management/configuration/restore","revision="+saved_revision);
+    require(restored_config.starts_with("HTTP/1.1 200")&&restored_config.find("\"written\":true")!=std::string::npos);
+    { std::ifstream input(ini.path);const std::string data(std::istreambuf_iterator<char>{input},std::istreambuf_iterator<char>{});
+      require(data.find("max_connections=256")!=std::string::npos); }
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    const auto config_history=call("POST","/api/v1/audit","actor_id="+actor_id+
+        "&proof=WebAdmin+operator+password!&after=0");
+    require(config_history.starts_with("HTTP/1.1 200")&&
+        config_history.find("configuration.write")!=std::string::npos&&
+        config_history.find("configuration.restore")!=std::string::npos&&
+        config_history.find("\"outcome\":\"succeeded\"")!=std::string::npos&&
+        config_history.find(ini.path)==std::string::npos);
     std::this_thread::sleep_for(std::chrono::milliseconds(1100));
     const auto listed=call("GET","/api/v1/accounts?after=0");
     require(listed.starts_with("HTTP/1.1 200")&&listed.find("WebAdminTarget")!=std::string::npos&&listed.find("verifier")==std::string::npos);
@@ -132,6 +156,10 @@ void run(const database::Options& options) {
     std::this_thread::sleep_for(std::chrono::milliseconds(1100));
     const auto forbidden_validation=call("POST","/api/v1/management/configuration","revision="+revision+"&network_max_connections=128");
     require(forbidden_validation.starts_with("HTTP/1.1 403") && forbidden_validation.find("\"valid\"")==std::string::npos);
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    require(call("POST","/api/v1/management/configuration/write","revision="+revision+"&network_max_connections=1").starts_with("HTTP/1.1 403"));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    require(call("POST","/api/v1/management/configuration/restore","revision="+revision).starts_with("HTTP/1.1 403"));
     require(limited.find("\"key\":\"accounts\",\"permission\":\"accounts.manage\",\"allowed\":false,\"implemented\":true")!=std::string::npos);
     require(limited.find("\"key\":\"roles\",\"permission\":\"roles.manage\",\"allowed\":false,\"implemented\":true")!=std::string::npos);
     require(limited.find("\"key\":\"bans\",\"permission\":\"users.ban+blocks.manage\",\"allowed\":true,\"implemented\":true")!=std::string::npos);

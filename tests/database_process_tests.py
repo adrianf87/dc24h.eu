@@ -186,7 +186,7 @@ def main():
                 result = cli(path, action)
                 require(result.returncode == 0, result.stderr)
                 no_secrets(result)
-            require('version=0 latest=9 pending=9 dirty=no' in cli(path, '--database-status').stdout,
+            require('version=0 latest=10 pending=10 dirty=no' in cli(path, '--database-status').stdout,
                     'Fresh schema status is incorrect')
             early = folder / 'early.bk'
             refused = cli(path, '--backup-database', str(early))
@@ -215,7 +215,7 @@ def main():
                     'Migration checksum differs from SQL source')
             result = cli(path, '--migrate-database')
             require(result.returncode == 0 and 'applied=0' in result.stdout, result.stderr)
-            require('version=9 latest=9 pending=0 dirty=no' in cli(path, '--database-status').stdout,
+            require('version=10 latest=10 pending=0 dirty=no' in cli(path, '--database-status').stdout,
                     'Schema status does not match applied migrations')
             sql("INSERT INTO dc24h.dc24h_accounts (id,name,role,status,created_at,updated_at,revision) "
                 "VALUES (7,'backup-user','registered','active',1,1,1)")
@@ -420,10 +420,10 @@ def main():
                 'ALTER TABLE dc24h.dc24h_schema_migrations DROP COLUMN state;')
             result = cli(path, '--migrate-database')
             require(result.returncode == 1, 'Upgrade accepted without ALTER privileges'); no_secrets(result)
-            require('version=1 latest=9 pending=8 dirty=no' in cli(path, '--database-status').stdout,
+            require('version=1 latest=10 pending=9 dirty=no' in cli(path, '--database-status').stdout,
                     'Read-only status changed legacy schema')
             config()
-            require('applied=8' in cli(path, '--migrate-database').stdout, 'Legacy upgrade failed')
+            require('applied=9' in cli(path, '--migrate-database').stdout, 'Legacy upgrade failed')
             api_path, api_token = enable_api(path, folder)
             if NCDC:
                 for transport in ([], ['--tls']):

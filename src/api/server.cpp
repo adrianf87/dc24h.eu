@@ -412,7 +412,7 @@ struct Server::Impl {
     std::string dispatch(const Request& request) {
         const bool head = request.method == "HEAD";
         if (!authenticate(request.authorization, token)) { return response(401, "{\"error\":\"unauthorized\"}\n", head); }
-        if (accounts && (request.target.starts_with("/api/v1/accounts") || request.target == "/api/v1/admin" || request.target == "/api/v1/admin/access" || request.target.starts_with("/api/v1/bans") || request.target == "/api/v1/audit" || request.target == "/api/v1/management" || request.target == "/api/v1/management/authorize" || request.target == "/api/v1/management/configuration")) { return accounts(request); }
+        if (accounts && (request.target.starts_with("/api/v1/accounts") || request.target == "/api/v1/admin" || request.target == "/api/v1/admin/access" || request.target.starts_with("/api/v1/bans") || request.target == "/api/v1/audit" || request.target == "/api/v1/management" || request.target == "/api/v1/management/authorize" || request.target == "/api/v1/management/configuration" || request.target == "/api/v1/management/configuration/write" || request.target == "/api/v1/management/configuration/restore")) { return accounts(request); }
         if (request.method != "GET") { return response(405, "{\"error\":\"method_not_allowed\"}\n", head); }
         if (request.target == "/api/v1/health") { return response(200, "{\"status\":\"ok\"}\n"); }
         if (request.target == "/api/v1/status") { return response(200, status_json(status())); }

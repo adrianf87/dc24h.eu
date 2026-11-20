@@ -1,5 +1,14 @@
 # Changelog
 
+## beta-0.1.3 — 2026-11-20
+
+Atomic configuration write and restore — development branch `beta-0.1.3`, from protected main `83b224c`.
+
+- The local maintenance API adds exact, permission-gated POST `/api/v1/management/configuration/write` and `/restore`. It accepts only opaque revisions and the four nonsecret beta-0.1.2 settings, never arbitrary file paths.
+- A verified owner-only storage directory and regular INI are required. Changes use a fixed advisory lock, file revision check, safe temporary files, `fsync`, atomic rename, a private `.dc24h.bak` copy and an undo copy before restore. No live hub reconfiguration.
+- Migration v10 broadens the append-only audit constraints for configuration write/restore intentions and their succeeded/failed outcomes. An interrupted operation retains a `started` row requiring inspection. Historical v9 migrations are unchanged, and v9 database backups remain importable on v10.
+- Tests cover permissions, stale revisions, invalid input, sidecar symlinks, file modes, save/restore and bilingual docs. C++/WebAdmin metadata reports `beta-0.1.3`; full editing UI and service control remain later stages.
+
 ## beta-0.1.2 — 2026-11-20
 
 Configuration review — development branch `beta-0.1.2`, from main `bb80d11`.

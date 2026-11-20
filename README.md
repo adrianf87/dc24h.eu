@@ -2,12 +2,13 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: beta-0.1.2 (Configuration review).**
+**Current development version: beta-0.1.3 (Atomic configuration write and restore).**
 
 CI on `main`: [public GitHub-hosted Ubuntu 22.04, 24.04 and 26.04](doc/us/GITHUB_CI.md) runs C++ Debug, C++ Release and WebAdmin on each image · [PL](doc/pl/GITHUB_CI.md).
 
 Completed increments (older bullets describe their original delivery scope):
 
+- **beta-0.1.3 Configuration storage**: privileged local maintenance write/restore with revision conflicts, atomic INI replacement, private backup/undo and v10 audit intentions/outcomes. No live reload, browser editor or service commands. See [Configuration write](doc/us/CONFIGURATION_WRITE.md).
 - **beta-0.1.2 Configuration review**: branch `beta-0.1.2` adds privileged local read-only saved/maintenance-active comparisons, allowlisted in-memory proposal validation and stale-file detection. No file writes, WebAdmin editor, hub control or migration. See [Configuration review](doc/us/CONFIGURATION_REVIEW.md).
 - **beta-0.1.1 Management foundation**: the hub reports `beta-0.1.1`. The management catalog is schema 2. `POST /api/v1/management/authorize` checks the grant and returns `not_implemented`. `configuration.manage` and `hub.manage` stay unimplemented. Schema v9 is unchanged. This is not a production release. See [Management foundation](doc/us/MANAGEMENT_FOUNDATION.md).
 - **beta-0.1 Beta baseline**: the hub reports `beta-0.1` and keeps the alpha-0.9.17 behavior. Schema v9 is unchanged. This is not a production release. See [Beta baseline](doc/us/BETA.md).

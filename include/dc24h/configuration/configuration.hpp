@@ -68,6 +68,10 @@ class StaleReview : public std::runtime_error {
 public:
     StaleReview() : std::runtime_error("Stale configuration revision") {}
 };
+class WriteOutcomeUnknown : public std::runtime_error {
+public:
+    WriteOutcomeUnknown() : std::runtime_error("Configuration file outcome requires operator inspection") {}
+};
 class Review final {
 public:
     explicit Review(const Settings& active);
@@ -79,6 +83,12 @@ public:
     // Throws StaleReview if the file changed after the caller's read.
     [[nodiscard]] bool validate_candidate(std::string_view revision,
         const std::vector<std::pair<std::string, std::string>>& changes) const;
+    // Both operations use a fixed local INI path, exclusive advisory lock,
+    // per-file revision and atomic same-directory rename. Never accept paths.
+    // A durable sidecar backup is written before the primary replacement.
+    [[nodiscard]] std::string write_candidate(std::string_view revision,
+        const std::vector<std::pair<std::string, std::string>>& changes) const;
+    [[nodiscard]] std::string restore_backup(std::string_view revision) const;
 private:
     std::string filename_;
     ReviewOptions active_;

@@ -191,6 +191,46 @@ std::string configuration_review_request(const Request& request, const configura
     return response(200, valid ? "{\"valid\":true,\"written\":false,\"restart_required\":true}" :
         "{\"valid\":false,\"written\":false,\"restart_required\":true}");
 }
+std::string configuration_write_request(const Request& request, const configuration::Review& review,
+    const database::Options& database_options, std::uint64_t actor, bool& written) {
+    if (request.method != "POST") { throw HttpError{405,"method_not_allowed"}; }
+    const bool restoring = request.target == "/api/v1/management/configuration/restore";
+    Fields fields;form(request.body, fields);
+    const auto revision = fields.get("revision");
+    if (revision.size() != 64 || revision.find_first_not_of("0123456789abcdef") != std::string_view::npos) { bad(); }
+    std::vector<std::pair<std::string,std::string>> changes;
+    if (restoring) { fields.exact({"revision"}); }
+    else {
+        if (fields.values.size() < 2 || fields.values.size() > 5) { bad(); }
+        for (const auto& [key,value] : fields.values) {
+            if (key == "revision") { continue; }
+            if (key != "network_max_connections" && key != "network_idle_timeout" &&
+                key != "logging_level" && key != "general_language") { bad(); }
+            changes.emplace_back(key,value);
+        }
+        if (!review.validate_candidate(revision,changes)) { throw HttpError{422,"invalid_configuration"}; }
+    }
+    database::Connection connection(database_options);
+    audit::Repository audit(connection);
+    const auto timestamp = std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    const auto entry = audit.begin_configuration(restoring ? "configuration.restore" : "configuration.write", actor,timestamp);
+    std::string new_revision;
+    try {
+        new_revision = restoring ? review.restore_backup(revision) : review.write_candidate(revision,changes);
+    } catch (const configuration::WriteOutcomeUnknown&) {
+        // Durable 'started' audit entry tells operators that recovery may be needed.
+        throw;
+    } catch (...) {
+        try { audit.finish_configuration(entry,actor,false); }
+        catch (...) { throw configuration::WriteOutcomeUnknown(); }
+        throw;
+    }
+    written = true; // A later audit failure must never imply that the INI stayed unchanged.
+    audit.finish_configuration(entry,actor,true);
+    return response(200,"{\"written\":true,\"restart_required\":true,\"revision\":"+
+        json_string(new_revision)+",\"backup_available\":true}");
+}
 void management_contract(accounts::Role role, std::string_view body) {
     Fields fields;form(body,fields);fields.exact({"operation"});
     const auto operation=fields.get("operation");
@@ -215,7 +255,7 @@ std::string serve(const Request& request,admin::Engine& engine,bool& written) {
             output+="{\"id\":"+json_string(std::to_string(event.id))+",\"occurred_at\":"+std::to_string(event.occurred_at)+
                 ",\"action\":"+json_string(event.action)+",\"actor_id\":"+json_string(std::to_string(event.actor_id))+
                 ",\"target_kind\":"+json_string(event.target_kind)+",\"target_id\":"+json_string(std::to_string(event.target_id))+
-                ",\"outcome\":\"succeeded\"}";
+                ",\"outcome\":"+json_string(event.outcome)+"}";
         }
         return response(200,output+"],\"next_after\":"+(rows.size()==audit::page_size?json_string(std::to_string(rows.back().id)):"null")+"}");
     }
@@ -268,7 +308,7 @@ std::string serve(const Request& request,admin::Engine& engine,bool& written) {
 }
 AccountHandler account_handler(database::Options options, std::shared_ptr<const configuration::Review> review) {
     admin::AccessGate gate(options);
-    return [engine=admin::Engine(std::move(options),admin::Origin::maintenance_api),gate=std::move(gate),review=std::move(review),next=std::chrono::steady_clock::time_point{}](const Request& request) mutable {
+    return [engine=admin::Engine(options,admin::Origin::maintenance_api),audit_options=std::move(options),gate=std::move(gate),review=std::move(review),next=std::chrono::steady_clock::time_point{}](const Request& request) mutable {
         bool written=false;
         try {
             if(request.method=="POST") {
@@ -302,6 +342,13 @@ AccountHandler account_handler(database::Options options, std::shared_ptr<const 
                 if (!review) { throw HttpError{501,"not_implemented"}; }
                 return configuration_review_request(request,*review);
             }
+            if(request.target=="/api/v1/management/configuration/write" ||
+               request.target=="/api/v1/management/configuration/restore") {
+                if (!review) { throw HttpError{501,"not_implemented"}; }
+                const auto actor=gate.authorized_actor(request.admin_grant);
+                if (!actor) { throw admin::Error(admin::ErrorKind::forbidden); }
+                return configuration_write_request(request,*review,audit_options,*actor,written);
+            }
             if(request.target=="/api/v1/management"||request.target=="/api/v1/management/authorize"){
                 const auto role=gate.actor_role(request.admin_grant);
                 if(!role){throw admin::Error(admin::ErrorKind::forbidden);}
@@ -315,6 +362,7 @@ AccountHandler account_handler(database::Options options, std::shared_ptr<const 
             return serve(request,engine,written);
         } catch(const HttpError& e){return response(e.status,"{\"error\":"+json_string(e.key)+"}");}
         catch(const configuration::StaleReview&){return response(409,"{\"error\":\"stale\"}");}
+        catch(const configuration::WriteOutcomeUnknown&){return response(503,"{\"error\":\"outcome_unknown\"}");}
         catch(const admin::Error& e){
             const auto kind=e.kind();
             const unsigned status=kind==admin::ErrorKind::forbidden?403:kind==admin::ErrorKind::stale?409:kind==admin::ErrorKind::not_found?404:kind==admin::ErrorKind::invalid_input?400:503;

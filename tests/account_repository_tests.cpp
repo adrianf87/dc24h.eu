@@ -173,9 +173,9 @@ void integration(const Options& options) {
     c.execute("UPDATE dc24h_accounts SET revision=1 WHERE id=?",{std::to_string(first.account.id().value())});
     c.execute("SET check_constraint_checks=ON");
     require(repository.find_by_id(first.account.id()) == first);
-    c.execute("UPDATE dc24h_schema_migrations SET state='applying' WHERE version=9");
+    c.execute("UPDATE dc24h_schema_migrations SET state='applying' WHERE version=10");
     rejects(RepositoryErrorKind::schema,[&] { (void)repository.find_by_id(first.account.id()); });
-    c.execute("UPDATE dc24h_schema_migrations SET state='applied' WHERE version=9");
+    c.execute("UPDATE dc24h_schema_migrations SET state='applied' WHERE version=10");
     c.execute("DELETE FROM dc24h_accounts WHERE id=?",{std::to_string(first.account.id().value())});
     require(!repository.find_by_id(first.account.id()));
     rejects(RepositoryErrorKind::stale,[&] { (void)repository.update(first,first.account); });
