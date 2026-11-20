@@ -49,6 +49,6 @@ ctest --test-dir build --output-on-failure --parallel 4
 ctest --test-dir build -R '^accounts.registration' --output-on-failure
 ```
 
-Existing real ncdc ADC/ADCS, MariaDB and Apache checks remain required. The pinned Proxmox workflow from `github-runner-v0.1` tests Ubuntu 24.04/22.04; that branch is reused without merging. See [CI](CI_DEBIAN13.md) and [Testing](TESTING.md) for actual coverage.
+Existing real ncdc ADC/ADCS, MariaDB and Apache checks remain required. See [Testing](TESTING.md) for actual coverage.
 
 Public registration/admission budgets, breached-password screening, authenticated activation, password verification/reset, account/session binding, role grants and account UI/API remain future work. A future public endpoint must bound concurrent KDF workers and protect its transport before accepting secrets. No production hub, host database or user account is deployed by these tests.

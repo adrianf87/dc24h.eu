@@ -96,9 +96,9 @@ czasy graniczne, niezmienione metadane kont, ograniczone uprawnienia,
 własność wątku/transakcji, wyścig zapisów, zmiany indeksu/klucza obcego,
 uszkodzony CID i rollback przy błędach alokacji aż do udanego zapisu.
 Testy migracji obejmują zachowanie danych v4→v5 i odmowę powtarzania dirty.
-Pełny workflow Contabo uruchamia też dotychczasowe testy ncdc ADC/ADCS,
-MariaDB, Apache i WebAdmin oraz Debug/Release. Faktyczne wyniki opisują
-[Testowanie](TESTING.md), [Contabo CI](CONTABO_CI.md) i
+Dotychczasowe testy ncdc ADC/ADCS, MariaDB, Apache i WebAdmin oraz Debug/Release
+pozostają. Faktyczne wyniki opisują
+[Testowanie](TESTING.md) i
 [Changelog](../../CHANGELOG.md); wystartowane CI nie oznacza sukcesu.
 
 Weryfikacja hasła, uwierzytelnione przypisanie sesji, cofanie tożsamości,

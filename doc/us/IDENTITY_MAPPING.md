@@ -95,9 +95,9 @@ pair matching, cross-pair rejection, duplicates, absent accounts, timestamp
 limits, unchanged account metadata, restricted privileges, thread/transaction
 ownership, racing binds, schema/index/foreign-key drift, corrupt stored CID and
 allocation-failure rollback through a successful insert. Migration tests cover
-v4-to-v5 preservation and dirty-history refusal. The full Contabo workflow also
-runs existing ncdc ADC/ADCS, MariaDB, Apache and WebAdmin tests in Debug/Release.
-See [Testing](TESTING.md), [Contabo CI](CONTABO_CI.md) and
+v4-to-v5 preservation and dirty-history refusal. Existing ncdc ADC/ADCS,
+MariaDB, Apache and WebAdmin tests remain in Debug/Release.
+See [Testing](TESTING.md) and
 [Changelog](../../CHANGELOG.md) for recorded results; launched CI is not a pass.
 
 Password verification, authenticated session binding, identity revocation,

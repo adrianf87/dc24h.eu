@@ -112,10 +112,8 @@ pliku wykonywalnego testu; produkt nie ma takiej konfiguracji.
 
 Kontrola metadanych wersji obejmuje teraz też oczekiwania CLI/log/API
 i przeglądarki, aby podniesienie wersji nie zostawiało starych asercji.
-Faktyczne wyniki: [Testowanie](TESTING.md), [Contabo CI](CONTABO_CI.md)
-i [Changelog](../../CHANGELOG.md). Pełne CI Debug/Release, ncdc ADC/ADCS
-i WebAdmin działa na jednym runnerze Ubuntu 24.04 z równoległością 6.
-Nie czekamy w tym zadaniu na zakończenie zdalnego CI.
+Faktyczne wyniki: [Testowanie](TESTING.md)
+i [Changelog](../../CHANGELOG.md). Nie czekamy w tym zadaniu na zakończenie zdalnego CI.
 
 Zmiana/reset hasła, adaptacyjne przeliczanie KDF, inne formaty, kontrola
 ujawnionych haseł, aktywacja i dopuszczanie uwierzytelnionych sesji oraz

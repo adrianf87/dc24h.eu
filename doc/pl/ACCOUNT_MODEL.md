@@ -10,7 +10,7 @@
 
 Poniżej zachowano historyczny zakres alpha-0.7.3. Zapis wprowadzony w alpha-0.7.4 opisuje [Repozytorium kont](ACCOUNT_REPOSITORY.md).
 
-Etap oparty bezpośrednio na main `aabe5ddcbc47a4c65a5069b077fd0b5e71a9281c`, obejmującym Database Core, Database Migrations i poprawkę CI bez sudo w zadaniach.
+Etap oparty bezpośrednio na main `aabe5ddcbc47a4c65a5069b077fd0b5e71a9281c`, obejmującym Database Core i Database Migrations.
 
 ## Przeznaczenie i własność danych
 
@@ -69,5 +69,3 @@ ctest --test-dir build -R '^accounts.model$' --output-on-failure
 ```
 
 `accounts.model` sprawdza konstrukcję typów, zakres ID, bajtowe granice Unicode/NFC, odrzucanie znaków sterujących/separatorów, stałe klucze ról/stanów, nieznane wartości, brak/epokę/zakres/kolejność dat, własność migawek, niezmienność kandydatów, przeniesienia/przypisania do siebie i błędy alokacji podczas tworzenia, eksportu, zmian oraz przypisania. Dotychczasowe zestawy CTest, w tym rzeczywisty ncdc ADC/ADCS, MariaDB i Apache, pozostają włączone. Rzeczywiste wyniki opisują [Testowanie](TESTING.md) i [Changelog](../../CHANGELOG.md). Nie czekamy na zdalny Check status.
-
-Wszystkie zadania GitHub Actions nadal używają własnego runnera Ubuntu 24.04. Przygotowanie zależności wykonuje jawnie administrator; zadania działają bez sudo. Zobacz [przygotowanie CI](CI_DEBIAN13.md).

@@ -8,4 +8,4 @@ Dwa zadania działają na każdym z tych trzech obrazów. C++ Debug, C++ Release
 
 Jedna grupa współbieżności na workflow i ref, `dc24h-github-` plus nazwa workflow i ref, ma `cancel-in-progress: false`. Zadanie C++ ma limit 120 minut, a WebAdmin 60 minut. Faktyczne wyniki każdego przebiegu są dostępne w [GitHub Actions](https://github.com/adrianf87/dc24h.eu/actions/workflows/build.yml). Nie czekamy na zakończenie CI.
 
-Ten wybór zastępuje własny runner `server-747585786` dla nowych pushy tych gałęzi. Push uruchamia CI; nie czekamy na jego zakończenie.
+Push uruchamia CI; nie czekamy na jego zakończenie.
