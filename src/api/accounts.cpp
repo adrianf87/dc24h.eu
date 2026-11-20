@@ -10,6 +10,11 @@
 #include <chrono>
 #include <limits>
 #include <map>
+#include <pwd.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <unistd.h>
+#include <cstring>
 
 namespace dc24h::api {
 namespace {
@@ -231,6 +236,79 @@ std::string configuration_write_request(const Request& request, const configurat
     return response(200,"{\"written\":true,\"restart_required\":true,\"revision\":"+
         json_string(new_revision)+",\"backup_available\":true}");
 }
+
+// Only the separate maintenance API can reach this fixed local controller.
+// Verify its kernel peer credentials; never trust a browser-selected socket.
+std::string controller_action(std::string_view command) {
+    // A hub worker (or root-running development API) cannot impersonate the
+    // independently provisioned maintenance service to control its own unit.
+    const auto* process=::getpwuid(::geteuid());
+    if(!process||std::string_view(process->pw_name)!="dc24h-maintenance"||::geteuid()==0)
+        throw HttpError{503,"service_unavailable"};
+    const auto* identity=::getpwnam("dc24h-control");
+    if(!identity||identity->pw_uid==0){throw HttpError{503,"service_unavailable"};}
+    const uid_t expected=identity->pw_uid;
+    const int fd=::socket(AF_UNIX,SOCK_STREAM|SOCK_CLOEXEC,0);
+    if(fd<0){throw HttpError{503,"service_unavailable"};}
+    struct Close { int fd; ~Close(){(void)::close(fd);} } close{fd};
+    const timeval timeout{28,0};
+    (void)::setsockopt(fd,SOL_SOCKET,SO_RCVTIMEO,&timeout,sizeof(timeout));
+    (void)::setsockopt(fd,SOL_SOCKET,SO_SNDTIMEO,&timeout,sizeof(timeout));
+    sockaddr_un address{};address.sun_family=AF_UNIX;
+    constexpr char path[]="/run/dc24h-control/status.sock";
+    static_assert(sizeof(path)<sizeof(address.sun_path));
+    std::memcpy(address.sun_path,path,sizeof(path));
+    if(::connect(fd,reinterpret_cast<sockaddr*>(&address),sizeof(address))!=0)
+        throw HttpError{503,"service_unavailable"};
+    struct ucred peer{};socklen_t length=sizeof(peer);
+    if(::getsockopt(fd,SOL_SOCKET,SO_PEERCRED,&peer,&length)!=0||length!=sizeof(peer)||peer.uid!=expected)
+        throw HttpError{503,"service_unavailable"};
+    const std::string message=std::string(command)+"\n";
+    if(::send(fd,message.data(),message.size(),MSG_NOSIGNAL)!=static_cast<ssize_t>(message.size()))
+        throw HttpError{503,"outcome_unknown"};
+    std::string result;
+    char text[128]{};
+    while(result.size()<sizeof(text)) {
+        const auto count=::recv(fd,text,sizeof(text)-result.size(),0);
+        if(count<=0)throw HttpError{503,"outcome_unknown"};
+        result.append(text,static_cast<std::size_t>(count));
+        if(result.ends_with('\n'))break;
+    }
+    if(!result.ends_with('\n')||result.find('\0')!=std::string::npos||
+       result.size()==sizeof(text))throw HttpError{503,"outcome_unknown"};
+    return result;
+}
+
+std::string hub_action_request(const Request& request,const database::Options& options,
+    std::uint64_t actor,bool& written) {
+    if(request.method!="POST"){throw HttpError{405,"method_not_allowed"};}
+    const std::string_view prefix="/api/v1/management/hub/";
+    const auto operation=std::string_view(request.target).substr(prefix.size());
+    if(operation!="start"&&operation!="stop"&&operation!="restart"){bad();}
+    const std::string upper=operation=="start"?"START":operation=="stop"?"STOP":"RESTART";
+    Fields fields;form(request.body,fields);fields.exact({"confirm"});
+    if(fields.get("confirm")!=upper){throw HttpError{400,"confirmation_required"};}
+    database::Connection connection(options);
+    audit::Repository audit(connection);
+    const auto timestamp=std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    const auto event=audit.begin_service("hub."+std::string(operation),actor,timestamp);
+    std::string result;
+    try{result=controller_action(upper);}
+    catch(...){throw HttpError{503,"outcome_unknown"};} // Unknown if systemd acted; preserve started audit intent.
+    if(result=="ERROR outcome_unknown\n")throw HttpError{503,"outcome_unknown"};
+    const bool succeeded=result==(operation=="stop"?"OK inactive\n":"OK active\n");
+    const bool conflict=result=="ERROR already_active\n"||result=="ERROR already_inactive\n"||result=="ERROR busy\n";
+    const bool failure=conflict||result=="ERROR unavailable\n"||result=="ERROR action_failed\n"||
+        result=="ERROR unauthorized\n"||result=="ERROR unsupported_request\n";
+    if(!succeeded&&!failure)throw HttpError{503,"outcome_unknown"};
+    try{audit.finish_service(event,actor,succeeded);}
+    catch(...){throw HttpError{503,"outcome_unknown"};}
+    if(!succeeded)throw HttpError{conflict?409u:503u,"service_refused"};
+    written=true;
+    return response(200,"{\"operation\":"+json_string(operation)+",\"outcome\":\"succeeded\",\"active_state\":"+
+        json_string(operation=="stop"?"inactive":"active")+"}");
+}
 void management_contract(accounts::Role role, std::string_view body) {
     Fields fields;form(body,fields);fields.exact({"operation"});
     const auto operation=fields.get("operation");
@@ -348,6 +426,13 @@ AccountHandler account_handler(database::Options options, std::shared_ptr<const 
                 const auto actor=gate.authorized_actor(request.admin_grant);
                 if (!actor) { throw admin::Error(admin::ErrorKind::forbidden); }
                 return configuration_write_request(request,*review,audit_options,*actor,written);
+            }
+            if(request.target=="/api/v1/management/hub/start"||
+               request.target=="/api/v1/management/hub/stop"||
+               request.target=="/api/v1/management/hub/restart") {
+                const auto actor=gate.authorized_actor(request.admin_grant);
+                if(!actor){throw admin::Error(admin::ErrorKind::forbidden);}
+                return hub_action_request(request,audit_options,*actor,written);
             }
             if(request.target=="/api/v1/management"||request.target=="/api/v1/management/authorize"){
                 const auto role=gate.actor_role(request.admin_grant);

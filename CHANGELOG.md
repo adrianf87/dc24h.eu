@@ -1,5 +1,14 @@
 # Changelog
 
+## beta-0.1.6 — 2026-11-20
+
+Owner-only local service control — development branch `beta-0.1.6`, based on protected main `463e56e`.
+
+- The separate C++20 maintenance API now accepts three exact confirmed POST operations for `dc24h.service`: Start, Stop and Restart. The existing process bearer, maintenance grant, bound session and CSRF are required, and the current Owner role is checked against the database for each request. No user-supplied command, unit or filesystem path is passed through.
+- The independent status controller verifies an additional dedicated maintenance Unix UID, executes only fixed systemctl action commands without a shell, applies bounded execution and state verification, and keeps status available with the hub stopped. Example-only Polkit/systemd/sysusers configuration gives the controller narrow rights to the one unit; it does not change any host configuration automatically.
+- MariaDB schema v11 adds service action audit events: durable `started` intent before contact with the controller, then `succeeded` or `failed` on a definite result. An ambiguous result preserves `started` and returns `503 outcome_unknown`; no automatic replay. New safety tests cover Owner-only route permissions and controller action refusal from status peers.
+- Hub, API and WebAdmin identify as `beta-0.1.6`; package tuple stays `0.1.0`. Full `hub.manage` WebAdmin functionality and browser action UI remain postponed to beta-0.1.7. No Apache or Node forwarding paths or ADC/ADCS changes. See [US](doc/us/SERVICE_OPERATIONS.md) | [PL](doc/pl/SERVICE_OPERATIONS.md).
+
 ## beta-0.1.5 — 2026-11-20
 
 Independent, read-only systemd hub status controller — development branch `beta-0.1.5`, based on protected main `e8d00ae`.

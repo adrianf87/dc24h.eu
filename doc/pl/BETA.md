@@ -1,3 +1,7 @@
+# Operacje usługi tylko dla Owner — beta-0.1.6
+
+Gałąź `beta-0.1.6` powstaje z chronionego main `463e56e`. Oddzielne API obsługowe sprawdza aktualną rolę Owner, grant, sesję, CSRF i wyraźne potwierdzenie przed użyciem kontrolera stałej jednostki `dc24h.service`. Dozwolone są tylko Start, Stop i Restart. Schemat v11 zapisuje trwały zamiar `started` przed akcją i zweryfikowany wynik `succeeded` albo `failed`; niepewny wynik `outcome_unknown` nie jest ponawiany automatycznie. Brak interfejsu przeglądarkowego i publicznego proxy. Zobacz [Operacje systemd](SERVICE_OPERATIONS.md). To nie jest wydanie produkcyjne.
+
 # Kontroler usługi tylko do odczytu — beta-0.1.5
 
 Gałąź `beta-0.1.5` powstaje z main `e8d00ae`. Hub, API i WebAdmin zgłaszają `beta-0.1.5`. Osobny proces C++20 `dc24h-service-controller` odczytuje stan ustalonej usługi `dc24h.service` przez lokalne gniazdo Unix z autoryzacją, także przy zatrzymanym hubie. Obsługiwany jest wyłącznie odczyt stanu. Nie dodano trasy HTTP, przycisków WebAdmin, Start/Stop/Restart ani migracji. Zobacz [Kontroler usługi](SERVICE_CONTROLLER.md). Schemat v10 bez zmian. Uprawnienie `hub.manage` nadal nie jest wykonywalne.

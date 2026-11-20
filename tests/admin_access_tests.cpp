@@ -3,6 +3,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <string>
 #include <string_view>
 
 using namespace dc24h;
@@ -47,6 +48,15 @@ int main() {
     require(!admin::route_allowed(Role::registered, "POST", "/api/v1/management/configuration"));
     require(!admin::route_allowed(Role::owner, "GET", "/api/v1/management/configuration?x=1"));
     require(!admin::route_allowed(Role::owner, "POST", "/api/v1/management/configuration/extra"));
+    for (const auto command : {"start","stop","restart"}) {
+        const auto path=std::string("/api/v1/management/hub/")+command;
+        require(admin::route_allowed(Role::owner,"POST",path));
+        require(!admin::route_allowed(Role::administrator,"POST",path));
+        require(!admin::route_allowed(Role::operator_,"POST",path));
+        require(!admin::route_allowed(Role::owner,"GET",path));
+        require(!admin::route_allowed(Role::owner,"POST",path+"?unit=other.service"));
+    }
+    require(!admin::route_allowed(Role::owner,"POST","/api/v1/management/hub/start/extra"));
     require(admin::catalog_allowed(Role::administrator, "configuration.manage"));
     require(!admin::catalog_allowed(Role::administrator, "hub.manage"));
     require(!admin::catalog_allowed(Role::operator_, "configuration.manage"));

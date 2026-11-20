@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lock beta-0.1.5 controller metadata and established safety limits."""
+"""Lock beta-0.1.6 service actions and established safety limits."""
 
 from pathlib import Path
 import sys
@@ -57,7 +57,7 @@ def main():
     errors = []
     cmake = check(ROOT / "CMakeLists.txt", (
         "project(dc24h VERSION 0.1.0 LANGUAGES CXX)",
-        'set(DC24H_VERSION "beta-0.1.5")',
+        'set(DC24H_VERSION "beta-0.1.6")',
         'add_executable(dc24h-service-controller',
         'service.controller.process',
         "add_test(NAME beta.baseline ",
@@ -171,6 +171,18 @@ def main():
     ), errors)
     check(ROOT / "src/service_control/controller.cpp", (
         "SO_PEERCRED", "STATUS\\n", "systemctl", "dc24h.service", "execve", "O_NOFOLLOW",
+        '"START\\n"', '"STOP\\n"', '"RESTART\\n"', 'dc24h-maintenance',
+    ), errors)
+    check(ROOT / "src/api/accounts.cpp", (
+        '"/api/v1/management/hub/start"', '"/api/v1/management/hub/stop"',
+        '"/api/v1/management/hub/restart"', 'confirm', 'begin_service', 'finish_service',
+        'SO_PEERCRED', 'dc24h-maintenance',
+    ), errors)
+    check(ROOT / "doc/us/SERVICE_OPERATIONS.md", (
+        'beta-0.1.6', 'Owner', 'started', 'outcome_unknown', 'Polkit',
+    ), errors)
+    check(ROOT / "doc/pl/SERVICE_OPERATIONS.md", (
+        'beta-0.1.6', 'Owner', 'started', 'outcome_unknown', 'Polkit',
     ), errors)
     check(ROOT / "doc/us/SERVICE_CONTROLLER.md", (
         "beta-0.1.5", "SO_PEERCRED", "systemd_unavailable", "beta-0.1.6",
@@ -195,22 +207,23 @@ def main():
         "configuration.manage and hub.manage stay",
     ), errors)
     check(ROOT / "webadmin/src/lib/status.ts", (
-        'export const WEBADMIN_VERSION = "beta-0.1.5";',
+        'export const WEBADMIN_VERSION = "beta-0.1.6";',
         '!/^(?:alpha-\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|beta-\\d{1,3}\\.\\d{1,3}(?:\\.\\d{1,3})?)$/.test(server.version)',
     ), errors)
     check(ROOT / "src/security/roles.cpp", (
         "return p!=Permission::manage_configuration&&p!=Permission::manage_hub;",
     ), errors)
     check(ROOT / "tests/database_migrations_tests.cpp", (
-        "require(migration_catalog().size() == 10 && entries[0].info.version == 1 && entries[1].info.version == 2);",
+        "require(migration_catalog().size() == 11 && entries[0].info.version == 1 && entries[1].info.version == 2);",
         'require(entries[8].info.version == 9 && entries[8].info.name == "audit_events");',
         'require(entries[9].info.version == 10 && entries[9].info.name == "configuration_audit");',
+        'require(entries[10].info.version == 11 && entries[10].info.name == "hub_service_audit");',
     ), errors)
     check_no_custom_workers(errors)
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1
-    print("Beta 0.1.5 controller, version and safety limits passed")
+    print("Beta 0.1.6 service actions, version and safety limits passed")
     return 0
 
 

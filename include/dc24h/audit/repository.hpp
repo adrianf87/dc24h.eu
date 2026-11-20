@@ -42,6 +42,10 @@ public:
     [[nodiscard]] std::uint64_t begin_configuration(std::string_view action, std::uint64_t actor,
         std::int64_t occurred_at);
     void finish_configuration(std::uint64_t event_id, std::uint64_t actor, bool succeeded);
+    // Append an intent before any systemd operation; a crash or ambiguous
+    // result intentionally retains the 'started' row for manual recovery.
+    [[nodiscard]] std::uint64_t begin_service(std::string_view action, std::uint64_t actor, std::int64_t occurred_at);
+    void finish_service(std::uint64_t event_id, std::uint64_t actor, bool succeeded);
     [[nodiscard]] std::vector<Event> list(std::uint64_t after);
 private:
     database::Connection& connection_;

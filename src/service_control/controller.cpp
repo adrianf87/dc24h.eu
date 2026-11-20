@@ -1,4 +1,5 @@
-// Read-only local systemd controller. No hub process, shell, or service action.
+// Local systemd controller. The only unit is dc24h.service; actions require
+// the dedicated maintenance process identity, never a browser-supplied token.
 #include "dc24h/version.hpp"
 #include <algorithm>
 #include <cerrno>
@@ -8,6 +9,8 @@
 #include <filesystem>
 #include <iostream>
 #include <limits>
+#include <optional>
+#include <pwd.h>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -32,8 +35,8 @@ struct Fd {
     Fd& operator=(const Fd&)=delete;
 };
 
-// The only subprocess is a fixed, read-only query. Never accept command or
-// unit names from the socket, environment or CLI.
+// Fixed read-only query. Never accept command or unit names from the socket,
+// environment or CLI.
 std::string query_systemd() {
     int pipes[2];
     if(::pipe2(pipes,O_CLOEXEC)!=0)return {};
@@ -115,22 +118,77 @@ std::string status_json() {
         "\",\"active_state\":\""+active+"\",\"sub_state\":\""+sub+"\",\"result\":\""+result+"\"}\n";
 }
 
-void serve_peer(int connection) {
+enum class Action { start, stop, restart };
+
+// Exactly three fixed systemctl invocations; no user-supplied executable,
+// argument, environment, shell, service name or job mode.
+bool change_unit(Action action, bool& uncertain) {
+    const pid_t pid=::fork();
+    if(pid<0)return false;
+    if(pid==0) {
+        const int null_fd=::open("/dev/null",O_WRONLY|O_CLOEXEC);
+        if(null_fd>=0){(void)::dup2(null_fd,STDOUT_FILENO);(void)::dup2(null_fd,STDERR_FILENO);(void)::close(null_fd);}
+        const char* verb=action==Action::start?"start":action==Action::stop?"stop":"restart";
+        const char* const args[]={"systemctl","--system","--no-pager","--no-ask-password",verb,"dc24h.service",nullptr};
+        const char* const env[]={"PATH=/usr/bin:/bin","LANG=C","SYSTEMD_COLORS=0",nullptr};
+        ::execve("/usr/bin/systemctl",const_cast<char* const*>(args),const_cast<char* const*>(env));
+        ::_exit(127);
+    }
+    const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(18);
+    int status=0;
+    while(std::chrono::steady_clock::now()<deadline) {
+        const auto result=::waitpid(pid,&status,WNOHANG);
+        if(result==pid)return WIFEXITED(status)&&WEXITSTATUS(status)==0;
+        if(result<0&&errno!=EINTR){uncertain=true;return false;}
+        (void)::usleep(20000);
+    }
+    (void)::kill(pid,SIGKILL);
+    while(::waitpid(pid,&status,0)<0&&errno==EINTR){}
+    uncertain=true; // The manager may already have executed the operation.
+    return false;
+}
+
+std::string action_response(Action action) {
+    const auto before=query_systemd();
+    if(before.empty()||field(before,"LoadState")!="loaded")return "ERROR unavailable\n";
+    const auto state=field(before,"ActiveState");
+    if(state=="unknown"||state=="activating"||state=="deactivating"||state=="reloading")return "ERROR busy\n";
+    if(action==Action::start&&state=="active")return "ERROR already_active\n";
+    if(action!=Action::start&&state!="active")return "ERROR already_inactive\n";
+    bool uncertain=false;
+    if(!change_unit(action,uncertain))return uncertain?"ERROR outcome_unknown\n":"ERROR action_failed\n";
+    const auto expected=action==Action::stop?"inactive":"active";
+    const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(5);
+    do {
+        const auto after=query_systemd();
+        if(!after.empty()&&field(after,"ActiveState")==expected)return std::string("OK ")+expected+'\n';
+        (void)::usleep(100000);
+    }while(std::chrono::steady_clock::now()<deadline);
+    return "ERROR outcome_unknown\n";
+}
+
+void serve_peer(int connection,std::optional<uid_t> action_uid) {
     Fd peer(connection);
     struct ucred credentials{};
     socklen_t length=sizeof(credentials);
     if(::getsockopt(peer.value,SOL_SOCKET,SO_PEERCRED,&credentials,&length)!=0||length!=sizeof(credentials))return;
     // Credential check is in addition to the private Unix socket filesystem
     // boundary. Only the controller's UID or its configured primary group.
-    if(credentials.uid!=::geteuid()&&credentials.gid!=::getegid())return;
+    const bool maintenance=action_uid&&credentials.uid==*action_uid&&credentials.uid!=::geteuid();
+    if(!maintenance&&credentials.uid!=::geteuid()&&credentials.gid!=::getegid())return;
+    // A caller cannot monopolize this single-threaded controller while idle.
     const struct timeval timeout{2,0};
     (void)::setsockopt(peer.value,SOL_SOCKET,SO_RCVTIMEO,&timeout,sizeof(timeout));
     (void)::setsockopt(peer.value,SOL_SOCKET,SO_SNDTIMEO,&timeout,sizeof(timeout));
     char request[32]{};
     const auto size=::recv(peer.value,request,sizeof(request),0);
     if(size<=0)return;
-    const std::string response=(std::string_view(request,static_cast<std::size_t>(size))=="STATUS\n")
-        ?status_json():"{\"error\":\"unsupported_request\"}\n";
+    const std::string_view command(request,static_cast<std::size_t>(size));
+    const std::string response=command=="STATUS\n"?status_json():
+        !maintenance?"ERROR unauthorized\n":
+        command=="START\n"?action_response(Action::start):
+        command=="STOP\n"?action_response(Action::stop):
+        command=="RESTART\n"?action_response(Action::restart):"ERROR unsupported_request\n";
     (void)::send(peer.value,response.data(),response.size(),MSG_NOSIGNAL);
 }
 
@@ -174,6 +232,10 @@ int run(std::string_view pathname) {
     // Allow only the service's designated Unix group, never the world.
     if(::chmod(path.c_str(),0660)!=0)throw std::runtime_error("Cannot set socket permissions");
     if(::listen(listener.value,16)!=0)throw std::runtime_error("Cannot listen");
+    std::optional<uid_t> action_uid;
+    // Missing or misconfigured dedicated account fails closed for all actions.
+    if(const auto* account=::getpwnam("dc24h-maintenance");account&&account->pw_uid!=0&&account->pw_uid!=::geteuid())
+        action_uid=account->pw_uid;
     std::signal(SIGTERM,request_stop);
     std::signal(SIGINT,request_stop);
     while(!stopping) {
@@ -182,7 +244,7 @@ int run(std::string_view pathname) {
         if(ready<0){if(errno==EINTR)continue;break;}
         if(ready==0)continue;
         const int peer=::accept4(listener.value,nullptr,nullptr,SOCK_CLOEXEC);
-        if(peer>=0)serve_peer(peer);
+        if(peer>=0)serve_peer(peer,action_uid);
         else if(errno!=EINTR)break;
     }
     struct stat current{};

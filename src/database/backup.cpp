@@ -101,10 +101,10 @@ struct SessionLock {
 };
 
 void require_current(Connection& connection) {
-    if (migration_catalog().size() != 10) { throw MigrationError(MigrationErrorKind::history); }
+    if (migration_catalog().size() != 11) { throw MigrationError(MigrationErrorKind::history); }
     const auto status = inspect_migrations(connection);
     if (status.dirty) { throw MigrationError(MigrationErrorKind::dirty); }
-    if (status.current_version != 10 || status.latest_version != 10 || status.pending != 0) {
+    if (status.current_version != 11 || status.latest_version != 11 || status.pending != 0) {
         throw MigrationError(MigrationErrorKind::history);
     }
 }
