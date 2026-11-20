@@ -494,7 +494,7 @@ def main():
             result = cli(path, '--language', 'pl', '--check-database')
             require(result.returncode == 0 and 'Połączenie z bazą' in result.stdout, result.stderr)
             result = cli(path, '--language', 'pl', '--database-status')
-            require(result.returncode == 0 and 'Wersja schematu bazy danych=9' in result.stdout, result.stderr)
+            require(result.returncode == 0 and 'Wersja schematu bazy danych=10' in result.stdout, result.stderr)
             config(db_user='missing_private_user')
             result = cli(path, '--check-database')
             require(result.returncode == 1, 'Missing user accepted'); no_secrets(result)

@@ -220,7 +220,12 @@ def exercise(binary, seed, config, db_socket, password, token, api_socket):
         recorded = [event['action'] for event in history['events']]
         assert 'accounts.create' in recorded and 'bans.create' in recorded and 'bans.revoke' in recorded
         assert 'configuration.write' in recorded and 'configuration.restore' in recorded
-        assert all(event['outcome'] == 'succeeded' for event in history['events'])
+        assert all(event['outcome'] == 'succeeded' for event in history['events']
+                   if event['target_kind'] != 'configuration')
+        assert any(event['action'] == 'configuration.restore' and event['outcome'] == 'failed'
+                   for event in history['events'])
+        assert any(event['action'] == 'configuration.restore' and event['outcome'] == 'succeeded'
+                   for event in history['events'])
         assert proof not in json.dumps(history) and 'Private account ban' not in json.dumps(history) and 'Temporary HTTP' not in json.dumps(history)
         assert request('POST', '/api/v1/audit', {'actor_id': target, 'proof': proof, 'after': '0'}, delay=True)[0] == 403
         assert request('POST', '/api/v1/audit', {'actor_id': actor, 'proof': proof, 'after': '00'}, delay=True)[0] == 400
