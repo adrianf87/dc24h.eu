@@ -5,6 +5,7 @@
 #include "dc24h/version.hpp"
 #include <csignal>
 #include <iostream>
+#include <memory>
 #include <stop_token>
 
 int main(int argc,char* argv[]) {
@@ -26,8 +27,9 @@ int main(int argc,char* argv[]) {
         std::stop_source stop;
         settings.api.request_timeout=30;
         const auto public_settings=dc24h::configuration::public_settings(settings,true);
+        const auto review=std::make_shared<dc24h::configuration::Review>(settings);
         dc24h::api::Server api(logger,settings.api,[public_settings]{dc24h::api::Snapshot s;s.database_enabled=true;s.configuration=public_settings;return s;},
-            [&]{stop.request_stop();},dc24h::api::account_handler(settings.database));
+            [&]{stop.request_stop();},dc24h::api::account_handler(settings.database,review));
         api.start();logger.info("Account maintenance API ready; no hub listeners");
         (void)signals.wait(stop.get_token());return api.failed()?1:0;
     }catch(const std::exception&){std::cerr<<"Account maintenance startup failed\n";return 1;}
