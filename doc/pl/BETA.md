@@ -1,3 +1,9 @@
+# Kontroler usługi tylko do odczytu — beta-0.1.5
+
+Gałąź `beta-0.1.5` powstaje z main `e8d00ae`. Hub, API i WebAdmin zgłaszają `beta-0.1.5`. Osobny proces C++20 `dc24h-service-controller` odczytuje stan ustalonej usługi `dc24h.service` przez lokalne gniazdo Unix z autoryzacją, także przy zatrzymanym hubie. Obsługiwany jest wyłącznie odczyt stanu. Nie dodano trasy HTTP, przycisków WebAdmin, Start/Stop/Restart ani migracji. Zobacz [Kontroler usługi](SERVICE_CONTROLLER.md). Schemat v10 bez zmian. Uprawnienie `hub.manage` nadal nie jest wykonywalne.
+
+## Poprzedni etap
+
 # Edytor konfiguracji WebAdmin — beta-0.1.4
 
 Gałąź `beta-0.1.4` powstaje z main `3f7f03d`. Hub, API i WebAdmin zgłaszają `beta-0.1.4`. Ograniczony edytor na stronie Konfiguracja odczytuje INI z oddzielnego procesu administracyjnego, pokazuje cztery niesekretne ustawienia i wartości startowe tego procesu, waliduje oraz prezentuje różnice, a następnie wymaga potwierdzenia zapisu atomowego albo przywrócenia kopii. Apache i adapter Node przekazują wyłącznie dokładne lokalne trasy z kontrolą pochodzenia, grantu, sesji, CSRF i uprawnienia po stronie C++. Nadal wymagany jest kontrolowany restart huba; brak przeładowywania na żywo i kontrolera usługi. Schemat v10 bez zmian. Zobacz [Edytor konfiguracji](CONFIGURATION_EDITOR.md).

@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: beta-0.1.4.
+Current development version: beta-0.1.5.
+
+[Service controller — beta-0.1.5](us/SERVICE_CONTROLLER.md) · [PL](pl/SERVICE_CONTROLLER.md)
 
 [Configuration editor — beta-0.1.4](us/CONFIGURATION_EDITOR.md) · [PL](pl/CONFIGURATION_EDITOR.md)
 

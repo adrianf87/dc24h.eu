@@ -1,7 +1,8 @@
 # dc24h.eu documentation
 
-beta-0.1.4: release channel Beta. Hub, API and WebAdmin report beta-0.1.4. The loopback WebAdmin editor supports reviewed, confirmed configuration changes through the separate maintenance API; the running hub is never reloaded in place. Default development language: EN/US UTF-8.
+beta-0.1.5: release channel Beta. Hub, API and WebAdmin report beta-0.1.5. The independent, local-only controller can read systemd hub state with the hub stopped. No service actions or new HTTP routes. The established WebAdmin configuration editor remains unchanged. Default development language: EN/US UTF-8.
 
+- [Service controller — beta-0.1.5](SERVICE_CONTROLLER.md)
 - [Configuration editor — beta-0.1.4](CONFIGURATION_EDITOR.md)
 - [Configuration write — beta-0.1.3](CONFIGURATION_WRITE.md)
 - [Configuration review — beta-0.1.2](CONFIGURATION_REVIEW.md)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lock beta-0.1.4 editor metadata and established configuration safety limits."""
+"""Lock beta-0.1.5 controller metadata and established safety limits."""
 
 from pathlib import Path
 import sys
@@ -57,7 +57,9 @@ def main():
     errors = []
     cmake = check(ROOT / "CMakeLists.txt", (
         "project(dc24h VERSION 0.1.0 LANGUAGES CXX)",
-        'set(DC24H_VERSION "beta-0.1.4")',
+        'set(DC24H_VERSION "beta-0.1.5")',
+        'add_executable(dc24h-service-controller',
+        'service.controller.process',
         "add_test(NAME beta.baseline ",
     ), errors)
     require('set(DC24H_VERSION "alpha-' not in cmake, "CMakeLists.txt: alpha version string remains", errors)
@@ -80,6 +82,8 @@ def main():
     require("self-hosted" not in workflow, "build.yml: self-hosted runner is selected", errors)
     require("ubuntu-latest" not in workflow, "build.yml: ubuntu-latest is selected", errors)
     check(ROOT / "doc/us/BETA.md", (
+        "# Read-only service controller — beta-0.1.5",
+        "Branch `beta-0.1.5` starts from main `e8d00ae`.",
         "# WebAdmin configuration editor — beta-0.1.4",
         "Branch `beta-0.1.4` starts from main `3f7f03d`.",
         "# Atomic configuration write — beta-0.1.3",
@@ -100,6 +104,8 @@ def main():
         "four logical CPUs and 16 GB",
     ), errors)
     check(ROOT / "doc/pl/BETA.md", (
+        "# Kontroler usługi tylko do odczytu — beta-0.1.5",
+        "Gałąź `beta-0.1.5` powstaje z main `e8d00ae`.",
         "# Edytor konfiguracji WebAdmin — beta-0.1.4",
         "Gałąź `beta-0.1.4` powstaje z main `3f7f03d`.",
         "# Atomowy zapis konfiguracji — beta-0.1.3",
@@ -163,6 +169,15 @@ def main():
     check(ROOT / "doc/pl/CONFIGURATION_EDITOR.md", (
         "beta-0.1.4", "configuration.manage", "409 stale", "503 outcome_unknown", "Require local",
     ), errors)
+    check(ROOT / "src/service_control/controller.cpp", (
+        "SO_PEERCRED", "STATUS\\n", "systemctl", "dc24h.service", "execve", "O_NOFOLLOW",
+    ), errors)
+    check(ROOT / "doc/us/SERVICE_CONTROLLER.md", (
+        "beta-0.1.5", "SO_PEERCRED", "systemd_unavailable", "beta-0.1.6",
+    ), errors)
+    check(ROOT / "doc/pl/SERVICE_CONTROLLER.md", (
+        "beta-0.1.5", "SO_PEERCRED", "systemd_unavailable", "beta-0.1.6",
+    ), errors)
     check(ROOT / "config/apache2-webadmin-https-proxy.conf.example", (
         "management(?:/authorize|/configuration",
         "management/authorize",
@@ -180,7 +195,7 @@ def main():
         "configuration.manage and hub.manage stay",
     ), errors)
     check(ROOT / "webadmin/src/lib/status.ts", (
-        'export const WEBADMIN_VERSION = "beta-0.1.4";',
+        'export const WEBADMIN_VERSION = "beta-0.1.5";',
         '!/^(?:alpha-\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|beta-\\d{1,3}\\.\\d{1,3}(?:\\.\\d{1,3})?)$/.test(server.version)',
     ), errors)
     check(ROOT / "src/security/roles.cpp", (
@@ -195,7 +210,7 @@ def main():
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1
-    print("Beta 0.1.4 editor, version and safety limits passed")
+    print("Beta 0.1.5 controller, version and safety limits passed")
     return 0
 
 

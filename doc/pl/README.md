@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-beta-0.1.4: kanał wydania Beta. Hub, API i WebAdmin zgłaszają beta-0.1.4. Lokalny edytor WebAdmin umożliwia zatwierdzone zmiany przez oddzielne API administracyjne, ale nie przeładowuje pracującego huba.
+beta-0.1.5: kanał wydania Beta. Hub, API i WebAdmin zgłaszają beta-0.1.5. Osobny lokalny kontroler odczytuje stan usługi systemd przy zatrzymanym hubie. Nie udostępnia operacji sterujących ani nowych tras HTTP. Dotychczasowy edytor WebAdmin pozostaje bez zmian.
 
+- [Kontroler usługi — beta-0.1.5](SERVICE_CONTROLLER.md)
 - [Edytor konfiguracji — beta-0.1.4](CONFIGURATION_EDITOR.md)
 - [Zapis konfiguracji — beta-0.1.3](CONFIGURATION_WRITE.md)
 - [Przegląd konfiguracji — beta-0.1.2](CONFIGURATION_REVIEW.md)
