@@ -2,7 +2,7 @@
 
 Library control and automatic security tests. The branch starts from main `6940992`. The branch name is `alpha-0.9.17`.
 
-Configuration requires OpenSSL 3. The hub binaries must directly link the same five product libraries and no other product library. WebAdmin dependencies stay on exact versions from the npm registry. The existing security tests stay registered. There is no new route, INI key, schema migration, Apache setting, CLI flag, WebAdmin page or status field. This is not a vulnerability database and it does not run `npm audit`.
+Configuration requires OpenSSL 3. The hub binaries must directly link OpenSSL, libgcrypt, MariaDB and exactly one utf8proc SONAME, and no other product library. WebAdmin dependencies stay on exact versions from the npm registry. The existing security tests stay registered. There is no new route, INI key, schema migration, Apache setting, CLI flag, WebAdmin page or status field. This is not a vulnerability database and it does not run `npm audit`.
 
 ## Hub binaries
 
@@ -12,7 +12,8 @@ Configuration requires OpenSSL 3. The hub binaries must directly link the same f
 - `libcrypto.so.3`
 - `libgcrypt.so.20`
 - `libmariadb.so.3`
-- `libutf8proc.so.3`
+
+Each binary must also need exactly one utf8proc library: `libutf8proc.so.2` or `libutf8proc.so.3`. Ubuntu 22.04 provides `libutf8proc.so.2`. Debian 12, Debian 13, Ubuntu 24.04 and Ubuntu 26.04 provide `libutf8proc.so.3`.
 
 The C++ runtime may also need `libc.so.6`, `libstdc++.so.6`, `libgcc_s.so.1` and `libm.so.6`. Any other shared library fails the test. The binaries must not have `RPATH` or `RUNPATH`.
 
@@ -24,8 +25,8 @@ An AddressSanitizer build may also need `libasan.so.8`. An UndefinedBehaviorSani
 
 ## Security tests
 
-`tests/security_tests.manifest` names the security tests that CMake always registers. `dependencies.audit` fails when one of those names is absent from the build. `systemd.sandbox` stays conditional on the systemd tools, as it already was. The manifest is not a claim that those tests cover every threat.
+`tests/security_tests.manifest` names the security tests that CMake always registers. `dependencies.audit` fails when one of those names is absent from the build. CMake 3 writes each CTest name as a bracket argument. CMake 4.4 quotes a name that contains no quote, dollar sign or backslash. The audit accepts both forms. `systemd.sandbox` stays conditional on the systemd tools, as it already was. The manifest is not a claim that those tests cover every threat.
 
 ## Limits
 
-GitHub Check status still builds Debug and Release on Ubuntu 24.04. The audit runs inside that existing test step. It does not add a job, a sanitizer matrix, or a network scan. Schema v9 is unchanged. `configuration.manage` and `hub.manage` stay unimplemented. Browser kick and mute stay undispatched. Status and health stay bearer-only. `Require local` stays. No residual threat is closed.
+GitHub Check status builds Debug and Release on public runners `ubuntu-22.04`, `ubuntu-24.04` and `ubuntu-26.04`. The audit runs inside that existing test step. It does not add a job, a sanitizer matrix, or a network scan. Schema v9 is unchanged. `configuration.manage` and `hub.manage` stay unimplemented. Browser kick and mute stay undispatched. Status and health stay bearer-only. `Require local` stays. No residual threat is closed.

@@ -11,12 +11,21 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 EXACT_VERSION = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 NEEDED = re.compile(r"\(NEEDED\)\s+Shared library: \[([^\]]+)\]")
-TEST_NAME = re.compile(r"^add_test\(\[=\[([^\]]+)\]=\]")
+# CMake 3 writes add_test([=[name]=] ...). CMake 4.4 quotes a name that
+# contains no quote, dollar sign or backslash: add_test("name" ...).
+TEST_NAME = re.compile(
+    r'^\s*add_test\((?:\[=*\['
+    r'(?P<bracket>.*?)'
+    r'\]=*\]|"(?P<quoted>(?:\\.|[^"\\])*)")')
 PRODUCT_LIBRARIES = frozenset({
     "libcrypto.so.3",
     "libgcrypt.so.20",
     "libmariadb.so.3",
     "libssl.so.3",
+})
+# Ubuntu 22.04 ships SONAME 2. Debian 12/13 and Ubuntu 24.04/26.04 ship 3.
+UTF8PROC_LIBRARIES = frozenset({
+    "libutf8proc.so.2",
     "libutf8proc.so.3",
 })
 RUNTIME_LIBRARIES = frozenset({
@@ -55,7 +64,13 @@ def check_binary(binary, mode):
     missing = PRODUCT_LIBRARIES - needed
     if missing:
         return fail(f"{name} is missing a required library: {', '.join(sorted(missing))}")
-    allowed = set(PRODUCT_LIBRARIES | RUNTIME_LIBRARIES)
+    utf8 = needed & UTF8PROC_LIBRARIES
+    if len(utf8) != 1:
+        found = sorted(item for item in needed if item.startswith("libutf8proc.so."))
+        return fail(
+            f"{name} must link exactly one of {', '.join(sorted(UTF8PROC_LIBRARIES))}; "
+            f"found {', '.join(found) if found else 'none'}")
+    allowed = set(PRODUCT_LIBRARIES | RUNTIME_LIBRARIES | utf8)
     sanitizer = SANITIZER_LIBRARIES.get(mode)
     if mode and sanitizer is None:
         return fail("DC24H_SANITIZER must be address, undefined, thread, or empty")
@@ -108,8 +123,12 @@ def registered_tests(build_dir):
     for path in Path(build_dir).rglob("CTestTestfile.cmake"):
         for line in path.read_text(encoding="utf-8").splitlines():
             match = TEST_NAME.match(line)
-            if match:
-                names.add(match.group(1))
+            if not match:
+                continue
+            name = match.group("bracket")
+            if name is None:
+                name = match.group("quoted")
+            names.add(name)
     return names
 
 
