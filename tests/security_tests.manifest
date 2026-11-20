@@ -3,6 +3,7 @@
 adc.security
 adcs.tls_security
 adcs.tls_security.process
+configuration.review
 dependencies.audit
 logging.process
 logging.unit

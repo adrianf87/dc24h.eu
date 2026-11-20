@@ -27,7 +27,7 @@ else()
 endif()
 
 # Operators see beta-0.1. The VERSION tuple above is the package number.
-set(DC24H_VERSION "beta-0.1.1")
+set(DC24H_VERSION "beta-0.1.2")
 configure_file(cmake/version.hpp.in generated/dc24h/version.hpp @ONLY)
 find_package(Threads REQUIRED)
 find_package(OpenSSL 3 REQUIRED COMPONENTS SSL Crypto)
@@ -245,7 +245,7 @@ add_library(dc24h_configuration src/configuration/configuration.cpp)
 target_compile_features(dc24h_configuration PUBLIC cxx_std_20)
 set_target_properties(dc24h_configuration PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_configuration PUBLIC include)
-target_link_libraries(dc24h_configuration PUBLIC dc24h_network dc24h_logging dc24h_database dc24h_api PRIVATE UTF8Proc::UTF8Proc)
+target_link_libraries(dc24h_configuration PUBLIC dc24h_network dc24h_logging dc24h_database dc24h_api PRIVATE UTF8Proc::UTF8Proc OpenSSL::Crypto)
 
 add_library(dc24h_core
     src/core/server.cpp
@@ -273,7 +273,7 @@ target_compile_options(dc24h_admin PRIVATE -Wall -Wextra -Wpedantic -Wconversion
 add_library(dc24h_account_api src/api/accounts.cpp)
 target_compile_features(dc24h_account_api PUBLIC cxx_std_20)
 target_include_directories(dc24h_account_api PUBLIC include)
-target_link_libraries(dc24h_account_api PUBLIC dc24h_api dc24h_admin)
+target_link_libraries(dc24h_account_api PUBLIC dc24h_api dc24h_admin dc24h_configuration)
 target_compile_options(dc24h_account_api PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 add_executable(dc24h-owner src/owner_admin.cpp)
 target_include_directories(dc24h-owner PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
@@ -899,6 +899,11 @@ if(BUILD_TESTING)
     set_target_properties(configuration_tests PROPERTIES CXX_EXTENSIONS OFF)
     target_compile_options(configuration_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
     add_test(NAME configuration.unit COMMAND configuration_tests)
+    add_executable(configuration_review_tests tests/configuration_review_tests.cpp)
+    target_link_libraries(configuration_review_tests PRIVATE dc24h_configuration)
+    set_target_properties(configuration_review_tests PROPERTIES CXX_EXTENSIONS OFF)
+    target_compile_options(configuration_review_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    add_test(NAME configuration.review COMMAND configuration_review_tests)
     add_test(NAME configuration.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/configuration_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(configuration.unit configuration.process PROPERTIES TIMEOUT 45)
