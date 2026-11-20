@@ -40,10 +40,11 @@ test("management shows grant areas, links and Polish navigation", async ({ page 
   await expect(bans).toContainText("users.ban+blocks.manage");
   await expect(bans.getByRole("link", { name: "Open bans", exact: true })).toHaveAttribute("href", "#bans");
   const configuration = page.getByTestId("management-configuration");
-  await expect(configuration).toContainText("Not implemented");
+  // The broader management catalog is still unimplemented; the narrow
+  // configuration editor can be opened under a configuration.manage grant.
   await expect(configuration).toContainText("configuration.manage");
   await expect(configuration).toContainText("Allowed for this grant");
-  await expect(configuration.getByRole("link")).toHaveCount(0);
+  await expect(configuration.getByRole("link", { name: "Open configuration editor", exact: true })).toHaveAttribute("href", "#configuration");
   const hub = page.getByTestId("management-hub");
   await expect(hub).toContainText("Not implemented");
   await expect(hub).toContainText("hub.manage");
@@ -58,7 +59,7 @@ test("management shows grant areas, links and Polish navigation", async ({ page 
   await page.getByRole("button", { name: "Otwórz nawigację", exact: true }).click();
   await page.getByRole("link", { name: "Zarządzanie", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Zarządzanie kontami, rolami, banami, konfiguracją i hubem", exact: true })).toBeVisible();
-  await expect(page.getByTestId("management-configuration")).toContainText("Niezaimplementowane");
+  await expect(page.getByTestId("management-configuration").getByRole("link", { name: "Otwórz edytor konfiguracji", exact: true })).toHaveAttribute("href", "#configuration");
   await expect(page.getByTestId("management-hub")).toContainText("Niezaimplementowane");
   await expect(page.getByTestId("management-bans")).toContainText("Dozwolone dla tego grantu");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

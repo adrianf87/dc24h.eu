@@ -270,7 +270,7 @@ class ApacheHttpsProxyTests(unittest.TestCase):
         form = {"Content-Type": "application/x-www-form-urlencoded", "X-DC24H-Admin": "1",
                 "Origin": "https://dc24h.eu", "Sec-Fetch-Site": "same-origin"}
         reads = ["/admin-api/v1/status", "/admin-api/v1/health", "/admin-api/v1/users",
-                 "/admin-api/v1/admin", "/admin-api/v1/management", "/admin-api/v1/accounts?after=0",
+                 "/admin-api/v1/admin", "/admin-api/v1/management", "/admin-api/v1/management/configuration", "/admin-api/v1/accounts?after=0",
                  "/admin-api/v1/accounts/15", "/admin-api/v1/bans?state=active"]
         for path in reads:
             with self.subTest(path=path):
@@ -289,6 +289,9 @@ class ApacheHttpsProxyTests(unittest.TestCase):
             ("/admin-api/v1/bans", b"subject=1"),
             ("/admin-api/v1/bans/15/revoke", b"proof=abc"),
             ("/admin-api/v1/management/authorize", b"operation=configuration.read"),
+            ("/admin-api/v1/management/configuration", b"revision=" + b"a" * 64 + b"&network_max_connections=256"),
+            ("/admin-api/v1/management/configuration/write", b"revision=" + b"a" * 64 + b"&network_max_connections=256"),
+            ("/admin-api/v1/management/configuration/restore", b"revision=" + b"a" * 64),
         ]
         boundary = b"a=" + b"b" * 6998
         self.assertEqual(len(boundary), 7000)
@@ -363,6 +366,12 @@ class ApacheHttpsProxyTests(unittest.TestCase):
             ("GET", "/admin-api/v1/management/authorize", None, None),
             ("POST", "/admin-api/v1/management/authorize/extra", form, b"operation=configuration.read"),
             ("POST", "/admin-api/v1/management/write", form, b"operation=configuration.write"),
+            ("GET", "/admin-api/v1/management/configuration/write", None, None),
+            ("GET", "/admin-api/v1/management/configuration/restore", None, None),
+            ("POST", "/admin-api/v1/management/configuration/extra", form, b"revision=1"),
+            ("POST", "/admin-api/v1/management/configuration/write/extra", form, b"revision=1"),
+            ("POST", "/admin-api/v1/management/configuration/write", {"Content-Type": "application/x-www-form-urlencoded",
+                    "X-DC24H-Admin": "1", "Origin": "https://evil.example"}, b"revision=1"),
             ("GET", "/admin-api/v1/status", {"Origin": "https://evil.example"}, None),
             ("GET", "/admin-api/v1/status", {"Sec-Fetch-Site": "cross-site"}, None),
             ("GET", "/admin-api/v1/status", {"Host": "evil.example"}, None),

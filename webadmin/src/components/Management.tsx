@@ -4,13 +4,14 @@ import { adminHeaders } from "../lib/adminAccess";
 import { parseManagement } from "../lib/management";
 import type { ManagementArea, ManagementCatalog } from "../lib/management";
 
-const links: Partial<Record<ManagementArea["key"], { href: string; label: "managementOpenAccounts" | "managementOpenRoles" | "managementOpenBans" }[]>> = {
+const links: Partial<Record<ManagementArea["key"], { href: string; label: "managementOpenAccounts" | "managementOpenRoles" | "managementOpenBans" | "managementOpenConfiguration" }[]>> = {
   accounts: [{ href: "#accounts", label: "managementOpenAccounts" }],
   roles: [
     { href: "#accounts", label: "managementOpenAccounts" },
     { href: "#roles", label: "managementOpenRoles" },
   ],
   bans: [{ href: "#bans", label: "managementOpenBans" }],
+  configuration: [{ href: "#configuration", label: "managementOpenConfiguration" }],
 };
 
 function title(area: ManagementArea, t: Copy) {
@@ -64,7 +65,9 @@ export function Management({ t }: { t: Copy }) {
     {!available && <p>{t.managementUnavailable}</p>}
     {available && catalog && <div className="management-areas">
       {catalog.areas.map((area) => {
-        const areaLinks = area.implemented ? links[area.key] : undefined;
+        // The broad management/authorize contract remains 501. Configuration
+        // has a narrower, separately authorized editor in beta-0.1.4.
+        const areaLinks = area.implemented || (area.key === "configuration" && area.allowed) ? links[area.key] : undefined;
         return <article key={area.key} data-testid={`management-${area.key}`}>
           <h3>{title(area, t)}</h3>
           <p>{body(area, t)}</p>

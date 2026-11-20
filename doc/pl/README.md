@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-beta-0.1.3: kanał wydania Beta. Hub, API i WebAdmin zgłaszają beta-0.1.3. Lokalny proces administracyjny umożliwia chroniony atomowy zapis i przywracanie INI, ale nie przeładowuje pracującego huba.
+beta-0.1.4: kanał wydania Beta. Hub, API i WebAdmin zgłaszają beta-0.1.4. Lokalny edytor WebAdmin umożliwia zatwierdzone zmiany przez oddzielne API administracyjne, ale nie przeładowuje pracującego huba.
 
+- [Edytor konfiguracji — beta-0.1.4](CONFIGURATION_EDITOR.md)
 - [Zapis konfiguracji — beta-0.1.3](CONFIGURATION_WRITE.md)
 - [Przegląd konfiguracji — beta-0.1.2](CONFIGURATION_REVIEW.md)
 - [Fundament zarządzania — beta-0.1.1](MANAGEMENT_FOUNDATION.md)

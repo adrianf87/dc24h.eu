@@ -1,5 +1,14 @@
 # Changelog
 
+## beta-0.1.4 — 2026-11-20
+
+WebAdmin configuration editor — development branch `beta-0.1.4`, based on protected main `3f7f03d`.
+
+- The local-only WebAdmin editor reads the four reviewed nonsecret INI fields, displays saved versus maintenance-process startup values, validates changes on the C++ server and previews the exact modified keys before a confirmed write.
+- Exact Node adapter and Apache allowlists forward the maintenance configuration review, write and restore endpoints only with the established process bearer, administrator grant, session, CSRF, same-origin form and loopback restrictions. Secrets and arbitrary file paths remain excluded.
+- A successful save or restore clearly requires a controlled hub restart. Stale revisions block further actions until a reload; ambiguous results are never retried automatically. The editor stays outside the hub process and has no service commands.
+- EN/US and Polish UI, validation tests, browser tests and adapter/Apache rejection tests accompany the release. Schema v10 and the backend atomic storage format are unchanged.
+
 ## beta-0.1.3 — 2026-11-20
 
 Atomic configuration write and restore — development branch `beta-0.1.3`, from protected main `83b224c`.

@@ -1,3 +1,9 @@
+# WebAdmin configuration editor — beta-0.1.4
+
+Branch `beta-0.1.4` starts from main `3f7f03d`. Hub, API and WebAdmin report `beta-0.1.4`. A restricted editor on the Configuration page loads the saved INI from the separate maintenance process, displays its four allowlisted nonsecret settings and the maintenance startup values, validates and previews differences, then requires explicit confirmation for atomic write or backup restore. Apache and the Node adapter forward only exact loopback, same-origin paths under grant, session, CSRF and server-side role checks. A controlled hub restart is still required; no live reload or service controller is included. Schema v10 is unchanged. See [Configuration editor](CONFIGURATION_EDITOR.md).
+
+## Previous stage
+
 # Atomic configuration write — beta-0.1.3
 
 Branch `beta-0.1.3` starts from main `83b224c`. Hub, API and WebAdmin report `beta-0.1.3`. The isolated maintenance API supports atomic INI write/restore using the fixed, reviewed allowlist and a content revision. Migration v10 records configuration audit intentions and results; v9 history is preserved. See [Configuration write](CONFIGURATION_WRITE.md). No WebAdmin editor, live hub reload or service controller is included.
