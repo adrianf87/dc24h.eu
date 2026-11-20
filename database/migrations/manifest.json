@@ -62,6 +62,13 @@
       "files": [
         "0009_audit_events.sql"
       ]
+    },
+    {
+      "version": 10,
+      "name": "configuration_audit",
+      "files": [
+        "0010_configuration_audit.sql"
+      ]
     }
   ]
 }

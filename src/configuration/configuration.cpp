@@ -2,6 +2,7 @@
 
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <sys/file.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <utf8proc.h>
@@ -13,6 +14,7 @@
 #include <cerrno>
 #include <charconv>
 #include <filesystem>
+#include <map>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -127,11 +129,7 @@ void validate_endpoints(const std::vector<network::Endpoint>& list, std::unorder
     }
 }
 
-std::string read_file(const std::string& filename) {
-    path_text(filename);
-    const int fd = ::open(filename.c_str(), O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK | O_NOCTTY);
-    if (fd < 0) { throw std::invalid_argument("Cannot open configuration file (regular file required, no symlink)"); }
-    struct Close { int fd; ~Close() { ::close(fd); } } close{fd};
+std::string read_fd(int fd) {
     struct stat state{};
     if (::fstat(fd, &state) != 0 || !S_ISREG(state.st_mode) || state.st_size < 0 ||
         static_cast<std::uintmax_t>(state.st_size) > max_file_bytes) {
@@ -160,6 +158,13 @@ std::string read_file(const std::string& filename) {
         i += static_cast<std::size_t>(count);
     }
     return data;
+}
+std::string read_file(const std::string& filename) {
+    path_text(filename);
+    const int fd = ::open(filename.c_str(), O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK | O_NOCTTY);
+    if (fd < 0) { throw std::invalid_argument("Cannot open configuration file (regular file required, no symlink)"); }
+    struct Close { int fd; ~Close() { ::close(fd); } } close{fd};
+    return read_fd(fd);
 }
 } // namespace
 
@@ -590,6 +595,193 @@ bool Review::validate_candidate(std::string_view revision,
         return false;
     }
     return true;
+}
+
+namespace {
+struct OwnedFd {
+    int fd{-1};
+    explicit OwnedFd(int value) noexcept : fd(value) {}
+    ~OwnedFd() { if (fd >= 0) { (void)::close(fd); } }
+    OwnedFd(const OwnedFd&) = delete;
+    OwnedFd& operator=(const OwnedFd&) = delete;
+};
+
+[[noreturn]] void unsafe_file() { throw std::invalid_argument("Unsafe configuration storage"); }
+void checked_regular(const struct stat& state, bool secret) {
+    if (!S_ISREG(state.st_mode) || state.st_nlink != 1 || state.st_uid != ::geteuid() ||
+        (state.st_mode & (secret ? 0077 : 0022)) != 0 || state.st_size < 0 ||
+        static_cast<std::uintmax_t>(state.st_size) > max_file_bytes) { unsafe_file(); }
+}
+bool unchanged(const struct stat& a, const struct stat& b) noexcept {
+    return a.st_dev == b.st_dev && a.st_ino == b.st_ino && a.st_size == b.st_size &&
+        a.st_mode == b.st_mode && a.st_uid == b.st_uid &&
+        a.st_mtim.tv_sec == b.st_mtim.tv_sec && a.st_mtim.tv_nsec == b.st_mtim.tv_nsec &&
+        a.st_ctim.tv_sec == b.st_ctim.tv_sec && a.st_ctim.tv_nsec == b.st_ctim.tv_nsec;
+}
+struct FileBytes { std::string text; struct stat state{}; };
+
+class LockedConfig final {
+public:
+    explicit LockedConfig(const std::string& filename)
+        : leaf_(fs::path(filename).filename().string()),
+          directory_(::open((fs::path(filename).has_parent_path() ? fs::path(filename).parent_path() : fs::path(".")).c_str(),
+              O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)),
+          lock_(-1) {
+        if (leaf_.empty() || leaf_.size() > 180 || leaf_ == "." || leaf_ == ".." || directory_.fd < 0) { unsafe_file(); }
+        struct stat directory_state{};
+        if (::fstat(directory_.fd, &directory_state) != 0 || !S_ISDIR(directory_state.st_mode) ||
+            directory_state.st_uid != ::geteuid() || (directory_state.st_mode & 0022) != 0) { unsafe_file(); }
+        lock_.fd = ::openat(directory_.fd, ("." + leaf_ + ".dc24h.lock").c_str(),
+            O_RDWR | O_CREAT | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC, 0600);
+        struct stat lock_state{};
+        if (lock_.fd < 0 || ::fstat(lock_.fd, &lock_state) != 0) { unsafe_file(); }
+        checked_regular(lock_state, true);
+        if ((lock_state.st_mode & 0777) != 0600 || ::flock(lock_.fd, LOCK_EX | LOCK_NB) != 0) { unsafe_file(); }
+    }
+    [[nodiscard]] FileBytes primary() const { return load(leaf_, false); }
+    [[nodiscard]] FileBytes backup() const { return load(leaf_ + ".dc24h.bak", true); }
+    void check_primary(const struct stat& expected) const {
+        struct stat actual{};
+        if (::fstatat(directory_.fd, leaf_.c_str(), &actual, AT_SYMLINK_NOFOLLOW) != 0 || !unchanged(expected, actual)) {
+            throw StaleReview();
+        }
+    }
+    void persist_backup(std::string_view bytes) const { persist(leaf_ + ".dc24h.bak", bytes, 0600); }
+    void persist_undo(std::string_view bytes) const { persist(leaf_ + ".dc24h.undo", bytes, 0600); }
+    void persist_primary(std::string_view bytes, mode_t mode) const { persist(leaf_, bytes, mode & 0777); }
+private:
+    std::string leaf_;
+    OwnedFd directory_;
+    OwnedFd lock_;
+
+    [[nodiscard]] FileBytes load(const std::string& name, bool secret) const {
+        OwnedFd file(::openat(directory_.fd, name.c_str(), O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC));
+        if (file.fd < 0) { unsafe_file(); }
+        FileBytes result;
+        if (::fstat(file.fd, &result.state) != 0) { unsafe_file(); }
+        checked_regular(result.state, secret);
+        result.text = read_fd(file.fd);
+        struct stat after{};
+        if (::fstat(file.fd, &after) != 0 || !unchanged(result.state, after)) { throw StaleReview(); }
+        return result;
+    }
+    void persist(const std::string& name, std::string_view bytes, mode_t mode) const {
+        if (bytes.size() > max_file_bytes) { unsafe_file(); }
+        struct stat previous{};
+        if (::fstatat(directory_.fd, name.c_str(), &previous, AT_SYMLINK_NOFOLLOW) == 0) {
+            checked_regular(previous, name != leaf_);
+        } else if (errno != ENOENT) { unsafe_file(); }
+        std::array<unsigned char, 12> random{};
+        if (RAND_bytes(random.data(), static_cast<int>(random.size())) != 1) { unsafe_file(); }
+        constexpr char hex[] = "0123456789abcdef";
+        std::string temporary = "." + leaf_ + ".tmp-";
+        for (const auto byte : random) { temporary += hex[byte >> 4]; temporary += hex[byte & 15]; }
+        OwnedFd fd(::openat(directory_.fd, temporary.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600));
+        if (fd.fd < 0) { unsafe_file(); }
+        bool renamed = false;
+        try {
+            if (::fchmod(fd.fd, mode) != 0) { unsafe_file(); }
+            std::size_t offset = 0;
+            while (offset < bytes.size()) {
+                const auto count = ::write(fd.fd, bytes.data() + offset, bytes.size() - offset);
+                if (count < 0 && errno == EINTR) { continue; }
+                if (count <= 0) { unsafe_file(); }
+                offset += static_cast<std::size_t>(count);
+            }
+            if (::fsync(fd.fd) != 0 || ::renameat(directory_.fd, temporary.c_str(), directory_.fd, name.c_str()) != 0) {
+                unsafe_file();
+            }
+            renamed = true;
+            if (::fsync(directory_.fd) != 0) { throw WriteOutcomeUnknown(); }
+        } catch (...) {
+            if (!renamed) { (void)::unlinkat(directory_.fd, temporary.c_str(), 0); }
+            throw;
+        }
+    }
+};
+
+struct IniField { const char* section; const char* key; };
+IniField ini_field(std::string_view key) {
+    if (key == "network_max_connections") { return {"network", "max_connections"}; }
+    if (key == "network_idle_timeout") { return {"network", "idle_timeout"}; }
+    if (key == "logging_level") { return {"logging", "level"}; }
+    if (key == "general_language") { return {"general", "language"}; }
+    throw std::invalid_argument("Unknown review option");
+}
+std::string patch_ini(std::string source, const std::vector<std::pair<std::string, std::string>>& changes) {
+    for (const auto& [name, value] : changes) {
+        const auto target = ini_field(name);
+        std::string section;
+        bool found = false;
+        std::size_t pos = 0;
+        while (pos < source.size()) {
+            const auto end = source.find('\n', pos);
+            const auto line_end = end == std::string::npos ? source.size() : end;
+            std::string_view line(source.data() + pos, line_end - pos);
+            const bool cr = !line.empty() && line.back() == '\r';
+            if (cr) { line.remove_suffix(1); }
+            if (pos == 0 && line.starts_with("\xEF\xBB\xBF")) { line.remove_prefix(3); }
+            const auto text = trim(line);
+            if (text.size() >= 3 && text.front() == '[' && text.back() == ']') {
+                section = trim(std::string_view(text).substr(1, text.size() - 2));
+            } else if (section == target.section) {
+                const auto equal = text.find('=');
+                if (equal != std::string::npos && trim(std::string_view(text).substr(0, equal)) == target.key) {
+                    source.replace(pos, line_end - pos, std::string(target.key) + " = " + value + (cr ? "\r" : ""));
+                    found = true;
+                    break;
+                }
+            }
+            if (end == std::string::npos) { break; }
+            pos = end + 1;
+        }
+        if (!found) {
+            if (!source.empty() && source.back() != '\n') { source += '\n'; }
+            source += std::string("[") + target.section + "]\n" + target.key + " = " + value + "\n";
+        }
+        if (source.size() > max_file_bytes) { throw std::invalid_argument("Configuration exceeds size limit"); }
+    }
+    return source;
+}
+} // namespace
+
+std::string Review::write_candidate(std::string_view revision,
+    const std::vector<std::pair<std::string, std::string>>& changes) const {
+    if (changes.empty() || changes.size() > 4) { throw std::invalid_argument("Invalid change set"); }
+    std::map<std::string, std::string> unique;
+    for (const auto& [key, value] : changes) {
+        (void)ini_field(key);
+        if (!unique.emplace(key, value).second) { throw std::invalid_argument("Duplicate change"); }
+    }
+    LockedConfig storage(filename_);
+    const auto current = storage.primary();
+    if (revision_for(current.text) != revision) { throw StaleReview(); }
+    auto candidate = parse_file_data(filename_, current.text);
+    validate(candidate);
+    for (const auto& [key, value] : changes) {
+        if (!apply_review_change(candidate, key, value)) { throw std::invalid_argument("Invalid proposed setting"); }
+    }
+    validate(candidate);
+    const auto updated = patch_ini(current.text, changes);
+    validate(parse_file_data(filename_, updated));
+    storage.check_primary(current.state);
+    storage.persist_backup(current.text);
+    storage.check_primary(current.state);
+    storage.persist_primary(updated, current.state.st_mode);
+    return revision_for(updated);
+}
+
+std::string Review::restore_backup(std::string_view revision) const {
+    LockedConfig storage(filename_);
+    const auto current = storage.primary();
+    if (revision_for(current.text) != revision) { throw StaleReview(); }
+    const auto backup = storage.backup();
+    validate(parse_file_data(filename_, backup.text));
+    storage.check_primary(current.state);
+    storage.persist_undo(current.text);
+    storage.check_primary(current.state);
+    storage.persist_primary(backup.text, current.state.st_mode);
+    return revision_for(backup.text);
 }
 
 CommandLine parse_arguments(int argc, char* const argv[]) {

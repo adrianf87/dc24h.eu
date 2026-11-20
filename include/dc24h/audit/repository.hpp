@@ -25,6 +25,7 @@ struct Event {
     std::uint64_t actor_id{};
     std::string target_kind;
     std::uint64_t target_id{};
+    std::string outcome{"succeeded"};
     friend bool operator==(const Event&, const Event&) = default;
 };
 [[nodiscard]] bool known_action(std::string_view action) noexcept;
@@ -36,6 +37,11 @@ public:
     void require_schema();
     void append_in_transaction(std::string_view action, std::uint64_t actor, std::string_view target_kind,
         std::uint64_t target, std::int64_t occurred_at);
+    // Durable intent precedes a filesystem mutation. A crash leaves a
+    // 'started' entry, never a misleading successful record.
+    [[nodiscard]] std::uint64_t begin_configuration(std::string_view action, std::uint64_t actor,
+        std::int64_t occurred_at);
+    void finish_configuration(std::uint64_t event_id, std::uint64_t actor, bool succeeded);
     [[nodiscard]] std::vector<Event> list(std::uint64_t after);
 private:
     database::Connection& connection_;

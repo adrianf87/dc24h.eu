@@ -101,10 +101,10 @@ struct SessionLock {
 };
 
 void require_current(Connection& connection) {
-    if (migration_catalog().size() != 9) { throw MigrationError(MigrationErrorKind::history); }
+    if (migration_catalog().size() != 10) { throw MigrationError(MigrationErrorKind::history); }
     const auto status = inspect_migrations(connection);
     if (status.dirty) { throw MigrationError(MigrationErrorKind::dirty); }
-    if (status.current_version != 9 || status.latest_version != 9 || status.pending != 0) {
+    if (status.current_version != 10 || status.latest_version != 10 || status.pending != 0) {
         throw MigrationError(MigrationErrorKind::history);
     }
 }
@@ -254,7 +254,7 @@ std::vector<Row> read_rows(Connection& connection, const Table& table, std::uint
 
 std::uint64_t write_tables(Destination& destination, Connection& connection) {
     destination.emit(magic.data(), magic.size());
-    destination.emit_u32(9);
+    destination.emit_u32(10);
     destination.emit_u32(static_cast<std::uint32_t>(std::size(tables)));
     std::uint64_t total = 0;
     for (const auto& table : tables) {
@@ -305,9 +305,13 @@ struct Cursor {
     [[nodiscard]] bool done() const { return cursor == end; }
 };
 
-std::vector<std::vector<Row>> parse_body(std::string_view body) {
+std::vector<std::vector<Row>> parse_body(std::string_view body, std::uint32_t& version) {
     Cursor cursor(body);
-    if (cursor.bytes(magic.size()) != magic || cursor.u32() != 9 || cursor.u32() != std::size(tables)) { refuse(); }
+    if (cursor.bytes(magic.size()) != magic) { refuse(); }
+    version = cursor.u32();
+    // The v9 archive uses the same table/column encoding. Its migration
+    // history is a verified prefix of v10, so it remains restorable.
+    if ((version != 9 && version != 10) || cursor.u32() != std::size(tables)) { refuse(); }
     std::vector<std::vector<Row>> stored;
     stored.reserve(std::size(tables));
     for (const auto& table : tables) {
@@ -400,12 +404,17 @@ void same_rows(const std::vector<Row>& live, const std::vector<Row>& stored) {
     }
 }
 
-std::uint64_t insert_rows(Connection& connection, const std::vector<std::vector<Row>>& stored) {
+std::uint64_t insert_rows(Connection& connection, const std::vector<std::vector<Row>>& stored,
+    std::uint32_t archive_version) {
     std::uint64_t inserted = 0;
     for (std::size_t index = 0; index < std::size(tables); ++index) {
         const auto& table = tables[index];
         if (!table.application) {
-            same_rows(read_rows(connection, table, count_rows(connection, table)), stored[index]);
+            const auto live = read_rows(connection, table, count_rows(connection, table));
+            if (archive_version == 9 && index == 0) {
+                if (live.size() != stored[index].size() + 1 || stored[index].size() != 9) { refuse(); }
+                same_rows(std::vector<Row>(live.begin(),live.begin()+9),stored[index]);
+            } else { same_rows(live,stored[index]); }
             continue;
         }
         if (count_rows(connection, table) != 0) { refuse(); }
@@ -448,11 +457,12 @@ BackupReport backup(Connection& connection, const std::string& path) {
 BackupReport restore(Connection& connection, const std::string& path) {
     if (connection.in_transaction()) { throw Error(ErrorKind::transaction, Operation::begin); }
     const auto body = read_private_backup(path);
-    const auto stored = parse_body(body);
+    std::uint32_t archive_version{};
+    const auto stored = parse_body(body,archive_version);
     const SessionLock lock(connection);
     require_current(connection);
     auto transaction = connection.transaction();
-    const auto rows = insert_rows(connection, stored);
+    const auto rows = insert_rows(connection, stored,archive_version);
     transaction.commit();
     return BackupReport{body.size() + 32, rows};
 }

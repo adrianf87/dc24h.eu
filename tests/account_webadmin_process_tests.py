@@ -6,6 +6,7 @@ import re
 import selectors
 import signal
 import socket
+import stat
 import subprocess
 import sys
 import time
@@ -123,6 +124,41 @@ def exercise(binary, seed, config, db_socket, password, token, api_socket):
         policy = request('GET', '/api/v1/status')[1]['configuration']
         assert policy['mode'] == 'maintenance' and not policy['authentication']['enabled']
         assert policy['database']['enabled'] and policy['restart_required']
+        # Configuration persistence is local, role-gated, revision-checked and audited.
+        config_path = Path(config)
+        initial_bytes = config_path.read_bytes()
+        code, config_view = request('GET', '/api/v1/management/configuration')
+        assert code == 200 and config_view['maintenance'] and config_view['read_only']
+        config_revision = config_view['revision']
+        previous_limit = config_view['saved']['network_max_connections']
+        next_limit = '302' if previous_limit == '301' else '301'
+        assert request('POST', '/api/v1/management/configuration/write',
+                       {'revision': config_revision, 'network_max_connections': next_limit},
+                       authorized=False, delay=True)[0] == 401
+        assert request('POST', '/api/v1/management/configuration/write',
+                       {'revision': config_revision, 'network_max_connections': next_limit},
+                       bind=False, delay=True)[1]['error'] == 'csrf_required'
+        invalid = request('POST', '/api/v1/management/configuration/write',
+                          {'revision': config_revision, 'network_max_connections': '0'}, delay=True)
+        assert invalid == (422, {'error': 'invalid_configuration'})
+        assert config_path.read_bytes() == initial_bytes
+        code, saved_config = request('POST', '/api/v1/management/configuration/write',
+                                     {'revision': config_revision, 'network_max_connections': next_limit}, delay=True)
+        assert code == 200 and saved_config['written'] and saved_config['restart_required']
+        assert saved_config['revision'] != config_revision and saved_config['backup_available']
+        backup = Path(str(config_path) + '.dc24h.bak')
+        assert backup.read_bytes() == initial_bytes and stat.S_IMODE(backup.stat().st_mode) == 0o600
+        assert request('GET', '/api/v1/management/configuration')[1]['saved']['network_max_connections'] == next_limit
+        assert request('POST', '/api/v1/management/configuration/write',
+                       {'revision': config_revision, 'network_max_connections': '400'}, delay=True)[0] == 409
+        assert request('POST', '/api/v1/management/configuration/restore',
+                       {'revision': config_revision}, delay=True)[0] == 409
+        code, restored = request('POST', '/api/v1/management/configuration/restore',
+                                 {'revision': saved_config['revision']}, delay=True)
+        assert code == 200 and restored['written'] and restored['revision'] == config_revision
+        assert config_path.read_bytes() == initial_bytes
+        undo = Path(str(config_path) + '.dc24h.undo')
+        assert stat.S_IMODE(undo.stat().st_mode) == 0o600 and next_limit.encode() in undo.read_bytes()
         current = request('GET', '/api/v1/accounts/' + target)[1]['account']
         assert current['status'] == 'active'
         stale = { 'actor_id':actor, 'proof':proof, 'revision':'1' }
@@ -183,6 +219,13 @@ def exercise(binary, seed, config, db_socket, password, token, api_socket):
         assert code == 200 and history['maintenance'] is True and history['restart_required'] is True
         recorded = [event['action'] for event in history['events']]
         assert 'accounts.create' in recorded and 'bans.create' in recorded and 'bans.revoke' in recorded
+        assert 'configuration.write' in recorded and 'configuration.restore' in recorded
+        assert all(event['outcome'] == 'succeeded' for event in history['events']
+                   if event['target_kind'] != 'configuration')
+        assert any(event['action'] == 'configuration.restore' and event['outcome'] == 'failed'
+                   for event in history['events'])
+        assert any(event['action'] == 'configuration.restore' and event['outcome'] == 'succeeded'
+                   for event in history['events'])
         assert proof not in json.dumps(history) and 'Private account ban' not in json.dumps(history) and 'Temporary HTTP' not in json.dumps(history)
         assert request('POST', '/api/v1/audit', {'actor_id': target, 'proof': proof, 'after': '0'}, delay=True)[0] == 403
         assert request('POST', '/api/v1/audit', {'actor_id': actor, 'proof': proof, 'after': '00'}, delay=True)[0] == 400

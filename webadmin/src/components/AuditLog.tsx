@@ -71,7 +71,7 @@ export function AuditLog({t}:{t:Copy}) {
     </form>
     <div className="accounts-table-wrap"><table><caption>{t.auditTable}</caption>
       <thead><tr><th>ID</th><th>{t.auditWhen}</th><th>{t.auditAction}</th><th>{t.auditTarget}</th><th>{t.auditOutcome}</th></tr></thead>
-      <tbody>{items.length ? items.map(event => <tr key={event.id}><td>{event.id}</td><td>{new Date(event.occurred_at * 1000).toLocaleString()}</td><td><code>{event.action}</code></td><td>{t[event.target_kind === "account" ? "auditAccount" : "auditBan"]} {event.target_id}</td><td>{t.auditSucceeded}</td></tr>) : <tr><td colSpan={5}>{t.auditEmpty}</td></tr>}</tbody>
+      <tbody>{items.length ? items.map(event => <tr key={event.id}><td>{event.id}</td><td>{new Date(event.occurred_at * 1000).toLocaleString()}</td><td><code>{event.action}</code></td><td>{t[event.target_kind === "account" ? "auditAccount" : event.target_kind === "ban" ? "auditBan" : "auditConfiguration"]} {event.target_id}</td><td>{event.outcome === "succeeded" ? t.auditSucceeded : event.outcome === "started" ? t.auditStarted : t.auditFailed}</td></tr>) : <tr><td colSpan={5}>{t.auditEmpty}</td></tr>}</tbody>
     </table></div>
     <div className="accounts-buttons">
       <button disabled={busy || cursor === "0" || !proof.current} onClick={() => void load("0")}>{t.accountsFirst}</button>

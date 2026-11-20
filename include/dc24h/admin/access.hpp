@@ -92,6 +92,9 @@ public:
     // Reloads the actor after a live grant was accepted. A missing grant, a
     // missing row or an inactive account returns nullopt. Database failures throw.
     [[nodiscard]] std::optional<accounts::Role> actor_role(std::string_view token);
+    // Call only after authorize() accepted the same request. The id is
+    // matched to the in-memory grant; it is never taken from the request body.
+    [[nodiscard]] std::optional<std::uint64_t> authorized_actor(std::string_view token) const noexcept;
 
 private:
     struct Slot {

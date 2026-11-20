@@ -8,10 +8,17 @@ test("audit pages keep fixed facts and drop secret fields",()=>{
  assert.deepEqual(parseAudit(page([{...event,name:"Owner"}],null)),page([event],null));
  const full=Array.from({length:16},(_,index)=>({...event,id:String(index+1)}));
  assert.equal(parseAudit(page(full,"16")).next_after,"16");
+ const config = {id:"17",occurred_at:11,action:"configuration.write",actor_id:"2",target_kind:"configuration",target_id:"1",outcome:"started"};
+ assert.deepEqual(parseAuditEvent({...config,configuration:"secret"}),config);
+ assert.deepEqual(parseAuditEvent({...config,action:"configuration.restore",outcome:"failed"}),
+  {...config,action:"configuration.restore",outcome:"failed"});
 });
 test("malformed audit pages and unknown actions fail closed",()=>{
- for(const patch of [{id:"01"},{id:"9223372036854775808"},{occurred_at:-1},{occurred_at:253402300800},{action:"users.kick"},{target_kind:"ip"},{outcome:"refused"},{actor_id:2}]) {
+ for(const patch of [{id:"01"},{id:"9223372036854775808"},{occurred_at:-1},{occurred_at:253402300800},{action:"users.kick"},{target_kind:"ip"},{outcome:"refused"},{actor_id:2},{action:"configuration.write"}]) {
   assert.throws(()=>parseAuditEvent({...event,...patch}));
+ }
+ for (const patch of [{target_id:"2"},{action:"accounts.create"},{outcome:"unknown"},{target_kind:"account"}]) {
+  assert.throws(()=>parseAuditEvent({...event,action:"configuration.write",target_kind:"configuration",target_id:"1",outcome:"started",...patch}));
  }
  assert.throws(()=>parseAudit(page([event,{...event,id:"1"}],null)));
  assert.throws(()=>parseAudit(page([event],"1")));
