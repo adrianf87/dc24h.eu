@@ -10,7 +10,7 @@ import { parseSearch } from "./search-status.ts";
 import type { SearchSnapshot } from "./search-status.ts";
 import { parseConfiguration } from "./configuration.ts";
 import type { StartupConfiguration } from "./configuration.ts";
-export const WEBADMIN_VERSION = "alpha-0.9.17";
+export const WEBADMIN_VERSION = "beta-0.1";
 export interface HubSnapshot {
   api_version: "v1";
   server: {
@@ -129,7 +129,7 @@ export function parseSnapshot(value: unknown): HubSnapshot {
     root.api_version !== "v1" ||
     server.name !== "dc24h.eu" ||
     typeof server.version !== "string" ||
-    !/^alpha-\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(server.version) ||
+    !/^(?:alpha-\d{1,3}\.\d{1,3}\.\d{1,3}|beta-\d{1,3}\.\d{1,3}(?:\.\d{1,3})?)$/.test(server.version) ||
     typeof server.core_running !== "boolean" ||
     typeof database.enabled !== "boolean"
   ) {

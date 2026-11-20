@@ -139,6 +139,10 @@ alpha-0.1.10 powstaje z main po alpha-0.1.9. Oddzielaj schemat/formatowanie prze
 
 alpha-0.1.11 powstaje z main po alpha-0.1.10. Oddzielaj aktywację hosta, rzeczywiste certyfikaty i reload od tworzenia/testowania przykładu. Testuj dokładnie dostarczaną politykę TLS/dostępu/nagłówków z tymczasowymi ścieżkami/portami, bez konfiguracji hosta. Sukces apache2 -t nie dowodzi zgodności certyfikatu/klucza; sprawdzaj inicjalizację. Zachowuj oba języki dokumentacji i spójne wersje fixture.
 
+## Linia beta — beta-0.1
+
+Gałąź powstaje z main. Hub, API i WebAdmin zgłaszają `beta-0.1`. Krotka CMake i pakietu zostaje `0.1.0`. Nie zmieniaj zachowania huba, bajtów ADC ani schematu v9. Nie dodawaj migracji schematu, pola statusu, klucza INI, strony WebAdmin, flagi CLI ani ustawienia Apache. Nie twierdź, że to wydanie produkcyjne albo że którekolwiek zagrożenie szczątkowe jest zamknięte. `configuration.manage` i `hub.manage` pozostają niezaimplementowane.
+
 ## Zależności — alpha-0.9.17
 
 Gałąź powstaje z main. Sprawdzaj bezpośrednie biblioteki dzielone plików huba, dokładny lockfile WebAdmin i zarejestrowane testy bezpieczeństwa. Nie pobieraj pakietów i nie odpytuj bazy podatności. Nie dodawaj migracji schematu, pola statusu, klucza INI, strony WebAdmin, flagi CLI ani ustawienia Apache. Nie twierdź, że zestaw zależności jest wolny od błędów albo że którekolwiek zagrożenie szczątkowe jest zamknięte. `configuration.manage` i `hub.manage` pozostają niezaimplementowane.

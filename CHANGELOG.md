@@ -1,5 +1,16 @@
 # Changelog
 
+## beta-0.1 — 2026-11-20
+
+Beta baseline — release channel Beta, based on main `423a958`. The branch name is `beta-0.1`.
+
+- The hub, the API and WebAdmin report `beta-0.1`. The CMake project number and the WebAdmin package number are `0.1.0`. The status parser accepts `beta-N.N`, `beta-N.N.N` and the existing `alpha-N.N.N` form. Hub behavior, ADC bytes, recipient sets and security decisions stay the ones delivered through alpha-0.9.17.
+- `beta.baseline` checks that version string, the twelve maintenance routes, and that `configuration.manage` and `hub.manage` stay unimplemented. The catalog test still requires schema v9 and `audit_events`. The hub executable does not gain a library for this check.
+- This does not add a route, INI key, CLI flag, status field, WebAdmin page, Apache setting or schema migration. Schema v9 is unchanged. `configuration.manage` and `hub.manage` stay unimplemented. Browser kick and mute stay undispatched. Status and health stay bearer-only. `Require local` stays. No residual threat is closed. This is not a production release.
+- Run Check status on GitHub-hosted Ubuntu 24.04. Add `beta-0.1` to the push branches. Local validation uses eight CPU threads. Remote CI completion is not awaited.
+
+Validation on Debian 13: all 230/230 CTest suites passed in Debug (75.67 s real) and Release (73.97 s real), including disposable MariaDB, real ncdc ADC/ADCS, the Apache HTTPS reverse proxy, the sandboxed systemd example, and the beta baseline. The Release rebuild log contained no compiler warnings. WebAdmin typecheck and production build passed. All 49 Node tests passed. All 42 Chromium tests passed. Actual C++ API, adapter and React integration passed. Release metadata, documentation UTF-8, language parity, local Markdown links, Python syntax with warnings as errors and whitespace checks passed. Remote CI completion is not awaited. No production deployment, schema migration, host account or service activation is performed.
+
 ## alpha-0.9.17 — 2026-11-19
 
 CI and dependencies — library control and automatic security tests, based on main `6940992`. The branch name is `alpha-0.9.17`.

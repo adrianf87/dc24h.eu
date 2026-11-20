@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: alpha-0.9.17.
+Current development version: beta-0.1.
+
+[Beta baseline — beta-0.1](us/BETA.md) · [PL](pl/BETA.md)
 
 [Dependencies — alpha-0.9.17](us/DEPENDENCIES.md) · [PL](pl/DEPENDENCIES.md)
 

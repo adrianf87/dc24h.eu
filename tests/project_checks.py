@@ -15,6 +15,10 @@ def check_project(root):
     if not match:
         return ["CMake project version is missing"]
     version = match.group(1)
+    display_match = re.search(r'set\(DC24H_VERSION "([^"]+)"\)', cmake)
+    if not display_match:
+        return ["DC24H_VERSION is missing"]
+    display = display_match.group(1)
     package = json.loads((root / "webadmin/package.json").read_text(encoding="utf-8"))
     lock = json.loads((root / "webadmin/package-lock.json").read_text(encoding="utf-8"))
     for name, actual in (
@@ -25,15 +29,17 @@ def check_project(root):
         if actual != version:
             errors.append(f"{name}: expected {version}, got {actual!r}")
     frontend = (root / "webadmin/src/lib/status.ts").read_text(encoding="utf-8")
-    if f'export const WEBADMIN_VERSION = "alpha-{version}";' not in frontend:
-        errors.append("WEBADMIN_VERSION differs from CMake project version")
+    if f'export const WEBADMIN_VERSION = "{display}";' not in frontend:
+        errors.append("WEBADMIN_VERSION differs from DC24H_VERSION")
     # Keep black-box CLI/log/API and browser fixtures on the release version.
     # Otherwise metadata can pass while the real process tests expect an older build.
+    release_tokens = re.compile(r"(?:alpha|beta)-\d+\.\d+(?:\.\d+)?")
     for name in ("tests/process_tests.py", "tests/logging_process_tests.py", "tests/api_process_tests.py",
-                 "webadmin/tests/fixtures.ts", "webadmin/tests/panel.spec.ts", "webadmin/tests/live-panel.mjs"):
-        versions = set(re.findall(r"alpha-\d+\.\d+\.\d+", (root / name).read_text(encoding="utf-8")))
-        if versions != {f"alpha-{version}"}:
-            errors.append(f"{name}: release version fixtures differ from CMake project version")
+                 "webadmin/tests/fixtures.ts", "webadmin/tests/panel.spec.ts", "webadmin/tests/dashboard.spec.ts",
+                 "webadmin/tests/live-panel.mjs"):
+        versions = set(release_tokens.findall((root / name).read_text(encoding="utf-8")))
+        if versions != {display}:
+            errors.append(f"{name}: release version fixtures differ from DC24H_VERSION")
 
     us = {p.relative_to(root / "doc/us") for p in (root / "doc/us").rglob("*.md")}
     pl = {p.relative_to(root / "doc/pl") for p in (root / "doc/pl").rglob("*.md")}
@@ -49,7 +55,7 @@ def check_project(root):
             errors.append(f"{name}: replacement character or UTF-8 BOM")
         if path in current_documents:
             header = text.splitlines()[:6]
-            if not any(f"alpha-{version}" in line for line in header):
+            if not any(display in line for line in header):
                 errors.append(f"{name}: current version missing from introduction")
         for target in re.findall(r"\[[^\]]*\]\(([^\s)]+)\)", text):
             url = urlsplit(target)

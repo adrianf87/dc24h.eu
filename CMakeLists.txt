@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.9.17 LANGUAGES CXX)
+project(dc24h VERSION 0.1.0 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -26,7 +26,8 @@ else()
     message(FATAL_ERROR "DC24H_SANITIZER must be address, undefined, thread, or empty")
 endif()
 
-set(DC24H_VERSION "alpha-${PROJECT_VERSION}")
+# Operators see beta-0.1. The VERSION tuple above is the package number.
+set(DC24H_VERSION "beta-0.1")
 configure_file(cmake/version.hpp.in generated/dc24h/version.hpp @ONLY)
 find_package(Threads REQUIRED)
 find_package(OpenSSL 3 REQUIRED COMPONENTS SSL Crypto)
@@ -328,6 +329,9 @@ if(BUILD_TESTING)
     add_test(NAME security.threat_model COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/threat_model_tests.py")
     set_tests_properties(security.threat_model PROPERTIES TIMEOUT 15)
+    add_test(NAME beta.baseline COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/beta_baseline_tests.py")
+    set_tests_properties(beta.baseline PROPERTIES TIMEOUT 15)
     add_test(NAME configuration.policy.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/configuration_policy_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(configuration.policy.process PROPERTIES TIMEOUT 30)
