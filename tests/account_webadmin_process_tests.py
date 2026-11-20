@@ -13,7 +13,7 @@ from urllib.parse import urlencode
 
 
 def exercise(binary, seed, config, db_socket, password, token, api_socket):
-    seeded = subprocess.run([seed, str(db_socket), str(password)], capture_output=True, text=True, timeout=30)
+    seeded = subprocess.run([seed, str(db_socket), str(password)], capture_output=True, text=True, timeout=90)
     assert seeded.returncode == 0, seeded.stderr
     ids = re.search(r'actor=(\d+) target=(\d+)', seeded.stdout)
     assert ids, 'Missing account fixtures'

@@ -233,6 +233,8 @@ alpha-0.9.5 nie dodaje trasy ani pola statusu. Polityka liścia i szyfrów ADCS 
 
 beta-0.1 nie dodaje trasy ani pola statusu. Zgłaszany napis wersji to `beta-0.1`. WebAdmin przyjmuje tę formę beta i dotychczasową formę alpha. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Linia beta](BETA.md).
 
+beta-0.1.1 nie dodaje pola statusu. Rozszerza `GET /api/v1/management` do schematu 2 i dodaje `POST /api/v1/management/authorize`. Dozwolona operacja zwraca `not_implemented`. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Fundament zarządzania](MANAGEMENT_FOUNDATION.md).
+
 alpha-0.9.17 nie dodaje trasy ani pola statusu. Audyt zależności działa tylko w swoim teście. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Zależności](DEPENDENCIES.md).
 
 alpha-0.9.16 nie dodaje trasy ani pola statusu. Próba przeciążenia działa tylko w swoim teście jednostkowym. Powyższy przykład JSON pozostaje bez zmian. Zobacz [Testy przeciążenia](STRESS.md).

@@ -225,6 +225,10 @@ TLS and browser authentication are separate controls. The template selects TLS 1
 
 [Beta baseline](BETA.md) changes the reported release string to `beta-0.1`. It does not add a route, a grant or a bypass. `configuration.manage` and `hub.manage` stay unimplemented. Schema v9 is unchanged. No status field, WebAdmin page, INI key or Apache setting is added. This does not close a residual threat. This is not a production release.
 
+## Management foundation — beta-0.1.1
+
+[Management foundation](MANAGEMENT_FOUNDATION.md) checks the grant, the session, the CSRF secret and the operation permission before it answers `not_implemented`. `configuration.manage` and `hub.manage` stay unimplemented. The handler does not open a file, spawn a process or accept a caller-supplied path or command. Schema v9 is unchanged. No status field or INI key is added. Apache forwards only the exact authorize path. This does not close a residual threat. This is not a production release.
+
 ## Dependencies — alpha-0.9.17
 
 [Dependencies](DEPENDENCIES.md) checks the direct shared libraries of the hub binaries, the exact WebAdmin lockfile and the registered security tests. It does not add a route, a grant or a bypass. It does not query a vulnerability database. `configuration.manage` and `hub.manage` stay unimplemented. Schema v9 is unchanged. No status field, WebAdmin page, INI key or Apache setting is added. This does not close a residual threat.

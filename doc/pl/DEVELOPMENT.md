@@ -139,6 +139,10 @@ alpha-0.1.10 powstaje z main po alpha-0.1.9. Oddzielaj schemat/formatowanie prze
 
 alpha-0.1.11 powstaje z main po alpha-0.1.10. Oddzielaj aktywację hosta, rzeczywiste certyfikaty i reload od tworzenia/testowania przykładu. Testuj dokładnie dostarczaną politykę TLS/dostępu/nagłówków z tymczasowymi ścieżkami/portami, bez konfiguracji hosta. Sukces apache2 -t nie dowodzi zgodności certyfikatu/klucza; sprawdzaj inicjalizację. Zachowuj oba języki dokumentacji i spójne wersje fixture.
 
+## Fundament zarządzania — beta-0.1.1
+
+Gałąź powstaje z main. Hub, API i WebAdmin zgłaszają `beta-0.1.1`. Krotka CMake i pakietu zostaje `0.1.0`. Rozszerz katalog zarządzania i dodaj kontrakt autoryzacji. Nie oznaczaj `configuration.manage` ani `hub.manage` jako zaimplementowanych. Nie odczytuj ani nie zapisuj konfiguracji. Nie uruchamiaj, nie zatrzymuj ani nie restartuj huba. Nie dodawaj migracji schematu, pola statusu, klucza INI ani flagi CLI. Nie twierdź, że to wydanie produkcyjne albo że którekolwiek zagrożenie szczątkowe jest zamknięte. Otwórz pull request do `main` i scalaj dopiero po powodzeniu wymaganych kontroli.
+
 ## Linia beta — beta-0.1
 
 Gałąź powstaje z main. Hub, API i WebAdmin zgłaszają `beta-0.1`. Krotka CMake i pakietu zostaje `0.1.0`. Nie zmieniaj zachowania huba, bajtów ADC ani schematu v9. Nie dodawaj migracji schematu, pola statusu, klucza INI, strony WebAdmin, flagi CLI ani ustawienia Apache. Nie twierdź, że to wydanie produkcyjne albo że którekolwiek zagrożenie szczątkowe jest zamknięte. `configuration.manage` i `hub.manage` pozostają niezaimplementowane. Uruchamiaj Check status na publicznych runnerach GitHub-hosted `ubuntu-22.04`, `ubuntu-24.04` i `ubuntu-26.04`. Każde zadanie sprawdza cztery logiczne CPU przez `nproc`.

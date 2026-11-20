@@ -27,7 +27,7 @@ else()
 endif()
 
 # Operators see beta-0.1. The VERSION tuple above is the package number.
-set(DC24H_VERSION "beta-0.1")
+set(DC24H_VERSION "beta-0.1.1")
 configure_file(cmake/version.hpp.in generated/dc24h/version.hpp @ONLY)
 find_package(Threads REQUIRED)
 find_package(OpenSSL 3 REQUIRED COMPONENTS SSL Crypto)

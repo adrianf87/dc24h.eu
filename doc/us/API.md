@@ -234,6 +234,8 @@ alpha-0.9.5 does not add a route or a status field. The ADCS leaf and cipher pol
 
 beta-0.1 does not add a route or a status field. The reported version string is `beta-0.1`. WebAdmin accepts that beta form and the existing alpha form. The JSON example above is unchanged. See [Beta baseline](BETA.md).
 
+beta-0.1.1 does not add a status field. It extends `GET /api/v1/management` to schema 2 and adds `POST /api/v1/management/authorize`. A permitted operation returns `not_implemented`. The JSON example above is unchanged. See [Management foundation](MANAGEMENT_FOUNDATION.md).
+
 alpha-0.9.17 does not add a route or a status field. The dependency audit runs only inside its test. The JSON example above is unchanged. See [Dependencies](DEPENDENCIES.md).
 
 alpha-0.9.16 does not add a route or a status field. The stress soak runs only inside its unit test. The JSON example above is unchanged. See [Stress testing](STRESS.md).

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lock the beta-0.1 release string and the unchanged alpha-0.9.17 limits."""
+"""Lock the beta-0.1.1 release string, the authorize contract and the unchanged limits."""
 
 from pathlib import Path
 import sys
@@ -57,7 +57,7 @@ def main():
     errors = []
     cmake = check(ROOT / "CMakeLists.txt", (
         "project(dc24h VERSION 0.1.0 LANGUAGES CXX)",
-        'set(DC24H_VERSION "beta-0.1")',
+        'set(DC24H_VERSION "beta-0.1.1")',
         "add_test(NAME beta.baseline ",
     ), errors)
     require('set(DC24H_VERSION "alpha-' not in cmake, "CMakeLists.txt: alpha version string remains", errors)
@@ -67,6 +67,8 @@ def main():
         "runs-on: ${{ matrix.os }}",
         'test "$(nproc)" -eq 4',
         "beta-0.1",
+        "pull_request:",
+        "name: CI (C++ and WebAdmin)",
     ), errors)
     require(workflow.count("os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]") == 2,
             "build.yml: both jobs must list the three public images", errors)
@@ -78,10 +80,12 @@ def main():
     require("self-hosted" not in workflow, "build.yml: self-hosted runner is selected", errors)
     require("ubuntu-latest" not in workflow, "build.yml: ubuntu-latest is selected", errors)
     check(ROOT / "doc/us/BETA.md", (
-        "# Beta baseline — beta-0.1",
+        "# Management foundation — beta-0.1.1",
+        "The branch name is `beta-0.1.1`.",
+        "The hub, the API and WebAdmin report `beta-0.1.1`.",
+        "main `075081f`",
         "The branch starts from main `423a958`.",
         "The branch name is `beta-0.1`.",
-        "The hub, the API and WebAdmin report `beta-0.1`.",
         "Schema v9 is unchanged.",
         "`configuration.manage` and `hub.manage` stay unimplemented",
         "This is not a production release.",
@@ -90,10 +94,12 @@ def main():
         "four logical CPUs and 16 GB",
     ), errors)
     check(ROOT / "doc/pl/BETA.md", (
-        "# Linia beta — beta-0.1",
+        "# Fundament zarządzania — beta-0.1.1",
+        "Nazwa gałęzi to `beta-0.1.1`.",
+        "Hub, API i WebAdmin zgłaszają `beta-0.1.1`.",
+        "main `075081f`",
         "Gałąź powstaje z main `423a958`.",
         "Nazwa gałęzi to `beta-0.1`.",
-        "Hub, API i WebAdmin zgłaszają `beta-0.1`.",
         "Schemat v9 pozostaje bez zmian.",
         "`configuration.manage` i `hub.manage` pozostają niezaimplementowane",
         "To nie jest wydanie produkcyjne.",
@@ -101,12 +107,32 @@ def main():
         "publicznych runnerach GitHub-hosted `ubuntu-22.04`, `ubuntu-24.04` i `ubuntu-26.04`",
         "cztery logiczne CPU i 16 GB",
     ), errors)
+    check(ROOT / "src/api/accounts.cpp", (
+        'schema\\":2',
+        "configuration.read",
+        "configuration.validate",
+        "configuration.write",
+        "configuration.restore",
+        "hub.status",
+        "hub.start",
+        "hub.stop",
+        "hub.restart",
+        "not_implemented",
+    ), errors)
+    check(ROOT / "config/apache2-webadmin-https-proxy.conf.example", (
+        "management(?:/authorize)?",
+        "management/authorize",
+    ), errors)
+    check(ROOT / "webadmin/server/account-api.ts", (
+        "/admin-api/v1/management/authorize",
+        "not_implemented",
+    ), errors)
     check(ROOT / "include/dc24h/admin/access.hpp", (
         "inline constexpr std::array<RouteTemplate, 12> access_routes{{",
         "configuration.manage and hub.manage stay",
     ), errors)
     check(ROOT / "webadmin/src/lib/status.ts", (
-        'export const WEBADMIN_VERSION = "beta-0.1";',
+        'export const WEBADMIN_VERSION = "beta-0.1.1";',
         '!/^(?:alpha-\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|beta-\\d{1,3}\\.\\d{1,3}(?:\\.\\d{1,3})?)$/.test(server.version)',
     ), errors)
     check(ROOT / "src/security/roles.cpp", (
@@ -120,7 +146,7 @@ def main():
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1
-    print("Beta 0.1 baseline, version string and unchanged limits passed")
+    print("Beta 0.1.1 foundation, version string and unchanged limits passed")
     return 0
 
 

@@ -2,7 +2,7 @@
 
 Ten etap dodaje udowodniony grant administracyjny w procesie konserwacji C++. Punktem wyjścia jest main `d7c5908`. Nie ma automatycznego scalenia. Nazwa gałęzi to `alpha-0.8.10`.
 
-Schemat v9 pozostaje bez zmian. Grant nie jest wierszem SQL, a udowodnienie dostępu nie dopisuje zdarzenia audytu. `configuration.manage` i `hub.manage` pozostają niewdrożone. Nie mają trasy. Zapisy konfiguracji i bieżąca administracja huba pozostają w planach. Kick i wyciszenie na żywo zostają w swoich licznikach.
+Schemat v9 pozostaje bez zmian. Grant nie jest wierszem SQL, a udowodnienie dostępu nie dopisuje zdarzenia audytu. `configuration.manage` i `hub.manage` pozostają niewdrożone. W alpha-0.8.10 nie mają trasy. Zapisy konfiguracji i bieżąca administracja huba pozostają w planach. Kick i wyciszenie na żywo zostają w swoich licznikach.
 
 Token procesu pozostaje poświadczeniem transportu. `GET /api/v1/status` i `GET /api/v1/health` wymagają tylko bearer. Nagłówek grantu na tych trasach jest ignorowany. Obecny nagłówek grantu, który nie ma 64 cyfr szesnastkowych, jest błędnym żądaniem na każdej trasie.
 
@@ -17,3 +17,5 @@ Każda inna trasa konserwacyjna wymaga `X-DC24H-Admin-Grant`. Brakujący, wygas�
 Prywatny adapter przyjmuje `POST /admin-api/v1/admin/access` i przekazuje poprawny nagłówek grantu małymi literami. Sam nie wymyśla grantu. `POST /admin-api/v1/admin` pozostaje w adapterze brakiem zasobu. WebAdmin udowadnia dostęp w Admin Core. Pole hasła jest czyszczone po wysłaniu. Grant zostaje w pamięci strony, nie jest pokazywany i nie trafia do pamięci przeglądarki. Polecenie Zapomnij dostęp albo przeładowanie usuwa go. Strony konserwacji wysyłają nagłówek, gdy ta pamięć trzyma grant.
 
 alpha-0.8.13 dodaje dokładne `GET /api/v1/management` jako kolejny odczyt odkrywania. Nie jest jednym z dwunastu szablonów tras. [Zarządzanie WebAdmin](WEBADMIN_MANAGEMENT.md) opisuje katalog. Zapisy konfiguracji i bieżąca administracja huba pozostają w planach.
+
+beta-0.1.1 rozszerza ten katalog do schematu 2 i dodaje dokładne `POST /api/v1/management/authorize`. Kontrakt sprawdza grant, sesję, sekret CSRF i uprawnienie operacji, a potem zwraca `501` `not_implemented`. Nie odczytuje ani nie zapisuje konfiguracji i nie uruchamia, nie zatrzymuje ani nie restartuje huba. Zobacz [Fundament zarządzania](MANAGEMENT_FOUNDATION.md).

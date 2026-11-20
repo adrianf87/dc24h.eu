@@ -138,15 +138,35 @@ std::string administration(const admin::Engine& engine) {
     return response(200,output);
 }
 std::string management_json(accounts::Role role) {
-    struct Area { const char* key; const char* permission; };
-    constexpr Area areas[]={{"accounts","accounts.manage"},{"roles","roles.manage"},{"bans","users.ban+blocks.manage"}};
-    std::string output="{\"schema\":1,\"maintenance\":true,\"restart_required\":true,\"areas\":[";
+    struct Area { const char* key; const char* permission; bool implemented; };
+    constexpr Area areas[]={
+        {"accounts","accounts.manage",true},
+        {"roles","roles.manage",true},
+        {"bans","users.ban+blocks.manage",true},
+        {"configuration","configuration.manage",false},
+        {"hub","hub.manage",false},
+    };
+    std::string output="{\"schema\":2,\"maintenance\":true,\"restart_required\":true,\"areas\":[";
     for(const auto& area:areas){
         if(output.back()!='['){output+=',';}
         const bool allowed=admin::catalog_allowed(role,area.permission);
-        output+="{\"key\":"+json_string(area.key)+",\"permission\":"+json_string(area.permission)+",\"allowed\":"+(allowed?"true":"false")+"}";
+        output+="{\"key\":"+json_string(area.key)+",\"permission\":"+json_string(area.permission)+
+            ",\"allowed\":"+(allowed?"true":"false")+",\"implemented\":"+(area.implemented?"true":"false")+"}";
     }
     return response(200,output+"]}");
+}
+void management_contract(accounts::Role role, std::string_view body) {
+    Fields fields;form(body,fields);fields.exact({"operation"});
+    const auto operation=fields.get("operation");
+    const char* permission=nullptr;
+    if(operation=="configuration.read"||operation=="configuration.validate"||operation=="configuration.write"||operation=="configuration.restore"){
+        permission="configuration.manage";
+    }else if(operation=="hub.status"||operation=="hub.start"||operation=="hub.stop"||operation=="hub.restart"){
+        permission="hub.manage";
+    }else{bad();}
+    if(!admin::catalog_allowed(role,permission)){throw admin::Error(admin::ErrorKind::forbidden);}
+    // The permission is granted and the engine is still absent. Do not open a file or spawn a process.
+    throw HttpError{501,"not_implemented"};
 }
 std::string serve(const Request& request,admin::Engine& engine,bool& written) {
     if(request.target=="/api/v1/audit"){
@@ -242,10 +262,14 @@ AccountHandler account_handler(database::Options options) {
             case admin::GrantCheck::csrf_required: throw HttpError{403,"csrf_required"};
             case admin::GrantCheck::rate_limited: throw HttpError{429,"rate_limited"};
             }
-            if(request.target=="/api/v1/management"){
-                if(request.method!="GET"){throw HttpError{405,"method_not_allowed"};}
+            if(request.target=="/api/v1/management"||request.target=="/api/v1/management/authorize"){
                 const auto role=gate.actor_role(request.admin_grant);
                 if(!role){throw admin::Error(admin::ErrorKind::forbidden);}
+                if(request.target=="/api/v1/management/authorize"){
+                    if(request.method!="POST"){return response(405,"{\"error\":\"method_not_allowed\"}",false,"POST");}
+                    management_contract(*role,request.body);
+                }
+                if(request.method!="GET"){throw HttpError{405,"method_not_allowed"};}
                 return management_json(*role);
             }
             return serve(request,engine,written);

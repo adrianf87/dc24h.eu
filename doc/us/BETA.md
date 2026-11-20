@@ -1,15 +1,21 @@
-# Beta baseline — beta-0.1
+# Management foundation — beta-0.1.1
 
-The release channel is Beta. The branch starts from main `423a958`. The branch name is `beta-0.1`.
+The release channel is Beta. beta-0.1.1 starts from main `075081f`. The branch name is `beta-0.1.1`.
 
-The hub, the API and WebAdmin report `beta-0.1`. The CMake project number and the WebAdmin package number are `0.1.0`. Those numbers are the package tuple. Operators see `beta-0.1`. The status parser accepts that beta form, `beta-N.N.N`, and the existing `alpha-N.N.N` form. It still rejects any other version text.
+The hub, the API and WebAdmin report `beta-0.1.1`. The CMake project number and the WebAdmin package number stay `0.1.0`. Those numbers are the package tuple. Operators see `beta-0.1.1`. The status parser accepts `beta-N.N`, `beta-N.N.N`, and the existing `alpha-N.N.N` form. It still rejects any other version text.
 
-Hub behavior, ADC bytes, recipient sets and security decisions stay the ones delivered through alpha-0.9.17. Schema v9 is unchanged. This is a developmental Beta. This is not a production release.
+Hub behavior, ADC bytes, recipient sets and the security decisions delivered through alpha-0.9.17 stay. Schema v9 is unchanged. This is a developmental Beta. This is not a production release. No residual threat is closed.
+
+`configuration.manage` and `hub.manage` stay unimplemented. The catalog and the authorize contract are specified in [Management foundation](MANAGEMENT_FOUNDATION.md). This increment does not read or write configuration and does not start, stop or restart the hub.
 
 `beta.baseline` checks that version string, the twelve maintenance routes, and that `configuration.manage` and `hub.manage` stay unimplemented. The catalog test still requires schema v9 and `audit_events`. The hub executable does not gain a library for this check.
 
+## Earlier baseline — beta-0.1
+
+The branch starts from main `423a958`. The branch name is `beta-0.1`. The hub, the API and WebAdmin reported `beta-0.1`. That increment did not add a route.
+
 ## Limits
 
-This does not add a route, INI key, CLI flag, status field, WebAdmin page, Apache setting or schema migration. Browser kick and mute stay undispatched. Status and health stay bearer-only. `Require local` stays. No residual threat is closed. A public authenticated gateway, remote administrator access, `configuration.manage` and `hub.manage` stay separate work.
+Browser kick and mute stay undispatched. Status and health stay bearer-only. `Require local` stays. A public authenticated gateway and remote administrator access stay separate work.
 
-Run Check status on public GitHub-hosted runners `ubuntu-22.04`, `ubuntu-24.04` and `ubuntu-26.04`. Each runner is specified with four logical CPUs and 16 GB of memory. Each job checks that `nproc` equals 4 and uses `nproc` workers. Add `beta-0.1` to the push branches. Local validation uses eight CPU threads. Remote CI completion is not awaited.
+Run Check status on public GitHub-hosted runners `ubuntu-22.04`, `ubuntu-24.04` and `ubuntu-26.04`. Each runner is specified with four logical CPUs and 16 GB of memory. Each job checks that `nproc` equals 4 and uses `nproc` workers. Pull requests to `main` run the same checks. Local validation uses eight CPU threads. Remote CI completion is not awaited. A merge to `main` waits until the required checks succeed.

@@ -290,6 +290,10 @@ Osobny instalowany przykład serwuje gotowe zasoby WebAdmin przez TLS 1.2/1.3 i 
 
 Hub zgłasza `beta-0.1`. CMake i pakiet WebAdmin używają `0.1.0`. Zachowanie, bajty ADC i schemat v9 zostają przy alpha-0.9.17. `beta.baseline` sprawdza ten napis oraz to, że `configuration.manage` i `hub.manage` pozostają niezaimplementowane. Zobacz [Linia beta](BETA.md).
 
+## Fundament zarządzania — beta-0.1.1
+
+Hub zgłasza `beta-0.1.1`. CMake i pakiet WebAdmin zostają przy `0.1.0`. Katalog utrzymania ma schemat 2. `POST /api/v1/management/authorize` sprawdza grant i zwraca `not_implemented`. `configuration.manage` i `hub.manage` pozostają niezaimplementowane. Schemat v9 zostaje. Zobacz [Fundament zarządzania](MANAGEMENT_FOUNDATION.md).
+
 ## Zależności — alpha-0.9.17
 
 `dependencies.audit` czyta sekcję dynamiczną trzech plików huba i porównuje ją z dozwolonymi nazwami soname. Sprawdza też lockfile WebAdmin i testy bezpieczeństwa, które CMake rejestruje zawsze. Plik wykonywalny huba nie dostaje biblioteki dla tego sprawdzenia. Zobacz [Zależności](DEPENDENCIES.md).

@@ -123,11 +123,12 @@ bool authenticate(std::string_view authorization, std::string_view token) noexce
     }
     return CRYPTO_memcmp(authorization.data() + 7, token.data(), 64) == 0;
 }
-std::string response(unsigned int status, std::string_view json, bool head) {
+std::string response(unsigned int status, std::string_view json, bool head, std::string_view allow) {
     const auto reason = status == 200 ? "OK" : status == 401 ? "Unauthorized" :
         status == 404 ? "Not Found" : status == 405 ? "Method Not Allowed" :
         status == 403 ? "Forbidden" : status == 409 ? "Conflict" : status == 429 ? "Too Many Requests" :
-        status == 503 ? "Service Unavailable" : status == 431 ? "Request Header Fields Too Large" : "Bad Request";
+        status == 501 ? "Not Implemented" : status == 503 ? "Service Unavailable" :
+        status == 431 ? "Request Header Fields Too Large" : "Bad Request";
     std::string result = "HTTP/1.1 " + std::to_string(status) + " " + reason + "\r\n";
     const auto now = std::time(nullptr);
     std::tm utc{};
@@ -143,7 +144,11 @@ std::string response(unsigned int status, std::string_view json, bool head) {
     }
     result += "Content-Type: application/json; charset=utf-8\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\n";
     if (status == 401) { result += "WWW-Authenticate: Bearer realm=\"dc24h-admin\"\r\n"; }
-    if (status == 405) { result += "Allow: GET\r\n"; }
+    if (status == 405) {
+        result += "Allow: ";
+        result += allow.empty() ? std::string_view("GET") : allow;
+        result += "\r\n";
+    }
     result += "Content-Length: " + std::to_string(json.size()) + "\r\n\r\n";
     if (!head) { result += json; }
     return result;

@@ -17,7 +17,7 @@ export function accountMiddleware(config: {socket:string; token:string}|null) {
     };
     const path=req.url ?? "";
     const read=req.method === "GET" && (path==="/admin-api/v1/admin" || path==="/admin-api/v1/management" || /^\/admin-api\/v1\/bans(?:\?(?:after=(?:0|[1-9]\d{0,18})(?:&state=(?:all|active|permanent|temporary|expired|revoked))?|state=(?:all|active|permanent|temporary|expired|revoked)))?$/.test(path) || /^\/admin-api\/v1\/accounts(?:\?(?:after|staff_after)=(?:0|[1-9]\d{0,18})|\/[1-9]\d{0,18})?$/.test(path));
-    const write=req.method === "POST" && (path === "/admin-api/v1/admin/access" || path === "/admin-api/v1/audit" || /^\/admin-api\/v1\/bans(?:\/[1-9]\d{0,18}\/revoke)?$/.test(path) || /^\/admin-api\/v1\/accounts(?:\/[1-9]\d{0,18}\/(?:activate|disable|reset|password|role))?$/.test(path));
+    const write=req.method === "POST" && (path === "/admin-api/v1/admin/access" || path === "/admin-api/v1/audit" || path === "/admin-api/v1/management/authorize" || /^\/admin-api\/v1\/bans(?:\/[1-9]\d{0,18}\/revoke)?$/.test(path) || /^\/admin-api\/v1\/accounts(?:\/[1-9]\d{0,18}\/(?:activate|disable|reset|password|role))?$/.test(path));
     const presented=req.headers["x-dc24h-admin-grant"];
     const grant=typeof presented==="string" && /^[0-9a-fA-F]{64}$/.test(presented)?presented.toLowerCase():"";
     const presentedSession=req.headers["x-dc24h-session"];
@@ -56,8 +56,8 @@ export function accountMiddleware(config: {socket:string; token:string}|null) {
           if(!response.headers["content-type"]?.startsWith("application/json"))throw new Error();
           const data=JSON.parse(Buffer.concat(received).toString("utf8"));
           if(response.statusCode!==200){
-            const status=[400,401,403,404,409,429,503].includes(response.statusCode ?? 0)?response.statusCode!:503;
-            const error=["outcome_unknown","stale","rate_limited","unauthorized","admin_grant_required","csrf_required","management_refused","invalid_registration","invalid_input","account_unavailable","database_unavailable"].includes(data?.error)?data.error:"api_unavailable";
+            const status=[400,401,403,404,409,429,501,503].includes(response.statusCode ?? 0)?response.statusCode!:503;
+            const error=["outcome_unknown","stale","rate_limited","unauthorized","admin_grant_required","csrf_required","management_refused","invalid_registration","invalid_input","not_implemented","account_unavailable","database_unavailable"].includes(data?.error)?data.error:"api_unavailable";
             finish();reply(status,{error});return;
           }
           const safe=path==="/admin-api/v1/management"?parseManagement(data):path==="/admin-api/v1/admin/access"?parseAccess(data):path==="/admin-api/v1/audit"?parseAudit(data):path.startsWith("/admin-api/v1/bans")?(req.method==="GET"?parseBans(data):parseBanResult(data)):path==="/admin-api/v1/admin"?parseAdmin(data):data && "accounts" in data?(path.includes("?staff_after=")?parseStaff(data):parseAccounts(data)):data?.maintenance===true?{account:parseAccount(data.account),maintenance:true}:null;

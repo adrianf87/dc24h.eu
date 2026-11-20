@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: beta-0.1.
+Current development version: beta-0.1.1.
+
+[Management foundation — beta-0.1.1](us/MANAGEMENT_FOUNDATION.md) · [PL](pl/MANAGEMENT_FOUNDATION.md)
 
 [Beta baseline — beta-0.1](us/BETA.md) · [PL](pl/BETA.md)
 
