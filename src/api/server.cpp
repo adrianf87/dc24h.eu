@@ -412,9 +412,8 @@ struct Server::Impl {
     std::string dispatch(const Request& request) {
         const bool head = request.method == "HEAD";
         if (!authenticate(request.authorization, token)) { return response(401, "{\"error\":\"unauthorized\"}\n", head); }
-        const bool hub_action = request.target == "/api/v1/management/hub/start" ||
-                                request.target == "/api/v1/management/hub/stop" ||
-                                request.target == "/api/v1/management/hub/restart";
+        // Route the subtree through AccessGate; it accepts only the three exact Owner POST paths.
+        const bool hub_action = request.target.starts_with("/api/v1/management/hub/");
         if (accounts && (request.target.starts_with("/api/v1/accounts") || request.target == "/api/v1/admin" ||
             request.target == "/api/v1/admin/access" || request.target.starts_with("/api/v1/bans") ||
             request.target == "/api/v1/audit" || request.target == "/api/v1/management" ||
