@@ -1,6 +1,6 @@
 # Atomic configuration storage — beta-0.1.3
 
-This development increment extends the **separate local maintenance process**, not the serving ADC hub. Stop the hub before starting `dc24h-account-admin --config /absolute/private/hub.ini`. Apply database migration v10 through the explicit maintenance/migration CLI before starting this process; back up the database first. The INI remains the source of startup configuration. Neither Apache nor the browser adapter forwards write/restore routes.
+This development increment extends the **separate local maintenance process**, not the serving ADC hub. Stop the hub before starting `dc24h-account-admin --config /absolute/private/hub.ini`. Apply database migration v10 through the explicit maintenance/migration CLI before starting this process; back up the database first. The INI remains the source of startup configuration. Starting in beta-0.1.4, the authenticated WebAdmin adapter forwards write/restore requests to this maintenance API; it does not write files itself.
 
 ## API and authorization
 
@@ -11,13 +11,13 @@ All requests use the existing local Unix socket and require the process bearer t
 - `POST /api/v1/management/configuration/write`: send `revision` and one to four of `network_max_connections`, `network_idle_timeout`, `logging_level`, `general_language` as an URL-encoded form. A successful response has `written:true`, `restart_required:true`, a new `revision`, and `backup_available:true`.
 - `POST /api/v1/management/configuration/restore`: send exactly `revision` to restore the server-owned sidecar backup. The current INI is preserved in a private undo copy before replacement.
 
-No endpoint accepts a filename, path, system command, arbitrary INI key or secret. Bad forms are rejected, invalid proposed values are `422`, stale revisions are `409`, and ambiguous file outcomes return `503 outcome_unknown`. Never retry an ambiguous write blindly; reread and inspect the INI, backup and audit first. The old `management/authorize` discovery contract remains non-executing; the WebAdmin editor is planned for beta-0.1.4.
+No endpoint accepts a filename, path, system command, arbitrary INI key or secret. Bad forms are rejected, invalid proposed values are `422`, stale revisions or an already-applied backup are `409`, and ambiguous file outcomes return `503 outcome_unknown`. Never retry an ambiguous write blindly; reread and inspect the INI, backup and audit first. The old `management/authorize` discovery contract remains non-executing; the WebAdmin editor was introduced in beta-0.1.4.
 
 ## Filesystem safety and recovery
 
 Only a canonical, fixed INI path from process startup is used. The parent directory and source must belong to the effective service UID and must not be group/world writable. The source must be a regular non-hardlinked file. The writer rejects symlinks and unsafe existing sidecars. A fixed owner-only advisory `.dc24h.lock` serializes cooperative writers; a content-bound revision and inode/metadata recheck detect stale edits. External processes that ignore the lock must be coordinated separately.
 
-Before each write, the complete original INI is copied and durably synced to `<ini>.dc24h.bak` (mode 0600). The validated updated bytes are written to a private same-directory temporary file, synced, atomically renamed over the INI and followed by a directory sync. Existing comments and keys outside the four allowlisted settings are retained. Restoration validates the backup, saves the pre-restore bytes to `<ini>.dc24h.undo` (0600) and replaces the primary atomically. No live settings change without a controlled hub restart.
+Before each write, the complete original INI is copied and durably synced to `<ini>.dc24h.bak` (mode 0600). The validated updated bytes are written to a private same-directory temporary file, synced, atomically renamed over the INI and followed by a directory sync. Existing comments and keys outside the four allowlisted settings are retained. Restoration validates the backup, saves the pre-restore bytes to `<ini>.dc24h.undo` (0600) and replaces the primary atomically. If the primary already equals the backup, restoration is refused without touching the undo copy, preserving the only pre-restore generation. No live settings change without a controlled hub restart.
 
 If a write reports `outcome_unknown` or the process crashes, stop further writes, inspect and validate the live INI and both sidecars as the service owner, inspect the audit row and restart only after recovery. Backup rotation is intentionally one-generation in this phase; arrange independent operator backups before upgrades.
 

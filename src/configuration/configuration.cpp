@@ -785,6 +785,9 @@ std::string Review::restore_backup(std::string_view revision) const {
     if (revision_for(current.text) != revision) { throw StaleReview(); }
     const auto backup = storage.backup();
     validate(parse_file_data(filename_, backup.text));
+    // A second restore of the same bytes would replace the only undo copy
+    // with the already-restored configuration, losing the pre-restore state.
+    if (backup.text == current.text) { throw StaleReview(); }
     storage.check_primary(current.state);
     storage.persist_undo(current.text);
     storage.check_primary(current.state);
