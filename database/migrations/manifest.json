@@ -69,6 +69,13 @@
       "files": [
         "0010_configuration_audit.sql"
       ]
+    },
+    {
+      "version": 11,
+      "name": "hub_service_audit",
+      "files": [
+        "0011_hub_service_audit.sql"
+      ]
     }
   ]
 }

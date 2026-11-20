@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise the independent, read-only controller with no hub process."""
+"""Exercise the independent service controller with no hub process."""
 import json
 import os
 from pathlib import Path
@@ -23,7 +23,9 @@ def request(path, payload=b"STATUS\n"):
         client.connect(str(path))
         client.sendall(payload)
         result = client.recv(4096)
-        return json.loads(result)
+        if result.startswith(b"{"):
+            return json.loads(result)
+        return result.decode("ascii")
 
 
 class ControllerProcessTests(unittest.TestCase):
@@ -60,7 +62,7 @@ class ControllerProcessTests(unittest.TestCase):
                     self.assertIn(response["error"], ("systemd_unavailable", "invalid_systemd_response"))
                 for payload in (b"START\n", b"STOP\n", b"RESTART\n",
                                 b"STATUS dc24h-other.service\n", b"STATUS\n\x00", b"X" * 64):
-                    self.assertEqual(request(path, payload), {"error": "unsupported_request"})
+                    self.assertEqual(request(path, payload), "ERROR unauthorized\n")
                 self.assertEqual(request(path), response)
 
                 duplicate = subprocess.run([str(CONTROLLER), "--socket", str(path)],
@@ -99,7 +101,7 @@ class ControllerProcessTests(unittest.TestCase):
     def test_version_and_invalid_arguments(self):
         version = subprocess.run([str(CONTROLLER), "--version"],
                                  capture_output=True, text=True, timeout=5)
-        self.assertEqual(version.stdout.strip(), "dc24h-service-controller beta-0.1.5")
+        self.assertEqual(version.stdout.strip(), "dc24h-service-controller beta-0.1.6")
         self.assertEqual(version.returncode, 0)
         self.assertNotEqual(subprocess.run([str(CONTROLLER), "--unit", "sshd.service"],
                                            capture_output=True, timeout=5).returncode, 0)

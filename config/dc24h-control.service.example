@@ -1,8 +1,9 @@
 # Example only. Never enabled or started by the build.
-# Create a dedicated dc24h-control user and tightly restricted dc24h-admin
-# group before deploying. Review group membership locally.
+# Create a dedicated dc24h-control user, dc24h-maintenance peer account and
+# tightly restricted dc24h-admin group before deploying. Review membership.
+# Install the independently reviewed Polkit rule for only dc24h.service.
 [Unit]
-Description=dc24h.eu read-only systemd status controller
+Description=dc24h.eu restricted systemd service controller
 After=systemd-user-sessions.service
 
 [Service]

@@ -31,9 +31,13 @@ std::string checksum(std::span<const std::string_view> sql) {
 void unit() {
     const auto& entries = detail::builtin_migrations;
     detail::validate_catalog(entries);
-    require(migration_catalog().size() == 10 && entries[0].info.version == 1 && entries[1].info.version == 2);
+    require(migration_catalog().size() == 11 && entries[0].info.version == 1 && entries[1].info.version == 2);
     require(entries[8].info.version == 9 && entries[8].info.name == "audit_events");
     require(entries[9].info.version == 10 && entries[9].info.name == "configuration_audit");
+    require(entries[10].info.version == 11 && entries[10].info.name == "hub_service_audit");
+    require(entries[10].statements.size() == 1 &&
+        entries[10].statements[0].find("'hub.start','hub.stop','hub.restart'") != std::string_view::npos &&
+        entries[10].statements[0].find("target_kind = 'service'") != std::string_view::npos);
     require(entries[0].info.name == "schema_migrations" && entries[1].info.name == "migration_state");
     auto invalid = entries;
     invalid[1].info.version = 3;
@@ -152,7 +156,7 @@ void future(Connection& c, const Options& options) {
     rejects(MigrationErrorKind::dirty,[&] { (void)detail::run(c,crash); });
     c.execute("DROP TABLE dc24h_interrupted_fixture");
     c.execute("DELETE FROM dc24h_schema_migrations WHERE version=3");
-    require(migrate(c) == 8); // Restore accounts, credentials, mappings, ADC secrets, roles, bans and audit v9/v10.
+    require(migrate(c) == migration_catalog().size() - 2); // Restore the current catalog after the v2 fixture.
 }
 void adc_upgrade(Connection& c) {
     c.execute("INSERT INTO dc24h_accounts(name,role,status,created_at,updated_at) VALUES ('AdcMigrationSentinel','registered','disabled',1,1)");
@@ -230,11 +234,11 @@ void credential_upgrade(Connection& c) {
 }
 void integration(const Options& options) {
     Connection c(options);
-    // Upgrade v8 -> v10 without changing account or ban rows.
+    // Upgrade v8 -> v11 without changing account or ban rows.
     const auto before_accounts=c.query("SELECT id,name,role,status,revision FROM dc24h_accounts ORDER BY id");
     const auto before_ban_rows=c.query("SELECT id,kind,subject,reason,created_at,expires_at,created_by,revoked_at,revoked_by,revision FROM dc24h_bans ORDER BY id");
     c.execute("DROP TABLE dc24h_audit_events");c.execute("DELETE FROM dc24h_schema_migrations WHERE version>=9");
-    require(migrate(c)==2&&migrate(c)==0);
+    require(migrate(c)==3&&migrate(c)==0);
     require(c.query("SELECT id,name,role,status,revision FROM dc24h_accounts ORDER BY id").rows==before_accounts.rows);
     require(c.query("SELECT id,kind,subject,reason,created_at,expires_at,created_by,revoked_at,revoked_by,revision FROM dc24h_bans ORDER BY id").rows==before_ban_rows.rows);
     require(c.scalar("SELECT COUNT(*) FROM dc24h_audit_events")=="0");
@@ -276,8 +280,8 @@ void integration(const Options& options) {
     c.execute("DROP TABLE dc24h_account_credentials");
     c.execute("DROP TABLE dc24h_accounts");
     c.execute("DROP TABLE dc24h_schema_migrations");
-    require(inspect_migrations(c).current_version == 0 && inspect_migrations(c).pending == 10);
-    require(migrate(c) == 10 && migrate(c) == 0);
+    require(inspect_migrations(c).current_version == 0 && inspect_migrations(c).pending == 11);
+    require(migrate(c) == 11 && migrate(c) == 0);
 }
 }
 int main(int argc, char* argv[]) {

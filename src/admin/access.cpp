@@ -58,13 +58,14 @@ bool decode_session(std::string_view text, std::array<unsigned char, 16>& out) n
     return true;
 }
 
-enum class Gate { discovery, accounts, roles, password, bans, audit, contract, configuration };
+enum class Gate { discovery, accounts, roles, password, bans, audit, contract, configuration, hub };
 bool allows_gate(accounts::Role role, Gate gate) noexcept {
     using security::Permission;
     switch (gate) {
     case Gate::discovery: return true;
     case Gate::contract: return true;
     case Gate::configuration: return security::allows(role, Permission::manage_configuration);
+    case Gate::hub: return role==accounts::Role::owner && security::allows(role, Permission::manage_hub);
     case Gate::accounts: return security::allows(role, Permission::manage_accounts);
     case Gate::roles: return security::allows(role, Permission::manage_roles);
     case Gate::password: return security::allows(role, Permission::change_own_password);
@@ -89,6 +90,8 @@ std::optional<Gate> classify(std::string_view method, std::string_view target) n
           target == "/api/v1/management/configuration/restore") && method == "POST")) {
         return Gate::configuration;
     }
+    if(method=="POST" && (target=="/api/v1/management/hub/start" ||
+       target=="/api/v1/management/hub/stop" || target=="/api/v1/management/hub/restart"))return Gate::hub;
     if (target == "/api/v1/audit") { return Gate::audit; }
     if (target.starts_with("/api/v1/bans")) { return Gate::bans; }
     if (target == "/api/v1/admin/access" || !target.starts_with(accounts)) { return std::nullopt; }

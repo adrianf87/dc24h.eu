@@ -2,3 +2,5 @@
 g dc24h-admin - -
 u dc24h-control - "dc24h service status controller" /var/empty /usr/sbin/nologin
 m dc24h-control dc24h-admin
+u dc24h-maintenance - "dc24h maintenance API" /var/empty /usr/sbin/nologin
+m dc24h-maintenance dc24h-admin

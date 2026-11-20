@@ -109,6 +109,14 @@ def exercise(binary, seed, config, db_socket, password, token, api_socket):
         assert request('GET', '/api/v1/accounts', session_override='ab' * 16)[1]['error'] == 'csrf_required'
         assert request('GET', '/api/v1/admin', csrf_override='zz')[0] == 400
         assert request('GET', '/api/v1/admin')[0] == 200
+        # Service control is a separate Owner-only route, not Administrator
+        # management permission or a way to smuggle in a different unit.
+        assert request('POST', '/api/v1/management/hub/start', {'confirm': 'START'},
+                       authorized=False, delay=True)[0] == 401
+        assert request('POST', '/api/v1/management/hub/start', {'confirm': 'START'}, delay=True)[0] == 403
+        assert request('POST', '/api/v1/management/hub/restart', {'confirm': 'RESTART'}, delay=True)[0] == 403
+        assert request('POST', '/api/v1/management/hub/stop?unit=other.service',
+                       {'confirm': 'STOP'}, delay=True)[0] in (403, 404)
         code, core = request('GET', '/api/v1/admin')
         assert code == 200 and core['maintenance'] is True
         assert len(core['actions']) == 10 and [a['available'] for a in core['actions']] == [True]*6+[False]*2+[True]*2

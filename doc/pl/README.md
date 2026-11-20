@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-beta-0.1.5: kanał wydania Beta. Hub, API i WebAdmin zgłaszają beta-0.1.5. Osobny lokalny kontroler odczytuje stan usługi systemd przy zatrzymanym hubie. Nie udostępnia operacji sterujących ani nowych tras HTTP. Dotychczasowy edytor WebAdmin pozostaje bez zmian.
+beta-0.1.6: kanał wydania Beta. Hub, API i WebAdmin zgłaszają beta-0.1.6. Osobny lokalny kontroler umożliwia operacje Start, Stop i Restart stałej jednostki dc24h.service wyłącznie dla roli Owner za pośrednictwem niezależnego API obsługowego. Schemat MariaDB v11 rejestruje intencje i wyniki operacji. Nie dodano publicznych tras ani przycisków sterowania w WebAdmin.
 
+- [Operacje systemd tylko dla Owner — beta-0.1.6](SERVICE_OPERATIONS.md)
 - [Kontroler usługi — beta-0.1.5](SERVICE_CONTROLLER.md)
 - [Edytor konfiguracji — beta-0.1.4](CONFIGURATION_EDITOR.md)
 - [Zapis konfiguracji — beta-0.1.3](CONFIGURATION_WRITE.md)

@@ -32,6 +32,7 @@ std::optional<unsigned> role_rank(accounts::Role role) noexcept {
 }
 bool permission_implemented(Permission p) noexcept {
     if(permission_key(p).empty())return false;
+    // Catalog marks full WebAdmin management as unavailable until the UI stage.
     return p!=Permission::manage_configuration&&p!=Permission::manage_hub;
 }
 void validate(const RolePolicy& policy) {

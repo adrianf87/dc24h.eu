@@ -1,3 +1,7 @@
+# Owner-only service operations — beta-0.1.6
+
+Branch `beta-0.1.6` starts from protected main `463e56e`. The separate maintenance API checks the current Owner role, grant, session, CSRF and explicit confirmation before calling the fixed `dc24h.service` controller. Only Start, Stop and Restart are permitted. Schema v11 records a durable `started` intention before action and a final verified `succeeded` or `failed` state; `outcome_unknown` is never automatically retried. No browser UI or public proxy is added. Read [Service operations](SERVICE_OPERATIONS.md). This is not a production release.
+
 # Read-only service controller — beta-0.1.5
 
 Branch `beta-0.1.5` starts from main `e8d00ae`. Hub, API and WebAdmin report `beta-0.1.5`. The independent C++20 `dc24h-service-controller` queries the fixed `dc24h.service` unit via a local authenticated Unix socket, even when the hub is stopped. Only status reads are implemented. No HTTP service route, web controls, Start/Stop/Restart or schema change. See [Service controller](SERVICE_CONTROLLER.md). Schema v10 is unchanged. The application `hub.manage` permission remains non-executable.
