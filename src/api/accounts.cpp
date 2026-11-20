@@ -4,6 +4,7 @@
 #include "dc24h/admin/core.hpp"
 #include "dc24h/accounts/password_security.hpp"
 #include "dc24h/accounts/registration.hpp"
+#include "dc24h/configuration/configuration.hpp"
 #include <openssl/crypto.h>
 #include <charconv>
 #include <chrono>
@@ -155,6 +156,41 @@ std::string management_json(accounts::Role role) {
     }
     return response(200,output+"]}");
 }
+std::string configuration_review_json(const configuration::ReviewSnapshot& snapshot) {
+    auto fields = [&](const configuration::ReviewOptions& options) {
+        std::string result = "{";
+        for (const auto& option : options) {
+            if (result.size() > 1) { result += ','; }
+            result += json_string(option.key) + ':' + json_string(option.value);
+        }
+        return result + '}';
+    };
+    return "{\"schema\":1,\"maintenance\":true,\"read_only\":true,\"restart_required\":true,"
+        "\"active_scope\":\"maintenance_process\",\"hub_active_available\":false,\"revision\":" +
+        json_string(snapshot.revision) + ",\"matches_active\":" + (snapshot.matches_active ? "true" : "false") +
+        ",\"saved\":" + fields(snapshot.saved) + ",\"active\":" + fields(snapshot.active) + '}';
+}
+std::string configuration_review_request(const Request& request, const configuration::Review& review) {
+    if (request.method == "GET") {
+        return response(200, configuration_review_json(review.read()));
+    }
+    if (request.method != "POST") { return response(405, "{\"error\":\"method_not_allowed\"}", false, "GET, POST"); }
+    Fields fields;
+    form(request.body, fields);
+    const auto revision = fields.get("revision");
+    if (revision.size() != 64 || revision.find_first_not_of("0123456789abcdef") != std::string_view::npos ||
+        fields.values.size() < 2 || fields.values.size() > 5) { bad(); }
+    std::vector<std::pair<std::string,std::string>> changes;
+    for (const auto& [key,value] : fields.values) {
+        if (key == "revision") { continue; }
+        if (key != "network_max_connections" && key != "network_idle_timeout" &&
+            key != "logging_level" && key != "general_language") { bad(); }
+        changes.emplace_back(key,value);
+    }
+    const bool valid = review.validate_candidate(revision, changes);
+    return response(200, valid ? "{\"valid\":true,\"written\":false,\"restart_required\":true}" :
+        "{\"valid\":false,\"written\":false,\"restart_required\":true}");
+}
 void management_contract(accounts::Role role, std::string_view body) {
     Fields fields;form(body,fields);fields.exact({"operation"});
     const auto operation=fields.get("operation");
@@ -230,9 +266,9 @@ std::string serve(const Request& request,admin::Engine& engine,bool& written) {
     return response(200,"{\"account\":"+json(updated)+",\"maintenance\":true}");
 }
 }
-AccountHandler account_handler(database::Options options) {
+AccountHandler account_handler(database::Options options, std::shared_ptr<const configuration::Review> review) {
     admin::AccessGate gate(options);
-    return [engine=admin::Engine(std::move(options),admin::Origin::maintenance_api),gate=std::move(gate),next=std::chrono::steady_clock::time_point{}](const Request& request) mutable {
+    return [engine=admin::Engine(std::move(options),admin::Origin::maintenance_api),gate=std::move(gate),review=std::move(review),next=std::chrono::steady_clock::time_point{}](const Request& request) mutable {
         bool written=false;
         try {
             if(request.method=="POST") {
@@ -262,6 +298,10 @@ AccountHandler account_handler(database::Options options) {
             case admin::GrantCheck::csrf_required: throw HttpError{403,"csrf_required"};
             case admin::GrantCheck::rate_limited: throw HttpError{429,"rate_limited"};
             }
+            if(request.target=="/api/v1/management/configuration") {
+                if (!review) { throw HttpError{501,"not_implemented"}; }
+                return configuration_review_request(request,*review);
+            }
             if(request.target=="/api/v1/management"||request.target=="/api/v1/management/authorize"){
                 const auto role=gate.actor_role(request.admin_grant);
                 if(!role){throw admin::Error(admin::ErrorKind::forbidden);}
@@ -274,6 +314,7 @@ AccountHandler account_handler(database::Options options) {
             }
             return serve(request,engine,written);
         } catch(const HttpError& e){return response(e.status,"{\"error\":"+json_string(e.key)+"}");}
+        catch(const configuration::StaleReview&){return response(409,"{\"error\":\"stale\"}");}
         catch(const admin::Error& e){
             const auto kind=e.kind();
             const unsigned status=kind==admin::ErrorKind::forbidden?403:kind==admin::ErrorKind::stale?409:kind==admin::ErrorKind::not_found?404:kind==admin::ErrorKind::invalid_input?400:503;
