@@ -487,7 +487,7 @@ export const pl = {
   managementTitle: "Zarządzanie kontami, rolami, banami, konfiguracją i hubem",
   managementSub: "Które obszary utrzymania dopuszcza ten grant.",
   managementAreas: "Obszary utrzymania",
-  managementNote: "Ta strona odczytuje jeden katalog utrzymania. Nie tworzy kont, nie przypisuje ról, nie tworzy banów, nie zapisuje konfiguracji i nie uruchamia, nie zatrzymuje ani nie restartuje huba. Zapisy kont, ról i banów zostają na swoich stronach. Konfiguracja i hub są na liście, aby sprawdzić grant. Ich silniki nie są zaimplementowane. Kick i mute w przeglądarce pozostają poza tą stroną.",
+  managementNote: "Ta strona odczytuje katalog uprawnień utrzymaniowych, ale sama nie wykonuje operacji administracyjnych. Zapisy kont, ról i banów pozostają na własnych stronach. Uprawnieni lokalni administratorzy mogą skorzystać z osobnej strony Konfiguracja dla czterech ustawień bez sekretów. Ogólny kontrakt management/authorize oraz Start, Stop i Restart huba pozostają niezaimplementowane. Kick i mute w przeglądarce pozostają poza tą stroną.",
   managementUnavailable: "Katalog zarządzania nie jest dostępny. Udowodnij dostęp w rdzeniu administracyjnym i otwórz tę stronę ponownie.",
   managementAllowed: "Dozwolone dla tego grantu",
   managementDenied: "Niedozwolone dla tego grantu",

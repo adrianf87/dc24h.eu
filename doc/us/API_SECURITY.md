@@ -24,7 +24,13 @@ Status and health stay bearer-only. Each live session still accepts 24 requests 
 
 The stored role is loaded only after the binding matches. An active account that no longer holds the route permission is still forbidden. Unknown maintenance targets stay forbidden. `configuration.manage` and `hub.manage` stay unimplemented and have no route. Browser kick and mute are still not dispatched. The permission catalog and the twelve maintenance routes are unchanged.
 
-## Unchanged
+## Later management routes (beta-0.1.1 through beta-0.1.4)
+
+The preceding section documents the original alpha-0.9.7 security boundary. The current maintenance process also has the exact `POST /api/v1/management/authorize` contract from beta-0.1.1. It requires the bound grant and checks `configuration.manage` or `hub.manage` according to the named operation, but returns `501 not_implemented` for an allowed request. It never carries out a configuration change or service command.
+
+Beta-0.1.2 through beta-0.1.4 separately introduce `GET` and `POST /api/v1/management/configuration` and `POST /api/v1/management/configuration/write` and `/restore`. These routes require `configuration.manage` in the C++ authorization gate, in addition to the same bearer, live grant, session and CSRF binding. Only four nonsecret settings are exposed and no caller-supplied filesystem path or shell command is accepted. Write and restore are auditable, atomic operations on the saved INI; they do not apply settings to a running hub. The database schema is now v10 for the configuration audit. `hub.manage` still has no executable service route. The original twelve grant route templates are unchanged. See [Configuration review](CONFIGURATION_REVIEW.md), [Configuration write](CONFIGURATION_WRITE.md), and [Management foundation](MANAGEMENT_FOUNDATION.md).
+
+## Unchanged in alpha-0.9.7
 
 Copying the grant, the session id and the CSRF secret from page memory still authorizes that slot until it expires or the actor replaces it. The proof response still carries the three secrets. This does not close residual threats T04 or T05. Schema v9 is unchanged. No status counter, new WebAdmin page, INI key or Apache setting is added. `Require local` stays. There is no cookie session and no public authenticated gateway. HTTP/2, OCSP and automatic certificate renewal remain unimplemented.
 

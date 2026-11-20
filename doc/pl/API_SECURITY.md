@@ -24,7 +24,13 @@ Status i health nadal wymagają tylko bearer. Każda żywa sesja nadal przyjmuje
 
 Zapisana rola jest ładowana dopiero po zgodności wiązania. Aktywne konto, które nie ma już uprawnienia trasy, nadal jest zabronione. Nieznane cele utrzymaniowe pozostają zabronione. `configuration.manage` i `hub.manage` pozostają niezaimplementowane i nie mają trasy. Przeglądarka nadal nie wysyła kick ani mute. Katalog uprawnień i dwanaście tras utrzymaniowych pozostają bez zmian.
 
-## Bez zmian
+## Późniejsze trasy zarządzania (beta-0.1.1 do beta-0.1.4)
+
+Poprzednia sekcja opisuje pierwotne zabezpieczenia alpha-0.9.7. Aktualny proces utrzymaniowy ma także dokładny kontrakt `POST /api/v1/management/authorize` z beta-0.1.1. Wymaga on grantu związanego z sesją i sprawdza `configuration.manage` albo `hub.manage` zależnie od nazwy operacji, ale dla dozwolonego żądania zwraca `501 not_implemented`. Nie wykonuje zmiany konfiguracji ani polecenia dla usługi.
+
+Beta-0.1.2 do beta-0.1.4 wprowadzają osobno `GET` i `POST /api/v1/management/configuration` oraz `POST /api/v1/management/configuration/write` i `/restore`. Trasy te wymagają uprawnienia `configuration.manage` w bramce autoryzacji C++ oraz tego samego bearera, żywego grantu, sesji i powiązanego sekretu CSRF. Udostępniają tylko cztery ustawienia bez sekretów; nie przyjmują dowolnej ścieżki systemowej ani polecenia powłoki. Zapis i przywracanie są audytowanymi, atomowymi operacjami na zapisanym INI; nie stosują ustawień w działającym hubie. Schemat bazy to obecnie v10 na potrzeby audytu konfiguracji. `hub.manage` nadal nie ma wykonywalnej trasy sterowania usługą. Pierwotne dwanaście szablonów tras grantu pozostaje bez zmian. Zobacz [Przegląd konfiguracji](CONFIGURATION_REVIEW.md), [Zapis konfiguracji](CONFIGURATION_WRITE.md) i [Fundament zarządzania](MANAGEMENT_FOUNDATION.md).
+
+## Bez zmian w alpha-0.9.7
 
 Skopiowanie grantu, identyfikatora sesji i sekretu CSRF z pamięci strony nadal autoryzuje ten slot do wygaśnięcia albo do wymiany przez aktora. Odpowiedź dowodu nadal niesie te trzy sekrety. To nie zamyka zagrożeń szczątkowych T04 ani T05. Schemat v9 pozostaje bez zmian. Nie dodano licznika statusu, nowej strony WebAdmin, klucza INI ani ustawienia Apache. `Require local` zostaje. Nie ma sesji w ciasteczku ani publicznej uwierzytelnionej bramy. HTTP/2, OCSP i automatyczne odnawianie certyfikatu pozostają niezaimplementowane.
 

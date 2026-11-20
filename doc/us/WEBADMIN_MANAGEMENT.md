@@ -14,4 +14,8 @@ A missing grant, a hub API or a malformed catalog shows the page as unavailable 
 
 Check status for this branch uses GitHub-hosted Ubuntu 24.04 runners. Each job checks four logical CPUs and uses `nproc` workers. Remote completion is not awaited.
 
-No production deployment, schema migration or account mutation is part of this increment.
+No production deployment, schema migration or account mutation is part of this historical alpha-0.8.13 increment.
+
+## Current behavior after beta-0.1.4
+
+The five-area catalog and its `implemented` flags still describe the original broad management contract. The `configuration` area therefore remains `implemented: false` for that contract, even though a separate, narrowly authorized four-setting editor is now available from the Configuration page for Administrator/Owner grants. The Management page links to that editor only when the grant allows `configuration.manage`; it does not submit configuration changes itself. The hub area remains unimplemented, with no service Start/Stop/Restart controls. See [Configuration editor](CONFIGURATION_EDITOR.md) and [Management foundation](MANAGEMENT_FOUNDATION.md). Schema v10 belongs to the later configuration audit, not to the original catalog release.
