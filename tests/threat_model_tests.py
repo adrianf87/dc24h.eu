@@ -61,7 +61,9 @@ def main():
         "This is not a public authenticated gateway",
         "HTTP/2, OCSP and automatic certificate renewal are not implemented",
         "The analysis does not add a protocol check, a schema migration, an Apache setting or a WebAdmin control.",
-        "This document does not mark any of them done.",
+        "beta-0.2 does not mark any of them done.",
+        "No MFA or supported public network exposure.",
+        "[Remote gateway](REMOTE_GATEWAY.md)",
     )))
     errors.extend(check(ROOT / "doc/pl/THREAT_MODEL.md", (
         "# Model zagrożeń — alpha-0.9.1",
@@ -70,7 +72,9 @@ def main():
         "To nie jest publiczna uwierzytelniona brama",
         "HTTP/2, OCSP i automatyczne odnawianie certyfikatu nie są zaimplementowane",
         "Analiza nie dodaje sprawdzenia protokołu, migracji schematu, ustawienia Apache ani mechanizmu WebAdmin.",
-        "Ten dokument nie oznacza żadnego z nich jako ukończonego.",
+        "beta-0.2 nie oznacza żadnego z nich jako ukończonego.",
+        "Brak MFA i publicznego dostępu.",
+        "[Brama WebAdmin](REMOTE_GATEWAY.md)",
     )))
     if errors:
         print("\n".join(errors), file=sys.stderr)
