@@ -1,5 +1,13 @@
 # Changelog
 
+## beta-0.1.8 — 2026-11-21
+
+Development baseline for the next Beta increment — branch `beta-0.1.8` from protected main `cebcd12`.
+
+- Hub, API, independent service controller and WebAdmin now identify as `beta-0.1.8`; the CMake/WebAdmin package tuple remains `0.1.0`.
+- Carries forward the beta-0.1.7 Owner-only local service controls and all fixes already merged into main. No new endpoint, feature, database migration, ADC/ADCS protocol change or production deployment is included in this baseline.
+- Updated EN/PL release documentation, version assertions and WebAdmin test fixtures. Alpha history in the root README remains collapsible.
+
 ## beta-0.1.7 — 2026-11-21
 
 Owner-only local WebAdmin service management — development branch `beta-0.1.7`, based on protected main `a314fe0`.

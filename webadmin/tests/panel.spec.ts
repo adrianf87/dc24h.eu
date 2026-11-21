@@ -8,7 +8,7 @@ const data = {
   api_version: "v1",
   server: {
     name: "dc24h.eu",
-    version: "beta-0.1.7",
+    version: "beta-0.1.8",
     core_running: true,
     uptime_seconds: 3661,
   },
