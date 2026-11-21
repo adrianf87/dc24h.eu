@@ -213,6 +213,15 @@ void run(const database::Options& options) {
     require(owner_hub.starts_with("HTTP/1.1 501")&&owner_hub.find("\"error\":\"not_implemented\"")!=std::string::npos);
     require(authorize_call("operation=hub.stop").find("\"error\":\"not_implemented\"")!=std::string::npos);
     require(authorize_call("operation=configuration.write").find("\"error\":\"not_implemented\"")!=std::string::npos);
+    // The test process has no dedicated maintenance identity. No action can
+    // reach the controller, so audit the definitive pre-send refusal as failed
+    // rather than leaving an ambiguous started intent.
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    const auto unavailable_hub=call("POST","/api/v1/management/hub/start","confirm=START");
+    require(unavailable_hub.starts_with("HTTP/1.1 503")&&
+        unavailable_hub.find("\"error\":\"service_unavailable\"")!=std::string::npos);
+    require(connection.scalar("SELECT outcome FROM dc24h_audit_events WHERE target_kind='service' "
+        "AND action='hub.start' ORDER BY id DESC LIMIT 1")=="failed");
     std::this_thread::sleep_for(std::chrono::milliseconds(1100));
     const auto denied_management=call("POST","/api/v1/management","operation=configuration.read");
     require(denied_management.starts_with("HTTP/1.1 405"));

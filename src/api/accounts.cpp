@@ -310,7 +310,15 @@ std::string hub_action_request(const Request& request,const database::Options& o
     const auto event=audit.begin_service("hub."+std::string(operation),actor,timestamp);
     std::string result;
     try{result=controller_action(upper);}
-    catch(...){throw HttpError{503,"outcome_unknown"};} // Unknown if systemd acted; preserve started audit intent.
+    catch(const HttpError& error){
+        if(std::string_view(error.key)!="service_unavailable")throw HttpError{503,"outcome_unknown"};
+        // Identity, connection or peer verification failed before sending a
+        // command. This is a definite failure, not an ambiguous systemd action.
+        try{audit.finish_service(event,actor,false);}
+        catch(...){throw HttpError{503,"outcome_unknown"};}
+        throw;
+    }
+    catch(...){throw HttpError{503,"outcome_unknown"};} // Unknown after delivery; preserve started audit intent.
     if(result=="ERROR outcome_unknown\n")throw HttpError{503,"outcome_unknown"};
     const bool succeeded=result==(operation=="stop"?"OK inactive\n":"OK active\n");
     const bool conflict=result=="ERROR already_active\n"||result=="ERROR already_inactive\n"||result=="ERROR busy\n";
