@@ -1,0 +1,11 @@
+#pragma once
+
+#include <string_view>
+
+namespace dc24h {
+
+inline constexpr std::string_view project_name = "dc24h.eu";
+inline constexpr std::string_view release_label = "@DC24H_RELEASE_LABEL@";
+inline constexpr std::string_view version = "@DC24H_VERSION@";
+
+} // namespace dc24h
