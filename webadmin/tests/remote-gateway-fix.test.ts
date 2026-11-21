@@ -6,8 +6,8 @@ import { remoteGateway } from "../server/remote-gateway.ts";
 const origin = "https://localhost:8443";
 
 // In-memory HTTP stubs exercise the handler without opening a network socket.
-function harness() {
-  const handle = remoteGateway(null, { origin });
+function harness(audit?: (event: string) => void) {
+  const handle = remoteGateway(null, { origin, audit });
   return async (path: string, method: string, body = "", extra: Record<string, string> = {},
     chunks: Buffer[] = body ? [Buffer.from(body)] : [], interrupted = false) => {
     const headers: Record<string, string> = { host: "localhost", ...extra };
@@ -76,4 +76,18 @@ test("interrupted login scrubs partially received proof", async () => {
   }, [chunk], true);
   assert.equal(response.status, 400);
   assert.ok(chunk.every((byte) => byte === 0), "aborted request proof remains in memory");
+});
+
+test("failed audit sink cannot interrupt a rejected gateway request", async () => {
+  const call = harness(() => { throw new Error("audit_sink_unavailable"); });
+  const refused = await call("/remote/v1/private", "GET");
+  assert.equal(refused.status, 404);
+  assert.equal(refused.body, '{"error":"not_found"}');
+});
+
+test("rejected asynchronous audit sink does not leak an unhandled rejection", async () => {
+  const call = harness(async () => { throw new Error("audit_sink_rejected"); });
+  const refused = await call("/remote/v1/other", "POST");
+  assert.equal(refused.status, 404);
+  await new Promise<void>((resolve) => setImmediate(resolve));
 });

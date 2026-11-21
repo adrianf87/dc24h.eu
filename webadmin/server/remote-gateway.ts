@@ -110,7 +110,12 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
   const challenges = new Map<string, Challenge>();
   const budgets = new Map<string, Budget>();
 
-  const log = (event: RemoteEvent) => { audit(event); };
+  const log = (event: RemoteEvent) => {
+    // Audit integrations are external observers; a failed sink must not crash
+    // the HTTP handler or change the decision to reject a request.
+    try { void Promise.resolve(audit(event)).catch(() => {}); }
+    catch { /* A synchronous sink failure is isolated as well. */ }
+  };
   const prune = (now: number) => {
     for (const [id, value] of sessions) {
       if (value.created + absoluteTime <= now || value.used + idleTime <= now) sessions.delete(id);

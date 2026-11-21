@@ -12,6 +12,9 @@ TraceEnable Off
 
 <VirtualHost 127.0.0.1:8443>
     ServerName localhost
+    # Preserve suspicious doubled slashes for the exact ProxyPassMatch route check.
+    # Apache otherwise collapses them before matching (MergeSlashes defaults On).
+    MergeSlashes Off
     DocumentRoot "/usr/local/share/dc24h/webadmin"
     ServerSignature Off
     SSLEngine On

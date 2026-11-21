@@ -60,6 +60,11 @@ cookie. Buffered request chunks are zeroed even when the stream exceeds its
 limit or aborts before completing; a rejected proof cannot be replayed with
 the same challenge. This does not change the five public route contracts.
 
+The dedicated Apache vhost explicitly uses `MergeSlashes Off` (Apache 2.4.39+)
+so repeated slashes cannot be silently normalized into a proxy-allowlisted
+path. The disposable Apache integration tests verify this boundary separately
+from the Node request checks.
+
 The summary includes only version, hub-running state, uptime, aggregate
 connection/user/chat counters and optional aggregate search/transfer counts.
 No account list, nicknames, peer IP/CID, credentials, configuration, audit

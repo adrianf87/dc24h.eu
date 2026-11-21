@@ -59,6 +59,11 @@ inicjalizacyjne. Bufory odebranej treści są zerowane również po przekroczeni
 limitu i błędzie/przerwaniu strumienia. Odrzuconego dowodu nie można ponownie
 użyć z tym samym wyzwaniem. Kontrakt pięciu tras pozostaje bez zmian.
 
+Osobny vhost Apache ustawia `MergeSlashes Off` (Apache 2.4.39+), aby podwójne
+ukośniki nie były po cichu normalizowane do dozwolonej ścieżki proxy.
+Izolowany test integracyjny Apache sprawdza tę granicę niezależnie
+od walidacji żądań w Node.
+
 Statystyki obejmują tylko wersję, stan działania huba, czas pracy
 oraz zbiorcze liczniki połączeń, użytkowników i czatu; opcjonalnie
 liczniki wyszukiwania i transferów. Nie ma list kont, nazw użytkowników,
