@@ -158,7 +158,7 @@ test("remote gateway authenticates a real API proof but projects only approved a
         if (method !== "HEAD") assert.equal(response.data, '{"error":"not_found"}');
       }
     }
-    assert.deepEqual(upstreamCalls, [], "refused paths and methods must not reach the private API");
+    assert.equal(upstreamCalls.length, 0, "refused paths and methods must not reach the private API");
     assert.equal((await call("/remote/v1/challenge", "GET", "", { Host: "evil.example" })).status, 403);
     assert.equal((await call("/remote/v1/challenge", "GET", "", { Authorization: "Bearer attacker" })).status, 403);
     for (const header of ["X-Forwarded-Prefix", "X-Forwarded-Port", "X-Forwarded-User",
@@ -169,7 +169,7 @@ test("remote gateway authenticates a real API proof but projects only approved a
     }
     assert.equal((await call("/remote/v1/challenge", "GET", "", { "Transfer-Encoding": "chunked" })).status, 400);
     assert.equal((await call("/remote/v1/challenge", "GET", "", { "Content-Length": "1" })).status, 400);
-    assert.deepEqual(upstreamCalls, [], "refused inputs must not reach the private API");
+    assert.equal(upstreamCalls.length, 0, "refused inputs must not reach the private API");
     const challenge = await call("/remote/v1/challenge");
     const loginCookie = challenge.cookies[0]!.split(";")[0]!;
     assert.ok(challenge.cookies[0]!.includes("HttpOnly; Secure; SameSite=Strict"));
