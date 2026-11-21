@@ -159,23 +159,33 @@ class ApacheRemoteGateway(unittest.TestCase):
         previous = len(self.backend.seen)
         status, _, _ = self.fetch("/remote/v1/summary", headers={
             "Authorization": "Bearer browser-secret",
+            "Proxy-Authorization": "Basic browser-secret",
             "X-DC24H-Admin-Grant": "browser-grant",
             "X-DC24H-Session": "browser-session",
             "X-DC24H-Csrf": "browser-csrf",
             "X-Forwarded-For": "8.8.8.8",
+            "X-Forwarded-Port": "8443",
+            "X-Forwarded-Prefix": "/admin-api",
+            "X-Forwarded-User": "owner",
             "Forwarded": "for=8.8.8.8",
+            "X-Original-URL": "/api/v1/status",
+            "X-Rewrite-URL": "/api/v1/status",
             "Cookie": "dc24h_remote=fixture",
         })
         self.assertEqual(status, 200)
         headers = {key.lower(): value for key, value in self.backend.seen[previous][2].items()}
-        for key in ("authorization", "x-dc24h-admin-grant", "x-dc24h-session",
-                    "x-dc24h-csrf", "x-forwarded-for", "forwarded"):
+        for key in ("authorization", "proxy-authorization", "x-dc24h-admin-grant", "x-dc24h-session",
+                    "x-dc24h-csrf", "x-forwarded-for", "x-forwarded-port", "x-forwarded-prefix",
+                    "x-forwarded-user", "forwarded", "x-original-url", "x-rewrite-url"):
             self.assertNotIn(key, headers)
         self.assertEqual(headers.get("cookie"), "dc24h_remote=fixture")
 
     def test_private_paths_never_forward(self):
         for path in ("/api/v1/status", "/admin-api/v1/management", "/management",
-                     "/remote/v1/admin", "/remote/v1/wildcard",
+                     "/remote/v1/admin", "/remote/v1/wildcard", "/remote/v1/challenge/",
+                     "/remote/v1//challenge", "/remote/v1/%63hallenge",
+                     "/remote/v1/challenge%2F", "/remote/v1/challenge?extra=1",
+                     "/remote/v1/Challenge",
                      "/.env", "/secret.ini"):
             before = len(self.backend.seen)
             status, body, _ = self.fetch(path)

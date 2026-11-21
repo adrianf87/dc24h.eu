@@ -1,3 +1,7 @@
+# HTTP request allowlist hardening — beta-0.2.2
+
+Branch `beta-0.2-code` starts from `main` at `fbb7b4e`, after the merge of beta-0.2.1. The gateway still exposes only the five fixed remote paths with exact methods. It now rejects *all* browser-supplied `X-Forwarded-*` variants and other untrusted proxy-identity/rewrite headers before allocating challenges or contacting the C++ API. Negative request tests cover path variants, methods, framing, invalid JSON, size limits and secret-free refusals; the Apache example strips common spoofing headers. The hub, API, service controller and WebAdmin report `beta-0.2.2`; package tuple `0.1.0` and schema v11 stay unchanged. No public access, remote mutation, MFA, ADC/ADCS changes or deployment is included. See [Remote gateway](REMOTE_GATEWAY.md). This is not a production release.
+
 # Maintenance baseline — beta-0.2.1
 
 Branch `beta-0.2.1` starts from protected `main` after merging beta-0.2 (`fbd5ab3`). The hub, local API, service controller and WebAdmin report `beta-0.2.1`; the CMake and npm package tuple stays `0.1.0`. The beta-0.2 gateway remains authenticated, local-only and strictly read-only. No MFA or Internet-facing mode, remote writes, systemd controls, migration, ADC/ADCS protocol change or production deployment is introduced. This is a development baseline, not a production release. See [Remote gateway](REMOTE_GATEWAY.md).

@@ -43,6 +43,11 @@ const sameSecret = (a: string, b: string): boolean =>
   timingSafeEqual(Buffer.from(a, "hex"), Buffer.from(b, "hex"));
 const loopback = (peer: string | undefined): boolean =>
   peer === "127.0.0.1" || peer === "::1" || peer === "::ffff:127.0.0.1";
+const untrustedProxyHeader = (req: IncomingMessage): boolean =>
+  Object.keys(req.headers).some((name) =>
+    name === "authorization" || name === "proxy" || name === "proxy-authorization" ||
+    name === "forwarded" || name === "x-real-ip" || name === "x-original-url" ||
+    name === "x-rewrite-url" || name.startsWith("x-forwarded-"));
 const cookie = (req: IncomingMessage, key: string): string => {
   const raw = req.headers.cookie;
   if (typeof raw !== "string" || raw.length > 1024) return "";
@@ -193,9 +198,8 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
       !/^(127\.0\.0\.1|localhost|\[::1\])(:\d{1,5})?$/.test(host) ||
       (req.headers.origin && req.headers.origin !== options.origin) ||
       (req.headers["sec-fetch-site"] && !["same-origin", "none"].includes(String(req.headers["sec-fetch-site"]))) ||
-      req.headers.authorization || req.headers["x-dc24h-admin-grant"] || req.headers["x-dc24h-session"] ||
-      req.headers["x-dc24h-csrf"] || req.headers.forwarded || req.headers["x-forwarded-for"] ||
-      req.headers["x-forwarded-host"] || req.headers["x-forwarded-proto"] || req.headers.proxy ||
+      req.headers["x-dc24h-admin-grant"] || req.headers["x-dc24h-session"] ||
+      req.headers["x-dc24h-csrf"] || untrustedProxyHeader(req) ||
       (post && req.headers.origin !== options.origin)) {
       log("route_refused"); reply(res, 403, { error: "forbidden" }); return;
     }

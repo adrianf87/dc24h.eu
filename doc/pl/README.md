@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-beta-0.2.1: wersja bazowa utrzymania lokalnej, uwierzytelnionej bramy WebAdmin z beta-0.2, tylko do odczytu. Hub, API, kontroler usługi i WebAdmin zgłaszają beta-0.2.1. Schemat v11 i publiczne proxy Apache pozostają bez zmian. Bez MFA brak dostępu publicznego. Brak zapisu administracyjnego i wdrożenia produkcyjnego.
+beta-0.2.2: uszczelnienie listy tras HTTP lokalnej, uwierzytelnionej bramy WebAdmin tylko do odczytu. Hub, API, kontroler usługi i WebAdmin zgłaszają beta-0.2.2. Schemat v11 i publiczne proxy Apache pozostają bez zmian. Bez MFA brak dostępu publicznego. Brak zapisu administracyjnego i wdrożenia produkcyjnego.
 
+- [Walidacja żądań HTTP — beta-0.2.2](BETA.md)
 - [Wersja bazowa utrzymania — beta-0.2.1](BETA.md)
 - [Brama WebAdmin tylko do odczytu — beta-0.2](REMOTE_GATEWAY.md)
 

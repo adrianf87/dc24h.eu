@@ -24,8 +24,9 @@ class RemoteConfiguration(unittest.TestCase):
         self.assertIn("Require all denied", config)
         for path in ("admin-api", "api", "management"):
             self.assertIn(path, config)
-        for header in ("Authorization", "X-DC24H-Admin-Grant", "X-DC24H-Session",
-                       "X-DC24H-Csrf", "Forwarded", "X-Forwarded-For"):
+        for header in ("Authorization", "Proxy-Authorization", "X-DC24H-Admin-Grant", "X-DC24H-Session",
+                       "X-DC24H-Csrf", "Forwarded", "X-Forwarded-For", "X-Forwarded-Port",
+                       "X-Forwarded-Prefix", "X-Forwarded-User", "X-Original-URL", "X-Rewrite-URL"):
             self.assertIn("RequestHeader unset " + header, config)
         self.assertIn("frame-ancestors 'none'", config)
         self.assertIn("Cache-Control \"no-store\"", config)
@@ -38,7 +39,8 @@ class RemoteConfiguration(unittest.TestCase):
                          "SameSite=Strict", "HttpOnly; Secure", "maxSessions = 4",
                          "absoluteTime = 10 * 60_000", "idleTime = 2 * 60_000",
                          "api_unavailable", "session_revoked", "login_refused",
-                         "no-store", "login:global", "authorization"):
+                         "no-store", "login:global", "authorization", "untrustedProxyHeader",
+                         'name.startsWith("x-forwarded-")', 'name === "proxy-authorization"'):
             self.assertIn(expected, code)
         for forbidden in ("/api/v1/management/configuration/write",
                           "/api/v1/management/hub/start",
@@ -59,9 +61,9 @@ class RemoteConfiguration(unittest.TestCase):
         self.assertNotIn("sessionStorage", ui)
         self.assertNotIn("Start/Stop/Restart", ui)
         self.assertIn('remote.html', self.text("webadmin/vite.config.ts"))
-        self.assertIn('set(DC24H_VERSION "beta-0.2.1")', self.text("CMakeLists.txt"))
-        self.assertIn('WEBADMIN_VERSION = "beta-0.2.1"', self.text("webadmin/src/lib/status.ts"))
-        self.assertIn("beta-0.2.1", self.text(".github/workflows/build.yml"))
+        self.assertIn('set(DC24H_VERSION "beta-0.2.2")', self.text("CMakeLists.txt"))
+        self.assertIn('WEBADMIN_VERSION = "beta-0.2.2"', self.text("webadmin/src/lib/status.ts"))
+        self.assertIn("beta-0.2-code", self.text(".github/workflows/build.yml"))
         self.assertIn("remote.gateway.config", self.text("CMakeLists.txt"))
         self.assertIn("apache2.remote.gateway", self.text("CMakeLists.txt"))
         self.assertEqual(len(list((ROOT / "database/migrations").glob("*.sql"))), 11)
