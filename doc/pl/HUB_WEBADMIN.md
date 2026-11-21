@@ -12,7 +12,7 @@ Ta wersja rozwojowa dodaje panel usługi dostępny wyłącznie dla Ownera na str
 
 ## Użytkownicy i historia
 
-Liczba użytkowników online pochodzi wyłącznie z *osobnej obserwacji API statusu huba* nie starszej niż 15 sekund i jest wyświetlana tylko wtedy, gdy kontroler zgłasza aktywną jednostkę. Brak danych jest oznaczony jako niedostępny; nie wyliczamy liczby z systemd ani historycznego maksimum. Odczyt stanu usługi nie pobiera prywatnych danych użytkowników.
+Liczba użytkowników online pochodzi wyłącznie z *osobnej obserwacji API statusu huba* nie starszej niż 15 sekund i jest wyświetlana tylko wtedy, gdy kontroler zgłasza aktywną jednostkę. Po Start/Stop/Restart poprzednia obserwacja zostaje unieważniona, a WebAdmin ponownie pobiera telemetrię huba; do tego czasu nie pokazuje liczby użytkowników sprzed operacji. Brak danych jest oznaczony jako niedostępny; nie wyliczamy liczby z systemd ani historycznego maksimum. Odczyt stanu usługi nie pobiera prywatnych danych użytkowników.
 
 Panel prowadzi do **Historii działań**. Istniejąca trasa `/api/v1/audit` wymaga dodatkowo ID wykonawcy i dowodu dostępu; zachowuje strony po 16 wpisów i zdarzenia usługi z migracji v11 (`hub.start`, `hub.stop`, `hub.restart`, cel `service/1`, wynik `started`, `succeeded`, `failed`). Filtr operacji usługi ogranicza tylko *widoczną stronę*, nie wszystkie strony w bazie. Przerwane lub niepewne operacje mogą pozostać w stanie `started` do ręcznej analizy. Panel i audyt nie ujawniają sekretów.
 

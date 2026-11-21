@@ -12,7 +12,7 @@ This development increment adds an Owner-only service panel to the existing Reac
 
 ## Users and history
 
-Online user count is displayed only from a recent (no older than 15 seconds) *separate hub status API observation*, and only while the controller reports an active unit. A missing count is shown as unavailable; it is not inferred from systemd or from the last recorded peak. Status polling does not read private user details.
+Online user count is displayed only from a recent (no older than 15 seconds) *separate hub status API observation*, and only while the controller reports an active unit. Start/Stop/Restart invalidates the previous observation and triggers a fresh hub telemetry request; until it completes, the panel never shows the pre-action user count. A missing count is shown as unavailable; it is not inferred from systemd or from the last recorded peak. Status polling does not read private user details.
 
 The panel links to **Administrative history**. The existing `/api/v1/audit` route requires the additional actor ID and account proof; it retains its 16-event pagination and v11 append-only service events (`hub.start`, `hub.stop`, `hub.restart`, target `service/1`, outcomes `started`, `succeeded`, `failed`). The service-only checkbox filters the *visible page*, not the database or all pages. Interrupted/uncertain actions can remain `started` for operator investigation. Secrets are never included in the panel or audit output.
 

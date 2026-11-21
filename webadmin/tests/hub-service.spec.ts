@@ -89,6 +89,43 @@ test("unknown service outcome is never retried",async({page})=>{
   await expect(page.getByTestId("hub-restart")).toBeDisabled();
 });
 
+test("restart never displays pre-restart user count and refreshes hub telemetry",async({page})=>{
+  let restarted=false, telemetryReads=0;
+  await page.route("**/admin-api/v1/**",async route=>{
+    const request=route.request(),path=new URL(request.url()).pathname;
+    if(path==="/admin-api/v1/admin/access")return route.fulfill({json:access});
+    if(path==="/admin-api/v1/admin")return route.fulfill({json:administration});
+    if(path==="/admin-api/v1/management")return route.fulfill({json:{schema:2,maintenance:true,restart_required:true,areas}});
+    if(path==="/admin-api/v1/status"){
+      telemetryReads++;
+      if(restarted)await new Promise(resolve=>setTimeout(resolve,400));
+      return route.fulfill({json:{...snapshot,users:{...snapshot.users,online:restarted?0:4}}});
+    }
+    if(path==="/admin-api/v1/management/hub/status")return route.fulfill({json:systemd(true)});
+    if(path==="/admin-api/v1/management/hub/restart"){
+      restarted=true;
+      return route.fulfill({json:{operation:"restart",outcome:"succeeded",active_state:"active"}});
+    }
+    return route.fallback();
+  });
+  await page.goto("/#adminCore");
+  await expect(page.getByRole("switch")).toHaveAttribute("aria-checked","true");
+  await page.getByRole("switch").click(); // Disable the five-second automatic refresh.
+  await page.getByLabel("Active account ID").fill("1");
+  await page.getByLabel("Account password").fill("Valid proof");
+  await page.getByRole("button",{name:"Prove access",exact:true}).click();
+  await expect(page.getByTestId("admin-access-result")).toContainText("Access proved");
+  await page.evaluate(()=>{location.hash="#management";});
+  await expect(page.getByTestId("hub-service-online")).toHaveText("4");
+  await page.getByTestId("hub-restart").click();
+  await page.getByText("I understand the impact").click();
+  await page.getByRole("button",{name:"Confirm operation"}).click();
+  await expect(page.getByTestId("hub-service-notice")).toContainText("succeeded");
+  await expect(page.getByTestId("hub-service-online")).toHaveText("—");
+  await expect(page.getByTestId("hub-service-online")).toHaveText("0");
+  expect(telemetryReads).toBeGreaterThanOrEqual(2);
+});
+
 test("a catalog without hub.manage never renders service controls",async({page})=>{
   await page.route("**/admin-api/v1/status",route=>route.fulfill({json:snapshot}));
   await page.route("**/admin-api/v1/management",route=>route.fulfill({json:{schema:2,maintenance:true,restart_required:true,

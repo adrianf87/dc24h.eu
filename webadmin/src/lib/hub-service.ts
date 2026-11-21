@@ -36,3 +36,15 @@ export function parseHubServiceResult(value: unknown): HubServiceResult {
 }
 
 export const serviceConfirmation = (operation: ServiceOperation): string => operation.toUpperCase();
+
+// Even a recently fetched hub count becomes stale when systemd may have
+// restarted the serving process. Only a post-action observation is usable.
+export function currentServiceUsers(
+  snapshot: {server: {core_running: boolean}; users: {online: number}} | null,
+  checked: number | null, freshAfterAction: number | null, active: boolean, now = Date.now(),
+): number | null {
+  if (!active || !snapshot?.server.core_running || checked === null ||
+      (freshAfterAction !== null && checked <= freshAfterAction) ||
+      checked > now || now - checked >= 15000) return null;
+  return snapshot.users.online;
+}
