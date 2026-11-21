@@ -172,13 +172,13 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
         Number(length) > maxBody || req.headers["content-type"] !== "application/json") throw new Error("bad_body");
     const chunks: Buffer[] = [];
     let size = 0;
-    for await (const part of req) {
-      const chunk = part as Buffer;
-      size += chunk.length;
-      if (size > maxBody) throw new Error("bad_body");
-      chunks.push(chunk);
-    }
     try {
+      for await (const part of req) {
+        const chunk = part as Buffer;
+        chunks.push(chunk);
+        size += chunk.length;
+        if (size > maxBody) throw new Error("bad_body");
+      }
       if (size !== Number(length)) throw new Error("bad_body");
       return JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
     } finally { for (const chunk of chunks) chunk.fill(0); }
@@ -218,15 +218,16 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
       return;
     }
     if (name === "login") {
-      let fields: Record<string, unknown>;
-      try { fields = object(await readBody(req)); }
-      catch { reply(res, 400, { error: "bad_request" }); return; }
-      const actor = fields.actor_id;
-      const proof = fields.password;
-      const csrf = req.headers["x-dc24h-remote-csrf"];
+      // A challenge is one-use even if request framing or JSON is invalid.
       const init = cookie(req, "dc24h_remote_init");
       const challenge = challenges.get(init);
       challenges.delete(init);
+      let fields: Record<string, unknown>;
+      try { fields = object(await readBody(req)); }
+      catch { reply(res, 400, { error: "bad_request" }, [setCookie("dc24h_remote_init", "", 0)]); return; }
+      const actor = fields.actor_id;
+      const proof = fields.password;
+      const csrf = req.headers["x-dc24h-remote-csrf"];
       if (typeof actor !== "string" || !/^[1-9]\d{0,18}$/.test(actor) ||
         BigInt(actor) > 9223372036854775807n ||
         typeof proof !== "string" || !proof.length || proof.length > 1024 ||

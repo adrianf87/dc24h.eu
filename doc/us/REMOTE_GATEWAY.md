@@ -54,6 +54,12 @@ common proxy spoofing headers. Failures contain generic error codes, not
 tokens, passwords or private API output. The five successful route contracts
 remain unchanged.
 
+The `beta-0.2.2-fix` follow-up consumes an issued login challenge even if the
+POST body fails JSON, length or type validation, and clears its initialization
+cookie. Buffered request chunks are zeroed even when the stream exceeds its
+limit or aborts before completing; a rejected proof cannot be replayed with
+the same challenge. This does not change the five public route contracts.
+
 The summary includes only version, hub-running state, uptime, aggregate
 connection/user/chat counters and optional aggregate search/transfer counts.
 No account list, nicknames, peer IP/CID, credentials, configuration, audit

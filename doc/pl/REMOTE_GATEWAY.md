@@ -53,6 +53,12 @@ dodatkowo usuwa popularne sfałszowane nagłówki. Błędy zwracają generyczne
 kody, bez tokenów, haseł i treści prywatnego API. Pięć poprawnych tras
 pozostaje zgodnych z dotychczasowym kontraktem.
 
+Poprawka na gałęzi `beta-0.2.2-fix` zużywa wydane wyzwanie logowania także
+wtedy, gdy POST zawiera błędny JSON, długość lub typ body, oraz czyści cookie
+inicjalizacyjne. Bufory odebranej treści są zerowane również po przekroczeniu
+limitu i błędzie/przerwaniu strumienia. Odrzuconego dowodu nie można ponownie
+użyć z tym samym wyzwaniem. Kontrakt pięciu tras pozostaje bez zmian.
+
 Statystyki obejmują tylko wersję, stan działania huba, czas pracy
 oraz zbiorcze liczniki połączeń, użytkowników i czatu; opcjonalnie
 liczniki wyszukiwania i transferów. Nie ma list kont, nazw użytkowników,

@@ -4,6 +4,7 @@
 
 HTTP allowlist and malformed-request regression patch on branch `beta-0.2-code`, based on `main` at `fbb7b4e` after merging beta-0.2.1.
 
+- Follow-up fixes on `beta-0.2.2-fix` (from `beta-0.2.2-source`): remove a remaining TypeScript test assertion that narrowed an API-call array to `never`; consume the login challenge even when JSON/body parsing fails; clear the initialization cookie on malformed login; and zero request buffers on streamed oversize/abort/error paths. Added socket-free regression tests for challenge replay and buffer cleanup.
 - Deny all client-controlled `X-Forwarded-*`, `Proxy-Authorization`, `X-Real-IP`, `X-Original-URL` and `X-Rewrite-URL` headers at the independent Node gateway; extend the Apache example to strip commonly spoofed proxy headers.
 - Test exact path/method matching, encoded and alternate paths, wrong bodies, request framing, header spoofing and absence of private API calls for refused requests. Keep the five accepted routes unchanged.
 - Update the visible hub/API/service-controller/WebAdmin version to `beta-0.2.2` and the EN/PL operator notes. CMake/npm package tuple `0.1.0` and MariaDB schema v11 remain unchanged. Still local-only, read-only and public-disabled; no deployment, administrative writes or ADC/ADCS modifications.

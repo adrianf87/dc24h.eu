@@ -64,6 +64,7 @@ class RemoteConfiguration(unittest.TestCase):
         self.assertIn('set(DC24H_VERSION "beta-0.2.2")', self.text("CMakeLists.txt"))
         self.assertIn('WEBADMIN_VERSION = "beta-0.2.2"', self.text("webadmin/src/lib/status.ts"))
         self.assertIn("beta-0.2-code", self.text(".github/workflows/build.yml"))
+        self.assertIn("beta-0.2.2-fix", self.text(".github/workflows/build.yml"))
         self.assertIn("remote.gateway.config", self.text("CMakeLists.txt"))
         self.assertIn("apache2.remote.gateway", self.text("CMakeLists.txt"))
         self.assertEqual(len(list((ROOT / "database/migrations").glob("*.sql"))), 11)

@@ -183,7 +183,7 @@ test("remote gateway authenticates a real API proof but projects only approved a
     assert.equal((await call("/remote/v1/login", "POST", JSON.stringify({ password: "x".repeat(2048) }), {
       Cookie: loginCookie, "X-DC24H-Remote-CSRF": challengeToken,
     })).status, 400);
-    assert.deepEqual(upstreamCalls, [], "invalid POST bodies must not authenticate upstream");
+    assert.equal(upstreamCalls.length, 0, "invalid POST bodies must not authenticate upstream");
     assert.equal((await call("/remote/v1/login", "POST", JSON.stringify({ actor_id: "7", password: "correct" }),
       { Cookie: loginCookie, "X-DC24H-Remote-CSRF": "0".repeat(64) })).status, 403);
     const fresh = await call("/remote/v1/challenge");
