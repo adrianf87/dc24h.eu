@@ -38,6 +38,9 @@ find_package(OpenSSL 3.0 REQUIRED COMPONENTS SSL Crypto)
 find_package(Threads REQUIRED)
 find_path(MARIADB_INCLUDE_DIR NAMES mysql.h PATH_SUFFIXES mariadb REQUIRED)
 find_library(MARIADB_LIBRARY NAMES mariadb REQUIRED)
+find_path(ARGON2_INCLUDE_DIR NAMES argon2.h REQUIRED)
+find_library(ARGON2_LIBRARY NAMES argon2 REQUIRED)
+find_package(nlohmann_json 3.10.5 REQUIRED)
 
 add_library(dc24h_config STATIC src/net/config.cpp)
 target_include_directories(dc24h_config PUBLIC include)
@@ -59,9 +62,20 @@ target_link_libraries(dc24h_net
 )
 dc24h_enable_warnings(dc24h_net)
 
+add_library(dc24h_admin STATIC src/admin/crypto.cpp src/admin/server.cpp src/admin/service.cpp)
+target_include_directories(dc24h_admin
+    PUBLIC include
+    PRIVATE "${ARGON2_INCLUDE_DIR}" "${PROJECT_BINARY_DIR}/generated"
+)
+target_link_libraries(dc24h_admin
+    PRIVATE dc24h_adc dc24h_db dc24h_net Threads::Threads OpenSSL::Crypto
+        "${ARGON2_LIBRARY}" nlohmann_json::nlohmann_json
+)
+dc24h_enable_warnings(dc24h_admin)
+
 add_library(dc24h_cli STATIC src/cli.cpp src/server_cli.cpp src/database_cli.cpp)
 target_include_directories(dc24h_cli PUBLIC include PRIVATE "${PROJECT_BINARY_DIR}/generated")
-target_link_libraries(dc24h_cli PRIVATE dc24h_net dc24h_config dc24h_db Threads::Threads)
+target_link_libraries(dc24h_cli PRIVATE dc24h_net dc24h_config dc24h_db dc24h_admin Threads::Threads)
 dc24h_enable_warnings(dc24h_cli)
 
 add_executable(dc24h-hub src/main.cpp)

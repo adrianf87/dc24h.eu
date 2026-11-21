@@ -379,6 +379,16 @@ std::vector<RosterEntry> Presence::roster() const {
     return list;
 }
 
+std::vector<OnlineUser> Presence::user_page(std::string_view after, std::size_t limit) const {
+    std::vector<OnlineUser> page;
+    for (auto user = users_.upper_bound(after); user != users_.end() && page.size() < limit;
+         ++user) {
+        const auto &fields = user->second.profile.fields;
+        page.push_back({user->first, fields.at("NI"), fields.at("ID")});
+    }
+    return page;
+}
+
 std::size_t Presence::size() const noexcept { return users_.size(); }
 
 bool Presence::remove(std::string_view sid) {

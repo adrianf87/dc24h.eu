@@ -1,6 +1,7 @@
 #include "server_cli.hpp"
 
 #include "database_cli.hpp"
+#include "dc24h/admin/server.hpp"
 #include "dc24h/db/store.hpp"
 #include "dc24h/net/server.hpp"
 
@@ -28,6 +29,8 @@ struct LaunchConfig {
     net::ServerConfig server;
     std::size_t threads = 2;
     bool mariadb = false;
+    bool admin_api = false;
+    admin::Config admin;
     std::set<std::string_view> setting_overrides;
 };
 
@@ -59,6 +62,10 @@ LaunchConfig parse_options(std::span<const std::string_view> arguments) {
             launch.mariadb = true;
             continue;
         }
+        if (option == "--admin-api") {
+            launch.admin_api = true;
+            continue;
+        }
         if (++index == arguments.size() ||
             (arguments[index].empty() && option != "--hub-description") ||
             arguments[index].starts_with("--")) {
@@ -77,6 +84,10 @@ LaunchConfig parse_options(std::span<const std::string_view> arguments) {
             adc.address = value;
         } else if (option == "--adc-port") {
             adc.port = static_cast<std::uint16_t>(number(value, max_port, option));
+        } else if (option == "--admin-port") {
+            launch.admin.port = static_cast<std::uint16_t>(number(value, max_port, option));
+        } else if (option == "--admin-origin") {
+            launch.admin.origin = value;
         } else if (option == "--threads") {
             launch.threads = static_cast<std::size_t>(number(value, 64, option));
             if (launch.threads == 0) {
@@ -93,6 +104,12 @@ LaunchConfig parse_options(std::span<const std::string_view> arguments) {
         launch.server.adc = std::move(adc);
     } else if (seen.contains("--adc-address") || seen.contains("--adc-port")) {
         throw std::invalid_argument("ADC address and port require --enable-adc");
+    }
+    if (launch.admin_api && (!launch.mariadb || launch.admin.origin.empty())) {
+        throw std::invalid_argument("--admin-api requires --mariadb and --admin-origin");
+    }
+    if (!launch.admin_api && (seen.contains("--admin-port") || seen.contains("--admin-origin"))) {
+        throw std::invalid_argument("Admin API options require --admin-api");
     }
     return launch;
 }
@@ -135,6 +152,11 @@ int serve(LaunchConfig launch, std::ostream &output, std::ostream &errors) {
         io, std::move(launch.server),
         [&errors](std::string_view event) { std::osyncstream(errors) << event << '\n'; },
         std::move(database));
+    std::unique_ptr<admin::Server> api;
+    if (launch.admin_api) {
+        api = std::make_unique<admin::Server>(server, read_database_config(DatabaseAccount::api),
+                                              std::move(launch.admin));
+    }
     asio::signal_set signals(io, SIGINT, SIGTERM);
     signals.async_wait([&server](const boost::system::error_code &error, int) {
         if (!error) {
@@ -145,6 +167,9 @@ int serve(LaunchConfig launch, std::ostream &output, std::ostream &errors) {
     print_listener(output, "ADCS", server.adcs_endpoint());
     if (const auto &adc = server.adc_endpoint()) {
         print_listener(output, "ADC", *adc);
+    }
+    if (api) {
+        print_listener(output, "Admin API", {"127.0.0.1", api->port()});
     }
     output.flush();
 
@@ -188,6 +213,9 @@ void write_server_help(std::ostream &output) {
            << "  --adc-address IP          ADC listen address (127.0.0.1).\n"
            << "  --adc-port PORT           ADC TCP port (1510).\n"
            << "  --mariadb                 Load settings and enforce bans from MariaDB.\n"
+           << "  --admin-api               Start the Admin API on 127.0.0.1.\n"
+           << "  --admin-port PORT         Admin API loopback TCP port (8081).\n"
+           << "  --admin-origin URL        HTTPS origin of the Admin API reverse proxy.\n"
            << "  --hub-name NAME           Advertised hub name (dc24h.eu).\n"
            << "  --hub-description TEXT    Advertised hub description.\n"
            << "  --max-clients COUNT       Concurrent clients across both listeners (128).\n"

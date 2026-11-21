@@ -13,7 +13,7 @@
 
 namespace dc24h::db {
 
-inline constexpr unsigned current_schema = 3;
+inline constexpr unsigned current_schema = 5;
 
 class Error : public std::runtime_error {
   public:
@@ -52,6 +52,22 @@ struct AuditEvent {
     std::string details;
 };
 
+enum class AdminRole { admin, viewer };
+
+struct AdminAccount {
+    std::uint64_t id;
+    std::string username;
+    AdminRole role;
+};
+
+struct AdminCredentials {
+    AdminAccount account;
+    std::string password_hash;
+};
+
+[[nodiscard]] bool valid_admin_username(std::string_view name) noexcept;
+[[nodiscard]] std::string_view role_name(AdminRole role) noexcept;
+
 using Settings = std::vector<std::pair<std::string, std::string>>;
 
 // One synchronous connection. Construct, use, and destroy it on the same non-I/O thread.
@@ -70,10 +86,19 @@ class Store {
 
     [[nodiscard]] std::uint64_t add_ban(const BanInput &input, std::string_view actor = {});
     [[nodiscard]] bool remove_ban(std::uint64_t id, std::string_view actor = {});
-    [[nodiscard]] std::vector<Ban> bans(std::uint64_t after_id = 0);
+    [[nodiscard]] std::vector<Ban> bans(std::uint64_t after_id = 0, std::uint64_t limit = 100);
     [[nodiscard]] std::optional<ActiveBan> active_ban(std::string_view cid,
                                                       std::string_view peer_ip);
-    [[nodiscard]] std::vector<AuditEvent> audit_events(std::uint64_t after_id = 0);
+    [[nodiscard]] std::vector<AuditEvent> audit_events(std::uint64_t after_id = 0,
+                                                       std::uint64_t limit = 100);
+
+    void create_admin_user(std::string_view username, AdminRole role, std::string_view hash);
+    [[nodiscard]] std::optional<AdminCredentials> admin_credentials(std::string_view username);
+    void create_admin_session(const AdminAccount &account, std::string_view digest,
+                              std::uint64_t lifetime_seconds);
+    [[nodiscard]] std::optional<AdminAccount> admin_session(std::string_view digest);
+    void revoke_admin_session(const AdminAccount &account, std::string_view digest);
+    [[nodiscard]] std::uint64_t revoke_admin_sessions(std::string_view username);
 
   private:
     class Impl;

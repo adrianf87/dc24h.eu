@@ -28,6 +28,12 @@ struct RosterEntry {
     WireFrame information;
 };
 
+struct OnlineUser {
+    std::string sid;
+    std::string nickname;
+    std::string cid;
+};
+
 struct ChatDelivery {
     WireFrame frame;
     std::vector<std::string_view> recipients;
@@ -63,6 +69,8 @@ class Presence {
     [[nodiscard]] std::optional<std::vector<std::string_view>>
     recipients(const adc::Message &message) const;
     [[nodiscard]] std::vector<RosterEntry> roster() const;
+    [[nodiscard]] std::vector<OnlineUser> user_page(std::string_view after,
+                                                    std::size_t limit) const;
     [[nodiscard]] std::size_t size() const noexcept;
     [[nodiscard]] bool remove(std::string_view sid);
 
