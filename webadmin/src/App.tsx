@@ -658,7 +658,7 @@ export default function App() {
             />
           )}
           {page === "users" && <HubUsers snapshot={snapshot} t={t} />}
-          {page === "management" && <Management t={t} snapshot={snapshot} checked={hub.checked} />}
+          {page === "management" && <Management t={t} snapshot={snapshot} checked={hub.checked} refreshHub={hub.refresh} />}
           {(page === "overview" || page === "connections" || page === "security") && (
             <div className={`metrics-grid ${page === "security" ? "two" : ""}`}>
               <Metric

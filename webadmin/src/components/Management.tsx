@@ -32,7 +32,9 @@ function body(area: ManagementArea, t: Copy) {
   return t.managementHubBody;
 }
 
-export function Management({ t, snapshot, checked }: { t: Copy; snapshot: HubSnapshot | null; checked: number | null }) {
+export function Management({ t, snapshot, checked, refreshHub }: {
+  t: Copy; snapshot: HubSnapshot | null; checked: number | null; refreshHub: () => Promise<void>;
+}) {
   const [catalog, setCatalog] = useState<ManagementCatalog | null>(null);
   const [available, setAvailable] = useState(false);
 
@@ -81,6 +83,6 @@ export function Management({ t, snapshot, checked }: { t: Copy; snapshot: HubSna
         </article>;
       })}
     </div>}
-    {available && catalog?.areas[4].allowed && <HubService t={t} snapshot={snapshot} checked={checked}/>}
+    {available && catalog?.areas[4].allowed && <HubService t={t} snapshot={snapshot} checked={checked} refreshHub={refreshHub}/>}
   </section>;
 }

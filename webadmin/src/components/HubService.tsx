@@ -1,7 +1,7 @@
 import {useEffect, useRef, useState} from "react";
 import type {Copy} from "../languages/us";
 import {adminHeaders} from "../lib/adminAccess";
-import {parseHubServiceResult, parseHubServiceStatus, serviceConfirmation} from "../lib/hub-service";
+import {currentServiceUsers, parseHubServiceResult, parseHubServiceStatus, serviceConfirmation} from "../lib/hub-service";
 import type {HubServiceStatus, ServiceOperation} from "../lib/hub-service";
 import type {HubSnapshot} from "../lib/status";
 
@@ -9,13 +9,16 @@ const path = "./admin-api/v1/management/hub/";
 type Notice = "hubServiceAuth" | "hubServiceUnavailable" | "hubServiceRefused" | "hubServiceConflict" |
   "hubServiceUnknown" | "hubServiceSucceeded" | "hubServiceVerifyUnknown";
 
-export function HubService({t, snapshot, checked}: {t: Copy; snapshot: HubSnapshot | null; checked: number | null}) {
+export function HubService({t, snapshot, checked, refreshHub}: {
+  t: Copy; snapshot: HubSnapshot | null; checked: number | null; refreshHub: () => Promise<void>;
+}) {
   const [service, setService] = useState<HubServiceStatus | null>(null);
   const [selected, setSelected] = useState<ServiceOperation | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [phase, setPhase] = useState<"idle" | "working" | "verifying">("idle");
   const [notice, setNotice] = useState<Notice | null>(null);
   const [lastResult, setLastResult] = useState<ServiceOperation | null>(null);
+  const [freshAfterAction, setFreshAfterAction] = useState<number | null>(null);
   const pending = useRef<AbortController | null>(null);
   const loadEpoch = useRef(0);
   useEffect(() => {
@@ -84,6 +87,9 @@ export function HubService({t, snapshot, checked}: {t: Copy; snapshot: HubSnapsh
     if (selected === "start" && service.active_state !== "inactive") return;
     if (selected !== "start" && service.active_state !== "active") return;
     const action = selected;
+    // A successful service start/restart invalidates all previously observed
+    // hub user counts, even if the previous snapshot was only seconds old.
+    setFreshAfterAction(Date.now());
     setPhase("working"); setNotice(null); setService(null); setSelected(null); setConfirmed(false); setLastResult(null);
     try {
       await request(action, action, parseHubServiceResult);
@@ -97,13 +103,19 @@ export function HubService({t, snapshot, checked}: {t: Copy; snapshot: HubSnapsh
       }
       catch { setNotice("hubServiceVerifyUnknown"); }
     } catch (error) { setNotice(errorNotice(error, true)); }
-    finally { setPhase("idle"); }
+    finally {
+      // Cancel a possibly in-flight pre-action snapshot and fetch a new one.
+      // A reading taken during the action is not evidence of the new service.
+      setFreshAfterAction(Date.now());
+      void refreshHub();
+      setPhase("idle");
+    }
   }
 
   const ready = service?.available === true && service.load_state === "loaded";
   const active = ready && service.active_state === "active";
   const inactive = ready && service.active_state === "inactive";
-  const online = active && snapshot?.server.core_running && checked !== null && Date.now() - checked < 15000 ? snapshot.users.online : null;
+  const online = currentServiceUsers(snapshot, checked, freshAfterAction, active);
   const actions: ServiceOperation[] = ["start", "stop", "restart"];
   const label = (action: ServiceOperation) => action === "start" ? t.hubServiceStart : action === "stop" ? t.hubServiceStop : t.hubServiceRestart;
 
