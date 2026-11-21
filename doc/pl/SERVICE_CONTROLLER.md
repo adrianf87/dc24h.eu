@@ -26,4 +26,6 @@ Brak dostępu do systemd daje `{"schema":1,"available":false,"error":"systemd_un
 
 ## Testy i ograniczenia
 
+Poprawka po audycie (obowiązuje też w późniejszych wersjach sterowania usługą): kontroler odczytuje fragmenty polecenia strumieniowego Unix w jednym limicie 2 sekund, nie zakładając, że pojedynczy `recv` zwraca całe żądanie. Istniejące gniazdo może być uznane za nieaktywne wyłącznie po błędzie połączenia `ECONNREFUSED`; odmowa dostępu i inne niepewne wyniki nie pozwalają usunąć czynnego gniazda. Testy procesowe obejmują oba przypadki.
+
 `service.controller.process` sprawdza odpowiedź bez uruchamiania huba, odrzucanie komend sterujących, drugą instancję, usuwanie gniazda, symlink, niebezpieczne uprawnienia katalogu i numer wersji. Dostępność prawdziwego systemd zależy od środowiska; testy nie zmieniają `dc24h.service` na hoście. Przykładowa jednostka nie jest automatycznie instalowana ani testowana na środowisku produkcyjnym. Nie zmieniają się ADC/ADCS, API serwisowe, Apache, przyciski WebAdmin, schemat MariaDB v10 ani audyt. Uprawnienie aplikacyjne `hub.manage` pozostaje niezaimplementowane. Start/Stop/Restart z kontrolą Owner i audytem to beta-0.1.6; przyciski WebAdmin to beta-0.1.7.
