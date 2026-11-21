@@ -8,6 +8,7 @@ Owner-only local WebAdmin service management — development branch `beta-0.1.7`
 - Added the WebAdmin service panel with state-aware action buttons, explicit warning and confirmation, progress, result and re-verification handling. Uncertain outcomes are not retried. Recent hub user count remains separate from systemd status. Service action history is available through the existing proof-gated audit page, now with a per-page service filter.
 - Restricted Node loopback forwarding to the four exact service routes; Apache continues to deny them. Added service response allowlist parsing and audit v11 service-row parsing. The maintenance API resets the bounded reply-send deadline after a potentially slow systemd operation.
 - Updated EN/PL UI and documentation. Hub, API and WebAdmin identify as `beta-0.1.7`; package tuple remains `0.1.0`. Schema v11 is unchanged, with no migration or production deployment. No ADC/ADCS protocol change. See [US](doc/us/HUB_WEBADMIN.md) | [PL](doc/pl/HUB_WEBADMIN.md).
+- Maintenance fix carried forward from the beta-0.1.4 editor audit: validation now checks the size and parsing of the exact serialized INI proposal, so a preview cannot report success for a patch that exceeds the 64 KiB file limit. No API or database change.
 
 ## beta-0.1.6 — 2026-11-20
 
