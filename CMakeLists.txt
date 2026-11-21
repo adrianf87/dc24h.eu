@@ -28,6 +28,11 @@ target_include_directories(dc24h_adc
 target_link_libraries(dc24h_adc PRIVATE "${UTF8PROC_LIBRARY}" "${GCRYPT_LIBRARY}")
 dc24h_enable_warnings(dc24h_adc)
 
+add_library(dc24h_presence STATIC src/hub/presence.cpp)
+target_include_directories(dc24h_presence PUBLIC include PRIVATE "${UTF8PROC_INCLUDE_DIR}")
+target_link_libraries(dc24h_presence PUBLIC dc24h_adc PRIVATE "${UTF8PROC_LIBRARY}")
+dc24h_enable_warnings(dc24h_presence)
+
 find_package(Boost 1.74 REQUIRED CONFIG)
 find_package(OpenSSL 3.0 REQUIRED COMPONENTS SSL Crypto)
 find_package(Threads REQUIRED)
@@ -36,7 +41,7 @@ add_library(dc24h_net STATIC src/net/server.cpp src/net/connection.cpp)
 target_include_directories(dc24h_net PUBLIC include PRIVATE "${PROJECT_BINARY_DIR}/generated")
 target_link_libraries(dc24h_net
     PUBLIC Boost::headers
-    PRIVATE dc24h_adc OpenSSL::SSL Threads::Threads
+    PRIVATE dc24h_presence OpenSSL::SSL Threads::Threads
 )
 dc24h_enable_warnings(dc24h_net)
 

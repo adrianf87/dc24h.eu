@@ -72,6 +72,11 @@ LaunchConfig parse_options(std::span<const std::string_view> arguments) {
             adc.port = static_cast<std::uint16_t>(number(value, max_port, option));
         } else if (option == "--max-clients") {
             launch.server.max_clients = static_cast<std::size_t>(number(value, max_size, option));
+        } else if (option == "--max-nick-codepoints") {
+            launch.server.max_nick_codepoints =
+                static_cast<std::size_t>(number(value, 256, option));
+        } else if (option == "--max-message-bytes") {
+            launch.server.max_message_bytes = static_cast<std::size_t>(number(value, 4096, option));
         } else if (option == "--input-bytes") {
             limits.input_bytes = static_cast<std::size_t>(number(value, max_size, option));
         } else if (option == "--pending-bytes") {
@@ -176,6 +181,8 @@ void write_server_help(std::ostream &output) {
            << "  --adc-address IP          ADC listen address (127.0.0.1).\n"
            << "  --adc-port PORT           ADC TCP port (1510).\n"
            << "  --max-clients COUNT       Concurrent clients across both listeners (128).\n"
+           << "  --max-nick-codepoints N   Maximum Unicode code points in a nickname (32).\n"
+           << "  --max-message-bytes N     Maximum decoded UTF-8 chat bytes (1024).\n"
            << "  --input-bytes BYTES       Maximum ADC frame bytes before LF (16384).\n"
            << "  --pending-bytes BYTES     Maximum queued output bytes per client (65536).\n"
            << "  --setup-timeout-ms MS     Overall connection setup deadline (30000).\n"

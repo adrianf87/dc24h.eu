@@ -29,6 +29,11 @@ target_link_libraries(dc24h_adc_tests PRIVATE dc24h_adc GTest::gtest_main)
 dc24h_enable_warnings(dc24h_adc_tests)
 gtest_discover_tests(dc24h_adc_tests)
 
+add_executable(dc24h_presence_tests hub/presence_test.cpp)
+target_link_libraries(dc24h_presence_tests PRIVATE dc24h_presence GTest::gtest_main)
+dc24h_enable_warnings(dc24h_presence_tests)
+gtest_discover_tests(dc24h_presence_tests)
+
 add_executable(dc24h_net_tests net/server_test.cpp)
 target_link_libraries(dc24h_net_tests
     PRIVATE dc24h_net dc24h_adc GTest::gtest_main OpenSSL::SSL Threads::Threads

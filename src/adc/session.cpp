@@ -16,21 +16,8 @@ bool routed(MessageType type) {
            type == MessageType::echo || type == MessageType::feature;
 }
 
-std::string status_line(std::string_view code, std::string_view text, std::string_view field) {
-    std::string line = "ISTA ";
-    line += code;
-    line += ' ';
-    line += escape_parameter(text);
-    if (!field.empty()) {
-        line += ' ';
-        line += escape_parameter(field);
-    }
-    line += '\n';
-    return line;
-}
-
 SessionResult status(std::string_view code, std::string_view text, std::string_view field = {}) {
-    return {SessionAction::none, {status_line(code, text, field)}};
+    return {SessionAction::none, {format_status(code, text, field)}};
 }
 
 SessionResult invalid_state(const Message &message) {
@@ -106,6 +93,9 @@ SessionResult Session::receive(const Message &message) {
     }
     if (routed(message.type)) {
         return {SessionAction::dispatch, {}};
+    }
+    if (message.command == "MSG") {
+        return invalid_direction(message);
     }
     return {};
 }
@@ -271,7 +261,7 @@ SessionResult Session::disconnect() {
 SessionResult Session::fatal_status(std::string_view code, std::string_view description,
                                     std::string_view field) {
     closed_ = true;
-    return {SessionAction::close, {status_line(code, description, field)}};
+    return {SessionAction::close, {format_status(code, description, field)}};
 }
 
 } // namespace dc24h::adc

@@ -1,4 +1,5 @@
 #include "dc24h/adc/protocol.hpp"
+#include "dc24h/adc/parser.hpp"
 
 #include "wire.hpp"
 
@@ -56,12 +57,30 @@ std::optional<std::string_view> single_parameter(const Message &message, std::st
 
 std::string Message::fourcc() const { return static_cast<char>(type) + command; }
 
+std::string format_status(std::string_view code, std::string_view text, std::string_view field) {
+    std::string line = "ISTA ";
+    line += code;
+    line += ' ';
+    line += escape_parameter(text);
+    if (!field.empty()) {
+        line += ' ';
+        line += escape_parameter(field);
+    }
+    line += '\n';
+    return line;
+}
+
 bool is_sid(std::string_view value) noexcept {
     return value.size() == 4 && std::ranges::all_of(value, detail::base32_symbol);
 }
 
 bool is_cid(std::string_view value) noexcept {
     return value.size() == 39 && detail::base32_bytes(value) == detail::tiger_bytes;
+}
+
+bool is_feature(std::string_view value) noexcept {
+    return value.size() == 4 && std::ranges::all_of(value.substr(0, 3), detail::uppercase) &&
+           detail::alphanumeric(value.back());
 }
 
 IdentityCheck verify_tiger_identity(std::string_view cid, std::string_view pid) {
@@ -101,9 +120,7 @@ std::optional<std::vector<FeatureChange>> parse_support(const Message &message) 
         }
         const auto operation = parameter.substr(0, 2);
         const auto feature = parameter.substr(2);
-        if ((operation != "AD" && operation != "RM") ||
-            !std::ranges::all_of(feature.substr(0, 3), detail::uppercase) ||
-            !detail::alphanumeric(feature.back())) {
+        if ((operation != "AD" && operation != "RM") || !is_feature(feature)) {
             return std::nullopt;
         }
         changes.push_back({feature, operation == "AD"});
@@ -153,6 +170,32 @@ std::optional<Quit> parse_quit(const Message &message) {
         return std::nullopt;
     }
     return Quit{message.parameters.front(), std::move(*fields)};
+}
+
+std::optional<Chat> parse_chat(const Message &message) {
+    if (message.command != "MSG" || message.parameters.empty() ||
+        message.parameters.front().empty()) {
+        return std::nullopt;
+    }
+    const auto flags = parse_fields(std::span(message.parameters).subspan(1));
+    if (!flags) {
+        return std::nullopt;
+    }
+    Chat result{message.parameters.front(), std::nullopt};
+    for (const auto &flag : *flags) {
+        if (flag.name == "PM") {
+            if (!is_sid(flag.value)) {
+                return std::nullopt;
+            }
+            result.private_group = flag.value;
+        } else if (flag.name == "ME") {
+            if (flag.value != "1" && flag.value != "0") {
+                return std::nullopt;
+            }
+            result.third_person = flag.value == "1";
+        }
+    }
+    return result;
 }
 
 std::optional<std::string_view> parse_password_challenge(const Message &message) {

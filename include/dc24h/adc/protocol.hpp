@@ -37,6 +37,7 @@ struct Message {
 
 [[nodiscard]] bool is_sid(std::string_view value) noexcept;
 [[nodiscard]] bool is_cid(std::string_view value) noexcept; // TIGR/192
+[[nodiscard]] bool is_feature(std::string_view value) noexcept;
 
 enum class IdentityCheck { valid, invalid_cid, invalid_pid, mismatch, hash_unavailable };
 
@@ -67,11 +68,20 @@ struct Quit {
     std::vector<Field> fields;
 };
 
+struct Chat {
+    std::string_view text;
+    std::optional<std::string_view> private_group;
+    bool third_person = false;
+};
+
+[[nodiscard]] std::string format_status(std::string_view code, std::string_view text,
+                                        std::string_view field = {});
 [[nodiscard]] std::optional<std::vector<FeatureChange>> parse_support(const Message &message);
 [[nodiscard]] std::optional<std::string_view> parse_sid(const Message &message);
 [[nodiscard]] std::optional<std::vector<Field>> parse_info(const Message &message);
 [[nodiscard]] std::optional<Status> parse_status(const Message &message);
 [[nodiscard]] std::optional<Quit> parse_quit(const Message &message);
+[[nodiscard]] std::optional<Chat> parse_chat(const Message &message);
 [[nodiscard]] std::optional<std::string_view> parse_password_challenge(const Message &message);
 [[nodiscard]] std::optional<std::string_view> parse_password_response(const Message &message);
 
