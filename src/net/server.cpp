@@ -3,6 +3,7 @@
 #include "connection.hpp"
 #include "dc24h/hub/peer_routing.hpp"
 
+#include <boost/asio/executor_work_guard.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/v6_only.hpp>
 #include <boost/asio/post.hpp>
@@ -148,6 +149,9 @@ class Server::Impl : public std::enable_shared_from_this<Server::Impl> {
     }
 
     void stop() {
+        // Accept handlers can stop scheduling work as soon as they see the flag.
+        // Keep run() alive until the listener shutdown has been posted.
+        const auto work = asio::make_work_guard(io_);
         if (stop_requested_.exchange(true)) {
             return;
         }
