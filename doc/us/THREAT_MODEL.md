@@ -163,4 +163,15 @@ Current control: the missing engines are absent, and the pages say so. Residual 
 
 ## What remains separate work
 
-A public authenticated gateway, remote administrator access, cookie sessions, HTTP/2, OCSP, automatic certificate renewal, production audit logging, an AppArmor or SELinux policy, a firewall, unattended package upgrades, `configuration.manage`, `hub.manage`, and browser kick or mute. This document does not mark any of them done.
+Public authenticated gateway with MFA, Internet-facing administrator access, HTTP/2, OCSP, automatic certificate renewal, production audit logging, an AppArmor or SELinux policy, a firewall, unattended package upgrades, `configuration.manage`, `hub.manage`, and browser kick or mute. beta-0.2 does not mark any of them done.
+
+### beta-0.2 local gateway boundary
+
+The new localhost-only HTTPS gateway issues HttpOnly/Secure/SameSite cookies
+backed by short in-memory sessions after administrator/Owner account-password
+proof. Every read rechecks the live role, and only fixed aggregate counters
+cross to the browser. No generic maintenance proxy, write or systemd action
+is available. Local token/socket compromise, browser compromise, password
+theft, weak local TLS trust and process-local rate limits remain residual
+risks. **No MFA or supported public network exposure.** See
+[Remote gateway](REMOTE_GATEWAY.md) for exact boundaries and denial tests.

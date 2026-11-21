@@ -27,7 +27,7 @@ else()
 endif()
 
 # The VERSION tuple above is the package number; operators see the beta version.
-set(DC24H_VERSION "beta-0.1.8")
+set(DC24H_VERSION "beta-0.2")
 configure_file(cmake/version.hpp.in generated/dc24h/version.hpp @ONLY)
 find_package(Threads REQUIRED)
 find_package(OpenSSL 3 REQUIRED COMPONENTS SSL Crypto)
@@ -298,7 +298,7 @@ endforeach()
 
 include(GNUInstallDirs)
 install(TARGETS dc24h dc24h-account-admin dc24h-owner dc24h-service-controller RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-install(FILES config/dc24h.ini.example config/adc-accounts.ini.example config/apache2-webadmin-https.conf.example config/apache2-webadmin-https-proxy.conf.example config/dc24h.service.example config/dc24h.sysusers.example config/dc24h-control.service.example config/dc24h-control.sysusers.example config/49-dc24h-control.rules.example DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/dc24h)
+install(FILES config/dc24h.ini.example config/adc-accounts.ini.example config/apache2-webadmin-https.conf.example config/apache2-webadmin-https-proxy.conf.example config/apache2-webadmin-remote.conf.example config/dc24h-remote-gateway.service.example config/dc24h.service.example config/dc24h.sysusers.example config/dc24h-control.service.example config/dc24h-control.sysusers.example config/49-dc24h-control.rules.example DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/dc24h)
 
 install(FILES ${DC24H_MIGRATION_FILES} DESTINATION ${CMAKE_INSTALL_DATADIR}/dc24h/migrations)
 
@@ -336,6 +336,8 @@ if(BUILD_TESTING)
     set_tests_properties(security.threat_model PROPERTIES TIMEOUT 15)
     add_test(NAME beta.baseline COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/beta_baseline_tests.py")
+    add_test(NAME remote.gateway.config COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/remote_gateway_config_tests.py")
     set_tests_properties(beta.baseline PROPERTIES TIMEOUT 15)
     add_test(NAME service.controller.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/service_controller_process_tests.py"
@@ -1168,6 +1170,11 @@ if(BUILD_TESTING)
                 "${APACHE2_EXECUTABLE}" "${APACHE2_MODULE_DIR}"
                 "${CMAKE_CURRENT_SOURCE_DIR}/config/apache2-webadmin-https-proxy.conf.example")
             set_tests_properties(apache2.https.proxy PROPERTIES TIMEOUT 90)
+            add_test(NAME apache2.remote.gateway COMMAND "${Python3_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/apache_remote_gateway_tests.py"
+                "${APACHE2_EXECUTABLE}" "${APACHE2_MODULE_DIR}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/config/apache2-webadmin-remote.conf.example")
+            set_tests_properties(apache2.remote.gateway PROPERTIES TIMEOUT 90)
         elseif(DC24H_REQUIRE_INTEGRATION_TESTS)
             message(FATAL_ERROR "Required Apache2 mod_proxy_http not found: apache2.https.proxy unavailable")
         else()

@@ -1,3 +1,9 @@
+# Lokalna brama WebAdmin tylko do odczytu — beta-0.2
+
+Gałąź beta-0.2 bazuje na aktualnym chronionym main z wersją bazową beta-0.1.8. Hub, API, kontroler usługi i WebAdmin zgłaszają beta-0.2. Osobny portal HTTPS pod /remote.html weryfikuje hasło aktywnego konta administratora albo Ownera, korzysta z krótkich sesji po stronie serwera, CSRF i ściśle określonych pól statystyk. Brama jest wyłącznie lokalna, ponieważ MFA nie jest zaimplementowane. Nie ma publicznego nasłuchu, zapisu konfiguracji, zmiany ról ani sterowania systemd. Schemat v11 i pakiet 0.1.0 bez zmian. To nie jest wydanie produkcyjne. Zobacz [Bramę WebAdmin](REMOTE_GATEWAY.md).
+
+## Poprzedni etap
+
 # Wersja bazowa rozwoju — beta-0.1.8
 
 Gałąź `beta-0.1.8` powstaje z chronionego main `cebcd12`. Hub, lokalne API administracyjne, niezależny kontroler usługi i WebAdmin zgłaszają `beta-0.1.8`, a numer pakietu pozostaje `0.1.0`. Ta wersja bazowa zachowuje sterowanie usługą huba tylko dla Ownera, potwierdzanie operacji i audyt z beta-0.1.7 oraz poprawki scalone do main. Nie dodano nowej funkcji, migracji schematu, publicznej trasy proxy, zmian protokołu ADC/ADCS ani wdrożenia produkcyjnego. To nie jest wydanie produkcyjne.

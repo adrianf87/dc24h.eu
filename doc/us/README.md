@@ -1,6 +1,8 @@
 # dc24h.eu documentation
 
-beta-0.1.8: release channel Beta. Hub, API, service controller and WebAdmin report beta-0.1.8. The baseline inherits local Owner-only WebAdmin service controls from beta-0.1.7. Schema v11 and the public Apache proxy restrictions are unchanged. No new feature or production deployment. Default development language: EN/US UTF-8.
+beta-0.2: local-only, authenticated read-only WebAdmin gateway. Hub, API, service controller and WebAdmin report beta-0.2. The existing public Apache proxy and schema v11 remain unchanged. No Internet gateway without MFA, no administration writes or production deployment. Default development language: EN/US UTF-8.
+
+- [Remote WebAdmin gateway — beta-0.2](REMOTE_GATEWAY.md)
 
 - [Development baseline — beta-0.1.8](BETA.md)
 

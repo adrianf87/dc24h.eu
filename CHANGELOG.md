@@ -1,5 +1,13 @@
 # Changelog
 
+## beta-0.2 — 2026-11-21
+
+Separate authenticated **local-only** read-only WebAdmin gateway — development branch beta-0.2.
+
+- Added a dedicated loopback HTTPS Apache example and independent Node gateway; server-only C++ API bearer credentials, administrator/Owner account-password proof, live role revalidation, expiring server-side sessions, CSRF and limited login attempts. Public exposure is disabled because MFA is not provided.
+- Added separate EN/PL /remote.html with only allowlisted aggregate status fields, loss-of-access handling and logout. Existing public proxy, management writes and hub service controls remain separate and unreachable through this gateway.
+- Added isolated Apache integration and Node/Playwright security tests, strict configuration checks, bilingual operator documentation, CI branch coverage and beta-0.2 version expectations. No schema migration, protocol modification or production deployment.
+
 ## beta-0.1.8 — 2026-11-21
 
 Development baseline for the next Beta increment — branch `beta-0.1.8` from protected main `cebcd12`.

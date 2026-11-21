@@ -2,12 +2,13 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: beta-0.1.8 (development baseline; beta-0.1.7 functionality preserved).**
+**Current development version: beta-0.2 (local-only, read-only remote WebAdmin; not a production release).**
 
 CI on `main`: [public GitHub-hosted Ubuntu 22.04, 24.04 and 26.04](doc/us/GITHUB_CI.md) runs C++ Debug, C++ Release and WebAdmin on each image · [PL](doc/pl/GITHUB_CI.md).
 
 Completed increments (older bullets describe their original delivery scope):
 
+- **beta-0.2 Remote WebAdmin**: isolated loopback-only HTTPS portal, authenticated administrator/Owner password proof, bounded server-side sessions with CSRF and live role revalidation, and an explicit allowlist of aggregate status metrics. No public exposure without MFA, no administrative writes or service commands. See [Remote gateway](doc/us/REMOTE_GATEWAY.md) | [PL](doc/pl/REMOTE_GATEWAY.md).
 - **beta-0.1.8 Development baseline**: the hub, API and WebAdmin report `beta-0.1.8`, carrying forward beta-0.1.7 service controls and the fixes already merged to `main`. No new functionality, migration or production deployment is included. See [Beta development baseline](doc/us/BETA.md) | [PL](doc/pl/BETA.md).
 - **beta-0.1.7 Hub WebAdmin**: local Owner-only service status and Start/Stop/Restart controls with explicit warnings, confirmation, progress, failure handling, recent online-user observations and access to the audited action history. The public Apache proxy does not expose these routes. See [Hub WebAdmin](doc/us/HUB_WEBADMIN.md) | [PL](doc/pl/HUB_WEBADMIN.md).
 - **beta-0.1.6 Service operations**: the separate maintenance API validates the live Owner grant, session, CSRF and an explicit confirmation, then instructs a dedicated systemd controller to Start, Stop or Restart only `dc24h.service`. Migration v11 records durable audit intentions and verified outcomes. No WebAdmin controls were added at this stage. See [Service operations](doc/us/SERVICE_OPERATIONS.md) | [PL](doc/pl/SERVICE_OPERATIONS.md).

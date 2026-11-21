@@ -1,6 +1,6 @@
 # dc24h.eu WebAdmin
 
-The current development UI is `beta-0.1.8`. Local Owner-only hub service controls carried forward from beta-0.1.7 are documented in [Hub WebAdmin](../doc/us/HUB_WEBADMIN.md) and [Polish](../doc/pl/HUB_WEBADMIN.md). The public Apache example intentionally does not forward service-control routes.
+The current development UI is `beta-0.2`. The new *separate*, local-only, authenticated read-only portal is at /remote.html; see [Remote gateway](../doc/us/REMOTE_GATEWAY.md) and [PL](../doc/pl/REMOTE_GATEWAY.md). The existing local Owner-only service controls are documented in [Hub WebAdmin](../doc/us/HUB_WEBADMIN.md). Neither the public Apache example nor the new gateway forwards service-control commands.
 
 alpha-0.8.1: see [Permissions](../doc/us/PERMISSIONS.md) for the seven-role catalog, pending-action flags, safe VIP delegation and stopped-hub role changes.
 
@@ -27,8 +27,13 @@ Optional real C++ connection: server-only `DC24H_API_SOCKET` and
 `DC24H_API_TOKEN_FILE` absolute paths, same effective UID; keep the token outside
 this WebAdmin root. Never use `VITE_*` for credentials.
 
-`npm run preview` serves a static build with API disabled. Production web
-sessions, roles, mutations and an authenticated Apache gateway remain planned.
+`npm run preview` serves a static build with API disabled. beta-0.2 adds
+an optional independent loopback gateway with server-side sessions:
+set private DC24H_API_SOCKET, DC24H_API_TOKEN_FILE and
+DC24H_REMOTE_ORIGIN=https://localhost:8443 and use npm run remote:local.
+Only the separate localhost HTTPS Apache example exposes its fixed /remote/v1
+routes. Public authenticated access is **not** enabled; MFA is not available.
+Production web sessions, public access and remote mutations remain planned.
 
 See [setup and architecture (US)](../doc/us/WEBADMIN.md) or
 [instrukcja PL](../doc/pl/WEBADMIN.md) for API connection, Apache2, installation

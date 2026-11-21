@@ -1,6 +1,8 @@
 # Dokumentacja dc24h.eu
 
-beta-0.1.8: kanał wydania Beta. Hub, API, kontroler usługi i WebAdmin zgłaszają beta-0.1.8. Wersja bazowa zachowuje sterowanie usługą tylko dla Ownera z beta-0.1.7. Schemat v11 i ograniczenia publicznego proxy Apache pozostają bez zmian. Brak nowych funkcji i wdrożenia produkcyjnego.
+beta-0.2: osobna lokalna brama WebAdmin z uwierzytelnianiem i dostępem tylko do odczytu. Hub, API, kontroler usługi i WebAdmin zgłaszają beta-0.2. Schemat v11 i publiczne proxy Apache pozostają bez zmian. Bez MFA brak dostępu publicznego. Brak zapisu administracyjnego i wdrożenia produkcyjnego.
+
+- [Brama WebAdmin tylko do odczytu — beta-0.2](REMOTE_GATEWAY.md)
 
 - [Wersja bazowa rozwoju — beta-0.1.8](BETA.md)
 

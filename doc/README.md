@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: beta-0.1.8.
+Current development version: beta-0.2.
+
+[Remote WebAdmin read-only gateway — beta-0.2](us/REMOTE_GATEWAY.md) · [PL](pl/REMOTE_GATEWAY.md)
 
 [Beta-0.1.8 development baseline](us/BETA.md) · [PL](pl/BETA.md)
 

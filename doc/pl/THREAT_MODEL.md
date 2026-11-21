@@ -163,4 +163,15 @@ Obecny mechanizm: brakujące silniki są nieobecne, a strony tak mówią. Ryzyko
 
 ## Co pozostaje osobną pracą
 
-Publiczna uwierzytelniona brama, zdalny dostęp administratora, sesje w ciasteczkach, HTTP/2, OCSP, automatyczne odnawianie certyfikatu, produkcyjny dziennik audytu, polityka AppArmor albo SELinux, zapora, nienadzorowane aktualizacje pakietów, `configuration.manage`, `hub.manage` oraz kick albo mute w przeglądarce. Ten dokument nie oznacza żadnego z nich jako ukończonego.
+Publiczna uwierzytelniona brama z MFA, zewnętrzny dostęp administratora przez Internet, HTTP/2, OCSP, automatyczne odnawianie certyfikatu, produkcyjny dziennik audytu, polityka AppArmor albo SELinux, zapora, nienadzorowane aktualizacje pakietów, `configuration.manage`, `hub.manage` oraz kick albo mute w przeglądarce. beta-0.2 nie oznacza żadnego z nich jako ukończonego.
+
+### Granica lokalnej bramy beta-0.2
+
+Osobna lokalna brama HTTPS używa ciasteczek HttpOnly/Secure/SameSite,
+krótkich sesji w pamięci i dowodu hasła administratora albo Ownera.
+Każdy odczyt ponownie weryfikuje aktualną rolę i wysyła tylko określone
+zbiorcze liczniki. Brak proxy do ogólnego API, zapisu i poleceń systemd.
+Pozostają ryzyka przejęcia lokalnego tokenu/gniazda, serwera,
+przeglądarki lub hasła oraz błędnej konfiguracji lokalnego TLS i limitów
+obowiązujących tylko w procesie. **Brak MFA i publicznego dostępu.**
+Szczegóły: [Brama WebAdmin](REMOTE_GATEWAY.md).

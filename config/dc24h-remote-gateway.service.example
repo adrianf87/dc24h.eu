@@ -1,0 +1,32 @@
+# Example for a separate, local-only beta-0.2 gateway.
+# Must be reviewed and installed deliberately; it is never enabled by build.
+# The account must be allowed to read the dedicated local API token and socket.
+# Never set DC24H_REMOTE_PUBLIC or bind the service to a public interface.
+[Unit]
+Description=dc24h remote read-only gateway (local-only development)
+After=network.target
+
+[Service]
+Type=simple
+User=dc24h-maintenance
+WorkingDirectory=/opt/dc24h/webadmin
+Environment=DC24H_API_SOCKET=/run/dc24h/api.sock
+Environment=DC24H_API_TOKEN_FILE=/run/dc24h/api.token
+Environment=DC24H_REMOTE_ORIGIN=https://localhost:8443
+Environment=DC24H_REMOTE_PORT=4182
+ExecStart=/usr/bin/node --import tsx server/remote-main.ts
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+IPAddressDeny=any
+IPAddressAllow=localhost
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
