@@ -1,6 +1,8 @@
 # Dokumentacja dc24h.eu
 
-beta-0.1.7: kanał wydania Beta. Hub, API i WebAdmin zgłaszają beta-0.1.7. Lokalny panel WebAdmin dla Ownera odczytuje niezależny stan systemd i wymaga potwierdzenia Start, Stop i Restart stałej usługi. Schemat MariaDB v11 rejestruje audyt; publiczne proxy Apache nadal nie udostępnia tych tras.
+beta-0.1.8: kanał wydania Beta. Hub, API, kontroler usługi i WebAdmin zgłaszają beta-0.1.8. Wersja bazowa zachowuje sterowanie usługą tylko dla Ownera z beta-0.1.7. Schemat v11 i ograniczenia publicznego proxy Apache pozostają bez zmian. Brak nowych funkcji i wdrożenia produkcyjnego.
+
+- [Wersja bazowa rozwoju — beta-0.1.8](BETA.md)
 
 - [Sterowanie hubem z WebAdmin — beta-0.1.7](HUB_WEBADMIN.md)
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lock beta-0.1.7 local WebAdmin service controls and safety limits."""
+"""Lock beta-0.1.8 metadata and inherited WebAdmin safety limits."""
 
 from pathlib import Path
 import sys
@@ -57,7 +57,7 @@ def main():
     errors = []
     cmake = check(ROOT / "CMakeLists.txt", (
         "project(dc24h VERSION 0.1.0 LANGUAGES CXX)",
-        'set(DC24H_VERSION "beta-0.1.7")',
+        'set(DC24H_VERSION "beta-0.1.8")',
         'add_executable(dc24h-service-controller',
         'service.controller.process',
         "add_test(NAME beta.baseline ",
@@ -69,6 +69,7 @@ def main():
         "runs-on: ${{ matrix.os }}",
         'test "$(nproc)" -eq 4',
         "beta-0.1",
+        "beta-0.1.8",
         "pull_request:",
         "name: CI (C++ and WebAdmin)",
     ), errors)
@@ -81,7 +82,15 @@ def main():
     require("server-747585786" not in workflow, "build.yml: custom runner is selected", errors)
     require("self-hosted" not in workflow, "build.yml: self-hosted runner is selected", errors)
     require("ubuntu-latest" not in workflow, "build.yml: ubuntu-latest is selected", errors)
+    check(ROOT / "README.md", (
+        "Current development version: beta-0.1.8",
+        "beta-0.1.8 Development baseline",
+        "<summary>Alpha 0.9.x (17 releases)</summary>",
+    ), errors)
+    check(ROOT / "doc/README.md", ("Current development version: beta-0.1.8",), errors)
     check(ROOT / "doc/us/BETA.md", (
+        "# Development baseline — beta-0.1.8",
+        "Branch `beta-0.1.8` starts from protected main `cebcd12`.",
         "# Hub service controls in WebAdmin — beta-0.1.7",
         "# Read-only service controller — beta-0.1.5",
         "Branch `beta-0.1.5` starts from main `e8d00ae`.",
@@ -105,6 +114,8 @@ def main():
         "four logical CPUs and 16 GB",
     ), errors)
     check(ROOT / "doc/pl/BETA.md", (
+        "# Wersja bazowa rozwoju — beta-0.1.8",
+        "Gałąź `beta-0.1.8` powstaje z chronionego main `cebcd12`.",
         "# Sterowanie usługą huba w WebAdmin — beta-0.1.7",
         "# Kontroler usługi tylko do odczytu — beta-0.1.5",
         "Gałąź `beta-0.1.5` powstaje z main `e8d00ae`.",
@@ -210,7 +221,7 @@ def main():
         "Owner-only fixed hub status/action",
     ), errors)
     check(ROOT / "webadmin/src/lib/status.ts", (
-        'export const WEBADMIN_VERSION = "beta-0.1.7";',
+        'export const WEBADMIN_VERSION = "beta-0.1.8";',
         '!/^(?:alpha-\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|beta-\\d{1,3}\\.\\d{1,3}(?:\\.\\d{1,3})?)$/.test(server.version)',
     ), errors)
     check(ROOT / "src/security/roles.cpp", (
@@ -234,7 +245,7 @@ def main():
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1
-    print("Beta 0.1.7 WebAdmin service controls, version and safety limits passed")
+    print("Beta 0.1.8 baseline metadata and inherited safety limits passed")
     return 0
 
 

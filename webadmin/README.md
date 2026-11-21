@@ -1,6 +1,6 @@
-# dc24h.eu WebAdmin — alpha-0.5.7
+# dc24h.eu WebAdmin
 
-The current development UI is `beta-0.1.7`. Local Owner-only hub service controls are documented in [Hub WebAdmin](../doc/us/HUB_WEBADMIN.md) and [Polish](../doc/pl/HUB_WEBADMIN.md). The public Apache example intentionally does not forward service-control routes.
+The current development UI is `beta-0.1.8`. Local Owner-only hub service controls carried forward from beta-0.1.7 are documented in [Hub WebAdmin](../doc/us/HUB_WEBADMIN.md) and [Polish](../doc/pl/HUB_WEBADMIN.md). The public Apache example intentionally does not forward service-control routes.
 
 alpha-0.8.1: see [Permissions](../doc/us/PERMISSIONS.md) for the seven-role catalog, pending-action flags, safe VIP delegation and stopped-hub role changes.
 

@@ -1,6 +1,8 @@
 # dc24h.eu documentation
 
-beta-0.1.7: release channel Beta. Hub, API and WebAdmin report beta-0.1.7. The local Owner-only WebAdmin panel reads the independent systemd state and confirms fixed Start, Stop and Restart operations. MariaDB schema v11 records audit outcomes; the public Apache proxy still excludes these routes. Default development language: EN/US UTF-8.
+beta-0.1.8: release channel Beta. Hub, API, service controller and WebAdmin report beta-0.1.8. The baseline inherits local Owner-only WebAdmin service controls from beta-0.1.7. Schema v11 and the public Apache proxy restrictions are unchanged. No new feature or production deployment. Default development language: EN/US UTF-8.
+
+- [Development baseline — beta-0.1.8](BETA.md)
 
 - [Hub controls in WebAdmin — beta-0.1.7](HUB_WEBADMIN.md)
 

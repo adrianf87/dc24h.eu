@@ -1,3 +1,9 @@
+# Wersja bazowa rozwoju — beta-0.1.8
+
+Gałąź `beta-0.1.8` powstaje z chronionego main `cebcd12`. Hub, lokalne API administracyjne, niezależny kontroler usługi i WebAdmin zgłaszają `beta-0.1.8`, a numer pakietu pozostaje `0.1.0`. Ta wersja bazowa zachowuje sterowanie usługą huba tylko dla Ownera, potwierdzanie operacji i audyt z beta-0.1.7 oraz poprawki scalone do main. Nie dodano nowej funkcji, migracji schematu, publicznej trasy proxy, zmian protokołu ADC/ADCS ani wdrożenia produkcyjnego. To nie jest wydanie produkcyjne.
+
+## Poprzedni etap
+
 # Sterowanie usługą huba w WebAdmin — beta-0.1.7
 
 Gałąź `beta-0.1.7` powstaje z chronionego main `a314fe0`. Lokalny panel WebAdmin wyłącznie dla Ownera odczytuje niezależny stan systemd, potwierdza Start/Stop/Restart, pokazuje świeże dane o użytkownikach online z osobnego API i prowadzi do audytu wymagającego dowodu dostępu. Bez nowego schematu, publicznej trasy proxy, dowolnych komend i wdrożenia produkcyjnego. Zobacz [WebAdmin huba](HUB_WEBADMIN.md). Hub, API i WebAdmin zgłaszają `beta-0.1.7`; wersja pakietu nadal wynosi `0.1.0`. To nie jest wydanie produkcyjne.

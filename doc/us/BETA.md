@@ -1,3 +1,9 @@
+# Development baseline — beta-0.1.8
+
+Branch `beta-0.1.8` starts from protected main `cebcd12`. The hub, maintenance API, independent service controller and WebAdmin identify as `beta-0.1.8`, while the package tuple stays `0.1.0`. This baseline keeps the local Owner-only WebAdmin service controls, confirmation and audit behavior from beta-0.1.7, along with fixes merged into main. No new feature, schema migration, public proxy route, ADC/ADCS protocol change or production deployment is included. This is not a production release.
+
+## Previous stage
+
 # Hub service controls in WebAdmin — beta-0.1.7
 
 Branch `beta-0.1.7` starts from protected main `a314fe0`. The local Owner-only WebAdmin panel reads independent systemd status, confirms Start/Stop/Restart, shows recent separately observed online-user counts and links to proof-gated service audit. No new schema, public proxy route, arbitrary command or production deployment. See [Hub WebAdmin](HUB_WEBADMIN.md). Hub, API and WebAdmin report `beta-0.1.7`; package tuple remains `0.1.0`. This is not a production release.
