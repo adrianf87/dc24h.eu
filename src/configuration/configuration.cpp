@@ -579,6 +579,10 @@ ReviewSnapshot Review::read() const {
     return result;
 }
 
+namespace {
+std::string patch_ini(std::string source, const std::vector<std::pair<std::string, std::string>>& changes);
+}
+
 bool Review::validate_candidate(std::string_view revision,
     const std::vector<std::pair<std::string, std::string>>& changes) const {
     if (changes.empty() || changes.size() > 4) { throw std::invalid_argument("Invalid review change set"); }
@@ -599,6 +603,9 @@ bool Review::validate_candidate(std::string_view revision,
     }
     try {
         validate(candidate);
+        // The review must check the bytes that would actually be written:
+        // appending a missing INI key can overflow file or line limits.
+        validate(parse_file_data(filename_, patch_ini(data, changes)));
     } catch (const std::invalid_argument&) {
         return false;
     }

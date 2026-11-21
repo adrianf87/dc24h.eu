@@ -90,6 +90,15 @@ int main() {
         refused([&] { (void)review.validate_candidate(second.revision, {{"network_idle_timeout", "120"}}); });
         ini.write(std::string(65537, 'x'));
         refused([&] { (void)review.read(); });
+        // The source is exactly 64 KiB of valid comment lines. A new key is
+        // semantically valid but its serialized insertion cannot fit.
+        std::string near_limit;
+        const std::string comment = "#" + std::string(4094, 'x') + "\n";
+        for (std::size_t i = 0; i < 16; ++i) { near_limit += comment; }
+        require(near_limit.size() == 65536);
+        ini.write(near_limit);
+        const auto full_review = review.read();
+        require(!review.validate_candidate(full_review.revision, {{"network_max_connections", "256"}}));
         ini.write(std::string("[network]\nmax_connections=128\n\0", 31));
         refused([&] { (void)review.read(); });
         fs::remove(ini.path);
