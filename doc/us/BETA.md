@@ -1,3 +1,9 @@
+# Maintenance baseline — beta-0.2.1
+
+Branch `beta-0.2.1` starts from protected `main` after merging beta-0.2 (`fbd5ab3`). The hub, local API, service controller and WebAdmin report `beta-0.2.1`; the CMake and npm package tuple stays `0.1.0`. The beta-0.2 gateway remains authenticated, local-only and strictly read-only. No MFA or Internet-facing mode, remote writes, systemd controls, migration, ADC/ADCS protocol change or production deployment is introduced. This is a development baseline, not a production release. See [Remote gateway](REMOTE_GATEWAY.md).
+
+## Previous stage
+
 # Remote WebAdmin read-only gateway — beta-0.2
 
 Branch beta-0.2 is based on the latest protected main with the beta-0.1.8 baseline. The hub, API, service controller and WebAdmin report beta-0.2. A separate HTTPS portal at /remote.html uses active administrator/Owner password proof, short server-side sessions, CSRF and a fixed status projection. The gateway is local-only because MFA is not implemented; it offers no public network listener, configuration mutation, role write or systemd control. Schema v11 and package tuple 0.1.0 are unchanged. This is not a production release. See [Remote gateway](REMOTE_GATEWAY.md).

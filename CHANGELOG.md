@@ -1,5 +1,13 @@
 # Changelog
 
+## beta-0.2.1 — 2026-11-21
+
+Maintenance baseline on top of protected `main` after the beta-0.2 merge (`fbd5ab3`).
+
+- Updated the visible development version of the C++ hub, API, service controller and WebAdmin to `beta-0.2.1`; the CMake/npm package version remains `0.1.0`.
+- Extended the existing version, browser and process regression expectations and added the branch to the public GitHub Actions push matrix. No new remote endpoint, permission or administrative write operation.
+- Retained the beta-0.2 local-only, read-only gateway. Public exposure is disabled without MFA; no schema migration, ADC/ADCS protocol change, production deployment or claim of production readiness.
+
 ## beta-0.2 — 2026-11-21
 
 Separate authenticated **local-only** read-only WebAdmin gateway — development branch beta-0.2.
