@@ -17,9 +17,17 @@ export function HubService({t, snapshot, checked}: {t: Copy; snapshot: HubSnapsh
   const [notice, setNotice] = useState<Notice | null>(null);
   const [lastResult, setLastResult] = useState<ServiceOperation | null>(null);
   const pending = useRef<AbortController | null>(null);
+  const loadEpoch = useRef(0);
   useEffect(() => {
     void load();
-    return () => pending.current?.abort();
+    return () => {
+      // StrictMode replays mount effects: invalidate the aborted request and
+      // release its slot so the second setup can fetch a fresh status.
+      loadEpoch.current++;
+      const controller = pending.current;
+      pending.current = null;
+      controller?.abort();
+    };
     // The grant is supplied by Admin Core; a manual refresh is available after login.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -61,9 +69,14 @@ export function HubService({t, snapshot, checked}: {t: Copy; snapshot: HubSnapsh
 
   async function load() {
     if (pending.current) return;
+    const epoch = ++loadEpoch.current;
     setNotice(null); setSelected(null); setConfirmed(false);
-    try { setService(await request("status", null, parseHubServiceStatus)); }
-    catch (error) { setService(null); setNotice(errorNotice(error, false)); }
+    try {
+      const observed = await request("status", null, parseHubServiceStatus);
+      if (loadEpoch.current === epoch) setService(observed);
+    } catch (error) {
+      if (loadEpoch.current === epoch) { setService(null); setNotice(errorNotice(error, false)); }
+    }
   }
 
   async function execute() {
