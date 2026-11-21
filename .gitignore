@@ -1,0 +1,11 @@
+/build/
+/build-*/
+/cmake-build-*/
+/webadmin/dist/
+CMakeUserPresets.json
+compile_commands.json
+node_modules/
+coverage/
+*.tsbuildinfo
+.env
+.env.*
