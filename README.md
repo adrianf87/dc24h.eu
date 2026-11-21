@@ -1,6 +1,6 @@
 # dc24h.eu
 
-dc24h.eu is an ADC/ADCS Direct Connect hub project targeting Alpha 0.1 (`0.1.0-alpha.1`). The `dc24h-hub` binary accepts concurrent guest connections, maintains a shared user list, and routes public and private chat across the ADC and ADCS listeners. The repository includes the ADC parser library, a Webadmin welcome screen, and automated builds and tests. The planned hub configuration uses TOML at `/etc/dc24h/hub.toml`.
+dc24h.eu is an ADC/ADCS Direct Connect hub project targeting Alpha 0.1 (`0.1.0-alpha.1`). The `dc24h-hub` binary accepts concurrent guest connections, maintains a shared user list, and routes chat, file searches, results, and peer connection requests across ADC and ADCS. Clients transfer file contents directly. The repository includes the ADC parser library, a Webadmin welcome screen, and automated builds and tests. The planned hub configuration uses TOML at `/etc/dc24h/hub.toml`.
 
 ## Target systems
 
@@ -73,4 +73,6 @@ The same build and test commands work locally on Debian 12 and 13. The ADC parse
 - [TCP and ADCS server (pl-PL)](docs/pl/alpha-0.1/TCP-ADCS.md)
 - [User presence and chat (en-US)](docs/us/alpha-0.1/PRESENCE-CHAT.md)
 - [User presence and chat (pl-PL)](docs/pl/alpha-0.1/PRESENCE-CHAT.md)
+- [Search and peer connection signaling (en-US)](docs/us/alpha-0.1/SEARCH-P2P.md)
+- [Search and peer connection signaling (pl-PL)](docs/pl/alpha-0.1/SEARCH-P2P.md)
 - [GNU General Public License v3.0](LICENSE)
