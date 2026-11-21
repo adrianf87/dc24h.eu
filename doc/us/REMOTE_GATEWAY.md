@@ -54,6 +54,11 @@ common proxy spoofing headers. Failures contain generic error codes, not
 tokens, passwords or private API output. The five successful route contracts
 remain unchanged.
 
+The dedicated Apache vhost explicitly uses `MergeSlashes Off` (Apache 2.4.39+)
+so repeated slashes cannot be silently normalized into a proxy-allowlisted
+path. The disposable Apache integration tests verify this boundary separately
+from the Node request checks.
+
 The summary includes only version, hub-running state, uptime, aggregate
 connection/user/chat counters and optional aggregate search/transfer counts.
 No account list, nicknames, peer IP/CID, credentials, configuration, audit

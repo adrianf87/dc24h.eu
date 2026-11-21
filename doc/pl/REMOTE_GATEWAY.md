@@ -53,6 +53,11 @@ dodatkowo usuwa popularne sfałszowane nagłówki. Błędy zwracają generyczne
 kody, bez tokenów, haseł i treści prywatnego API. Pięć poprawnych tras
 pozostaje zgodnych z dotychczasowym kontraktem.
 
+Osobny vhost Apache ustawia `MergeSlashes Off` (Apache 2.4.39+), aby podwójne
+ukośniki nie były po cichu normalizowane do dozwolonej ścieżki proxy.
+Izolowany test integracyjny Apache sprawdza tę granicę niezależnie
+od walidacji żądań w Node.
+
 Statystyki obejmują tylko wersję, stan działania huba, czas pracy
 oraz zbiorcze liczniki połączeń, użytkowników i czatu; opcjonalnie
 liczniki wyszukiwania i transferów. Nie ma list kont, nazw użytkowników,
