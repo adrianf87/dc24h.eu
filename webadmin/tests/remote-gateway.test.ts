@@ -124,7 +124,7 @@ test("remote gateway authenticates a real API proof but projects only approved a
   const port = (gateway.address() as AddressInfo).port;
   const call = async (path: string, method = "GET", body = "", headers: Record<string, string> = {}) => {
     const response = await new Promise<{ status: number; data: string; cookies: string[] }>((resolve, reject) => {
-      const outgoing = request({ hostname: "127.0.0.1", port, path, method, headers: {
+      const outgoing = request({ hostname: "127.0.0.1", port, path, method, agent: false, headers: {
         ...(method === "POST" ? { Origin: origin, "Content-Type": "application/json",
           "Content-Length": String(Buffer.byteLength(body)) } : {}),
         ...headers,
@@ -168,9 +168,10 @@ test("remote gateway authenticates a real API proof but projects only approved a
       assert.ok(!response.data.includes(token));
     }
     assert.equal((await call("/remote/v1/challenge", "GET", "", { "Transfer-Encoding": "chunked" })).status, 400);
-    assert.equal((await call("/remote/v1/challenge", "GET", "", { "Content-Length": "1" })).status, 400);
+    assert.equal((await call("/remote/v1/challenge", "GET", "x", { "Content-Length": "1" })).status, 400);
     assert.equal(upstreamCalls.length, 0, "refused inputs must not reach the private API");
     const challenge = await call("/remote/v1/challenge");
+    assert.equal(challenge.status, 200, challenge.data);
     const loginCookie = challenge.cookies[0]!.split(";")[0]!;
     assert.ok(challenge.cookies[0]!.includes("HttpOnly; Secure; SameSite=Strict"));
     const challengeToken = JSON.parse(challenge.data).csrf as string;
@@ -187,6 +188,7 @@ test("remote gateway authenticates a real API proof but projects only approved a
     assert.equal((await call("/remote/v1/login", "POST", JSON.stringify({ actor_id: "7", password: "correct" }),
       { Cookie: loginCookie, "X-DC24H-Remote-CSRF": "0".repeat(64) })).status, 403);
     const fresh = await call("/remote/v1/challenge");
+    assert.equal(fresh.status, 200, fresh.data);
     const login = await call("/remote/v1/login", "POST", JSON.stringify({ actor_id: "7", password: "correct" }), {
       Cookie: fresh.cookies[0]!.split(";")[0]!,
       "X-DC24H-Remote-CSRF": JSON.parse(fresh.data).csrf,
@@ -238,6 +240,7 @@ test("remote gateway authenticates a real API proof but projects only approved a
     assert.ok(challengeToken.length === 64);
     revoked = false;
     const renewed = await call("/remote/v1/challenge");
+    assert.equal(renewed.status, 200, renewed.data);
     const again = await call("/remote/v1/login", "POST", JSON.stringify({ actor_id: "7", password: "correct" }), {
       Cookie: renewed.cookies[0]!.split(";")[0]!, "X-DC24H-Remote-CSRF": JSON.parse(renewed.data).csrf,
     });
