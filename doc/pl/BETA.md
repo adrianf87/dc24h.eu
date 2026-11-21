@@ -1,3 +1,9 @@
+# Wersja bazowa utrzymania — beta-0.2.1
+
+Gałąź `beta-0.2.1` powstaje z chronionego `main` po scaleniu beta-0.2 (`fbd5ab3`). Hub, lokalne API, kontroler usługi i WebAdmin zgłaszają `beta-0.2.1`; numer pakietu CMake i npm pozostaje `0.1.0`. Brama z beta-0.2 nadal wymaga uwierzytelnienia, jest dostępna wyłącznie lokalnie i pozwala tylko na odczyt. Nie dodano MFA, dostępu z Internetu, zdalnego zapisu, kontroli systemd, migracji, zmian protokołu ADC/ADCS ani wdrożenia produkcyjnego. To wersja rozwojowa, nie produkcyjna. Zobacz [Bramę WebAdmin](REMOTE_GATEWAY.md).
+
+## Poprzedni etap
+
 # Lokalna brama WebAdmin tylko do odczytu — beta-0.2
 
 Gałąź beta-0.2 bazuje na aktualnym chronionym main z wersją bazową beta-0.1.8. Hub, API, kontroler usługi i WebAdmin zgłaszają beta-0.2. Osobny portal HTTPS pod /remote.html weryfikuje hasło aktywnego konta administratora albo Ownera, korzysta z krótkich sesji po stronie serwera, CSRF i ściśle określonych pól statystyk. Brama jest wyłącznie lokalna, ponieważ MFA nie jest zaimplementowane. Nie ma publicznego nasłuchu, zapisu konfiguracji, zmiany ról ani sterowania systemd. Schemat v11 i pakiet 0.1.0 bez zmian. To nie jest wydanie produkcyjne. Zobacz [Bramę WebAdmin](REMOTE_GATEWAY.md).
