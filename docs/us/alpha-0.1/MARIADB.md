@@ -60,7 +60,7 @@ sudo -u dc24h -- env \
 
 ## Migrations
 
-Run `--db migrate` with the migration account when deploying or upgrading, then verify `--db status`. E5 expects version 3. A database-scoped advisory lock serializes schema changes. Each table creation is repeatable and the runner checks that the table uses InnoDB and exposes the expected columns before recording the version. MariaDB commits DDL implicitly, so the runner can verify a table left by an interruption and then record its version. Applied migrations preserve existing rows. Unknown or inconsistent migration history requires operator review. [MariaDB advisory locks](https://mariadb.com/docs/server/reference/sql-functions/secondary-functions/miscellaneous-functions/get_lock), [MariaDB implicit commits](https://mariadb.com/docs/server/reference/sql-statements/transactions/sql-statements-that-cause-an-implicit-commit)
+Run `--db migrate` with the migration account when deploying or upgrading, then verify `--db status`. E5 introduced version 3. The current E6a schema is version 5. A database-scoped advisory lock serializes schema changes. Each table creation is repeatable and the runner checks that the table uses InnoDB and exposes the expected columns before recording the version. MariaDB commits DDL implicitly, so the runner can verify a table left by an interruption and then record its version. Applied migrations preserve existing rows. Unknown or inconsistent migration history requires operator review. [Admin API migrations](ADMIN-API.md), [MariaDB advisory locks](https://mariadb.com/docs/server/reference/sql-functions/secondary-functions/miscellaneous-functions/get_lock), [MariaDB implicit commits](https://mariadb.com/docs/server/reference/sql-statements/transactions/sql-statements-that-cause-an-implicit-commit)
 
 | Table | Contents |
 | --- | --- |
@@ -110,7 +110,7 @@ Successful changes and their audit events commit in one transaction. The event s
 
 ## Backup and restore
 
-Use a backup account with `SELECT` on the four tables. The client prompts for its password. Store dumps in a private location because they include identifiers and ban reasons. Schedule schema upgrades outside the dump window.
+Use a backup account with `SELECT` on every table in the database, including `admin_users` and `admin_sessions` on E6a. The client prompts for its password. Store dumps in a private location because they include identifiers, ban reasons, and password hashes. Schedule schema upgrades outside the dump window.
 
 ```sh
 umask 077

@@ -8,7 +8,7 @@ Alpha 0.1 targets Ubuntu Server 22.04 LTS, 24.04 LTS, and 26.04 LTS, Debian 12 (
 
 ## C++20 backend
 
-Build with a C++20 compiler, CMake 3.22 or later, Make, Boost 1.74 or later, OpenSSL 3, utf8proc, Libgcrypt, and MariaDB Connector/C. The Debian and Ubuntu package names are `g++`, `cmake`, `make`, `ca-certificates`, `libboost-dev`, `libssl-dev`, `libutf8proc-dev`, `libgcrypt20-dev`, and `libmariadb-dev`. CMake downloads GoogleTest and verifies the archive's SHA-256 checksum the first time it configures the tests. Use `-DBUILD_TESTING=OFF` to build the hub and its libraries without the test suite.
+Build with a C++20 compiler, CMake 3.22 or later, Make, Boost 1.74 or later, OpenSSL 3, utf8proc, Libgcrypt, MariaDB Connector/C, Argon2, and nlohmann/json. The Debian and Ubuntu package names are `g++`, `cmake`, `make`, `ca-certificates`, `libboost-dev`, `libssl-dev`, `libutf8proc-dev`, `libgcrypt20-dev`, `libmariadb-dev`, `libargon2-dev`, and `nlohmann-json3-dev`. CMake downloads GoogleTest and verifies the archive's SHA-256 checksum the first time it configures the tests. Use `-DBUILD_TESTING=OFF` to build the hub and its libraries without the test suite.
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
@@ -44,6 +44,8 @@ The TCP and ADCS guide covers TLS, connection limits, and shutdown. The presence
 
 To enable MariaDB, apply the schema with `--db migrate` using the migration account, then start the hub with `--serve --mariadb` using a read-only account. [MariaDB setup, administration, and backup (en-US)](docs/us/alpha-0.1/MARIADB.md)
 
+The optional `--admin-api` listener serves `/api/v1` on IPv4 loopback. The API uses MariaDB for administrator accounts and sessions, with `admin` and `viewer` roles. Configure a dedicated SQL account and an HTTPS reverse proxy before enabling browser access. [Admin API setup and endpoints (en-US)](docs/us/alpha-0.1/ADMIN-API.md)
+
 ## Webadmin
 
 Use Node.js 24 LTS with npm. The CI version is pinned in `webadmin/.nvmrc`.
@@ -61,7 +63,7 @@ Vite writes the compiled application to `webadmin/dist/`. Run `npm run dev` to s
 
 ## CI
 
-GitHub Actions builds and tests the Debug and Release configurations, runs the isolated MariaDB integration suite, and checks Webadmin on Ubuntu 22.04, 24.04, and 26.04 runners (`amd64`). The C++ formatting check uses `clang-format-18` on Ubuntu 24.04.
+GitHub Actions builds and tests the Debug and Release configurations, runs the isolated MariaDB and Admin API integration suites, and checks Webadmin on Ubuntu 22.04, 24.04, and 26.04 runners (`amd64`). The C++ formatting check uses `clang-format-18` on Ubuntu 24.04.
 
 The same build and test commands work locally on Debian 12 and 13. The ADC parser guide covers the optional Clang/libFuzzer build.
 
@@ -79,4 +81,6 @@ The same build and test commands work locally on Debian 12 and 13. The ADC parse
 - [Search and peer connection signaling (pl-PL)](docs/pl/alpha-0.1/SEARCH-P2P.md)
 - [MariaDB persistence (en-US)](docs/us/alpha-0.1/MARIADB.md)
 - [MariaDB persistence (pl-PL)](docs/pl/alpha-0.1/MARIADB.md)
+- [Admin API (en-US)](docs/us/alpha-0.1/ADMIN-API.md)
+- [Admin API (pl-PL)](docs/pl/alpha-0.1/ADMIN-API.md)
 - [GNU General Public License v3.0](LICENSE)
