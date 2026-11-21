@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dc24h/db/config.hpp"
+#include "dc24h/hub/presence.hpp"
 #include "dc24h/net/config.hpp"
 
 #include <functional>
@@ -32,6 +33,9 @@ class Server {
     [[nodiscard]] const std::optional<Endpoint> &adc_endpoint() const noexcept;
     [[nodiscard]] std::size_t active_clients() const noexcept;
     [[nodiscard]] std::size_t online_users() const noexcept;
+    // The callback runs on the control strand when the server accepts the request.
+    using UsersHandler = std::function<void(std::vector<hub::OnlineUser>)>;
+    [[nodiscard]] bool read_users(std::string after, std::size_t limit, UsersHandler reply) const;
     void stop();
 
   private:

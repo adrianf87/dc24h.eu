@@ -3,14 +3,12 @@
 #include "../adc/test_messages.hpp"
 #include "../net/test_certificate.hpp"
 #include "../net/test_client.hpp"
+#include "test_database.hpp"
 
 #include <gtest/gtest.h>
-#include <mysql.h>
 
 #include <chrono>
-#include <cstdlib>
 #include <filesystem>
-#include <fstream>
 #include <thread>
 
 namespace dc24h::db {
@@ -21,50 +19,13 @@ using namespace std::chrono_literals;
 using net::test::RawClient;
 using net::test::TestCertificate;
 using net::test::TlsClient;
+using test::credentials;
+using test::fixture_path;
+using test::TestSql;
 
 constexpr std::string_view other_pid = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 constexpr std::string_view other_cid = "ZXO4VT7KPNYLJBLFLOR5YP3A33SPNOHYMEDJ4MY";
 constexpr std::string_view unavailable = "ISTA 210 Admission\\stemporarily\\sunavailable\n";
-
-std::filesystem::path fixture_path(std::string_view name) {
-    const char *directory = std::getenv("DC24H_TEST_DB_DIR");
-    if (!directory || !std::string_view(directory).starts_with("/tmp/dc24h-e5.")) {
-        throw std::runtime_error("Run this test suite through the isolated MariaDB fixture");
-    }
-    return std::filesystem::path(directory) / name;
-}
-
-Config credentials(std::string_view role, std::string_view database = "dc24h_e5_test") {
-    std::ifstream file(fixture_path(std::string(role) + ".pw"));
-    std::string password;
-    if (!std::getline(file, password) || password.empty()) {
-        throw std::runtime_error("Could not read fixture credentials");
-    }
-    return {std::string(database), "e5_" + std::string(role), std::move(password),
-            fixture_path("mdb.sock")};
-}
-
-class TestSql {
-  public:
-    explicit TestSql(const char *database = "dc24h_e5_test") {
-        if (!mysql_real_connect(connection_.get(), "localhost", "root", "", database, 0,
-                                fixture_path("mdb.sock").c_str(), 0)) {
-            throw std::runtime_error("Could not connect to the fixture as its administrator");
-        }
-    }
-
-    void execute(const char *sql) {
-        if (mysql_query(connection_.get(), sql) != 0) {
-            throw std::runtime_error(mysql_error(connection_.get()));
-        }
-        if (auto *result = mysql_store_result(connection_.get())) {
-            mysql_free_result(result);
-        }
-    }
-
-  private:
-    std::unique_ptr<MYSQL, decltype(&mysql_close)> connection_{mysql_init(nullptr), &mysql_close};
-};
 
 TEST(MariaDbMigrations, ResumesAfterDdlOrValidationFailureAndKeepsRows) {
     const auto config = credentials("migrator", "dc24h_e5_upgrade");
@@ -82,7 +43,7 @@ TEST(MariaDbMigrations, ResumesAfterDdlOrValidationFailureAndKeepsRows) {
 
     // Simulate an interruption after the table was created but before its version was recorded.
     sql.execute("INSERT INTO audit_events (event_type, details) VALUES ('fixture', 'preserve')");
-    sql.execute("DELETE FROM schema_migrations WHERE version = 3");
+    sql.execute("DELETE FROM schema_migrations WHERE version >= 3");
     EXPECT_EQ(store.schema_version(), 2U);
     EXPECT_EQ(migrate(config), current_schema);
     EXPECT_EQ(migrate(config), current_schema);
@@ -92,7 +53,15 @@ TEST(MariaDbMigrations, ResumesAfterDdlOrValidationFailureAndKeepsRows) {
     const auto events = store.audit_events();
     ASSERT_EQ(events.size(), 1U);
     EXPECT_EQ(events.front().details, "preserve");
-    sql.execute("UPDATE schema_migrations SET name = 'unknown' WHERE version = 3");
+    // A deployed E5 schema can add both administrator tables while preserving its data.
+    sql.execute("DROP TABLE admin_sessions");
+    sql.execute("DROP TABLE admin_users");
+    sql.execute("DELETE FROM schema_migrations WHERE version > 3");
+    EXPECT_EQ(store.schema_version(), 3U);
+    EXPECT_EQ(migrate(config), current_schema);
+    EXPECT_EQ(store.settings(), (Settings{{"max-clients", "12"}}));
+    EXPECT_EQ(store.audit_events().front().details, "preserve");
+    sql.execute("UPDATE schema_migrations SET name = 'unknown' WHERE version = 5");
     EXPECT_THROW(static_cast<void>(migrate(config)), Error);
     EXPECT_THROW(store.require_current_schema(), Error);
 }

@@ -60,7 +60,7 @@ sudo -u dc24h -- env \
 
 ## Migracje
 
-Przy wdrożeniu lub aktualizacji uruchom `--db migrate` na koncie migracyjnym, a potem sprawdź `--db status`. Etap E5 wymaga wersji 3. Blokada przypisana do bazy danych dopuszcza tylko jedną migrację naraz. Tworzenie tabel można powtórzyć. Przed zapisaniem numeru wersji migrator sprawdza silnik InnoDB i dostępność wymaganych kolumn. MariaDB zatwierdza polecenia DDL niejawnie, więc po przerwaniu migrator może sprawdzić już utworzoną tabelę i zapisać jej wersję. Ponowna migracja zachowuje istniejące wiersze. Nieznana lub niespójna historia migracji wymaga sprawdzenia przez operatora. [Blokady w MariaDB](https://mariadb.com/docs/server/reference/sql-functions/secondary-functions/miscellaneous-functions/get_lock), [Niejawne zatwierdzanie w MariaDB](https://mariadb.com/docs/server/reference/sql-statements/transactions/sql-statements-that-cause-an-implicit-commit)
+Przy wdrożeniu lub aktualizacji uruchom `--db migrate` na koncie migracyjnym, a potem sprawdź `--db status`. Etap E5 wprowadził wersję 3. Aktualny schemat E6a ma wersję 5. Blokada przypisana do bazy danych dopuszcza tylko jedną migrację naraz. Tworzenie tabel można powtórzyć. Przed zapisaniem numeru wersji migrator sprawdza silnik InnoDB i dostępność wymaganych kolumn. MariaDB zatwierdza polecenia DDL niejawnie, więc po przerwaniu migrator może sprawdzić już utworzoną tabelę i zapisać jej wersję. Ponowna migracja zachowuje istniejące wiersze. Nieznana lub niespójna historia migracji wymaga sprawdzenia przez operatora. [Migracje Admin API](ADMIN-API.md), [Blokady w MariaDB](https://mariadb.com/docs/server/reference/sql-functions/secondary-functions/miscellaneous-functions/get_lock), [Niejawne zatwierdzanie w MariaDB](https://mariadb.com/docs/server/reference/sql-statements/transactions/sql-statements-that-cause-an-implicit-commit)
 
 | Tabela | Zawartość |
 | --- | --- |
@@ -110,7 +110,7 @@ Udana zmiana i jej zdarzenie audytowe są zatwierdzane w jednej transakcji. Zdar
 
 ## Kopia zapasowa i odtwarzanie
 
-Użyj konta z uprawnieniem `SELECT` do czterech tabel. Klient poprosi o hasło. Przechowuj zrzuty w prywatnej lokalizacji, ponieważ zawierają identyfikatory użytkowników i powody banów. Migracje planuj poza oknem wykonywania kopii.
+Użyj konta z uprawnieniem `SELECT` do wszystkich tabel bazy, w tym `admin_users` i `admin_sessions` od etapu E6a. Klient poprosi o hasło. Przechowuj zrzuty w prywatnej lokalizacji, ponieważ zawierają identyfikatory użytkowników, powody banów i hashe haseł. Migracje planuj poza oknem wykonywania kopii.
 
 ```sh
 umask 077

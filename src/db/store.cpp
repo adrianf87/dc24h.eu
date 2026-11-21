@@ -292,6 +292,28 @@ constexpr Migration migrations[] = {
         ) ENGINE=InnoDB
     )sql",
      "SELECT id, event_type, created_at, actor, object_id, details FROM audit_events LIMIT 0"},
+    {"admin_users", R"sql(
+        CREATE TABLE IF NOT EXISTS admin_users (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(48) CHARACTER SET ascii COLLATE ascii_bin NOT NULL UNIQUE,
+            password_hash VARCHAR(160) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+            role ENUM('admin', 'viewer') CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+            created_at DATETIME(6) NOT NULL DEFAULT (UTC_TIMESTAMP(6))
+        ) ENGINE=InnoDB
+    )sql",
+     "SELECT id, username, password_hash, role, created_at FROM admin_users LIMIT 0"},
+    {"admin_sessions", R"sql(
+        CREATE TABLE IF NOT EXISTS admin_sessions (
+            token_hash BINARY(32) NOT NULL PRIMARY KEY,
+            admin_user_id BIGINT UNSIGNED NOT NULL,
+            created_at DATETIME(6) NOT NULL DEFAULT (UTC_TIMESTAMP(6)),
+            expires_at DATETIME(6) NOT NULL,
+            INDEX admin_sessions_expiry (expires_at),
+            INDEX admin_sessions_user (admin_user_id),
+            FOREIGN KEY (admin_user_id) REFERENCES admin_users (id) ON DELETE CASCADE
+        ) ENGINE=InnoDB
+    )sql",
+     "SELECT token_hash, admin_user_id, created_at, expires_at FROM admin_sessions LIMIT 0"},
 };
 static_assert(std::size(migrations) == current_schema);
 
@@ -370,7 +392,43 @@ bool valid_reason(std::string_view reason) {
                adc::unescape_parameter(adc::escape_parameter(reason)));
 }
 
+AdminRole parse_role(std::string_view role) {
+    if (role == "admin") {
+        return AdminRole::admin;
+    }
+    if (role == "viewer") {
+        return AdminRole::viewer;
+    }
+    throw Error("Invalid administrator role in MariaDB");
+}
+
+void validate_digest(std::string_view digest) {
+    if (digest.size() != 64 || !std::ranges::all_of(digest, [](char byte) {
+            return (byte >= '0' && byte <= '9') || (byte >= 'a' && byte <= 'f');
+        })) {
+        throw std::invalid_argument("Invalid administrator session digest");
+    }
+}
+
+void validate_page_size(std::uint64_t limit) {
+    // The API can read one additional row to check whether the page has a successor.
+    if (limit == 0 || limit > 101) {
+        throw std::invalid_argument("Invalid page size");
+    }
+}
+
 } // namespace
+
+bool valid_admin_username(std::string_view name) noexcept {
+    return name.size() >= 3 && name.size() <= 48 && std::ranges::all_of(name, [](char byte) {
+               return (byte >= 'a' && byte <= 'z') || (byte >= '0' && byte <= '9') || byte == '-' ||
+                      byte == '_' || byte == '.';
+           });
+}
+
+std::string_view role_name(AdminRole role) noexcept {
+    return role == AdminRole::admin ? "admin" : "viewer";
+}
 
 class Store::Impl {
   public:
@@ -541,7 +599,8 @@ bool Store::remove_ban(std::uint64_t id, std::string_view actor) {
     });
 }
 
-std::vector<Ban> Store::bans(std::uint64_t after_id) {
+std::vector<Ban> Store::bans(std::uint64_t after_id, std::uint64_t limit) {
+    validate_page_size(limit);
     UnsignedResult id;
     TextResult<3> kind;
     TextResult<45> identifier;
@@ -550,9 +609,9 @@ std::vector<Ban> Store::bans(std::uint64_t after_id) {
     TextResult<64> actor;
     Statement query(impl_->connection,
                     "SELECT id, kind, identifier, reason, created_at, expires_at, actor "
-                    "FROM bans WHERE id > ? ORDER BY id LIMIT 100",
+                    "FROM bans WHERE id > ? ORDER BY id LIMIT ?",
                     "read bans");
-    query.execute(parameter(after_id));
+    query.execute(parameter(after_id), parameter(limit));
     query.results(id.column(), kind.column(), identifier.column(), reason.column(),
                   created.column(), expires.column(), actor.column());
     std::vector<Ban> result;
@@ -588,7 +647,8 @@ std::optional<ActiveBan> Store::active_ban(std::string_view cid, std::string_vie
     return ActiveBan{remaining.is_null ? std::nullopt : std::optional{remaining.value}};
 }
 
-std::vector<AuditEvent> Store::audit_events(std::uint64_t after_id) {
+std::vector<AuditEvent> Store::audit_events(std::uint64_t after_id, std::uint64_t limit) {
+    validate_page_size(limit);
     UnsignedResult id;
     TextResult<32> type;
     TextResult<26> created;
@@ -597,9 +657,9 @@ std::vector<AuditEvent> Store::audit_events(std::uint64_t after_id) {
     TextResult<96> details;
     Statement query(impl_->connection,
                     "SELECT id, event_type, created_at, actor, object_id, details "
-                    "FROM audit_events WHERE id > ? ORDER BY id LIMIT 100",
+                    "FROM audit_events WHERE id > ? ORDER BY id LIMIT ?",
                     "read audit events");
-    query.execute(parameter(after_id));
+    query.execute(parameter(after_id), parameter(limit));
     query.results(id.column(), type.column(), created.column(), actor.column(), object.column(),
                   details.column());
     std::vector<AuditEvent> result;
@@ -608,6 +668,107 @@ std::vector<AuditEvent> Store::audit_events(std::uint64_t after_id) {
                           object.nullable(), details.text()});
     }
     return result;
+}
+
+void Store::create_admin_user(std::string_view username, AdminRole role, std::string_view hash) {
+    impl_->administrative("admin.create", {}, {}, [&] {
+        if (!valid_admin_username(username) || !hash.starts_with("$argon2id$") ||
+            hash.size() > 160 || hash.find('\0') != hash.npos) {
+            throw std::invalid_argument("Invalid administrator credentials");
+        }
+        Statement insert(impl_->connection,
+                         "INSERT INTO admin_users (username, password_hash, role) VALUES (?, ?, ?)",
+                         "create administrator");
+        insert.execute(parameter(username), parameter(hash), parameter(role_name(role)));
+        impl_->audit("admin.created", {}, username, role_name(role));
+        return true;
+    });
+}
+
+std::optional<AdminCredentials> Store::admin_credentials(std::string_view username) {
+    UnsignedResult id;
+    TextResult<6> role;
+    TextResult<160> hash;
+    Statement query(impl_->connection,
+                    "SELECT id, role, password_hash FROM admin_users WHERE username = ?",
+                    "read administrator credentials");
+    query.execute(parameter(username));
+    query.results(id.column(), role.column(), hash.column());
+    if (!query.next()) {
+        return std::nullopt;
+    }
+    return AdminCredentials{{id.value, std::string(username), parse_role(role.text())},
+                            hash.text()};
+}
+
+void Store::create_admin_session(const AdminAccount &account, std::string_view digest,
+                                 std::uint64_t lifetime_seconds) {
+    validate_digest(digest);
+    if (lifetime_seconds == 0 || lifetime_seconds > 86400) {
+        throw std::invalid_argument("Invalid administrator session lifetime");
+    }
+    auto id = account.id;
+    {
+        Statement prune(impl_->connection,
+                        "DELETE FROM admin_sessions WHERE expires_at <= UTC_TIMESTAMP(6)",
+                        "prune expired administrator sessions");
+        prune.execute();
+    }
+    Transaction transaction(impl_->connection);
+    Statement insert(impl_->connection,
+                     "INSERT INTO admin_sessions (token_hash, admin_user_id, expires_at) "
+                     "VALUES (UNHEX(?), ?, TIMESTAMPADD(SECOND, ?, UTC_TIMESTAMP(6)))",
+                     "create administrator session");
+    insert.execute(parameter(digest), parameter(id), parameter(lifetime_seconds));
+    impl_->audit("auth.login", account.username, account.username, "session issued");
+    transaction.commit();
+}
+
+std::optional<AdminAccount> Store::admin_session(std::string_view digest) {
+    validate_digest(digest);
+    UnsignedResult id;
+    TextResult<48> name;
+    TextResult<6> role;
+    Statement query(impl_->connection,
+                    "SELECT u.id, u.username, u.role FROM admin_sessions AS s "
+                    "JOIN admin_users AS u ON u.id = s.admin_user_id "
+                    "WHERE s.token_hash = UNHEX(?) AND s.expires_at > UTC_TIMESTAMP(6)",
+                    "read administrator session");
+    query.execute(parameter(digest));
+    query.results(id.column(), name.column(), role.column());
+    if (!query.next()) {
+        return std::nullopt;
+    }
+    return AdminAccount{id.value, name.text(), parse_role(role.text())};
+}
+
+void Store::revoke_admin_session(const AdminAccount &account, std::string_view digest) {
+    validate_digest(digest);
+    auto id = account.id;
+    Transaction transaction(impl_->connection);
+    Statement remove(impl_->connection,
+                     "DELETE FROM admin_sessions WHERE token_hash = UNHEX(?) AND admin_user_id = ?",
+                     "delete administrator session");
+    remove.execute(parameter(digest), parameter(id));
+    if (remove.affected_rows() != 0) {
+        impl_->audit("auth.logout", account.username, account.username, "session revoked");
+    }
+    transaction.commit();
+}
+
+std::uint64_t Store::revoke_admin_sessions(std::string_view username) {
+    if (!valid_admin_username(username)) {
+        throw std::invalid_argument("Invalid administrator username");
+    }
+    return impl_->administrative("admin.revoke", {}, username, [&] {
+        Statement remove(impl_->connection,
+                         "DELETE FROM admin_sessions WHERE admin_user_id = "
+                         "(SELECT id FROM admin_users WHERE username = ?)",
+                         "revoke administrator sessions");
+        remove.execute(parameter(username));
+        impl_->audit("admin.sessions.revoked", {}, username, "sessions revoked");
+        return remove.affected_rows();
+    });
 }
 
 } // namespace dc24h::db

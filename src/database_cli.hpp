@@ -8,7 +8,8 @@
 
 namespace dc24h {
 
-[[nodiscard]] db::Config read_database_config();
+enum class DatabaseAccount { standard, api };
+[[nodiscard]] db::Config read_database_config(DatabaseAccount account = DatabaseAccount::standard);
 void write_database_help(std::ostream &output);
 int run_database(std::span<const std::string_view> arguments, std::ostream &output,
                  std::ostream &errors);

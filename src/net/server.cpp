@@ -186,6 +186,19 @@ class Server::Impl : public std::enable_shared_from_this<Server::Impl> {
         return online_users_.load(std::memory_order_relaxed);
     }
 
+    bool read_users(std::string after, std::size_t limit, UsersHandler reply) {
+        if (stop_requested_.load() || io_.stopped()) {
+            return false;
+        }
+        asio::post(control_, [self = shared_from_this(), after = std::move(after), limit,
+                              reply = std::move(reply)] {
+            if (!self->stop_requested_.load()) {
+                reply(self->presence_.user_page(after, limit));
+            }
+        });
+        return true;
+    }
+
   private:
     void accept(Listener &listener) {
         if (stop_requested_.load()) {
@@ -462,6 +475,10 @@ const std::optional<Endpoint> &Server::adc_endpoint() const noexcept {
 std::size_t Server::active_clients() const noexcept { return impl_->active_clients(); }
 
 std::size_t Server::online_users() const noexcept { return impl_->online_users(); }
+
+bool Server::read_users(std::string after, std::size_t limit, UsersHandler reply) const {
+    return impl_->read_users(std::move(after), limit, std::move(reply));
+}
 
 void Server::stop() {
     impl_->stop();

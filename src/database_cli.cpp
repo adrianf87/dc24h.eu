@@ -1,5 +1,6 @@
 #include "database_cli.hpp"
 
+#include "dc24h/admin/crypto.hpp"
 #include "dc24h/db/store.hpp"
 
 #include <fcntl.h>
@@ -41,7 +42,7 @@ std::string read_password(const std::string &path) {
     struct stat status {};
     if (file.fd < 0 || fstat(file.fd, &status) != 0 || !S_ISREG(status.st_mode) ||
         (status.st_mode & (S_IRWXG | S_IRWXO)) != 0) {
-        throw std::invalid_argument("DC24H_DB_PASSWORD_FILE must be a private regular file");
+        throw std::invalid_argument("Password file must be a private regular file");
     }
     constexpr std::size_t max_password_bytes = 4096;
     std::array<char, max_password_bytes + 3> bytes;
@@ -55,7 +56,7 @@ std::string read_password(const std::string &path) {
             if (errno == EINTR) {
                 continue;
             }
-            throw std::invalid_argument("Could not read DC24H_DB_PASSWORD_FILE");
+            throw std::invalid_argument("Could not read password file");
         }
         size += static_cast<std::size_t>(count);
     }
@@ -68,7 +69,7 @@ std::string read_password(const std::string &path) {
     }
     if (value.empty() || value.size() > max_password_bytes ||
         value.find_first_of(std::string_view("\r\n\0", 3)) != value.npos) {
-        throw std::invalid_argument("DC24H_DB_PASSWORD_FILE must contain one password");
+        throw std::invalid_argument("Password file must contain one password");
     }
     return std::string(value);
 }
@@ -169,6 +170,25 @@ int database_command(db::Store &store, Arguments arguments, std::ostream &output
     store.require_current_schema();
     const auto group = arguments[0];
     const auto command = arguments[1];
+    if (group == "admin" && command == "create" && arguments.size() == 6 &&
+        arguments[4] == "--password-file") {
+        const auto name = arguments[2];
+        const auto role = arguments[3];
+        if (!db::valid_admin_username(name) || (role != "admin" && role != "viewer")) {
+            throw std::invalid_argument("Invalid administrator username or role");
+        }
+        const auto password = read_password(std::string(arguments[5]));
+        store.create_admin_user(name,
+                                role == "admin" ? db::AdminRole::admin : db::AdminRole::viewer,
+                                admin::hash_password(password));
+        output << "Administrator account created\n";
+        return 0;
+    }
+    if (group == "admin" && command == "revoke" && arguments.size() == 3) {
+        const auto count = store.revoke_admin_sessions(arguments[2]);
+        output << count << " administrator sessions revoked\n";
+        return 0;
+    }
     if (command == "list" && arguments.size() <= 3) {
         const auto after = arguments.size() == 3 ? positive_number<std::uint64_t>(arguments[2]) : 0;
         if (group == "settings" && arguments.size() == 2) {
@@ -212,13 +232,16 @@ int database_command(db::Store &store, Arguments arguments, std::ostream &output
 
 } // namespace
 
-db::Config read_database_config() {
+db::Config read_database_config(DatabaseAccount account) {
+    const bool api = account == DatabaseAccount::api;
     db::Config config;
     config.database = environment("DC24H_DB_NAME");
-    config.user = environment("DC24H_DB_USER");
-    const auto path = environment("DC24H_DB_PASSWORD_FILE");
+    config.user = environment(api ? "DC24H_API_DB_USER" : "DC24H_DB_USER");
+    const auto path = environment(api ? "DC24H_API_DB_PASSWORD_FILE" : "DC24H_DB_PASSWORD_FILE");
     if (config.database.empty() || config.user.empty() || path.empty()) {
-        throw std::invalid_argument("Set DC24H_DB_NAME, DC24H_DB_USER and DC24H_DB_PASSWORD_FILE");
+        throw std::invalid_argument(
+            api ? "Set DC24H_DB_NAME, DC24H_API_DB_USER and DC24H_API_DB_PASSWORD_FILE"
+                : "Set DC24H_DB_NAME, DC24H_DB_USER and DC24H_DB_PASSWORD_FILE");
     }
     if (auto socket = environment("DC24H_DB_SOCKET"); !socket.empty()) {
         config.socket = std::move(socket);
@@ -235,6 +258,8 @@ void write_database_help(std::ostream &output) {
            << "  bans add cid|ip IDENTIFIER SECONDS|permanent REASON [--actor ACTOR]\n"
            << "  bans remove ID [--actor ACTOR]\n"
            << "  audit list [AFTER_ID]\n"
+           << "  admin create NAME admin|viewer --password-file FILE\n"
+           << "  admin revoke NAME\n"
            << "  Requires DC24H_DB_NAME, DC24H_DB_USER and DC24H_DB_PASSWORD_FILE.\n";
 }
 
