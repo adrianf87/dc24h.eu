@@ -6,7 +6,10 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <array>
+#include <memory>
 #include <mutex>
+#include <set>
 #include <thread>
 #include <vector>
 
@@ -82,6 +85,10 @@ class RunningServer {
         return wait_for([&] { return server_.active_clients() == expected; });
     }
 
+    bool online_is(std::size_t expected) const {
+        return wait_for([&] { return server_.online_users() == expected; });
+    }
+
     bool logged(std::string_view message) {
         return wait_for([&] {
             const std::lock_guard guard(log_mutex_);
@@ -123,33 +130,49 @@ template <typename Client> std::string negotiate(Client &client) {
 }
 
 std::string identification(std::string_view sid, std::string_view cid = adc::test::cid,
-                           std::string_view pid = adc::test::pid) {
+                           std::string_view pid = adc::test::pid, std::string_view nick = {}) {
     std::string wire = "BINF ";
     wire += sid;
     wire += " ID";
     wire += cid;
     wire += " PD";
     wire += pid;
-    wire += " NIGuest SUBASE I4192.0.2.9\n";
+    wire += " NI";
+    wire += nick.empty() ? sid : nick;
+    wire += " SUBASE I4192.0.2.9\n";
     return wire;
 }
 
-template <typename Client>
-void identify(Client &client, std::string_view sid, std::string_view cid = adc::test::cid,
-              std::string_view pid = adc::test::pid) {
-    client.send(identification(sid, cid, pid));
-    const auto info = adc::test::decode(client.line());
+void expect_info_fields(const adc::Message &info, std::string_view sid, std::string_view cid,
+                        std::string_view nick) {
     EXPECT_EQ(info.fourcc(), "BINF");
     EXPECT_EQ(info.sender_sid, sid);
     const auto fields = adc::parse_info(info);
     ASSERT_TRUE(fields);
-    EXPECT_TRUE(
-        std::ranges::none_of(*fields, [](const adc::Field &item) { return item.name == "PD"; }));
+    EXPECT_TRUE(std::ranges::none_of(*fields, [](const adc::Field &item) {
+        return item.name == "PD" || item.name == "EM" || item.name == "RF" || item.name == "TO" ||
+               item.name == "CT" || item.name == "ZZ";
+    }));
     EXPECT_TRUE(std::ranges::any_of(
         *fields, [cid](const adc::Field &item) { return item.name == "ID" && item.value == cid; }));
+    const auto expected_nick = nick.empty() ? sid : nick;
+    EXPECT_TRUE(std::ranges::any_of(*fields, [expected_nick](const adc::Field &item) {
+        return item.name == "NI" && item.value == expected_nick;
+    }));
     EXPECT_TRUE(std::ranges::any_of(*fields, [](const adc::Field &item) {
         return item.name == "I4" && item.value == "127.0.0.1";
     }));
+}
+
+template <typename Client>
+void expect_info(Client &client, std::string_view sid, std::string_view cid = adc::test::cid,
+                 std::string_view nick = {}) {
+    expect_info_fields(adc::test::decode(client.line()), sid, cid, nick);
+}
+
+template <typename Client> void identify(Client &client, std::string_view sid) {
+    client.send(identification(sid));
+    expect_info(client, sid);
 }
 
 constexpr std::string_view second_pid = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
@@ -198,7 +221,10 @@ TEST(AdcServer, TwoPlainClientsCompleteIndependentHandshakes) {
     const auto second_sid = negotiate(second);
     EXPECT_NE(first_sid, second_sid);
     identify(first, first_sid);
-    identify(second, second_sid, second_cid, second_pid);
+    second.send(identification(second_sid, second_cid, second_pid));
+    expect_info(second, first_sid);
+    expect_info(second, second_sid, second_cid);
+    expect_info(first, second_sid, second_cid);
     first.close();
     second.close();
     EXPECT_TRUE(server.active_is(0));
@@ -218,8 +244,12 @@ TEST(AdcServer, TwoAdcsClientsCompleteAdcHandshakesAndCleanTlsShutdown) {
     const auto second_sid = negotiate(second);
     EXPECT_NE(first_sid, second_sid);
     identify(first, first_sid);
-    identify(second, second_sid, second_cid, second_pid);
+    second.send(identification(second_sid, second_cid, second_pid));
+    expect_info(second, first_sid);
+    expect_info(second, second_sid, second_cid);
+    expect_info(first, second_sid, second_cid);
     EXPECT_FALSE(first.shutdown_tls());
+    EXPECT_EQ(second.line(), "IQUI " + first_sid + '\n');
     EXPECT_FALSE(second.shutdown_tls());
     EXPECT_TRUE(server.active_is(0));
 }
@@ -408,10 +438,9 @@ TEST(AdcServer, ReleasesTheSessionWhenPeerResetsDuringALargeReply) {
     const auto sid = negotiate(client);
     auto wire = identification(sid);
     wire.pop_back();
-    for (int index = 0; index < 120; ++index) {
+    for (const auto field : {"DE", "AP", "VE"}) {
         wire += ' ';
-        wire += static_cast<char>('A' + index / 26);
-        wire += static_cast<char>('A' + index % 26);
+        wire += field;
         wire.append(4000, 'x');
     }
     wire += '\n';
@@ -436,7 +465,14 @@ TEST(AdcServer, StopsAcceptingAndGracefullyClosesEstablishedSessions) {
     const auto adc_sid = negotiate(plain);
     const auto adcs_sid = negotiate(encrypted);
     identify(plain, adc_sid);
-    identify(encrypted, adcs_sid, second_cid, second_pid);
+    encrypted.send(identification(adcs_sid, second_cid, second_pid));
+    expect_info(encrypted, adc_sid);
+    expect_info(encrypted, adcs_sid, second_cid);
+    expect_info(plain, adcs_sid, second_cid);
+    const auto chat = "BMSG " + adcs_sid + " hello\\sADC\n";
+    encrypted.send(chat);
+    EXPECT_EQ(plain.line(), chat);
+    EXPECT_EQ(encrypted.line(), chat);
     server.stop();
     server.stop();
     EXPECT_EQ(plain.line(), "IQUI " + adc_sid + '\n');
@@ -444,6 +480,7 @@ TEST(AdcServer, StopsAcceptingAndGracefullyClosesEstablishedSessions) {
     EXPECT_FALSE(encrypted.shutdown_tls());
     server.join();
     EXPECT_TRUE(server.active_is(0));
+    EXPECT_TRUE(server.online_is(0));
     RawClient probe;
     EXPECT_EQ(probe.connect(server.adc()), asio::error::connection_refused);
 }
@@ -459,6 +496,270 @@ TEST(AdcServer, ShutdownDeadlineClosesUncooperativeTlsPeers) {
     server.join();
     EXPECT_TRUE(server.logged("Shutdown timeout"));
     EXPECT_TRUE(server.active_is(0));
+}
+
+struct Identity {
+    std::string_view cid;
+    std::string_view pid;
+};
+
+// TIGR/192 of 24 bytes filled with the index of the vector.
+constexpr Identity identities[] = {
+    {second_cid, second_pid},
+    {"2OAQNIXGXYDKKV5VMUWQJMEYEFQ64QPULDCLPTI", "AEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAI"},
+    {"AFUZAFTMCBTPYNKXXS5K5XZCIFYWTHMZJOQE3RY", "AIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQ"},
+    {"KV5UVNFXISHNNQ4AE6WA5WJ52OPAAPXP4PAT3KY", "AMBQGAYDAMBQGAYDAMBQGAYDAMBQGAYDAMBQGAY"},
+    {"O62VZNGB5AVT6MLAXDM7LS3HQXMPO6ROIZZ7RDA", "AQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBA"},
+    {"65ECQ4TIQH3SBDLFJEAHIWQIUMY2WU4OWO4ATRY", "AUCQKBIFAUCQKBIFAUCQKBIFAUCQKBIFAUCQKBI"},
+    {"U24ANPLVX2WN6XSS5CJ53ZANNDF4TQNZPFYYG2I", "AYDAMBQGAYDAMBQGAYDAMBQGAYDAMBQGAYDAMBQ"},
+    {"PZDJP7WBILVOAOSCO3VROIJHL3XR7LMOVHO6ZIA", "A4DQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQOBY"},
+    {"A5ZBRBD5VDQVZW4OOG3GSSBE6WHD4FO2VZSLQLY", "BAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCA"},
+    {"2FEWBDVKBTUYP46ZNBJPUEOYCCOTMORITEUGW6Q", "BEEQSCIJBEEQSCIJBEEQSCIJBEEQSCIJBEEQSCI"},
+};
+
+TEST(AdcPresence, TenAdcsClientsTrackPresenceAndRouteChat) {
+    const TestCertificate certificate;
+    RunningServer server(loopback_config(certificate, false));
+    constexpr auto count = std::size(identities);
+    std::array<std::unique_ptr<TlsClient>, count> clients;
+    std::array<std::string, count> sids;
+    std::array<std::string, count> nicks;
+    for (std::size_t index = 0; index < count; ++index) {
+        clients[index] = std::make_unique<TlsClient>(certificate.cert_path);
+        ASSERT_FALSE(clients[index]->connect(server.adcs()));
+        ASSERT_FALSE(clients[index]->handshake());
+        sids[index] = negotiate(*clients[index]);
+        nicks[index] = "Client" + std::to_string(index);
+    }
+    ASSERT_TRUE(server.active_is(count));
+    ASSERT_TRUE(server.online_is(0));
+    ASSERT_EQ((std::set<std::string>{sids.begin(), sids.end()}.size()), count);
+    clients[0]->send("BMSG " + sids[0] + " premature\n");
+    EXPECT_TRUE(clients[0]->line().starts_with("ISTA 144 "));
+
+    // Send all logins before consuming any roster. Every peer must see each SID once.
+    for (std::size_t index = 0; index < count; ++index) {
+        auto wire =
+            identification(sids[index], identities[index].cid, identities[index].pid, nicks[index]);
+        wire.pop_back();
+        wire += " EMtest@example.invalid RFtest TOprivate CT4 ZZunknown\n";
+        clients[index]->send(wire);
+    }
+    std::array<std::array<std::size_t, count>, count> positions{};
+    for (std::size_t client = 0; client < count; ++client) {
+        std::set<std::size_t> seen;
+        for (std::size_t position = 0; position < count; ++position) {
+            const auto info = adc::test::decode(clients[client]->line());
+            ASSERT_TRUE(info.sender_sid);
+            const auto sender = std::ranges::find(sids, *info.sender_sid);
+            ASSERT_NE(sender, sids.end());
+            const auto index = static_cast<std::size_t>(sender - sids.begin());
+            ASSERT_TRUE(seen.insert(index).second);
+            positions[client][index] = position;
+            expect_info_fields(info, sids[index], identities[index].cid, nicks[index]);
+        }
+    }
+    for (std::size_t client = 0; client < count; ++client) {
+        for (std::size_t peer = 0; peer < count; ++peer) {
+            EXPECT_EQ(positions[client][peer] < positions[client][client],
+                      positions[peer][peer] < positions[client][client]);
+        }
+    }
+    ASSERT_TRUE(server.online_is(count));
+
+    const auto public_chat = "BMSG " + sids[0] + " Zażółć\\sgęślą\\njaźń\\\\ ME1\n";
+    clients[0]->send(public_chat);
+    for (auto &client : clients) {
+        EXPECT_EQ(client->line(), public_chat);
+    }
+
+    const auto direct = "DMSG " + sids[0] + ' ' + sids[1] + " direct\\sbody PM" + sids[0] + '\n';
+    const auto echo = "EMSG " + sids[0] + ' ' + sids[2] + " echo\\sbody PM" + sids[0] + '\n';
+    const auto marker = "BMSG " + sids[0] + " after\\sprivate\n";
+    clients[0]->send(direct + echo + "EMSG " + sids[0] + " 7777 hidden-body PM" + sids[0] + '\n' +
+                     "DMSG " + sids[3] + ' ' + sids[2] + " spoof PM" + sids[3] + '\n' + "BMSG " +
+                     sids[0] + " private-flag PM" + sids[0] + '\n' + marker);
+    for (std::size_t index = 0; index < count; ++index) {
+        if (index == 1) {
+            EXPECT_EQ(clients[index]->line(), direct);
+        }
+        if (index == 0 || index == 2) {
+            EXPECT_EQ(clients[index]->line(), echo);
+        }
+        if (index == 0) {
+            EXPECT_EQ(clients[0]->line(), "ISTA 125 Recipient\\sis\\sunavailable FCEMSG\n");
+            EXPECT_TRUE(clients[0]->line().starts_with("ISTA 125 "));
+            EXPECT_TRUE(clients[0]->line().starts_with("ISTA 140 "));
+        }
+        // The next public message proves nonrecipients never received either private frame.
+        EXPECT_EQ(clients[index]->line(), marker);
+    }
+
+    nicks[3] = "Renamed";
+    const auto update = "BINF " + sids[3] + " NI" + nicks[3] + " SUBASE,TEST\n";
+    const auto feature = "FMSG " + sids[3] + " +TEST-OLDX feature\n";
+    const auto after_update = "BMSG " + sids[3] + " after\\supdate\n";
+    clients[3]->send(update + feature + after_update);
+    for (std::size_t index = 0; index < count; ++index) {
+        EXPECT_EQ(clients[index]->line(), update);
+        if (index == 3) {
+            EXPECT_EQ(clients[index]->line(), feature);
+        }
+        EXPECT_EQ(clients[index]->line(), after_update);
+    }
+
+    constexpr std::size_t leaving = 5;
+    const auto old_sid = sids[leaving];
+    clients[leaving]->reset();
+    for (std::size_t index = 0; index < count; ++index) {
+        if (index != leaving) {
+            EXPECT_EQ(clients[index]->line(), "IQUI " + old_sid + '\n');
+        }
+    }
+    ASSERT_TRUE(server.online_is(count - 1));
+    ASSERT_TRUE(server.active_is(count - 1));
+
+    clients[leaving] = std::make_unique<TlsClient>(certificate.cert_path);
+    ASSERT_FALSE(clients[leaving]->connect(server.adcs()));
+    ASSERT_FALSE(clients[leaving]->handshake());
+    sids[leaving] = negotiate(*clients[leaving]);
+    ASSERT_NE(sids[leaving], old_sid);
+    ASSERT_EQ((std::set<std::string>{sids.begin(), sids.end()}.size()), count);
+    clients[leaving]->send(identification(sids[leaving], identities[leaving].cid,
+                                          identities[leaving].pid, nicks[leaving]));
+    std::set<std::string> reconnected_roster;
+    for (std::size_t index = 0; index + 1 < count; ++index) {
+        const auto peer = adc::test::decode(clients[leaving]->line());
+        ASSERT_TRUE(peer.sender_sid);
+        ASSERT_NE(*peer.sender_sid, sids[leaving]);
+        const auto sender = std::ranges::find(sids, *peer.sender_sid);
+        ASSERT_NE(sender, sids.end());
+        const auto member = static_cast<std::size_t>(sender - sids.begin());
+        ASSERT_TRUE(reconnected_roster.insert(*peer.sender_sid).second);
+        expect_info_fields(peer, sids[member], identities[member].cid, nicks[member]);
+    }
+    expect_info(*clients[leaving], sids[leaving], identities[leaving].cid, nicks[leaving]);
+    for (std::size_t index = 0; index < count; ++index) {
+        if (index != leaving) {
+            expect_info(*clients[index], sids[leaving], identities[leaving].cid, nicks[leaving]);
+        }
+    }
+    ASSERT_TRUE(server.online_is(count));
+    for (auto &client : clients) {
+        client->close();
+    }
+    EXPECT_TRUE(server.active_is(0));
+    EXPECT_TRUE(server.online_is(0));
+}
+
+TEST(AdcPresence, ConcurrentNicknameConflictHasOneWinnerAndOneDeparture) {
+    const TestCertificate certificate;
+    RunningServer server(loopback_config(certificate));
+    RawClient observer;
+    RawClient first;
+    RawClient second;
+    ASSERT_FALSE(observer.connect(server.adc()));
+    ASSERT_FALSE(first.connect(server.adc()));
+    ASSERT_FALSE(second.connect(server.adc()));
+    const auto observer_sid = negotiate(observer);
+    const auto first_sid = negotiate(first);
+    const auto second_sid = negotiate(second);
+    identify(observer, observer_sid);
+    first.send(identification(first_sid, identities[0].cid, identities[0].pid, "Straße"));
+    second.send(identification(second_sid, identities[1].cid, identities[1].pid, "STRASSE"));
+    const auto first_reply = first.line();
+    const auto second_reply = second.line();
+    const auto roster_line = "BINF " + observer_sid + ' ';
+    const bool first_won = first_reply.starts_with(roster_line);
+    ASSERT_NE(first_won, second_reply.starts_with(roster_line));
+    EXPECT_TRUE((first_won ? second_reply : first_reply).starts_with("ISTA 222 "));
+    auto &winner = first_won ? first : second;
+    const auto &winner_sid = first_won ? first_sid : second_sid;
+    const auto winner_cid = identities[first_won ? 0 : 1].cid;
+    const auto winner_nick = first_won ? "Straße" : "STRASSE";
+    expect_info(winner, winner_sid, winner_cid, winner_nick);
+    expect_info(observer, winner_sid, winner_cid, winner_nick);
+    ASSERT_TRUE(server.active_is(2));
+    ASSERT_TRUE(server.online_is(2));
+
+    winner.send("HSTA 200 leaving\n");
+    EXPECT_EQ(observer.line(), "IQUI " + winner_sid + '\n');
+    ASSERT_TRUE(server.active_is(1));
+    ASSERT_TRUE(server.online_is(1));
+    const auto marker = "BMSG " + observer_sid + " still-present\n";
+    observer.send(marker);
+    EXPECT_EQ(observer.line(), marker);
+}
+
+TEST(AdcPresence, RejectsRosterOverflowWithoutAnnouncingTheJoin) {
+    const TestCertificate certificate;
+    auto config = loopback_config(certificate);
+    config.limits.pending_bytes = 1000;
+    RunningServer server(config);
+    RawClient member;
+    RawClient newcomer;
+    ASSERT_FALSE(member.connect(server.adc()));
+    ASSERT_FALSE(newcomer.connect(server.adc()));
+    const auto member_sid = negotiate(member);
+    const auto newcomer_sid = negotiate(newcomer);
+    const std::string description = " DE" + std::string(680, 'x') + '\n';
+    auto wire = identification(member_sid);
+    wire.pop_back();
+    member.send(wire + description);
+    expect_info(member, member_sid);
+
+    wire = identification(newcomer_sid, second_cid, second_pid);
+    wire.pop_back();
+    newcomer.send(wire + description);
+    std::string bytes;
+    EXPECT_TRUE(socket_closed(newcomer.read_to_close(bytes)));
+    EXPECT_TRUE(bytes.empty());
+    EXPECT_TRUE(server.logged("Pending output limit exceeded"));
+    ASSERT_TRUE(server.active_is(1));
+    ASSERT_TRUE(server.online_is(1));
+    const auto marker = "BMSG " + member_sid + " still-present\n";
+    member.send(marker);
+    EXPECT_EQ(member.line(), marker);
+
+    RawClient replacement;
+    ASSERT_FALSE(replacement.connect(server.adc()));
+    const auto replacement_sid = negotiate(replacement);
+    replacement.send(identification(replacement_sid, second_cid, second_pid, newcomer_sid));
+    expect_info(replacement, member_sid);
+    expect_info(replacement, replacement_sid, second_cid, newcomer_sid);
+    expect_info(member, replacement_sid, second_cid, newcomer_sid);
+    EXPECT_TRUE(server.online_is(2));
+}
+
+TEST(AdcPresence, RejectsPrivateEchoWhenTheRecipientQueueOverflows) {
+    const TestCertificate certificate;
+    auto config = loopback_config(certificate);
+    config.limits.pending_bytes = 512;
+    RunningServer server(config);
+    RawClient sender;
+    RawClient target;
+    ASSERT_FALSE(sender.connect(server.adc()));
+    ASSERT_FALSE(target.connect(server.adc()));
+    const auto sender_sid = negotiate(sender);
+    const auto target_sid = negotiate(target);
+    identify(sender, sender_sid);
+    target.send(identification(target_sid, second_cid, second_pid));
+    expect_info(target, sender_sid);
+    expect_info(target, target_sid, second_cid);
+    expect_info(sender, target_sid, second_cid);
+
+    sender.send("EMSG " + sender_sid + ' ' + target_sid + ' ' + std::string(600, 'x') + " PM" +
+                sender_sid + '\n');
+    EXPECT_EQ(sender.line(), "ISTA 125 Recipient\\sis\\sunavailable FCEMSG\n");
+    EXPECT_EQ(sender.line(), "IQUI " + target_sid + '\n');
+    std::string discarded;
+    EXPECT_TRUE(socket_closed(target.read_to_close(discarded)));
+    EXPECT_TRUE(discarded.empty());
+    ASSERT_TRUE(server.active_is(1));
+    ASSERT_TRUE(server.online_is(1));
+    const auto marker = "BMSG " + sender_sid + " still-present\n";
+    sender.send(marker);
+    EXPECT_EQ(sender.line(), marker);
 }
 
 } // namespace

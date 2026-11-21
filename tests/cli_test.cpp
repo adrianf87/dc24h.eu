@@ -70,7 +70,22 @@ TEST_F(CliTest, ShowsServerOptionsWithoutStartingListeners) {
     constexpr std::array<std::string_view, 2> arguments{"--serve", "--help"};
     EXPECT_EQ(dc24h::run_cli(arguments, output, errors), 0);
     EXPECT_NE(output.str().find("--tls-cert FILE --tls-key FILE"), std::string::npos);
+    EXPECT_NE(output.str().find("--max-nick-codepoints"), std::string::npos);
+    EXPECT_NE(output.str().find("--max-message-bytes"), std::string::npos);
     EXPECT_TRUE(errors.str().empty());
+}
+
+TEST_F(CliTest, ValidatesPresenceLimits) {
+    constexpr std::array<std::string_view, 3> nick{"--serve", "--max-nick-codepoints", "257"};
+    EXPECT_EQ(dc24h::run_cli(nick, output, errors), 2);
+    EXPECT_NE(errors.str().find("Invalid numeric value for --max-nick-codepoints"),
+              std::string::npos);
+
+    constexpr std::array<std::string_view, 3> message{"--serve", "--max-message-bytes", "4097"};
+    errors.str({});
+    EXPECT_EQ(dc24h::run_cli(message, output, errors), 2);
+    EXPECT_NE(errors.str().find("Invalid numeric value for --max-message-bytes"),
+              std::string::npos);
 }
 
 } // namespace

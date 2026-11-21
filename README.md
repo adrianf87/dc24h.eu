@@ -1,6 +1,6 @@
 # dc24h.eu
 
-dc24h.eu is an ADC/ADCS Direct Connect hub project targeting Alpha 0.1 (`0.1.0-alpha.1`). The `dc24h-hub` binary can accept concurrent ADC and ADCS connections and complete the ADC guest handshake. The repository includes the ADC parser library, a Webadmin welcome screen, and automated builds and tests. The planned hub configuration uses TOML at `/etc/dc24h/hub.toml`.
+dc24h.eu is an ADC/ADCS Direct Connect hub project targeting Alpha 0.1 (`0.1.0-alpha.1`). The `dc24h-hub` binary accepts concurrent guest connections, maintains a shared user list, and routes public and private chat across the ADC and ADCS listeners. The repository includes the ADC parser library, a Webadmin welcome screen, and automated builds and tests. The planned hub configuration uses TOML at `/etc/dc24h/hub.toml`.
 
 ## Target systems
 
@@ -40,7 +40,7 @@ Start the hub with an ADCS certificate chain and its private key. ADCS defaults 
 ./build/dc24h-hub --serve --help
 ```
 
-The E2 guide documents the limits, TLS test credentials, and shutdown behavior. [TCP and ADCS guide (en-US)](docs/us/alpha-0.1/TCP-ADCS.md)
+The TCP and ADCS guide covers TLS, connection limits, and shutdown. The presence and chat guide covers nickname policy, message routing, and the ten-client ADCS integration test. [TCP and ADCS guide (en-US)](docs/us/alpha-0.1/TCP-ADCS.md), [Presence and chat guide (en-US)](docs/us/alpha-0.1/PRESENCE-CHAT.md)
 
 ## Webadmin
 
@@ -71,4 +71,6 @@ The same build and test commands work locally on Debian 12 and 13. The ADC parse
 - [ADC parser and connection state machine (pl-PL)](docs/pl/alpha-0.1/ADC-PARSER.md)
 - [TCP and ADCS server (en-US)](docs/us/alpha-0.1/TCP-ADCS.md)
 - [TCP and ADCS server (pl-PL)](docs/pl/alpha-0.1/TCP-ADCS.md)
+- [User presence and chat (en-US)](docs/us/alpha-0.1/PRESENCE-CHAT.md)
+- [User presence and chat (pl-PL)](docs/pl/alpha-0.1/PRESENCE-CHAT.md)
 - [GNU General Public License v3.0](LICENSE)

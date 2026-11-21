@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <deque>
 #include <type_traits>
 #include <utility>
@@ -41,27 +42,23 @@ std::string hub_information() {
     return line;
 }
 
-std::string client_information(const adc::Message &message, const std::string &sid,
-                               const std::optional<asio::ip::address> &peer) {
-    std::string line = "BINF " + sid;
-    for (const auto &field : message.parameters) {
+void prepare_info(adc::Message &message, const std::optional<asio::ip::address> &peer) {
+    // Keep private identity data on the socket strand, where E1 validates it.
+    std::erase_if(message.parameters, [&](const std::string &field) {
         const auto name = std::string_view(field).substr(0, 2);
-        if (name == "PD") {
-            continue;
-        }
-        if (name == "I4" || name == "I6") {
-            if (peer && ((name == "I4" && peer->is_v4()) || (name == "I6" && peer->is_v6()))) {
-                line += ' ';
-                line += name;
-                line += peer->to_string();
-            }
-            continue;
-        }
-        line += ' ';
-        line += adc::escape_parameter(field);
+        return name == "PD" || name == "EM" || name == "RF" || name == "TO" || name == "CT" ||
+               (name == "I4" && (!peer || !peer->is_v4())) ||
+               (name == "I6" && (!peer || !peer->is_v6()));
+    });
+    if (!peer) {
+        return;
     }
-    line += '\n';
-    return line;
+    for (auto &field : message.parameters) {
+        if (field.size() > 2 && (field.starts_with("I4") || field.starts_with("I6"))) {
+            field.resize(2);
+            field += peer->to_string();
+        }
+    }
 }
 
 template <typename Stream>
@@ -69,11 +66,11 @@ class StreamConnection final : public Connection,
                                public std::enable_shared_from_this<StreamConnection<Stream>> {
   public:
     StreamConnection(Stream stream, ConnectionLimits limits, std::string sid, LogSink log,
-                     std::function<void()> on_closed)
+                     InputHandler on_input, std::function<void()> on_closed)
         : stream_(std::move(stream)), executor_(stream_.get_executor()), timer_(executor_),
           limits_(limits), setup_deadline_(Clock::now() + limits.setup_timeout),
           sid_(std::move(sid)), protocol_(sid_), decoder_({.frame_bytes = limits.input_bytes}),
-          log_(std::move(log)), on_closed_(std::move(on_closed)) {}
+          log_(std::move(log)), on_input_(std::move(on_input)), on_closed_(std::move(on_closed)) {}
 
     void start() override {
         asio::post(executor_, [self = this->shared_from_this()] { self->establish(); });
@@ -83,6 +80,36 @@ class StreamConnection final : public Connection,
         asio::post(executor_, [self = this->shared_from_this()] {
             self->begin_close("Server shutdown", true);
         });
+    }
+
+    bool deliver(std::vector<hub::WireFrame> frames, Continuation after) override {
+        if (!can_deliver_.load()) {
+            return false;
+        }
+        const auto bytes = reserve_output(frames);
+        if (!bytes) {
+            if (can_deliver_.exchange(false)) {
+                asio::post(executor_, [self = this->shared_from_this()] {
+                    self->close_now("Pending output limit exceeded");
+                });
+            }
+            return false;
+        }
+        try {
+            asio::post(executor_, [self = this->shared_from_this(), frames = std::move(frames),
+                                   after, reserved = *bytes]() mutable {
+                if (self->phase_ != Phase::open) {
+                    self->reserved_bytes_.fetch_sub(reserved, std::memory_order_relaxed);
+                    return;
+                }
+                self->enqueue_reserved(std::move(frames));
+                self->continue_input(after);
+            });
+        } catch (...) {
+            reserved_bytes_.fetch_sub(*bytes, std::memory_order_relaxed);
+            throw;
+        }
+        return true;
     }
 
   private:
@@ -211,11 +238,15 @@ class StreamConnection final : public Connection,
             return;
         }
 
+        unread_ = std::string_view(read_buffer_.data(), count);
+        pump_input();
+    }
+
+    void pump_input() {
         bool activity = false;
-        std::string_view remaining(read_buffer_.data(), count);
-        while (!remaining.empty() && phase_ == Phase::open) {
-            auto decoded = decoder_.consume(remaining);
-            remaining.remove_prefix(decoded.consumed);
+        while (!unread_.empty() && phase_ == Phase::open && !waiting_for_hub_) {
+            auto decoded = decoder_.consume(unread_);
+            unread_.remove_prefix(decoded.consumed);
             if (!decoded.frame) {
                 continue;
             }
@@ -224,7 +255,7 @@ class StreamConnection final : public Connection,
                 continue;
             }
             activity = true;
-            if (const auto *message = std::get_if<adc::Message>(&*decoded.frame)) {
+            if (auto *message = std::get_if<adc::Message>(&*decoded.frame)) {
                 handle_message(*message);
             }
         }
@@ -232,7 +263,9 @@ class StreamConnection final : public Connection,
             if (activity && protocol_.state() == adc::SessionState::normal) {
                 arm_timer(Clock::now() + limits_.idle_timeout, "Idle timeout", true);
             }
-            read_next();
+            if (!waiting_for_hub_) {
+                read_next();
+            }
         }
     }
 
@@ -249,41 +282,93 @@ class StreamConnection final : public Connection,
         }
     }
 
-    void handle_message(const adc::Message &message) {
+    void handle_message(adc::Message &message) {
         const auto prior = protocol_.state();
         auto result = protocol_.receive(message);
         if (prior == adc::SessionState::protocol &&
             protocol_.state() == adc::SessionState::identify) {
             result.replies.push_back(hub_information());
         }
-        if (result.action == adc::SessionAction::identified) {
+        if (!enqueue(std::move(result.replies))) {
+            return;
+        }
+        if (result.action == adc::SessionAction::close) {
+            begin_close("ADC session closed", false);
+            return;
+        }
+        const bool identifying = result.action == adc::SessionAction::identified;
+        if (identifying || (result.action == adc::SessionAction::dispatch &&
+                            (message.command == "INF" || message.command == "MSG"))) {
+            if (message.command == "INF") {
+                prepare_info(message, peer_address_);
+            }
+            // Leave the remainder of this read in the fixed buffer until the hub replies.
+            waiting_for_hub_ = true;
+            on_input_(identifying, std::move(message));
+        }
+    }
+
+    void continue_input(Continuation after) {
+        if (after == Continuation::none) {
+            return;
+        }
+        if (after == Continuation::reject) {
+            begin_close("ADC identification rejected", false);
+            return;
+        }
+        if (after == Continuation::admit) {
             if (!protocol_.complete_identification()) {
                 close_now("ADC identification could not complete");
                 return;
             }
-            result.replies.push_back(client_information(message, sid_, peer_address_));
             report("ADC handshake completed");
+            arm_timer(Clock::now() + limits_.idle_timeout, "Idle timeout", true);
         }
-        if (enqueue(std::move(result.replies)) && result.action == adc::SessionAction::close) {
-            begin_close("ADC session closed", false);
+        waiting_for_hub_ = false;
+        pump_input();
+    }
+
+    std::optional<std::size_t> reserve_output(const std::vector<hub::WireFrame> &frames) {
+        std::size_t bytes = 0;
+        for (const auto &frame : frames) {
+            if (frame->size() > limits_.pending_bytes - bytes) {
+                return std::nullopt;
+            }
+            bytes += frame->size();
         }
+        if (bytes == 0) {
+            return 0;
+        }
+        // Count posted batches, queued frames, and the active write against the same limit.
+        auto used = reserved_bytes_.load(std::memory_order_relaxed);
+        do {
+            if (bytes > limits_.pending_bytes - used) {
+                return std::nullopt;
+            }
+        } while (
+            !reserved_bytes_.compare_exchange_weak(used, used + bytes, std::memory_order_relaxed));
+        return bytes;
     }
 
     bool enqueue(std::vector<std::string> lines) {
-        auto free_bytes = limits_.pending_bytes - queued_bytes_;
-        for (const auto &line : lines) {
-            if (line.size() > free_bytes) {
-                close_now("Pending output limit exceeded");
-                return false;
-            }
-            free_bytes -= line.size();
-        }
+        std::vector<hub::WireFrame> frames;
+        frames.reserve(lines.size());
         for (auto &line : lines) {
-            writes_.push_back(std::move(line));
+            frames.push_back(std::make_shared<const std::string>(std::move(line)));
         }
-        queued_bytes_ = limits_.pending_bytes - free_bytes;
-        write_next();
+        if (!reserve_output(frames)) {
+            close_now("Pending output limit exceeded");
+            return false;
+        }
+        enqueue_reserved(std::move(frames));
         return true;
+    }
+
+    void enqueue_reserved(std::vector<hub::WireFrame> frames) {
+        for (auto &frame : frames) {
+            writes_.push_back(std::move(frame));
+        }
+        write_next();
     }
 
     void write_next() {
@@ -292,7 +377,7 @@ class StreamConnection final : public Connection,
         }
         write_pending_ = true;
         // Keep the front buffer alive until this operation completes, including during cancel.
-        asio::async_write(stream_, asio::buffer(writes_.front()),
+        asio::async_write(stream_, asio::buffer(*writes_.front()),
                           [self = this->shared_from_this()](const Error &error, std::size_t) {
                               self->write_pending_ = false;
                               if (self->phase_ == Phase::closed) {
@@ -302,7 +387,8 @@ class StreamConnection final : public Connection,
                                   self->close_now("Write failed", error);
                                   return;
                               }
-                              self->queued_bytes_ -= self->writes_.front().size();
+                              self->reserved_bytes_.fetch_sub(self->writes_.front()->size(),
+                                                              std::memory_order_relaxed);
                               self->writes_.pop_front();
                               self->write_next();
                               self->finish_close();
@@ -317,6 +403,7 @@ class StreamConnection final : public Connection,
         if (phase_ != Phase::open) {
             return;
         }
+        can_deliver_.store(false);
         phase_ = Phase::closing;
         close_reason_ = reason;
         arm_timer(Clock::now() + limits_.shutdown_timeout, "Shutdown timeout");
@@ -356,6 +443,7 @@ class StreamConnection final : public Connection,
         if (phase_ == Phase::closed) {
             return;
         }
+        can_deliver_.store(false);
         phase_ = Phase::closed;
         Error ignored;
         timer_.cancel();
@@ -374,6 +462,7 @@ class StreamConnection final : public Connection,
     adc::Session protocol_;
     adc::FrameDecoder decoder_;
     LogSink log_;
+    InputHandler on_input_;
     std::function<void()> on_closed_;
     std::optional<asio::ip::address> peer_address_;
     Phase phase_ = Phase::establishing;
@@ -383,23 +472,28 @@ class StreamConnection final : public Connection,
     bool read_pending_ = false;
     bool write_pending_ = false;
     bool shutdown_started_ = false;
+    bool waiting_for_hub_ = false;
     std::array<char, read_chunk_bytes> read_buffer_{};
-    std::deque<std::string> writes_;
-    std::size_t queued_bytes_ = 0;
+    std::string_view unread_;
+    std::deque<hub::WireFrame> writes_;
+    std::atomic<std::size_t> reserved_bytes_{0};
+    std::atomic<bool> can_deliver_{true};
 };
 
 } // namespace
 
 std::shared_ptr<Connection> make_connection(tcp::socket socket, asio::ssl::context *tls,
                                             ConnectionLimits limits, std::string sid, LogSink log,
+                                            InputHandler on_input,
                                             std::function<void()> on_closed) {
     if (tls) {
-        return std::make_shared<StreamConnection<TlsStream>>(TlsStream(std::move(socket), *tls),
-                                                             limits, std::move(sid), std::move(log),
-                                                             std::move(on_closed));
+        return std::make_shared<StreamConnection<TlsStream>>(
+            TlsStream(std::move(socket), *tls), limits, std::move(sid), std::move(log),
+            std::move(on_input), std::move(on_closed));
     }
     return std::make_shared<StreamConnection<tcp::socket>>(
-        std::move(socket), limits, std::move(sid), std::move(log), std::move(on_closed));
+        std::move(socket), limits, std::move(sid), std::move(log), std::move(on_input),
+        std::move(on_closed));
 }
 
 } // namespace dc24h::net

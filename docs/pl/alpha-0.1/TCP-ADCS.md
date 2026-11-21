@@ -61,4 +61,4 @@ tls_dir=$(mktemp -d)
 
 Polecenie `ctest --preset debug -R '^AdcServer\.'` uruchamia testy sieciowe. Korzystają z tymczasowych certyfikatów i efemerycznych portów loopback. Scenariusz ADCS obejmuje dwóch niezależnych klientów, oba etapy handshake i poprawne rozłączenie. `ctest --preset release` wykonuje cały zestaw dla Release.
 
-E2 przyjmuje gości. Obecność, czat i routing do innych klientów należą do późniejszych etapów. Klient otrzymuje własne `BINF`, aby zakończyć logowanie.
+E2 ustanawia połączenia gości. E3 rozszerza te same nasłuchy i sesje o wspólną listę użytkowników i czat. [Obecność użytkowników i czat](PRESENCE-CHAT.md)

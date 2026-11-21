@@ -38,6 +38,8 @@ struct ServerConfig {
     std::filesystem::path private_key;
     std::size_t max_clients = 128;
     ConnectionLimits limits;
+    std::size_t max_nick_codepoints = 32;
+    std::size_t max_message_bytes = 1024;
 };
 
 // Called on an I/O worker. The sink must be thread-safe and return promptly.
@@ -55,6 +57,7 @@ class Server {
     [[nodiscard]] const Endpoint &adcs_endpoint() const noexcept;
     [[nodiscard]] const std::optional<Endpoint> &adc_endpoint() const noexcept;
     [[nodiscard]] std::size_t active_clients() const noexcept;
+    [[nodiscard]] std::size_t online_users() const noexcept;
     void stop();
 
   private:

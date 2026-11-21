@@ -61,4 +61,4 @@ tls_dir=$(mktemp -d)
 
 Run `ctest --preset debug -R '^AdcServer\.'` for the network tests. They generate temporary TLS credentials, use loopback and ephemeral ports, and include two independent ADCS clients that complete both handshakes and close cleanly. `ctest --preset release` runs the full Release suite.
 
-E2 admits guests. User presence, chat, and routing to other clients belong to later stages. The client receives its own `BINF` to complete login.
+E2 establishes guest connections. E3 extends the same listeners and sessions with a shared user list and chat. [User presence and chat](PRESENCE-CHAT.md)

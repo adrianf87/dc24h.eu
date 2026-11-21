@@ -11,8 +11,8 @@
 #include <openssl/ssl.h>
 
 #include <atomic>
+#include <map>
 #include <stdexcept>
-#include <unordered_map>
 #include <utility>
 
 namespace dc24h::net {
@@ -119,7 +119,9 @@ class Server::Impl : public std::enable_shared_from_this<Server::Impl> {
   public:
     Impl(asio::io_context &io, ServerConfig config, LogSink log)
         : io_(io), control_(asio::make_strand(io)), config_(std::move(config)),
-          log_(std::move(log)), tls_(asio::ssl::context::tls_server), adcs_(control_, true) {
+          log_(std::move(log)), tls_(asio::ssl::context::tls_server), adcs_(control_, true),
+          presence_(config_.max_nick_codepoints, config_.max_message_bytes,
+                    config_.limits.input_bytes) {
         validate(config_);
         setup_tls(tls_, config_);
         adcs_endpoint_ = adcs_.bind(config_.adcs);
@@ -166,6 +168,10 @@ class Server::Impl : public std::enable_shared_from_this<Server::Impl> {
         return active_clients_.load(std::memory_order_relaxed);
     }
 
+    [[nodiscard]] std::size_t online_users() const noexcept {
+        return online_users_.load(std::memory_order_relaxed);
+    }
+
   private:
     void accept(Listener &listener) {
         if (stop_requested_.load()) {
@@ -210,28 +216,134 @@ class Server::Impl : public std::enable_shared_from_this<Server::Impl> {
         }
 
         // SID zero is reserved. A slot remains occupied until its socket has closed.
-        std::uint32_t slot;
+        std::string sid;
         do {
-            slot = next_sid_;
-            next_sid_ = slot == last_sid ? 1U : slot + 1U;
-        } while (connections_.contains(slot));
-        auto released = [weak = weak_from_this(), slot] {
+            sid = encode_sid(next_sid_);
+            next_sid_ = next_sid_ == last_sid ? 1U : next_sid_ + 1U;
+        } while (connections_.contains(sid));
+        auto input = [weak = weak_from_this(), sid](bool identifying, adc::Message message) {
             if (auto owner = weak.lock()) {
                 const auto executor = owner->control_;
-                asio::post(executor, [owner = std::move(owner), slot] {
-                    owner->connections_.erase(slot);
-                    owner->active_clients_.store(owner->connections_.size(),
-                                                 std::memory_order_relaxed);
-                    owner->reported_full_ = false;
+                asio::post(executor, [owner = std::move(owner), sid, identifying,
+                                      message = std::move(message)] {
+                    owner->process_input(sid, identifying, message);
                 });
             }
         };
+        auto released = [weak = weak_from_this(), sid] {
+            if (auto owner = weak.lock()) {
+                const auto executor = owner->control_;
+                asio::post(executor, [owner = std::move(owner), sid] { owner->release(sid); });
+            }
+        };
         auto connection =
-            make_connection(std::move(socket), secure ? &tls_ : nullptr, config_.limits,
-                            encode_sid(slot), log_, std::move(released));
-        connections_.emplace(slot, connection);
+            make_connection(std::move(socket), secure ? &tls_ : nullptr, config_.limits, sid, log_,
+                            std::move(input), std::move(released));
+        connections_.emplace(sid, connection);
         active_clients_.store(connections_.size(), std::memory_order_relaxed);
         connection->start();
+    }
+
+    bool send(std::string_view sid, const hub::WireFrame &frame) {
+        const auto found = connections_.find(sid);
+        return found != connections_.end() && found->second->deliver({frame});
+    }
+
+    void broadcast(const hub::WireFrame &frame, std::string_view except = {}) {
+        for (const auto &entry : presence_.roster()) {
+            if (entry.sid != except) {
+                send(entry.sid, frame);
+            }
+        }
+    }
+
+    void release(const std::string &sid) {
+        if (connections_.erase(sid) == 0) {
+            return;
+        }
+        active_clients_.store(connections_.size(), std::memory_order_relaxed);
+        reported_full_ = false;
+        if (presence_.remove(sid)) {
+            online_users_.store(presence_.size(), std::memory_order_relaxed);
+            if (!stop_requested_.load()) {
+                broadcast(std::make_shared<const std::string>("IQUI " + sid + '\n'));
+            }
+        }
+    }
+
+    void admit(const std::string &sid, Connection &connection, const adc::Message &message) {
+        auto result = presence_.admit(sid, message);
+        if (const auto *error = std::get_if<hub::Rejection>(&result)) {
+            static_cast<void>(connection.deliver({error->reply(true)}, Continuation::reject));
+            return;
+        }
+
+        const auto &own = std::get<hub::WireFrame>(result);
+        const auto roster = presence_.roster();
+        std::vector<hub::WireFrame> frames;
+        frames.reserve(roster.size());
+        for (const auto &entry : roster) {
+            if (entry.sid != sid) {
+                frames.push_back(entry.information);
+            }
+        }
+        // ADC finishes NORMAL entry with the joining client's own BINF.
+        frames.push_back(own);
+        if (!connection.deliver(std::move(frames), Continuation::admit)) {
+            static_cast<void>(presence_.remove(sid));
+            return;
+        }
+        online_users_.store(presence_.size(), std::memory_order_relaxed);
+        for (const auto &entry : roster) {
+            if (entry.sid != sid) {
+                send(entry.sid, own);
+            }
+        }
+    }
+
+    hub::WireFrame update(std::string_view sid, const adc::Message &message) {
+        const auto result = presence_.update(sid, message);
+        if (const auto *error = std::get_if<hub::Rejection>(&result)) {
+            return error->reply();
+        }
+        if (const auto &frame = std::get<hub::WireFrame>(result)) {
+            broadcast(frame);
+        }
+        return {};
+    }
+
+    hub::WireFrame route_chat(std::string_view sid, const adc::Message &message) {
+        const auto result = presence_.chat(sid, message);
+        if (const auto *error = std::get_if<hub::Rejection>(&result)) {
+            return error->reply();
+        }
+        const auto &delivery = std::get<hub::ChatDelivery>(result);
+        for (const auto recipient : delivery.recipients) {
+            if (!send(recipient, delivery.frame) && delivery.directed) {
+                // A directed message must be accepted by the target before echoing it.
+                return hub::Rejection{"25", "Recipient is unavailable", "FC" + message.fourcc()}
+                    .reply();
+            }
+        }
+        return {};
+    }
+
+    void process_input(const std::string &sid, bool identifying, const adc::Message &message) {
+        const auto found = connections_.find(sid);
+        if (found == connections_.end() || stop_requested_.load()) {
+            return;
+        }
+        auto &connection = *found->second;
+        if (identifying) {
+            admit(sid, connection, message);
+            return;
+        }
+        auto reply = message.command == "INF" ? update(sid, message) : route_chat(sid, message);
+        std::vector<hub::WireFrame> responses;
+        if (reply) {
+            responses.push_back(std::move(reply));
+        }
+        static_cast<void>(connection.deliver(std::move(responses), Continuation::resume));
     }
 
     asio::io_context &io_;
@@ -243,8 +355,10 @@ class Server::Impl : public std::enable_shared_from_this<Server::Impl> {
     std::optional<Listener> adc_;
     Endpoint adcs_endpoint_;
     std::optional<Endpoint> adc_endpoint_;
-    std::unordered_map<std::uint32_t, std::shared_ptr<Connection>> connections_;
+    hub::Presence presence_;
+    std::map<std::string, std::shared_ptr<Connection>, std::less<>> connections_;
     std::atomic<std::size_t> active_clients_{0};
+    std::atomic<std::size_t> online_users_{0};
     std::atomic<bool> stop_requested_{false};
     std::uint32_t next_sid_ = 1;
     bool reported_full_ = false;
@@ -264,6 +378,8 @@ const std::optional<Endpoint> &Server::adc_endpoint() const noexcept {
 }
 
 std::size_t Server::active_clients() const noexcept { return impl_->active_clients(); }
+
+std::size_t Server::online_users() const noexcept { return impl_->online_users(); }
 
 void Server::stop() { impl_->stop(); }
 
