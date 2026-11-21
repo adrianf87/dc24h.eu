@@ -2,6 +2,14 @@
 
 This analysis records how the hub and WebAdmin can be attacked, which controls already exist, and which risks remain. The branch starts from main `7872471`. The branch name is `alpha-0.9.1`.
 
+**beta-0.2.2 update (remote gateway only):** Untrusted proxy/rewrite metadata
+(`X-Forwarded-*`, `Proxy-Authorization`, `X-Real-IP`, `X-Original-URL`,
+`X-Rewrite-URL`) must not influence the independent loopback session gateway.
+Node denies those headers before issuing a challenge or contacting the
+private API; Apache strips common variants. Exact route/method matching and
+negative body tests limit ambiguous requests. These controls do not create
+MFA, protect a compromised local proxy, or authorize Internet exposure.
+
 The analysis does not add a protocol check, a schema migration, an Apache setting or a WebAdmin control. Schema v9 is unchanged. `configuration.manage` and `hub.manage` stay unimplemented. Browser kick and mute are still not dispatched. This is not a public authenticated gateway and it is not a penetration test.
 
 beta-0.1 changes the reported release string to `beta-0.1`. It does not add a control and it does not close any threat. Schema v9 is unchanged. See [Beta baseline](BETA.md).

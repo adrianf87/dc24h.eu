@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createServer, request } from "node:http";
+import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { once } from "node:events";
 import { mkdtempSync, chmodSync, rmSync } from "node:fs";
@@ -32,6 +33,50 @@ const management = (allowed: boolean) => ({
     { key: "configuration", permission: "configuration.manage", implemented: false, allowed },
     { key: "hub", permission: "hub.manage", implemented: true, allowed },
   ],
+});
+
+test("remote gateway refuses untrusted proxy identity headers even on a public challenge", async () => {
+  for (const header of ["X-Forwarded-Prefix", "X-Forwarded-Port", "X-Forwarded-User",
+    "Proxy-Authorization", "X-Real-IP", "X-Original-URL", "X-Rewrite-URL"]) {
+    const handler = remoteGateway(null, { origin });
+    let status = 0;
+    let body = "";
+    const req = { url: "/remote/v1/challenge", method: "GET", socket: { remoteAddress: "127.0.0.1" },
+      headers: { host: "localhost", [header.toLowerCase()]: "attacker-controlled" } } as unknown as IncomingMessage;
+    const res = { writableEnded: false, destroyed: false,
+      writeHead(code: number) { status = code; }, end(data: string) { body = data; },
+    } as unknown as ServerResponse;
+    await handler(req, res);
+    assert.equal(status, 403, header);
+    assert.equal(body, '{"error":"forbidden"}', header);
+    assert.ok(!body.includes(token), header);
+  }
+});
+
+test("remote gateway matches only exact raw paths and methods", async () => {
+  const handler = remoteGateway(null, { origin });
+  for (const path of ["/remote/v1/challenge/", "/remote/v1//challenge", "/remote/v1/%63hallenge",
+    "/remote/v1/challenge?x=1", "/remote/v1/Challenge", "/remote/v1/summary/extra", "/api/v1/status"]) {
+    let status = 0;
+    const req = { url: path, method: "GET", socket: { remoteAddress: "127.0.0.1" },
+      headers: { host: "localhost" } } as unknown as IncomingMessage;
+    const res = { writableEnded: false, destroyed: false,
+      writeHead(code: number) { status = code; }, end() {},
+    } as unknown as ServerResponse;
+    await handler(req, res);
+    assert.equal(status, 404, path);
+  }
+  for (const [path, method] of [["challenge", "POST"], ["login", "GET"], ["session", "HEAD"],
+    ["summary", "OPTIONS"], ["logout", "TRACE"]]) {
+    let status = 0;
+    const req = { url: "/remote/v1/" + path, method, socket: { remoteAddress: "127.0.0.1" },
+      headers: { host: "localhost" } } as unknown as IncomingMessage;
+    const res = { writableEnded: false, destroyed: false,
+      writeHead(code: number) { status = code; }, end() {},
+    } as unknown as ServerResponse;
+    await handler(req, res);
+    assert.equal(status, 404, path + " " + method);
+  }
 });
 
 test("remote gateway authenticates a real API proof but projects only approved aggregates", async () => {
@@ -79,7 +124,7 @@ test("remote gateway authenticates a real API proof but projects only approved a
   const port = (gateway.address() as AddressInfo).port;
   const call = async (path: string, method = "GET", body = "", headers: Record<string, string> = {}) => {
     const response = await new Promise<{ status: number; data: string; cookies: string[] }>((resolve, reject) => {
-      const outgoing = request({ hostname: "127.0.0.1", port, path, method, headers: {
+      const outgoing = request({ hostname: "127.0.0.1", port, path, method, agent: false, headers: {
         ...(method === "POST" ? { Origin: origin, "Content-Type": "application/json",
           "Content-Length": String(Buffer.byteLength(body)) } : {}),
         ...headers,
@@ -95,19 +140,55 @@ test("remote gateway authenticates a real API proof but projects only approved a
   };
   try {
     assert.equal((await call("/remote/v1/summary")).status, 401);
-    assert.equal((await call("/remote/v1/management/hub/start", "POST", "{}")).status, 404);
-    assert.equal((await call("/admin-api/v1/status")).status, 404);
-    assert.equal((await call("/remote/v1/summary?extra=1")).status, 404);
-    assert.equal((await call("/remote/v1/challenge", "POST", "{}")).status, 404);
+    const badPaths = ["/admin-api/v1/status", "/remote/v1/management/hub/start", "/remote/v1/status",
+      "/remote/v1/challenge/", "/remote/v1//challenge", "/remote//v1/challenge",
+      "/remote/v1/%63hallenge", "/remote/v1/challenge%2F", "/remote/v1/challenge?extra=1",
+      "/remote/v1/summary?extra=1", "/remote/v1/Challenge", "/remote/v1/../remote/v1/challenge"];
+    for (const path of badPaths) {
+      const response = await call(path);
+      assert.equal(response.status, 404, path);
+      assert.equal(response.data, '{"error":"not_found"}', path);
+    }
+    for (const path of ["challenge", "session", "summary", "login", "logout"]) {
+      const allowed = path === "login" || path === "logout" ? "POST" : "GET";
+      for (const method of ["GET", "POST", "HEAD", "OPTIONS", "TRACE", "PUT", "DELETE"]) {
+        if (method === allowed) continue;
+        const response = await call("/remote/v1/" + path, method, method === "POST" ? "{}" : "");
+        assert.equal(response.status, 404, path + " " + method);
+        if (method !== "HEAD") assert.equal(response.data, '{"error":"not_found"}');
+      }
+    }
+    assert.equal(upstreamCalls.length, 0, "refused paths and methods must not reach the private API");
     assert.equal((await call("/remote/v1/challenge", "GET", "", { Host: "evil.example" })).status, 403);
     assert.equal((await call("/remote/v1/challenge", "GET", "", { Authorization: "Bearer attacker" })).status, 403);
+    for (const header of ["X-Forwarded-Prefix", "X-Forwarded-Port", "X-Forwarded-User",
+      "Proxy-Authorization", "X-Real-IP", "X-Original-URL", "X-Rewrite-URL"]) {
+      const response = await call("/remote/v1/challenge", "GET", "", { [header]: "attacker-controlled" });
+      assert.equal(response.status, 403, header);
+      assert.ok(!response.data.includes(token));
+    }
+    assert.equal((await call("/remote/v1/challenge", "GET", "", { "Transfer-Encoding": "chunked" })).status, 400);
+    assert.equal((await call("/remote/v1/challenge", "GET", "x", { "Content-Length": "1" })).status, 400);
+    assert.equal(upstreamCalls.length, 0, "refused inputs must not reach the private API");
     const challenge = await call("/remote/v1/challenge");
+    assert.equal(challenge.status, 200, challenge.data);
     const loginCookie = challenge.cookies[0]!.split(";")[0]!;
     assert.ok(challenge.cookies[0]!.includes("HttpOnly; Secure; SameSite=Strict"));
     const challengeToken = JSON.parse(challenge.data).csrf as string;
+    assert.equal((await call("/remote/v1/login", "POST", "{invalid", {
+      Cookie: loginCookie, "X-DC24H-Remote-CSRF": challengeToken,
+    })).status, 400);
+    assert.equal((await call("/remote/v1/login", "POST", JSON.stringify({ actor_id: "7", password: "correct" }), {
+      Cookie: loginCookie, "X-DC24H-Remote-CSRF": challengeToken, "Content-Type": "text/plain",
+    })).status, 400);
+    assert.equal((await call("/remote/v1/login", "POST", JSON.stringify({ password: "x".repeat(2048) }), {
+      Cookie: loginCookie, "X-DC24H-Remote-CSRF": challengeToken,
+    })).status, 400);
+    assert.equal(upstreamCalls.length, 0, "invalid POST bodies must not authenticate upstream");
     assert.equal((await call("/remote/v1/login", "POST", JSON.stringify({ actor_id: "7", password: "correct" }),
       { Cookie: loginCookie, "X-DC24H-Remote-CSRF": "0".repeat(64) })).status, 403);
     const fresh = await call("/remote/v1/challenge");
+    assert.equal(fresh.status, 200, fresh.data);
     const login = await call("/remote/v1/login", "POST", JSON.stringify({ actor_id: "7", password: "correct" }), {
       Cookie: fresh.cookies[0]!.split(";")[0]!,
       "X-DC24H-Remote-CSRF": JSON.parse(fresh.data).csrf,
@@ -124,6 +205,14 @@ test("remote gateway authenticates a real API proof but projects only approved a
     assert.equal((await call("/remote/v1/summary", "GET", "", {
       Cookie: browserCookie, "X-Forwarded-For": "198.51.100.2",
     })).status, 403);
+    const beforeSpoofedRead = upstreamCalls.length;
+    for (const header of ["X-Forwarded-Prefix", "Proxy-Authorization", "X-Real-IP"]) {
+      const response = await call("/remote/v1/summary", "GET", "", {
+        Cookie: browserCookie, [header]: "attacker-controlled",
+      });
+      assert.equal(response.status, 403, header);
+      assert.equal(upstreamCalls.length, beforeSpoofedRead, "blocked read must not touch the private API");
+    }
     assert.equal((await call("/remote/v1/logout", "POST", "{}", {
       Cookie: browserCookie, Origin: "https://evil.example", "X-DC24H-Remote-CSRF": loginData.csrf,
     })).status, 403);
@@ -132,13 +221,16 @@ test("remote gateway authenticates a real API proof but projects only approved a
     assert.equal(summary.status, 200);
     assert.deepEqual(JSON.parse(summary.data), {
       schema: 1, mode: "read-only",
-      server: { version: "beta-0.2.1", running: true, uptime_seconds: 3661 },
+      server: { version: "beta-0.2.2", running: true, uptime_seconds: 3661 },
       network: { active_connections: 7, accepted_connections: 48 },
       users: { online: 4, peak_online: 6 }, chat: { received: 12, rejected: 2 },
     });
     assert.ok(!summary.data.includes(token) && !summary.data.includes("DO-NOT-LEAK"));
     assert.deepEqual(upstreamCalls.filter((s) => s.includes("/api/v1/status")), ["GET /api/v1/status"]);
     assert.equal((await call("/remote/v1/logout", "POST", "{}", { Cookie: browserCookie })).status, 403);
+    assert.equal((await call("/remote/v1/logout", "POST", "{invalid", {
+      Cookie: browserCookie, "X-DC24H-Remote-CSRF": loginData.csrf,
+    })).status, 400);
     revoked = true; // The underlying role is reduced while this session is live.
     assert.equal((await call("/remote/v1/summary", "GET", "", { Cookie: browserCookie })).status, 403);
     assert.equal((await call("/remote/v1/session", "GET", "", { Cookie: browserCookie })).status, 401);
@@ -148,6 +240,7 @@ test("remote gateway authenticates a real API proof but projects only approved a
     assert.ok(challengeToken.length === 64);
     revoked = false;
     const renewed = await call("/remote/v1/challenge");
+    assert.equal(renewed.status, 200, renewed.data);
     const again = await call("/remote/v1/login", "POST", JSON.stringify({ actor_id: "7", password: "correct" }), {
       Cookie: renewed.cookies[0]!.split(";")[0]!, "X-DC24H-Remote-CSRF": JSON.parse(renewed.data).csrf,
     });

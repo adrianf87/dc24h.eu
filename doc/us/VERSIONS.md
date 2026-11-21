@@ -1,5 +1,7 @@
 # Versions
 
+**beta-0.2.2 HTTP request validation:** [Remote gateway](REMOTE_GATEWAY.md) strictly refuses spoofed proxy headers, unknown path/method variants and malformed bodies. Five read-only routes, package tuple `0.1.0`, schema v11 and local-only policy are unchanged.
+**beta-0.2.1 Maintenance baseline:** [Release notes](BETA.md) retained the beta-0.2 local gateway and updated the visible version.
 **beta-0.1 Beta baseline:** [Release channel](BETA.md) reports `beta-0.1` and keeps the alpha-0.9.17 behavior. Schema v9 is unchanged.
 **alpha-0.9.17 Dependencies:** [Library control and security tests](DEPENDENCIES.md) checks the hub binaries, the WebAdmin lockfile and the registered security tests. Schema v9 is unchanged.
 **alpha-0.9.16 Stress testing:** [Overload and sustained operation](STRESS.md) repeats the existing frame, peer, login, chat and session limits for a fixed number of rounds. Refusals stay on. Occupancy returns to zero. Schema v9 is unchanged.

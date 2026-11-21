@@ -1,7 +1,8 @@
 # dc24h.eu documentation
 
-beta-0.2.1: maintenance baseline retaining the local-only, authenticated read-only WebAdmin gateway from beta-0.2. Hub, API, service controller and WebAdmin report beta-0.2.1. The existing public Apache proxy and schema v11 remain unchanged. No Internet gateway without MFA, no administration writes or production deployment. Default development language: EN/US UTF-8.
+beta-0.2.2: HTTP request allowlist hardening for the local-only, authenticated read-only WebAdmin gateway. Hub, API, service controller and WebAdmin report beta-0.2.2. The existing public Apache proxy and schema v11 remain unchanged. No Internet gateway without MFA, no administration writes or production deployment. Default development language: EN/US UTF-8.
 
+- [HTTP request hardening — beta-0.2.2](BETA.md)
 - [Maintenance baseline — beta-0.2.1](BETA.md)
 - [Remote WebAdmin gateway — beta-0.2](REMOTE_GATEWAY.md)
 

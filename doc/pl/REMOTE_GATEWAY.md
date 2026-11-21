@@ -1,6 +1,6 @@
-# Zdalny WebAdmin — beta-0.2 (dostęp lokalny, tylko odczyt)
+# Zdalny WebAdmin — beta-0.2.2 (dostęp lokalny, tylko odczyt)
 
-**Wersja rozwojowa.** beta-0.2 dodaje **osobną** bramę WebAdmin:
+**Wersja rozwojowa.** beta-0.2 dodaje, a beta-0.2.2 uszczelnia **osobną** bramę WebAdmin:
 /remote.html i pięć ściśle określonych tras /remote/v1. Działa **tylko
 lokalnie** na 127.0.0.1 i wymaga HTTPS, aktywnego konta
 **administrator** albo **Owner** oraz hasła tego konta. W tej wersji nie
@@ -39,6 +39,31 @@ identyfikatorów sesji, adresów IP i treści odpowiedzi.
 | /remote/v1/summary | GET | Wybrane zbiorcze statystyki, tylko odczyt |
 | /remote/v1/logout | POST | Unieważnienie sesji po kontroli CSRF |
 
+### Walidacja żądań w beta-0.2.2
+
+Brama porównuje oryginalną ścieżkę żądania z pięcioma dokładnymi nazwami
+i metodami. Dodatkowe segmenty, podwójne ukośniki, alternatywne kodowanie
+procentowe, query string, zmiana wielkości liter i niewłaściwe metody są
+odrzucane. GET nie przyjmuje body. POST wymaga ograniczonego JSON z poprawnym
+Content-Length i bez Transfer-Encoding; niepoprawny JSON i nadmierny rozmiar
+oznaczają odmowę. Nagłówki Authorization, Proxy-Authorization, Forwarded,
+wszystkie `X-Forwarded-*`, X-Real-IP, X-Original-URL i X-Rewrite-URL
+są odrzucane w procesie Node przed połączeniem z prywatnym API. Apache
+dodatkowo usuwa popularne sfałszowane nagłówki. Błędy zwracają generyczne
+kody, bez tokenów, haseł i treści prywatnego API. Pięć poprawnych tras
+pozostaje zgodnych z dotychczasowym kontraktem.
+
+Poprawka na gałęzi `beta-0.2.2-fix` zużywa wydane wyzwanie logowania także
+wtedy, gdy POST zawiera błędny JSON, długość lub typ body, oraz czyści cookie
+inicjalizacyjne. Bufory odebranej treści są zerowane również po przekroczeniu
+limitu i błędzie/przerwaniu strumienia. Odrzuconego dowodu nie można ponownie
+użyć z tym samym wyzwaniem. Kontrakt pięciu tras pozostaje bez zmian.
+
+Osobny vhost Apache ustawia `MergeSlashes Off` (Apache 2.4.39+), aby podwójne
+ukośniki nie były po cichu normalizowane do dozwolonej ścieżki proxy.
+Izolowany test integracyjny Apache sprawdza tę granicę niezależnie
+od walidacji żądań w Node.
+
 Statystyki obejmują tylko wersję, stan działania huba, czas pracy
 oraz zbiorcze liczniki połączeń, użytkowników i czatu; opcjonalnie
 liczniki wyszukiwania i transferów. Nie ma list kont, nazw użytkowników,
@@ -75,7 +100,8 @@ powinna skutkować odmową dostępu.
 ## Testy i ryzyka
 
 Testy Node sprawdzają dowód hasła i role, CSRF, wygaśnięcie sesji,
-błędne trasy, nagłówki i pola statystyk. Playwright sprawdza EN/PL,
+błędne metody, kodowane ścieżki, długości i nagłówki oraz brak odczytu API
+przy odmowie. Playwright sprawdza EN/PL,
 logowanie, wylogowanie i stany błędów. Test integracyjny Apache
 uruchamia tymczasowy lokalny serwer HTTPS oraz weryfikuje listę tras,
 ukrycie plików i nagłówków poświadczeń. CTest sprawdza też

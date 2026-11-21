@@ -1,3 +1,7 @@
+# Uszczelnienie walidacji HTTP — beta-0.2.2
+
+Gałąź `beta-0.2-code` rozpoczyna się od `main` w commicie `fbb7b4e`, po scaleniu beta-0.2.1. Brama nadal udostępnia wyłącznie pięć stałych tras z dokładnie określonymi metodami. Odrzuca teraz *wszystkie* nagłówki `X-Forwarded-*` podane przez przeglądarkę oraz inne niezaufane nagłówki tożsamości proxy i przepisywania ścieżek, zanim utworzy wyzwanie lub skontaktuje się z API C++. Testy negatywne obejmują warianty ścieżek, metody, ramkowanie HTTP, błędny JSON, limity rozmiaru oraz odmowy bez sekretów; przykład Apache usuwa popularne fałszywe nagłówki. Hub, API, kontroler usługi i WebAdmin zgłaszają `beta-0.2.2`; numer pakietu `0.1.0` i schemat v11 pozostają bez zmian. Brak dostępu publicznego, zdalnych zmian, MFA, zmian ADC/ADCS i wdrożenia. Zobacz [Bramę WebAdmin](REMOTE_GATEWAY.md). Nie jest to wydanie produkcyjne.
+
 # Wersja bazowa utrzymania — beta-0.2.1
 
 Gałąź `beta-0.2.1` powstaje z chronionego `main` po scaleniu beta-0.2 (`fbd5ab3`). Hub, lokalne API, kontroler usługi i WebAdmin zgłaszają `beta-0.2.1`; numer pakietu CMake i npm pozostaje `0.1.0`. Brama z beta-0.2 nadal wymaga uwierzytelnienia, jest dostępna wyłącznie lokalnie i pozwala tylko na odczyt. Nie dodano MFA, dostępu z Internetu, zdalnego zapisu, kontroli systemd, migracji, zmian protokołu ADC/ADCS ani wdrożenia produkcyjnego. To wersja rozwojowa, nie produkcyjna. Zobacz [Bramę WebAdmin](REMOTE_GATEWAY.md).

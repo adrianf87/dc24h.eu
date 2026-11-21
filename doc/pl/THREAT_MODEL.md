@@ -2,6 +2,15 @@
 
 Ta analiza zapisuje, jak można atakować hub i WebAdmin, które mechanizmy już istnieją i które ryzyka zostają. Gałąź powstaje z main `7872471`. Nazwa gałęzi to `alpha-0.9.1`.
 
+**Aktualizacja beta-0.2.2 (tylko brama zdalna):** Niezaufane metadane proxy
+i przepisywania ścieżek (`X-Forwarded-*`, `Proxy-Authorization`, `X-Real-IP`,
+`X-Original-URL`, `X-Rewrite-URL`) nie mogą wpływać na odrębną lokalną bramę
+sesyjną. Node odrzuca te nagłówki przed wydaniem wyzwania lub kontaktem
+z prywatnym API, a Apache usuwa popularne warianty. Dokładna kontrola
+tras/metod i negatywne testy body ograniczają dwuznaczne żądania.
+Nie zastępuje to MFA, ochrony przed przejęciem lokalnego proxy ani
+zgody na wystawienie usługi do Internetu.
+
 Analiza nie dodaje sprawdzenia protokołu, migracji schematu, ustawienia Apache ani mechanizmu WebAdmin. Schemat v9 pozostaje bez zmian. `configuration.manage` i `hub.manage` pozostają niezaimplementowane. Kick i mute w przeglądarce nadal nie są wysyłane. To nie jest publiczna uwierzytelniona brama i to nie jest test penetracyjny.
 
 beta-0.1 zmienia zgłaszany napis wydania na `beta-0.1`. Nie dodaje mechanizmu i nie zamyka żadnego zagrożenia. Schemat v9 pozostaje bez zmian. Zobacz [Linia beta](BETA.md).

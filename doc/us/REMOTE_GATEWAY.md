@@ -1,6 +1,6 @@
-# Remote WebAdmin — beta-0.2 (local-only read access)
+# Remote WebAdmin — beta-0.2.2 (local-only read access)
 
-**Development-only.** The beta-0.2 gateway is an **independent** WebAdmin entry
+**Development-only.** The beta-0.2 gateway, hardened in beta-0.2.2, is an **independent** WebAdmin entry
 point: /remote.html and five precisely defined /remote/v1 routes. It is
 **local-only** on 127.0.0.1 and requires HTTPS, an active **administrator**
 or **Owner** account and a valid account password. There is **no MFA** in this
@@ -39,6 +39,31 @@ secrets, IP addresses or response payloads.
 | /remote/v1/session | GET | Revalidate current account/role, return session status |
 | /remote/v1/summary | GET | Revalidate, return explicit aggregate projection |
 | /remote/v1/logout | POST | CSRF-protected session invalidation |
+
+### beta-0.2.2 request validation
+
+The gateway compares the raw request target against the five exact names and
+their methods. Extra segments, double slashes, percent-encoded alternatives,
+query strings, case changes and all mismatched methods are refused. GET does
+not accept a request body. POST requires a bounded JSON body with a valid
+Content-Length and no Transfer-Encoding; malformed JSON and oversize bodies
+are refused. Untrusted Authorization, Proxy-Authorization, Forwarded,
+all `X-Forwarded-*`, X-Real-IP, X-Original-URL and X-Rewrite-URL headers are
+rejected by the Node gateway before any private API call. Apache also strips
+common proxy spoofing headers. Failures contain generic error codes, not
+tokens, passwords or private API output. The five successful route contracts
+remain unchanged.
+
+The `beta-0.2.2-fix` follow-up consumes an issued login challenge even if the
+POST body fails JSON, length or type validation, and clears its initialization
+cookie. Buffered request chunks are zeroed even when the stream exceeds its
+limit or aborts before completing; a rejected proof cannot be replayed with
+the same challenge. This does not change the five public route contracts.
+
+The dedicated Apache vhost explicitly uses `MergeSlashes Off` (Apache 2.4.39+)
+so repeated slashes cannot be silently normalized into a proxy-allowlisted
+path. The disposable Apache integration tests verify this boundary separately
+from the Node request checks.
 
 The summary includes only version, hub-running state, uptime, aggregate
 connection/user/chat counters and optional aggregate search/transfer counts.
@@ -79,7 +104,8 @@ weaken the bind or proxy an unprotected port to make the feature reachable.
 ## Tests / known limitations
 
 - Node gateway tests cover proof and account-role revalidation, CSRF,
-  malformed input, denied routes/origins/headers, expiry and status projection.
+  malformed input and length, denied methods/encoded paths/proxy headers,
+  no private API calls on refusal, expiry and status projection.
 - Browser tests cover EN/PL UI, login, summary, logout and refusal.
 - Apache integration launches a disposable localhost HTTPS server and checks
   the exact allowlist, secret header stripping, private-file denial and TLS.

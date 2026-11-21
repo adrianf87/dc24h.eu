@@ -1,5 +1,7 @@
 # Wersjonowanie
 
+**beta-0.2.2 Walidacja HTTP:** [Brama WebAdmin](REMOTE_GATEWAY.md) odrzuca fałszywe nagłówki proxy, niedozwolone warianty tras/metod i błędne body. Pięć tras tylko do odczytu, numer pakietu `0.1.0`, schemat v11 i tryb lokalny pozostają bez zmian.
+**beta-0.2.1 Wersja bazowa utrzymania:** [Opis wydania](BETA.md) zachował lokalną bramę beta-0.2 i uaktualnił widoczną wersję.
 **beta-0.1 Linia beta:** [Kanał wydania](BETA.md) zgłasza `beta-0.1` i zachowuje zachowanie alpha-0.9.17. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.17 Zależności:** [Kontrola bibliotek i testy bezpieczeństwa](DEPENDENCIES.md) sprawdza pliki wykonywalne huba, lockfile WebAdmin i zarejestrowane testy bezpieczeństwa. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.16 Testy przeciążenia:** [Przeciążenie i długotrwała praca](STRESS.md) powtarza istniejące limity ramek, klientów, logowania, czatu i sesji przez stałą liczbę rund. Odmowy zostają. Zajętość wraca do zera. Schemat v9 pozostaje bez zmian.

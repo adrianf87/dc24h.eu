@@ -12,6 +12,9 @@ TraceEnable Off
 
 <VirtualHost 127.0.0.1:8443>
     ServerName localhost
+    # Preserve suspicious doubled slashes for the exact ProxyPassMatch route check.
+    # Apache otherwise collapses them before matching (MergeSlashes defaults On).
+    MergeSlashes Off
     DocumentRoot "/usr/local/share/dc24h/webadmin"
     ServerSignature Off
     SSLEngine On
@@ -32,6 +35,7 @@ TraceEnable Off
     # Strip browser-supplied process credentials and proxy identity.
     # The gateway injects its own local C++ API token, never the browser.
     RequestHeader unset Authorization
+    RequestHeader unset Proxy-Authorization
     RequestHeader unset X-DC24H-Admin-Grant
     RequestHeader unset X-DC24H-Session
     RequestHeader unset X-DC24H-Csrf
@@ -40,7 +44,12 @@ TraceEnable Off
     RequestHeader unset X-Forwarded-For
     RequestHeader unset X-Forwarded-Host
     RequestHeader unset X-Forwarded-Proto
+    RequestHeader unset X-Forwarded-Port
+    RequestHeader unset X-Forwarded-Prefix
+    RequestHeader unset X-Forwarded-User
     RequestHeader unset X-Real-IP
+    RequestHeader unset X-Original-URL
+    RequestHeader unset X-Rewrite-URL
 
     # Exact read-only gateway routes. Never proxy /admin-api, /api, /management
     # or any wildcard into the existing local WebAdmin adapter.
