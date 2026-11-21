@@ -1,5 +1,7 @@
 #include "server_cli.hpp"
 
+#include "database_cli.hpp"
+#include "dc24h/db/store.hpp"
 #include "dc24h/net/server.hpp"
 
 #include <boost/asio/io_context.hpp>
@@ -25,6 +27,8 @@ namespace asio = boost::asio;
 struct LaunchConfig {
     net::ServerConfig server;
     std::size_t threads = 2;
+    bool mariadb = false;
+    std::set<std::string_view> setting_overrides;
 };
 
 std::uint64_t number(std::string_view value, std::uint64_t maximum, std::string_view option) {
@@ -42,7 +46,6 @@ LaunchConfig parse_options(std::span<const std::string_view> arguments) {
     net::Endpoint adc{"127.0.0.1", 1510};
     std::set<std::string_view> seen;
     constexpr auto max_port = std::numeric_limits<std::uint16_t>::max();
-    constexpr auto max_size = std::numeric_limits<std::size_t>::max();
 
     for (std::size_t index = 0; index < arguments.size(); ++index) {
         const auto option = arguments[index];
@@ -52,12 +55,16 @@ LaunchConfig parse_options(std::span<const std::string_view> arguments) {
         if (option == "--enable-adc") {
             continue;
         }
-        if (++index == arguments.size() || arguments[index].empty() ||
+        if (option == "--mariadb") {
+            launch.mariadb = true;
+            continue;
+        }
+        if (++index == arguments.size() ||
+            (arguments[index].empty() && option != "--hub-description") ||
             arguments[index].starts_with("--")) {
             throw std::invalid_argument("Expected a value for " + std::string(option));
         }
         const auto value = arguments[index];
-        auto &limits = launch.server.limits;
         if (option == "--tls-cert") {
             launch.server.certificate = value;
         } else if (option == "--tls-key") {
@@ -70,43 +77,16 @@ LaunchConfig parse_options(std::span<const std::string_view> arguments) {
             adc.address = value;
         } else if (option == "--adc-port") {
             adc.port = static_cast<std::uint16_t>(number(value, max_port, option));
-        } else if (option == "--max-clients") {
-            launch.server.max_clients = static_cast<std::size_t>(number(value, max_size, option));
-        } else if (option == "--max-nick-codepoints") {
-            launch.server.max_nick_codepoints =
-                static_cast<std::size_t>(number(value, 256, option));
-        } else if (option == "--max-message-bytes") {
-            launch.server.max_message_bytes = static_cast<std::size_t>(number(value, 4096, option));
-        } else if (option == "--input-bytes") {
-            limits.input_bytes = static_cast<std::size_t>(number(value, max_size, option));
-        } else if (option == "--pending-bytes") {
-            limits.pending_bytes = static_cast<std::size_t>(number(value, max_size, option));
         } else if (option == "--threads") {
             launch.threads = static_cast<std::size_t>(number(value, 64, option));
             if (launch.threads == 0) {
                 throw std::invalid_argument("At least one I/O worker is required");
             }
+        } else if (option.starts_with("--") &&
+                   net::apply_hub_setting(launch.server, option.substr(2), value)) {
+            launch.setting_overrides.emplace(option.substr(2));
         } else {
-            constexpr std::pair<std::string_view,
-                                std::chrono::milliseconds net::ConnectionLimits::*>
-                timeouts[] = {{"--setup-timeout-ms", &net::ConnectionLimits::setup_timeout},
-                              {"--tls-timeout-ms", &net::ConnectionLimits::tls_timeout},
-                              {"--identify-timeout-ms", &net::ConnectionLimits::identify_timeout},
-                              {"--idle-timeout-ms", &net::ConnectionLimits::idle_timeout},
-                              {"--shutdown-timeout-ms", &net::ConnectionLimits::shutdown_timeout}};
-            bool matched = false;
-            for (const auto &[name, member] : timeouts) {
-                if (name == option) {
-                    using Rep = std::chrono::milliseconds::rep;
-                    limits.*member = std::chrono::milliseconds(
-                        static_cast<Rep>(number(value, 86400000, option)));
-                    matched = true;
-                    break;
-                }
-            }
-            if (!matched) {
-                throw std::invalid_argument("Unknown server option " + std::string(option));
-            }
+            throw std::invalid_argument("Unknown server option " + std::string(option));
         }
     }
     if (seen.contains("--enable-adc")) {
@@ -117,6 +97,27 @@ LaunchConfig parse_options(std::span<const std::string_view> arguments) {
     return launch;
 }
 
+void load_settings(LaunchConfig &launch, const db::Config &config, std::ostream &errors) {
+    try {
+        db::Store store(config);
+        store.require_current_schema();
+        for (const auto &[name, value] : store.settings()) {
+            if (launch.setting_overrides.contains(name)) {
+                continue;
+            }
+            try {
+                if (!net::apply_hub_setting(launch.server, name, value)) {
+                    errors << "Ignoring an unknown MariaDB hub setting\n";
+                }
+            } catch (const std::invalid_argument &) {
+                errors << "Ignoring an invalid MariaDB hub setting\n";
+            }
+        }
+    } catch (const db::Error &error) {
+        errors << "Using command-line settings and defaults at startup: " << error.what() << '\n';
+    }
+}
+
 void print_listener(std::ostream &output, std::string_view protocol,
                     const net::Endpoint &endpoint) {
     output << "Listening for " << protocol << " on " << endpoint.address << " port "
@@ -124,10 +125,16 @@ void print_listener(std::ostream &output, std::string_view protocol,
 }
 
 int serve(LaunchConfig launch, std::ostream &output, std::ostream &errors) {
+    std::optional<db::Config> database;
+    if (launch.mariadb) {
+        database.emplace(read_database_config());
+        load_settings(launch, *database, errors);
+    }
     asio::io_context io;
-    net::Server server(io, std::move(launch.server), [&errors](std::string_view event) {
-        std::osyncstream(errors) << event << '\n';
-    });
+    net::Server server(
+        io, std::move(launch.server),
+        [&errors](std::string_view event) { std::osyncstream(errors) << event << '\n'; },
+        std::move(database));
     asio::signal_set signals(io, SIGINT, SIGTERM);
     signals.async_wait([&server](const boost::system::error_code &error, int) {
         if (!error) {
@@ -180,6 +187,9 @@ void write_server_help(std::ostream &output) {
            << "  --enable-adc              Enable plaintext ADC.\n"
            << "  --adc-address IP          ADC listen address (127.0.0.1).\n"
            << "  --adc-port PORT           ADC TCP port (1510).\n"
+           << "  --mariadb                 Load settings and enforce bans from MariaDB.\n"
+           << "  --hub-name NAME           Advertised hub name (dc24h.eu).\n"
+           << "  --hub-description TEXT    Advertised hub description.\n"
            << "  --max-clients COUNT       Concurrent clients across both listeners (128).\n"
            << "  --max-nick-codepoints N   Maximum Unicode code points in a nickname (32).\n"
            << "  --max-message-bytes N     Maximum decoded UTF-8 chat bytes (1024).\n"

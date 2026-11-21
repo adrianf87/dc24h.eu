@@ -42,3 +42,27 @@ dc24h_enable_warnings(dc24h_net_tests)
 gtest_discover_tests(dc24h_net_tests PROPERTIES TIMEOUT 12)
 
 add_test(NAME hub.starts COMMAND dc24h-hub)
+
+option(DC24H_TEST_MARIADB "Run integration tests on a disposable MariaDB instance" OFF)
+if(DC24H_TEST_MARIADB)
+    find_program(DC24H_BASH bash REQUIRED)
+    find_program(DC24H_MARIADBD mariadbd REQUIRED)
+    find_program(DC24H_MARIADB_INSTALL_DB mariadb-install-db REQUIRED)
+    find_program(DC24H_MARIADB mariadb REQUIRED)
+    find_program(DC24H_OPENSSL openssl REQUIRED)
+
+    add_executable(dc24h_db_tests db/database_test.cpp)
+    target_include_directories(dc24h_db_tests PRIVATE "${MARIADB_INCLUDE_DIR}")
+    target_link_libraries(dc24h_db_tests
+        PRIVATE dc24h_db dc24h_net dc24h_adc GTest::gtest_main OpenSSL::SSL
+            Threads::Threads "${MARIADB_LIBRARY}"
+    )
+    dc24h_enable_warnings(dc24h_db_tests)
+
+    add_test(NAME hub.mariadb
+        COMMAND "${DC24H_BASH}" "${CMAKE_CURRENT_SOURCE_DIR}/db/run_mariadb.sh"
+            "$<TARGET_FILE:dc24h-hub>" "$<TARGET_FILE:dc24h_db_tests>" "${DC24H_MARIADBD}"
+            "${DC24H_MARIADB_INSTALL_DB}" "${DC24H_MARIADB}" "${DC24H_OPENSSL}"
+    )
+    set_tests_properties(hub.mariadb PROPERTIES LABELS mariadb TIMEOUT 90)
+endif()

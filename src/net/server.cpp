@@ -1,5 +1,6 @@
 #include "dc24h/net/server.hpp"
 
+#include "ban_worker.hpp"
 #include "connection.hpp"
 #include "dc24h/hub/peer_routing.hpp"
 
@@ -59,6 +60,11 @@ void validate(const ServerConfig &config) {
             throw std::invalid_argument("Timeouts must be between 1 and 86400000 milliseconds");
         }
     }
+    ServerConfig checked;
+    if (!config.hub_name.empty()) {
+        static_cast<void>(apply_hub_setting(checked, "hub-name", config.hub_name));
+    }
+    static_cast<void>(apply_hub_setting(checked, "hub-description", config.hub_description));
 }
 
 void setup_tls(asio::ssl::context &tls, const ServerConfig &config) {
@@ -119,11 +125,11 @@ struct Listener {
 
 class Server::Impl : public std::enable_shared_from_this<Server::Impl> {
   public:
-    Impl(asio::io_context &io, ServerConfig config, LogSink log)
+    Impl(asio::io_context &io, ServerConfig config, LogSink log, std::shared_ptr<BanWorker> bans)
         : io_(io), control_(asio::make_strand(io)), config_(std::move(config)),
-          log_(std::move(log)), tls_(asio::ssl::context::tls_server), adcs_(control_, true),
-          presence_(config_.max_nick_codepoints, config_.max_message_bytes,
-                    config_.limits.input_bytes),
+          log_(std::move(log)), bans_(std::move(bans)), tls_(asio::ssl::context::tls_server),
+          adcs_(control_, true), presence_(config_.max_nick_codepoints, config_.max_message_bytes,
+                                           config_.limits.input_bytes),
           peers_(presence_, [this](std::string_view sid, const hub::WireFrame &frame) {
               return send(sid, frame);
           }) {
@@ -229,12 +235,13 @@ class Server::Impl : public std::enable_shared_from_this<Server::Impl> {
             sid = encode_sid(next_sid_);
             next_sid_ = next_sid_ == last_sid ? 1U : next_sid_ + 1U;
         } while (connections_.contains(sid));
-        auto input = [weak = weak_from_this(), sid](bool identifying, adc::Message message) {
+        auto input = [weak = weak_from_this(), sid](std::optional<Identity> identity,
+                                                    adc::Message message) {
             if (auto owner = weak.lock()) {
                 const auto executor = owner->control_;
-                asio::post(executor, [owner = std::move(owner), sid, identifying,
-                                      message = std::move(message)] {
-                    owner->process_input(sid, identifying, message);
+                asio::post(executor, [owner = std::move(owner), sid, identity = std::move(identity),
+                                      message = std::move(message)]() mutable {
+                    owner->process_input(sid, std::move(identity), std::move(message));
                 });
             }
         };
@@ -244,9 +251,8 @@ class Server::Impl : public std::enable_shared_from_this<Server::Impl> {
                 asio::post(executor, [owner = std::move(owner), sid] { owner->release(sid); });
             }
         };
-        auto connection =
-            make_connection(std::move(socket), secure ? &tls_ : nullptr, config_.limits, sid, log_,
-                            std::move(input), std::move(released));
+        auto connection = make_connection(std::move(socket), secure ? &tls_ : nullptr, config_, sid,
+                                          log_, std::move(input), std::move(released));
         connections_.emplace(sid, connection);
         active_clients_.store(connections_.size(), std::memory_order_relaxed);
         connection->start();
@@ -310,6 +316,51 @@ class Server::Impl : public std::enable_shared_from_this<Server::Impl> {
         }
     }
 
+    void finish_admission(const std::string &sid, Connection &connection, const adc::Message &info,
+                          const BanDecision &decision) {
+        if (database_available_ != decision.available) {
+            database_available_ = decision.available;
+            if (log_) {
+                log_(decision.available ? "MariaDB admission checks recovered"
+                                        : "MariaDB admission checks unavailable");
+            }
+        }
+        std::string reply;
+        if (!decision.available) {
+            reply = adc::format_status("210", "Admission temporarily unavailable");
+        } else if (!decision.ban) {
+            admit(sid, connection, info);
+            return;
+        } else if (const auto remaining = decision.ban->seconds_remaining) {
+            reply =
+                adc::format_status("232", "Temporarily banned", "TL" + std::to_string(*remaining));
+        } else {
+            reply = adc::format_status("231", "Permanently banned");
+        }
+        static_cast<void>(connection.deliver(
+            {std::make_shared<const std::string>(std::move(reply))}, Continuation::reject));
+    }
+
+    void check_admission(const std::string &sid, const std::shared_ptr<Connection> &connection,
+                         Identity identity, adc::Message info) {
+        auto complete = [weak = weak_from_this(), client = std::weak_ptr(connection),
+                         executor = control_, sid,
+                         info = std::move(info)](BanDecision decision) mutable {
+            asio::post(executor, [weak, client, sid, info = std::move(info),
+                                  decision = std::move(decision)] {
+                if (const auto owner = weak.lock(); owner && !owner->stop_requested_.load()) {
+                    const auto found = owner->connections_.find(sid);
+                    if (found != owner->connections_.end() && found->second == client.lock()) {
+                        owner->finish_admission(sid, *found->second, info, decision);
+                    }
+                }
+            });
+        };
+        if (!bans_->submit(std::move(identity.cid), std::move(identity.ip), std::move(complete))) {
+            finish_admission(sid, *connection, {}, {});
+        }
+    }
+
     hub::WireFrame update(std::string_view sid, const adc::Message &message) {
         const auto result = presence_.update(sid, message);
         if (const auto *error = std::get_if<hub::Rejection>(&result)) {
@@ -337,14 +388,19 @@ class Server::Impl : public std::enable_shared_from_this<Server::Impl> {
         return {};
     }
 
-    void process_input(const std::string &sid, bool identifying, const adc::Message &message) {
+    void process_input(const std::string &sid, std::optional<Identity> identity,
+                       adc::Message message) {
         const auto found = connections_.find(sid);
         if (found == connections_.end() || stop_requested_.load()) {
             return;
         }
         auto &connection = *found->second;
-        if (identifying) {
-            admit(sid, connection, message);
+        if (identity) {
+            if (bans_) {
+                check_admission(sid, found->second, std::move(*identity), std::move(message));
+            } else {
+                admit(sid, connection, message);
+            }
             return;
         }
         hub::WireFrame reply;
@@ -366,6 +422,7 @@ class Server::Impl : public std::enable_shared_from_this<Server::Impl> {
     Strand control_;
     ServerConfig config_;
     LogSink log_;
+    std::shared_ptr<BanWorker> bans_;
     asio::ssl::context tls_;
     Listener adcs_;
     std::optional<Listener> adc_;
@@ -379,14 +436,22 @@ class Server::Impl : public std::enable_shared_from_this<Server::Impl> {
     std::atomic<bool> stop_requested_{false};
     std::uint32_t next_sid_ = 1;
     bool reported_full_ = false;
+    bool database_available_ = true;
 };
 
-Server::Server(asio::io_context &io, ServerConfig config, LogSink log)
-    : impl_(std::make_shared<Impl>(io, std::move(config), std::move(log))) {
+Server::Server(asio::io_context &io, ServerConfig config, LogSink log,
+               std::optional<db::Config> database)
+    : bans_(database ? std::make_shared<BanWorker>(std::move(*database)) : nullptr),
+      impl_(std::make_shared<Impl>(io, std::move(config), std::move(log), bans_)) {
     impl_->start();
 }
 
-Server::~Server() { stop(); }
+Server::~Server() {
+    stop();
+    if (bans_) {
+        bans_->join();
+    }
+}
 
 const Endpoint &Server::adcs_endpoint() const noexcept { return impl_->adcs_endpoint(); }
 
@@ -398,6 +463,11 @@ std::size_t Server::active_clients() const noexcept { return impl_->active_clien
 
 std::size_t Server::online_users() const noexcept { return impl_->online_users(); }
 
-void Server::stop() { impl_->stop(); }
+void Server::stop() {
+    impl_->stop();
+    if (bans_) {
+        bans_->stop();
+    }
+}
 
 } // namespace dc24h::net

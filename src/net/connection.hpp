@@ -10,7 +10,11 @@
 namespace dc24h::net {
 
 enum class Continuation { none, resume, admit, reject };
-using InputHandler = std::function<void(bool identifying, adc::Message)>;
+struct Identity {
+    std::string cid;
+    std::string ip;
+};
+using InputHandler = std::function<void(std::optional<Identity>, adc::Message)>;
 
 class Connection {
   public:
@@ -22,10 +26,9 @@ class Connection {
                                        Continuation after = Continuation::none) = 0;
 };
 
-[[nodiscard]] std::shared_ptr<Connection> make_connection(boost::asio::ip::tcp::socket socket,
-                                                          boost::asio::ssl::context *tls,
-                                                          ConnectionLimits limits, std::string sid,
-                                                          LogSink log, InputHandler on_input,
-                                                          std::function<void()> on_closed);
+[[nodiscard]] std::shared_ptr<Connection>
+make_connection(boost::asio::ip::tcp::socket socket, boost::asio::ssl::context *tls,
+                const ServerConfig &config, std::string sid, LogSink log, InputHandler on_input,
+                std::function<void()> on_closed);
 
 } // namespace dc24h::net

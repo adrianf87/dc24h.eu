@@ -1,6 +1,6 @@
 # dc24h.eu
 
-dc24h.eu is an ADC/ADCS Direct Connect hub project targeting Alpha 0.1 (`0.1.0-alpha.1`). The `dc24h-hub` binary accepts concurrent guest connections, maintains a shared user list, and routes chat, file searches, results, and peer connection requests across ADC and ADCS. Clients transfer file contents directly. The repository includes the ADC parser library, a Webadmin welcome screen, and automated builds and tests. The planned hub configuration uses TOML at `/etc/dc24h/hub.toml`.
+dc24h.eu is an ADC/ADCS Direct Connect hub project targeting Alpha 0.1 (`0.1.0-alpha.1`). The `dc24h-hub` binary accepts concurrent guest connections, maintains a shared user list, and routes chat, file searches, results, and peer connection requests across ADC and ADCS. Clients transfer file contents directly. The hub can persist settings, bans, and administrative audit events in MariaDB. The repository includes the ADC parser library, a Webadmin welcome screen, and automated builds and tests. The planned hub configuration uses TOML at `/etc/dc24h/hub.toml`.
 
 ## Target systems
 
@@ -8,7 +8,7 @@ Alpha 0.1 targets Ubuntu Server 22.04 LTS, 24.04 LTS, and 26.04 LTS, Debian 12 (
 
 ## C++20 backend
 
-Build with a C++20 compiler, CMake 3.22 or later, Make, Boost 1.74 or later, OpenSSL 3, utf8proc, and Libgcrypt. The Debian and Ubuntu package names are `g++`, `cmake`, `make`, `ca-certificates`, `libboost-dev`, `libssl-dev`, `libutf8proc-dev`, and `libgcrypt20-dev`. CMake downloads GoogleTest and verifies the archive's SHA-256 checksum the first time it configures the tests. Use `-DBUILD_TESTING=OFF` to build the hub and its libraries without the test suite.
+Build with a C++20 compiler, CMake 3.22 or later, Make, Boost 1.74 or later, OpenSSL 3, utf8proc, Libgcrypt, and MariaDB Connector/C. The Debian and Ubuntu package names are `g++`, `cmake`, `make`, `ca-certificates`, `libboost-dev`, `libssl-dev`, `libutf8proc-dev`, `libgcrypt20-dev`, and `libmariadb-dev`. CMake downloads GoogleTest and verifies the archive's SHA-256 checksum the first time it configures the tests. Use `-DBUILD_TESTING=OFF` to build the hub and its libraries without the test suite.
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
@@ -42,6 +42,8 @@ Start the hub with an ADCS certificate chain and its private key. ADCS defaults 
 
 The TCP and ADCS guide covers TLS, connection limits, and shutdown. The presence and chat guide covers nickname policy, message routing, and the ten-client ADCS integration test. [TCP and ADCS guide (en-US)](docs/us/alpha-0.1/TCP-ADCS.md), [Presence and chat guide (en-US)](docs/us/alpha-0.1/PRESENCE-CHAT.md)
 
+To enable MariaDB, apply the schema with `--db migrate` using the migration account, then start the hub with `--serve --mariadb` using a read-only account. [MariaDB setup, administration, and backup (en-US)](docs/us/alpha-0.1/MARIADB.md)
+
 ## Webadmin
 
 Use Node.js 24 LTS with npm. The CI version is pinned in `webadmin/.nvmrc`.
@@ -59,7 +61,7 @@ Vite writes the compiled application to `webadmin/dist/`. Run `npm run dev` to s
 
 ## CI
 
-GitHub Actions builds and tests the Debug and Release configurations and checks Webadmin on Ubuntu 22.04, 24.04, and 26.04 runners (`amd64`). The C++ formatting check uses `clang-format-18` on Ubuntu 24.04.
+GitHub Actions builds and tests the Debug and Release configurations, runs the isolated MariaDB integration suite, and checks Webadmin on Ubuntu 22.04, 24.04, and 26.04 runners (`amd64`). The C++ formatting check uses `clang-format-18` on Ubuntu 24.04.
 
 The same build and test commands work locally on Debian 12 and 13. The ADC parser guide covers the optional Clang/libFuzzer build.
 
@@ -75,4 +77,6 @@ The same build and test commands work locally on Debian 12 and 13. The ADC parse
 - [User presence and chat (pl-PL)](docs/pl/alpha-0.1/PRESENCE-CHAT.md)
 - [Search and peer connection signaling (en-US)](docs/us/alpha-0.1/SEARCH-P2P.md)
 - [Search and peer connection signaling (pl-PL)](docs/pl/alpha-0.1/SEARCH-P2P.md)
+- [MariaDB persistence (en-US)](docs/us/alpha-0.1/MARIADB.md)
+- [MariaDB persistence (pl-PL)](docs/pl/alpha-0.1/MARIADB.md)
 - [GNU General Public License v3.0](LICENSE)

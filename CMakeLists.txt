@@ -36,18 +36,32 @@ dc24h_enable_warnings(dc24h_presence)
 find_package(Boost 1.74 REQUIRED CONFIG)
 find_package(OpenSSL 3.0 REQUIRED COMPONENTS SSL Crypto)
 find_package(Threads REQUIRED)
+find_path(MARIADB_INCLUDE_DIR NAMES mysql.h PATH_SUFFIXES mariadb REQUIRED)
+find_library(MARIADB_LIBRARY NAMES mariadb REQUIRED)
 
-add_library(dc24h_net STATIC src/net/server.cpp src/net/connection.cpp)
+add_library(dc24h_config STATIC src/net/config.cpp)
+target_include_directories(dc24h_config PUBLIC include)
+target_link_libraries(dc24h_config PRIVATE dc24h_adc)
+dc24h_enable_warnings(dc24h_config)
+
+add_library(dc24h_db STATIC src/db/store.cpp)
+target_include_directories(dc24h_db PUBLIC include PRIVATE "${MARIADB_INCLUDE_DIR}")
+target_link_libraries(dc24h_db
+    PRIVATE dc24h_config dc24h_adc Boost::headers "${MARIADB_LIBRARY}" Threads::Threads
+)
+dc24h_enable_warnings(dc24h_db)
+
+add_library(dc24h_net STATIC src/net/server.cpp src/net/connection.cpp src/net/ban_worker.cpp)
 target_include_directories(dc24h_net PUBLIC include PRIVATE "${PROJECT_BINARY_DIR}/generated")
 target_link_libraries(dc24h_net
     PUBLIC Boost::headers
-    PRIVATE dc24h_presence OpenSSL::SSL Threads::Threads
+    PRIVATE dc24h_presence dc24h_config dc24h_db OpenSSL::SSL Threads::Threads
 )
 dc24h_enable_warnings(dc24h_net)
 
-add_library(dc24h_cli STATIC src/cli.cpp src/server_cli.cpp)
+add_library(dc24h_cli STATIC src/cli.cpp src/server_cli.cpp src/database_cli.cpp)
 target_include_directories(dc24h_cli PUBLIC include PRIVATE "${PROJECT_BINARY_DIR}/generated")
-target_link_libraries(dc24h_cli PRIVATE dc24h_net Threads::Threads)
+target_link_libraries(dc24h_cli PRIVATE dc24h_net dc24h_config dc24h_db Threads::Threads)
 dc24h_enable_warnings(dc24h_cli)
 
 add_executable(dc24h-hub src/main.cpp)
