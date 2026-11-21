@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dc24h/adc/protocol.hpp"
+#include "dc24h/hub/token_bucket.hpp"
 
 #include <chrono>
 #include <cstddef>
@@ -33,6 +34,13 @@ struct ChatDelivery {
     bool directed;
 };
 
+struct PeerCapabilities {
+    bool tcp;
+    bool udp;
+    bool adcs;
+    bool legacy_adcs;
+};
+
 // Call on the server control strand. Returned SID views remain valid until that user is removed.
 class Presence {
   public:
@@ -51,6 +59,9 @@ class Presence {
                                   Clock::time_point now = Clock::now());
 
     [[nodiscard]] WireFrame find(std::string_view sid) const;
+    [[nodiscard]] std::optional<PeerCapabilities> capabilities(std::string_view sid) const;
+    [[nodiscard]] std::optional<std::vector<std::string_view>>
+    recipients(const adc::Message &message) const;
     [[nodiscard]] std::vector<RosterEntry> roster() const;
     [[nodiscard]] std::size_t size() const noexcept;
     [[nodiscard]] bool remove(std::string_view sid);
@@ -67,14 +78,11 @@ class Presence {
 
     struct User {
         Profile profile;
-        Clock::time_point refill;
-        std::size_t tokens;
+        TokenBucket commands;
     };
 
     [[nodiscard]] std::optional<Rejection> apply(Profile &profile, const adc::Message &message,
                                                  std::string_view sid, bool initial) const;
-    [[nodiscard]] static bool take_token(User &user, Clock::time_point now);
-
     std::size_t nickname_limit_;
     std::size_t message_limit_;
     std::size_t profile_limit_;

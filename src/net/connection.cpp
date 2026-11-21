@@ -298,7 +298,8 @@ class StreamConnection final : public Connection,
         }
         const bool identifying = result.action == adc::SessionAction::identified;
         if (identifying || (result.action == adc::SessionAction::dispatch &&
-                            (message.command == "INF" || message.command == "MSG"))) {
+                            (message.command == "INF" || message.command == "MSG" ||
+                             adc::is_peer_command(message.command)))) {
             if (message.command == "INF") {
                 prepare_info(message, peer_address_);
             }

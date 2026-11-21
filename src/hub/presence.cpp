@@ -73,9 +73,9 @@ bool decimal(std::string_view value, std::uint64_t maximum) {
 }
 
 bool allowed_field(std::string_view name) {
-    constexpr std::string_view public_names[] = {"NI", "ID", "DE", "VE", "AP", "AW", "SU",
-                                                 "I4", "I6", "U4", "U6", "SS", "SF", "SL",
-                                                 "HN", "HR", "HO", "US", "DS", "AS", "AM"};
+    constexpr std::string_view public_names[] = {"NI", "ID", "DE", "VE", "AP", "AW", "SU", "I4",
+                                                 "I6", "U4", "U6", "SS", "SF", "SL", "HN", "HR",
+                                                 "HO", "US", "DS", "AS", "AM", "KP"};
     return std::ranges::find(public_names, name) != std::end(public_names);
 }
 
@@ -85,6 +85,9 @@ bool valid_field(const adc::Field &field) {
     }
     if (field.name == "AW" || field.name == "U4" || field.name == "U6") {
         return decimal(field.value, field.name == "AW" ? 2U : 65535U);
+    }
+    if (field.name == "KP") {
+        return adc::is_keyprint(field.value);
     }
     if (field.name == "DE" || field.name == "VE" || field.name == "AP" || field.name == "I4" ||
         field.name == "I6") {
@@ -125,20 +128,8 @@ template <typename Fields> WireFrame encode_info(std::string_view sid, const Fie
     return std::make_shared<const std::string>(std::move(line));
 }
 
-WireFrame encode_chat(std::string_view sid, const adc::Message &message, const adc::Chat &chat) {
-    std::string line = message.fourcc() + ' ';
-    line += sid;
-    if (message.target_sid) {
-        line += ' ';
-        line += *message.target_sid;
-    }
-    if (message.type == MessageType::feature) {
-        line += ' ';
-        for (const auto &selector : message.selectors) {
-            line += selector.required ? '+' : '-';
-            line += selector.name;
-        }
-    }
+WireFrame encode_chat(const adc::Message &message, const adc::Chat &chat) {
+    auto line = adc::format_routing_header(message);
     line += ' ';
     line += adc::escape_parameter(chat.text);
     if (chat.private_group) {
@@ -237,22 +228,8 @@ Presence::ProfileResult Presence::admit(std::string_view sid, const adc::Message
         return *error;
     }
     const auto information = profile.information;
-    users_.emplace(std::string(sid), User{std::move(profile), now, burst});
+    users_.emplace(std::string(sid), User{std::move(profile), {burst, token_interval, now}});
     return information;
-}
-
-bool Presence::take_token(User &user, Clock::time_point now) {
-    const auto elapsed = now - user.refill;
-    if (elapsed >= token_interval) {
-        const auto periods = elapsed / token_interval;
-        user.refill += periods * token_interval;
-        user.tokens = std::min(burst, user.tokens + static_cast<std::size_t>(periods));
-    }
-    if (user.tokens == 0) {
-        return false;
-    }
-    --user.tokens;
-    return true;
 }
 
 Presence::ProfileResult Presence::update(std::string_view sid, const adc::Message &message,
@@ -263,7 +240,7 @@ Presence::ProfileResult Presence::update(std::string_view sid, const adc::Messag
         return denied(message, "Connection cannot update this profile");
     }
     auto &user = found->second;
-    if (!take_token(user, now)) {
+    if (!user.commands.take(now)) {
         return rate_limit;
     }
     auto candidate = user.profile;
@@ -299,7 +276,7 @@ Presence::ChatResult Presence::chat(std::string_view sid, const adc::Message &me
     if (sender == users_.end() || message.sender_sid != sid) {
         return denied(message, "Connection cannot send as this SID");
     }
-    if (!take_token(sender->second, now)) {
+    if (!sender->second.commands.take(now)) {
         return rate_limit;
     }
     const auto parsed = adc::parse_chat(message);
@@ -313,43 +290,84 @@ Presence::ChatResult Presence::chat(std::string_view sid, const adc::Message &me
     }
 
     const bool directed = message.type == MessageType::direct || message.type == MessageType::echo;
-    ChatDelivery delivery{nullptr, {}, directed};
     if (directed) {
         if (!message.target_sid || !adc::is_sid(*message.target_sid) ||
             parsed->private_group != sid) {
             return invalid_message;
-        }
-        const auto target = users_.find(*message.target_sid);
-        if (target == users_.end()) {
-            return denied(message, "Recipient is unavailable");
-        }
-        delivery.recipients.push_back(target->first);
-        if (message.type == MessageType::echo && target != sender) {
-            delivery.recipients.push_back(sender->first);
         }
     } else if (message.type == MessageType::broadcast || message.type == MessageType::feature) {
         if (parsed->private_group || message.target_sid ||
             (message.type == MessageType::feature && message.selectors.empty())) {
             return invalid_message;
         }
-        for (const auto &[peer_sid, user] : users_) {
-            if (message.type == MessageType::broadcast ||
-                std::ranges::all_of(message.selectors, [&](const adc::FeatureSelector &selector) {
-                    return user.profile.features.contains(selector.name) == selector.required;
-                })) {
-                delivery.recipients.push_back(peer_sid);
-            }
-        }
     } else {
         return invalid_message;
     }
-    delivery.frame = encode_chat(sid, message, *parsed);
-    return delivery;
+    auto destinations = recipients(message);
+    if (!destinations) {
+        return denied(message, "Recipient is unavailable");
+    }
+    return ChatDelivery{encode_chat(message, *parsed), std::move(*destinations), directed};
 }
 
 WireFrame Presence::find(std::string_view sid) const {
     const auto user = users_.find(sid);
     return user == users_.end() ? WireFrame{} : user->second.profile.information;
+}
+
+std::optional<PeerCapabilities> Presence::capabilities(std::string_view sid) const {
+    const auto user = users_.find(sid);
+    if (user == users_.end()) {
+        return std::nullopt;
+    }
+    const auto &[fields, nickname, features, information] = user->second.profile;
+    const auto has_udp = [&](std::string_view ip, std::string_view port, std::string_view flag) {
+        const auto advertised = fields.find(port);
+        return fields.contains(ip) && features.contains(flag) && advertised != fields.end() &&
+               advertised->second.find_first_not_of('0') != std::string::npos;
+    };
+    return PeerCapabilities{
+        (fields.contains("I4") && features.contains("TCP4")) ||
+            (fields.contains("I6") && features.contains("TCP6")),
+        has_udp("I4", "U4", "UDP4") || has_udp("I6", "U6", "UDP6"),
+        features.contains("ADCS"),
+        features.contains("ADC0"),
+    };
+}
+
+std::optional<std::vector<std::string_view>>
+Presence::recipients(const adc::Message &message) const {
+    std::vector<std::string_view> result;
+    if (message.type == MessageType::direct || message.type == MessageType::echo) {
+        if (!message.target_sid) {
+            return std::nullopt;
+        }
+        const auto target = users_.find(*message.target_sid);
+        if (target == users_.end()) {
+            return std::nullopt;
+        }
+        result.push_back(target->first);
+        if (message.type == MessageType::echo && message.sender_sid != message.target_sid &&
+            message.sender_sid) {
+            const auto sender = users_.find(*message.sender_sid);
+            if (sender != users_.end()) {
+                result.push_back(sender->first);
+            }
+        }
+    } else if (message.type == MessageType::broadcast || message.type == MessageType::feature) {
+        result.reserve(users_.size());
+        for (const auto &[sid, user] : users_) {
+            if (message.type == MessageType::broadcast ||
+                std::ranges::all_of(message.selectors, [&](const adc::FeatureSelector &selector) {
+                    return user.profile.features.contains(selector.name) == selector.required;
+                })) {
+                result.push_back(sid);
+            }
+        }
+    } else {
+        return std::nullopt;
+    }
+    return result;
 }
 
 std::vector<RosterEntry> Presence::roster() const {

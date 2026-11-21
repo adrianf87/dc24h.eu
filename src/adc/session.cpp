@@ -85,8 +85,7 @@ SessionResult Session::receive(const Message &message) {
         return invalid_direction(message);
     }
     if (state_ != SessionState::normal) {
-        if (message.command == "MSG" || message.command == "SCH" || message.command == "RES" ||
-            message.command == "CTM" || message.command == "RCM") {
+        if (message.command == "MSG" || is_peer_command(message.command)) {
             return invalid_state(message);
         }
         return {};
@@ -94,7 +93,7 @@ SessionResult Session::receive(const Message &message) {
     if (routed(message.type)) {
         return {SessionAction::dispatch, {}};
     }
-    if (message.command == "MSG") {
+    if (message.command == "MSG" || is_peer_command(message.command)) {
         return invalid_direction(message);
     }
     return {};

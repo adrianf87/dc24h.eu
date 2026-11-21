@@ -130,7 +130,8 @@ template <typename Client> std::string negotiate(Client &client) {
 }
 
 std::string identification(std::string_view sid, std::string_view cid = adc::test::cid,
-                           std::string_view pid = adc::test::pid, std::string_view nick = {}) {
+                           std::string_view pid = adc::test::pid, std::string_view nick = {},
+                           std::string_view features = "BASE") {
     std::string wire = "BINF ";
     wire += sid;
     wire += " ID";
@@ -139,7 +140,9 @@ std::string identification(std::string_view sid, std::string_view cid = adc::tes
     wire += pid;
     wire += " NI";
     wire += nick.empty() ? sid : nick;
-    wire += " SUBASE I4192.0.2.9\n";
+    wire += " SU";
+    wire += features;
+    wire += " I4192.0.2.9\n";
     return wire;
 }
 
@@ -760,6 +763,103 @@ TEST(AdcPresence, RejectsPrivateEchoWhenTheRecipientQueueOverflows) {
     const auto marker = "BMSG " + sender_sid + " still-present\n";
     sender.send(marker);
     EXPECT_EQ(sender.line(), marker);
+}
+
+TEST(AdcPeerRouting, FindsFilesAndNegotiatesADirectSocketAcrossListeners) {
+    const TestCertificate certificate;
+    RunningServer server(loopback_config(certificate));
+    RawClient active;
+    TlsClient passive(certificate.cert_path);
+    ASSERT_FALSE(active.connect(server.adc()));
+    ASSERT_FALSE(passive.connect(server.adcs()));
+    ASSERT_FALSE(passive.handshake());
+    const auto active_sid = negotiate(active);
+    const auto passive_sid = negotiate(passive);
+    active.send(identification(active_sid, adc::test::cid, adc::test::pid, {}, "BASE,TCP4"));
+    expect_info(active, active_sid);
+    passive.send(identification(passive_sid, second_cid, second_pid));
+    expect_info(passive, active_sid);
+    expect_info(passive, passive_sid, second_cid);
+    expect_info(active, passive_sid, second_cid);
+
+    const auto filtered = "FSCH " + passive_sid + " +TCP4 ANlocal ANfile TOfirst\n";
+    const auto targeted = "DSCH " + passive_sid + ' ' + active_sid + " ANanother TOsecond\n";
+    passive.send(filtered + targeted);
+    EXPECT_EQ(active.line(), filtered);
+    EXPECT_EQ(active.line(), targeted);
+    const auto result = "DRES " + active_sid + ' ' + passive_sid +
+                        " FN/Public/local\\sfile.txt SI37 SL2 TR" + std::string(adc::test::cid);
+    const auto first_result = result + " TOfirst\n";
+    const auto second_result = result + " TOsecond\n";
+    active.send(second_result + first_result);
+    EXPECT_EQ(passive.line(), second_result);
+    EXPECT_EQ(passive.line(), first_result);
+
+    asio::io_context peer_io;
+    test::tcp::acceptor peer_listener(peer_io, {asio::ip::address_v4::loopback(), 0});
+    const auto port = peer_listener.local_endpoint().port();
+    const auto reverse = "DRCM " + passive_sid + ' ' + active_sid + " ADC/1.0 connect-token\n";
+    passive.send(reverse);
+    EXPECT_EQ(active.line(), reverse);
+    const auto connect = "DCTM " + active_sid + ' ' + passive_sid + " ADC/1.0 " +
+                         std::to_string(port) + " connect-token\n";
+    active.send(connect);
+    const auto forwarded = passive.line();
+    ASSERT_EQ(forwarded, connect);
+    const auto signal = adc::test::decode(forwarded);
+    const auto request = adc::parse_peer_connection(signal);
+    ASSERT_TRUE(request && request->port);
+
+    RawClient peer;
+    ASSERT_FALSE(peer.connect({"127.0.0.1", *request->port}));
+    auto remote = peer_listener.accept();
+    const auto handshake = "CSUP ADBASE ADTIGR\nCINF ID" + std::string(second_cid) + " TO" +
+                           std::string(request->token) + '\n';
+    peer.send(handshake);
+    std::string wire(handshake.size(), '\0');
+    asio::read(remote, asio::buffer(wire));
+    EXPECT_EQ(wire, handshake);
+    EXPECT_TRUE(server.online_is(2));
+}
+
+TEST(AdcPeerRouting, RejectsSpoofingMalformedSignalsAndFilesOnTheHub) {
+    const TestCertificate certificate;
+    RunningServer server(loopback_config(certificate));
+    RawClient sender;
+    RawClient peer;
+    ASSERT_FALSE(sender.connect(server.adc()));
+    ASSERT_FALSE(peer.connect(server.adc()));
+    const auto sender_sid = negotiate(sender);
+    const auto peer_sid = negotiate(peer);
+    sender.send("BSCH " + sender_sid + " ANpremature\n");
+    EXPECT_TRUE(sender.line().starts_with("ISTA 144 "));
+    sender.send(identification(sender_sid, adc::test::cid, adc::test::pid, {}, "BASE,TCP4"));
+    expect_info(sender, sender_sid);
+    peer.send(identification(peer_sid, second_cid, second_pid));
+    expect_info(peer, sender_sid);
+    expect_info(peer, peer_sid, second_cid);
+    expect_info(sender, peer_sid, second_cid);
+
+    const auto marker = "BMSG " + sender_sid + " barrier\n";
+    sender.send("BSCH " + peer_sid + " ANspoof\n" + "BSCH " + sender_sid +
+                " ANmalformed TOduplicate TOanother\n" + "DRES " + sender_sid + ' ' + peer_sid +
+                " FN/Public/x/ SI8 TOunsolicited\n" + "DCTM " + sender_sid + ' ' + peer_sid +
+                " ADC/1.0 65536 invalid-port\n" + "CGET file fake 0 -1\n" + "CSND file fake 0 4\n" +
+                marker);
+    EXPECT_TRUE(sender.line().starts_with("ISTA 125 "));
+    for (int index = 0; index < 3; ++index) {
+        EXPECT_TRUE(sender.line().starts_with("ISTA 140 "));
+    }
+    EXPECT_TRUE(sender.line().starts_with("ISTA 125 "));
+    EXPECT_TRUE(sender.line().starts_with("ISTA 125 "));
+    EXPECT_EQ(sender.line(), marker);
+    // The next frame at the intended target makes unintended forwarding observable.
+    EXPECT_EQ(peer.line(), marker);
+    peer.reset();
+    EXPECT_EQ(sender.line(), "IQUI " + peer_sid + '\n');
+    sender.send("DCTM " + sender_sid + ' ' + peer_sid + " ADC/1.0 8001 offline\n");
+    EXPECT_EQ(sender.line(), "ISTA 125 Recipient\\sis\\sunavailable FCDCTM\n");
+    EXPECT_TRUE(server.online_is(1));
 }
 
 } // namespace

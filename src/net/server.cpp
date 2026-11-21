@@ -1,6 +1,7 @@
 #include "dc24h/net/server.hpp"
 
 #include "connection.hpp"
+#include "dc24h/hub/peer_routing.hpp"
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/v6_only.hpp>
@@ -121,7 +122,10 @@ class Server::Impl : public std::enable_shared_from_this<Server::Impl> {
         : io_(io), control_(asio::make_strand(io)), config_(std::move(config)),
           log_(std::move(log)), tls_(asio::ssl::context::tls_server), adcs_(control_, true),
           presence_(config_.max_nick_codepoints, config_.max_message_bytes,
-                    config_.limits.input_bytes) {
+                    config_.limits.input_bytes),
+          peers_(presence_, [this](std::string_view sid, const hub::WireFrame &frame) {
+              return send(sid, frame);
+          }) {
         validate(config_);
         setup_tls(tls_, config_);
         adcs_endpoint_ = adcs_.bind(config_.adcs);
@@ -264,6 +268,7 @@ class Server::Impl : public std::enable_shared_from_this<Server::Impl> {
         active_clients_.store(connections_.size(), std::memory_order_relaxed);
         reported_full_ = false;
         if (presence_.remove(sid)) {
+            peers_.forget(sid);
             online_users_.store(presence_.size(), std::memory_order_relaxed);
             if (!stop_requested_.load()) {
                 broadcast(std::make_shared<const std::string>("IQUI " + sid + '\n'));
@@ -338,7 +343,14 @@ class Server::Impl : public std::enable_shared_from_this<Server::Impl> {
             admit(sid, connection, message);
             return;
         }
-        auto reply = message.command == "INF" ? update(sid, message) : route_chat(sid, message);
+        hub::WireFrame reply;
+        if (message.command == "INF") {
+            reply = update(sid, message);
+        } else if (message.command == "MSG") {
+            reply = route_chat(sid, message);
+        } else if (const auto error = peers_.route(sid, message)) {
+            reply = error->reply();
+        }
         std::vector<hub::WireFrame> responses;
         if (reply) {
             responses.push_back(std::move(reply));
@@ -356,6 +368,7 @@ class Server::Impl : public std::enable_shared_from_this<Server::Impl> {
     Endpoint adcs_endpoint_;
     std::optional<Endpoint> adc_endpoint_;
     hub::Presence presence_;
+    hub::PeerRouting peers_;
     std::map<std::string, std::shared_ptr<Connection>, std::less<>> connections_;
     std::atomic<std::size_t> active_clients_{0};
     std::atomic<std::size_t> online_users_{0};

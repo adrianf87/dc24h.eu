@@ -102,5 +102,63 @@ TEST(AdcProtocol, ParsesQuitAndPasswordMessages) {
     EXPECT_FALSE(parse_password_response(test::decode("HPAS MZXW6\n")));
 }
 
+TEST(AdcProtocol, AcceptsRepeatedSearchTermsAndChecksScalarFlags) {
+    const std::string wire =
+        "FSCH ABCD +TCP4 ANplik ANdo\\stestów NOold EXogg EXwav GE7 LE40 TY1 TOquery\\sone\n";
+    const auto request = test::decode(wire);
+    EXPECT_EQ(parse_search(request), "query one");
+    EXPECT_EQ(format_routed(request), wire);
+    EXPECT_EQ(parse_search(test::decode("BSCH ABCD ANlocal ZZfuture\n")), "");
+    EXPECT_EQ(parse_search(test::decode("BSCH ABCD TR" + std::string(test::cid) + '\n')), "");
+    for (const auto malformed : {"AN TOtoken", "EX.txt", "TRbad", "TY3", "GE10 LE2", "GE10 EQ5",
+                                 "GE-1", "GE18446744073709551616", "ANfile TO", "ANfile TOa TOb",
+                                 "ANfile TOa\\nb", "TOtoken ZZunknown"}) {
+        EXPECT_FALSE(parse_search(test::decode(std::string("BSCH ABCD ") + malformed + '\n')))
+            << malformed;
+    }
+}
+
+TEST(AdcProtocol, ValidatesFileAndDirectorySearchResults) {
+    const std::string file =
+        "DRES ABCE ABCD FN/share/a\\sb.txt SI7 SL2 TR" + std::string(test::cid);
+    EXPECT_EQ(parse_search_result(test::decode(file + " TOresult\\sone\n")), "result one");
+    EXPECT_EQ(parse_search_result(test::decode(file + '\n')), "");
+    EXPECT_EQ(parse_search_result(test::decode("DRES ABCE ABCD FN/share/subdir/ SI0\n")), "");
+    for (const auto malformed : {"FN/share/test SI1 TOq", "FNrelative/ SI0", "FN/share/x/",
+                                 "FN/share/x/ SI-1", "FN/share/x/ SI0 SI1", "FN/share/x/ SI0 TRxx",
+                                 "FN/share/x/ SI0 SLnone", "FN/share/x/ SI0 TO"}) {
+        EXPECT_FALSE(
+            parse_search_result(test::decode(std::string("DRES ABCE ABCD ") + malformed + '\n')))
+            << malformed;
+    }
+}
+
+TEST(AdcProtocol, ValidatesPortsOpaqueTokensAndKeyprints) {
+    const auto ctm = test::decode("DCTM ABCD ABCE ADCS/1.0 65535 local\\stoken\n");
+    const auto connect = parse_peer_connection(ctm);
+    ASSERT_TRUE(connect);
+    EXPECT_EQ(connect->protocol, "ADCS/1.0");
+    EXPECT_EQ(connect->port, 65535);
+    EXPECT_EQ(connect->token, "local token");
+    const auto rcm = test::decode("DRCM ABCD ABCE ADC/1.0 reverse\n");
+    const auto reverse = parse_peer_connection(rcm);
+    ASSERT_TRUE(reverse);
+    EXPECT_FALSE(reverse->port);
+    EXPECT_EQ(reverse->token, "reverse");
+    for (const auto malformed :
+         {"ADC/1.0 0 tok", "ADC/1.0 +1 tok", "ADC/1.0 65536 tok", "ADC/1.0 12.3 tok", "ADC/1.0 9",
+          "ADC/1.0 9 tok extra", "ADC/1.0 9 tok\\nnext"}) {
+        EXPECT_FALSE(
+            parse_peer_connection(test::decode(std::string("DCTM ABCD ABCE ") + malformed + '\n')))
+            << malformed;
+    }
+    EXPECT_FALSE(parse_peer_connection(
+        test::decode("DRCM ABCD ABCE ADC/1.0 " + std::string(257, 'x') + '\n')));
+    const auto key = "SHA256/" + std::string(52, 'A');
+    EXPECT_TRUE(is_keyprint(key));
+    EXPECT_FALSE(is_keyprint(key.substr(0, key.size() - 1)));
+    EXPECT_FALSE(is_keyprint(key.substr(0, key.size() - 1) + 'B'));
+}
+
 } // namespace
 } // namespace dc24h::adc

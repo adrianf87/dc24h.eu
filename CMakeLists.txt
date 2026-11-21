@@ -28,7 +28,7 @@ target_include_directories(dc24h_adc
 target_link_libraries(dc24h_adc PRIVATE "${UTF8PROC_LIBRARY}" "${GCRYPT_LIBRARY}")
 dc24h_enable_warnings(dc24h_adc)
 
-add_library(dc24h_presence STATIC src/hub/presence.cpp)
+add_library(dc24h_presence STATIC src/hub/presence.cpp src/hub/peer_routing.cpp)
 target_include_directories(dc24h_presence PUBLIC include PRIVATE "${UTF8PROC_INCLUDE_DIR}")
 target_link_libraries(dc24h_presence PUBLIC dc24h_adc PRIVATE "${UTF8PROC_LIBRARY}")
 dc24h_enable_warnings(dc24h_presence)
