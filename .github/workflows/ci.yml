@@ -46,17 +46,19 @@ jobs:
       - name: Install C++ build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libboost-dev libssl-dev libgcrypt20-dev libutf8proc-dev
+          sudo apt-get install -y --no-install-recommends \
+            libboost-dev libssl-dev libgcrypt20-dev libutf8proc-dev \
+            libmariadb-dev mariadb-server openssl
 
       - name: Build and test C++ Debug
         run: |
-          cmake --preset debug
+          cmake --preset debug -DDC24H_TEST_MARIADB=ON
           cmake --build --preset debug --parallel 4
           ctest --preset debug
 
       - name: Build and test C++ Release
         run: |
-          cmake --preset release
+          cmake --preset release -DDC24H_TEST_MARIADB=ON
           cmake --build --preset release --parallel 4
           ctest --preset release
 
