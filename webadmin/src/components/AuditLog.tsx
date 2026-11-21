@@ -11,10 +11,12 @@ export function AuditLog({t}:{t:Copy}) {
   const [cursor, setCursor] = useState("0");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [serviceOnly, setServiceOnly] = useState(false);
   const proof = useRef("");
   const actor = useRef("");
   const form = useRef<HTMLFormElement>(null);
   const pending = useRef<AbortController | null>(null);
+  const visibleItems = items.filter(event => !serviceOnly || (event.target_kind === "service" && ["hub.start","hub.stop","hub.restart"].includes(event.action)));
   useEffect(() => () => { proof.current = ""; pending.current?.abort(); }, []);
   async function load(after: string) {
     if (!actor.current || !proof.current) { setMessage(t.auditUnavailable); return; }
@@ -69,9 +71,10 @@ export function AuditLog({t}:{t:Copy}) {
         <button className="button primary" type="submit">{busy ? t.accountsWorking : t.auditShow}</button>
       </fieldset>
     </form>
+    <label className="configuration-confirm"><input type="checkbox" checked={serviceOnly} onChange={e => setServiceOnly(e.target.checked)}/>{t.auditServiceOnly}</label>
     <div className="accounts-table-wrap"><table><caption>{t.auditTable}</caption>
       <thead><tr><th>ID</th><th>{t.auditWhen}</th><th>{t.auditAction}</th><th>{t.auditTarget}</th><th>{t.auditOutcome}</th></tr></thead>
-      <tbody>{items.length ? items.map(event => <tr key={event.id}><td>{event.id}</td><td>{new Date(event.occurred_at * 1000).toLocaleString()}</td><td><code>{event.action}</code></td><td>{t[event.target_kind === "account" ? "auditAccount" : event.target_kind === "ban" ? "auditBan" : "auditConfiguration"]} {event.target_id}</td><td>{event.outcome === "succeeded" ? t.auditSucceeded : event.outcome === "started" ? t.auditStarted : t.auditFailed}</td></tr>) : <tr><td colSpan={5}>{t.auditEmpty}</td></tr>}</tbody>
+      <tbody>{visibleItems.length ? visibleItems.map(event => <tr key={event.id}><td>{event.id}</td><td>{new Date(event.occurred_at * 1000).toLocaleString()}</td><td><code>{event.action}</code></td><td>{t[event.target_kind === "account" ? "auditAccount" : event.target_kind === "ban" ? "auditBan" : event.target_kind === "service" ? "auditService" : "auditConfiguration"]} {event.target_id}</td><td>{event.outcome === "succeeded" ? t.auditSucceeded : event.outcome === "started" ? t.auditStarted : t.auditFailed}</td></tr>) : <tr><td colSpan={5}>{t.auditEmpty}</td></tr>}</tbody>
     </table></div>
     <div className="accounts-buttons">
       <button disabled={busy || cursor === "0" || !proof.current} onClick={() => void load("0")}>{t.accountsFirst}</button>

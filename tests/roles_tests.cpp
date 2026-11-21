@@ -138,7 +138,7 @@ void detailed_permissions() {
     }
     require(!parse_permission("users.Kick")&&!parse_permission("users.kick ")&&permission_key(static_cast<Permission>(999)).empty());
     require(security::permission_implemented(Permission::read_audit));
-    require(!security::permission_implemented(Permission::manage_configuration)&&!security::permission_implemented(Permission::manage_hub));
+    require(!security::permission_implemented(Permission::manage_configuration)&&security::permission_implemented(Permission::manage_hub));
     require(!security::allows(Role::owner,Permission::manage_accounts,security::RolePolicy{0xffffffffU}));
     fail_allocation=true;
     const bool allocation_free=security::allows(Role::owner,Permission::manage_roles)&&security::can_manage(Role::owner,Role::administrator)&&security::can_revoke(Role::vip,Role::guest,vip);

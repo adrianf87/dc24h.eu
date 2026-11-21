@@ -131,7 +131,7 @@ void run(const database::Options& options) {
     require(management.find("\"key\":\"roles\",\"permission\":\"roles.manage\",\"allowed\":true,\"implemented\":true")!=std::string::npos);
     require(management.find("\"key\":\"bans\",\"permission\":\"users.ban+blocks.manage\",\"allowed\":true,\"implemented\":true")!=std::string::npos);
     require(management.find("\"key\":\"configuration\",\"permission\":\"configuration.manage\",\"allowed\":true,\"implemented\":false")!=std::string::npos);
-    require(management.find("\"key\":\"hub\",\"permission\":\"hub.manage\",\"allowed\":false,\"implemented\":false")!=std::string::npos);
+    require(management.find("\"key\":\"hub\",\"permission\":\"hub.manage\",\"allowed\":false,\"implemented\":true")!=std::string::npos);
     require(management.find(grant)==std::string::npos&&management.find("WebAdmin")==std::string::npos);
     require(call("GET","/api/v1/management","",false).starts_with("HTTP/1.1 401"));
     require(call("GET","/api/v1/accounts?after=-1").starts_with("HTTP/1.1 400"));
@@ -164,6 +164,8 @@ void run(const database::Options& options) {
     require(limited.starts_with("HTTP/1.1 200"));
     const auto forbidden_review=call("GET","/api/v1/management/configuration");
     require(forbidden_review.starts_with("HTTP/1.1 403") && forbidden_review.find("\"saved\"")==std::string::npos);
+    const auto forbidden_status=call("GET","/api/v1/management/hub/status");
+    require(forbidden_status.starts_with("HTTP/1.1 403") && forbidden_status.find("\"active_state\"")==std::string::npos);
     std::this_thread::sleep_for(std::chrono::milliseconds(1100));
     const auto forbidden_validation=call("POST","/api/v1/management/configuration","revision="+revision+"&network_max_connections=128");
     require(forbidden_validation.starts_with("HTTP/1.1 403") && forbidden_validation.find("\"valid\"")==std::string::npos);
@@ -175,7 +177,7 @@ void run(const database::Options& options) {
     require(limited.find("\"key\":\"roles\",\"permission\":\"roles.manage\",\"allowed\":false,\"implemented\":true")!=std::string::npos);
     require(limited.find("\"key\":\"bans\",\"permission\":\"users.ban+blocks.manage\",\"allowed\":true,\"implemented\":true")!=std::string::npos);
     require(limited.find("\"key\":\"configuration\",\"permission\":\"configuration.manage\",\"allowed\":false,\"implemented\":false")!=std::string::npos);
-    require(limited.find("\"key\":\"hub\",\"permission\":\"hub.manage\",\"allowed\":false,\"implemented\":false")!=std::string::npos);
+    require(limited.find("\"key\":\"hub\",\"permission\":\"hub.manage\",\"allowed\":false,\"implemented\":true")!=std::string::npos);
     require(limited.find(grant)==std::string::npos&&limited.find(csrf)==std::string::npos&&limited.find("password")==std::string::npos);
     handler=api::account_handler(options,review);grant.clear();session.clear();csrf.clear();
     actor=repository.update(actor,std::get<Account>(actor.account.with_access(Role::administrator,Status::active,now)));

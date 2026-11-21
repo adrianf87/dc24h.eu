@@ -90,8 +90,9 @@ std::optional<Gate> classify(std::string_view method, std::string_view target) n
           target == "/api/v1/management/configuration/restore") && method == "POST")) {
         return Gate::configuration;
     }
-    if(method=="POST" && (target=="/api/v1/management/hub/start" ||
-       target=="/api/v1/management/hub/stop" || target=="/api/v1/management/hub/restart"))return Gate::hub;
+    if((method=="GET" && target=="/api/v1/management/hub/status") ||
+       (method=="POST" && (target=="/api/v1/management/hub/start" ||
+       target=="/api/v1/management/hub/stop" || target=="/api/v1/management/hub/restart")))return Gate::hub;
     if (target == "/api/v1/audit") { return Gate::audit; }
     if (target.starts_with("/api/v1/bans")) { return Gate::bans; }
     if (target == "/api/v1/admin/access" || !target.starts_with(accounts)) { return std::nullopt; }

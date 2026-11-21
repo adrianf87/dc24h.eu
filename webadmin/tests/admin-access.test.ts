@@ -13,7 +13,7 @@ function body(patch: Record<string, unknown> = {}) {
     grant: "ab".repeat(32),
     session: "cd".repeat(16),
     csrf: "ef".repeat(32),
-    permissions: PERMISSION_KEYS.map(key => ({key, granted: key !== "hub.manage", implemented: key !== "configuration.manage" && key !== "hub.manage"})),
+    permissions: PERMISSION_KEYS.map(key => ({key, granted: key !== "hub.manage", implemented: key !== "configuration.manage"})),
     routes: ACCESS_ROUTES.map(([method, path, permission]) => ({method, path, permission, allowed: method !== "POST" || permission !== "accounts.manage"})),
     token: "hidden",
     ...patch,
@@ -38,7 +38,7 @@ test("administrative access keeps the grant and drops transport secrets", () => 
   assert.throws(() => parseAccess(body({csrf: "zz"})));
   assert.throws(() => parseAccess(body({expires_in: 60})));
   const implemented = body();
-  implemented.permissions[15].implemented = true;
+  implemented.permissions[15].implemented = false;
   assert.throws(() => parseAccess(implemented));
   assert.throws(() => parseAccess(body({routes: body().routes.slice(1)})));
 });

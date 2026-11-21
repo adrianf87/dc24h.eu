@@ -32,8 +32,9 @@ std::optional<unsigned> role_rank(accounts::Role role) noexcept {
 }
 bool permission_implemented(Permission p) noexcept {
     if(permission_key(p).empty())return false;
-    // Catalog marks full WebAdmin management as unavailable until the UI stage.
-    return p!=Permission::manage_configuration&&p!=Permission::manage_hub;
+    // Configuration remains a deliberately restricted editor. Hub management
+    // is complete only for the fixed Owner-only local service operations.
+    return p!=Permission::manage_configuration;
 }
 void validate(const RolePolicy& policy) {
     if(policy.vip_permissions&~vip_mask)throw std::invalid_argument("Invalid role permission configuration");

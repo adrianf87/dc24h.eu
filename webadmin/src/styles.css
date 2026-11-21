@@ -1568,3 +1568,17 @@ th {
 .management-links { display: flex; gap: 16px; flex-wrap: wrap; }
 .management-card h3 { margin: 0 0 8px; }
 .management-card code { overflow-wrap: anywhere; }
+.hub-service { padding:24px; margin-top:20px; }
+.hub-service p { line-height:1.6; }
+.hub-service-status { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin:20px 0; }
+.hub-service-status>div { background:var(--surface,#fff); border:1px solid #e6eaf2; border-radius:10px; padding:14px; min-width:0; }
+.hub-service-status dt { color:var(--muted,#64748b); font-size:13px; }
+.hub-service-status dd { margin:8px 0 0; font-weight:600; overflow-wrap:anywhere; }
+.hub-service .accounts-buttons { flex-wrap:wrap; }
+.hub-service button { cursor:pointer; }
+.hub-service button:disabled { cursor:default; opacity:.55; }
+.hub-service-confirm,.hub-service-history { padding:18px; margin-top:18px; border:1px solid #dbe2ed; border-radius:12px; }
+.hub-service-confirm label { display:flex; align-items:flex-start; gap:10px; }
+.hub-service-confirm label input { margin-top:4px; }
+.hub-service-confirm [role="alert"] { color:#9c311e; }
+@media(max-width:700px) { .hub-service-status { grid-template-columns:1fr; } }

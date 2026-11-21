@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lock beta-0.1.6 service actions and established safety limits."""
+"""Lock beta-0.1.7 local WebAdmin service controls and safety limits."""
 
 from pathlib import Path
 import sys
@@ -57,7 +57,7 @@ def main():
     errors = []
     cmake = check(ROOT / "CMakeLists.txt", (
         "project(dc24h VERSION 0.1.0 LANGUAGES CXX)",
-        'set(DC24H_VERSION "beta-0.1.6")',
+        'set(DC24H_VERSION "beta-0.1.7")',
         'add_executable(dc24h-service-controller',
         'service.controller.process',
         "add_test(NAME beta.baseline ",
@@ -82,6 +82,7 @@ def main():
     require("self-hosted" not in workflow, "build.yml: self-hosted runner is selected", errors)
     require("ubuntu-latest" not in workflow, "build.yml: ubuntu-latest is selected", errors)
     check(ROOT / "doc/us/BETA.md", (
+        "# Hub service controls in WebAdmin — beta-0.1.7",
         "# Read-only service controller — beta-0.1.5",
         "Branch `beta-0.1.5` starts from main `e8d00ae`.",
         "# WebAdmin configuration editor — beta-0.1.4",
@@ -104,6 +105,7 @@ def main():
         "four logical CPUs and 16 GB",
     ), errors)
     check(ROOT / "doc/pl/BETA.md", (
+        "# Sterowanie usługą huba w WebAdmin — beta-0.1.7",
         "# Kontroler usługi tylko do odczytu — beta-0.1.5",
         "Gałąź `beta-0.1.5` powstaje z main `e8d00ae`.",
         "# Edytor konfiguracji WebAdmin — beta-0.1.4",
@@ -175,7 +177,7 @@ def main():
     ), errors)
     check(ROOT / "src/api/accounts.cpp", (
         '"/api/v1/management/hub/start"', '"/api/v1/management/hub/stop"',
-        '"/api/v1/management/hub/restart"', 'confirm', 'begin_service', 'finish_service',
+        '"/api/v1/management/hub/restart"', '"/api/v1/management/hub/status"', 'confirm', 'begin_service', 'finish_service',
         'SO_PEERCRED', 'dc24h-maintenance',
     ), errors)
     check(ROOT / "doc/us/SERVICE_OPERATIONS.md", (
@@ -198,21 +200,30 @@ def main():
         "/admin-api/v1/management/authorize",
         "not_implemented",
         "parseConfigurationReview", "parseConfigurationValidation", "parseConfigurationWrite",
+        "parseHubServiceStatus", "parseHubServiceResult",
     ), errors)
     check(ROOT / "webadmin/src/components/ConfigurationEditor.tsx", (
         "configurationChanges", "configEditConfirm", "configEditRestoreConfirm", "adminHeaders()",
     ), errors)
     check(ROOT / "include/dc24h/admin/access.hpp", (
         "inline constexpr std::array<RouteTemplate, 12> access_routes{{",
-        "configuration.manage and hub.manage stay",
+        "Owner-only fixed hub status/action",
     ), errors)
     check(ROOT / "webadmin/src/lib/status.ts", (
-        'export const WEBADMIN_VERSION = "beta-0.1.6";',
+        'export const WEBADMIN_VERSION = "beta-0.1.7";',
         '!/^(?:alpha-\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|beta-\\d{1,3}\\.\\d{1,3}(?:\\.\\d{1,3})?)$/.test(server.version)',
     ), errors)
     check(ROOT / "src/security/roles.cpp", (
-        "return p!=Permission::manage_configuration&&p!=Permission::manage_hub;",
+        "return p!=Permission::manage_configuration;",
     ), errors)
+    check(ROOT / "webadmin/src/components/HubService.tsx", (
+        "hubServiceConfirm", "hubServiceUnknown", "hubServiceVerifying", "serviceConfirmation", "adminHeaders()",
+    ), errors)
+    check(ROOT / "webadmin/src/lib/hub-service.ts", (
+        "parseHubServiceStatus", "parseHubServiceResult", '"dc24h.service"',
+    ), errors)
+    check(ROOT / "doc/us/HUB_WEBADMIN.md", ("beta-0.1.7", "Owner", "outcome_unknown", "Apache"), errors)
+    check(ROOT / "doc/pl/HUB_WEBADMIN.md", ("beta-0.1.7", "Owner", "outcome_unknown", "Apache"), errors)
     check(ROOT / "tests/database_migrations_tests.cpp", (
         "require(migration_catalog().size() == 11 && entries[0].info.version == 1 && entries[1].info.version == 2);",
         'require(entries[8].info.version == 9 && entries[8].info.name == "audit_events");',
@@ -223,7 +234,7 @@ def main():
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1
-    print("Beta 0.1.6 service actions, version and safety limits passed")
+    print("Beta 0.1.7 WebAdmin service controls, version and safety limits passed")
     return 0
 
 

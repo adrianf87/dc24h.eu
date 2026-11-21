@@ -87,7 +87,7 @@ def exercise(binary, seed, config, db_socket, password, token, api_socket):
         assert re.fullmatch(r'[0-9a-f]{64}', access['csrf']) and access['csrf'] != access['grant']
         permissions = {item['key']: item for item in access['permissions']}
         assert permissions['configuration.manage'] == {'key': 'configuration.manage', 'granted': True, 'implemented': False}
-        assert permissions['hub.manage'] == {'key': 'hub.manage', 'granted': False, 'implemented': False}
+        assert permissions['hub.manage'] == {'key': 'hub.manage', 'granted': False, 'implemented': True}
         assert len(access['permissions']) == 17 and len(access['routes']) == 12
         first = access['grant']
         code, replacement = request('POST', '/api/v1/admin/access', {'actor_id': actor, 'proof': proof}, delay=True, use_grant=False)
@@ -114,6 +114,10 @@ def exercise(binary, seed, config, db_socket, password, token, api_socket):
         assert request('POST', '/api/v1/management/hub/start', {'confirm': 'START'},
                        authorized=False, delay=True)[0] == 401
         assert request('POST', '/api/v1/management/hub/start', {'confirm': 'START'}, delay=True)[0] == 403
+        assert request('GET', '/api/v1/management/hub/status')[0] == 403
+        assert request('GET', '/api/v1/management/hub/status', authorized=False)[0] == 401
+        assert request('POST', '/api/v1/management/hub/status', {'confirm': 'STATUS'}, delay=True)[0] == 403
+        assert request('GET', '/api/v1/management/hub/status?unit=other.service')[0] in (403, 404)
         assert request('POST', '/api/v1/management/hub/restart', {'confirm': 'RESTART'}, delay=True)[0] == 403
         assert request('POST', '/api/v1/management/hub/stop?unit=other.service',
                        {'confirm': 'STOP'}, delay=True)[0] in (403, 404)

@@ -17,8 +17,8 @@ test("account adapter requires same-origin forms and redacts service credentials
  let writes=0, observed="", authorization="", staffMode=true, backendPath="", grantHeader="", sessionHeader="", csrfHeader="";
  const sessionId="ab".repeat(16), csrfToken="ef".repeat(32);
  const bound={"X-DC24H-Session":sessionId,"X-DC24H-Csrf":csrfToken};
- const accessBody={maintenance:true,restart_required:true,expires_in:600,actor:{id:"1",role:"administrator",status:"active"},grant:"cd".repeat(32),session:sessionId,csrf:csrfToken,permissions:PERMISSION_KEYS.map(key=>({key,granted:key!=="hub.manage",implemented:key!=="configuration.manage"&&key!=="hub.manage"})),routes:ACCESS_ROUTES.map(([method,path,permission])=>({method,path,permission,allowed:true})),token};
- const managementBody={schema:2,maintenance:true,restart_required:true,areas:[{key:"accounts",permission:"accounts.manage",allowed:true,implemented:true,proof:"MgmtSecret"},{key:"roles",permission:"roles.manage",allowed:false,implemented:true},{key:"bans",permission:"users.ban+blocks.manage",allowed:true,implemented:true},{key:"configuration",permission:"configuration.manage",allowed:true,implemented:false},{key:"hub",permission:"hub.manage",allowed:false,implemented:false}],token};
+ const accessBody={maintenance:true,restart_required:true,expires_in:600,actor:{id:"1",role:"administrator",status:"active"},grant:"cd".repeat(32),session:sessionId,csrf:csrfToken,permissions:PERMISSION_KEYS.map(key=>({key,granted:key!=="hub.manage",implemented:key!=="configuration.manage"})),routes:ACCESS_ROUTES.map(([method,path,permission])=>({method,path,permission,allowed:true})),token};
+ const managementBody={schema:2,maintenance:true,restart_required:true,areas:[{key:"accounts",permission:"accounts.manage",allowed:true,implemented:true,proof:"MgmtSecret"},{key:"roles",permission:"roles.manage",allowed:false,implemented:true},{key:"bans",permission:"users.ban+blocks.manage",allowed:true,implemented:true},{key:"configuration",permission:"configuration.manage",allowed:true,implemented:false},{key:"hub",permission:"hub.manage",allowed:false,implemented:true}],token};
  const configRevision="a".repeat(64),configSaved={network_max_connections:"128",network_idle_timeout:"120",logging_level:"info",general_language:"us"};
  const configReview={schema:1,maintenance:true,read_only:true,restart_required:true,active_scope:"maintenance_process",hub_active_available:false,
   revision:configRevision,matches_active:true,saved:configSaved,active:configSaved,token};
@@ -33,6 +33,12 @@ test("account adapter requires same-origin forms and redacts service credentials
    const result=req.url.endsWith("/write")||req.url.endsWith("/restore")?{written:true,restart_required:true,revision:"d".repeat(64),backup_available:true,token}:
     req.method==="POST"?{valid:true,written:false,restart_required:true,token}:configReview;
    res.setHeader("Content-Type","application/json");res.end(JSON.stringify(result));return;
+  }
+  if(req.url==="/api/v1/management/hub/status"){
+   res.setHeader("Content-Type","application/json");res.end(JSON.stringify({schema:1,available:true,unit:"dc24h.service",load_state:"loaded",active_state:"active",sub_state:"running",result:"success",token}));return;
+  }
+  if(req.url==="/api/v1/management/hub/stop"){
+   res.setHeader("Content-Type","application/json");res.end(JSON.stringify({operation:"stop",outcome:"succeeded",active_state:"inactive",token}));return;
   }
   const audit={maintenance:true,restart_required:true,events:[{id:"4",occurred_at:10,action:"accounts.create",actor_id:"1",target_kind:"account",target_id:"2",outcome:"succeeded",proof:"hidden-proof"}],next_after:null,token};
   res.setHeader("Content-Type","application/json");res.end(JSON.stringify(req.url==="/api/v1/management"?managementBody:req.url==="/api/v1/admin/access"?accessBody:req.url==="/api/v1/audit"?audit:req.url?.startsWith("/api/v1/bans")?(req.method==="GET"?{bans:[ban],next_after:null,maintenance:true,restart_required:true,observed_at:100,token}:{ban:{...ban,proof:"private"},maintenance:true,restart_required:true,observed_at:100,token}):req.url==="/api/v1/admin"?{...administration,token}:req.method==="POST"?{account:{...account,verifier:"private"},maintenance:true,token}:{accounts:[staffMode&&req.url?.includes("staff_after")?{...account,role:"owner"}:account],staff_only:staffMode&&req.url?.includes("staff_after"),next_after:null,maintenance:true,token}));
@@ -84,7 +90,7 @@ test("account adapter requires same-origin forms and redacts service credentials
   assert.equal(unboundManagement.code,403);assert.equal(JSON.parse(unboundManagement.text).error,"csrf_required");
   const listedManagement=await call("GET",{"X-DC24H-Admin-Grant":"AB".repeat(32),...bound},"","/admin-api/v1/management");
   assert.equal(listedManagement.code,200);assert.equal(backendPath,"/api/v1/management");assert.equal(grantHeader,"ab".repeat(32));assert.equal(sessionHeader,sessionId);assert.equal(csrfHeader,csrfToken);
-  assert.deepEqual(JSON.parse(listedManagement.text).areas.map((area:{key:string;allowed:boolean;implemented:boolean})=>[area.key,area.allowed,area.implemented]),[["accounts",true,true],["roles",false,true],["bans",true,true],["configuration",true,false],["hub",false,false]]);
+  assert.deepEqual(JSON.parse(listedManagement.text).areas.map((area:{key:string;allowed:boolean;implemented:boolean})=>[area.key,area.allowed,area.implemented]),[["accounts",true,true],["roles",false,true],["bans",true,true],["configuration",true,false],["hub",false,true]]);
   assert.ok(!listedManagement.text.includes("MgmtSecret")&&!listedManagement.text.includes(token));
   const configPath="/admin-api/v1/management/configuration",configHeaders={"X-DC24H-Admin-Grant":"AB".repeat(32),...bound};
   assert.equal((await call("GET",{},"",configPath)).code,403);
@@ -111,6 +117,20 @@ test("account adapter requires same-origin forms and redacts service credentials
   assert.equal(stale.code,409);assert.deepEqual(JSON.parse(stale.text),{error:"stale"});
   assert.equal((await call("GET",configHeaders,"",configPath+"/write")).code,404);
   assert.equal((await call("POST",configPost,configForm,configPath+"/write/extra")).code,405);
+  const servicePath="/admin-api/v1/management/hub/";
+  assert.equal((await call("GET",{},"",servicePath+"status")).code,403);
+  assert.equal((await call("GET",{"X-DC24H-Admin-Grant":"AB".repeat(32)},"",servicePath+"status")).code,403);
+  const serviceRead=await call("GET",configHeaders,"",servicePath+"status");
+  assert.equal(serviceRead.code,200);assert.equal(JSON.parse(serviceRead.text).active_state,"active");
+  assert.ok(!serviceRead.text.includes(token));assert.equal(backendPath,"/api/v1/management/hub/status");
+  const serviceForm="confirm=STOP",serviceHeaders={...configPost,"Content-Length":String(serviceForm.length)};
+  assert.equal((await call("POST",{...serviceHeaders,Origin:"https://evil.example"},serviceForm,servicePath+"stop")).code,403);
+  const stopped=await call("POST",serviceHeaders,serviceForm,servicePath+"stop");
+  assert.equal(stopped.code,200);assert.deepEqual(JSON.parse(stopped.text),{operation:"stop",outcome:"succeeded",active_state:"inactive"});
+  assert.equal(observed,serviceForm);assert.ok(!stopped.text.includes(token));
+  assert.equal((await call("GET",configHeaders,"",servicePath+"stop")).code,404);
+  assert.equal((await call("POST",serviceHeaders,serviceForm,servicePath+"status")).code,404);
+  assert.equal((await call("GET",configHeaders,"",servicePath+"status?unit=other.service")).code,404);
   assert.equal((await call("POST",{},"","/admin-api/v1/management")).code,404);
   const authorizeBody="operation=configuration.read";
   const authorized=await call("POST",{...headers,...bound,"Content-Length":String(Buffer.byteLength(authorizeBody))},authorizeBody,"/admin-api/v1/management/authorize");

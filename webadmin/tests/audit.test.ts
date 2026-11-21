@@ -12,6 +12,9 @@ test("audit pages keep fixed facts and drop secret fields",()=>{
  assert.deepEqual(parseAuditEvent({...config,configuration:"secret"}),config);
  assert.deepEqual(parseAuditEvent({...config,action:"configuration.restore",outcome:"failed"}),
   {...config,action:"configuration.restore",outcome:"failed"});
+ const service={id:"18",occurred_at:12,action:"hub.restart",actor_id:"2",target_kind:"service",target_id:"1",outcome:"started"};
+ assert.deepEqual(parseAuditEvent({...service,token:"hidden"}),service);
+ assert.deepEqual(parseAuditEvent({...service,action:"hub.stop",outcome:"failed"}),{...service,action:"hub.stop",outcome:"failed"});
 });
 test("malformed audit pages and unknown actions fail closed",()=>{
  for(const patch of [{id:"01"},{id:"9223372036854775808"},{occurred_at:-1},{occurred_at:253402300800},{action:"users.kick"},{target_kind:"ip"},{outcome:"refused"},{actor_id:2},{action:"configuration.write"}]) {
@@ -19,6 +22,9 @@ test("malformed audit pages and unknown actions fail closed",()=>{
  }
  for (const patch of [{target_id:"2"},{action:"accounts.create"},{outcome:"unknown"},{target_kind:"account"}]) {
   assert.throws(()=>parseAuditEvent({...event,action:"configuration.write",target_kind:"configuration",target_id:"1",outcome:"started",...patch}));
+ }
+ for (const patch of [{target_id:"2"},{action:"configuration.write"},{outcome:"unknown"},{target_kind:"configuration"}]) {
+  assert.throws(()=>parseAuditEvent({...event,action:"hub.start",target_kind:"service",target_id:"1",outcome:"started",...patch}));
  }
  assert.throws(()=>parseAudit(page([event,{...event,id:"1"}],null)));
  assert.throws(()=>parseAudit(page([event],"1")));

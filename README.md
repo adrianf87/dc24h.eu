@@ -2,13 +2,14 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: beta-0.1.6 (Owner-gated hub service actions).**
+**Current development version: beta-0.1.7 (local WebAdmin hub service controls).**
 
 CI on `main`: [public GitHub-hosted Ubuntu 22.04, 24.04 and 26.04](doc/us/GITHUB_CI.md) runs C++ Debug, C++ Release and WebAdmin on each image · [PL](doc/pl/GITHUB_CI.md).
 
 Completed increments (older bullets describe their original delivery scope):
 
-- **beta-0.1.6 Service operations**: the separate maintenance API validates the live Owner grant, session, CSRF and an explicit confirmation, then instructs a dedicated systemd controller to Start, Stop or Restart only `dc24h.service`. Migration v11 records durable audit intentions and verified outcomes. No WebAdmin controls or automatic host changes. See [Service operations](doc/us/SERVICE_OPERATIONS.md) | [PL](doc/pl/SERVICE_OPERATIONS.md).
+- **beta-0.1.7 Hub WebAdmin**: local Owner-only service status and Start/Stop/Restart controls with explicit warnings, confirmation, progress, failure handling, recent online-user observations and access to the audited action history. The public Apache proxy does not expose these routes. See [Hub WebAdmin](doc/us/HUB_WEBADMIN.md) | [PL](doc/pl/HUB_WEBADMIN.md).
+- **beta-0.1.6 Service operations**: the separate maintenance API validates the live Owner grant, session, CSRF and an explicit confirmation, then instructs a dedicated systemd controller to Start, Stop or Restart only `dc24h.service`. Migration v11 records durable audit intentions and verified outcomes. No WebAdmin controls were added at this stage. See [Service operations](doc/us/SERVICE_OPERATIONS.md) | [PL](doc/pl/SERVICE_OPERATIONS.md).
 - **beta-0.1.5 Service controller**: a separate, local-only, Unix-socket status process reads the fixed systemd `dc24h.service` state even with the hub stopped. It has no Start/Stop/Restart commands or public API. See [Service controller](doc/us/SERVICE_CONTROLLER.md) | [PL](doc/pl/SERVICE_CONTROLLER.md).
 - **beta-0.1.4 Configuration editor**: local-only WebAdmin review, validation, change preview, confirmed save and backup restore for four nonsecret settings with PL/US interface and restart warning. No live reload or service commands. See [Configuration editor](doc/us/CONFIGURATION_EDITOR.md).
 - **beta-0.1.3 Configuration storage**: privileged local maintenance write/restore with revision conflicts, atomic INI replacement, private backup/undo and v10 audit intentions/outcomes. See [Configuration write](doc/us/CONFIGURATION_WRITE.md).

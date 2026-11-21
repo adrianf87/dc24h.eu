@@ -203,7 +203,7 @@ class AuthenticationTests(unittest.TestCase):
         self.assertTrue(implemented['users.mute'])
         self.assertTrue(implemented['audit.read'])
         self.assertFalse(implemented['configuration.manage'])
-        self.assertFalse(implemented['hub.manage'])
+        self.assertTrue(implemented['hub.manage'])
         hub.stop()
 
 

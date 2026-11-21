@@ -18,11 +18,11 @@ namespace dc24h::admin {
 // them. They are not written to SQL and do not add an audit row.
 // Each slot also holds a public session id and a separate CSRF secret.
 // allows() is evaluated with the default role table. A configured VIP mask
-// is not applied to a grant. configuration.manage and hub.manage stay
+// is not applied to a grant. configuration.manage stays
 // unimplemented. POST /api/v1/management/authorize checks the live grant and
 // does not execute the operation. That contract is not one of the twelve routes.
-// beta-0.1.2 separately gates exact GET/POST /management/configuration for
-// read-only maintenance review and in-memory validation; no writes are enabled.
+// Exact configuration edit routes and the Owner-only fixed hub status/action
+// routes are separately gated; the broad authorize contract never executes.
 inline constexpr std::size_t access_grant_limit = 4;
 inline constexpr std::chrono::seconds access_grant_ttl{600};
 // Requests that present one live grant. The window is not derived from a

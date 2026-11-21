@@ -17,7 +17,7 @@ const expected = [
   ["roles", "roles.manage", true],
   ["bans", "users.ban+blocks.manage", true],
   ["configuration", "configuration.manage", false],
-  ["hub", "hub.manage", false],
+  ["hub", "hub.manage", true],
 ] as const;
 
 function record(value: unknown): Record<string, unknown> {
