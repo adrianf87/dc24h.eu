@@ -33,11 +33,16 @@ constexpr std::size_t read_chunk_bytes = 4096;
 
 enum class Phase { establishing, open, closing, closed };
 
-std::string hub_information() {
+std::string hub_information(const ServerConfig &config) {
     std::string line = "IINF CT32 NI";
-    line += project_name;
+    line += config.hub_name.empty() ? std::string(project_name)
+                                    : adc::escape_parameter(config.hub_name);
     line += " VE";
     line += version;
+    if (!config.hub_description.empty()) {
+        line += " DE";
+        line += adc::escape_parameter(config.hub_description);
+    }
     line += '\n';
     return line;
 }
@@ -65,12 +70,13 @@ template <typename Stream>
 class StreamConnection final : public Connection,
                                public std::enable_shared_from_this<StreamConnection<Stream>> {
   public:
-    StreamConnection(Stream stream, ConnectionLimits limits, std::string sid, LogSink log,
+    StreamConnection(Stream stream, const ServerConfig &config, std::string sid, LogSink log,
                      InputHandler on_input, std::function<void()> on_closed)
         : stream_(std::move(stream)), executor_(stream_.get_executor()), timer_(executor_),
-          limits_(limits), setup_deadline_(Clock::now() + limits.setup_timeout),
-          sid_(std::move(sid)), protocol_(sid_), decoder_({.frame_bytes = limits.input_bytes}),
-          log_(std::move(log)), on_input_(std::move(on_input)), on_closed_(std::move(on_closed)) {}
+          limits_(config.limits), setup_deadline_(Clock::now() + limits_.setup_timeout),
+          sid_(std::move(sid)), protocol_(sid_), decoder_({.frame_bytes = limits_.input_bytes}),
+          hub_info_(hub_information(config)), log_(std::move(log)), on_input_(std::move(on_input)),
+          on_closed_(std::move(on_closed)) {}
 
     void start() override {
         asio::post(executor_, [self = this->shared_from_this()] { self->establish(); });
@@ -287,7 +293,7 @@ class StreamConnection final : public Connection,
         auto result = protocol_.receive(message);
         if (prior == adc::SessionState::protocol &&
             protocol_.state() == adc::SessionState::identify) {
-            result.replies.push_back(hub_information());
+            result.replies.push_back(std::move(hub_info_));
         }
         if (!enqueue(std::move(result.replies))) {
             return;
@@ -305,7 +311,12 @@ class StreamConnection final : public Connection,
             }
             // Leave the remainder of this read in the fixed buffer until the hub replies.
             waiting_for_hub_ = true;
-            on_input_(identifying, std::move(message));
+            std::optional<Identity> identity;
+            if (identifying) {
+                identity = Identity{std::string(protocol_.cid()),
+                                    peer_address_ ? peer_address_->to_string() : std::string{}};
+            }
+            on_input_(std::move(identity), std::move(message));
         }
     }
 
@@ -462,6 +473,7 @@ class StreamConnection final : public Connection,
     std::string sid_;
     adc::Session protocol_;
     adc::FrameDecoder decoder_;
+    std::string hub_info_;
     LogSink log_;
     InputHandler on_input_;
     std::function<void()> on_closed_;
@@ -484,16 +496,16 @@ class StreamConnection final : public Connection,
 } // namespace
 
 std::shared_ptr<Connection> make_connection(tcp::socket socket, asio::ssl::context *tls,
-                                            ConnectionLimits limits, std::string sid, LogSink log,
-                                            InputHandler on_input,
+                                            const ServerConfig &config, std::string sid,
+                                            LogSink log, InputHandler on_input,
                                             std::function<void()> on_closed) {
     if (tls) {
         return std::make_shared<StreamConnection<TlsStream>>(
-            TlsStream(std::move(socket), *tls), limits, std::move(sid), std::move(log),
+            TlsStream(std::move(socket), *tls), config, std::move(sid), std::move(log),
             std::move(on_input), std::move(on_closed));
     }
     return std::make_shared<StreamConnection<tcp::socket>>(
-        std::move(socket), limits, std::move(sid), std::move(log), std::move(on_input),
+        std::move(socket), config, std::move(sid), std::move(log), std::move(on_input),
         std::move(on_closed));
 }
 
