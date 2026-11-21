@@ -16,6 +16,10 @@ Completed increments (older bullets describe their original delivery scope):
 - **beta-0.1.2 Configuration review**: branch `beta-0.1.2` adds privileged local read-only saved/maintenance-active comparisons, allowlisted in-memory proposal validation and stale-file detection. No file writes, WebAdmin editor, hub control or migration. See [Configuration review](doc/us/CONFIGURATION_REVIEW.md).
 - **beta-0.1.1 Management foundation**: the hub reports `beta-0.1.1`. The management catalog is schema 2. `POST /api/v1/management/authorize` checks the grant and returns `not_implemented`. `configuration.manage` and `hub.manage` stay unimplemented. Schema v9 is unchanged. This is not a production release. See [Management foundation](doc/us/MANAGEMENT_FOUNDATION.md).
 - **beta-0.1 Beta baseline**: the hub reports `beta-0.1` and keeps the alpha-0.9.17 behavior. Schema v9 is unchanged. This is not a production release. See [Beta baseline](doc/us/BETA.md).
+
+<details>
+<summary>Alpha 0.9.x (17 releases)</summary>
+
 - **alpha-0.9.17 CI and dependencies**: the hub binaries, the WebAdmin lockfile and the registered security tests are checked from the existing test jobs. This is not a vulnerability database. See [Dependencies](doc/us/DEPENDENCIES.md).
 - **alpha-0.9.16 Stress testing**: a fixed in-process soak repeats the existing frame, peer, login, chat and session limits. Refusals stay on and occupancy returns to zero. This is not a capacity claim or a load test. See [Stress testing](doc/us/STRESS.md).
 - **alpha-0.9.15 Memory safety**: AddressSanitizer, UndefinedBehaviorSanitizer and ThreadSanitizer are separate build modes. The normal build is unchanged. See [Memory safety](doc/us/MEMORY_SAFETY.md).
@@ -33,6 +37,12 @@ Completed increments (older bullets describe their original delivery scope):
 - **alpha-0.9.3 Network security**: the listen backlog is 128. Each accepted socket the hub keeps gets kernel send and receive buffers of 65536 bytes and a TCP user timeout equal to the idle timeout. Existing application timeouts and output queues stay. A bandwidth cap remains separate work. See [Network security](doc/us/NETWORK_SECURITY.md).
 - **alpha-0.9.2 ADC security**: the hub command profile is one function, called before session state changes. A deterministic in-process fuzz campaign locks the parser, the stream decoder and that profile. Unknown extensions still parse. Coverage-guided fuzzing remains separate work. See [ADC security](doc/us/ADC_SECURITY.md).
 - **alpha-0.9.1 Threat model**: a written analysis of assets, actors, trust boundaries and residual risk for the hub and local WebAdmin. It adds no control, schema change or public gateway. See [Threat model](doc/us/THREAT_MODEL.md).
+
+</details>
+
+<details>
+<summary>Alpha 0.8.x (15 releases)</summary>
+
 - **alpha-0.8.15 Security sessions**: each in-memory maintenance grant carries a public session id and a separate CSRF secret. Writes require both on that same slot. Each session accepts 24 requests in 10 seconds. Reads stay grant-only. The values stay in process memory, not in SQL, cookies or web storage. A public authenticated gateway remains separate work. See [Security sessions](doc/us/SECURITY_SESSIONS.md).
 - **alpha-0.8.14 Apache2 HTTPS proxy**: an allowlisted reverse proxy to the loopback WebAdmin adapter, with client bearer tokens, cookies and forwarded identity removed. The service token and the C++ Unix socket stay out of Apache. Local access remains the default. See [Apache2 HTTPS proxy](doc/us/APACHE2_PROXY.md).
 - **alpha-0.8.13 WebAdmin Management**: a maintenance catalog of account, role and ban areas for the current grant, and a bilingual page that links to the existing flows. The page does not perform those writes. Configuration writes, live hub administration and browser kick or mute stay outside it. See [WebAdmin Management](doc/us/WEBADMIN_MANAGEMENT.md).
@@ -52,6 +62,12 @@ Completed increments (older bullets describe their original delivery scope):
 - **alpha-0.8.2 Operators**: SQL-filtered staff directory, first-Owner provisioning and dual-proof atomic ownership transfer through a private local CLI. Schema v7 is unchanged. See [Operators](doc/us/OPERATORS.md).
 
 - **alpha-0.8.1 Permissions**: seven-role hierarchy, seventeen exact capabilities, constrained VIP delegation, stronger-role enforcement, transactional maintenance role assignment and explicit schema v7. See [Permissions](doc/us/PERMISSIONS.md).
+
+
+</details>
+
+<details>
+<summary>Alpha 0.7.x (15 releases)</summary>
 
 - **alpha-0.7.15 Configuration**: validated database/login policy, shared effective timeouts, a redacted CLI preview and bilingual read-only WebAdmin startup configuration. See [Database and Login Configuration](doc/us/DATABASE_AUTH_CONFIGURATION.md).
 
@@ -79,6 +95,12 @@ Completed increments (older bullets describe their original delivery scope):
 - **alpha-0.7.3 Account Model**: independent checked persistent-account metadata, Unicode names, roles/status, UTC audit times and immutable candidates with allocation-safe ownership. See [Account Model](doc/us/ACCOUNT_MODEL.md).
 - **alpha-0.7.2 Database Migrations**: ordered compiled SQL catalog, exact checksums, legacy metadata upgrade, read-only schema status and durable partial-migration detection without blind DDL replay. See [Database Migrations](doc/us/DATABASE_MIGRATIONS.md).
 - **alpha-0.7.1 Database Core**: typed MariaDB parameters, bounded owning results, write metadata and owner-thread RAII transactions, with deterministic conflict/loss/fault tests and database-enabled real ncdc. See [Database Core](doc/us/DATABASE_CORE.md).
+
+</details>
+
+<details>
+<summary>Alpha 0.6.x (13 releases)</summary>
+
 - **alpha-0.6.13 Configuration**: exact bounded peer-protocol policy, existing count/byte limits and all effective transfer settings in the authenticated API and US/PL Connections page. See [Transfer Configuration](doc/us/TRANSFER_CONFIGURATION.md).
 - **alpha-0.6.12 WebAdmin**: observed CTM/RCM request, refusal and queue-copy rates, bounded browser-local chart/table, restart/outage recovery and EN/PL controls. See [WebAdmin Transfer Monitoring](doc/us/WEBADMIN_TRANSFERS.md).
 - **alpha-0.6.11 Transfer Statistics**: saturating CTM/RCM outcomes, queue/error and peer-report counters in the authenticated API and US/PL Connections page. See [Transfer Statistics](doc/us/TRANSFER_STATISTICS.md).
@@ -92,6 +114,12 @@ Completed increments (older bullets describe their original delivery scope):
 - **alpha-0.6.3 ADC RCM**: owning Reverse Connect To Me validation and live DRCM/ERCM routing, per-family passive/active roles, shared queues and real ncdc RCM→CTM peer handshakes. See [ADC RCM](doc/us/ADC_RCM.md).
 - **alpha-0.6.2 ADC CTM**: owning Connect To Me validation and live DCTM target / ECTM target+source routing through Transfer Core, with active-source checks, shared bounded queues and real ncdc peer handshakes. See [ADC CTM](doc/us/ADC_CTM.md).
 - **alpha-0.6.1 Transfer Core**: independent checked connection intents, IPv4/IPv6 active/passive roles and lifetime-bound one-attempt plans with cancel/revalidation. Live CTM/RCM and file transfers remain future stages. See [Transfer Core](doc/us/TRANSFER_CORE.md).
+
+</details>
+
+<details>
+<summary>Alpha 0.5.x (13 releases)</summary>
+
 - **alpha-0.5.13 WebAdmin**: browser-local search traffic rates, a bounded chart and accessible interval table, with pause/manual refresh, local clear and restart/outage recovery. See [WebAdmin Search Monitoring](doc/us/WEBADMIN_SEARCH.md).
 - **alpha-0.5.12 Configuration**: 19 aggregate SCH/RES counters, tracked token windows and all 16 effective search settings in the authenticated read-only API and US/PL WebAdmin Search page. See [Search Configuration and Statistics](doc/us/SEARCH_CONFIGURATION.md).
 - **alpha-0.5.11 Search Security**: independent query/result/recipient count and byte quotas, bounded denials, guest/global permissions and trusted session grants, configurable active-search windows and optional strict result tokens. See [Search Security](doc/us/SEARCH_SECURITY.md).
@@ -106,6 +134,12 @@ Completed increments (older bullets describe their original delivery scope):
 - **alpha-0.5.3 Search Filters**: compiled Unicode name/path, extension, size and type predicates over checked descriptors, filter-only Core queries and allocation-free matching. Routing/results remain later stages. See [Search Filters](doc/us/SEARCH_FILTERS.md).
 - **alpha-0.5.2 ADC SCH**: typed owning search-request parsing, field/selector/TR validation and real ADC/ADCS reception with bounded, payload-free diagnostics. Routing/results remain later stages. See [ADC SCH](doc/us/ADC_SCH.md).
 - **alpha-0.5.1 Search Core**: independent C++20 textual query validation, immutable lifetime-bound recipient plans, feature selection and bounded dispatch. Live SCH/RES adapters and search results remain future stages. See [Search Core](doc/us/SEARCH_CORE.md).
+
+</details>
+
+<details>
+<summary>Alpha 0.4.x (12 releases)</summary>
+
 - **alpha-0.4.12 WebAdmin**: dedicated Chat statistics page with all nine aggregate counters, message/recipient queue definitions, US/PL navigation, live refresh, honest unavailable states and safe snapshot export. See [WebAdmin chat statistics](doc/us/WEBADMIN_CHAT.md).
 - **alpha-0.4.11 Chat Logging**: opt-in payload-free outcome logs with a separate rate budget, saturating aggregate B/D/E chat counters, authenticated API and bilingual WebAdmin metrics. See [Chat Logging](doc/us/CHAT_LOGGING.md).
 - **alpha-0.4.10 Chat Configuration**: checked startup `[chat]` settings for decoded text size, independent public/private/actions and optional/custom welcome, alongside existing Anti-Flood limits. Defaults retain previous behavior; disabled/oversized legal chat gets recoverable refusals. See [Chat Configuration](doc/us/CHAT_CONFIGURATION.md).
@@ -127,6 +161,12 @@ Completed increments (older bullets describe their original delivery scope):
 - **alpha-0.4.2 Chat Core**: independent message engine with owned lifecycle-bound broadcast plans and live public BMSG delivery, including sender echo and /me. Unknown fields are removed; private intent is never downgraded to public. Existing bounded queues isolate slow/failing recipients. See [Chat Core](doc/us/CHAT_CORE.md).
 
 - **alpha-0.4.1 ADC MSG**: dedicated MSG parsing/serialization, checked PM/ME flags, typed views/builders, exact escaped frame limits and live NORMAL/source validation. Actual ncdc public/action/private messages are tested; chat routing remains planned. See [ADC MSG](doc/us/ADC_MSG.md).
+
+
+</details>
+
+<details>
+<summary>Alpha 0.3.x (13 releases)</summary>
 
 - **alpha-0.3.13 Statistics**: constant-time session lifecycle counts, online/peak users and successful logins; closed/rejected connections, peak peers and application byte totals exposed through the authenticated local API and US/PL WebAdmin. See [Statistics](doc/us/STATISTICS.md).
 
@@ -154,6 +194,12 @@ Completed increments (older bullets describe their original delivery scope):
 
 - **alpha-0.3.1 Session Core**: independent Users lifecycle model, stable local session IDs, public identity snapshots, monotonic transition times and typed closure causes. Live ADC/ADCS uses this model for readiness, deadlines and cleanup. See [Session Core](doc/us/SESSION_CORE.md).
 
+
+</details>
+
+<details>
+<summary>Alpha 0.2.x (10 releases)</summary>
+
 - **alpha-0.2.10 Security**: cumulative login input budgets, global/per-IP pending admissions and shared identity-attempt gates before Tiger validation. Tested with real ADC/ADCS and ncdc. See [negotiation security](doc/us/NEGOTIATION_SECURITY.md).
 
 - **alpha-0.2.9 STA/QUI**: typed status/quit validation, precise protocol errors, bounded ISTA → own IQUI → close, safe B/D/E/F status routing and real ncdc rejection/recovery tests. See [STA/QUI](doc/us/ADC_STATUS.md).
@@ -173,6 +219,12 @@ Completed increments (older bullets describe their original delivery scope):
 - **alpha-0.2.2 ADC Parser**: BASE argument layouts, named-field syntax, bounded decimal integers, feature budgets and TCP/TLS recovery tests.
 
 - **alpha-0.2.1 Project**: [alpha-0.1 audit](doc/us/AUDIT_ALPHA_0.1.md), prioritized alpha-0.2 acceptance plan, version/documentation checks and required CI integrations.
+
+
+</details>
+
+<details>
+<summary>Alpha 0.1.x (11 releases)</summary>
 
 - **alpha-0.1.11 Apache2**: customizable static WebAdmin HTTPS example, HTTP→HTTPS redirect, TLS 1.2/1.3, certificate paths and isolated HTTPS tests.
 
@@ -195,6 +247,8 @@ Completed increments (older bullets describe their original delivery scope):
 - **alpha-0.1.2 Network**: multiple nonblocking IPv4/IPv6 TCP listeners/clients.
 
 - **alpha-0.1.1 Core**: lifecycle, signal handling, graceful shutdown.
+
+</details>
 
 Guest login, public user sessions, public chat and direct/echo private chat are implemented. Group chat, registered-user authentication, moderation/history, search, transfer coordination and a production authenticated web gateway remain future milestones.
 
