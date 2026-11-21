@@ -2,9 +2,13 @@
 
 Fundament serwera ADC/ADCS Direct Connect Hub w wersji Alpha 0.1 (`0.1.0-alpha.1`). Etap E0 obejmuje program `dc24h-hub`, ekran startowy Webadmin oraz automatyczne kompilacje i testy. Docelowy format konfiguracji huba to TOML (`/etc/dc24h/hub.toml`).
 
+## Systemy docelowe
+
+Na architekturze `amd64` plan Alpha 0.1 obejmuje Ubuntu Server 22.04 LTS, 24.04 LTS i 26.04 LTS oraz Debian 12 (Bookworm) i Debian 13 (Trixie).
+
 ## Backend C++20
 
-Potrzebujesz kompilatora obsługującego C++20, CMake 3.22 lub nowszego oraz Make. Przy pierwszej konfiguracji testów CMake pobiera GoogleTest i sprawdza sumę SHA-256 archiwum. Flaga `-DBUILD_TESTING=OFF` ogranicza kompilację do programu i jego biblioteki.
+Potrzebujesz kompilatora obsługującego C++20, CMake 3.22 lub nowszego oraz Make. Na Ubuntu i Debianie użyj pakietów `g++`, `cmake`, `make` i `ca-certificates`. Przy pierwszej konfiguracji testów CMake pobiera GoogleTest i sprawdza sumę SHA-256 archiwum. Flaga `-DBUILD_TESTING=OFF` ogranicza kompilację do programu i jego biblioteki.
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
@@ -45,6 +49,8 @@ Vite zapisuje skompilowaną aplikację w `webadmin/dist/`. Polecenie `npm run de
 ## CI
 
 GitHub Actions kompiluje i testuje konfiguracje Debug i Release oraz sprawdza Webadmin na runnerach Ubuntu 22.04, 24.04 i 26.04 (`amd64`). Kontrola formatu C++ używa `clang-format-18` na Ubuntu 24.04.
+
+Na Debianie 12 i 13 użyj powyższych poleceń, aby lokalnie sprawdzić Debug, Release i Webadmin.
 
 ## Dokumentacja i licencja
 
