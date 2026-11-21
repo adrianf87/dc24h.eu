@@ -4,8 +4,10 @@
 #include "wire.hpp"
 
 #include <array>
+#include <charconv>
 #include <cstdint>
 #include <gcrypt.h>
+#include <set>
 #include <span>
 #include <utility>
 
@@ -31,14 +33,15 @@ TigerValue decode_tiger_value(std::string_view value) {
     return bytes;
 }
 
-std::optional<std::vector<Field>> parse_fields(std::span<const std::string> parameters) {
+std::optional<std::vector<Field>> parse_fields(std::span<const std::string> parameters,
+                                               bool unique = true) {
     std::vector<Field> fields;
     fields.reserve(parameters.size());
     for (const std::string_view parameter : parameters) {
         const auto name = parameter.substr(0, 2);
-        if (!detail::wire_name(name, 2) || std::ranges::any_of(fields, [name](const Field &field) {
-                return field.name == name;
-            })) {
+        if (!detail::wire_name(name, 2) ||
+            (unique && std::ranges::any_of(
+                           fields, [name](const Field &field) { return field.name == name; }))) {
             return std::nullopt;
         }
         fields.push_back({name, parameter.substr(2)});
@@ -51,6 +54,25 @@ std::optional<std::string_view> single_parameter(const Message &message, std::st
         return std::nullopt;
     }
     return message.parameters.front();
+}
+
+std::optional<std::uint64_t> decimal(std::string_view value) {
+    if (value.empty()) {
+        return std::nullopt;
+    }
+    std::uint64_t result = 0;
+    const auto end = value.data() + value.size();
+    const auto parsed = std::from_chars(value.data(), end, result);
+    return parsed.ec == std::errc{} && parsed.ptr == end ? std::optional{result} : std::nullopt;
+}
+
+bool has_no_controls(std::string_view text) {
+    return std::ranges::none_of(text, [](unsigned char byte) { return byte < 32 || byte == 127; });
+}
+
+bool valid_token(std::string_view value) {
+    constexpr std::size_t max_token_bytes = 256;
+    return !value.empty() && value.size() <= max_token_bytes && has_no_controls(value);
 }
 
 } // namespace
@@ -70,6 +92,36 @@ std::string format_status(std::string_view code, std::string_view text, std::str
     return line;
 }
 
+std::string format_routing_header(const Message &message) {
+    auto line = message.fourcc();
+    if (message.sender_sid) {
+        line += ' ';
+        line += *message.sender_sid;
+    }
+    if (message.target_sid) {
+        line += ' ';
+        line += *message.target_sid;
+    }
+    if (message.type == MessageType::feature) {
+        line += ' ';
+        for (const auto &selector : message.selectors) {
+            line += selector.required ? '+' : '-';
+            line += selector.name;
+        }
+    }
+    return line;
+}
+
+std::string format_routed(const Message &message) {
+    auto line = format_routing_header(message);
+    for (const auto &parameter : message.parameters) {
+        line += ' ';
+        line += escape_parameter(parameter);
+    }
+    line += '\n';
+    return line;
+}
+
 bool is_sid(std::string_view value) noexcept {
     return value.size() == 4 && std::ranges::all_of(value, detail::base32_symbol);
 }
@@ -81,6 +133,14 @@ bool is_cid(std::string_view value) noexcept {
 bool is_feature(std::string_view value) noexcept {
     return value.size() == 4 && std::ranges::all_of(value.substr(0, 3), detail::uppercase) &&
            detail::alphanumeric(value.back());
+}
+
+bool is_keyprint(std::string_view value) noexcept {
+    return value.starts_with("SHA256/") && detail::base32_bytes(value.substr(7)) == 32;
+}
+
+bool is_peer_command(std::string_view command) noexcept {
+    return command == "SCH" || command == "RES" || command == "CTM" || command == "RCM";
 }
 
 IdentityCheck verify_tiger_identity(std::string_view cid, std::string_view pid) {
@@ -194,6 +254,128 @@ std::optional<Chat> parse_chat(const Message &message) {
             }
             result.third_person = flag.value == "1";
         }
+    }
+    return result;
+}
+
+std::optional<std::string_view> parse_search(const Message &message) {
+    if (message.command != "SCH") {
+        return std::nullopt;
+    }
+    const auto fields = parse_fields(message.parameters, false);
+    if (!fields) {
+        return std::nullopt;
+    }
+
+    std::string_view token;
+    std::optional<std::uint64_t> minimum;
+    std::optional<std::uint64_t> maximum;
+    std::optional<std::uint64_t> exact;
+    std::set<std::string_view> singletons;
+    bool has_filter = false;
+    for (const auto &[name, value] : *fields) {
+        if (!has_no_controls(value)) {
+            return std::nullopt;
+        }
+        if (name == "AN" || name == "NO" || name == "EX") {
+            if (value.empty() || (name == "EX" && value.starts_with('.'))) {
+                return std::nullopt;
+            }
+            has_filter = true;
+        } else if (name == "TO" || name == "TR" || name == "TY" || name == "GE" || name == "LE" ||
+                   name == "EQ") {
+            if (!singletons.insert(name).second) {
+                return std::nullopt;
+            }
+            if (name == "TO") {
+                if (!valid_token(value)) {
+                    return std::nullopt;
+                }
+                token = value;
+                continue;
+            }
+            if (name == "TR" || name == "TY") {
+                if (name == "TR" ? !is_cid(value) : (value != "1" && value != "2")) {
+                    return std::nullopt;
+                }
+            } else {
+                const auto size = decimal(value);
+                if (!size) {
+                    return std::nullopt;
+                }
+                auto &bound = name == "GE" ? minimum : name == "LE" ? maximum : exact;
+                bound = size;
+            }
+            has_filter = true;
+        }
+    }
+    if (!has_filter || (minimum && maximum && *minimum > *maximum) ||
+        (exact && ((minimum && *exact < *minimum) || (maximum && *exact > *maximum)))) {
+        return std::nullopt;
+    }
+    return token;
+}
+
+std::optional<std::string_view> parse_search_result(const Message &message) {
+    if (message.command != "RES") {
+        return std::nullopt;
+    }
+    const auto fields = parse_fields(message.parameters);
+    if (!fields) {
+        return std::nullopt;
+    }
+    std::string_view path;
+    std::string_view token;
+    bool has_size = false;
+    bool has_hash = false;
+    for (const auto &[name, value] : *fields) {
+        if (!has_no_controls(value)) {
+            return std::nullopt;
+        }
+        if (name == "FN") {
+            path = value;
+        } else if (name == "SI" || name == "SL") {
+            if (!decimal(value)) {
+                return std::nullopt;
+            }
+            has_size |= name == "SI";
+        } else if (name == "TR") {
+            if (!is_cid(value)) {
+                return std::nullopt;
+            }
+            has_hash = true;
+        } else if (name == "TO") {
+            if (!valid_token(value)) {
+                return std::nullopt;
+            }
+            token = value;
+        }
+    }
+    if (path.size() < 2 || !path.starts_with('/') || !has_size ||
+        (!path.ends_with('/') && !has_hash)) {
+        return std::nullopt;
+    }
+    return token;
+}
+
+std::optional<PeerConnection> parse_peer_connection(const Message &message) {
+    const bool ctm = message.command == "CTM";
+    if ((!ctm && message.command != "RCM") || message.parameters.size() != (ctm ? 3U : 2U)) {
+        return std::nullopt;
+    }
+    const auto &protocol = message.parameters.front();
+    const auto &token = message.parameters.back();
+    if (protocol.empty() || protocol.size() > 64 || !has_no_controls(protocol) ||
+        protocol.find(' ') != std::string::npos || !valid_token(token)) {
+        return std::nullopt;
+    }
+    PeerConnection result{protocol, token, std::nullopt};
+    if (ctm) {
+        const auto port = decimal(message.parameters[1]);
+        if (!port || *port == 0 || *port > 65535) {
+            return std::nullopt;
+        }
+        result.port = static_cast<std::uint16_t>(*port);
     }
     return result;
 }
