@@ -9,7 +9,7 @@
 - Gałąź `main` repozytorium `adrianf87/dc24h.eu` zawiera obecnie plik `LICENSE` (GNU GPLv3). Początkowa dokumentacja powstaje w Pull Request #1, a kod, testy i instrukcje instalacji muszą jeszcze zostać przygotowane.
 - Celem Alpha 0.1 jest **uruchamialny, testowalny hub Direct Connect obsługujący ADC oraz szyfrowany ADCS**, z podstawowym czatem, listą klientów i sygnalizacją wymiany plików peer-to-peer.
 - Implementacja: **C++20**, **CMake**, asynchroniczne I/O, **OpenSSL 3**, **MariaDB**, **Apache HTTP Server 2.4**, **systemd** oraz **Webadmin: React + TypeScript + Vite**.
-- Systemy docelowe: **Ubuntu Server 22.04 LTS, 24.04 LTS oraz 26.04 LTS**, architektura `amd64`; `arm64` jako rozszerzenie po Alpha.
+- Systemami docelowymi dla `amd64` są **Ubuntu Server 22.04 LTS, 24.04 LTS i 26.04 LTS** oraz **Debian 12 (Bookworm) i Debian 13 (Trixie)**. Wsparcie `arm64` przewidziano po Alpha.
 - Priorytet: poprawność protokołu, bezpieczeństwo, interoperacyjność i automatyczne testy. Alpha nie oznacza gotowości produkcyjnej.
 
 ## 2. Zakres Alpha 0.1
@@ -27,7 +27,7 @@
 9. Logowanie strukturalne, limity liczby połączeń, rozmiaru komend, szybkości komunikatów/wyszukiwań, timeouty handshake i bezpieczne wyłączenie procesu.
 10. **Webadmin React + TypeScript + Vite:** ekran logowania, dashboard (stan huba, liczba użytkowników, uptime), tabela podłączonych klientów, lista banów z możliwością dodania/usunięcia blokady, odczyt zdarzeń administracyjnych, komunikaty błędów i potwierdzenia operacji. Układ responsywny.
 11. Bezpieczny backend dla Webadmin: API `/api/v1/`, konta administratorów w MariaDB z hasłami haszowanymi Argon2id, sesje z cookie `HttpOnly`, `Secure`, `SameSite`, ochrona CSRF, role (`admin`, `viewer`), audyt zmian i ograniczanie prób logowania. Panel nie może łączyć się bezpośrednio z MariaDB.
-12. Pakiety konfiguracyjne, systemd, instrukcja instalacji/aktualizacji oraz testy automatyczne backendu i Webadmin na trzech wersjach Ubuntu.
+12. Pakiety konfiguracyjne, systemd, instrukcja instalacji/aktualizacji oraz testy automatyczne backendu i Webadmin. GitHub Actions uruchamia testy na trzech wersjach Ubuntu. Debian 12 i 13 są weryfikowane w osobnych środowiskach testowych.
 
 ### Poza zakresem Alpha 0.1
 
@@ -119,7 +119,7 @@ Każdy punkt powinien być osobnym Issue, z etykietą etapu i kryteriami akcepta
 ## 6. Kryteria akceptacji wydania
 
 - **Funkcjonalność:** co najmniej dwa niezależne klienty zgodne z ADC/ADCS pomyślnie łączą się, widzą listę, wysyłają chat/PM, wykonują wyszukiwanie i inicjują połączenie P2P; odłączanie i ponowne łączenie działają.
-- **Kompatybilność:** udokumentowane uruchomienie i smoke testy na Ubuntu Server 22.04, 24.04, 26.04 LTS; kompilacja na jednej obsługiwanej wersji GCC/Clang dostępnej na każdej dystrybucji.
+- **Kompatybilność** wymaga udokumentowanego uruchomienia i testów dymnych na każdej dystrybucji docelowej oraz kompilacji przy użyciu dostępnej, obsługiwanej wersji GCC lub Clang.
 - **Zabezpieczenia:** skonfigurowany TLS z walidowaną polityką certyfikatów, brak wycieków sekretów, limity, timeouty, bez nieograniczonych kolejek; nieszyfrowane ADC możliwe do wyłączenia.
 - **Testy:** testy jednostkowe parsera/stanu, testy integracyjne (TCP, TLS, MariaDB, Apache), przypadki odmowy usługi na poziomie pojedynczej sesji i automatyczny pipeline CI.
 - **Webadmin:** konto `admin` loguje się i wylogowuje przez HTTPS; dashboard pokazuje stan huba i użytkowników; lista banów pozwala dodawać/usuwać wpisy; rola `viewer` nie może modyfikować danych; testy frontendowe (Vitest/React Testing Library) oraz minimum jeden scenariusz E2E w przeglądarce (Playwright).
@@ -136,7 +136,7 @@ Każdy punkt powinien być osobnym Issue, z etykietą etapu i kryteriami akcepta
 | **ADCS i Apache2** | ADCS jest TLS opakowującym surowy TCP ADC; Apache2 obsługuje osobne HTTPS panelu, nie port klientów ADC. |
 | **Bezpieczeństwo Webadmin** | Nie umieszczać sekretów w kodzie React ani zmiennych `VITE_*`; wymagać HTTPS, cookies `HttpOnly`/`Secure`, CSRF dla mutacji, CSP i rate limit logowania. API nasłuchuje tylko na loopback. |
 | **Hasła ADC (`GPA/PAS`)** | Standardowa odpowiedź PAS zależy od hasła i losowego wyzwania; zwykły hash Argon2id hasła w bazie nie wystarczy do weryfikacji odpowiedzi. Opracować osobny, bezpieczny model i analizę zagrożeń przed włączeniem kont; nie przechowywać haseł jawnych w MariaDB. |
-| **Wersje zależności** | Budować/testować na każdej wspieranej wersji Ubuntu, nie polegać wyłącznie na `ubuntu-latest`; przypiąć wersje zależności i śledzić poprawki bezpieczeństwa. |
+| **Wersje zależności** | Budować i testować na każdej docelowej wersji Ubuntu i Debiana. W CI używać etykiet z konkretną wersją Ubuntu. Przypiąć wersje zależności i śledzić poprawki bezpieczeństwa. |
 | **Nadużycia i zgłaszanie błędów** | Rate limiting, wielkość ramek, timeouty i limity pamięci wdrożyć od pierwszych etapów. |
 
 ## 8. Organizacja pracy GitHub
@@ -149,7 +149,7 @@ Każdy punkt powinien być osobnym Issue, z etykietą etapu i kryteriami akcepta
 ## 9. Pierwszy sprint — rekomendowana kolejność
 
 1. Zaakceptować zakres MVP, format konfiguracji (`TOML` proponowany), stos asynchronicznego I/O (Boost.Asio proponowany), nazwy usług i porty.
-2. Dodać `CMakeLists.txt`, katalog `src/`, testy GoogleTest/Catch2, `webadmin/` z szablonem Vite `react-ts`, lockfile `package-lock.json` i GitHub Actions: testy C++ na Ubuntu 22.04/24.04/26.04 (kontenery/VM, jeśli runner niedostępny) oraz `npm ci`, `tsc --noEmit`, testy UI i `vite build` na wspieranym Node.js LTS.
+2. Dodać `CMakeLists.txt`, katalog `src/`, testy GoogleTest/Catch2, `webadmin/` z szablonem Vite `react-ts` i lockfile `package-lock.json`. Na Ubuntu 22.04/24.04/26.04 uruchamiać w GitHub Actions testy C++ oraz `npm ci`, `tsc --noEmit`, testy UI i `vite build` na wspieranym Node.js LTS (kontenery lub VM, jeśli runner jest niedostępny). Te same polecenia sprawdzić lokalnie na Debianie 12 i 13.
 3. Dodać parser komend ADC z testami danych poprawnych i złośliwych. Dopiero potem budować pełny socket server.
 4. Przygotować pierwszy klient testowy/interoperacyjny i przykładową konfigurację TLS.
 

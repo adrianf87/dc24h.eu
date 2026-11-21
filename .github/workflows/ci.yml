@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build-and-test:
+    name: Build and test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify runner and toolchain
+        env:
+          EXPECTED_UBUNTU: ${{ matrix.os }}
+        run: |
+          source /etc/os-release
+          printf '%s (%s)\n' "$PRETTY_NAME" "$(uname -m)"
+          test "$ID-$VERSION_ID" = "$EXPECTED_UBUNTU"
+          cmake --version
+          c++ --version
+
+      - name: Check C++ formatting
+        if: matrix.os == 'ubuntu-24.04'
+        run: git ls-files -z -- '*.cpp' '*.hpp' | xargs -0 -r clang-format-18 --dry-run --Werror
+
+      - name: Build and test C++ Debug
+        run: |
+          cmake --preset debug
+          cmake --build --preset debug --parallel 4
+          ctest --preset debug
+
+      - name: Build and test C++ Release
+        run: |
+          cmake --preset release
+          cmake --build --preset release --parallel 4
+          ctest --preset release
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: webadmin/.nvmrc
+          cache: npm
+          cache-dependency-path: webadmin/package-lock.json
+
+      - name: Install Webadmin dependencies
+        working-directory: webadmin
+        run: npm ci
+
+      - name: Lint, typecheck and test Webadmin
+        working-directory: webadmin
+        run: |
+          npm run lint
+          npm run typecheck
+          npm test
+
+      - name: Build Webadmin
+        working-directory: webadmin
+        run: npm run build

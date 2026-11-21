@@ -9,7 +9,7 @@
 - The `main` branch of `adrianf87/dc24h.eu` currently contains the GNU GPLv3 `LICENSE`. The initial documentation is being developed in Pull Request #1; application code, tests, and installation instructions still need to be built from scratch.
 - Alpha 0.1 aims to provide a **runnable, testable Direct Connect hub supporting both ADC and encrypted ADCS**, with basic chat, a client list, and peer-to-peer file-sharing signaling.
 - Technology stack: **C++20**, **CMake**, asynchronous I/O, **OpenSSL 3**, **MariaDB**, **Apache HTTP Server 2.4**, **systemd**, and **Webadmin: React + TypeScript + Vite**.
-- Target operating systems: **Ubuntu Server 22.04 LTS, 24.04 LTS, and 26.04 LTS** on `amd64`; consider `arm64` after Alpha.
+- The `amd64` targets are **Ubuntu Server 22.04 LTS, 24.04 LTS, and 26.04 LTS**, **Debian 12 (Bookworm)**, and **Debian 13 (Trixie)**. Consider `arm64` after Alpha.
 - Priorities: protocol correctness, security, interoperability, and automated tests. Alpha does **not** mean production-ready.
 
 ## 2. Alpha 0.1 Scope
@@ -27,7 +27,7 @@
 9. Structured logging, limits on connections, command length, message/search rates, handshake timeouts, and graceful process shutdown.
 10. **Webadmin React + TypeScript + Vite:** login screen, dashboard (hub state, online client count, uptime), connected-client table, ban list with add/remove operations, administrative event log, error feedback, and action confirmations. Responsive layout.
 11. Secure Webadmin backend: versioned `/api/v1/` API, administrator accounts in MariaDB with Argon2id password hashes, sessions using `HttpOnly`, `Secure`, `SameSite` cookies, CSRF protection, `admin` and `viewer` roles, audit logging, and login rate limiting. The browser must never connect directly to MariaDB.
-12. Configuration and service packaging, systemd integration, installation/upgrade instructions, and backend/Webadmin automated tests on all three Ubuntu versions.
+12. Configuration and service packaging, systemd integration, installation/upgrade instructions, and automated backend and Webadmin tests. GitHub Actions runs the tests on all three Ubuntu versions. Debian 12 and 13 are verified in separate test environments.
 
 ### Out of Scope for Alpha 0.1
 
@@ -119,7 +119,7 @@ Keep one verifiable GitHub Issue per item, with stage labels and acceptance crit
 ## 6. Release Acceptance Criteria
 
 - **Functionality:** at least two independent ADC/ADCS clients can connect, view the client list, use public chat/private messages, search, and initiate a P2P connection. Disconnect and reconnect must work.
-- **Compatibility:** documented setup and smoke tests on Ubuntu Server 22.04, 24.04, and 26.04 LTS, using GCC/Clang versions supported on each distribution.
+- **Compatibility** requires documented setup and smoke tests on every target distribution, along with a build using a GCC or Clang version supported by that distribution.
 - **Security:** configured TLS with a validated certificate policy, no leaked secrets, resource limits, timeouts, bounded queues, and the option to disable unencrypted ADC.
 - **Tests:** unit tests for parsing/state management; TCP, TLS, MariaDB, and Apache integration tests; per-session abuse cases; automated CI pipeline.
 - **Webadmin:** the `admin` account can log in and out over HTTPS; the dashboard shows hub status and connected clients; admins can add/remove bans; `viewer` users cannot modify data. Frontend tests use Vitest/React Testing Library, with at least one Playwright browser E2E test.
@@ -136,7 +136,7 @@ Keep one verifiable GitHub Issue per item, with stage labels and acceptance crit
 | **ADCS vs. Apache2** | ADCS wraps raw ADC TCP in TLS; Apache2 hosts a separate HTTPS administration site, not the ADC client port. |
 | **Webadmin security** | Never put secrets in React code or `VITE_*` variables; enforce HTTPS, `HttpOnly`/`Secure` cookies, CSRF protection for mutations, CSP, and login rate limits. Bind API to loopback only. |
 | **ADC passwords (`GPA/PAS`)** | A standard PAS reply depends on the password and a random challenge. A conventional stored Argon2id password hash cannot verify this response alone. Design and review a separate secure approach before supporting accounts; do not store plaintext passwords in MariaDB. |
-| **Dependency versions** | Build and test on each supported Ubuntu version; do not rely only on `ubuntu-latest`. Pin dependencies and track security updates. |
+| **Dependency versions** | Build and test on every target Ubuntu and Debian version. Use explicit Ubuntu version labels in CI. Pin dependencies and track security updates. |
 | **Abuse and malformed traffic** | Introduce rate limits, frame-size bounds, timeouts, and memory limits in the earliest stages. |
 
 ## 8. GitHub Workflow
@@ -149,7 +149,7 @@ Keep one verifiable GitHub Issue per item, with stage labels and acceptance crit
 ## 9. First Sprint — Recommended Order
 
 1. Confirm MVP scope, configuration format (TOML is proposed), asynchronous I/O stack (Boost.Asio is proposed), service names, and ports.
-2. Add `CMakeLists.txt`, `src/`, GoogleTest/Catch2, and a `webadmin/` Vite `react-ts` scaffold with `package-lock.json`. Configure GitHub Actions for C++ on Ubuntu 22.04/24.04/26.04 (containers/VMs if a runner is unavailable), plus `npm ci`, `tsc --noEmit`, UI tests, and `vite build` on a supported Node.js LTS version.
+2. Add `CMakeLists.txt`, `src/`, GoogleTest/Catch2, and a `webadmin/` Vite `react-ts` scaffold with `package-lock.json`. Configure GitHub Actions for C++ on Ubuntu 22.04/24.04/26.04 (containers or VMs if a runner is unavailable), plus `npm ci`, `tsc --noEmit`, UI tests, and `vite build` on a supported Node.js LTS version. Run the same commands locally on Debian 12 and 13.
 3. Implement an ADC command parser with valid and adversarial input tests before building the complete socket server.
 4. Prepare an interoperability test client and an example TLS configuration.
 
