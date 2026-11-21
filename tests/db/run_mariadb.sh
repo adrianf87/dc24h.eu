@@ -8,6 +8,7 @@ mariadbd=$3
 install_db=$4
 mariadb=$5
 openssl=$6
+mode=${7:-persistence}
 work=$(mktemp -d /tmp/dc24h-e5.XXXXXXXX)
 db_pid=
 hub_pid=
@@ -55,7 +56,11 @@ export DC24H_DB_NAME=dc24h_e5_test
 CREATE DATABASE dc24h_e5_test CHARACTER SET utf8mb4;
 CREATE DATABASE dc24h_e5_upgrade CHARACTER SET utf8mb4;
 SQL
-for role in migrator admin reader; do
+roles=(migrator admin reader)
+if [[ $mode == api ]]; then
+    roles+=(api provisioner)
+fi
+for role in "${roles[@]}"; do
     read -r password < /proc/sys/kernel/random/uuid
     printf '%s\n' "$password" >"$work/$role.pw"
     "${sql[@]}" <<SQL
@@ -70,9 +75,9 @@ GRANT CREATE, SELECT, INSERT ON dc24h_e5_upgrade.* TO 'e5_migrator'@'localhost';
 SQL
 export DC24H_DB_USER=e5_migrator
 export DC24H_DB_PASSWORD_FILE="$work/migrator.pw"
-[[ "$("$hub" --db migrate)" == "MariaDB schema 3 ready" ]]
-[[ "$("$hub" --db migrate)" == "MariaDB schema 3 ready" ]]
-[[ "$("$hub" --db status)" == "MariaDB schema 3 / 3" ]]
+[[ "$("$hub" --db migrate)" == "MariaDB schema 5 ready" ]]
+[[ "$("$hub" --db migrate)" == "MariaDB schema 5 ready" ]]
+[[ "$("$hub" --db status)" == "MariaDB schema 5 / 5" ]]
 
 "${sql[@]}" <<'SQL'
 REVOKE INSERT ON dc24h_e5_test.* FROM 'e5_migrator'@'localhost';
@@ -84,6 +89,54 @@ GRANT SELECT, INSERT, UPDATE ON dc24h_e5_test.hub_settings TO 'e5_admin'@'localh
 GRANT SELECT, INSERT, DELETE ON dc24h_e5_test.bans TO 'e5_admin'@'localhost';
 GRANT SELECT, INSERT ON dc24h_e5_test.audit_events TO 'e5_admin'@'localhost';
 SQL
+if [[ $mode == api ]]; then
+    "${sql[@]}" <<'SQL'
+GRANT SELECT ON dc24h_e5_test.schema_migrations TO 'e5_api'@'localhost', 'e5_provisioner'@'localhost';
+GRANT SELECT ON dc24h_e5_test.admin_users TO 'e5_api'@'localhost';
+GRANT SELECT, INSERT, DELETE ON dc24h_e5_test.admin_sessions TO 'e5_api'@'localhost';
+GRANT SELECT, INSERT, DELETE ON dc24h_e5_test.bans TO 'e5_api'@'localhost';
+GRANT SELECT, INSERT ON dc24h_e5_test.audit_events TO 'e5_api'@'localhost';
+GRANT SELECT (id, username), INSERT ON dc24h_e5_test.admin_users TO 'e5_provisioner'@'localhost';
+GRANT SELECT (admin_user_id), DELETE ON dc24h_e5_test.admin_sessions TO 'e5_provisioner'@'localhost';
+GRANT INSERT ON dc24h_e5_test.audit_events TO 'e5_provisioner'@'localhost';
+SQL
+    export DC24H_DB_USER=e5_provisioner DC24H_DB_PASSWORD_FILE="$work/provisioner.pw"
+    for role in admin viewer; do
+        read -r password < /proc/sys/kernel/random/uuid
+        printf '%s\n' "$password" >"$work/login-$role.pw"
+        "$hub" --db admin create "$role-user" "$role" --password-file "$work/login-$role.pw"
+    done
+    unset password
+    "$hub" --db admin revoke viewer-user
+    "$openssl" req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes \
+        -subj /CN=localhost -days 1 -keyout "$work/key.pem" -out "$work/cert.pem" \
+        >"$work/openssl.log" 2>&1
+    DC24H_DB_USER=e5_reader DC24H_DB_PASSWORD_FILE="$work/reader.pw" \
+        DC24H_API_DB_USER=e5_api DC24H_API_DB_PASSWORD_FILE="$work/api.pw" \
+        "$hub" --serve --mariadb --adcs-port 0 --admin-api --admin-port 0 \
+        --admin-origin https://hub.example.test --tls-cert "$work/cert.pem" --tls-key "$work/key.pem" \
+        >"$work/listen.log" 2>"$work/hub.log" &
+    hub_pid=$!
+    for ((attempt = 0; attempt < 100; ++attempt)); do
+        port=$(awk '/Listening for Admin API on 127.0.0.1 port/ {print $NF}' "$work/listen.log")
+        if [[ -n $port ]]; then
+            break
+        fi
+        kill -0 "$hub_pid"
+        sleep 0.05
+    done
+    (
+        exec 3<>"/dev/tcp/127.0.0.1/$port"
+        printf 'GET /api/v1/status HTTP/1.1\r\nHost: localhost\r\n\r\n' >&3
+        IFS= read -r -t 3 line <&3
+        [[ $line == 'HTTP/1.1 401 '* ]]
+    )
+    kill -TERM "$hub_pid"
+    wait "$hub_pid"
+    hub_pid=
+    "$suite"
+    exit
+fi
 export DC24H_DB_USER=e5_admin
 export DC24H_DB_PASSWORD_FILE="$work/admin.pw"
 "$hub" --db settings set hub-name 'Stored hub' --actor maintainer
