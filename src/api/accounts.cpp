@@ -150,7 +150,7 @@ std::string management_json(accounts::Role role) {
         {"roles","roles.manage",true},
         {"bans","users.ban+blocks.manage",true},
         {"configuration","configuration.manage",false},
-        {"hub","hub.manage",false},
+        {"hub","hub.manage",true},
     };
     std::string output="{\"schema\":2,\"maintenance\":true,\"restart_required\":true,\"areas\":[";
     for(const auto& area:areas){
@@ -251,7 +251,8 @@ std::string controller_action(std::string_view command) {
     const int fd=::socket(AF_UNIX,SOCK_STREAM|SOCK_CLOEXEC,0);
     if(fd<0){throw HttpError{503,"service_unavailable"};}
     struct Close { int fd; ~Close(){(void)::close(fd);} } close{fd};
-    const timeval timeout{28,0};
+    const bool read_only=command=="STATUS";
+    const timeval timeout{read_only?4L:28L,0};
     (void)::setsockopt(fd,SOL_SOCKET,SO_RCVTIMEO,&timeout,sizeof(timeout));
     (void)::setsockopt(fd,SOL_SOCKET,SO_SNDTIMEO,&timeout,sizeof(timeout));
     sockaddr_un address{};address.sun_family=AF_UNIX;
@@ -265,18 +266,32 @@ std::string controller_action(std::string_view command) {
         throw HttpError{503,"service_unavailable"};
     const std::string message=std::string(command)+"\n";
     if(::send(fd,message.data(),message.size(),MSG_NOSIGNAL)!=static_cast<ssize_t>(message.size()))
-        throw HttpError{503,"outcome_unknown"};
+        throw HttpError{503,read_only?"service_unavailable":"outcome_unknown"};
     std::string result;
-    char text[128]{};
+    char text[512]{};
     while(result.size()<sizeof(text)) {
         const auto count=::recv(fd,text,sizeof(text)-result.size(),0);
-        if(count<=0)throw HttpError{503,"outcome_unknown"};
+        if(count<=0)throw HttpError{503,read_only?"service_unavailable":"outcome_unknown"};
         result.append(text,static_cast<std::size_t>(count));
         if(result.ends_with('\n'))break;
     }
     if(!result.ends_with('\n')||result.find('\0')!=std::string::npos||
-       result.size()==sizeof(text))throw HttpError{503,"outcome_unknown"};
+       result.size()==sizeof(text))throw HttpError{503,read_only?"service_unavailable":"outcome_unknown"};
     return result;
+}
+
+std::string hub_status_request(const Request& request) {
+    if(request.method!="GET")throw HttpError{405,"method_not_allowed"};
+    if(!request.body.empty())throw HttpError{400,"bad_request"};
+    auto result=controller_action("STATUS");
+    // The fixed, peer-verified controller is the only source of service state.
+    // Reject unexpected wire output rather than reflecting it to a browser.
+    if(!result.starts_with("{\"schema\":1,\"available\":") ||
+       (result.find("\"unit\":\"dc24h.service\"")==std::string::npos &&
+        result.find("\"available\":false")==std::string::npos) ||
+       result.find('\r')!=std::string::npos)
+        throw HttpError{503,"service_unavailable"};
+    return response(200,result);
 }
 
 std::string hub_action_request(const Request& request,const database::Options& options,
@@ -426,6 +441,9 @@ AccountHandler account_handler(database::Options options, std::shared_ptr<const 
                 const auto actor=gate.authorized_actor(request.admin_grant);
                 if (!actor) { throw admin::Error(admin::ErrorKind::forbidden); }
                 return configuration_write_request(request,*review,audit_options,*actor,written);
+            }
+            if(request.target=="/api/v1/management/hub/status") {
+                return hub_status_request(request);
             }
             if(request.target=="/api/v1/management/hub/start"||
                request.target=="/api/v1/management/hub/stop"||

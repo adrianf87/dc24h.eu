@@ -26,8 +26,8 @@ int main() {
     require(admin::permission_facts(Role::administrator).size() == security::permission_catalog.size());
     require(admin::access_routes.size() == 12);
     require(fact(Role::administrator, "configuration.manage", true, false));
-    require(fact(Role::administrator, "hub.manage", false, false));
-    require(fact(Role::owner, "hub.manage", true, false));
+    require(fact(Role::administrator, "hub.manage", false, true));
+    require(fact(Role::owner, "hub.manage", true, true));
     require(fact(Role::owner, "configuration.manage", true, false));
     require(fact(Role::registered, "accounts.password.change", true, true));
     require(fact(Role::registered, "accounts.manage", false, true));
@@ -48,6 +48,10 @@ int main() {
     require(!admin::route_allowed(Role::registered, "POST", "/api/v1/management/configuration"));
     require(!admin::route_allowed(Role::owner, "GET", "/api/v1/management/configuration?x=1"));
     require(!admin::route_allowed(Role::owner, "POST", "/api/v1/management/configuration/extra"));
+    require(admin::route_allowed(Role::owner, "GET", "/api/v1/management/hub/status"));
+    require(!admin::route_allowed(Role::administrator, "GET", "/api/v1/management/hub/status"));
+    require(!admin::route_allowed(Role::owner, "POST", "/api/v1/management/hub/status"));
+    require(!admin::route_allowed(Role::owner, "GET", "/api/v1/management/hub/status?unit=other.service"));
     for (const auto command : {"start","stop","restart"}) {
         const auto path=std::string("/api/v1/management/hub/")+command;
         require(admin::route_allowed(Role::owner,"POST",path));

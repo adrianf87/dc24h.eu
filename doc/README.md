@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: beta-0.1.6.
+Current development version: beta-0.1.7.
+
+[Local WebAdmin hub service controls — beta-0.1.7](us/HUB_WEBADMIN.md) · [PL](pl/HUB_WEBADMIN.md)
 
 [Owner-gated service operations — beta-0.1.6](us/SERVICE_OPERATIONS.md) · [PL](pl/SERVICE_OPERATIONS.md)
 

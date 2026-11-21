@@ -55,7 +55,8 @@ export function parseAccess(value: unknown): AccessSnapshot {
     const row = record(entry);
     const key = PERMISSION_KEYS[index];
     if (row.key !== key || typeof row.granted !== "boolean" || typeof row.implemented !== "boolean") throw new Error("Invalid administrative access");
-    if ((key === "configuration.manage" || key === "hub.manage") && row.implemented !== false) throw new Error("Invalid administrative access");
+    if (key === "configuration.manage" && row.implemented !== false) throw new Error("Invalid administrative access");
+    if (key === "hub.manage" && row.implemented !== true) throw new Error("Invalid administrative access");
     return {key, granted: row.granted, implemented: row.implemented};
   });
   const routes = body.routes.map((entry, index) => {

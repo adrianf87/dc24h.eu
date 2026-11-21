@@ -1,5 +1,14 @@
 # Changelog
 
+## beta-0.1.7 — 2026-11-21
+
+Owner-only local WebAdmin service management — development branch `beta-0.1.7`, based on protected main `a314fe0`.
+
+- Added an authenticated read-only maintenance route for independent `dc24h.service` systemd state, using the fixed peer-checked controller. The Owner-only gate also covers status; the fixed Start/Stop/Restart backend from beta-0.1.6 remains the action authority.
+- Added the WebAdmin service panel with state-aware action buttons, explicit warning and confirmation, progress, result and re-verification handling. Uncertain outcomes are not retried. Recent hub user count remains separate from systemd status. Service action history is available through the existing proof-gated audit page, now with a per-page service filter.
+- Restricted Node loopback forwarding to the four exact service routes; Apache continues to deny them. Added service response allowlist parsing and audit v11 service-row parsing. The maintenance API resets the bounded reply-send deadline after a potentially slow systemd operation.
+- Updated EN/PL UI and documentation. Hub, API and WebAdmin identify as `beta-0.1.7`; package tuple remains `0.1.0`. Schema v11 is unchanged, with no migration or production deployment. No ADC/ADCS protocol change. See [US](doc/us/HUB_WEBADMIN.md) | [PL](doc/pl/HUB_WEBADMIN.md).
+
 ## beta-0.1.6 — 2026-11-20
 
 Owner-only local service control — development branch `beta-0.1.6`, based on protected main `463e56e`.

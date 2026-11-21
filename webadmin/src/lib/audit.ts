@@ -1,4 +1,4 @@
-export const AUDIT_ACTIONS = ["accounts.create","accounts.activate","accounts.disable","accounts.password","accounts.reset","accounts.role","ownership.bootstrap","ownership.transfer","bans.create","bans.revoke","configuration.write","configuration.restore"] as const;
+export const AUDIT_ACTIONS = ["accounts.create","accounts.activate","accounts.disable","accounts.password","accounts.reset","accounts.role","ownership.bootstrap","ownership.transfer","bans.create","bans.revoke","configuration.write","configuration.restore","hub.start","hub.stop","hub.restart"] as const;
 const id = (value: unknown): value is string => typeof value === "string" && /^[1-9]\d{0,18}$/.test(value) && BigInt(value) <= 9223372036854775807n;
 const time = (value: unknown): value is number => typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && value <= 253402300799;
 export interface AuditEvent {
@@ -6,7 +6,7 @@ export interface AuditEvent {
   occurred_at: number;
   action: typeof AUDIT_ACTIONS[number];
   actor_id: string;
-  target_kind: "account" | "ban" | "configuration";
+  target_kind: "account" | "ban" | "configuration" | "service";
   target_id: string;
   outcome: "started" | "succeeded" | "failed";
 }
@@ -15,11 +15,15 @@ export function parseAuditEvent(value: unknown): AuditEvent {
   const row = value as Record<string, unknown>;
   const configuration = row.target_kind === "configuration";
   const configAction = row.action === "configuration.write" || row.action === "configuration.restore";
+  const service = row.target_kind === "service";
+  const serviceAction = row.action === "hub.start" || row.action === "hub.stop" || row.action === "hub.restart";
   if (!id(row.id) || !time(row.occurred_at) || typeof row.action !== "string" || !(AUDIT_ACTIONS as readonly string[]).includes(row.action) ||
       !id(row.actor_id) || !id(row.target_id) ||
       !(configuration ? configAction && row.target_id === "1" &&
         (row.outcome === "started" || row.outcome === "succeeded" || row.outcome === "failed") :
-        (row.target_kind === "account" || row.target_kind === "ban") && !configAction && row.outcome === "succeeded")) {
+        service ? serviceAction && row.target_id === "1" &&
+        (row.outcome === "started" || row.outcome === "succeeded" || row.outcome === "failed") :
+        (row.target_kind === "account" || row.target_kind === "ban") && !configAction && !serviceAction && row.outcome === "succeeded")) {
     throw new Error("Invalid audit event");
   }
   return {id: row.id, occurred_at: row.occurred_at, action: row.action as AuditEvent["action"], actor_id: row.actor_id,

@@ -189,12 +189,13 @@ struct Peer {
     std::string output;
     std::size_t sent{0};
     Clock::time_point accepted{Clock::now()};
+    Clock::time_point output_ready{Clock::now()};
     explicit Peer(Fd socket) : fd(std::move(socket)) {}
     Peer(Peer&&) noexcept = default;
     Peer& operator=(Peer&& other) noexcept {
         if(this!=&other) {
             OPENSSL_cleanse(input.data(),input.size());fd=std::move(other.fd);input=std::move(other.input);
-            output=std::move(other.output);sent=other.sent;accepted=other.accepted;
+            output=std::move(other.output);sent=other.sent;accepted=other.accepted;output_ready=other.output_ready;
         }
         return *this;
     }
@@ -412,7 +413,7 @@ struct Server::Impl {
     std::string dispatch(const Request& request) {
         const bool head = request.method == "HEAD";
         if (!authenticate(request.authorization, token)) { return response(401, "{\"error\":\"unauthorized\"}\n", head); }
-        // Route the subtree through AccessGate; it accepts only the three exact Owner POST paths.
+        // Route the subtree through AccessGate for exact Owner-only status and actions.
         const bool hub_action = request.target.starts_with("/api/v1/management/hub/");
         if (accounts && (request.target.starts_with("/api/v1/accounts") || request.target == "/api/v1/admin" ||
             request.target == "/api/v1/admin/access" || request.target.starts_with("/api/v1/bans") ||
@@ -430,7 +431,9 @@ struct Server::Impl {
         return response(404, "{\"error\":\"not_found\"}\n");
     }
     bool service(Peer& peer, short events) {
-        if (Clock::now() - peer.accepted >= std::chrono::seconds(options.request_timeout) ||
+        // A bounded systemd operation may outlast the input deadline. Start a
+        // fresh bounded send deadline once the full reply has been prepared.
+        if (Clock::now() - (peer.output.empty()?peer.accepted:peer.output_ready) >= std::chrono::seconds(options.request_timeout) ||
             (events & (POLLERR | POLLNVAL)) != 0) { return false; }
         if (peer.output.empty() && (events & (POLLIN | POLLHUP)) != 0) {
             std::array<char, 4096> buffer{};
@@ -453,6 +456,7 @@ struct Server::Impl {
             } erase{parsed.request};
             if (parsed.state == ParseState::complete) {
                 peer.output = dispatch(parsed.request);
+                peer.output_ready = Clock::now();
                 OPENSSL_cleanse(peer.input.data(), peer.input.size()); peer.input.clear();
             }
             if (parsed.state == ParseState::invalid) { peer.output = response(400, "{\"error\":\"bad_request\"}\n"); }

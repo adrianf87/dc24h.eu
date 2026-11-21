@@ -9,7 +9,7 @@ const saved={network_max_connections:"128",network_idle_timeout:"120",logging_le
 const review={schema:1,maintenance:true,read_only:true,restart_required:true,active_scope:"maintenance_process",
   hub_active_available:false,revision,matches_active:true,saved,active:saved,token:"upstream-secret"};
 const access={maintenance:true,restart_required:true,expires_in:600,actor:{id:"1",role:"administrator",status:"active"},
-  grant,session,csrf,permissions:PERMISSION_KEYS.map(key=>({key,granted:key!=="hub.manage",implemented:key!=="hub.manage"&&key!=="configuration.manage"})),
+  grant,session,csrf,permissions:PERMISSION_KEYS.map(key=>({key,granted:key!=="hub.manage",implemented:key!=="configuration.manage"})),
   routes:ACCESS_ROUTES.map(([method,path,permission])=>({method,path,permission,allowed:true}))};
 
 test("maintenance editor validates, previews, confirms, writes and restores in English and Polish",async({page})=>{

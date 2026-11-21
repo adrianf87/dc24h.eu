@@ -10,7 +10,7 @@ function accessBody() {
   return {
     maintenance: true, restart_required: true, expires_in: 600,
     actor: {id: "1", role: "administrator", status: "active"}, grant, session, csrf,
-    permissions: PERMISSION_KEYS.map(key => ({key, granted: key !== "hub.manage", implemented: key !== "configuration.manage" && key !== "hub.manage"})),
+    permissions: PERMISSION_KEYS.map(key => ({key, granted: key !== "hub.manage", implemented: key !== "configuration.manage"})),
     routes: ACCESS_ROUTES.map(([method, path, permission]) => ({method, path, permission, allowed: true})),
     token: "hidden-token",
   };

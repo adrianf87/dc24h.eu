@@ -1,3 +1,9 @@
+# Hub service controls in WebAdmin — beta-0.1.7
+
+Branch `beta-0.1.7` starts from protected main `a314fe0`. The local Owner-only WebAdmin panel reads independent systemd status, confirms Start/Stop/Restart, shows recent separately observed online-user counts and links to proof-gated service audit. No new schema, public proxy route, arbitrary command or production deployment. See [Hub WebAdmin](HUB_WEBADMIN.md). Hub, API and WebAdmin report `beta-0.1.7`; package tuple remains `0.1.0`. This is not a production release.
+
+## Previous stage
+
 # Owner-only service operations — beta-0.1.6
 
 Branch `beta-0.1.6` starts from protected main `463e56e`. The separate maintenance API checks the current Owner role, grant, session, CSRF and explicit confirmation before calling the fixed `dc24h.service` controller. Only Start, Stop and Restart are permitted. Schema v11 records a durable `started` intention before action and a final verified `succeeded` or `failed` state; `outcome_unknown` is never automatically retried. No browser UI or public proxy is added. Read [Service operations](SERVICE_OPERATIONS.md). This is not a production release.

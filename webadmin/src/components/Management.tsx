@@ -3,6 +3,8 @@ import type { Copy } from "../languages/us";
 import { adminHeaders } from "../lib/adminAccess";
 import { parseManagement } from "../lib/management";
 import type { ManagementArea, ManagementCatalog } from "../lib/management";
+import {HubService} from "./HubService";
+import type {HubSnapshot} from "../lib/status";
 
 const links: Partial<Record<ManagementArea["key"], { href: string; label: "managementOpenAccounts" | "managementOpenRoles" | "managementOpenBans" | "managementOpenConfiguration" }[]>> = {
   accounts: [{ href: "#accounts", label: "managementOpenAccounts" }],
@@ -30,7 +32,7 @@ function body(area: ManagementArea, t: Copy) {
   return t.managementHubBody;
 }
 
-export function Management({ t }: { t: Copy }) {
+export function Management({ t, snapshot, checked }: { t: Copy; snapshot: HubSnapshot | null; checked: number | null }) {
   const [catalog, setCatalog] = useState<ManagementCatalog | null>(null);
   const [available, setAvailable] = useState(false);
 
@@ -75,9 +77,10 @@ export function Management({ t }: { t: Copy }) {
           <p>{area.allowed ? t.managementAllowed : t.managementDenied}</p>
           {areaLinks ? <p className="management-links">
             {areaLinks.map((link) => <a key={link.href + link.label} href={link.href}>{t[link.label]}</a>)}
-          </p> : <p>{t.managementNotImplemented}</p>}
+          </p> : <p>{area.key === "hub" && area.allowed ? t.hubServiceBelow : t.managementNotImplemented}</p>}
         </article>;
       })}
     </div>}
+    {available && catalog?.areas[4].allowed && <HubService t={t} snapshot={snapshot} checked={checked}/>}
   </section>;
 }

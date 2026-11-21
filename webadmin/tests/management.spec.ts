@@ -10,7 +10,7 @@ const catalog = {
     { key: "roles", permission: "roles.manage", allowed: false, implemented: true },
     { key: "bans", permission: "users.ban+blocks.manage", allowed: true, implemented: true },
     { key: "configuration", permission: "configuration.manage", allowed: true, implemented: false },
-    { key: "hub", permission: "hub.manage", allowed: false, implemented: false },
+    { key: "hub", permission: "hub.manage", allowed: false, implemented: true },
   ],
 };
 
