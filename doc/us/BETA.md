@@ -1,3 +1,9 @@
+# Remote WebAdmin read-only gateway — beta-0.2
+
+Branch beta-0.2 is based on the latest protected main with the beta-0.1.8 baseline. The hub, API, service controller and WebAdmin report beta-0.2. A separate HTTPS portal at /remote.html uses active administrator/Owner password proof, short server-side sessions, CSRF and a fixed status projection. The gateway is local-only because MFA is not implemented; it offers no public network listener, configuration mutation, role write or systemd control. Schema v11 and package tuple 0.1.0 are unchanged. This is not a production release. See [Remote gateway](REMOTE_GATEWAY.md).
+
+## Previous stage
+
 # Development baseline — beta-0.1.8
 
 Branch `beta-0.1.8` starts from protected main `cebcd12`. The hub, maintenance API, independent service controller and WebAdmin identify as `beta-0.1.8`, while the package tuple stays `0.1.0`. This baseline keeps the local Owner-only WebAdmin service controls, confirmation and audit behavior from beta-0.1.7, along with fixes merged into main. No new feature, schema migration, public proxy route, ADC/ADCS protocol change or production deployment is included. This is not a production release.

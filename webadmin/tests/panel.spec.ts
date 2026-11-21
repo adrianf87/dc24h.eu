@@ -8,7 +8,7 @@ const data = {
   api_version: "v1",
   server: {
     name: "dc24h.eu",
-    version: "beta-0.1.8",
+    version: "beta-0.2",
     core_running: true,
     uptime_seconds: 3661,
   },
@@ -304,10 +304,15 @@ test("search monitoring samples real poll deltas, pauses, clears locally and kee
   await page.clock.runFor(10000);
   expect(requests).toBe(count);
   await expect(rates).toHaveText(["2", "4", "1", "3"]);
-  await page.getByRole("button", { name: "Clear local observations", exact: true }).click();
+  const clearSearch = page.getByRole("button", { name: "Clear local observations", exact: true });
+  await clearSearch.click();
+  await expect(clearSearch).toBeDisabled();
   await expect(rates).toHaveText(["—", "—", "—", "—"]);
   await expect(page.getByTestId("search-query-statistics").locator(".metric-value").first()).toHaveText("11");
   await page.getByRole("button", { name: "Refresh now", exact: true }).click();
+  // The first manual refresh must have committed its baseline before
+  // advancing the fake clock; otherwise the second refresh can race it.
+  await expect(clearSearch).toBeEnabled();
   await expect(rates).toHaveText(["—", "—", "—", "—"]);
   await page.clock.runFor(5000);
   await page.getByRole("button", { name: "Refresh now", exact: true }).click();
@@ -417,10 +422,13 @@ test("transfer monitoring samples poll deltas, pauses, clears locally and keeps 
   await page.clock.runFor(10000);
   expect(requests).toBe(count);
   await expect(rates).toHaveText(["2", "4", "1", "3"]);
-  await page.getByRole("button", { name: "Clear local observations", exact: true }).click();
+  const clearTransfers = page.getByRole("button", { name: "Clear local observations", exact: true });
+  await clearTransfers.click();
+  await expect(clearTransfers).toBeDisabled();
   await expect(rates).toHaveText(["—", "—", "—", "—"]);
   await expect(page.getByTestId("transfer-ctm").locator(".metric-value").first()).toHaveText("11");
   await page.getByRole("button", { name: "Refresh now", exact: true }).click();
+  await expect(clearTransfers).toBeEnabled();
   await expect(rates).toHaveText(["—", "—", "—", "—"]);
   await page.clock.runFor(5000);
   await page.getByRole("button", { name: "Refresh now", exact: true }).click();
