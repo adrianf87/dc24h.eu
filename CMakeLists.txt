@@ -11,17 +11,6 @@ set(DC24H_RELEASE_LABEL "Alpha ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
 set(DC24H_VERSION "${PROJECT_VERSION}-alpha.1")
 configure_file(cmake/version.hpp.in generated/dc24h/version.hpp @ONLY)
 
-add_library(dc24h_cli STATIC src/cli.cpp)
-target_include_directories(dc24h_cli
-    PUBLIC include
-    PRIVATE "${PROJECT_BINARY_DIR}/generated"
-)
-dc24h_enable_warnings(dc24h_cli)
-
-add_executable(dc24h-hub src/main.cpp)
-target_link_libraries(dc24h-hub PRIVATE dc24h_cli)
-dc24h_enable_warnings(dc24h-hub)
-
 find_path(UTF8PROC_INCLUDE_DIR NAMES utf8proc.h REQUIRED)
 find_library(UTF8PROC_LIBRARY NAMES utf8proc REQUIRED)
 find_path(GCRYPT_INCLUDE_DIR NAMES gcrypt.h REQUIRED)
@@ -38,6 +27,27 @@ target_include_directories(dc24h_adc
 )
 target_link_libraries(dc24h_adc PRIVATE "${UTF8PROC_LIBRARY}" "${GCRYPT_LIBRARY}")
 dc24h_enable_warnings(dc24h_adc)
+
+find_package(Boost 1.74 REQUIRED CONFIG)
+find_package(OpenSSL 3.0 REQUIRED COMPONENTS SSL Crypto)
+find_package(Threads REQUIRED)
+
+add_library(dc24h_net STATIC src/net/server.cpp src/net/connection.cpp)
+target_include_directories(dc24h_net PUBLIC include PRIVATE "${PROJECT_BINARY_DIR}/generated")
+target_link_libraries(dc24h_net
+    PUBLIC Boost::headers
+    PRIVATE dc24h_adc OpenSSL::SSL Threads::Threads
+)
+dc24h_enable_warnings(dc24h_net)
+
+add_library(dc24h_cli STATIC src/cli.cpp src/server_cli.cpp)
+target_include_directories(dc24h_cli PUBLIC include PRIVATE "${PROJECT_BINARY_DIR}/generated")
+target_link_libraries(dc24h_cli PRIVATE dc24h_net Threads::Threads)
+dc24h_enable_warnings(dc24h_cli)
+
+add_executable(dc24h-hub src/main.cpp)
+target_link_libraries(dc24h-hub PRIVATE dc24h_cli)
+dc24h_enable_warnings(dc24h-hub)
 
 option(DC24H_ENABLE_FUZZING "Build the ADC parser libFuzzer target" OFF)
 if(DC24H_ENABLE_FUZZING)

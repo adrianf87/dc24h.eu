@@ -54,4 +54,23 @@ TEST_F(CliTest, RejectsMultipleArguments) {
     EXPECT_NE(errors.str().find("expected at most one argument"), std::string::npos);
 }
 
+TEST_F(CliTest, ServerModeRequiresCredentialsAndExplicitPlaintextOptIn) {
+    constexpr std::array<std::string_view, 1> serve{"--serve"};
+    EXPECT_EQ(dc24h::run_cli(serve, output, errors), 2);
+    EXPECT_TRUE(output.str().empty());
+    EXPECT_NE(errors.str().find("certificate and private key"), std::string::npos);
+
+    constexpr std::array<std::string_view, 3> adc{"--serve", "--adc-port", "1510"};
+    errors.str({});
+    EXPECT_EQ(dc24h::run_cli(adc, output, errors), 2);
+    EXPECT_NE(errors.str().find("require --enable-adc"), std::string::npos);
+}
+
+TEST_F(CliTest, ShowsServerOptionsWithoutStartingListeners) {
+    constexpr std::array<std::string_view, 2> arguments{"--serve", "--help"};
+    EXPECT_EQ(dc24h::run_cli(arguments, output, errors), 0);
+    EXPECT_NE(output.str().find("--tls-cert FILE --tls-key FILE"), std::string::npos);
+    EXPECT_TRUE(errors.str().empty());
+}
+
 } // namespace

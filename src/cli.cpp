@@ -1,6 +1,7 @@
 #include "dc24h/cli.hpp"
 
 #include "dc24h/version.hpp"
+#include "server_cli.hpp"
 
 #include <ostream>
 
@@ -12,12 +13,16 @@ int run_cli(std::span<const std::string_view> arguments, std::ostream &output,
         output << project_name << " — ADC/ADCS Hub — " << release_label << '\n';
         return 0;
     }
+    if (arguments.front() == "--serve") {
+        return run_server(arguments.subspan(1), output, errors);
+    }
 
     if (arguments.size() != 1) {
         errors << "dc24h-hub: expected at most one argument.\n";
     } else if (arguments.front() == "--help") {
-        output << "Usage: dc24h-hub [--help | --version]\n"
-               << "  --help     Show this help.\n"
+        output << "Usage: dc24h-hub [--help | --version]\n";
+        write_server_help(output);
+        output << "  --help     Show this help.\n"
                << "  --version  Show the project version.\n";
         return 0;
     } else if (arguments.front() == "--version") {
