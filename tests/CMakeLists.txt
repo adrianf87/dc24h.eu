@@ -20,4 +20,13 @@ dc24h_enable_warnings(dc24h_cli_tests)
 include(GoogleTest)
 gtest_discover_tests(dc24h_cli_tests)
 
+add_executable(dc24h_adc_tests
+    adc/parser_test.cpp
+    adc/protocol_test.cpp
+    adc/session_test.cpp
+)
+target_link_libraries(dc24h_adc_tests PRIVATE dc24h_adc GTest::gtest_main)
+dc24h_enable_warnings(dc24h_adc_tests)
+gtest_discover_tests(dc24h_adc_tests)
+
 add_test(NAME hub.starts COMMAND dc24h-hub)

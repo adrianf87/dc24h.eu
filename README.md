@@ -1,14 +1,14 @@
 # dc24h.eu
 
-Fundament serwera ADC/ADCS Direct Connect Hub w wersji Alpha 0.1 (`0.1.0-alpha.1`). Etap E0 obejmuje program `dc24h-hub`, ekran startowy Webadmin oraz automatyczne kompilacje i testy. Docelowy format konfiguracji huba to TOML (`/etc/dc24h/hub.toml`).
+dc24h.eu is an ADC/ADCS Direct Connect hub project targeting Alpha 0.1 (`0.1.0-alpha.1`). It includes the `dc24h-hub` command-line program, a Webadmin welcome screen, and automated builds and tests. The `dc24h_adc` C++20 library implements ADC frame parsing and the hub-side connection state machine. The planned hub configuration uses TOML at `/etc/dc24h/hub.toml`.
 
-## Systemy docelowe
+## Target systems
 
-Na architekturze `amd64` plan Alpha 0.1 obejmuje Ubuntu Server 22.04 LTS, 24.04 LTS i 26.04 LTS oraz Debian 12 (Bookworm) i Debian 13 (Trixie).
+Alpha 0.1 targets Ubuntu Server 22.04 LTS, 24.04 LTS, and 26.04 LTS, Debian 12 (Bookworm), and Debian 13 (Trixie) on `amd64`.
 
-## Backend C++20
+## C++20 backend
 
-Potrzebujesz kompilatora obsługującego C++20, CMake 3.22 lub nowszego oraz Make. Na Ubuntu i Debianie użyj pakietów `g++`, `cmake`, `make` i `ca-certificates`. Przy pierwszej konfiguracji testów CMake pobiera GoogleTest i sprawdza sumę SHA-256 archiwum. Flaga `-DBUILD_TESTING=OFF` ogranicza kompilację do programu i jego biblioteki.
+Build with a C++20 compiler, CMake 3.22 or later, Make, utf8proc for Unicode handling, and Libgcrypt for the ADC session hash. The Debian and Ubuntu package names are `g++`, `cmake`, `make`, `ca-certificates`, `libutf8proc-dev`, and `libgcrypt20-dev`. CMake downloads GoogleTest and verifies the archive's SHA-256 checksum the first time it configures the tests. Use `-DBUILD_TESTING=OFF` for a build of the hub CLI and ADC library.
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
@@ -20,7 +20,7 @@ ctest --test-dir build --output-on-failure
 ./build/dc24h-hub --version
 ```
 
-Użyj presetu `release`, aby zbudować wersję zoptymalizowaną i uruchomić jej testy.
+Use the `release` preset to build and test the optimized configuration.
 
 ```sh
 cmake --preset release
@@ -29,11 +29,11 @@ ctest --preset release
 ./build/release/dc24h-hub --version
 ```
 
-Preset `debug` działa analogicznie i zapisuje wynik w `build/debug/`. Program zwraca `0` przy poprawnym wywołaniu i `2` przy błędnych argumentach.
+The `debug` preset uses the same commands and writes its output to `build/debug/`. The program exits with status `0` on a valid invocation and `2` on invalid arguments.
 
 ## Webadmin
 
-Użyj Node.js 24 LTS z npm. Dokładna wersja używana przez CI jest w `webadmin/.nvmrc`.
+Use Node.js 24 LTS with npm. The CI version is pinned in `webadmin/.nvmrc`.
 
 ```sh
 cd webadmin
@@ -44,16 +44,18 @@ npm test
 npm run build
 ```
 
-Vite zapisuje skompilowaną aplikację w `webadmin/dist/`. Polecenie `npm run dev` uruchamia lokalny podgląd, domyślnie pod adresem `http://localhost:5173/`.
+Vite writes the compiled application to `webadmin/dist/`. Run `npm run dev` to start the development server at `http://localhost:5173/` by default.
 
 ## CI
 
-GitHub Actions kompiluje i testuje konfiguracje Debug i Release oraz sprawdza Webadmin na runnerach Ubuntu 22.04, 24.04 i 26.04 (`amd64`). Kontrola formatu C++ używa `clang-format-18` na Ubuntu 24.04.
+GitHub Actions builds and tests the Debug and Release configurations and checks Webadmin on Ubuntu 22.04, 24.04, and 26.04 runners (`amd64`). The C++ formatting check uses `clang-format-18` on Ubuntu 24.04.
 
-Na Debianie 12 i 13 użyj powyższych poleceń, aby lokalnie sprawdzić Debug, Release i Webadmin.
+The same build and test commands work locally on Debian 12 and 13. The ADC parser guide covers the optional Clang/libFuzzer build.
 
-## Dokumentacja i licencja
+## Documentation and license
 
-- [Plan Alpha 0.1 po polsku](docs/pl/alpha-0.1/ALPHA-0.1-PLAN.md)
-- [Plan Alpha 0.1 w języku angielskim](docs/us/alpha-0.1/ALPHA-0.1-PLAN.md)
+- [Alpha 0.1 plan (en-US)](docs/us/alpha-0.1/ALPHA-0.1-PLAN.md)
+- [Alpha 0.1 plan (pl-PL)](docs/pl/alpha-0.1/ALPHA-0.1-PLAN.md)
+- [ADC parser and connection state machine (en-US)](docs/us/alpha-0.1/ADC-PARSER.md)
+- [ADC parser and connection state machine (pl-PL)](docs/pl/alpha-0.1/ADC-PARSER.md)
 - [GNU General Public License v3.0](LICENSE)

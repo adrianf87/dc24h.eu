@@ -22,6 +22,44 @@ add_executable(dc24h-hub src/main.cpp)
 target_link_libraries(dc24h-hub PRIVATE dc24h_cli)
 dc24h_enable_warnings(dc24h-hub)
 
+find_path(UTF8PROC_INCLUDE_DIR NAMES utf8proc.h REQUIRED)
+find_library(UTF8PROC_LIBRARY NAMES utf8proc REQUIRED)
+find_path(GCRYPT_INCLUDE_DIR NAMES gcrypt.h REQUIRED)
+find_library(GCRYPT_LIBRARY NAMES gcrypt REQUIRED)
+
+add_library(dc24h_adc STATIC
+    src/adc/parser.cpp
+    src/adc/protocol.cpp
+    src/adc/session.cpp
+)
+target_include_directories(dc24h_adc
+    PUBLIC include
+    PRIVATE "${UTF8PROC_INCLUDE_DIR}" "${GCRYPT_INCLUDE_DIR}"
+)
+target_link_libraries(dc24h_adc PRIVATE "${UTF8PROC_LIBRARY}" "${GCRYPT_LIBRARY}")
+dc24h_enable_warnings(dc24h_adc)
+
+option(DC24H_ENABLE_FUZZING "Build the ADC parser libFuzzer target" OFF)
+if(DC24H_ENABLE_FUZZING)
+    if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        message(FATAL_ERROR "DC24H_ENABLE_FUZZING requires Clang with libFuzzer")
+    endif()
+    target_compile_options(dc24h_adc PRIVATE
+        -fsanitize=fuzzer-no-link,address,undefined -fno-sanitize-recover=undefined
+        -fno-omit-frame-pointer
+    )
+    target_link_options(dc24h_adc INTERFACE -fsanitize=address,undefined)
+
+    add_executable(dc24h_adc_fuzz tests/adc/parser_fuzz.cpp)
+    target_link_libraries(dc24h_adc_fuzz PRIVATE dc24h_adc)
+    target_compile_options(dc24h_adc_fuzz PRIVATE
+        -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=undefined
+        -fno-omit-frame-pointer
+    )
+    target_link_options(dc24h_adc_fuzz PRIVATE -fsanitize=fuzzer,address,undefined)
+    dc24h_enable_warnings(dc24h_adc_fuzz)
+endif()
+
 include(CTest)
 if(BUILD_TESTING)
     add_subdirectory(tests)
