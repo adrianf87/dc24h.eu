@@ -232,8 +232,11 @@ def exercise(binary, seed, config, db_socket, password, token, api_socket):
         recorded = [event['action'] for event in history['events']]
         assert 'accounts.create' in recorded and 'bans.create' in recorded and 'bans.revoke' in recorded
         assert 'configuration.write' in recorded and 'configuration.restore' in recorded
+        service_events = [event for event in history['events'] if event['target_kind'] == 'service']
+        assert len(service_events) == 1
+        assert service_events[0]['action'] == 'hub.start' and service_events[0]['outcome'] == 'failed'
         assert all(event['outcome'] == 'succeeded' for event in history['events']
-                   if event['target_kind'] != 'configuration')
+                   if event['target_kind'] not in ('configuration', 'service'))
         assert any(event['action'] == 'configuration.restore' and event['outcome'] == 'failed'
                    for event in history['events'])
         assert any(event['action'] == 'configuration.restore' and event['outcome'] == 'succeeded'
