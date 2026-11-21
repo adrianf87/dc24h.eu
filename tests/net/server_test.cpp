@@ -185,14 +185,22 @@ bool socket_closed(const Error &error) {
     return error == asio::error::eof || error == asio::error::connection_reset;
 }
 
+void bind_shutdown_probe(RawClient &probe) {
+    // Bind while the listener still owns its port so the probe cannot connect to itself.
+    const test::tcp::endpoint local(asio::ip::address_v4::loopback(), 0);
+    probe.socket().open(local.protocol());
+    probe.socket().bind(local);
+}
+
 TEST(AdcServer, DefaultsToAdcsAndStopsListening) {
     const TestCertificate certificate;
     RunningServer server(loopback_config(certificate, false));
     EXPECT_FALSE(server.adc_enabled());
     EXPECT_GT(server.adcs().port, 0U);
+    RawClient probe;
+    bind_shutdown_probe(probe);
     server.stop();
     server.join();
-    RawClient probe;
     EXPECT_EQ(probe.connect(server.adcs()), asio::error::connection_refused);
 }
 
@@ -476,6 +484,8 @@ TEST(AdcServer, StopsAcceptingAndGracefullyClosesEstablishedSessions) {
     encrypted.send(chat);
     EXPECT_EQ(plain.line(), chat);
     EXPECT_EQ(encrypted.line(), chat);
+    RawClient probe;
+    bind_shutdown_probe(probe);
     server.stop();
     server.stop();
     EXPECT_EQ(plain.line(), "IQUI " + adc_sid + '\n');
@@ -484,7 +494,6 @@ TEST(AdcServer, StopsAcceptingAndGracefullyClosesEstablishedSessions) {
     server.join();
     EXPECT_TRUE(server.active_is(0));
     EXPECT_TRUE(server.online_is(0));
-    RawClient probe;
     EXPECT_EQ(probe.connect(server.adc()), asio::error::connection_refused);
 }
 
