@@ -1,7 +1,7 @@
-# beta-0.2: separate local-only HTTPS read-only WebAdmin gateway.
+# beta-0.2.5: separate local-only HTTPS read-only WebAdmin gateway.
 # Example ONLY. Do not make this virtual host public. There is no MFA and
 # therefore no supported public access mode in beta-0.2.
-# Required modules: ssl, headers, alias, proxy, proxy_http, authz_core,
+# Required modules: ssl, headers, rewrite, alias, proxy, proxy_http, authz_core,
 # authz_host. Configure a trusted local certificate before use.
 # Match DC24H_REMOTE_ORIGIN=https://localhost:8443 in the gateway service.
 Listen 127.0.0.1:8443
@@ -26,12 +26,66 @@ TraceEnable Off
     ProxyTimeout 5
     LimitRequestBody 2048
 
+    # ProxyPreserveHost is deliberately Off: reject the ORIGINAL browser Host
+    # here, before Apache substitutes its own loopback Host for Node.
+    # Only the configured HTTPS origin may reach the remote portal.
+    RewriteEngine On
+    RewriteCond %{HTTP_HOST} !^localhost:8443$ [NC]
+    RewriteRule ^ - [F,END]
+
+    # Defense in depth at the TLS boundary, before the Node route allowlist.
+    # A query string or wrong method must not reach even a mock upstream.
+    RewriteCond %{REQUEST_URI} ^/remote/v1/
+    RewriteCond %{QUERY_STRING} !^$
+    RewriteRule ^ - [F,END]
+    RewriteCond %{REQUEST_URI} ^/remote/v1/(?:challenge|session|summary)$
+    RewriteCond %{REQUEST_METHOD} !^GET$
+    RewriteRule ^ - [F,END]
+    # GET endpoints are bodyless. Do not forward a framed/streamed GET body
+    # even though mod_proxy would accept the otherwise allowlisted URL.
+    RewriteCond %{REQUEST_URI} ^/remote/v1/(?:challenge|session|summary)$
+    RewriteCond %{HTTP:Transfer-Encoding} !^$
+    RewriteRule ^ - [F,END]
+    RewriteCond %{REQUEST_URI} ^/remote/v1/(?:challenge|session|summary)$
+    RewriteCond %{HTTP:Content-Length} !^(?:0)?$
+    RewriteRule ^ - [F,END]
+    RewriteCond %{REQUEST_URI} ^/remote/v1/(?:login|logout)$
+    RewriteCond %{REQUEST_METHOD} !^POST$
+    RewriteRule ^ - [F,END]
+    # mod_proxy can stream the request without applying LimitRequestBody.
+    # Enforce the POST framing/size limit while the original browser headers
+    # are still available at the TLS boundary, before invoking the backend.
+    RewriteCond %{REQUEST_URI} ^/remote/v1/(?:login|logout)$
+    RewriteCond %{HTTP:Transfer-Encoding} !^$
+    RewriteRule ^ - [F,END]
+    RewriteCond %{REQUEST_URI} ^/remote/v1/(?:login|logout)$
+    RewriteCond %{HTTP:Content-Length} !^[0-9]{1,4}$
+    RewriteRule ^ - [F,END]
+    RewriteCond %{REQUEST_URI} ^/remote/v1/(?:login|logout)$
+    RewriteCond %{HTTP:Content-Length} -gt2048
+    RewriteRule ^ - [F,END]
+    RewriteCond %{REQUEST_URI} ^/remote/v1/
+    RewriteCond %{HTTP:Origin} !^$
+    RewriteCond %{HTTP:Origin} !^https://localhost:8443$
+    RewriteRule ^ - [F,END]
+    RewriteCond %{REQUEST_URI} ^/remote/v1/(?:login|logout)$
+    RewriteCond %{HTTP:Origin} !^https://localhost:8443$
+    RewriteRule ^ - [F,END]
+
     <Directory "/usr/local/share/dc24h/webadmin">
         Options -Indexes -Includes -ExecCGI -FollowSymLinks
         AllowOverride None
         Require local
         DirectoryIndex remote.html
     </Directory>
+    # The remote vhost must never serve the ordinary writable WebAdmin shell
+    # or its local-only JS/CSS entrypoints from the shared Vite build.
+    <Files "index.html">
+        Require all denied
+    </Files>
+    <FilesMatch "^local-[A-Za-z0-9_-]+\.(?:js|css)$">
+        Require all denied
+    </FilesMatch>
     # Strip browser-supplied process credentials and proxy identity.
     # The gateway injects its own local C++ API token, never the browser.
     RequestHeader unset Authorization

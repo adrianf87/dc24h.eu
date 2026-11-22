@@ -1,6 +1,8 @@
 # dc24h.eu technical documentation
 
-Current development version: beta-0.2.4.
+Current development version: beta-0.2.5.
+
+[Beta-0.2.5 Apache2, HTTPS and loopback hardening](us/BETA.md) · [PL](pl/BETA.md)
 
 [Beta-0.2.3 authentication and revalidation](us/BETA.md) · [PL](pl/BETA.md)
 

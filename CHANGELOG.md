@@ -1,5 +1,15 @@
 # Changelog
 
+## beta-0.2.5 — 2026-11-22
+
+- Session race review: a logout with valid CSRF but delayed request body could be overtaken by a new login using the previous cookie; the logout then returned success while the replacement session survived. Block re-login while any valid-CSRF logout is in flight, even if a concurrent malformed logout completes first. Add a deterministic regression reproducing the stale session before the fix.
+- Security review: refuse GET request bodies and chunked GET framing at the Apache TLS boundary for the three fixed read endpoints; previously Node would reject them only after Apache forwarded the request. Add real-Apache negative tests ensuring the mock upstream never sees these requests, while a bodyless GET with `Content-Length: 0` stays permitted.
+- CI follow-up: fixed the real-Apache proxy integration failure found on all three Ubuntu images. `LimitRequestBody` alone did not reject the proxied 2049-byte login; enforce the maximum Content-Length and reject absent/ambiguous lengths and chunked POST framing in the vhost's pre-proxy rewrite rules. Add a 2048-byte accepted boundary and a chunked framing refusal test.
+- Harden the separate, loopback-only Apache2 TLS example at the proxy boundary: reject unexpected `Host`, disallowed route methods, query strings, invalid cross-origin requests and login/logout requests without the exact HTTPS `Origin` before they reach the Node gateway. Keep only the five existing allowlisted routes.
+- Prevent the remote vhost from serving the regular administrative `index.html` and its `local-*` bundles from the shared WebAdmin distribution; retain `remote.html` and remote assets. Limit incoming request bodies at Apache to 2048 bytes.
+- Expand disposable Apache HTTPS tests with wrong-host, wrong-method, query, Origin, local-static-file, secret-file, plaintext-to-TLS and overlong-body refusals, asserting the private mock upstream was never contacted. Lock Apache example and service sandbox expectations in static tests.
+- Update hub/API, controller, WebAdmin and fixtures to `beta-0.2.5`; retain CMake/npm package tuple `0.1.0`, MariaDB v11, ADC/ADCS and the existing public Apache vhost unchanged. No public binding, MFA, remote writes, migration or deployment. This is a development-only branch awaiting CI and review.
+
 ## beta-0.2.4 — 2026-11-22
 
 - Follow-up audit: a second re-login that started with the same valid browser session could complete after another re-login rotated that cookie, leaving an orphan session. A logout could likewise race with in-flight re-authentication and allow a new session after logout. Require the predecessor session to remain current at final authorization; refuse the late login if it was replaced or revoked. Added two deterministic regressions reproducing HTTP 200 before this fix.

@@ -1,7 +1,8 @@
 # dc24h.eu documentation
 
-beta-0.2.4: session lifetime, re-login rotation, CSRF and browser isolation for the local-only, read-only WebAdmin gateway. Hub, API, service controller and WebAdmin report beta-0.2.4. The existing public Apache proxy and schema v11 remain unchanged. No Internet gateway without MFA, no administration writes or production deployment. Default development language: EN/US UTF-8.
+beta-0.2.5: additional Apache2 HTTPS and loopback boundary checks for the local-only, read-only WebAdmin gateway. Hub, API, service controller and WebAdmin report beta-0.2.5. The existing public Apache proxy and schema v11 remain unchanged. No Internet gateway without MFA, no administration writes or production deployment. Default development language: EN/US UTF-8.
 
+- [Apache2, HTTPS and loopback boundary — beta-0.2.5](BETA.md)
 - [Sessions and CSRF — beta-0.2.4](BETA.md)
 - [Authentication and live authorization — beta-0.2.3](BETA.md)
 - [HTTP request hardening — beta-0.2.2](BETA.md)

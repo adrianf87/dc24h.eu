@@ -1,6 +1,6 @@
-# Zdalny WebAdmin — beta-0.2.4 (dostęp lokalny, tylko odczyt)
+# Zdalny WebAdmin — beta-0.2.5 (dostęp lokalny, tylko odczyt)
 
-**Wersja rozwojowa.** beta-0.2 dodaje, a beta-0.2.2–beta-0.2.4 uszczelniają **osobną** bramę WebAdmin:
+**Wersja rozwojowa.** beta-0.2 dodaje, a beta-0.2.2–beta-0.2.5 uszczelniają **osobną** bramę WebAdmin:
 /remote.html i pięć ściśle określonych tras /remote/v1. Działa **tylko
 lokalnie** na 127.0.0.1 i wymaga HTTPS, aktywnego konta
 **administrator** albo **Owner** oraz hasła tego konta. W tej wersji nie
@@ -39,6 +39,43 @@ przed upływem terminu nie może zakończyć się sukcesem po jego przekroczeniu
 Pięć tras, numer wersji i uprawnienia tylko do odczytu pozostają bez zmian.
 Audyt zapisuje jedynie ustalone nazwy zdarzeń, bez haseł, tokenów,
 identyfikatorów sesji, adresów IP i treści odpowiedzi.
+
+### beta-0.2.5 — granica Apache2, HTTPS i loopback
+
+Osobny przykładowy vhost nasłuchuje **wyłącznie na 127.0.0.1:8443**,
+wykorzystuje TLS 1.2/1.3 oraz lokalnie zaufany certyfikat.
+`DC24H_REMOTE_ORIGIN` musi odpowiadać `https://localhost:8443`.
+Moduł `rewrite` Apache odrzuca niepoprawny Host przeglądarki, query string
+na trasach API oraz niewłaściwą metodę GET/POST przed przekazaniem do Node.
+Niepusty Origin musi dokładnie odpowiadać adresowi HTTPS, a POST logowania
+i wylogowania musi go zawierać. Node nadal niezależnie sprawdza trasy,
+metody, długość i format żądania, CSRF, konto oraz uprawnienia. Jedynie
+pięć ścisłych tras `/remote/v1/*` może trafić do lokalnego serwera Node.
+
+Vhost współdzieli katalog z kompilacją Vite, ale blokuje zwykły
+`index.html` panelu administracyjnego i jego pliki JS/CSS `local-*`.
+Ścieżki `/` i `/remote.html` pokazują osobny portal; zasoby `remote-*`
+pozostają dostępne. `LimitRequestBody 2048` uzupełnia jawna reguła rewrite:
+żądania POST do bramy wymagają liczbowego `Content-Length` w granicy 2048
+bajtów i nie mogą używać `Transfer-Encoding`. Jest to konieczne, ponieważ
+strumieniowanie w proxy może ominąć ogólny limit treści. Trzy trasy GET
+również odrzucają `Transfer-Encoding` i niezerową długość
+treści przed przekazaniem do Node. Testy na jednorazowym Apache HTTPS
+obejmują nieprawidłowy Host, metody, query,
+Origin, dostęp do plików lokalnych i sekretów, 2048/2049 bajtów,
+treść GET, chunked oraz próbę zwykłego HTTP; odmowy nie docierają do backendu.
+Testy statyczne sprawdzają nasłuch loopback i izolację usługi systemd.
+
+To dodatkowa ochrona, **nie** konfiguracja do Internetu: tunel/proxy
+zewnętrzne dodane przez operatora lub lokalny napastnik z dostępem do
+sekretów pozostają zagrożeniem. Publiczny vhost jest niezmieniony, a
+przykład nie jest automatycznie instalowany, uruchamiany ani wdrażany.
+
+Dodatkowa ochrona sesji blokuje ponowne logowanie ze starym cookie, dopóki
+wylogowanie z prawidłowym CSRF czeka na zakończenie odbierania treści żądania.
+Równoległa próba wylogowania z nieprawidłową treścią nie usuwa tej blokady.
+Wcześniej opóźnione wylogowanie mogło zgłosić sukces, choć nowa sesja
+pozostawała aktywna. Deterministyczny test bez gniazd odtwarza ten wyścig.
 
 ### beta-0.2.4 — sesje i weryfikacja CSRF
 

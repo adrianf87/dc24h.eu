@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Remote beta-0.2 gateway invariants, including public-exposure guardrails."""
+"""Remote beta-0.2.5 gateway invariants, including Apache boundary guardrails."""
 from pathlib import Path
 import unittest
 
@@ -19,6 +19,20 @@ class RemoteConfiguration(unittest.TestCase):
         self.assertIn("SSLProtocol -all +TLSv1.2 +TLSv1.3", config)
         self.assertIn("ProxyAddHeaders Off", config)
         self.assertIn("MergeSlashes Off", config)
+        self.assertIn("RewriteEngine On", config)
+        self.assertIn("RewriteCond %{HTTP_HOST} !^localhost:8443$ [NC]", config)
+        self.assertIn("RewriteCond %{QUERY_STRING} !^$", config)
+        self.assertIn("RewriteCond %{REQUEST_METHOD} !^GET$", config)
+        self.assertIn("RewriteCond %{REQUEST_METHOD} !^POST$", config)
+        self.assertIn("RewriteCond %{HTTP:Origin} !^https://localhost:8443$", config)
+        self.assertIn("LimitRequestBody 2048", config)
+        self.assertIn("RewriteCond %{HTTP:Content-Length} -gt2048", config)
+        self.assertIn("RewriteCond %{HTTP:Content-Length} !^[0-9]{1,4}$", config)
+        self.assertIn("RewriteCond %{HTTP:Transfer-Encoding} !^$", config)
+        self.assertIn("RewriteCond %{HTTP:Content-Length} !^(?:0)?$", config)
+        self.assertIn("RewriteCond %{REQUEST_URI} ^/remote/v1/(?:challenge|session|summary)$", config)
+        self.assertIn('<Files "index.html">', config)
+        self.assertIn('^local-[A-Za-z0-9_-]+', config)
         self.assertIn("ProxyPassMatch", config)
         self.assertIn("challenge|login|session|summary|logout", config)
         self.assertNotIn("ProxyPass \"/\"", config)
@@ -31,6 +45,16 @@ class RemoteConfiguration(unittest.TestCase):
             self.assertIn("RequestHeader unset " + header, config)
         self.assertIn("frame-ancestors 'none'", config)
         self.assertIn("Cache-Control \"no-store\"", config)
+
+    def test_systemd_sample_rejects_nonlocal_traffic(self):
+        unit = self.text("config/dc24h-remote-gateway.service.example")
+        for expected in ("DC24H_REMOTE_ORIGIN=https://localhost:8443",
+                         "DC24H_REMOTE_PORT=4182", "IPAddressDeny=any",
+                         "IPAddressAllow=localhost", "NoNewPrivileges=true",
+                         "ProtectSystem=strict", "RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6",
+                         "CapabilityBoundingSet=", "AmbientCapabilities="):
+            self.assertIn(expected, unit)
+        self.assertNotIn("DC24H_REMOTE_PUBLIC=", unit)
 
     def test_gateway_in_process_permissions_and_boundaries(self):
         code = self.text("webadmin/server/remote-gateway.ts")
@@ -62,8 +86,8 @@ class RemoteConfiguration(unittest.TestCase):
         self.assertNotIn("sessionStorage", ui)
         self.assertNotIn("Start/Stop/Restart", ui)
         self.assertIn('remote.html', self.text("webadmin/vite.config.ts"))
-        self.assertIn('set(DC24H_VERSION "beta-0.2.4")', self.text("CMakeLists.txt"))
-        self.assertIn('WEBADMIN_VERSION = "beta-0.2.4"', self.text("webadmin/src/lib/status.ts"))
+        self.assertIn('set(DC24H_VERSION "beta-0.2.5")', self.text("CMakeLists.txt"))
+        self.assertIn('WEBADMIN_VERSION = "beta-0.2.5"', self.text("webadmin/src/lib/status.ts"))
         self.assertIn("beta-0.2-code", self.text(".github/workflows/build.yml"))
         self.assertIn("beta-0.2.2-fix", self.text(".github/workflows/build.yml"))
         self.assertIn("beta-0.2.2-source", self.text(".github/workflows/build.yml"))

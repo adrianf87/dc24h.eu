@@ -1,5 +1,15 @@
 # Model zagrożeń — alpha-0.9.1
 
+**Aktualizacja beta-0.2.5 — granica zaufania:** Osobny rozwojowy vhost
+Apache z TLS na loopback weryfikuje Host, metodę, query string i Origin
+przed przekazaniem pięciu stałych tras `/remote/v1/*`. Wspólny katalog
+nie udostępnia zwykłego `index.html` ani plików `local-*` panelu
+administracyjnego; rozmiar żądania ma limit. Negatywne testy na
+jednorazowym Apache sprawdzają brak przekazania do backendu.
+Zagrożenia pozostałe: publiczny tunel dodany przez operatora, lokalny
+przejęty proces lub skradzione poświadczenia. Bez MFA brak dostępu
+publicznego. Istniejący publiczny vhost nie jest modyfikowany ani wdrażany.
+
 Ta analiza zapisuje, jak można atakować hub i WebAdmin, które mechanizmy już istnieją i które ryzyka zostają. Gałąź powstaje z main `7872471`. Nazwa gałęzi to `alpha-0.9.1`.
 
 **Aktualizacja beta-0.2.2 (tylko brama zdalna):** Niezaufane metadane proxy

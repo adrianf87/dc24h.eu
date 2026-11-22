@@ -1,4 +1,4 @@
-"""Disposable local HTTPS Apache integration for beta-0.2 remote route isolation."""
+"""Disposable local HTTPS Apache integration for beta-0.2.5 proxy isolation."""
 import grp
 import http.client
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -64,6 +64,12 @@ class ApacheRemoteGateway(unittest.TestCase):
         (cls.public / "index.html").write_text("LOCAL_PRIVATE_ADMIN_UI")
         (cls.public / ".env").write_text("PRIVATE_FIXTURE_NOT_FOR_HTTP")
         (cls.public / "secret.ini").write_text("PRIVATE_FIXTURE_NOT_FOR_HTTP")
+        (cls.public / "private.key").write_text("PRIVATE_FIXTURE_NOT_FOR_HTTP")
+        (cls.public / "api.token").write_text("PRIVATE_FIXTURE_NOT_FOR_HTTP")
+        (cls.public / "secret.sql").write_text("PRIVATE_FIXTURE_NOT_FOR_HTTP")
+        (cls.public / "assets").mkdir()
+        (cls.public / "assets" / "local-test.js").write_text("LOCAL_PRIVATE_ADMIN_UI")
+        (cls.public / "assets" / "remote-test.js").write_text("REMOTE_SAFE_ASSET")
         cls.backend = Backend()
         thread = threading.Thread(target=cls.backend.serve_forever, daemon=True)
         thread.start()
@@ -82,7 +88,7 @@ class ApacheRemoteGateway(unittest.TestCase):
             cls.port = listener.getsockname()[1]
         who = pwd.getpwnam("nobody") if os.geteuid() == 0 else pwd.getpwuid(os.geteuid())
         group = grp.getgrgid(who.pw_gid).gr_name
-        modules = ["mpm_event", "authz_core", "authz_host", "headers", "dir", "mime",
+        modules = ["mpm_event", "authz_core", "authz_host", "headers", "rewrite", "dir", "mime",
                    "alias", "socache_shmcb", "ssl", "proxy", "proxy_http"]
         conf = 'ServerRoot "' + str(cls.root) + '"\nServerName localhost\n'
         for module in modules:
@@ -97,6 +103,7 @@ class ApacheRemoteGateway(unittest.TestCase):
         (cls.root / "mime.types").write_text("text/html html\napplication/json json\n")
         shipped = (shipped
                    .replace("127.0.0.1:8443", "127.0.0.1:" + str(cls.port))
+                   .replace("localhost:8443", "localhost:" + str(cls.port))
                    .replace("/usr/local/share/dc24h/webadmin", str(cls.public))
                    .replace("/etc/dc24h/remote-tls/fullchain.pem", str(cls.cert))
                    .replace("/etc/dc24h/remote-tls/privkey.pem", str(cls.key))
@@ -141,11 +148,15 @@ class ApacheRemoteGateway(unittest.TestCase):
         finally:
             conn.close()
 
+    @property
+    def expected_origin(self):
+        return "https://localhost:" + str(self.port)
+
     def test_allowlisted_routes_and_isolation(self):
         for name in ("challenge", "login", "session", "summary", "logout"):
             method = "POST" if name in ("login", "logout") else "GET"
             status, body, headers = self.fetch("/remote/v1/" + name, method,
-                                                {"Origin": "https://localhost:8443",
+                                                {"Origin": self.expected_origin,
                                                  "Cookie": "dc24h_remote=fixture"})
             self.assertEqual(status, 200, (name, status))
             self.assertEqual(body, MARKER)
@@ -185,13 +196,111 @@ class ApacheRemoteGateway(unittest.TestCase):
                      "/remote/v1/admin", "/remote/v1/wildcard", "/remote/v1/challenge/",
                      "/remote/v1//challenge",
                      "/remote/v1/Challenge",
-                     "/.env", "/secret.ini"):
+                     "/.env", "/secret.ini", "/private.key", "/api.token",
+                     "/secret.sql", "/index.html", "/assets/local-test.js"):
             before = len(self.backend.seen)
             status, body, _ = self.fetch(path)
             self.assertNotEqual(status, 200, path)
             self.assertNotIn(MARKER, body)
             self.assertNotIn(b"PRIVATE_FIXTURE_NOT_FOR_HTTP", body)
             self.assertEqual(len(self.backend.seen), before, path)
+
+    def test_host_method_query_and_origin_denied_before_proxy(self):
+        cases = [
+            ("/remote.html", "GET", {"Host": "evil.example"}, None),
+            ("/remote/v1/summary", "GET", {"Host": "evil.example"}, None),
+            ("/remote/v1/summary", "GET", {"Host": "127.0.0.1:" + str(self.port)}, None),
+            ("/remote/v1/login", "GET", {}, None),
+            ("/remote/v1/challenge", "POST", {"Origin": self.expected_origin}, b"{}"),
+            ("/remote/v1/session", "HEAD", {}, None),
+            ("/remote/v1/summary", "OPTIONS", {}, None),
+            ("/remote/v1/logout", "PUT", {"Origin": self.expected_origin}, b"{}"),
+            ("/remote/v1/summary?secret=1", "GET", {}, None),
+            ("/remote/v1/login", "POST", {"Origin": "https://evil.example"}, b"{}"),
+            ("/remote/v1/logout", "POST", {}, b"{}"),
+            ("/remote/v1/challenge", "GET", {"Origin": "https://evil.example"}, None),
+        ]
+        for path, method, headers, body in cases:
+            with self.subTest(path=path, method=method, headers=headers):
+                before = len(self.backend.seen)
+                status, data, _ = self.fetch(path, method, headers, body)
+                self.assertNotEqual(status, 200)
+                self.assertNotIn(MARKER, data)
+                self.assertEqual(len(self.backend.seen), before)
+
+    def test_static_portal_only_and_oversized_request_denied(self):
+        for path in ("/", "/remote.html", "/assets/remote-test.js"):
+            status, _, _ = self.fetch(path)
+            self.assertEqual(status, 200, path)
+        status, data, _ = self.fetch("/remote/v1/login", "POST",
+                                     {"Origin": self.expected_origin, "Content-Type": "application/json"},
+                                     b"x" * 2048)
+        self.assertEqual(status, 200)
+        self.assertEqual(data, MARKER)
+        before = len(self.backend.seen)
+        status, body, _ = self.fetch("/remote/v1/login", "POST",
+                                     {"Origin": self.expected_origin, "Content-Type": "application/json"},
+                                     b"x" * 2049)
+        self.assertNotEqual(status, 200)
+        self.assertNotIn(MARKER, body)
+        self.assertEqual(len(self.backend.seen), before)
+
+    def test_chunked_post_denied_before_proxy(self):
+        before = len(self.backend.seen)
+        context = ssl.create_default_context(cafile=str(self.cert))
+        conn = http.client.HTTPSConnection("localhost", self.port, context=context, timeout=4)
+        try:
+            conn.request("POST", "/remote/v1/login", body=[b"{}"],
+                         headers={"Origin": self.expected_origin,
+                                  "Content-Type": "application/json",
+                                  "Transfer-Encoding": "chunked"}, encode_chunked=True)
+            response = conn.getresponse()
+            self.assertNotEqual(response.status, 200)
+            self.assertNotIn(MARKER, response.read())
+        finally:
+            conn.close()
+        self.assertEqual(len(self.backend.seen), before)
+
+    def test_get_request_bodies_denied_before_proxy(self):
+        # A GET body cannot be forwarded merely because ProxyPassMatch
+        # accepted the fixed path. An explicit zero length remains harmless.
+        status, data, _ = self.fetch("/remote/v1/summary", headers={"Content-Length": "0"})
+        self.assertEqual(status, 200)
+        self.assertEqual(data, MARKER)
+        for name in ("challenge", "session", "summary"):
+            before = len(self.backend.seen)
+            status, body, _ = self.fetch("/remote/v1/" + name, body=b"x")
+            self.assertNotEqual(status, 200, name)
+            self.assertNotIn(MARKER, body)
+            self.assertEqual(len(self.backend.seen), before, name)
+
+        before = len(self.backend.seen)
+        context = ssl.create_default_context(cafile=str(self.cert))
+        conn = http.client.HTTPSConnection("localhost", self.port, context=context, timeout=4)
+        try:
+            conn.request("GET", "/remote/v1/summary", body=[b"x"],
+                         headers={"Transfer-Encoding": "chunked"}, encode_chunked=True)
+            response = conn.getresponse()
+            self.assertNotEqual(response.status, 200)
+            self.assertNotIn(MARKER, response.read())
+        finally:
+            conn.close()
+        self.assertEqual(len(self.backend.seen), before)
+
+    def test_plain_http_never_downgrades_to_the_remote_portal(self):
+        before = len(self.backend.seen)
+        reply = b""
+        try:
+            with socket.create_connection(("127.0.0.1", self.port), timeout=3) as conn:
+                conn.settimeout(3)
+                conn.sendall(("GET /remote.html HTTP/1.1\r\nHost: localhost:" +
+                              str(self.port) + "\r\nConnection: close\r\n\r\n").encode())
+                reply = conn.recv(4096)
+        except (ConnectionError, OSError):
+            pass  # TLS servers may immediately close a plaintext connection.
+        self.assertNotIn(b"200 OK", reply)
+        self.assertNotIn(b"Remote portal fixture", reply)
+        self.assertEqual(len(self.backend.seen), before)
 
     def test_tls_only(self):
         context = ssl.create_default_context(cafile=str(self.cert))

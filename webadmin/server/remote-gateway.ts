@@ -24,6 +24,7 @@ type Session = {
   csrf: string;
   created: number;
   used: number;
+  pendingLogouts: number;
 };
 type Challenge = { token: string; expires: number };
 type Budget = { count: number; starts: number };
@@ -266,7 +267,7 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
         // A subsequent GET rechecks the role against the actual database.
         const session: Session = {
           actor, grant: issued.grant, apiSession: issued.session, apiCsrf: issued.csrf,
-          csrf: randomBytes(32).toString("hex"), created: 0, used: 0,
+          csrf: randomBytes(32).toString("hex"), created: 0, used: 0, pendingLogouts: 0,
         };
         const key = randomBytes(32).toString("hex");
         const check = await authorized(key, session);
@@ -279,7 +280,7 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
         // A concurrent logout or earlier re-login may have removed this
         // browser session while credentials were being verified. Do not
         // create an orphaned new session from the revoked predecessor.
-        if (prior && sessions.get(previousSession) !== prior) {
+        if (prior && (sessions.get(previousSession) !== prior || prior.pendingLogouts > 0)) {
           throw new Error("prior_session_revoked");
         }
         // Begin the session only after the asynchronous proof and permission
@@ -312,7 +313,17 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
           !sameSecret(session.csrf, req.headers["x-dc24h-remote-csrf"])) {
         reply(res, 403, { error: "csrf_required" }); return;
       }
-      try { await readBody(req); } catch { reply(res, 400, { error: "bad_request" }); return; }
+      // A concurrent re-login must not survive a logout whose valid CSRF
+      // was checked before its request body finished arriving. Track every
+      // pending logout so an invalid parallel body cannot clear the guard.
+      session.pendingLogouts++;
+      try { await readBody(req); }
+      catch { reply(res, 400, { error: "bad_request" }); return; }
+      finally { session.pendingLogouts--; }
+      if (sessions.get(key) !== session) {
+        reply(res, 401, { error: "unauthorized" }, clearSession());
+        return;
+      }
       sessions.delete(key);
       log("logout");
       reply(res, 200, { schema: 1, authenticated: false }, clearSession());

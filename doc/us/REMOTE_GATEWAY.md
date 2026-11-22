@@ -1,6 +1,6 @@
-# Remote WebAdmin — beta-0.2.4 (local-only read access)
+# Remote WebAdmin — beta-0.2.5 (local-only read access)
 
-**Development-only.** The beta-0.2 gateway, hardened through beta-0.2.4, is an **independent** WebAdmin entry
+**Development-only.** The beta-0.2 gateway, hardened through beta-0.2.5, is an **independent** WebAdmin entry
 point: /remote.html and five precisely defined /remote/v1 routes. It is
 **local-only** on 127.0.0.1 and requires HTTPS, an active **administrator**
 or **Owner** account and a valid account password. There is **no MFA** in this
@@ -39,6 +39,43 @@ read-only permission changes.
 Audit events contain only fixed event names (login_ok, login_refused, logout,
 session_revoked, route_refused, api_unavailable), never passwords, session
 secrets, IP addresses or response payloads.
+
+### beta-0.2.5 Apache2, HTTPS and loopback boundary
+
+The separate sample vhost listens on **127.0.0.1:8443 only** with TLS 1.2/1.3
+and a locally trusted certificate; `DC24H_REMOTE_ORIGIN` must match
+`https://localhost:8443`. The Apache `rewrite` module now denies unexpected
+browser `Host`, remote-API query strings and wrong GET/POST methods before
+proxying. Nonempty Origin must match that exact HTTPS origin; login/logout
+POST requires it. The Node gateway still performs its own independent exact
+route, method, framing, CSRF, account and permission checks. Only the five
+fixed `/remote/v1/*` routes may reach the loopback Node service.
+
+The remote document root is shared with the Vite build, but the remote vhost
+now explicitly forbids the ordinary writable WebAdmin `index.html` and
+`local-*` JavaScript/CSS bundles. `/` and `/remote.html` show the remote
+portal; its separate `remote-*` assets remain available. The sample also
+sets Apache `LimitRequestBody 2048` and explicitly refuses remote POST
+requests without a bounded numeric Content-Length or with Transfer-Encoding;
+the explicit rewrite guard is needed because proxy streaming may bypass the
+general body limit. The three GET-only endpoints additionally reject
+Transfer-Encoding and any nonzero Content-Length before proxying.
+Disposable Apache TLS integration tests exercise wrong
+Host, methods, query strings, Origin, direct admin and secret file paths,
+2048/2049-byte body boundaries, framed GET bodies, chunked framing and plaintext HTTP, checking
+that rejected API requests never contact the mock backend. Static tests
+verify the example still binds loopback and requires the service sandbox.
+
+This is defense in depth, **not** an Internet-ready configuration: an
+operator-supplied public proxy/tunnel or a local attacker with access to
+secrets remains out of scope. The existing public Apache vhost is untouched;
+the example is not automatically installed, enabled or deployed.
+
+Additional session race hardening blocks re-authentication with a browser
+cookie while a CSRF-validated logout using that cookie is still receiving its
+request body. A malformed concurrent logout cannot clear this in-flight guard.
+Previously the slow logout could return success while a replacement session
+remained valid. A socket-free deterministic test reproduces and prevents it.
 
 ### beta-0.2.4 session lifecycle and CSRF verification
 
