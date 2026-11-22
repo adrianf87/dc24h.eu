@@ -2,6 +2,15 @@
 
 This analysis records how the hub and WebAdmin can be attacked, which controls already exist, and which risks remain. The branch starts from main `7872471`. The branch name is `alpha-0.9.1`.
 
+**beta-0.2.6 status privacy:** A separate remote status parser validates
+only public aggregate fields and constructs a fresh allowlisted response.
+Unknown nested identities, peer addresses, account records, tokens, audit
+rows and private paths in the upstream API cannot be serialized by the
+remote gateway. Malformed required counters/schema, unsafe numbers and API
+failures return generic 503, without cached data. This limits accidental
+status data disclosure but does not prevent compromise of the local host,
+server-side service token or private API, and does not authorize public access.
+
 **beta-0.2.5 boundary update:** The separate development-only loopback
 Apache TLS example validates browser Host, methods, query strings and
 Origin before forwarding the five fixed `/remote/v1/*` routes. It denies

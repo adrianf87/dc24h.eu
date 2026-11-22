@@ -78,6 +78,35 @@ test("interrupted login scrubs partially received proof", async () => {
   assert.ok(chunk.every((byte) => byte === 0), "aborted request proof remains in memory");
 });
 
+test("login scrubs the assembled proof buffer after parsing", async () => {
+  const call = harness();
+  const originalConcat = Buffer.concat;
+  const proofCopies: Buffer[] = [];
+  try {
+    Buffer.concat = ((parts: readonly Uint8Array[], length?: number) => {
+      const assembled = originalConcat(parts, length);
+      if (assembled.includes("correct")) proofCopies.push(assembled);
+      return assembled;
+    }) as typeof Buffer.concat;
+    const body = JSON.stringify({ actor_id: "7", password: "correct" });
+    const response = await call("/remote/v1/login", "POST", body, {
+      origin, "content-type": "application/json", "content-length": String(Buffer.byteLength(body)),
+    });
+    assert.equal(response.status, 403, "a request without a challenge must be rejected after parsing");
+    const malformed = "{correct";
+    const rejected = await call("/remote/v1/login", "POST", malformed, {
+      origin, "content-type": "application/json", "content-length": String(Buffer.byteLength(malformed)),
+    });
+    assert.equal(rejected.status, 400, "a malformed JSON proof must be rejected");
+  } finally {
+    Buffer.concat = originalConcat;
+  }
+  assert.equal(proofCopies.length, 2, "both valid and invalid JSON bodies must be assembled");
+  for (const copy of proofCopies) {
+    assert.ok(copy.every((byte) => byte === 0), "copied password bytes remain in memory");
+  }
+});
+
 test("failed audit sink cannot interrupt a rejected gateway request", async () => {
   const call = harness(() => { throw new Error("audit_sink_unavailable"); });
   const refused = await call("/remote/v1/private", "GET");

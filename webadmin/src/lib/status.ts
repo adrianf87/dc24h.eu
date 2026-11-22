@@ -10,7 +10,7 @@ import { parseSearch } from "./search-status.ts";
 import type { SearchSnapshot } from "./search-status.ts";
 import { parseConfiguration } from "./configuration.ts";
 import type { StartupConfiguration } from "./configuration.ts";
-export const WEBADMIN_VERSION = "beta-0.2.5";
+export const WEBADMIN_VERSION = "beta-0.2.6";
 export interface HubSnapshot {
   api_version: "v1";
   server: {
@@ -53,6 +53,17 @@ export interface HubSnapshot {
   configuration?: StartupConfiguration;
   monitoring?: MonitoringSample;
 }
+// Independent, server-side read-only projection for the remote WebAdmin.
+// Never validate/forward unrelated local-admin sections (configuration,
+// monitoring, audit or user identities) through this interface.
+export interface RemoteStatusProjection {
+  server: { version: string; running: boolean; uptime_seconds: number };
+  network: { active_connections: number; accepted_connections: number };
+  users: { online: number; peak_online: number };
+  chat: { received: number; rejected: number };
+  search?: { queries: number; results: number };
+  transfers?: { ctm: number; rcm: number };
+}
 export interface MonitoringSample {
   available: boolean;
   cpu_user_ms: string;
@@ -85,6 +96,39 @@ const counter = (value: unknown): number => {
     throw new Error("Invalid API counter");
   return value;
 };
+export function parseRemoteSummary(value: unknown): RemoteStatusProjection {
+  const root = record(value);
+  const server = record(root.server);
+  const network = record(root.network);
+  const users = record(root.users);
+  const chat = record(root.chat);
+  if (root.api_version !== "v1" || server.name !== "dc24h.eu" ||
+    typeof server.version !== "string" ||
+    !/^(?:alpha-\d{1,3}\.\d{1,3}\.\d{1,3}|beta-\d{1,3}\.\d{1,3}(?:\.\d{1,3})?)$/.test(server.version) ||
+    typeof server.core_running !== "boolean") throw new Error("Invalid remote status schema");
+
+  // Construct new objects from a fixed whitelist. Unknown upstream fields,
+  // even nested or incorrectly typed private sections, are never included.
+  const result: RemoteStatusProjection = {
+    server: { version: server.version, running: server.core_running,
+      uptime_seconds: counter(server.uptime_seconds) },
+    network: { active_connections: counter(network.active_connections),
+      accepted_connections: counter(network.accepted_connections) },
+    users: { online: counter(users.online), peak_online: counter(users.peak_online) },
+    chat: { received: counter(chat.received), rejected: counter(chat.rejected) },
+  };
+  if (root.search !== undefined) {
+    const statistics = record(record(root.search).statistics);
+    result.search = { queries: counter(statistics.queries_received),
+      results: counter(statistics.results_received) };
+  }
+  if (root.transfers !== undefined) {
+    const statistics = record(record(root.transfers).statistics);
+    result.transfers = { ctm: counter(statistics.ctm_received),
+      rcm: counter(statistics.rcm_received) };
+  }
+  return result;
+}
 const decimalText = /^(0|[1-9][0-9]{0,19})$/;
 const monitoringKeys = [
   "cpu_user_ms",

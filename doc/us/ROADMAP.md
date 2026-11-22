@@ -1,5 +1,6 @@
 # Roadmap
 
+**beta-0.2.6 Status privacy and API errors:** [Remote gateway](REMOTE_GATEWAY.md) constructs a minimal server-side status projection from selected safe counters; malformed required values, API changes and outages fail closed. Tests cover unknown private nested fields, unsafe numbers, incomplete data and recovery. Five fixed local-only read-only routes remain unchanged; no public access or deployment.
 **beta-0.2.5 Apache2/HTTPS/loopback:** [Remote gateway](REMOTE_GATEWAY.md) adds pre-proxy Host, method, query and Origin checks, denies the ordinary admin shell and its local bundles, and tests a disposable loopback TLS vhost including negative requests. The current public vhost stays unchanged; no Internet gateway or deployment is authorized.
 **beta-0.2.4 Sessions and CSRF:** [Remote gateway](REMOTE_GATEWAY.md) fixes re-login rotation and delayed-login lifetime, with deterministic negative tests for expiration, session isolation, cookies, challenge replay, logout and process restart. After review/merge, the separately scoped next stage is beta-0.2.5 (Apache/HTTPS/loopback boundary); public access stays disabled.
 **beta-0.2.3 Authentication:** [Remote gateway](REMOTE_GATEWAY.md) hardens account-identity matching, live revocation and delayed read expiry.
