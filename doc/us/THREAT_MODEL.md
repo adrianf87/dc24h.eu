@@ -2,6 +2,16 @@
 
 This analysis records how the hub and WebAdmin can be attacked, which controls already exist, and which risks remain. The branch starts from main `7872471`. The branch name is `alpha-0.9.1`.
 
+**beta-0.2.5 boundary update:** The separate development-only loopback
+Apache TLS example validates browser Host, methods, query strings and
+Origin before forwarding the five fixed `/remote/v1/*` routes. It denies
+the ordinary `index.html` and `local-*` bundles in the shared web root,
+bounds request bodies, and retains TLS and loopback binding. Disposable
+real-Apache negative tests verify upstream isolation. Residual risks:
+misconfigured public tunnels, compromised local processes and stolen
+operator credentials; MFA and public exposure remain unsupported. The
+existing public Apache vhost is not modified or deployed.
+
 **beta-0.2.2 update (remote gateway only):** Untrusted proxy/rewrite metadata
 (`X-Forwarded-*`, `Proxy-Authorization`, `X-Real-IP`, `X-Original-URL`,
 `X-Rewrite-URL`) must not influence the independent loopback session gateway.

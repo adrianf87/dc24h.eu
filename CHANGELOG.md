@@ -1,5 +1,12 @@
 # Changelog
 
+## beta-0.2.5 — 2026-11-22
+
+- Harden the separate, loopback-only Apache2 TLS example at the proxy boundary: reject unexpected `Host`, disallowed route methods, query strings, invalid cross-origin requests and login/logout requests without the exact HTTPS `Origin` before they reach the Node gateway. Keep only the five existing allowlisted routes.
+- Prevent the remote vhost from serving the regular administrative `index.html` and its `local-*` bundles from the shared WebAdmin distribution; retain `remote.html` and remote assets. Limit incoming request bodies at Apache to 2048 bytes.
+- Expand disposable Apache HTTPS tests with wrong-host, wrong-method, query, Origin, local-static-file, secret-file, plaintext-to-TLS and overlong-body refusals, asserting the private mock upstream was never contacted. Lock Apache example and service sandbox expectations in static tests.
+- Update hub/API, controller, WebAdmin and fixtures to `beta-0.2.5`; retain CMake/npm package tuple `0.1.0`, MariaDB v11, ADC/ADCS and the existing public Apache vhost unchanged. No public binding, MFA, remote writes, migration or deployment. This is a development-only branch awaiting CI and review.
+
 ## beta-0.2.4 — 2026-11-22
 
 - Follow-up audit: a second re-login that started with the same valid browser session could complete after another re-login rotated that cookie, leaving an orphan session. A logout could likewise race with in-flight re-authentication and allow a new session after logout. Require the predecessor session to remain current at final authorization; refuse the late login if it was replaced or revoked. Added two deterministic regressions reproducing HTTP 200 before this fix.
