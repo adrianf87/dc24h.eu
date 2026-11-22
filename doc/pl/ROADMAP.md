@@ -1,5 +1,7 @@
 # Plan rozwoju
 
+**beta-0.2.4 Sesje i CSRF:** [Brama WebAdmin](REMOTE_GATEWAY.md) poprawia rotację po ponownym logowaniu i liczenie czasu po opóźnionej autoryzacji. Testy negatywne obejmują wygasanie, izolację sesji, cookies, ponowne użycie wyzwania, wylogowanie i restart. Po przeglądzie i scaleniu osobnym etapem będzie beta-0.2.5 (granica Apache/HTTPS/loopback); dostęp publiczny pozostaje wyłączony.
+**beta-0.2.3 Uwierzytelnianie:** [Brama WebAdmin](REMOTE_GATEWAY.md) uszczelnia zgodność ID konta, unieważnianie uprawnień oraz wygaśnięcie w trakcie odczytu.
 **beta-0.2.2 Walidacja HTTP:** [Brama WebAdmin](REMOTE_GATEWAY.md) ma testy odmowy dla ścieżek, metod, nagłówków i treści żądań, przy zachowaniu lokalnego trybu tylko do odczytu. Kolejny proponowany etap beta-0.2.3 (cofanie autoryzacji) wymaga oddzielnej zgody i gałęzi po scaleniu patcha; dostęp publiczny pozostaje wyłączony.
 **beta-0.1 Linia beta:** [Kanał wydania](BETA.md) zgłasza `beta-0.1` i zachowuje zachowanie alpha-0.9.17. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.17 Zależności:** [Kontrola bibliotek i testy bezpieczeństwa](DEPENDENCIES.md) sprawdza pliki wykonywalne huba, lockfile WebAdmin i zarejestrowane testy bezpieczeństwa. Schemat v9 pozostaje bez zmian.

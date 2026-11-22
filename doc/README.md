@@ -1,6 +1,6 @@
 # dc24h.eu technical documentation
 
-Current development version: beta-0.2.3.
+Current development version: beta-0.2.4.
 
 [Beta-0.2.3 authentication and revalidation](us/BETA.md) · [PL](pl/BETA.md)
 

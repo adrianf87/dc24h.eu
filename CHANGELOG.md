@@ -1,5 +1,14 @@
 # Changelog
 
+## beta-0.2.4 — 2026-11-22
+
+- Follow-up audit: a second re-login that started with the same valid browser session could complete after another re-login rotated that cookie, leaving an orphan session. A logout could likewise race with in-flight re-authentication and allow a new session after logout. Require the predecessor session to remain current at final authorization; refuse the late login if it was replaced or revoked. Added two deterministic regressions reproducing HTTP 200 before this fix.
+- Guard remote UI responses by authentication generation: old summary success/denial responses can no longer replace metrics or expire a newly authenticated browser session. Clear displayed data immediately when logout begins and discard the entered password when a challenge request fails. Added Playwright regressions for out-of-order responses and challenge failures.
+- Rotate the browser's prior server-side session on successful re-authentication, so a captured old cookie no longer authorizes reads after re-login. A failed login does not invalidate the existing session.
+- Stamp the new session's 10-minute absolute and two-minute idle deadlines after asynchronous password proof and permission checks, not when the request first arrived. Delayed authentication no longer returns an already-expired session.
+- Add deterministic session/CSRF regression tests: browser isolation, one-time challenges including races, four-session eviction, logout/replay and concurrent status reads, wrong/missing Origin and CSRF, restart invalidation and both expiry clocks. Add a Playwright regression for clearing stale metrics on expiry.
+- Report `beta-0.2.4` in the hub/API, service controller and WebAdmin. Maintain exactly five read-only gateway routes, local HTTPS/loopback-only access, Secure/HttpOnly/SameSite=Strict cookies, CMake/npm package tuple `0.1.0`, MariaDB schema v11 and unchanged ADC/ADCS. No public access, MFA, remote writes, DB migration or production deployment.
+
 ## beta-0.2.3-fix — 2026-11-22
 
 Follow-up security correction to the merged `beta-0.2.3` baseline; the application continues to identify as `beta-0.2.3`.

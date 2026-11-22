@@ -233,6 +233,9 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
     }
     if (name === "login") {
       // A challenge is one-use even if request framing or JSON is invalid.
+      const previousSession = cookie(req, "dc24h_remote");
+      const prior = /^[0-9a-f]{64}$/.test(previousSession)
+        ? sessions.get(previousSession) : undefined;
       const init = cookie(req, "dc24h_remote_init");
       const challenge = challenges.get(init);
       challenges.delete(init);
@@ -263,7 +266,7 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
         // A subsequent GET rechecks the role against the actual database.
         const session: Session = {
           actor, grant: issued.grant, apiSession: issued.session, apiCsrf: issued.csrf,
-          csrf: randomBytes(32).toString("hex"), created: now, used: now,
+          csrf: randomBytes(32).toString("hex"), created: 0, used: 0,
         };
         const key = randomBytes(32).toString("hex");
         const check = await authorized(key, session);
@@ -273,6 +276,19 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
           throw fault;
         }
         if (check !== "ok") throw new Error("authorization_refused");
+        // A concurrent logout or earlier re-login may have removed this
+        // browser session while credentials were being verified. Do not
+        // create an orphaned new session from the revoked predecessor.
+        if (prior && sessions.get(previousSession) !== prior) {
+          throw new Error("prior_session_revoked");
+        }
+        // Begin the session only after the asynchronous proof and permission
+        // recheck succeed. A slow upstream must not issue an expired cookie.
+        session.created = clock();
+        session.used = session.created;
+        // Re-authentication replaces the session presented by this browser;
+        // a previously issued cookie must never remain usable in parallel.
+        if (prior) sessions.delete(previousSession);
         if (sessions.size >= maxSessions) sessions.delete(sessions.keys().next().value!);
         sessions.set(key, session);
         log("login_ok");

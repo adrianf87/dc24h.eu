@@ -184,3 +184,15 @@ Pozostają ryzyka przejęcia lokalnego tokenu/gniazda, serwera,
 przeglądarki lub hasła oraz błędnej konfiguracji lokalnego TLS i limitów
 obowiązujących tylko w procesie. **Brak MFA i publicznego dostępu.**
 Szczegóły: [Brama WebAdmin](REMOTE_GATEWAY.md).
+
+W beta-0.2.4 dodano testy odmowy ponownego użycia starego cookie po
+zalogowaniu, izolacji CSRF między przeglądarkami, jednorazowych wyzwań,
+wygaśnięcia przy opóźnionej autoryzacji, wylogowania w trakcie odczytu
+oraz utraty wszystkich sesji po restarcie procesu. Brama pozostaje
+lokalna i przechowuje sesje tylko w pamięci; przejęcie hosta lub
+przeglądarki, kradzież hasła i brak MFA pozostają ryzykami.
+
+Dodatkowy audyt usuwa wyścig równoległych ponownych logowań oraz logowania
+trwającego podczas wylogowania, które wcześniej mogły pozostawić nową
+osieroconą sesję. Przeglądarka ignoruje spóźnione statystyki po zmianie
+sesji, więc stary odczyt nie przekracza granicy nowej autoryzacji.
