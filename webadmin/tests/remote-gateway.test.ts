@@ -84,6 +84,7 @@ test("remote gateway authenticates a real API proof but projects only approved a
   const socket = join(directory, "api.sock");
   let clock = 100_000;
   let revoked = false;
+  let plainManagement401 = false;
   let statusContentType = "application/json; charset=utf-8";
   let upstreamCalls: string[] = [];
   const events: string[] = [];
@@ -103,6 +104,11 @@ test("remote gateway authenticates a real API proof but projects only approved a
         res.end(JSON.stringify(access)); return;
       }
       if (req.url === "/api/v1/management" && req.method === "GET") {
+        if (plainManagement401) {
+          res.statusCode = 401;
+          res.setHeader("Content-Type", "text/plain");
+          res.end("upstream access revoked"); return;
+        }
         assert.equal(req.headers["x-dc24h-admin-grant"], grant);
         assert.equal(req.headers["x-dc24h-session"], session);
         assert.equal(req.headers["x-dc24h-csrf"], csrf);
@@ -258,6 +264,20 @@ test("remote gateway authenticates a real API proof but projects only approved a
     assert.equal(again.status, 200);
     clock += 2 * 60_000 + 1;
     assert.equal((await call("/remote/v1/summary", "GET", "", { Cookie: again.cookies[0]!.split(";")[0]! })).status, 401);
+    const next = await call("/remote/v1/challenge");
+    const lastLogin = await call("/remote/v1/login", "POST", JSON.stringify({ actor_id: "7", password: "correct" }), {
+      Cookie: next.cookies[0]!.split(";")[0]!, "X-DC24H-Remote-CSRF": JSON.parse(next.data).csrf,
+    });
+    assert.equal(lastLogin.status, 200);
+    // Upstream HTTP denial must revoke even if its payload is not JSON.
+    plainManagement401 = true;
+    const renewedCookie = lastLogin.cookies[0]!.split(";")[0]!;
+    const denied = await call("/remote/v1/summary", "GET", "", { Cookie: renewedCookie });
+    assert.equal(denied.status, 403);
+    assert.equal(denied.data, '{"error":"forbidden"}');
+    assert.ok(!denied.data.includes("upstream access revoked"));
+    assert.equal((await call("/remote/v1/session", "GET", "", { Cookie: renewedCookie })).status, 401);
+    plainManagement401 = false;
   } finally {
     gateway.close();
     api.close();

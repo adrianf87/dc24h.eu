@@ -101,14 +101,18 @@ async function upstream(config: Credentials, path: "/api/v1/admin/access" | "/ap
       answer.on("end", () => {
         let assembled: Buffer | undefined;
         try {
-          if (!isJsonContentType(answer.headers["content-type"])) throw Error();
-          assembled = Buffer.concat(chunks);
-          const value: unknown = JSON.parse(assembled.toString("utf8"));
+          // Preserve the HTTP denial status even if an upstream proxy returns
+          // plain text or invalid JSON. The caller must revoke the session.
           if (answer.statusCode !== 200) {
             const error = new Error("upstream_status");
             (error as Error & { status: number }).status = answer.statusCode ?? 503;
             reject(error);
-          } else resolve(value);
+            return;
+          }
+          if (!isJsonContentType(answer.headers["content-type"])) throw Error();
+          assembled = Buffer.concat(chunks);
+          const value: unknown = JSON.parse(assembled.toString("utf8"));
+          resolve(value);
         } catch { reject(new Error("upstream_invalid")); }
         finally { assembled?.fill(0); scrub(); }
       });
