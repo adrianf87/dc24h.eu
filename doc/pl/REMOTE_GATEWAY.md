@@ -1,4 +1,4 @@
-# Zdalny WebAdmin — beta-0.3.7 (lokalne MFA, tylko odczyt)
+# Zdalny WebAdmin — beta-0.3.10 (lokalne MFA, tylko odczyt)
 
 **Wersja rozwojowa.** beta-0.2 dodaje, a beta-0.2.2–beta-0.3.7 uszczelniają **osobną** bramę WebAdmin:
 /remote.html i pięć ściśle określonych tras /remote/v1. Działa **tylko
@@ -6,6 +6,11 @@ lokalnie** na 127.0.0.1 i wymaga HTTPS, aktywnego konta
 **administrator** albo **Owner**, hasła i kodu TOTP. Jest to **MFA nieodporne na phishing**; udostępnianie bramy w Internecie, przez proxy zewnętrzne albo
 tunel **nie jest obsługiwane**. Kompilacja nie uruchamia ani nie wdraża
 bramy. Dotychczasowa publiczna konfiguracja Apache pozostaje bez zmian.
+
+Etap III dopuszcza wyłącznie **ręcznie uruchomiony, prywatny pilotaż**
+poprzez lokalny tunel SSH, bez publicznego portu czy proxy. Przed testem
+sprawdź klucz hosta SSH oraz certyfikat HTTPS Apache. Szczegóły:
+[procedura pilotażu](REMOTE_PILOT.md).
 
 ## Granice zaufania i uprawnienia
 

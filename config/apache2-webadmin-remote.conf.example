@@ -1,6 +1,7 @@
-# beta-0.2.5: separate local-only HTTPS read-only WebAdmin gateway.
-# Example ONLY. Do not make this virtual host public. There is no MFA and
-# therefore no supported public access mode in beta-0.2.
+# beta-0.3.8: separate, hardened local-only HTTPS read-only WebAdmin gateway.
+# Example ONLY. TOTP is not phishing resistant and does not enable a public
+# listener or Internet-facing reverse proxy. An opt-in SSH port-forward pilot
+# still terminates at loopback and requires verified HTTPS on the client.
 # Required modules: ssl, headers, rewrite, alias, proxy, proxy_http, authz_core,
 # authz_host. Configure a trusted local certificate before use.
 # Match DC24H_REMOTE_ORIGIN=https://localhost:8443 in the gateway service.
@@ -21,6 +22,10 @@ TraceEnable Off
     SSLCertificateFile "/etc/dc24h/remote-tls/fullchain.pem"
     SSLCertificateKeyFile "/etc/dc24h/remote-tls/privkey.pem"
     SSLProtocol -all +TLSv1.2 +TLSv1.3
+    # Restrict TLS 1.2 to forward-secret AEAD suites; TLS 1.3 uses OpenSSL's
+    # separate modern cipher-suite policy. Validate with a real TLS handshake.
+    SSLCipherSuite "ECDHE+AESGCM:ECDHE+CHACHA20:!aNULL:!eNULL:!MD5:!3DES:!RC4"
+    SSLHonorCipherOrder On
     SSLCompression Off
     SSLSessionTickets Off
     ProxyTimeout 5
@@ -132,5 +137,8 @@ TraceEnable Off
     Header always set X-Content-Type-Options "nosniff"
     Header always set X-Frame-Options "DENY"
     Header always set Referrer-Policy "no-referrer"
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+    Header always set Cross-Origin-Opener-Policy "same-origin"
+    Header always set Cross-Origin-Resource-Policy "same-origin"
     Header always set Cache-Control "no-store"
 </VirtualHost>

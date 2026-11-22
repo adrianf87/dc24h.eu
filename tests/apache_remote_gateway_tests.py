@@ -163,6 +163,9 @@ class ApacheRemoteGateway(unittest.TestCase):
             self.assertEqual(body, MARKER)
             self.assertEqual(headers.get("Cache-Control"), "no-store")
             self.assertIn("nosniff", headers.get("X-Content-Type-Options", ""))
+            self.assertEqual(headers.get("Cross-Origin-Opener-Policy"), "same-origin")
+            self.assertEqual(headers.get("Cross-Origin-Resource-Policy"), "same-origin")
+            self.assertIn("camera=()", headers.get("Permissions-Policy", ""))
         forwarded = {item[1] for item in self.backend.seen}
         self.assertEqual(forwarded, {"/remote/v1/" + route for route in
                                      ("challenge", "login", "session", "summary", "logout")})
@@ -318,6 +321,21 @@ class ApacheRemoteGateway(unittest.TestCase):
             self.assertIn(b"Remote portal fixture", answer.read())
         finally:
             conn.close()
+
+    def test_tls_12_and_13_negotiate_authenticated_aead(self):
+        for version in (ssl.TLSVersion.TLSv1_2, ssl.TLSVersion.TLSv1_3):
+            with self.subTest(version=version.name):
+                context = ssl.create_default_context(cafile=str(self.cert))
+                context.minimum_version = version
+                context.maximum_version = version
+                conn = http.client.HTTPSConnection("localhost", self.port, context=context, timeout=4)
+                try:
+                    conn.request("GET", "/remote.html")
+                    cipher = conn.sock.cipher()[0]
+                    self.assertEqual(conn.getresponse().status, 200)
+                    self.assertTrue("GCM" in cipher or "CHACHA20" in cipher, cipher)
+                finally:
+                    conn.close()
 
 
 if __name__ == "__main__":

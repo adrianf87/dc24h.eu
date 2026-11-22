@@ -1,5 +1,12 @@
 # Changelog
 
+## beta-0.3.8–beta-0.3.10 Stage III — 2026-11-23 (existing branch beta-0.3.1-12-full, current beta-0.3.10)
+
+- **0.3.8 — HTTPS:** Strengthen the separate 127.0.0.1:8443 Apache TLS example with forward-secret TLS 1.2 AEAD ciphers, server cipher preference and explicit cross-origin isolation/permission response headers; keep TLS 1.2/1.3, session-ticket/compression refusal and exact local route/Origin constraints.
+- **0.3.9 — systemd:** Add device, kernel, cgroup, process and namespace isolation to the example Node service. Keep MFA StateDirectory 0700, loopback IP restrictions, C++ API Unix socket access and a read-only filesystem; avoid incompatible `PrivateNetwork` and V8/JIT memory execution restrictions.
+- **0.3.10 — private access pilot:** Add operator-only SSH local port-forward guidance and an independent verified-HTTPS smoke script that performs five fixed unauthenticated GETs, checks no-store/nosniff and refuses unsafe responses without sending credentials. Register regression tests in CTest; update all active runtime/test versions to `beta-0.3.10`.
+- No new branch, public listener, hosted tunnel, remote write, MFA bypass, MariaDB migration, ADC/ADCS change, deployment or merge to main. Public-facing access and phishing-resistant MFA remain separate design work.
+
 ## beta-0.3.4–beta-0.3.7 Stage II — 2026-11-22 (existing branch beta-0.3.1-12-full, current beta-0.3.7)
 
 - **0.3.4 — MFA contract:** Require TOTP alongside existing password proof, identity and live management checks. Login accepts exactly the three expected fields; session JSON includes a verified-MFA marker. There are still only five loopback-only, read-only routes.

@@ -1,6 +1,8 @@
 # Dokumentacja dc24h.eu High Starter
 
-beta-0.3.7: Etap I (beta-0.3.1–beta-0.3.3) poprawia CI i bezpieczeństwo API; Etap II (beta-0.3.4–beta-0.3.7) dodaje lokalne TOTP, ochronę przed powtórnym kodem, sesje MFA i zdarzenia w journald. Hub, API, kontroler i WebAdmin zgłaszają beta-0.3.7; nazwa projektu to dc24h.eu High Starter. Wewnętrzny identyfikator protokołu `dc24h.eu`, schemat v11 i publiczne proxy Apache pozostają bez zmian. TOTP nie zezwala na dostęp z Internetu, zdalny zapis ani wdrożenie produkcyjne.
+beta-0.3.10: Etap I poprawia CI i bezpieczeństwo API; Etap II dodaje lokalne TOTP, ochronę sesji i audyt; Etap III (beta-0.3.8–beta-0.3.10) utwardza lokalne HTTPS, izolację systemd i opcjonalny pilotaż prywatnego odczytu przez sprawdzony tunel SSH. Hub, API, kontroler i WebAdmin zgłaszają beta-0.3.10; nazwa projektu to dc24h.eu High Starter. Wewnętrzny identyfikator protokołu `dc24h.eu`, schemat v11 i publiczne proxy Apache pozostają bez zmian. Nie ma dostępu publicznego, zdalnego zapisu ani wdrożenia produkcyjnego.
+
+- [Beta-0.3.8–beta-0.3.10 — Etap III](BETA.md) · [pilotaż prywatny SSH](REMOTE_PILOT.md)
 
 - [Beta-0.3.4–beta-0.3.7 — Etap II](BETA.md)
 

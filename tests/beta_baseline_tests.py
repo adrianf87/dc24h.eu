@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lock beta-0.3.1–beta-0.3.7 Stages I-II metadata and safety limits."""
+"""Lock beta-0.3.1–beta-0.3.10 Stages I–III metadata and safety limits."""
 
 from pathlib import Path
 import sys
@@ -57,7 +57,7 @@ def main():
     errors = []
     cmake = check(ROOT / "CMakeLists.txt", (
         "project(dc24h VERSION 0.1.0 LANGUAGES CXX)",
-        'set(DC24H_VERSION "beta-0.3.7")',
+        'set(DC24H_VERSION "beta-0.3.10")',
         'add_executable(dc24h-service-controller',
         'service.controller.process',
         "add_test(NAME beta.baseline ",
@@ -93,7 +93,8 @@ def main():
     require("ubuntu-latest" not in workflow, "build.yml: ubuntu-latest is selected", errors)
     check(ROOT / "README.md", (
         "# dc24h.eu High Starter",
-        "Current development version: beta-0.3.7",
+        "Current development version: beta-0.3.10",
+        "beta-0.3.8–beta-0.3.10 Stage III",
         "beta-0.3.4–beta-0.3.7 Stage II",
         "beta-0.2.7–beta-0.2.12 Consolidated hardening",
         "beta-0.2.6 Status projection privacy",
@@ -106,7 +107,7 @@ def main():
         "beta-0.1.8 Development baseline",
         "<summary>Alpha 0.9.x (17 releases)</summary>",
     ), errors)
-    check(ROOT / "doc/README.md", ("Current development version: beta-0.3.7",), errors)
+    check(ROOT / "doc/README.md", ("Current development version: beta-0.3.10",), errors)
     check(ROOT / "doc/us/BETA.md", (
         "# Combined hardening release — beta-0.2.7 to beta-0.2.12",
         "## beta-0.2.9 — private API response hardening",
@@ -264,7 +265,7 @@ def main():
         "Owner-only fixed hub status/action",
     ), errors)
     check(ROOT / "webadmin/src/lib/status.ts", (
-        'export const WEBADMIN_VERSION = "beta-0.3.7";',
+        'export const WEBADMIN_VERSION = "beta-0.3.10";',
         '!/^(?:alpha-\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|beta-\\d{1,3}\\.\\d{1,3}(?:\\.\\d{1,3})?)$/.test(server.version)',
     ), errors)
     check(ROOT / "src/security/roles.cpp", (
@@ -288,6 +289,11 @@ def main():
     check(ROOT / "doc/pl/HUB_WEBADMIN.md", ("beta-0.1.7", "Owner", "outcome_unknown", "Apache"), errors)
     check(ROOT / "doc/us/REMOTE_GATEWAY.md", ("beta-0.2", "local-only", "MFA", "CSRF", "administrator"), errors)
     check(ROOT / "doc/pl/REMOTE_GATEWAY.md", ("beta-0.2", "lokalny", "MFA", "CSRF", "administrator"), errors)
+    check(ROOT / "doc/us/REMOTE_PILOT.md", ("beta-0.3.10", "127.0.0.1:8443", "ssh -N -T", "--ca-file"), errors)
+    check(ROOT / "doc/pl/REMOTE_PILOT.md", ("beta-0.3.10", "127.0.0.1:8443", "ssh -N -T", "--ca-file"), errors)
+    check(ROOT / "scripts/remote_pilot_check.py", ("ssl.create_default_context", '"localhost", 8443', "CERT_REQUIRED"), errors)
+    check(ROOT / "config/apache2-webadmin-remote.conf.example", ("SSLHonorCipherOrder On", "SSLCipherSuite", "Listen 127.0.0.1:8443"), errors)
+    check(ROOT / "CMakeLists.txt", ("remote.pilot.preflight",), errors)
     check(ROOT / "webadmin/server/remote-main.ts", ("loadTotpVerifier", "mfaVerify: mfa.verify", "127.0.0.1"), errors)
     check(ROOT / "webadmin/server/remote-mfa.ts", ("timingSafeEqual", "fsyncSync", "O_NOFOLLOW", "lastUsed"), errors)
     check(ROOT / "webadmin/src/remote/RemoteApp.tsx", ("s.mfa === true", 'name="otp"'), errors)
@@ -301,7 +307,7 @@ def main():
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1
-    print("Beta 0.3.7 Stages I-II metadata, MFA and inherited safety limits passed")
+    print("Beta 0.3.10 Stages I–III metadata, MFA, HTTPS and private pilot safety limits passed")
     return 0
 
 

@@ -1,11 +1,16 @@
-# Remote WebAdmin — beta-0.3.7 (local-only MFA, read-only)
+# Remote WebAdmin — beta-0.3.10 (local-only MFA, read-only)
 
-**Development-only.** The beta-0.2 gateway, hardened through beta-0.3.7, is an **independent** WebAdmin entry
+**Development-only.** The beta-0.2 gateway, hardened through beta-0.3.10, is an **independent** WebAdmin entry
 point: /remote.html and five precisely defined /remote/v1 routes. It is
 **local-only** on 127.0.0.1 and requires HTTPS, an active **administrator**
 or **Owner** account, a valid account password and an enrolled TOTP code. This is **not phishing-resistant MFA**; exposing this gateway on a public network, through a forwarding proxy
 or an Internet-facing tunnel is **not supported**. Nothing is deployed or
 enabled by the build. The existing public Apache configuration is unchanged.
+
+Stage III provides only an **operator-initiated, SSH-forwarded, private**
+read-only pilot. It is never a public proxy or listener: read the separate
+[SSH pilot procedure](REMOTE_PILOT.md) and verify both the SSH host key and
+the Apache HTTPS certificate before any test.
 
 ## Scope and trust boundaries
 

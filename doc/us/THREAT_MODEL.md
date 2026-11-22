@@ -2,6 +2,18 @@
 
 This analysis records how the hub and WebAdmin can be attacked, which controls already exist, and which risks remain. The branch starts from main `7872471`. The branch name is `alpha-0.9.1`.
 
+**beta-0.3.8–beta-0.3.10 private pilot follow-up:** The independent
+loopback Apache vhost restricts TLS 1.2 to forward-secret AEAD suites and
+adds browser isolation/privacy response headers. The opt-in systemd gateway
+restricts devices, namespaces, kernel surfaces and non-loopback networking
+while retaining access to its required C++ Unix socket and loopback Apache.
+An optional SSH *local* port forward can carry an operator's browser to the
+same HTTPS vhost; the operator must verify both host key and TLS certificate.
+The fixed-route pilot preflight does no authentication or write. Neither
+the tunnel nor TOTP solves stolen SSH keys, client compromise, phishing,
+replayed sessions or poor certificate enrollment. No Internet listener or
+public reverse proxy is enabled. See [private pilot](REMOTE_PILOT.md).
+
 **beta-0.3.4–beta-0.3.7 local MFA follow-up:** The independent loopback
 read-only gateway now requires a separate TOTP code after password and
 current role authorization. Its owner-only enrollment registry and

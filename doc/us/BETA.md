@@ -1,6 +1,26 @@
+# Beta 0.3 Stage III — beta-0.3.8 through beta-0.3.10
+
+The existing branch `beta-0.3.1-12-full` now reports **`beta-0.3.10`**. Stages I–III are delivered together without another branch, deployment or merge to `main`.
+
+## beta-0.3.8 — local HTTPS trust boundary
+
+Harden the **existing** `127.0.0.1:8443` Apache TLS vhost: retain TLS 1.2/1.3, restrict TLS 1.2 to forward-secret AEAD cipher suites, disable TLS compression and resumption tickets, and add cross-origin isolation/privacy response headers. Keep exact Host/Origin/route/method/body checks and fixed five local read-only gateway routes. No public listener, reverse proxy or new credential entry point.
+
+## beta-0.3.9 — dedicated system service isolation
+
+Expand the opt-in systemd example: private devices, kernel, cgroup, process and namespace restrictions, SUID/SGID and realtime limits, native syscall architecture and locked personality. Preserve owner-only MFA state, read-only system paths, the local C++ API Unix socket and IPAddressDeny/Allow loopback policy. Do **not** set `PrivateNetwork` (it would isolate the Apache/Node loopback), or `MemoryDenyWriteExecute` (unsafe for the Node/V8 JIT) without specific compatibility proof. The example is never auto-installed.
+
+## beta-0.3.10 — optional private read-only pilot
+
+Document an **operator-initiated** SSH **local** port-forward that carries `localhost:8443` from the workstation to the server's localhost-only Apache TLS vhost. SSH host-key authentication is independent of browser certificate verification; the client must validate both. Add a Python preflight using verified TLS and five fixed unauthenticated GETs; no password, TOTP, cookie, API token, remote host parameter, redirect following or write route. Tests enforce these limits. The pilot changes no listener or public firewall policy, grants no remote writes and is not an Internet-facing/WebAuthn-ready deployment. See [optional pilot](REMOTE_PILOT.md) and [gateway](REMOTE_GATEWAY.md).
+
+Stages beta-0.3.11–beta-0.3.12 remain planned. CMake/npm package tuple `0.1.0`, schema v11, ADC/ADCS and existing public Apache vhost remain unchanged.
+
+## Previous stage — beta-0.3.4 through beta-0.3.7
+
 # Beta 0.3 Stage II — beta-0.3.4 through beta-0.3.7
 
-The existing branch `beta-0.3.1-12-full` now reports **`beta-0.3.7`** (Stage I plus Stage II). No separate patch branches, tags or deployment were created.
+On completing Stage II, the existing branch `beta-0.3.1-12-full` reported **`beta-0.3.7`** (Stage I plus Stage II). No separate patch branches, tags or deployment were created; Stage III above supersedes the runtime identifier.
 
 ## beta-0.3.4 — MFA threat model and contract
 

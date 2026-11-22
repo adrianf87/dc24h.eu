@@ -1,6 +1,10 @@
 # dc24h.eu High Starter technical documentation
 
-Current development version: beta-0.3.7.
+Current development version: beta-0.3.10.
+
+[Beta-0.3.8–beta-0.3.10 Stage III: HTTPS, systemd and private pilot](us/BETA.md) · [PL](pl/BETA.md)
+
+[Optional private SSH read-only pilot](us/REMOTE_PILOT.md) · [PL](pl/REMOTE_PILOT.md)
 
 [Beta-0.3.4–beta-0.3.7 Stage II: local MFA and audit](us/BETA.md) · [PL](pl/BETA.md)
 

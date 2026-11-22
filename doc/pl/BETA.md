@@ -1,6 +1,26 @@
+# Etap III linii beta-0.3 — beta-0.3.8 do beta-0.3.10
+
+Na istniejącej gałęzi `beta-0.3.1-12-full` aktualny identyfikator to **`beta-0.3.10`**. Etapy I–III są realizowane bez dodatkowego brancha, instalacji czy scalenia z `main`.
+
+## beta-0.3.8 — bezpieczeństwo lokalnego HTTPS
+
+Utwardzenie dotychczasowego Apache TLS wyłącznie na `127.0.0.1:8443`: TLS 1.2/1.3, mocne szyfry AEAD z forward secrecy dla TLS 1.2, wyłączenie kompresji i biletów sesji oraz nagłówki ochrony cross-origin i prywatności. Pozostaje ścisłe sprawdzanie Host, Origin, tras, metod i wielkości body. Nie powstaje publiczny port, proxy zewnętrzne ani nowa trasa logowania.
+
+## beta-0.3.9 — izolacja usługi systemowej
+
+Rozbudowany opcjonalny unit systemd ogranicza urządzenia, jądro, cgroup, przestrzenie nazw, widoczność procesów, SUID/SGID, czas rzeczywisty i architekturę wywołań systemowych. Zachowuje prywatny katalog MFA, tylko odczyt systemu, gniazdo Unix API C++ i politykę ruchu loopback. Nie stosuje `PrivateNetwork`, które odcięłoby loopback Apache/Node, ani `MemoryDenyWriteExecute`, które może unieruchomić JIT Node/V8. Wdrożenie pozostaje ręczne.
+
+## beta-0.3.10 — opcjonalny pilotaż prywatnego odczytu
+
+Wyłącznie na decyzję operatora: **lokalne przekierowanie SSH** z `localhost:8443` komputera operatora do lokalnego Apache serwera. Trzeba niezależnie zweryfikować klucz SSH i certyfikat HTTPS w przeglądarce. Skrypt Python sprawdza pięć stałych nieuwierzytelnionych odczytów HTTPS; nie wysyła haseł, TOTP, cookie, tokenów, nie przyjmuje adresu publicznego, nie podąża za przekierowaniami ani nie próbuje operacji zapisu. Testy utrwalają ograniczenia. Nadal brak publicznego listenera, nowych uprawnień i produkcyjnego dostępu internetowego. Szczegóły w [pilotażu](REMOTE_PILOT.md) i [bramie](REMOTE_GATEWAY.md).
+
+Etap beta-0.3.11–beta-0.3.12 jest nadal planowany. Numery pakietów CMake/npm `0.1.0`, schemat v11, ADC/ADCS i publiczny Apache bez zmian.
+
+## Poprzedni etap — beta-0.3.4 do beta-0.3.7
+
 # Etap II linii beta-0.3 — beta-0.3.4 do beta-0.3.7
 
-Na istniejącej gałęzi `beta-0.3.1-12-full` identyfikator wersji zmienia się na **`beta-0.3.7`** (Etap I i II). Nie powstają nowe branche, tagi ani wdrożenia.
+Po ukończeniu Etapu II na gałęzi `beta-0.3.1-12-full` identyfikator wersji wynosił **`beta-0.3.7`** (Etapy I–II). Nie powstały nowe branche, tagi ani wdrożenia; Etap III powyżej zastępuje ten identyfikator runtime.
 
 ## beta-0.3.4 — projekt MFA i granice zaufania
 

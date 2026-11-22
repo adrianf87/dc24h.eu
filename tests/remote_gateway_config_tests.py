@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Remote beta-0.3.7 gateway invariants, including Apache boundary guardrails."""
+"""Remote beta-0.3.10 gateway invariants, including HTTPS and systemd sandbox."""
 from pathlib import Path
 import unittest
 
@@ -17,6 +17,10 @@ class RemoteConfiguration(unittest.TestCase):
         self.assertIn("Require local", config)
         self.assertIn("SSLEngine On", config)
         self.assertIn("SSLProtocol -all +TLSv1.2 +TLSv1.3", config)
+        self.assertIn('SSLCipherSuite "ECDHE+AESGCM:ECDHE+CHACHA20:', config)
+        self.assertIn("SSLHonorCipherOrder On", config)
+        self.assertIn("SSLCompression Off", config)
+        self.assertIn("SSLSessionTickets Off", config)
         self.assertIn("ProxyAddHeaders Off", config)
         self.assertIn("MergeSlashes Off", config)
         self.assertIn("RewriteEngine On", config)
@@ -46,6 +50,9 @@ class RemoteConfiguration(unittest.TestCase):
             self.assertIn("RequestHeader unset " + header, config)
         self.assertIn("frame-ancestors 'none'", config)
         self.assertIn("Cache-Control \"no-store\"", config)
+        self.assertIn('Cross-Origin-Opener-Policy "same-origin"', config)
+        self.assertIn('Cross-Origin-Resource-Policy "same-origin"', config)
+        self.assertIn('Permissions-Policy "camera=()', config)
 
     def test_systemd_sample_rejects_nonlocal_traffic(self):
         unit = self.text("config/dc24h-remote-gateway.service.example")
@@ -56,9 +63,18 @@ class RemoteConfiguration(unittest.TestCase):
                          "DC24H_REMOTE_MFA_REPLAY_FILE=/var/lib/dc24h-remote/replay.jsonl",
                          "IPAddressAllow=localhost", "NoNewPrivileges=true",
                          "ProtectSystem=strict", "RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6",
+                         "PrivateDevices=true", "ProtectKernelTunables=true",
+                         "ProtectKernelModules=true", "ProtectKernelLogs=true",
+                         "ProtectControlGroups=true", "ProtectClock=true",
+                         "ProtectHostname=true", "ProtectProc=invisible",
+                         "RestrictNamespaces=true", "RestrictSUIDSGID=true",
+                         "RestrictRealtime=true", "LockPersonality=true",
+                         "SystemCallArchitectures=native",
                          "CapabilityBoundingSet=", "AmbientCapabilities="):
             self.assertIn(expected, unit)
         self.assertNotIn("DC24H_REMOTE_PUBLIC=", unit)
+        self.assertNotIn("PrivateNetwork=true", unit)
+        self.assertNotIn("MemoryDenyWriteExecute=true", unit)
 
     def test_gateway_in_process_permissions_and_boundaries(self):
         code = self.text("webadmin/server/remote-gateway.ts")
@@ -103,13 +119,14 @@ class RemoteConfiguration(unittest.TestCase):
         self.assertNotIn("sessionStorage", ui)
         self.assertNotIn("Start/Stop/Restart", ui)
         self.assertIn('remote.html', self.text("webadmin/vite.config.ts"))
-        self.assertIn('set(DC24H_VERSION "beta-0.3.7")', self.text("CMakeLists.txt"))
-        self.assertIn('WEBADMIN_VERSION = "beta-0.3.7"', self.text("webadmin/src/lib/status.ts"))
+        self.assertIn('set(DC24H_VERSION "beta-0.3.10")', self.text("CMakeLists.txt"))
+        self.assertIn('WEBADMIN_VERSION = "beta-0.3.10"', self.text("webadmin/src/lib/status.ts"))
         self.assertIn("beta-0.2-code", self.text(".github/workflows/build.yml"))
         self.assertIn("beta-0.2.2-fix", self.text(".github/workflows/build.yml"))
         self.assertIn("beta-0.2.2-source", self.text(".github/workflows/build.yml"))
         self.assertIn("remote.gateway.config", self.text("CMakeLists.txt"))
         self.assertIn("apache2.remote.gateway", self.text("CMakeLists.txt"))
+        self.assertIn("remote.pilot.preflight", self.text("CMakeLists.txt"))
         self.assertEqual(len(list((ROOT / "database/migrations").glob("*.sql"))), 11)
 
 
