@@ -183,3 +183,10 @@ is available. Local token/socket compromise, browser compromise, password
 theft, weak local TLS trust and process-local rate limits remain residual
 risks. **No MFA or supported public network exposure.** See
 [Remote gateway](REMOTE_GATEWAY.md) for exact boundaries and denial tests.
+
+beta-0.2.4 adds regression coverage for old-cookie replay after re-login,
+independent browser CSRF tokens, concurrent one-use challenges, expiry
+through delayed authorizations, logout during in-flight reads and loss of
+all sessions on process restart. The gateway remains local-only and
+in-memory; compromised local browsers/hosts, password theft and missing MFA
+remain residual risks.

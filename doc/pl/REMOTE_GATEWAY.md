@@ -1,6 +1,6 @@
-# Zdalny WebAdmin — beta-0.2.3 (dostęp lokalny, tylko odczyt)
+# Zdalny WebAdmin — beta-0.2.4 (dostęp lokalny, tylko odczyt)
 
-**Wersja rozwojowa.** beta-0.2 dodaje, a beta-0.2.2–beta-0.2.3 uszczelniają **osobną** bramę WebAdmin:
+**Wersja rozwojowa.** beta-0.2 dodaje, a beta-0.2.2–beta-0.2.4 uszczelniają **osobną** bramę WebAdmin:
 /remote.html i pięć ściśle określonych tras /remote/v1. Działa **tylko
 lokalnie** na 127.0.0.1 i wymaga HTTPS, aktywnego konta
 **administrator** albo **Owner** oraz hasła tego konta. W tej wersji nie
@@ -39,6 +39,29 @@ przed upływem terminu nie może zakończyć się sukcesem po jego przekroczeniu
 Pięć tras, numer wersji i uprawnienia tylko do odczytu pozostają bez zmian.
 Audyt zapisuje jedynie ustalone nazwy zdarzeń, bez haseł, tokenów,
 identyfikatorów sesji, adresów IP i treści odpowiedzi.
+
+### beta-0.2.4 — sesje i weryfikacja CSRF
+
+Czas bezwzględny sesji (10 minut) i bezczynności (2 minuty) jest teraz
+liczony dopiero po zakończeniu sprawdzenia hasła i uprawnień w prywatnym API.
+Opóźniona autoryzacja nie zwraca poprawnego logowania z już wygasłym cookie.
+Udane ponowne logowanie z cookie poprzedniej sesji tej przeglądarki unieważnia
+poprzednią sesję po stronie serwera i wydaje nowy losowy identyfikator oraz
+CSRF; nieudana próba nie usuwa poprawnej sesji. Inne przeglądarki mają osobne
+sesje (maksymalnie cztery, piąta usuwa najstarszą). Restart procesu usuwa
+wszystkie sesje i wyzwania z pamięci.
+
+Cookie nadal ma `Secure; HttpOnly; SameSite=Strict; Path=/remote/v1`.
+Logowanie wymaga niezależnego, jednorazowego wyzwania ważnego 2 minuty,
+powiązanego z cookie inicjalizacyjnym. Wylogowanie wymaga zgodnego Origin
+HTTPS i aktualnego CSRF sesji; poprzednie cookie nie może być użyte ponownie.
+Testy bez gniazd sprawdzają rotację, izolację przeglądarek, równoległe
+wyzwania, limit sesji, oba czasy wygaśnięcia, zły Origin/CSRF,
+wylogowanie w trakcie odczytu i restart. Playwright potwierdza usunięcie
+wcześniej wyświetlonych metryk po wygaśnięciu. Token usługi, grant, sesja
+i CSRF prywatnego API nie trafiają do localStorage, URL ani przeglądarki;
+jedynie CSRF przeglądarki potrzebny do wylogowania jest zwracany w
+autoryzowanym JSON. Nie dodano tras ani możliwości zapisu.
 
 ### Dozwolone trasy
 

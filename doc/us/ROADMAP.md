@@ -1,5 +1,7 @@
 # Roadmap
 
+**beta-0.2.4 Sessions and CSRF:** [Remote gateway](REMOTE_GATEWAY.md) fixes re-login rotation and delayed-login lifetime, with deterministic negative tests for expiration, session isolation, cookies, challenge replay, logout and process restart. After review/merge, the separately scoped next stage is beta-0.2.5 (Apache/HTTPS/loopback boundary); public access stays disabled.
+**beta-0.2.3 Authentication:** [Remote gateway](REMOTE_GATEWAY.md) hardens account-identity matching, live revocation and delayed read expiry.
 **beta-0.2.2 HTTP request validation:** [Remote gateway](REMOTE_GATEWAY.md) adds negative path, method, header and body tests to the fixed local-only read-only gateway. Next proposed stage beta-0.2.3 (authorization revocation) requires a separately approved branch after this patch is merged; public access remains disabled.
 **beta-0.1 Beta baseline:** [Release channel](BETA.md) reports `beta-0.1` and keeps the alpha-0.9.17 behavior. Schema v9 is unchanged.
 **alpha-0.9.17 Dependencies:** [Library control and security tests](DEPENDENCIES.md) checks the hub binaries, the WebAdmin lockfile and the registered security tests. Schema v9 is unchanged.

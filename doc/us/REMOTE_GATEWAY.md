@@ -1,6 +1,6 @@
-# Remote WebAdmin — beta-0.2.3 (local-only read access)
+# Remote WebAdmin — beta-0.2.4 (local-only read access)
 
-**Development-only.** The beta-0.2 gateway, hardened through beta-0.2.3, is an **independent** WebAdmin entry
+**Development-only.** The beta-0.2 gateway, hardened through beta-0.2.4, is an **independent** WebAdmin entry
 point: /remote.html and five precisely defined /remote/v1 routes. It is
 **local-only** on 127.0.0.1 and requires HTTPS, an active **administrator**
 or **Owner** account and a valid account password. There is **no MFA** in this
@@ -39,6 +39,30 @@ read-only permission changes.
 Audit events contain only fixed event names (login_ok, login_refused, logout,
 session_revoked, route_refused, api_unavailable), never passwords, session
 secrets, IP addresses or response payloads.
+
+### beta-0.2.4 session lifecycle and CSRF verification
+
+The absolute (10-minute) and idle (2-minute) session deadlines now start only
+after the private password proof and management permission checks complete. A
+delayed upstream authorization cannot return a successful login with an
+already-expired cookie. Successful re-login with an existing session cookie
+invalidates that old server-side session and issues an independent random
+cookie and CSRF token; failed re-login does not revoke a valid session.
+Other browsers keep their own sessions (up to four active; the oldest is
+evicted on a fifth successful login). Closing/restarting the gateway loses all
+in-memory sessions and challenges by design.
+
+Cookies remain `Secure; HttpOnly; SameSite=Strict; Path=/remote/v1`. Login
+uses an independent, two-minute, one-use challenge bound to the init cookie,
+and logout requires both the current session CSRF token and the exact HTTPS
+Origin. A logged-out cookie cannot be replayed. Unit regressions exercise
+same-browser rotation, cross-browser isolation, concurrent challenges,
+session eviction, absolute and idle deadlines, invalid CSRF and Origin,
+logout during a delayed status read and process restart. A Playwright UI
+regression checks removal of stale metrics after expiration. The secret
+service token, private API grant, session and CSRF never enter browser
+storage or URL parameters; only the browser-specific CSRF needed for logout
+appears in authorized session JSON. No new route or write capability exists.
 
 ### Exactly allowed endpoints
 
@@ -114,7 +138,8 @@ weaken the bind or proxy an unprotected port to make the feature reachable.
 ## Tests / known limitations
 
 - Node gateway tests cover proof and account-role revalidation, including
-  beta-0.2.3 identity mismatches, role/grant revocation, DB/API outages,
+  beta-0.2.3 identity mismatches and beta-0.2.4 session/CSRF regressions,
+  role/grant revocation, DB/API outages,
   concurrent reads, delayed requests crossing expiry and per-actor limits. Socket-free cases exercise these
   rules even where opening test sockets is disallowed. Other tests cover CSRF,
   malformed input and length, denied methods/encoded paths/proxy headers,

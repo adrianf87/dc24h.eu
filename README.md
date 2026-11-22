@@ -2,12 +2,13 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: beta-0.2.3 (local-only, read-only remote WebAdmin; not a production release).**
+**Current development version: beta-0.2.4 (local-only, read-only remote WebAdmin; not a production release).**
 
 CI on `main`: [public GitHub-hosted Ubuntu 22.04, 24.04 and 26.04](doc/us/GITHUB_CI.md) runs C++ Debug, C++ Release and WebAdmin on each image · [PL](doc/pl/GITHUB_CI.md).
 
 Development increments (older bullets describe their original delivery scope; verify CI and merge status separately):
 
+- **beta-0.2.4 Sessions and CSRF**: rotates browser sessions on successful re-login (invalidating the old cookie), starts the 10-minute absolute lifetime after password proof and permission verification complete, and adds deterministic tests for 2-minute idle/10-minute absolute expiry, four concurrent browser sessions, one-time challenges, CSRF/Origin, logout/replay, late status responses and process restart. Browser regression checks that expired sessions hide prior metrics. Cookies remain Secure/HttpOnly/SameSite=Strict and scoped to /remote/v1. Still local-only, read-only and public-disabled, without a new route, migration, public proxy or ADC/ADCS change. See [Remote gateway](doc/us/REMOTE_GATEWAY.md) | [PL](doc/pl/REMOTE_GATEWAY.md).
 - **beta-0.2.3 Authentication and revalidation** (including `beta-0.2.3-fix`): rejects mismatched upstream account identities and late status responses after concurrent session revocation. The follow-up also refuses expired CSRF login challenges when a POST body arrives late, and denies protected API results if the browser session expires during asynchronous authorization or status reads. Socket-free regression tests cover administrator/Owner logins, generic refusals, role/grant revocation, API outages, concurrent reads, expiration and login limits. The application stays on `beta-0.2.3` with five fixed local-only, read-only routes; no public access, administrative writes, MariaDB migration or ADC/ADCS protocol changes. See [Remote gateway](doc/us/REMOTE_GATEWAY.md) | [PL](doc/pl/REMOTE_GATEWAY.md).
 - **beta-0.2.2 HTTP request hardening**: preserves the five exact remote gateway routes, rejects untrusted proxy headers by family and adds negative method/path/body tests. Work is on `beta-0.2-code`; no new permissions, Internet access or writes. See [Remote gateway](doc/us/REMOTE_GATEWAY.md) | [PL](doc/pl/REMOTE_GATEWAY.md).
 - **beta-0.2.1 Maintenance baseline**: reports `beta-0.2.1` across the hub, API, service controller and WebAdmin while retaining the beta-0.2 local-only, read-only gateway. No new remote permissions, public network listener, database migration or production deployment. See [Beta maintenance baseline](doc/us/BETA.md) | [PL](doc/pl/BETA.md).
