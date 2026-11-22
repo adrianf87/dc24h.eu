@@ -1,6 +1,8 @@
-# dc24h.eu documentation
+# dc24h.eu High Starter documentation
 
-beta-0.2.6: dedicated private-to-public aggregate status projection and fail-closed upstream validation for the local-only, read-only WebAdmin gateway. Hub, API, service controller and WebAdmin report beta-0.2.6. The existing public Apache proxy and schema v11 remain unchanged. No Internet gateway without MFA, no administration writes or production deployment. Default development language: EN/US UTF-8.
+beta-0.2.12: a combined beta-0.2.7–beta-0.2.12 hardening branch updates release/CI documentation, session race regressions, the private API response deadline/media checks and Apache Fetch Metadata enforcement. Hub, API, controller and WebAdmin report beta-0.2.12; the visible product name is dc24h.eu High Starter. The internal protocol identity `dc24h.eu`, public proxy and schema v11 remain unchanged. No Internet gateway without MFA, administrative writes or production deployment. Default development language: EN/US UTF-8.
+
+- [Combined beta-0.2.7–beta-0.2.12 hardening](BETA.md)
 
 - [Minimal status projection and API failures — beta-0.2.6](BETA.md)
 - [Apache2, HTTPS and loopback boundary — beta-0.2.5](BETA.md)

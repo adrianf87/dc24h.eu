@@ -45,9 +45,10 @@ def check_project(root):
     pl = {p.relative_to(root / "doc/pl") for p in (root / "doc/pl").rglob("*.md")}
     if not us or us != pl:
         errors.append(f"Documentation language file mismatch: US-only={sorted(us - pl)}, PL-only={sorted(pl - us)}")
-    current_documents = {root / "README.md", root / "doc/README.md",
+    current_documents = {root / "README.md", root / "webadmin/README.md", root / "doc/README.md",
                          root / "doc/us/README.md", root / "doc/pl/README.md"}
-    documents = sorted(set((root / "doc").rglob("*.md")) | {root / "README.md", root / "CHANGELOG.md"})
+    documents = sorted(set((root / "doc").rglob("*.md")) |
+                       {root / "README.md", root / "webadmin/README.md", root / "CHANGELOG.md"})
     for path in documents:
         text = path.read_text(encoding="utf-8")
         name = path.relative_to(root)

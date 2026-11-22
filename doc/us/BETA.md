@@ -1,3 +1,33 @@
+# Combined hardening release — beta-0.2.7 to beta-0.2.12
+
+One branch, `beta-0.2.7-beta-0.2.12-finish`, starts at merged `main` `f91ab49` after beta-0.2.6. The **final version string is `beta-0.2.12`**; intermediate patch names describe workstreams, not separately created branches, tags or builds. The visible project name is **dc24h.eu High Starter**; the stable C++/API identity `server.name = "dc24h.eu"` and existing wire contracts remain unchanged.
+
+## beta-0.2.7 — release documentation and CI coherence
+
+Update the previously stale `webadmin/README.md`, the main release headings and the CI docs. The project checker now includes the WebAdmin README in current-version, UTF-8 and local-link checks. Fix both C++/WebAdmin repository guards to recognize the renamed `adrianf87/dc24h.eu-high-starter` slug, and test that guard. The existing Ubuntu 22.04/24.04/26.04 Debug/Release/WebAdmin matrix runs for the one combined branch; public host and package tuple `0.1.0` do not change.
+
+## beta-0.2.8 — authentication and session regressions
+
+Add a deterministic regression that an outstanding status read from the oldest browser session cannot return metrics after a fifth login evicts it. The four-session bound, two-minute idle and ten-minute absolute deadlines, single-use challenges, CSRF and grant revalidation stay as before. No new login scope, persistent identity store or MFA is introduced.
+
+## beta-0.2.9 — private API response hardening
+
+Enforce exact `application/json` media type (allowing parameters such as UTF-8), rather than any prefix. Add a four-second **absolute** request deadline in addition to the idle socket timeout: a trickling peer cannot keep a private read alive indefinitely. Scrub buffered private response bytes after normal completion and on truncated/aborted/oversized responses. Tests cover a forged JSON media-type prefix and recovery.
+
+## beta-0.2.10 — Apache/HTTPS trust boundary
+
+The local-only TLS vhost now blocks `Sec-Fetch-Site: cross-site` and `same-site` for the five gateway routes before proxying, while allowing `same-origin`, `none` and missing Fetch Metadata for compatible local clients. The Node gateway already independently rejects cross-site Fetch Metadata. Add disposable Apache integration negatives; retain exact Host/Origin/method/query/framing and static-file restrictions.
+
+## beta-0.2.11 — concurrent failure and recovery
+
+Add socket-free concurrent status reads with mid-flight permission revocation. All pending requests must return generic 403 without metrics, old browser sessions stay invalid, and a new authorized login can recover. Normal private API failures return generic 503 without cached metrics. This is deterministic regression coverage, not a production load-capacity claim.
+
+## beta-0.2.12 — final verification boundary
+
+Pin hub, API, service controller, WebAdmin and fixtures to `beta-0.2.12`; keep the package tuple `0.1.0`, MariaDB schema v11, ADC/ADCS behavior and five fixed local HTTPS read-only routes. Run release metadata, documentation, static Apache, Node and the existing C++ Debug/Release, WebAdmin, Chromium and real API integration checks on CI. Merge remains an explicit separate decision after verification; no production deployment or public access/MFA is claimed.
+
+## Earlier stage
+
 # Minimal status projection and API failures — beta-0.2.6
 
 Branch `beta-0.2.6` begins from merged `main` `f2aec7d` following beta-0.2.5. The separate local-only read-only gateway now parses only approved public aggregate fields from the private C++ API; it constructs a fresh object for server version/running/uptime, connections, users-online/peak, chat totals and optional search/transfer counters. Unknown fields (identities, IP/CID, audit rows, tokens, paths) and unrelated status sections (configuration, dashboard and monitoring) are ignored and never serialized, even when their structure changes. Required counters must be finite nonnegative safe integers, the private API schema and version must be valid, and malformed optional **public** counters fail closed. Broken API responses or outages return generic 503 with no cached data. Deterministic tests cover extra secrets, partial data, unsafe numbers, changed upstream formats and recovery. The five fixed HTTPS loopback routes, administrator/Owner checks, bounded sessions, CSRF, CMake/npm package tuple `0.1.0`, MariaDB schema v11 and ADC/ADCS are unchanged. No public access without MFA, remote writes, migration, production deployment or automatic merge. See [Remote gateway](REMOTE_GATEWAY.md).

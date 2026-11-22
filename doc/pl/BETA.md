@@ -1,3 +1,33 @@
+# Zbiorcze wydanie poprawek — beta-0.2.7 do beta-0.2.12
+
+Jedna gałąź `beta-0.2.7-beta-0.2.12-finish` powstaje ze scalonego `main` `f91ab49` po beta-0.2.6. **Końcowa wersja to `beta-0.2.12`**; nazwy pośrednie oznaczają zakresy prac, a nie osobne branche, tagi ani kompilacje. Widoczna nazwa projektu to **dc24h.eu High Starter**; wewnętrzny identyfikator C++/API `server.name = "dc24h.eu"` i kontrakty protokołu pozostają bez zmian.
+
+## beta-0.2.7 — dokumentacja wersji i zgodność CI
+
+Poprawiamy nieaktualny `webadmin/README.md`, nagłówki wersji i dokumentację CI. Kontrola projektu sprawdza też aktualną wersję, UTF-8 i lokalne odsyłacze README WebAdmin. W obu zadaniach C++/WebAdmin poprawiono warunek nazwy repozytorium na `adrianf87/dc24h.eu-high-starter` i dodano test tego warunku. Ta jedna gałąź uruchamia istniejącą macierz Ubuntu 22.04/24.04/26.04, Debug/Release/WebAdmin. Publiczny host i pakiet `0.1.0` pozostają bez zmian.
+
+## beta-0.2.8 — regresje autoryzacji i sesji
+
+Test deterministyczny potwierdza, że rozpoczęty odczyt statusu najstarszej sesji nie może ujawnić danych po usunięciu jej przez piąte logowanie. Limit czterech sesji, dwuminutowa bezczynność, dziesięciominutowy maksymalny czas, jednorazowe wyzwania, CSRF i bieżąca kontrola grantu są zachowane. Brak nowego typu logowania, trwałego magazynu sesji i MFA.
+
+## beta-0.2.9 — odpowiedzi prywatnego API
+
+Akceptujemy dokładny typ `application/json` (także z parametrami, np. UTF-8), nie dowolny prefiks. Oprócz limitu bezczynności gniazda obowiązuje czterosekundowy **całkowity** czas żądania: powolny strumień nie może blokować odczytu bez końca. Bufory prywatnej odpowiedzi są czyszczone po sukcesie i przy przerwaniu, ucięciu lub przekroczeniu limitu. Testy obejmują sfałszowany prefiks typu i powrót po błędzie.
+
+## beta-0.2.10 — granica Apache i HTTPS
+
+Lokalny vhost TLS odrzuca `Sec-Fetch-Site: cross-site` i `same-site` dla pięciu tras przed proxy, dopuszczając `same-origin`, `none` i brak nagłówka dla zgodnych lokalnych klientów. Node nadal niezależnie odrzuca ruch cross-site. Dodano negatywne testy Apache; dotychczasowe ograniczenia Host/Origin, metod, zapytań, treści i plików pozostają.
+
+## beta-0.2.11 — równoległe awarie i powrót
+
+Testy bez gniazd sprawdzają wiele równoległych odczytów przy cofnięciu uprawnień w trakcie odpowiedzi. Każde oczekujące żądanie musi zwrócić ogólne 403 bez metryk; stare sesje pozostają nieważne, a świeże uprawnione logowanie może ponownie zadziałać. Awaria prywatnego API nadal daje 503 bez bufora poprzednich wyników. Test nie jest deklaracją wydajności produkcyjnej.
+
+## beta-0.2.12 — końcowa granica weryfikacji
+
+Hub, API, kontroler usługi, WebAdmin i testy używają `beta-0.2.12`; pakiet `0.1.0`, MariaDB v11, ADC/ADCS i pięć tras lokalnych HTTPS tylko do odczytu są niezmienione. Kontrola obejmuje metadane, dokumentację, konfigurację Apache, Node oraz dotychczasowe CI C++ Debug/Release, WebAdmin, Chromium i integrację żywego API. Scalenie wymaga osobnej decyzji po weryfikacji; brak wdrożenia, dostępu publicznego i deklaracji MFA.
+
+## Poprzedni etap
+
 # Minimalizacja statusu i błędy API — beta-0.2.6
 
 Gałąź `beta-0.2.6` powstaje ze scalonego `main` `f2aec7d` po beta-0.2.5. Osobna lokalna brama tylko do odczytu parsuje teraz wyłącznie zatwierdzone agregaty prywatnego API C++ i tworzy nowy obiekt: wersja/działanie/czas huba, połączenia, liczba użytkowników online i szczytowa, zbiorcze liczniki czatu oraz opcjonalnie wyszukiwań i transferów. Nieznane pola (tożsamości, IP/CID, audyt, tokeny, ścieżki) i nieużywane sekcje statusu (konfiguracja, dashboard, monitoring) są ignorowane i nigdy nie trafiają do JSON przeglądarki, nawet po zmianie formatu. Wymagane liczniki muszą być bezpiecznymi nieujemnymi liczbami całkowitymi; błędny schemat i wersja API lub błędne opcjonalne liczniki publiczne zamykają dostęp. Awaria i nieprawidłowa odpowiedź dają ogólny błąd 503 bez bufora poprzednich statystyk. Testy deterministyczne obejmują sekrety, brak pól, nadmierne liczby, zmianę formatu upstream i powrót po awarii. Pięć tras HTTPS na loopback, kontrola kont administrator/Owner, sesje/CSRF, pakiet CMake/npm `0.1.0`, schemat MariaDB v11 i ADC/ADCS bez zmian. Bez dostępu publicznego bez MFA, zdalnych zapisów, migracji, wdrożenia ani automatycznego scalenia. Zobacz [Bramę WebAdmin](REMOTE_GATEWAY.md).

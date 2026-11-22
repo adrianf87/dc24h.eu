@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Remote beta-0.2.6 gateway invariants, including Apache boundary guardrails."""
+"""Remote beta-0.2.12 gateway invariants, including Apache boundary guardrails."""
 from pathlib import Path
 import unittest
 
@@ -25,6 +25,7 @@ class RemoteConfiguration(unittest.TestCase):
         self.assertIn("RewriteCond %{REQUEST_METHOD} !^GET$", config)
         self.assertIn("RewriteCond %{REQUEST_METHOD} !^POST$", config)
         self.assertIn("RewriteCond %{HTTP:Origin} !^https://localhost:8443$", config)
+        self.assertIn("RewriteCond %{HTTP:Sec-Fetch-Site} !^(?:same-origin|none)$", config)
         self.assertIn("LimitRequestBody 2048", config)
         self.assertIn("RewriteCond %{HTTP:Content-Length} -gt2048", config)
         self.assertIn("RewriteCond %{HTTP:Content-Length} !^[0-9]{1,4}$", config)
@@ -69,6 +70,9 @@ class RemoteConfiguration(unittest.TestCase):
                          "no-store", "login:global", "authorization", "untrustedProxyHeader",
                          'name.startsWith("x-forwarded-")', 'name === "proxy-authorization"'):
             self.assertIn(expected, code)
+        self.assertIn("signal: AbortSignal.timeout(4000)", code)
+        self.assertIn('isJsonContentType(answer.headers["content-type"])', code)
+        self.assertIn('answer.on("close", scrub)', code)
         for forbidden in ("/api/v1/management/configuration/write",
                           "/api/v1/management/hub/start",
                           "child_process", "exec(", "localStorage", "sessionStorage"):
@@ -88,8 +92,8 @@ class RemoteConfiguration(unittest.TestCase):
         self.assertNotIn("sessionStorage", ui)
         self.assertNotIn("Start/Stop/Restart", ui)
         self.assertIn('remote.html', self.text("webadmin/vite.config.ts"))
-        self.assertIn('set(DC24H_VERSION "beta-0.2.6")', self.text("CMakeLists.txt"))
-        self.assertIn('WEBADMIN_VERSION = "beta-0.2.6"', self.text("webadmin/src/lib/status.ts"))
+        self.assertIn('set(DC24H_VERSION "beta-0.2.12")', self.text("CMakeLists.txt"))
+        self.assertIn('WEBADMIN_VERSION = "beta-0.2.12"', self.text("webadmin/src/lib/status.ts"))
         self.assertIn("beta-0.2-code", self.text(".github/workflows/build.yml"))
         self.assertIn("beta-0.2.2-fix", self.text(".github/workflows/build.yml"))
         self.assertIn("beta-0.2.2-source", self.text(".github/workflows/build.yml"))

@@ -184,7 +184,7 @@ test("remote status strips private upstream fields and refuses malformed or unav
   const login = await h.login();
   const browserCookie = login.cookies[0]!.split(";")[0]!;
   const privateValue = "SECRET_IDENTITY_FROM_PRIVATE_API";
-  const clean = { ...snapshot, server: { ...snapshot.server, version: "beta-0.2.6" } };
+  const clean = { ...snapshot, server: { ...snapshot.server, version: "beta-0.2.12" } };
   h.state.statusResponse = async () => ({
     ...clean, secret: privateValue, audit_rows: [{ account: privateValue }],
     server: { ...clean.server, private_socket: privateValue },
@@ -199,7 +199,7 @@ test("remote status strips private upstream fields and refuses malformed or unav
   assert.equal(safe.status, 200);
   assert.deepEqual(JSON.parse(safe.body), {
     schema: 1, mode: "read-only",
-    server: { version: "beta-0.2.6", running: true, uptime_seconds: 3661 },
+    server: { version: "beta-0.2.12", running: true, uptime_seconds: 3661 },
     network: { active_connections: 7, accepted_connections: 48 },
     users: { online: 4, peak_online: 6 },
     chat: { received: 12, rejected: 2 },
@@ -246,6 +246,30 @@ test("a revoked session cannot finish an earlier in-flight status read", async (
   assert.equal(stale.status, 403);
   assert.ok(!stale.body.includes("uptime_seconds"));
   assert.equal((await h.call("/remote/v1/summary", "GET", "", { cookie })).status, 401);
+});
+
+test("evicting the oldest browser session cancels its outstanding status response", async () => {
+  const h = harness();
+  const logins = [];
+  for (let i = 0; i < 4; i++) logins.push(await h.login());
+  assert.ok(logins.every((result) => result.status === 200));
+  const oldest = logins[0]!.cookies[0]!.split(";")[0]!;
+  let releaseStatus!: (value: unknown) => void;
+  let signalStatus!: () => void;
+  const statusStarted = new Promise<void>((resolve) => { signalStatus = resolve; });
+  h.state.statusResponse = () => new Promise<unknown>((resolve) => {
+    releaseStatus = resolve;
+    signalStatus();
+  });
+  const stale = h.call("/remote/v1/summary", "GET", "", { cookie: oldest });
+  await statusStarted;
+  h.advance(60_001); // Roll over the login budget, not the browser session.
+  assert.equal((await h.login()).status, 200, "the fifth session evicts the oldest");
+  releaseStatus(snapshot);
+  const result = await stale;
+  assert.equal(result.status, 403);
+  assert.ok(!result.body.includes("uptime_seconds"));
+  assert.equal((await h.call("/remote/v1/session", "GET", "", { cookie: oldest })).status, 401);
 });
 
 test("status cannot expose metrics when access is revoked while the upstream read is in flight", async () => {
@@ -295,6 +319,37 @@ test("a management outage during a status read never falls back to stale metrics
   assert.equal(denied.status, 503);
   assert.equal(denied.body, '{"error":"unavailable"}');
   assert.ok(!denied.body.includes("uptime_seconds"));
+});
+
+test("parallel status reads all fail closed after mid-flight revocation and recover after fresh login", async () => {
+  const h = harness();
+  const login = await h.login();
+  const cookie = login.cookies[0]!.split(";")[0]!;
+  const count = 12;
+  let started = 0;
+  let signalAll!: () => void;
+  let releaseStatus!: () => void;
+  const allStarted = new Promise<void>((resolve) => { signalAll = resolve; });
+  const statusGate = new Promise<void>((resolve) => { releaseStatus = resolve; });
+  h.state.statusResponse = async () => {
+    if (++started === count) signalAll();
+    await statusGate;
+    return snapshot;
+  };
+  const pending = Array.from({ length: count }, () => h.call("/remote/v1/summary", "GET", "", { cookie }));
+  await allStarted;
+  h.state.allowed = false;
+  releaseStatus();
+  const results = await Promise.all(pending);
+  assert.ok(results.every((result) => result.status === 403 && result.body === '{"error":"forbidden"}'));
+  assert.ok(results.every((result) => !result.body.includes("uptime_seconds")));
+  assert.equal((await h.call("/remote/v1/session", "GET", "", { cookie })).status, 401);
+  h.state.allowed = true;
+  const recovered = await h.login();
+  assert.equal(recovered.status, 200);
+  assert.equal((await h.call("/remote/v1/summary", "GET", "", {
+    cookie: recovered.cookies[0]!.split(";")[0]!,
+  })).status, 200);
 });
 
 test("login limiter caps password checks for a single actor", async () => {

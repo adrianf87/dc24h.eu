@@ -84,6 +84,8 @@ test("remote gateway authenticates a real API proof but projects only approved a
   const socket = join(directory, "api.sock");
   let clock = 100_000;
   let revoked = false;
+  let plainManagement401 = false;
+  let statusContentType = "application/json; charset=utf-8";
   let upstreamCalls: string[] = [];
   const events: string[] = [];
   const api = createServer((req, res) => {
@@ -102,12 +104,18 @@ test("remote gateway authenticates a real API proof but projects only approved a
         res.end(JSON.stringify(access)); return;
       }
       if (req.url === "/api/v1/management" && req.method === "GET") {
+        if (plainManagement401) {
+          res.statusCode = 401;
+          res.setHeader("Content-Type", "text/plain");
+          res.end("upstream access revoked"); return;
+        }
         assert.equal(req.headers["x-dc24h-admin-grant"], grant);
         assert.equal(req.headers["x-dc24h-session"], session);
         assert.equal(req.headers["x-dc24h-csrf"], csrf);
         res.end(JSON.stringify(management(!revoked))); return;
       }
       if (req.url === "/api/v1/status" && req.method === "GET") {
+        res.setHeader("Content-Type", statusContentType);
         res.end(JSON.stringify({ ...snapshot, secret: token, server: { ...snapshot.server, private_key: "DO-NOT-LEAK" } })); return;
       }
       res.statusCode = 404; res.end('{"error":"not_found"}');
@@ -221,12 +229,21 @@ test("remote gateway authenticates a real API proof but projects only approved a
     assert.equal(summary.status, 200);
     assert.deepEqual(JSON.parse(summary.data), {
       schema: 1, mode: "read-only",
-      server: { version: "beta-0.2.6", running: true, uptime_seconds: 3661 },
+      server: { version: "beta-0.2.12", running: true, uptime_seconds: 3661 },
       network: { active_connections: 7, accepted_connections: 48 },
       users: { online: 4, peak_online: 6 }, chat: { received: 12, rejected: 2 },
     });
     assert.ok(!summary.data.includes(token) && !summary.data.includes("DO-NOT-LEAK"));
-    assert.deepEqual(upstreamCalls.filter((s) => s.includes("/api/v1/status")), ["GET /api/v1/status"]);
+    // A prefix such as application/json-attacker is not the JSON media type.
+    statusContentType = "application/json-attacker";
+    const wrongMime = await call("/remote/v1/summary", "GET", "", { Cookie: browserCookie });
+    assert.equal(wrongMime.status, 503);
+    assert.equal(wrongMime.data, '{"error":"unavailable"}');
+    assert.ok(!wrongMime.data.includes("DO-NOT-LEAK"));
+    statusContentType = "application/json; charset=utf-8";
+    assert.equal((await call("/remote/v1/summary", "GET", "", { Cookie: browserCookie })).status, 200);
+    assert.deepEqual(upstreamCalls.filter((s) => s.includes("/api/v1/status")),
+      ["GET /api/v1/status", "GET /api/v1/status", "GET /api/v1/status"]);
     assert.equal((await call("/remote/v1/logout", "POST", "{}", { Cookie: browserCookie })).status, 403);
     assert.equal((await call("/remote/v1/logout", "POST", "{invalid", {
       Cookie: browserCookie, "X-DC24H-Remote-CSRF": loginData.csrf,
@@ -247,6 +264,20 @@ test("remote gateway authenticates a real API proof but projects only approved a
     assert.equal(again.status, 200);
     clock += 2 * 60_000 + 1;
     assert.equal((await call("/remote/v1/summary", "GET", "", { Cookie: again.cookies[0]!.split(";")[0]! })).status, 401);
+    const next = await call("/remote/v1/challenge");
+    const lastLogin = await call("/remote/v1/login", "POST", JSON.stringify({ actor_id: "7", password: "correct" }), {
+      Cookie: next.cookies[0]!.split(";")[0]!, "X-DC24H-Remote-CSRF": JSON.parse(next.data).csrf,
+    });
+    assert.equal(lastLogin.status, 200);
+    // Upstream HTTP denial must revoke even if its payload is not JSON.
+    plainManagement401 = true;
+    const renewedCookie = lastLogin.cookies[0]!.split(";")[0]!;
+    const denied = await call("/remote/v1/summary", "GET", "", { Cookie: renewedCookie });
+    assert.equal(denied.status, 403);
+    assert.equal(denied.data, '{"error":"forbidden"}');
+    assert.ok(!denied.data.includes("upstream access revoked"));
+    assert.equal((await call("/remote/v1/session", "GET", "", { Cookie: renewedCookie })).status, 401);
+    plainManagement401 = false;
   } finally {
     gateway.close();
     api.close();

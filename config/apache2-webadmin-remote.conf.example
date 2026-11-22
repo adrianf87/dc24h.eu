@@ -68,6 +68,12 @@ TraceEnable Off
     RewriteCond %{HTTP:Origin} !^$
     RewriteCond %{HTTP:Origin} !^https://localhost:8443$
     RewriteRule ^ - [F,END]
+    # Refuse cross-site Fetch Metadata at the TLS boundary, before proxying.
+    # Older/CLI clients may omit the header; Node repeats the same check.
+    RewriteCond %{REQUEST_URI} ^/remote/v1/
+    RewriteCond %{HTTP:Sec-Fetch-Site} !^$
+    RewriteCond %{HTTP:Sec-Fetch-Site} !^(?:same-origin|none)$
+    RewriteRule ^ - [F,END]
     RewriteCond %{REQUEST_URI} ^/remote/v1/(?:login|logout)$
     RewriteCond %{HTTP:Origin} !^https://localhost:8443$
     RewriteRule ^ - [F,END]

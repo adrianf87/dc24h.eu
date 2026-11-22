@@ -167,7 +167,7 @@ function Details({ snapshot, t }: { snapshot: HubSnapshot | null; t: Copy }) {
           <dt>{t.project}</dt>
           <dd>
             <span className="project-mark" />
-            dc24h.eu
+            dc24h.eu High Starter
           </dd>
         </div>
         <div>
@@ -309,7 +309,7 @@ export default function App() {
   );
   const number = (value: number | undefined) =>
     value === undefined ? "—" : formatter.format(value);
-  const documentation = `https://github.com/adrianf87/dc24h.eu/blob/${WEBADMIN_VERSION}/doc/${language}/WEBADMIN.md`;
+  const documentation = `https://github.com/adrianf87/dc24h.eu-high-starter/blob/main/doc/${language}/WEBADMIN.md`;
   useEffect(() => {
     document.documentElement.lang = language === "pl" ? "pl" : "en-US";
     try {
@@ -423,7 +423,7 @@ export default function App() {
           </span>
           <span>
             <strong>
-              dc24h<span>.eu</span>
+              dc24h<span>.eu High Starter</span>
             </strong>
             <small>{t.brandCaption}</small>
           </span>
@@ -434,7 +434,7 @@ export default function App() {
           </span>
           <span>
             <small>{t.workspace}</small>
-            <strong>dc24h.eu</strong>
+            <strong>dc24h.eu High Starter</strong>
           </span>
           <span className="workspace-lock">
             <LockKeyhole size={14} />

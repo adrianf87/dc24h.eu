@@ -157,6 +157,7 @@ class ApacheRemoteGateway(unittest.TestCase):
             method = "POST" if name in ("login", "logout") else "GET"
             status, body, headers = self.fetch("/remote/v1/" + name, method,
                                                 {"Origin": self.expected_origin,
+                                                 "Sec-Fetch-Site": "none" if name == "challenge" else "same-origin",
                                                  "Cookie": "dc24h_remote=fixture"})
             self.assertEqual(status, 200, (name, status))
             self.assertEqual(body, MARKER)
@@ -219,6 +220,10 @@ class ApacheRemoteGateway(unittest.TestCase):
             ("/remote/v1/login", "POST", {"Origin": "https://evil.example"}, b"{}"),
             ("/remote/v1/logout", "POST", {}, b"{}"),
             ("/remote/v1/challenge", "GET", {"Origin": "https://evil.example"}, None),
+            ("/remote/v1/summary", "GET", {"Sec-Fetch-Site": "cross-site"}, None),
+            ("/remote/v1/session", "GET", {"Sec-Fetch-Site": "same-site"}, None),
+            ("/remote/v1/login", "POST", {"Origin": self.expected_origin,
+                                              "Sec-Fetch-Site": "cross-site"}, b"{}"),
         ]
         for path, method, headers, body in cases:
             with self.subTest(path=path, method=method, headers=headers):

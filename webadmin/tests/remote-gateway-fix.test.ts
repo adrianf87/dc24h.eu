@@ -1,9 +1,19 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { remoteGateway } from "../server/remote-gateway.ts";
+import { isJsonContentType, remoteGateway } from "../server/remote-gateway.ts";
 
 const origin = "https://localhost:8443";
+
+test("private API JSON media type is exact, not a permissive prefix", () => {
+  for (const valid of ["application/json", "application/json; charset=utf-8", "APPLICATION/JSON; charset=UTF-8"]) {
+    assert.equal(isJsonContentType(valid), true, valid);
+  }
+  for (const invalid of [undefined, null, ["application/json"], "", "application/jsonp",
+    "application/json-attacker", "application/json;charset=utf-8, text/plain", "text/plain"]) {
+    assert.equal(isJsonContentType(invalid), false, String(invalid));
+  }
+});
 
 // In-memory HTTP stubs exercise the handler without opening a network socket.
 function harness(audit?: (event: string) => void) {

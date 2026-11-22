@@ -1,16 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { parseRemoteSummaryResponse } from "../lib/remote-status.ts";
+import type { Summary } from "../lib/remote-status.ts";
 
 type Language = "us" | "pl";
-type Summary = {
-  schema: 1;
-  mode: "read-only";
-  server: { version: string; running: boolean; uptime_seconds: number };
-  network: { active_connections: number; accepted_connections: number };
-  users: { online: number; peak_online: number };
-  chat: { received: number; rejected: number };
-  search?: { queries: number; results: number };
-  transfers?: { ctm: number; rcm: number };
-};
 type Session = { schema: 1; authenticated: true; mode: "read-only"; csrf: string; expires_in: number };
 type Status = "loading" | "unauthorized" | "authorized" | "forbidden" | "unavailable" | "expired" | "rate-limited";
 
@@ -64,12 +56,6 @@ const validSession = (value: unknown): value is Session => {
     typeof s.csrf === "string" && /^[0-9a-f]{64}$/.test(s.csrf) &&
     typeof s.expires_in === "number" && s.expires_in > 0 && s.expires_in <= 600;
 };
-const validSummary = (value: unknown): value is Summary => {
-  if (!value || typeof value !== "object") return false;
-  const s = value as Record<string, unknown>;
-  return s.schema === 1 && s.mode === "read-only" && !!s.server && !!s.network &&
-    !!s.users && !!s.chat;
-};
 function failure(status: number): Status {
   if (status === 403) return "forbidden";
   if (status === 429) return "rate-limited";
@@ -86,10 +72,13 @@ export function RemoteApp() {
   const [summary, setSummary] = useState<Summary | null>(null);
   // An older HTTP response must never modify a newer authenticated session.
   const sessionEpoch = useRef(0);
+  // A prior refresh must also not replace the latest result within a session.
+  const summaryRequest = useRef(0);
   const t = labels[language];
 
   const invalidate = (next: Status) => {
     sessionEpoch.current++;
+    summaryRequest.current++;
     setSummary(null);
     setCsrf("");
     setState(next);
@@ -105,13 +94,15 @@ export function RemoteApp() {
   }, []);
   const load = async () => {
     const epoch = sessionEpoch.current;
+    const requestId = ++summaryRequest.current;
     try {
       const { status, data } = await call("summary");
-      if (epoch !== sessionEpoch.current) return;
-      if (status === 200 && validSummary(data)) { setSummary(data); return; }
+      if (epoch !== sessionEpoch.current || requestId !== summaryRequest.current) return;
+      const parsed = status === 200 ? parseRemoteSummaryResponse(data) : null;
+      if (parsed) { setSummary(parsed); return; }
       invalidate(status === 200 ? "unavailable" : failure(status));
     } catch {
-      if (epoch === sessionEpoch.current) invalidate("unavailable");
+      if (epoch === sessionEpoch.current && requestId === summaryRequest.current) invalidate("unavailable");
     }
   };
   useEffect(() => {
@@ -170,7 +161,7 @@ export function RemoteApp() {
   return (
     <main className="remote-shell">
       <header className="remote-head">
-        <div><strong>dc24h.eu</strong><h1>{t.title}</h1><p>{t.mode}</p></div>
+        <div><strong>dc24h.eu High Starter</strong><h1>{t.title}</h1><p>{t.mode}</p></div>
         <div className="remote-actions">
           <button type="button" aria-label="English" onClick={() => setLanguage("us")}>EN</button>
           <button type="button" aria-label="Polski" onClick={() => setLanguage("pl")}>PL</button>

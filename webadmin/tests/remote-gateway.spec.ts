@@ -3,7 +3,7 @@ import { test, expect, type Route } from "@playwright/test";
 const sessionCsrf = "d".repeat(64);
 const snapshot = {
   schema: 1, mode: "read-only",
-  server: { version: "beta-0.2.6", running: true, uptime_seconds: 123 },
+  server: { version: "beta-0.2.12", running: true, uptime_seconds: 123 },
   network: { active_connections: 5, accepted_connections: 22 },
   users: { online: 4, peak_online: 7 },
   chat: { received: 10, rejected: 1 },
@@ -44,7 +44,7 @@ test("remote read-only screen needs a session, supports EN/PL and never offers m
   await page.getByLabel("ID konta administratora").fill("7");
   await page.getByLabel("Hasło konta").fill("example-proof");
   await page.getByRole("button", { name: "Zaloguj" }).click();
-  await expect(page.getByText("beta-0.2.6")).toBeVisible();
+  await expect(page.getByText("beta-0.2.12")).toBeVisible();
   await expect(page.getByText("Aktywne połączenia")).toBeVisible();
   await expect(page.getByText("Użytkownicy online")).toBeVisible();
   for (const title of ["Start", "Stop", "Restart", "Edit", "Restore", "Grant"]) {
@@ -195,4 +195,49 @@ test("an old summary cannot overwrite metrics after logout and a new login", asy
     requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   await expect(page.getByText("99", { exact: true })).toBeVisible();
   await expect(page.getByText("5", { exact: true })).toHaveCount(0);
+});
+
+test("an older read in the same session cannot replace fresher metrics", async ({ page }) => {
+  let oldRequest!: Route;
+  let signalStarted!: () => void;
+  const firstStarted = new Promise<void>((resolve) => { signalStarted = resolve; });
+  let reads = 0;
+  await page.route("**/remote/v1/session", async (route) => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({ schema: 1, authenticated: true, mode: "read-only", csrf: sessionCsrf, expires_in: 120 }),
+  }));
+  await page.route("**/remote/v1/summary", async (route) => {
+    reads++;
+    if (reads === 1) { oldRequest = route; signalStarted(); return; }
+    await route.fulfill({ status: 200, contentType: "application/json",
+      body: JSON.stringify({ ...snapshot, network: { active_connections: 99, accepted_connections: 100 } }) });
+  });
+
+  await page.goto("/remote.html");
+  await firstStarted;
+  await page.getByRole("button", { name: "Refresh" }).click();
+  await expect(page.getByText("99", { exact: true })).toBeVisible();
+
+  const staleResponse = page.waitForResponse((response) =>
+    response.url().includes("/remote/v1/summary") && response.status() === 200);
+  await oldRequest.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(snapshot) });
+  await staleResponse;
+  await page.evaluate(() => new Promise<void>((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await expect(page.getByText("99", { exact: true })).toBeVisible();
+  await expect(page.getByText("5", { exact: true })).toHaveCount(0);
+});
+
+test("malformed HTTP 200 metrics fail closed without rendering unsafe nested data", async ({ page }) => {
+  await page.route("**/remote/v1/session", async (route) => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({ schema: 1, authenticated: true, mode: "read-only", csrf: sessionCsrf, expires_in: 120 }),
+  }));
+  await page.route("**/remote/v1/summary", async (route) => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({ ...snapshot, server: { ...snapshot.server, version: { nested: "private" } } }),
+  }));
+  await page.goto("/remote.html");
+  await expect(page.getByText(/The gateway or hub API is unavailable/)).toBeVisible();
+  await expect(page.getByText("Active connections")).toHaveCount(0);
 });

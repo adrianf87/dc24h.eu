@@ -1,6 +1,6 @@
-# Zdalny WebAdmin — beta-0.2.6 (dostęp lokalny, tylko odczyt)
+# Zdalny WebAdmin — beta-0.2.12 (dostęp lokalny, tylko odczyt)
 
-**Wersja rozwojowa.** beta-0.2 dodaje, a beta-0.2.2–beta-0.2.6 uszczelniają **osobną** bramę WebAdmin:
+**Wersja rozwojowa.** beta-0.2 dodaje, a beta-0.2.2–beta-0.2.12 uszczelniają **osobną** bramę WebAdmin:
 /remote.html i pięć ściśle określonych tras /remote/v1. Działa **tylko
 lokalnie** na 127.0.0.1 i wymaga HTTPS, aktywnego konta
 **administrator** albo **Owner** oraz hasła tego konta. W tej wersji nie
@@ -39,6 +39,27 @@ przed upływem terminu nie może zakończyć się sukcesem po jego przekroczeniu
 Pięć tras, numer wersji i uprawnienia tylko do odczytu pozostają bez zmian.
 Audyt zapisuje jedynie ustalone nazwy zdarzeń, bez haseł, tokenów,
 identyfikatorów sesji, adresów IP i treści odpowiedzi.
+
+### beta-0.2.7–beta-0.2.12 — zbiorcze poprawki High Starter
+
+Widoczna nazwa to **dc24h.eu High Starter**; wewnętrzna tożsamość protokołu
+prywatnego API pozostaje `dc24h.eu`. To jedna gałąź i jedna końcowa wersja
+`beta-0.2.12`, nie sześć osobno opublikowanych aktualizacji.
+
+Odpowiedź prywatnego API przez gniazdo Unix musi mieć dokładny typ JSON
+(dopuszczalne parametry Content-Type). Całkowity czas żądania wynosi cztery
+sekundy także przy nieprzerwanym strumieniu, a zgromadzone prywatne bufory
+są zerowane po sukcesie, przerwaniu, przekroczeniu limitu lub ucięciu.
+Błąd odczytu oznacza 503 bez zapamiętanych metryk. Testy bez gniazd obejmują
+usunięcie sesji w trakcie statusu oraz 12 równoległych odczytów z cofnięciem
+grantu: nie ma wycieku metryk, a ponowne logowanie działa po odzyskaniu
+uprawnień.
+
+Przykładowy vhost Apache TLS odrzuca również Fetch Metadata cross-site
+(`Sec-Fetch-Site: cross-site` lub `same-site`) przed Node. Brak nagłówka,
+`same-origin` lub `none` pozostają dozwolone dla lokalnych klientów;
+Node niezależnie stosuje te same ograniczenia. Testy obejmują odizolowany
+serwer Apache HTTPS. Pięć tras pozostaje lokalnych i tylko do odczytu.
 
 ### beta-0.2.6 — minimalna projekcja statusu i awarie API
 
