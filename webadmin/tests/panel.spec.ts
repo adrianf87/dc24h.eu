@@ -1,7 +1,6 @@
 import { TRANSFER_COUNTERS } from "../src/lib/transfer-status";
 import { searchSnapshot } from "./fixtures";
 import { expect, test } from "@playwright/test";
-import { WEBADMIN_VERSION } from "../src/lib/status";
 import { readFile } from "node:fs/promises";
 const transferSnapshot = { statistics: Object.fromEntries(TRANSFER_COUNTERS.map((key, i) => [key, i + 1])) };
 const data = {
@@ -35,7 +34,7 @@ test("unconfigured panel stays honest, readable and bilingual with working navig
   await page.goto("/");
   await expect(page.locator("a.documentation")).toHaveAttribute(
     "href",
-    `https://github.com/adrianf87/dc24h.eu/blob/${WEBADMIN_VERSION}/doc/us/WEBADMIN.md`,
+    "https://github.com/adrianf87/dc24h.eu-high-starter/blob/main/doc/us/WEBADMIN.md",
   );
   await expect(
     page.getByRole("heading", { name: "Your hub, in one place." }),
@@ -52,7 +51,7 @@ test("unconfigured panel stays honest, readable and bilingual with working navig
   await page.getByRole("combobox").selectOption("pl");
   await expect(page.locator("a.documentation")).toHaveAttribute(
     "href",
-    `https://github.com/adrianf87/dc24h.eu/blob/${WEBADMIN_VERSION}/doc/pl/WEBADMIN.md`,
+    "https://github.com/adrianf87/dc24h.eu-high-starter/blob/main/doc/pl/WEBADMIN.md",
   );
   await expect(
     page.getByRole("heading", { name: "Przegląd huba" }),
