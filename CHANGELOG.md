@@ -1,5 +1,11 @@
 # Changelog
 
+## beta-0.3.1–beta-0.3.3 Stage I — 2026-11-22 (branch beta-0.3.1-12-full, current beta-0.3.3)
+
+- **0.3.1 — CI and baseline:** Advance C++ hub/API/controller, WebAdmin and test fixtures to `beta-0.3.3` as the consolidated Stage I runtime version. Add this branch to push CI and stop assuming hosted runners always have exactly four logical CPUs. Keep existing required check name and full three-image C++/WebAdmin matrix.
+- **0.3.2 — Local API hardening:** Share a strict JSON content-type check across remote and local adapters. Reject media-type lookalikes and non-UTF-8 alternatives; scrub private response chunks and assembled buffers on normal, denied, malformed, oversized and aborted responses. Add real-socket adapter regressions and a pure media-type policy test. Preserve generic errors and never disclose a raw private API payload.
+- **0.3.3 — Dependency and memory security:** Add ASan and UBSan C++ security-test builds to required CI and a high-severity npm production-dependency audit. Preserve pinned checkout and existing dependency allowlist checks. No database migration (v11), MFA, public listener, remote mutation, service operation, ADC/ADCS protocol change or deployment.
+
 ## beta-0.2.7–beta-0.2.12 finish — 2026-11-22 (one combined branch, final version beta-0.2.12)
 
 - Additional follow-up audit: validate every nested remote summary counter and version before the browser renders it, and project only approved fields even after a valid HTTP response. Discard out-of-order status results within the same authenticated session, not only across re-logins. Treat an upstream HTTP permission denial as a revocation even when its error body is plain text rather than JSON. Add parser, Chromium and live private-socket regressions; retain existing read-only/local-only restrictions.

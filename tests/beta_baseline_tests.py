@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lock combined beta-0.2.7–beta-0.2.12 final metadata and WebAdmin safety limits."""
+"""Lock beta-0.3.1–beta-0.3.3 Stage I metadata and inherited safety limits."""
 
 from pathlib import Path
 import sys
@@ -57,7 +57,7 @@ def main():
     errors = []
     cmake = check(ROOT / "CMakeLists.txt", (
         "project(dc24h VERSION 0.1.0 LANGUAGES CXX)",
-        'set(DC24H_VERSION "beta-0.2.12")',
+        'set(DC24H_VERSION "beta-0.3.3")',
         'add_executable(dc24h-service-controller',
         'service.controller.process',
         "add_test(NAME beta.baseline ",
@@ -67,7 +67,9 @@ def main():
     workflow = check(ROOT / ".github/workflows/build.yml", (
         "os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]",
         "runs-on: ${{ matrix.os }}",
-        'test "$(nproc)" -eq 4',
+        'beta-0.3.1-12-full',
+        'sanitizer: [address, undefined]',
+        'npm audit --omit=dev --audit-level=high',
         "beta-0.1",
         "beta-0.2",
         "beta-0.2.1",
@@ -80,16 +82,19 @@ def main():
             "build.yml: both jobs must list the three public images", errors)
     require(workflow.count("runs-on: ${{ matrix.os }}") == 2,
             "build.yml: both jobs must use the public image matrix", errors)
-    require(workflow.count('test "$(nproc)" -eq 4') == 2,
-            "build.yml: both jobs must require four logical CPUs", errors)
-    require(workflow.count("github.repository == 'adrianf87/dc24h.eu-high-starter'") == 2,
-            "build.yml: renamed High Starter repository must run both C++ and WebAdmin jobs", errors)
+    require('test "$(nproc)" -eq 4' not in workflow,
+            "build.yml: fixed runner CPU count is not portable", errors)
+    require(workflow.count("github.repository == 'adrianf87/dc24h.eu-high-starter'") == 3,
+            "build.yml: High Starter repository must run C++, WebAdmin and sanitizers", errors)
+    require("needs: [cpp, webadmin, sanitizers]" in workflow,
+            "build.yml: sanitizer failures must block the required CI result", errors)
     require("server-747585786" not in workflow, "build.yml: custom runner is selected", errors)
     require("self-hosted" not in workflow, "build.yml: self-hosted runner is selected", errors)
     require("ubuntu-latest" not in workflow, "build.yml: ubuntu-latest is selected", errors)
     check(ROOT / "README.md", (
         "# dc24h.eu High Starter",
-        "Current development version: beta-0.2.12",
+        "Current development version: beta-0.3.3",
+        "beta-0.3.1–beta-0.3.3 Stage I",
         "beta-0.2.7–beta-0.2.12 Consolidated hardening",
         "beta-0.2.6 Status projection privacy",
         "beta-0.2.5 Apache2/HTTPS/loopback boundary",
@@ -101,7 +106,7 @@ def main():
         "beta-0.1.8 Development baseline",
         "<summary>Alpha 0.9.x (17 releases)</summary>",
     ), errors)
-    check(ROOT / "doc/README.md", ("Current development version: beta-0.2.12",), errors)
+    check(ROOT / "doc/README.md", ("Current development version: beta-0.3.3",), errors)
     check(ROOT / "doc/us/BETA.md", (
         "# Combined hardening release — beta-0.2.7 to beta-0.2.12",
         "## beta-0.2.9 — private API response hardening",
@@ -259,7 +264,7 @@ def main():
         "Owner-only fixed hub status/action",
     ), errors)
     check(ROOT / "webadmin/src/lib/status.ts", (
-        'export const WEBADMIN_VERSION = "beta-0.2.12";',
+        'export const WEBADMIN_VERSION = "beta-0.3.3";',
         '!/^(?:alpha-\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|beta-\\d{1,3}\\.\\d{1,3}(?:\\.\\d{1,3})?)$/.test(server.version)',
     ), errors)
     check(ROOT / "src/security/roles.cpp", (
@@ -271,6 +276,14 @@ def main():
     check(ROOT / "webadmin/src/lib/hub-service.ts", (
         "parseHubServiceStatus", "parseHubServiceResult", '"dc24h.service"',
     ), errors)
+    check(ROOT / "webadmin/server/json-content-type.ts", (
+        "isJsonContentType", "application\\/json", "charset", "utf-8",
+    ), errors)
+    for adapter in ("local-api.ts", "account-api.ts"):
+        check(ROOT / "webadmin/server" / adapter, (
+            "isJsonContentType(response.headers[\"content-type\"])",
+            "assembled", "scrub", 'response.on("close",',
+        ), errors)
     check(ROOT / "doc/us/HUB_WEBADMIN.md", ("beta-0.1.7", "Owner", "outcome_unknown", "Apache"), errors)
     check(ROOT / "doc/pl/HUB_WEBADMIN.md", ("beta-0.1.7", "Owner", "outcome_unknown", "Apache"), errors)
     check(ROOT / "doc/us/REMOTE_GATEWAY.md", ("beta-0.2", "local-only", "MFA", "CSRF", "administrator"), errors)
@@ -285,7 +298,7 @@ def main():
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1
-    print("Beta 0.2.12 combined release metadata and inherited safety limits passed")
+    print("Beta 0.3.3 Stage I metadata, API hardening and inherited safety limits passed")
     return 0
 
 

@@ -1,6 +1,8 @@
 # dc24h.eu High Starter documentation
 
-beta-0.2.12: a combined beta-0.2.7–beta-0.2.12 hardening branch updates release/CI documentation, session race regressions, the private API response deadline/media checks and Apache Fetch Metadata enforcement. Hub, API, controller and WebAdmin report beta-0.2.12; the visible product name is dc24h.eu High Starter. The internal protocol identity `dc24h.eu`, public proxy and schema v11 remain unchanged. No Internet gateway without MFA, administrative writes or production deployment. Default development language: EN/US UTF-8.
+beta-0.3.3: Stage I (beta-0.3.1–beta-0.3.3) improves CI portability, local API response validation and scrubbing, plus security and dependency checks. Hub, API, controller and WebAdmin report beta-0.3.3; the visible project is dc24h.eu High Starter. The internal protocol identity `dc24h.eu`, public proxy and schema v11 remain unchanged. No Internet gateway without MFA, administrative writes or production deployment. Default development language: EN/US UTF-8.
+
+- [Beta-0.3.1–beta-0.3.3 Stage I](BETA.md)
 
 - [Combined beta-0.2.7–beta-0.2.12 hardening](BETA.md)
 

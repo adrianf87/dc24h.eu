@@ -6,6 +6,8 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { parseAccess } from "../src/lib/access.ts";
 import { parseManagement } from "../src/lib/management.ts";
 import { parseRemoteSummary } from "../src/lib/status.ts";
+import { isJsonContentType } from "./json-content-type.ts";
+export { isJsonContentType } from "./json-content-type.ts";
 
 type Credentials = { socket: string; token: string };
 export type RemoteEvent = "login_ok" | "login_refused" | "logout" | "session_revoked" | "route_refused" | "api_unavailable";
@@ -60,12 +62,6 @@ const cookie = (req: IncomingMessage, key: string): string => {
 };
 const setCookie = (key: string, value: string, age: number): string =>
   key + "=" + value + "; Path=" + cookiePath + "; HttpOnly; Secure; SameSite=Strict; Max-Age=" + age;
-
-// Accept the JSON media type with an optional UTF-8 charset, but never
-// prefix lookalikes or ambiguous comma-separated content types.
-export const isJsonContentType = (value: unknown): boolean =>
-  typeof value === "string" &&
-  /^application\/json(?:\s*;\s*charset\s*=\s*(?:utf-8|"utf-8"))?\s*$/i.test(value);
 
 // Fixed upstream paths: a grant never becomes a general-purpose HTTP proxy.
 async function upstream(config: Credentials, path: "/api/v1/admin/access" | "/api/v1/management" | "/api/v1/status",

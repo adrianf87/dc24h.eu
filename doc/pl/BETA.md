@@ -1,3 +1,21 @@
+# Etap I linii beta-0.3 — beta-0.3.1 do beta-0.3.3
+
+Gałąź `beta-0.3.1-12-full` powstała z `main` po scaleniu beta-0.2.12. Trzy poprawki Etapu I są dostarczane razem z identyfikatorem **`beta-0.3.3`**. Etapy beta-0.3.4–beta-0.3.12 nie są objęte tym patchem.
+
+## beta-0.3.1 — CI i wersja bazowa
+
+Aktualizacja C++ huba/API/kontrolera usługi, WebAdmin i testów procesu. Usunięcie sztywnego warunku `nproc == 4` z CI przy zachowaniu Ubuntu 22.04/24.04/26.04, Debug/Release/WebAdmin oraz istniejącej nazwy wymaganego checka. Nowa gałąź uruchamia CI. Pakiety CMake/npm mają nadal wersję `0.1.0`, a MariaDB schemat v11.
+
+## beta-0.3.2 — bezpieczeństwo lokalnych adapterów API
+
+Lokalne i zdalne adaptery Node używają tej samej ścisłej kontroli typu JSON. Bufory odpowiedzi prywatnego API C++ są zerowane po sukcesie, odmowie, błędnych danych, przekroczeniu limitu i zerwaniu połączenia. Przeglądarka dostaje tylko zatwierdzone dane lub ogólne błędy. Testy z gniazdem sprawdzają błędne prefiksy MIME oraz prawidłowy JSON UTF-8. Nie dodano tras ani uprawnień.
+
+## beta-0.3.3 — automatyczne testy bezpieczeństwa
+
+Wymagane CI dodaje kompilacje AddressSanitizer i UndefinedBehaviorSanitizer z wybranymi testami C++ oraz skan zależności npm używanych produkcyjnie pod kątem ostrzeżeń o wysokim ryzyku. Dotychczasowe testy lockfile i bibliotek pozostają. Bez MFA, publicznego dostępu, zdalnego zapisu, migracji, zmian ADC/ADCS ani wdrożenia. CI i scalenie pozostają osobnymi decyzjami.
+
+## Poprzedni etap — beta-0.2.7 do beta-0.2.12
+
 # Zbiorcze wydanie poprawek — beta-0.2.7 do beta-0.2.12
 
 Jedna gałąź `beta-0.2.7-beta-0.2.12-finish` powstaje ze scalonego `main` `f91ab49` po beta-0.2.6. **Końcowa wersja to `beta-0.2.12`**; nazwy pośrednie oznaczają zakresy prac, a nie osobne branche, tagi ani kompilacje. Widoczna nazwa projektu to **dc24h.eu High Starter**; wewnętrzny identyfikator C++/API `server.name = "dc24h.eu"` i kontrakty protokołu pozostają bez zmian.

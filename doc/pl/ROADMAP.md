@@ -1,5 +1,7 @@
 # Plan rozwoju
 
+**beta-0.3.1–beta-0.3.3 — Etap I:** Gałąź `beta-0.3.1-12-full` zgłasza `beta-0.3.3` i zawiera przenośne CI, ścisłą obsługę JSON i zerowanie buforów lokalnych adapterów, a także bramki ASan/UBSan i zależności npm. Dalsze etapy beta-0.3.4–beta-0.3.12 są planowane później. Bez publicznego dostępu przed MFA.
+
 **beta-0.2.7–beta-0.2.12 Finish (jedna gałąź):** [Zbiorczy plan wydania](BETA.md) uzgadnia nazwę High Starter i dokumentację CI, testuje równoległe unieważnianie i usuwanie sesji oraz powrót po awarii, ogranicza czas i bufory prywatnego API, odrzuca błędne typy odpowiedzi oraz żądania cross-site Fetch Metadata na granicy Apache. Końcowy identyfikator to `beta-0.2.12`. Brama pozostaje lokalna i tylko do odczytu. Publiczny dostęp z MFA jest odrębnym etapem, poza tym patchem.
 **beta-0.2.6 Prywatność statusu i błędy API:** [Brama WebAdmin](REMOTE_GATEWAY.md) tworzy minimalną projekcję tylko zatwierdzonych liczników; błędne wartości, zmiany formatu API i awarie odrzuca bez ujawniania wcześniejszych danych. Testy obejmują zagnieżdżone sekrety, nadmierne liczby, brak pól i powrót po awarii. Pięć tras lokalnych tylko do odczytu bez zmian; brak dostępu publicznego i wdrożenia.
 **beta-0.2.5 Apache2/HTTPS/loopback:** [Brama WebAdmin](REMOTE_GATEWAY.md) sprawdza Host, metody, query i Origin przed proxy, blokuje zwykły panel administracyjny oraz jego lokalne pliki JS/CSS; testy uruchamiają jednorazowy serwer Apache z HTTPS i sprawdzają odmowy. Publiczny vhost pozostaje bez zmian. Brak zgody na Internet i wdrożenie.

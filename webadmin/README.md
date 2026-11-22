@@ -1,6 +1,6 @@
 # dc24h.eu WebAdmin
 
-The current development UI is `beta-0.2.12` (dc24h.eu High Starter). The *separate*, local-only, authenticated read-only portal introduced in beta-0.2 is at /remote.html; see [Remote gateway](../doc/us/REMOTE_GATEWAY.md) and [PL](../doc/pl/REMOTE_GATEWAY.md). The combined branch `beta-0.2.7-beta-0.2.12-finish` adds session and outage regressions, tighter private API response handling and pre-proxy Fetch Metadata enforcement. The existing local Owner-only service controls are documented in [Hub WebAdmin](../doc/us/HUB_WEBADMIN.md). Neither the public Apache example nor the remote gateway forwards service-control commands.
+The current development UI is `beta-0.3.3` (dc24h.eu High Starter). Stage I on branch `beta-0.3.1-12-full` unifies strict private API JSON media-type checks and response-buffer scrubbing, and strengthens CI security coverage. The *separate*, local-only, authenticated read-only portal introduced in beta-0.2 is at /remote.html; see [Remote gateway](../doc/us/REMOTE_GATEWAY.md) and [PL](../doc/pl/REMOTE_GATEWAY.md). The existing local Owner-only service controls are documented in [Hub WebAdmin](../doc/us/HUB_WEBADMIN.md). Neither the public Apache example nor the remote gateway forwards service-control commands. MFA and Internet exposure remain disabled.
 
 alpha-0.8.1: see [Permissions](../doc/us/PERMISSIONS.md) for the seven-role catalog, pending-action flags, safe VIP delegation and stopped-hub role changes.
 

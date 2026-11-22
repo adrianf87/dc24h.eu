@@ -13,6 +13,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Plugin } from "vite";
 import { parseSnapshot } from "../src/lib/status.ts";
 import { parseHubUsers } from "../src/lib/users.ts";
+import { isJsonContentType } from "./json-content-type.ts";
 
 import { accountMiddleware } from "./account-api.ts";
 
@@ -177,39 +178,37 @@ export function middleware(config: Credentials | null) {
     upstream.on("response", (response) => {
       const chunks: Buffer[] = [];
       let size = 0;
+      const scrub = () => { for (const chunk of chunks) chunk.fill(0); chunks.length = 0; };
+      response.on("close", scrub);
       response.on("data", (chunk: Buffer) => {
         size += chunk.length;
         if (size > 16384) {
+          chunk.fill(0);
           upstream.destroy(new Error("API response too large"));
           return;
         }
         chunks.push(chunk);
       });
       response.on("error", () => {
+        scrub();
         if (!done) {
           finish();
           reply(res, 502, "api_unavailable");
         }
       });
       response.on("end", () => {
-        if (done) return;
+        if (done) { scrub(); return; }
         finish();
-        if (response.statusCode !== 200) {
-          reply(
-            res,
-            502,
-            response.statusCode === 401
-              ? "api_unauthorized"
-              : "api_unavailable",
-          );
-          return;
-        }
+        let assembled: Buffer | undefined;
         try {
-          if (!response.headers["content-type"]?.startsWith("application/json"))
+          if (response.statusCode !== 200) {
+            reply(res, 502, response.statusCode === 401 ? "api_unauthorized" : "api_unavailable");
+            return;
+          }
+          if (!isJsonContentType(response.headers["content-type"]))
             throw new Error();
-          const data: unknown = JSON.parse(
-            Buffer.concat(chunks).toString("utf8"),
-          );
+          assembled = Buffer.concat(chunks);
+          const data: unknown = JSON.parse(assembled.toString("utf8"));
           const result =
             req.url === "/admin-api/v1/status"
               ? parseSnapshot(data)
@@ -230,7 +229,7 @@ export function middleware(config: Credentials | null) {
           res.end(JSON.stringify(result));
         } catch {
           reply(res, 502, "invalid_api_response");
-        }
+        } finally { assembled?.fill(0); scrub(); }
       });
     });
     upstream.on("error", () => {

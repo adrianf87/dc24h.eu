@@ -10,7 +10,7 @@ import { parseSearch } from "./search-status.ts";
 import type { SearchSnapshot } from "./search-status.ts";
 import { parseConfiguration } from "./configuration.ts";
 import type { StartupConfiguration } from "./configuration.ts";
-export const WEBADMIN_VERSION = "beta-0.2.12";
+export const WEBADMIN_VERSION = "beta-0.3.3";
 export interface HubSnapshot {
   api_version: "v1";
   server: {

@@ -1,3 +1,21 @@
+# Beta 0.3 Stage I — beta-0.3.1 through beta-0.3.3
+
+Branch `beta-0.3.1-12-full` starts from merged `main` after beta-0.2.12. Three patches are delivered together with the current runtime version **`beta-0.3.3`**. Later beta-0.3.4–beta-0.3.12 work is not included.
+
+## beta-0.3.1 — CI and release baseline
+
+Update the C++ hub/API/service-controller, WebAdmin and live test fixtures. Remove the hardcoded `nproc == 4` assertion, retain Ubuntu 22.04/24.04/26.04 and Debug/Release/WebAdmin coverage, preserve the existing required check name, and trigger CI on the new branch. The CMake/npm package tuple stays `0.1.0` and database schema stays v11.
+
+## beta-0.3.2 — local adapter API safety
+
+Local and remote Node adapters use the same exact JSON content-type policy. Private C++ API response buffers are wiped after success, denial, malformed data, oversize and disconnect. Browser clients receive allowlisted data or generic errors. Socket-based tests cover invalid media-type prefixes and valid UTF-8 JSON. There are no new API routes or privileges.
+
+## beta-0.3.3 — automated security checks
+
+Required GitHub CI adds AddressSanitizer and UndefinedBehaviorSanitizer builds for a subset of C++ security tests, plus a high-severity production npm dependency advisory check. Existing lockfile and shared-library checks remain. No MFA, public access, remote writes, schema migration, ADC/ADCS protocol change or deployment is introduced. CI completion and merge remain separate decisions.
+
+## Previous stage — beta-0.2.7 through beta-0.2.12
+
 # Combined hardening release — beta-0.2.7 to beta-0.2.12
 
 One branch, `beta-0.2.7-beta-0.2.12-finish`, starts at merged `main` `f91ab49` after beta-0.2.6. The **final version string is `beta-0.2.12`**; intermediate patch names describe workstreams, not separately created branches, tags or builds. The visible project name is **dc24h.eu High Starter**; the stable C++/API identity `server.name = "dc24h.eu"` and existing wire contracts remain unchanged.

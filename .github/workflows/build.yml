@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, fix, alpha-0.8.7, alpha-0.8.8, alpha-0.8.9, alpha-0.8.10, alpha-0.8.11, alpha-0.8.12, alpha-0.8.13, alpha-0.8.14, alpha-0.8.15, alpha-0.9.1, alpha-0.9.2, alpha-0.9.3, alpha-0.9.4, alpha-0.9.5, alpha-0.9.6, alpha-0.9.7, alpha-0.9.8, alpha-0.9.9, alpha-0.9.10, alpha-0.9.11, alpha-0.9.12, alpha-0.9.13, alpha-0.9.14, alpha-0.9.15, alpha-0.9.16, alpha-0.9.17, beta-0.1, beta-0.1.8, beta-0.2, beta-0.2.1, beta-0.2-code, beta-0.2.2-source, beta-0.2.2-fix, beta-0.2.3, docs/beta-0.2.3-unified-description, beta-0.2.4, beta-0.2.5, beta-0.2.6, beta-0.2.7-beta-0.2.12-finish]
+    branches: [main, fix, alpha-0.8.7, alpha-0.8.8, alpha-0.8.9, alpha-0.8.10, alpha-0.8.11, alpha-0.8.12, alpha-0.8.13, alpha-0.8.14, alpha-0.8.15, alpha-0.9.1, alpha-0.9.2, alpha-0.9.3, alpha-0.9.4, alpha-0.9.5, alpha-0.9.6, alpha-0.9.7, alpha-0.9.8, alpha-0.9.9, alpha-0.9.10, alpha-0.9.11, alpha-0.9.12, alpha-0.9.13, alpha-0.9.14, alpha-0.9.15, alpha-0.9.16, alpha-0.9.17, beta-0.1, beta-0.1.8, beta-0.2, beta-0.2.1, beta-0.2-code, beta-0.2.2-source, beta-0.2.2-fix, beta-0.2.3, docs/beta-0.2.3-unified-description, beta-0.2.4, beta-0.2.5, beta-0.2.6, beta-0.2.7-beta-0.2.12-finish, beta-0.3.1-12-full]
   workflow_dispatch:
 
 permissions:
@@ -33,9 +33,6 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-
-      - name: Verify four logical CPUs on the GitHub-hosted runner
-        run: test "$(nproc)" -eq 4
 
       - name: Install build and integration dependencies
         run: |
@@ -70,9 +67,6 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Verify four logical CPUs on the GitHub-hosted runner
-        run: test "$(nproc)" -eq 4
-
       - name: Install C++ API build dependencies
         run: |
           sudo apt-get update
@@ -95,6 +89,10 @@ jobs:
         working-directory: webadmin
         run: npm ci
 
+      - name: Audit production npm dependencies for high-severity advisories
+        working-directory: webadmin
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Typecheck and production build
         working-directory: webadmin
         run: npm run build
@@ -115,9 +113,43 @@ jobs:
         working-directory: webadmin
         run: npm run test:integration -- ../build/Release/dc24h
 
+  sanitizers:
+    name: C++ ${{ matrix.sanitizer }} - ubuntu-24.04
+    if: github.repository == 'adrianf87/dc24h.eu' || github.repository == 'adrianf87/dc24h.eu-high-starter'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer: [address, undefined]
+    env:
+      CXX: g++
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - name: Install C++ dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake python3 libutf8proc-dev libgcrypt20-dev \
+            libssl-dev libmariadb-dev
+
+      - name: Configure isolated sanitizer build
+        run: cmake -S . -B "build/sanitizer-${{ matrix.sanitizer }}" -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DDC24H_SANITIZER="${{ matrix.sanitizer }}"
+
+      - name: Build instrumented unit tests
+        run: cmake --build "build/sanitizer-${{ matrix.sanitizer }}" --parallel "$(nproc)"
+
+      - name: Run sanitizer and security regression subset
+        run: ctest --test-dir "build/sanitizer-${{ matrix.sanitizer }}" --output-on-failure -R '^(memory\.safety|adc\.security|security\.unit|api\.unit|beta\.baseline)$'
+
   required_ci:
+    # Preserve the required check name configured by branch protection.
     name: CI (C++ and WebAdmin)
-    needs: [cpp, webadmin]
+    needs: [cpp, webadmin, sanitizers]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -126,6 +158,8 @@ jobs:
         env:
           CPP_RESULT: ${{ needs.cpp.result }}
           WEBADMIN_RESULT: ${{ needs.webadmin.result }}
+          SANITIZERS_RESULT: ${{ needs.sanitizers.result }}
         run: |
           test "$CPP_RESULT" = "success"
           test "$WEBADMIN_RESULT" = "success"
+          test "$SANITIZERS_RESULT" = "success"

@@ -14,7 +14,7 @@ test("account adapter requires same-origin forms and redacts service credentials
  const dir=mkdtempSync(join(tmpdir(),"dc24h-accounts-adapter-")),socket=join(dir,"api.sock"),token="b".repeat(64);
  const ban={id:"7",kind:"ip",subject:"192.0.2.1",reason:"Policy",created_at:1,expires_at:null,created_by:"1",revoked_at:null,revoked_by:null,revision:"1"};
  const account={id:"1",name:"Test",role:"registered",status:"disabled",revision:"1",created_at:1,updated_at:1,last_login_at:null};
- let writes=0, observed="", authorization="", staffMode=true, backendPath="", grantHeader="", sessionHeader="", csrfHeader="";
+ let writes=0, observed="", authorization="", staffMode=true, backendPath="", grantHeader="", sessionHeader="", csrfHeader="", managementMime="application/json";
  const sessionId="ab".repeat(16), csrfToken="ef".repeat(32);
  const bound={"X-DC24H-Session":sessionId,"X-DC24H-Csrf":csrfToken};
  const accessBody={maintenance:true,restart_required:true,expires_in:600,actor:{id:"1",role:"administrator",status:"active"},grant:"cd".repeat(32),session:sessionId,csrf:csrfToken,permissions:PERMISSION_KEYS.map(key=>({key,granted:key!=="hub.manage",implemented:key!=="configuration.manage"})),routes:ACCESS_ROUTES.map(([method,path,permission])=>({method,path,permission,allowed:true})),token};
@@ -39,6 +39,9 @@ test("account adapter requires same-origin forms and redacts service credentials
   }
   if(req.url==="/api/v1/management/hub/stop"){
    res.setHeader("Content-Type","application/json");res.end(JSON.stringify({operation:"stop",outcome:"succeeded",active_state:"inactive",token}));return;
+  }
+  if(req.url==="/api/v1/management" && managementMime!=="application/json"){
+   res.setHeader("Content-Type",managementMime);res.end(JSON.stringify(managementBody));return;
   }
   const audit={maintenance:true,restart_required:true,events:[{id:"4",occurred_at:10,action:"accounts.create",actor_id:"1",target_kind:"account",target_id:"2",outcome:"succeeded",proof:"hidden-proof"}],next_after:null,token};
   res.setHeader("Content-Type","application/json");res.end(JSON.stringify(req.url==="/api/v1/management"?managementBody:req.url==="/api/v1/admin/access"?accessBody:req.url==="/api/v1/audit"?audit:req.url?.startsWith("/api/v1/bans")?(req.method==="GET"?{bans:[ban],next_after:null,maintenance:true,restart_required:true,observed_at:100,token}:{ban:{...ban,proof:"private"},maintenance:true,restart_required:true,observed_at:100,token}):req.url==="/api/v1/admin"?{...administration,token}:req.method==="POST"?{account:{...account,verifier:"private"},maintenance:true,token}:{accounts:[staffMode&&req.url?.includes("staff_after")?{...account,role:"owner"}:account],staff_only:staffMode&&req.url?.includes("staff_after"),next_after:null,maintenance:true,token}));
@@ -92,6 +95,13 @@ test("account adapter requires same-origin forms and redacts service credentials
   assert.equal(listedManagement.code,200);assert.equal(backendPath,"/api/v1/management");assert.equal(grantHeader,"ab".repeat(32));assert.equal(sessionHeader,sessionId);assert.equal(csrfHeader,csrfToken);
   assert.deepEqual(JSON.parse(listedManagement.text).areas.map((area:{key:string;allowed:boolean;implemented:boolean})=>[area.key,area.allowed,area.implemented]),[["accounts",true,true],["roles",false,true],["bans",true,true],["configuration",true,false],["hub",false,true]]);
   assert.ok(!listedManagement.text.includes("MgmtSecret")&&!listedManagement.text.includes(token));
+  const mimeHeaders={"X-DC24H-Admin-Grant":"AB".repeat(32),...bound};
+  managementMime="application/json-attacker";
+  const refusedMime=await call("GET",mimeHeaders,"","/admin-api/v1/management");
+  assert.equal(refusedMime.code,503);assert.equal(JSON.parse(refusedMime.text).error,"invalid_api_response");
+  managementMime="application/json; charset=utf-8";
+  assert.equal((await call("GET",mimeHeaders,"","/admin-api/v1/management")).code,200);
+  managementMime="application/json";
   const configPath="/admin-api/v1/management/configuration",configHeaders={"X-DC24H-Admin-Grant":"AB".repeat(32),...bound};
   assert.equal((await call("GET",{},"",configPath)).code,403);
   assert.equal((await call("GET",{"X-DC24H-Admin-Grant":"AB".repeat(32)},"",configPath)).code,403);
