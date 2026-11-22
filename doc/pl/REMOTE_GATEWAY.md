@@ -1,6 +1,6 @@
-# Zdalny WebAdmin — beta-0.2.2 (dostęp lokalny, tylko odczyt)
+# Zdalny WebAdmin — beta-0.2.3 (dostęp lokalny, tylko odczyt)
 
-**Wersja rozwojowa.** beta-0.2 dodaje, a beta-0.2.2 uszczelnia **osobną** bramę WebAdmin:
+**Wersja rozwojowa.** beta-0.2 dodaje, a beta-0.2.2–beta-0.2.3 uszczelniają **osobną** bramę WebAdmin:
 /remote.html i pięć ściśle określonych tras /remote/v1. Działa **tylko
 lokalnie** na 127.0.0.1 i wymaga HTTPS, aktywnego konta
 **administrator** albo **Owner** oraz hasła tego konta. W tej wersji nie
@@ -22,8 +22,14 @@ losowe cookie Secure, HttpOnly, SameSite=Strict dla /remote/v1.
 Przed **każdym** odczytem sesji lub statystyk brama ponownie sprawdza
 aktywną rolę konta w katalogu zarządzania. Blokada konta, odebranie
 uprawnienia, utrata grantu lub awaria API zamyka dostęp; przy błędzie
-API zwracane jest 503, bez wcześniejszych danych. Sesja trwa maksymalnie
-10 minut, wygasa po 2 minutach bezczynności. Jednocześnie maksymalnie
+API zwracane jest 503, bez wcześniejszych danych.
+W beta-0.2.3 odpowiedź C++ po sprawdzeniu hasła musi zawierać dokładnie ten
+sam identyfikator konta, który podał operator. Inne ID, konto nieaktywne lub
+niedozwolona rola skutkują generyczną odmową jak przy błędnym haśle. Odczyt
+statusu nie może zakończyć się sukcesem po równoległym unieważnieniu sesji;
+spóźniona odpowiedź API nie przywraca uprawnień.
+
+Sesja trwa maksymalnie 10 minut, wygasa po 2 minutach bezczynności. Jednocześnie maksymalnie
 4 sesje. Logowanie wymaga jednorazowego wyzwania CSRF; próby są
 limitowane. Wylogowanie wymaga osobnego CSRF i zgodnego Origin.
 Audyt zapisuje jedynie ustalone nazwy zdarzeń, bez haseł, tokenów,
@@ -99,7 +105,9 @@ powinna skutkować odmową dostępu.
 
 ## Testy i ryzyka
 
-Testy Node sprawdzają dowód hasła i role, CSRF, wygaśnięcie sesji,
+Testy Node sprawdzają dowód hasła i role, w beta-0.2.3 również różne ID,
+cofnięcie grantu/roli, awarie DB/API, wyścigi odczytów i limity prób
+(deterministycznie bez otwierania gniazd sieciowych). Sprawdzają też CSRF, wygaśnięcie sesji,
 błędne metody, kodowane ścieżki, długości i nagłówki oraz brak odczytu API
 przy odmowie. Playwright sprawdza EN/PL,
 logowanie, wylogowanie i stany błędów. Test integracyjny Apache

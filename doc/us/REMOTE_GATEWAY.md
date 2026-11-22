@@ -1,6 +1,6 @@
-# Remote WebAdmin — beta-0.2.2 (local-only read access)
+# Remote WebAdmin — beta-0.2.3 (local-only read access)
 
-**Development-only.** The beta-0.2 gateway, hardened in beta-0.2.2, is an **independent** WebAdmin entry
+**Development-only.** The beta-0.2 gateway, hardened through beta-0.2.3, is an **independent** WebAdmin entry
 point: /remote.html and five precisely defined /remote/v1 routes. It is
 **local-only** on 127.0.0.1 and requires HTTPS, an active **administrator**
 or **Owner** account and a valid account password. There is **no MFA** in this
@@ -23,6 +23,11 @@ session cookie (Secure, HttpOnly, SameSite=Strict, scoped to /remote/v1).
 The gateway rechecks the live authenticated management catalog on **every**
 session or summary read. An inactive account, revoked grant or reduced role
 fails closed. Upstream timeouts/errors cause 503 with no cached metrics.
+In beta-0.2.3, login additionally verifies that the authenticated account ID
+returned by C++ exactly matches the ID supplied by the operator. Other IDs,
+disabled accounts and ineligible roles receive the same generic refusal as
+invalid credentials. A session revoked by a concurrent request cannot deliver
+a late status response or regain authority from a previously started read.
 Sessions expire after at most 10 minutes, 2 minutes idle; at most four
 concurrent sessions, short one-time login challenges and rate-limited login
 attempts. Logout requires same-origin Origin and an independent CSRF secret.
@@ -103,7 +108,10 @@ weaken the bind or proxy an unprotected port to make the feature reachable.
 
 ## Tests / known limitations
 
-- Node gateway tests cover proof and account-role revalidation, CSRF,
+- Node gateway tests cover proof and account-role revalidation, including
+  beta-0.2.3 identity mismatches, role/grant revocation, DB/API outages,
+  concurrent reads and per-actor limits. Socket-free cases exercise these
+  rules even where opening test sockets is disallowed. Other tests cover CSRF,
   malformed input and length, denied methods/encoded paths/proxy headers,
   no private API calls on refusal, expiry and status projection.
 - Browser tests cover EN/PL UI, login, summary, logout and refusal.

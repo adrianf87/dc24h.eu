@@ -13,6 +13,8 @@ export interface RemoteOptions {
   origin: string;
   now?: () => number;
   audit?: (event: RemoteEvent) => void;
+  // Optional in-process transport override for deterministic, socket-free tests.
+  upstream?: typeof upstream;
 }
 type Session = {
   actor: string;
@@ -106,6 +108,7 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
   if (!/^https:\/\/[A-Za-z0-9.-]+(?::[1-9]\d{1,4})?$/.test(options.origin)) throw new Error("HTTPS origin required");
   const clock = options.now ?? Date.now;
   const audit = options.audit ?? (() => {});
+  const callUpstream = options.upstream ?? upstream;
   const sessions = new Map<string, Session>();
   const challenges = new Map<string, Challenge>();
   const budgets = new Map<string, Budget>();
@@ -152,11 +155,15 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
     }
     return [id, session];
   };
-  const authorized = async (id: string, value: Session): Promise<"ok" | "revoked" | "unavailable"> => {
+  const authorized = async (id: string, value: Session, existing = false): Promise<"ok" | "revoked" | "unavailable"> => {
     if (!config) return "unavailable";
     try {
-      const catalog = parseManagement(await upstream(config, "/api/v1/management", "GET", "", value));
-      if (catalog.areas[0].allowed && catalog.areas[1].allowed) return "ok";
+      const catalog = parseManagement(await callUpstream(config, "/api/v1/management", "GET", "", value));
+      if (catalog.areas[0].allowed && catalog.areas[1].allowed) {
+        // A concurrent request may have revoked this session while the API
+        // request was in flight. Never restore authority from a late success.
+        return existing && sessions.get(id) !== value ? "revoked" : "ok";
+      }
       sessions.delete(id);
       log("session_revoked");
       return "revoked";
@@ -247,8 +254,10 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
       if (!config) { reply(res, 503, { error: "unavailable" }); return; }
       try {
         const form = "actor_id=" + encodeURIComponent(actor) + "&proof=" + encodeURIComponent(proof);
-        const issued = parseAccess(await upstream(config, "/api/v1/admin/access", "POST", form));
-        if (!["administrator", "owner"].includes(issued.actor.role)) throw new Error("role_refused");
+        const issued = parseAccess(await callUpstream(config, "/api/v1/admin/access", "POST", form));
+        if (issued.actor.id !== actor || !["administrator", "owner"].includes(issued.actor.role)) {
+          throw new Error("identity_refused");
+        }
         // A subsequent GET rechecks the role against the actual database.
         const session: Session = {
           actor, grant: issued.grant, apiSession: issued.session, apiCsrf: issued.csrf,
@@ -291,7 +300,7 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
       reply(res, 200, { schema: 1, authenticated: false }, clearSession());
       return;
     }
-    const check = await authorized(key, session);
+    const check = await authorized(key, session, true);
     if (check === "revoked") { reply(res, 403, { error: "forbidden" }, clearSession()); return; }
     if (check !== "ok") { reply(res, 503, { error: "unavailable" }); return; }
     session.used = now;
@@ -304,7 +313,11 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
     }
     try {
       if (!config) throw new Error("unavailable");
-      const data = parseSnapshot(await upstream(config, "/api/v1/status", "GET"));
+      const data = parseSnapshot(await callUpstream(config, "/api/v1/status", "GET"));
+      if (sessions.get(key) !== session) {
+        reply(res, 403, { error: "forbidden" }, clearSession());
+        return;
+      }
       // Intentionally no user list, identities, IPs, INI, audit, grants or
       // process counters beyond the explicitly reviewed aggregate fields.
       reply(res, 200, { schema: 1, mode: "read-only", server: {

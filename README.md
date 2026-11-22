@@ -2,12 +2,13 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: beta-0.2.2 (local-only, read-only remote WebAdmin; not a production release).**
+**Current development version: beta-0.2.3 (local-only, read-only remote WebAdmin; not a production release).**
 
 CI on `main`: [public GitHub-hosted Ubuntu 22.04, 24.04 and 26.04](doc/us/GITHUB_CI.md) runs C++ Debug, C++ Release and WebAdmin on each image · [PL](doc/pl/GITHUB_CI.md).
 
-Completed increments (older bullets describe their original delivery scope):
+Development increments (older bullets describe their original delivery scope; verify CI and merge status separately):
 
+- **beta-0.2.3 Authentication and revalidation**: rejects mismatched upstream account identities and refuses a late status response if a concurrent request revoked its session. Socket-free tests cover valid Owner/administrator logins, generic refusals, role/grant revocation, outages, racing reads and login limits. No new routes, public access, writes or ADC/ADCS protocol changes. See [Remote gateway](doc/us/REMOTE_GATEWAY.md) | [PL](doc/pl/REMOTE_GATEWAY.md).
 - **beta-0.2.2 HTTP request hardening**: preserves the five exact remote gateway routes, rejects untrusted proxy headers by family and adds negative method/path/body tests. Work is on `beta-0.2-code`; no new permissions, Internet access or writes. See [Remote gateway](doc/us/REMOTE_GATEWAY.md) | [PL](doc/pl/REMOTE_GATEWAY.md).
 - **beta-0.2.1 Maintenance baseline**: reports `beta-0.2.1` across the hub, API, service controller and WebAdmin while retaining the beta-0.2 local-only, read-only gateway. No new remote permissions, public network listener, database migration or production deployment. See [Beta maintenance baseline](doc/us/BETA.md) | [PL](doc/pl/BETA.md).
 - **beta-0.2 Remote WebAdmin**: isolated loopback-only HTTPS portal, authenticated administrator/Owner password proof, bounded server-side sessions with CSRF and live role revalidation, and an explicit allowlist of aggregate status metrics. No public exposure without MFA, no administrative writes or service commands. See [Remote gateway](doc/us/REMOTE_GATEWAY.md) | [PL](doc/pl/REMOTE_GATEWAY.md).
