@@ -1,10 +1,9 @@
-# Zdalny WebAdmin — beta-0.2.12 (dostęp lokalny, tylko odczyt)
+# Zdalny WebAdmin — beta-0.3.7 (lokalne MFA, tylko odczyt)
 
-**Wersja rozwojowa.** beta-0.2 dodaje, a beta-0.2.2–beta-0.2.12 uszczelniają **osobną** bramę WebAdmin:
+**Wersja rozwojowa.** beta-0.2 dodaje, a beta-0.2.2–beta-0.3.7 uszczelniają **osobną** bramę WebAdmin:
 /remote.html i pięć ściśle określonych tras /remote/v1. Działa **tylko
 lokalnie** na 127.0.0.1 i wymaga HTTPS, aktywnego konta
-**administrator** albo **Owner** oraz hasła tego konta. W tej wersji nie
-ma **MFA**; udostępnianie bramy w Internecie, przez proxy zewnętrzne albo
+**administrator** albo **Owner**, hasła i kodu TOTP. Jest to **MFA nieodporne na phishing**; udostępnianie bramy w Internecie, przez proxy zewnętrzne albo
 tunel **nie jest obsługiwane**. Kompilacja nie uruchamia ani nie wdraża
 bramy. Dotychczasowa publiczna konfiguracja Apache pozostaje bez zmian.
 
@@ -39,6 +38,31 @@ przed upływem terminu nie może zakończyć się sukcesem po jego przekroczeniu
 Pięć tras, numer wersji i uprawnienia tylko do odczytu pozostają bez zmian.
 Audyt zapisuje jedynie ustalone nazwy zdarzeń, bez haseł, tokenów,
 identyfikatorów sesji, adresów IP i treści odpowiedzi.
+
+### beta-0.3.4–beta-0.3.7 — MFA, sesje i audyt
+
+Brama wymaga drugiego składnika **po** sprawdzeniu hasła w C++, zgodności
+identyfikatora i aktualnych uprawnień. JSON logowania ma dokładnie
+`actor_id`, `password`, `otp` (6 cyfr). Przeglądarka akceptuje tylko sesję
+z `mfa: true`; po próbie czyści pole hasła i kodu, nie zapisuje ich trwale.
+Nie pojawiły się nowe trasy HTTP ani rejestracja przez Internet.
+
+TOTP zgodny z RFC 6238 używa HMAC-SHA1, kroków 30 sekund i okna ±1 kroku.
+Każde konto wymaga osobnego losowego sekretu co najmniej 160 bitów.
+Plik JSON z sekretami musi być własnością UID bramy i mieć tryb 0600,
+a katalog nadrzędny 0700. Dziennik 0600 zapisuje i synchronizuje z dyskiem
+zużyte kroki TOTP przed wystawieniem sesji; po restarcie kody nie mogą
+zostać użyte ponownie. Brak MFA, błąd pliku, pełny/uszkodzony dziennik,
+zły kod albo awaria zapisu oznaczają odmowę, bez tworzenia sesji.
+Nie ma jeszcze WebAuthn/passkeys, odzyskiwania ani API do rejestracji urządzeń.
+
+Zdarzenia logowane są jako JSON w stdout procesu Node, docelowo w
+systemd-journald. Rekord obejmuje tylko typ ze stałej listy oraz czas ISO;
+bez ID konta, adresu IP, haseł, kodów, cookie czy treści żądań. Operator
+konfiguruje trwałość, ograniczenia dostępu, retencję, eksport i alerty.
+Nie jest to dziennik niezmienialny ani audyt zgodności. Pozostają cookie
+Secure/HttpOnly/SameSite=Strict, CSRF, 4 sesje, 2 minuty bezczynności,
+10 minut maksymalnego czasu i bieżąca kontrola uprawnień.
 
 ### beta-0.2.7–beta-0.2.12 — zbiorcze poprawki High Starter
 
@@ -164,7 +188,7 @@ czyści wpisane hasło. Scenariusze te mają testy regresyjne.
 | Trasa | Metoda | Działanie |
 | --- | --- | --- |
 | /remote/v1/challenge | GET | Krótkie wyzwanie CSRF, bez danych huba |
-| /remote/v1/login | POST | Weryfikacja hasła i roli |
+| /remote/v1/login | POST | Weryfikacja hasła, roli i obowiązkowego TOTP |
 | /remote/v1/session | GET | Powtórna kontrola sesji i uprawnień |
 | /remote/v1/summary | GET | Wybrane zbiorcze statystyki, tylko odczyt |
 | /remote/v1/logout | POST | Unieważnienie sesji po kontroli CSRF |
@@ -210,17 +234,37 @@ poza bramą. Logowanie tutaj nie otwiera starego lokalnego WebAdmin.
    DC24H_API_TOKEN_FILE dla istniejącego API C++. Użytkownik bramy
    musi mieć dostęp do gniazda i pliku tokenu. Nie umieszczaj tych
    danych w katalogu WWW, nagłówkach przeglądarki, Vite ani Git.
-3. Ustaw DC24H_REMOTE_ORIGIN=https://localhost:8443 i uruchom
+3. Zarejestruj numeryczne ID każdego uprawnionego konta **poza bramą**.
+   Wygeneruj odrębny, losowy sekret Base32 o długości co najmniej 32 znaków,
+   np. w prywatnym terminalu wykonaj `openssl rand -hex 20 | xxd -r -p | base32 -w0`.
+   Dodaj ten sam sekret do zaufanej aplikacji TOTP. Utwórz katalog
+   `/var/lib/dc24h-remote` o właścicielu `dc24h-maintenance` i trybie 0700.
+   W `mfa.json` (ten sam właściciel, tryb 0600) zapisz **schemat**:
+
+   ```json
+   {"schema":1,"accounts":{"7":"ZASTAP_PRYWATNYM_SEKRETEM_BASE32"}}
+   ```
+
+   Przykładowy tekst to tylko symbol zastępczy — nie zadziała jako sekret.
+   Ustaw bezwzględne ścieżki `DC24H_REMOTE_MFA_FILE` oraz
+   `DC24H_REMOTE_MFA_REPLAY_FILE` w prywatnym katalogu. Dziennik replay
+   powstaje przy pierwszym uruchomieniu z trybem 0600. Chroń oba pliki
+   i kopie zapasowe; po zmianie rejestru kont zrestartuj bramę. **Nie
+   zeruj ani nie przywracaj starej wersji dziennika** przy tym samym
+   sekrecie. Po osiągnięciu limitu 1 MiB brama odmówi logowania;
+   bezpieczna kompakcja offline musi zachować największy wykorzystany
+   krok każdego konta. Zadbaj o synchronizację czasu systemowego.
+4. Ustaw DC24H_REMOTE_ORIGIN=https://localhost:8443 i uruchom
    npm run remote:local w webadmin/. Proces nasłuchuje wyłącznie
    127.0.0.1:4182; próby ustawienia adresu publicznego są odrzucane.
    Przykład config/dc24h-remote-gateway.service.example nie jest
    instalowany jako działająca usługa.
-4. Skonfiguruj **lokalny** certyfikat HTTPS i osobny vhost z pliku
+5. Skonfiguruj **lokalny** certyfikat HTTPS i osobny vhost z pliku
    config/apache2-webadmin-remote.conf.example. Potrzebne są moduły
    ssl, headers, proxy i proxy_http. Sprawdź zgodność Origin oraz
    konfigurację Apache przed uruchomieniem.
-5. Na tym samym komputerze otwórz https://localhost:8443/remote.html,
-   zaloguj się numerycznym ID i hasłem aktywnego administratora albo
+6. Na tym samym komputerze otwórz https://localhost:8443/remote.html,
+   zaloguj się numerycznym ID, hasłem i kodem TOTP aktywnego administratora albo
    Ownera. Dostępne są języki EN/PL. Wylogowanie unieważnia sesję.
 
 Nie wystawiaj portu przez publiczny interfejs lub tunel jako obejście
@@ -242,6 +286,7 @@ konfigurację i niezmienioną listę migracji.
 Pozostałe ryzyka: lokalne procesy z dostępem do gniazda lub tokenu,
 przejęcie serwera albo przeglądarki, kradzież hasła oraz zarządzanie
 lokalnym zaufaniem TLS. Limity logowania są **lokalne dla procesu**
-i zerują się po jego restarcie. **Brak MFA i publicznego trybu dostępu.**
+i zerują się po jego restarcie. **TOTP jest dostępne wyłącznie lokalnie;
+brak publicznego trybu dostępu oraz MFA odpornego na phishing.**
 To nie jest wdrożenie produkcyjne. Schemat v11 i numer pakietu 0.1.0
 nie ulegają zmianie.

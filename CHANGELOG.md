@@ -1,5 +1,13 @@
 # Changelog
 
+## beta-0.3.4–beta-0.3.7 Stage II — 2026-11-22 (existing branch beta-0.3.1-12-full, current beta-0.3.7)
+
+- **0.3.4 — MFA contract:** Require TOTP alongside existing password proof, identity and live management checks. Login accepts exactly the three expected fields; session JSON includes a verified-MFA marker. There are still only five loopback-only, read-only routes.
+- **0.3.5 — Enrollment and replay:** Verify six-digit RFC 6238 TOTP against private per-account Base32 seeds; require correct UID and 0600/0700 permissions, reject symlinks and preserve consumed time steps in a synced replay ledger across gateway restarts. Unavailable MFA fails closed.
+- **0.3.6 — Session hardening:** Browser clears OTP and password after submission, demands an MFA-marked session and retains Secure/HttpOnly/SameSite=Strict cookies, CSRF, live role revalidation and strict idle/absolute expiration. Add deterministic MFA, replay and session regressions.
+- **0.3.7 — Audit and operator controls:** Record only fixed event names and timestamps as structured journal lines, include MFA acceptance and refusal, and document retention/recovery requirements. The local-only systemd example gains a private state directory and MFA file paths. This is not a tamper-evident audit or a public gateway.
+- Retain unchanged MariaDB v11, npm/CMake tuple `0.1.0`, ADC/ADCS wire behavior, public Apache and read-only permissions. No deployment or merge to `main` is implied.
+
 ## beta-0.3.1–beta-0.3.3 Stage I — 2026-11-22 (branch beta-0.3.1-12-full, current beta-0.3.3)
 
 - **0.3.1 — CI and baseline:** Advance C++ hub/API/controller, WebAdmin and test fixtures to `beta-0.3.3` as the consolidated Stage I runtime version. Add this branch to push CI and stop assuming hosted runners always have exactly four logical CPUs. Keep existing required check name and full three-image C++/WebAdmin matrix.

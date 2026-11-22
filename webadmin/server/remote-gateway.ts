@@ -10,15 +10,18 @@ import { isJsonContentType } from "./json-content-type.ts";
 export { isJsonContentType } from "./json-content-type.ts";
 
 type Credentials = { socket: string; token: string };
-export type RemoteEvent = "login_ok" | "login_refused" | "logout" | "session_revoked" | "route_refused" | "api_unavailable";
+export type RemoteEvent = "login_ok" | "login_refused" | "mfa_ok" | "mfa_refused" | "logout" | "session_revoked" | "route_refused" | "api_unavailable";
 export interface RemoteOptions {
   origin: string;
   now?: () => number;
   audit?: (event: RemoteEvent) => void;
+  // No login session can be created without an explicitly configured second factor.
+  mfaVerify?: (actor: string, code: string, at: number) => boolean;
   // Optional in-process transport override for deterministic, socket-free tests.
   upstream?: typeof upstream;
 }
 type Session = {
+  mfaVerified: true;
   actor: string;
   grant: string;
   apiSession: string;
@@ -166,7 +169,7 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
     const id = cookie(req, "dc24h_remote");
     if (!/^[0-9a-f]{64}$/.test(id)) return null;
     const session = sessions.get(id);
-    if (!session || expired(session, now)) {
+    if (!session || session.mfaVerified !== true || expired(session, now)) {
       sessions.delete(id);
       return null;
     }
@@ -261,11 +264,12 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
       catch { reply(res, 400, { error: "bad_request" }, [setCookie("dc24h_remote_init", "", 0)]); return; }
       const actor = fields.actor_id;
       const proof = fields.password;
+      const otp = fields.otp;
       const csrf = req.headers["x-dc24h-remote-csrf"];
       if (typeof actor !== "string" || !/^[1-9]\d{0,18}$/.test(actor) ||
         BigInt(actor) > 9223372036854775807n ||
         typeof proof !== "string" || !proof.length || proof.length > 1024 ||
-        Object.keys(fields).length !== 2 ||
+        typeof otp !== "string" || !/^\d{6}$/.test(otp) || Object.keys(fields).length !== 3 ||
         typeof csrf !== "string" || !challenge || challenge.expires <= clock() ||
         !sameSecret(challenge.token, csrf)) {
         log("login_refused"); reply(res, 403, { error: "login_refused" }, [setCookie("dc24h_remote_init", "", 0)]); return;
@@ -282,7 +286,7 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
         }
         // A subsequent GET rechecks the role against the actual database.
         const session: Session = {
-          actor, grant: issued.grant, apiSession: issued.session, apiCsrf: issued.csrf,
+          mfaVerified: true, actor, grant: issued.grant, apiSession: issued.session, apiCsrf: issued.csrf,
           csrf: randomBytes(32).toString("hex"), created: 0, used: 0, pendingLogouts: 0,
         };
         const key = randomBytes(32).toString("hex");
@@ -293,6 +297,19 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
           throw fault;
         }
         if (check !== "ok") throw new Error("authorization_refused");
+        if (!options.mfaVerify) {
+          const fault = new Error("mfa_not_configured") as Error & { status: number };
+          fault.status = 503;
+          throw fault;
+        }
+        let verified = false;
+        try { verified = options.mfaVerify(actor, otp, clock()); }
+        catch {
+          const fault = new Error("mfa_unavailable") as Error & { status: number };
+          fault.status = 503;
+          throw fault;
+        }
+        if (!verified) { log("mfa_refused"); throw new Error("mfa_refused"); }
         // A concurrent logout or earlier re-login may have removed this
         // browser session while credentials were being verified. Do not
         // create an orphaned new session from the revoked predecessor.
@@ -308,8 +325,9 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
         if (prior) sessions.delete(previousSession);
         if (sessions.size >= maxSessions) sessions.delete(sessions.keys().next().value!);
         sessions.set(key, session);
+        log("mfa_ok");
         log("login_ok");
-        reply(res, 200, { schema: 1, authenticated: true, mode: "read-only", csrf: session.csrf, expires_in: 600 },
+        reply(res, 200, { schema: 1, authenticated: true, mfa: true, mode: "read-only", csrf: session.csrf, expires_in: 600 },
           [setCookie("dc24h_remote", key, 600), setCookie("dc24h_remote_init", "", 0)]);
       } catch (error) {
         log("login_refused");
@@ -363,7 +381,7 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
     session.used = checkedAt;
     if (name === "session") {
       reply(res, 200, {
-        schema: 1, authenticated: true, mode: "read-only", csrf: session.csrf,
+        schema: 1, authenticated: true, mfa: true, mode: "read-only", csrf: session.csrf,
         expires_in: Math.max(0, Math.floor(Math.min(session.created + absoluteTime - checkedAt, idleTime) / 1000)),
       });
       return;

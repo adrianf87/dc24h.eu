@@ -1,6 +1,6 @@
 # dc24h.eu WebAdmin
 
-The current development UI is `beta-0.3.3` (dc24h.eu High Starter). Stage I on branch `beta-0.3.1-12-full` unifies strict private API JSON media-type checks and response-buffer scrubbing, and strengthens CI security coverage. The *separate*, local-only, authenticated read-only portal introduced in beta-0.2 is at /remote.html; see [Remote gateway](../doc/us/REMOTE_GATEWAY.md) and [PL](../doc/pl/REMOTE_GATEWAY.md). The existing local Owner-only service controls are documented in [Hub WebAdmin](../doc/us/HUB_WEBADMIN.md). Neither the public Apache example nor the remote gateway forwards service-control commands. MFA and Internet exposure remain disabled.
+The current development UI is `beta-0.3.7` (dc24h.eu High Starter). Stage I on branch `beta-0.3.1-12-full` unifies strict private API JSON media-type checks and response-buffer scrubbing, and strengthens CI security coverage. Stage II requires private TOTP enrollment and replay protection for the *separate*, local-only, authenticated read-only portal at /remote.html; see [Remote gateway](../doc/us/REMOTE_GATEWAY.md) and [PL](../doc/pl/REMOTE_GATEWAY.md). The existing local Owner-only service controls are documented in [Hub WebAdmin](../doc/us/HUB_WEBADMIN.md). Neither the public Apache example nor the remote gateway forwards service-control commands. Public exposure remains disabled, even with TOTP.
 
 alpha-0.8.1: see [Permissions](../doc/us/PERMISSIONS.md) for the seven-role catalog, pending-action flags, safe VIP delegation and stopped-hub role changes.
 
@@ -29,10 +29,11 @@ this WebAdmin root. Never use `VITE_*` for credentials.
 
 `npm run preview` serves a static build with API disabled. beta-0.2 adds
 an optional independent loopback gateway with server-side sessions:
-set private DC24H_API_SOCKET, DC24H_API_TOKEN_FILE and
+set private DC24H_API_SOCKET, DC24H_API_TOKEN_FILE,
+DC24H_REMOTE_MFA_FILE, DC24H_REMOTE_MFA_REPLAY_FILE and
 DC24H_REMOTE_ORIGIN=https://localhost:8443 and use npm run remote:local.
 Only the separate localhost HTTPS Apache example exposes its fixed /remote/v1
-routes. Public authenticated access is **not** enabled; MFA is not available.
+routes. Public authenticated access is **not** enabled; only local TOTP is available.
 Production web sessions, public access and remote mutations remain planned.
 
 See [setup and architecture (US)](../doc/us/WEBADMIN.md) or

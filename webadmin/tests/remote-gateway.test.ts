@@ -125,7 +125,7 @@ test("remote gateway authenticates a real API proof but projects only approved a
   await once(api, "listening");
   chmodSync(socket, 0o600);
   const gateway = createServer(remoteGateway({ socket, token }, {
-    origin, now: () => clock, audit: (event) => events.push(event),
+    origin, now: () => clock, audit: (event) => events.push(event), mfaVerify: () => true,
   }));
   gateway.listen(0, "127.0.0.1");
   await once(gateway, "listening");
@@ -186,18 +186,18 @@ test("remote gateway authenticates a real API proof but projects only approved a
     assert.equal((await call("/remote/v1/login", "POST", "{invalid", {
       Cookie: loginCookie, "X-DC24H-Remote-CSRF": challengeToken,
     })).status, 400);
-    assert.equal((await call("/remote/v1/login", "POST", JSON.stringify({ actor_id: "7", password: "correct" }), {
+    assert.equal((await call("/remote/v1/login", "POST", JSON.stringify({ actor_id: "7", password: "correct", otp: "000000" }), {
       Cookie: loginCookie, "X-DC24H-Remote-CSRF": challengeToken, "Content-Type": "text/plain",
     })).status, 400);
     assert.equal((await call("/remote/v1/login", "POST", JSON.stringify({ password: "x".repeat(2048) }), {
       Cookie: loginCookie, "X-DC24H-Remote-CSRF": challengeToken,
     })).status, 400);
     assert.equal(upstreamCalls.length, 0, "invalid POST bodies must not authenticate upstream");
-    assert.equal((await call("/remote/v1/login", "POST", JSON.stringify({ actor_id: "7", password: "correct" }),
+    assert.equal((await call("/remote/v1/login", "POST", JSON.stringify({ actor_id: "7", password: "correct", otp: "000000" }),
       { Cookie: loginCookie, "X-DC24H-Remote-CSRF": "0".repeat(64) })).status, 403);
     const fresh = await call("/remote/v1/challenge");
     assert.equal(fresh.status, 200, fresh.data);
-    const login = await call("/remote/v1/login", "POST", JSON.stringify({ actor_id: "7", password: "correct" }), {
+    const login = await call("/remote/v1/login", "POST", JSON.stringify({ actor_id: "7", password: "correct", otp: "000000" }), {
       Cookie: fresh.cookies[0]!.split(";")[0]!,
       "X-DC24H-Remote-CSRF": JSON.parse(fresh.data).csrf,
     });
@@ -229,7 +229,7 @@ test("remote gateway authenticates a real API proof but projects only approved a
     assert.equal(summary.status, 200);
     assert.deepEqual(JSON.parse(summary.data), {
       schema: 1, mode: "read-only",
-      server: { version: "beta-0.3.3", running: true, uptime_seconds: 3661 },
+      server: { version: "beta-0.3.7", running: true, uptime_seconds: 3661 },
       network: { active_connections: 7, accepted_connections: 48 },
       users: { online: 4, peak_online: 6 }, chat: { received: 12, rejected: 2 },
     });
@@ -258,14 +258,14 @@ test("remote gateway authenticates a real API proof but projects only approved a
     revoked = false;
     const renewed = await call("/remote/v1/challenge");
     assert.equal(renewed.status, 200, renewed.data);
-    const again = await call("/remote/v1/login", "POST", JSON.stringify({ actor_id: "7", password: "correct" }), {
+    const again = await call("/remote/v1/login", "POST", JSON.stringify({ actor_id: "7", password: "correct", otp: "000000" }), {
       Cookie: renewed.cookies[0]!.split(";")[0]!, "X-DC24H-Remote-CSRF": JSON.parse(renewed.data).csrf,
     });
     assert.equal(again.status, 200);
     clock += 2 * 60_000 + 1;
     assert.equal((await call("/remote/v1/summary", "GET", "", { Cookie: again.cookies[0]!.split(";")[0]! })).status, 401);
     const next = await call("/remote/v1/challenge");
-    const lastLogin = await call("/remote/v1/login", "POST", JSON.stringify({ actor_id: "7", password: "correct" }), {
+    const lastLogin = await call("/remote/v1/login", "POST", JSON.stringify({ actor_id: "7", password: "correct", otp: "000000" }), {
       Cookie: next.cookies[0]!.split(";")[0]!, "X-DC24H-Remote-CSRF": JSON.parse(next.data).csrf,
     });
     assert.equal(lastLogin.status, 200);

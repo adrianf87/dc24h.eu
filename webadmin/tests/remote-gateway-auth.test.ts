@@ -14,18 +14,23 @@ const apiCsrf = "d".repeat(64);
 type Failure = Error & { status?: number };
 const failure = (status: number): Failure => Object.assign(new Error("private_failure"), { status });
 
-function harness() {
+function harness(mfaConfigured = true) {
   let time = 100_000;
   const calls: string[] = [];
   const events: string[] = [];
   const state = {
     role: "administrator", actor: "7", active: true, allowed: true,
     loginFailure: 0, managementFailure: 0,
+    mfaAccepted: true, mfaFailure: false,
     managementGate: async () => {},
     statusResponse: async () => snapshot as unknown,
   };
   const gateway = remoteGateway({ socket: "/private/test-only.sock", token }, {
     origin, now: () => time, audit: (event) => events.push(event),
+    ...(mfaConfigured ? { mfaVerify: (_actor: string, code: string) => {
+      if (state.mfaFailure) throw Error("private_mfa_failure");
+      return state.mfaAccepted && code === "000000";
+    } } : {}),
     upstream: async (_config, path, method, body, session) => {
       calls.push(method + " " + path);
       if (path === "/api/v1/admin/access") {
@@ -89,11 +94,11 @@ function harness() {
     await gateway(req, res);
     return response;
   }
-  async function login(actor = "7", password = "correct", priorCookie = "") {
+  async function login(actor = "7", password = "correct", priorCookie = "", otp = "000000") {
     const issued = await call("/remote/v1/challenge");
     assert.equal(issued.status, 200);
     const challenge = JSON.parse(issued.body).csrf as string;
-    const body = JSON.stringify({ actor_id: actor, password });
+    const body = JSON.stringify({ actor_id: actor, password, otp });
     return call("/remote/v1/login", "POST", body, {
       cookie: issued.cookies[0]!.split(";")[0]! + (priorCookie ? "; " + priorCookie : ""),
       "x-dc24h-remote-csrf": challenge,
@@ -108,6 +113,8 @@ test("login accepts current administrator and Owner, but never substitutes an ac
     h.state.role = role;
     const login = await h.login();
     assert.equal(login.status, 200, role);
+    assert.equal(JSON.parse(login.body).mfa, true);
+    assert.ok(h.events.includes("mfa_ok"));
     assert.ok(login.cookies[0]?.includes("HttpOnly; Secure; SameSite=Strict"));
     assert.ok(!login.body.includes(grant) && !login.body.includes(apiSession) && !login.body.includes("correct"));
     assert.deepEqual(h.calls, ["POST /api/v1/admin/access", "GET /api/v1/management"]);
@@ -126,6 +133,25 @@ test("login accepts current administrator and Owner, but never substitutes an ac
     assert.ok(!h.calls.includes("GET /api/v1/status"));
     assert.ok(!refused.body.includes("correct"));
   }
+});
+
+test("MFA is required after private access authorization and is audited without leaking codes", async () => {
+  for (const [accepted, failure, expected] of [[false, false, 403], [true, true, 503]] as const) {
+    const h = harness();
+    h.state.mfaAccepted = accepted;
+    h.state.mfaFailure = failure;
+    const response = await h.login();
+    assert.equal(response.status, expected);
+    assert.deepEqual(h.calls, ["POST /api/v1/admin/access", "GET /api/v1/management"]);
+    assert.ok(!response.cookies.some((item) => item.startsWith("dc24h_remote=")));
+    assert.ok(!JSON.stringify(h.events).includes("000000"));
+    if (!failure) assert.ok(h.events.includes("mfa_refused"));
+  }
+  const absent = harness(false);
+  assert.equal((await absent.login()).status, 503, "no configured verifier cannot mint a session");
+  const invalid = harness();
+  assert.equal((await invalid.login("7", "correct", "", "123456")).status, 403);
+  assert.ok(invalid.events.includes("mfa_refused"));
 });
 
 test("bad passwords, unknown accounts and lost API return generic refusals", async () => {
@@ -184,7 +210,7 @@ test("remote status strips private upstream fields and refuses malformed or unav
   const login = await h.login();
   const browserCookie = login.cookies[0]!.split(";")[0]!;
   const privateValue = "SECRET_IDENTITY_FROM_PRIVATE_API";
-  const clean = { ...snapshot, server: { ...snapshot.server, version: "beta-0.3.3" } };
+  const clean = { ...snapshot, server: { ...snapshot.server, version: "beta-0.3.7" } };
   h.state.statusResponse = async () => ({
     ...clean, secret: privateValue, audit_rows: [{ account: privateValue }],
     server: { ...clean.server, private_socket: privateValue },
@@ -199,7 +225,7 @@ test("remote status strips private upstream fields and refuses malformed or unav
   assert.equal(safe.status, 200);
   assert.deepEqual(JSON.parse(safe.body), {
     schema: 1, mode: "read-only",
-    server: { version: "beta-0.3.3", running: true, uptime_seconds: 3661 },
+    server: { version: "beta-0.3.7", running: true, uptime_seconds: 3661 },
     network: { active_connections: 7, accepted_connections: 48 },
     users: { online: 4, peak_online: 6 },
     chat: { received: 12, rejected: 2 },
@@ -366,7 +392,7 @@ test("an expired challenge cannot be used by completing a slow login body", asyn
   const h = harness();
   const issued = await h.call("/remote/v1/challenge");
   assert.equal(issued.status, 200);
-  const body = JSON.stringify({ actor_id: "7", password: "correct" });
+  const body = JSON.stringify({ actor_id: "7", password: "correct", otp: "000000" });
   let finishBody!: () => void;
   const bodyGate = new Promise<void>((resolve) => { finishBody = resolve; });
   const pending = h.call("/remote/v1/login", "POST", body, {
@@ -549,7 +575,7 @@ test("concurrent reuse of a login challenge authenticates at most once", async (
   assert.equal(challenge.status, 200);
   const cookie = challenge.cookies[0]!.split(";")[0]!;
   const csrf = (JSON.parse(challenge.body) as { csrf: string }).csrf;
-  const body = JSON.stringify({ actor_id: "7", password: "correct" });
+  const body = JSON.stringify({ actor_id: "7", password: "correct", otp: "000000" });
   const headers = { cookie, "x-dc24h-remote-csrf": csrf };
   let release!: () => void;
   const gate = new Promise<void>((resolve) => { release = resolve; });

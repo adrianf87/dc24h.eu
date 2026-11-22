@@ -59,7 +59,7 @@ test("malformed login consumes its one-time challenge", async () => {
   assert.equal(malformed.status, 400);
   assert.ok(malformed.cookies.some((item) => item.startsWith("dc24h_remote_init=;")));
 
-  const valid = JSON.stringify({ actor_id: "7", password: "correct" });
+  const valid = JSON.stringify({ actor_id: "7", password: "correct", otp: "000000" });
   const replay = await call("/remote/v1/login", "POST", valid, {
     ...headers, "content-length": String(Buffer.byteLength(valid)),
   });
@@ -98,7 +98,7 @@ test("login scrubs the assembled proof buffer after parsing", async () => {
       if (assembled.includes("correct")) proofCopies.push(assembled);
       return assembled;
     }) as typeof Buffer.concat;
-    const body = JSON.stringify({ actor_id: "7", password: "correct" });
+    const body = JSON.stringify({ actor_id: "7", password: "correct", otp: "000000" });
     const response = await call("/remote/v1/login", "POST", body, {
       origin, "content-type": "application/json", "content-length": String(Buffer.byteLength(body)),
     });

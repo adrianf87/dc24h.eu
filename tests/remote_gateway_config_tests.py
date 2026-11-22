@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Remote beta-0.3.3 gateway invariants, including Apache boundary guardrails."""
+"""Remote beta-0.3.7 gateway invariants, including Apache boundary guardrails."""
 from pathlib import Path
 import unittest
 
@@ -51,6 +51,9 @@ class RemoteConfiguration(unittest.TestCase):
         unit = self.text("config/dc24h-remote-gateway.service.example")
         for expected in ("DC24H_REMOTE_ORIGIN=https://localhost:8443",
                          "DC24H_REMOTE_PORT=4182", "IPAddressDeny=any",
+                         "StateDirectory=dc24h-remote", "StateDirectoryMode=0700",
+                         "DC24H_REMOTE_MFA_FILE=/var/lib/dc24h-remote/mfa.json",
+                         "DC24H_REMOTE_MFA_REPLAY_FILE=/var/lib/dc24h-remote/replay.jsonl",
                          "IPAddressAllow=localhost", "NoNewPrivileges=true",
                          "ProtectSystem=strict", "RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6",
                          "CapabilityBoundingSet=", "AmbientCapabilities="):
@@ -67,6 +70,7 @@ class RemoteConfiguration(unittest.TestCase):
                          "SameSite=Strict", "HttpOnly; Secure", "maxSessions = 4",
                          "absoluteTime = 10 * 60_000", "idleTime = 2 * 60_000",
                          "api_unavailable", "session_revoked", "login_refused",
+                         "mfaVerify", "mfaVerified", "mfa_ok", "mfa_refused",
                          "no-store", "login:global", "authorization", "untrustedProxyHeader",
                          'name.startsWith("x-forwarded-")', 'name === "proxy-authorization"'):
             self.assertIn(expected, code)
@@ -82,18 +86,25 @@ class RemoteConfiguration(unittest.TestCase):
         self.assertIn("DC24H_REMOTE_ORIGIN", executable)
         self.assertIn("DC24H_REMOTE_PUBLIC", executable)
         self.assertIn("credentials(process.env)", executable)
+        self.assertIn("loadTotpVerifier", executable)
+        self.assertIn("mfaVerify: mfa.verify", executable)
+        verifier = self.text("webadmin/server/remote-mfa.ts")
+        for expected in ("timingSafeEqual", "O_NOFOLLOW", "fsyncSync", "lastUsed", "0o600", "ledgerLimit"):
+            self.assertIn(expected, verifier)
 
     def test_no_new_migration_and_separate_ui(self):
         ui = self.text("webadmin/src/remote/RemoteApp.tsx")
         self.assertIn("X-DC24H-Remote-CSRF", ui)
         self.assertIn('call("logout"', ui)
         self.assertIn('call("summary"', ui)
+        self.assertIn('s.mfa === true', ui)
+        self.assertIn('name="otp"', ui)
         self.assertNotIn("localStorage", ui)
         self.assertNotIn("sessionStorage", ui)
         self.assertNotIn("Start/Stop/Restart", ui)
         self.assertIn('remote.html', self.text("webadmin/vite.config.ts"))
-        self.assertIn('set(DC24H_VERSION "beta-0.3.3")', self.text("CMakeLists.txt"))
-        self.assertIn('WEBADMIN_VERSION = "beta-0.3.3"', self.text("webadmin/src/lib/status.ts"))
+        self.assertIn('set(DC24H_VERSION "beta-0.3.7")', self.text("CMakeLists.txt"))
+        self.assertIn('WEBADMIN_VERSION = "beta-0.3.7"', self.text("webadmin/src/lib/status.ts"))
         self.assertIn("beta-0.2-code", self.text(".github/workflows/build.yml"))
         self.assertIn("beta-0.2.2-fix", self.text(".github/workflows/build.yml"))
         self.assertIn("beta-0.2.2-source", self.text(".github/workflows/build.yml"))

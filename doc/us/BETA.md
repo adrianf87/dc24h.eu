@@ -1,6 +1,30 @@
+# Beta 0.3 Stage II — beta-0.3.4 through beta-0.3.7
+
+The existing branch `beta-0.3.1-12-full` now reports **`beta-0.3.7`** (Stage I plus Stage II). No separate patch branches, tags or deployment were created.
+
+## beta-0.3.4 — MFA threat model and contract
+
+The separate remote read-only gateway requires the active administrator/Owner password proof, current live management permission and a server-verified six-digit TOTP code. The login accepts exactly `actor_id`, `password` and `otp`; successful session JSON includes `mfa: true`. No new route or browser-visible seed, enrollment API, privilege or public endpoint is introduced. TOTP is a development second factor, not phishing-resistant WebAuthn or an Internet-access authorization.
+
+## beta-0.3.5 — private TOTP verification
+
+An explicitly provisioned JSON enrollment file maps numeric account IDs to unique random Base32 TOTP secrets (at least 160 bits); it must be owned by the gateway UID and mode 0600 inside an owner-only 0700 directory. Verification uses RFC 6238 HMAC-SHA1, 30-second steps, six digits and a ±1-step clock window. A private append-only JSONL ledger records consumed steps with `fsync`, so a code cannot be reused for that account, including after gateway restart. Invalid/missing credentials fail closed; filesystem and ledger failures deny login. No seed or code is logged.
+
+## beta-0.3.6 — session and browser isolation
+
+The browser discards entered password and OTP on submit, requires `mfa: true` on session JSON, and never persists either credential. Only a successful password, role and TOTP verification creates an opaque read-only session. Secure, HttpOnly, SameSite=Strict cookies, CSRF, loopback HTTPS, four-session cap, two-minute idle and ten-minute absolute deadlines, live permission rechecks and revocation races remain enforced. Unit and browser regressions cover MFA failures and session behavior.
+
+## beta-0.3.7 — structured event audit and safety boundary
+
+The dedicated Node process writes bounded JSON event records (`component`, fixed `event`, ISO timestamp) to systemd-journald: login accepted/refused, MFA accepted/refused, logout, session revocation, refused route and unavailable API. No account ID, IP, password, OTP, API token, cookie, grant or response body is included. Journal persistence, access restrictions, rotation, alerting and independent forwarding remain the operator's responsibility; the sink is not an immutable compliance audit. The service template provisions private MFA storage and remains loopback-only. Tests cover file permissions, replay after restart and generic denials. See [Remote gateway](REMOTE_GATEWAY.md).
+
+Nothing is merged to `main` or exposed to the Internet by this stage. WebAuthn/passkeys, recovery and enrollment administration, phishing-resistant MFA, anti-DoS across gateway restarts and public-edge hardening remain future work. MariaDB schema v11, CMake/npm package tuple `0.1.0`, ADC/ADCS protocol and existing public Apache vhost remain unchanged.
+
+## Previous stage — beta-0.3.1 through beta-0.3.3
+
 # Beta 0.3 Stage I — beta-0.3.1 through beta-0.3.3
 
-Branch `beta-0.3.1-12-full` starts from merged `main` after beta-0.2.12. Three patches are delivered together with the current runtime version **`beta-0.3.3`**. Later beta-0.3.4–beta-0.3.12 work is not included.
+Branch `beta-0.3.1-12-full` started from merged `main` after beta-0.2.12. Stage I originally delivered three patches and the runtime version **`beta-0.3.3`**; Stage II above supersedes its runtime identifier. Later beta-0.3.8–beta-0.3.12 work is not included.
 
 ## beta-0.3.1 — CI and release baseline
 

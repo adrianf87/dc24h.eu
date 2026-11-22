@@ -2,6 +2,19 @@
 
 This analysis records how the hub and WebAdmin can be attacked, which controls already exist, and which risks remain. The branch starts from main `7872471`. The branch name is `alpha-0.9.1`.
 
+**beta-0.3.4–beta-0.3.7 local MFA follow-up:** The independent loopback
+read-only gateway now requires a separate TOTP code after password and
+current role authorization. Its owner-only enrollment registry and
+disk-synced consumed-step ledger resist stolen passwords alone and same-code
+replay, including across restarts. The browser rejects unauthenticated
+session envelopes; service journal events exclude identities and secrets.
+This does **not** defend against phishing proxies that relay TOTP in real
+time, compromised hosts or authenticators, local stolen session cookies,
+disk rollback of the replay ledger, or distributed guessing across restarts.
+The remaining public-access design requires phishing-resistant MFA, explicit
+enrollment/recovery, hardened edge policy and operational audit retention.
+No Internet exposure or write permission is enabled by this patch.
+
 **beta-0.2.7–beta-0.2.12 High Starter follow-up:** A four-second absolute
 deadline reduces the ability of a trickling private API peer to occupy a
 gateway read indefinitely. Exact JSON content-type validation and buffer

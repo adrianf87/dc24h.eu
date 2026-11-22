@@ -1,6 +1,8 @@
 # dc24h.eu High Starter technical documentation
 
-Current development version: beta-0.3.3.
+Current development version: beta-0.3.7.
+
+[Beta-0.3.4–beta-0.3.7 Stage II: local MFA and audit](us/BETA.md) · [PL](pl/BETA.md)
 
 [Beta-0.3.1–beta-0.3.3 Stage I: CI, API safety and security tests](us/BETA.md) · [PL](pl/BETA.md)
 

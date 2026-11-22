@@ -1,6 +1,8 @@
 # dc24h.eu High Starter documentation
 
-beta-0.3.3: Stage I (beta-0.3.1–beta-0.3.3) improves CI portability, local API response validation and scrubbing, plus security and dependency checks. Hub, API, controller and WebAdmin report beta-0.3.3; the visible project is dc24h.eu High Starter. The internal protocol identity `dc24h.eu`, public proxy and schema v11 remain unchanged. No Internet gateway without MFA, administrative writes or production deployment. Default development language: EN/US UTF-8.
+beta-0.3.7: Stage I (beta-0.3.1–beta-0.3.3) improves CI, API response validation and security checks; Stage II (beta-0.3.4–beta-0.3.7) adds local-only TOTP, replay protection, session enforcement and journald audit events. Hub, API, controller and WebAdmin report beta-0.3.7; the visible project is dc24h.eu High Starter. The internal protocol identity `dc24h.eu`, public proxy and schema v11 remain unchanged. TOTP does not enable an Internet-facing gateway, administrative writes or deployment. Default development language: EN/US UTF-8.
+
+- [Beta-0.3.4–beta-0.3.7 Stage II](BETA.md)
 
 - [Beta-0.3.1–beta-0.3.3 Stage I](BETA.md)
 
