@@ -483,3 +483,30 @@ test("logout cancels an in-flight re-login tied to the same session", async () =
   assert.equal((await pending).status, 403);
   assert.equal((await h.call("/remote/v1/session", "GET", "", { cookie: oldCookie })).status, 401);
 });
+
+test("a delayed logout prevents a replacement login while its body is pending", async () => {
+  const h = harness();
+  const initial = await h.login();
+  assert.equal(initial.status, 200);
+  const oldCookie = initial.cookies[0]!.split(";")[0]!;
+  const csrf = (JSON.parse(initial.body) as { csrf: string }).csrf;
+
+  let finishBody!: () => void;
+  const bodyGate = new Promise<void>((resolve) => { finishBody = resolve; });
+  const pendingLogout = h.call("/remote/v1/logout", "POST", "{}", {
+    cookie: oldCookie, "x-dc24h-remote-csrf": csrf,
+  }, bodyGate);
+
+  const invalidParallelLogout = await h.call("/remote/v1/logout", "POST", "{", {
+    cookie: oldCookie, "x-dc24h-remote-csrf": csrf,
+  });
+  assert.equal(invalidParallelLogout.status, 400);
+  const renewed = await h.login("7", "correct", oldCookie);
+  assert.equal(renewed.status, 403, "an in-flight logout must prevent re-authentication");
+  finishBody();
+
+  const logout = await pendingLogout;
+  assert.equal(logout.status, 200);
+  assert.equal((await h.call("/remote/v1/session", "GET", "", { cookie: oldCookie })).status, 401);
+  assert.equal(h.calls.filter((item) => item === "GET /api/v1/status").length, 0);
+});

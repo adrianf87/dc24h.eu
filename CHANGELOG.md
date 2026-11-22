@@ -2,6 +2,7 @@
 
 ## beta-0.2.5 — 2026-11-22
 
+- Session race review: a logout with valid CSRF but delayed request body could be overtaken by a new login using the previous cookie; the logout then returned success while the replacement session survived. Block re-login while any valid-CSRF logout is in flight, even if a concurrent malformed logout completes first. Add a deterministic regression reproducing the stale session before the fix.
 - Security review: refuse GET request bodies and chunked GET framing at the Apache TLS boundary for the three fixed read endpoints; previously Node would reject them only after Apache forwarded the request. Add real-Apache negative tests ensuring the mock upstream never sees these requests, while a bodyless GET with `Content-Length: 0` stays permitted.
 - CI follow-up: fixed the real-Apache proxy integration failure found on all three Ubuntu images. `LimitRequestBody` alone did not reject the proxied 2049-byte login; enforce the maximum Content-Length and reject absent/ambiguous lengths and chunked POST framing in the vhost's pre-proxy rewrite rules. Add a 2048-byte accepted boundary and a chunked framing refusal test.
 - Harden the separate, loopback-only Apache2 TLS example at the proxy boundary: reject unexpected `Host`, disallowed route methods, query strings, invalid cross-origin requests and login/logout requests without the exact HTTPS `Origin` before they reach the Node gateway. Keep only the five existing allowlisted routes.

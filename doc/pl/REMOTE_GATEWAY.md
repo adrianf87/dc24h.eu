@@ -71,6 +71,12 @@ zewnętrzne dodane przez operatora lub lokalny napastnik z dostępem do
 sekretów pozostają zagrożeniem. Publiczny vhost jest niezmieniony, a
 przykład nie jest automatycznie instalowany, uruchamiany ani wdrażany.
 
+Dodatkowa ochrona sesji blokuje ponowne logowanie ze starym cookie, dopóki
+wylogowanie z prawidłowym CSRF czeka na zakończenie odbierania treści żądania.
+Równoległa próba wylogowania z nieprawidłową treścią nie usuwa tej blokady.
+Wcześniej opóźnione wylogowanie mogło zgłosić sukces, choć nowa sesja
+pozostawała aktywna. Deterministyczny test bez gniazd odtwarza ten wyścig.
+
 ### beta-0.2.4 — sesje i weryfikacja CSRF
 
 Czas bezwzględny sesji (10 minut) i bezczynności (2 minuty) jest teraz

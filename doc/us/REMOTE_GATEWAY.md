@@ -71,6 +71,12 @@ operator-supplied public proxy/tunnel or a local attacker with access to
 secrets remains out of scope. The existing public Apache vhost is untouched;
 the example is not automatically installed, enabled or deployed.
 
+Additional session race hardening blocks re-authentication with a browser
+cookie while a CSRF-validated logout using that cookie is still receiving its
+request body. A malformed concurrent logout cannot clear this in-flight guard.
+Previously the slow logout could return success while a replacement session
+remained valid. A socket-free deterministic test reproduces and prevents it.
+
 ### beta-0.2.4 session lifecycle and CSRF verification
 
 The absolute (10-minute) and idle (2-minute) session deadlines now start only
