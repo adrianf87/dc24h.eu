@@ -2,6 +2,16 @@
 
 This analysis records how the hub and WebAdmin can be attacked, which controls already exist, and which risks remain. The branch starts from main `7872471`. The branch name is `alpha-0.9.1`.
 
+**beta-0.2.7–beta-0.2.12 High Starter follow-up:** A four-second absolute
+deadline reduces the ability of a trickling private API peer to occupy a
+gateway read indefinitely. Exact JSON content-type validation and buffer
+scrubbing reduce malformed-response and residual-memory exposure. A local
+Apache Fetch Metadata check blocks cross-site gateway traffic before Node.
+Regression tests cover concurrent revocations and session eviction. None
+of these controls protects against a compromised local host, stolen
+administrator password or leaked service token. MFA and any Internet-facing
+gateway remain explicitly unsupported.
+
 **beta-0.2.6 status privacy:** A separate remote status parser validates
 only public aggregate fields and constructs a fresh allowlisted response.
 Unknown nested identities, peer addresses, account records, tokens, audit

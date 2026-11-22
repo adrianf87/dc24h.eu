@@ -84,6 +84,7 @@ test("remote gateway authenticates a real API proof but projects only approved a
   const socket = join(directory, "api.sock");
   let clock = 100_000;
   let revoked = false;
+  let statusContentType = "application/json; charset=utf-8";
   let upstreamCalls: string[] = [];
   const events: string[] = [];
   const api = createServer((req, res) => {
@@ -108,6 +109,7 @@ test("remote gateway authenticates a real API proof but projects only approved a
         res.end(JSON.stringify(management(!revoked))); return;
       }
       if (req.url === "/api/v1/status" && req.method === "GET") {
+        res.setHeader("Content-Type", statusContentType);
         res.end(JSON.stringify({ ...snapshot, secret: token, server: { ...snapshot.server, private_key: "DO-NOT-LEAK" } })); return;
       }
       res.statusCode = 404; res.end('{"error":"not_found"}');
@@ -221,12 +223,21 @@ test("remote gateway authenticates a real API proof but projects only approved a
     assert.equal(summary.status, 200);
     assert.deepEqual(JSON.parse(summary.data), {
       schema: 1, mode: "read-only",
-      server: { version: "beta-0.2.6", running: true, uptime_seconds: 3661 },
+      server: { version: "beta-0.2.12", running: true, uptime_seconds: 3661 },
       network: { active_connections: 7, accepted_connections: 48 },
       users: { online: 4, peak_online: 6 }, chat: { received: 12, rejected: 2 },
     });
     assert.ok(!summary.data.includes(token) && !summary.data.includes("DO-NOT-LEAK"));
-    assert.deepEqual(upstreamCalls.filter((s) => s.includes("/api/v1/status")), ["GET /api/v1/status"]);
+    // A prefix such as application/json-attacker is not the JSON media type.
+    statusContentType = "application/json-attacker";
+    const wrongMime = await call("/remote/v1/summary", "GET", "", { Cookie: browserCookie });
+    assert.equal(wrongMime.status, 503);
+    assert.equal(wrongMime.data, '{"error":"unavailable"}');
+    assert.ok(!wrongMime.data.includes("DO-NOT-LEAK"));
+    statusContentType = "application/json; charset=utf-8";
+    assert.equal((await call("/remote/v1/summary", "GET", "", { Cookie: browserCookie })).status, 200);
+    assert.deepEqual(upstreamCalls.filter((s) => s.includes("/api/v1/status")),
+      ["GET /api/v1/status", "GET /api/v1/status", "GET /api/v1/status"]);
     assert.equal((await call("/remote/v1/logout", "POST", "{}", { Cookie: browserCookie })).status, 403);
     assert.equal((await call("/remote/v1/logout", "POST", "{invalid", {
       Cookie: browserCookie, "X-DC24H-Remote-CSRF": loginData.csrf,

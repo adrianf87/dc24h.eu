@@ -1,6 +1,6 @@
-# Remote WebAdmin — beta-0.2.6 (local-only read access)
+# Remote WebAdmin — beta-0.2.12 (local-only read access)
 
-**Development-only.** The beta-0.2 gateway, hardened through beta-0.2.6, is an **independent** WebAdmin entry
+**Development-only.** The beta-0.2 gateway, hardened through beta-0.2.12, is an **independent** WebAdmin entry
 point: /remote.html and five precisely defined /remote/v1 routes. It is
 **local-only** on 127.0.0.1 and requires HTTPS, an active **administrator**
 or **Owner** account and a valid account password. There is **no MFA** in this
@@ -39,6 +39,27 @@ read-only permission changes.
 Audit events contain only fixed event names (login_ok, login_refused, logout,
 session_revoked, route_refused, api_unavailable), never passwords, session
 secrets, IP addresses or response payloads.
+
+### beta-0.2.7–beta-0.2.12 consolidated hardening — High Starter
+
+The visible name is **dc24h.eu High Starter**, while the private API's
+protocol identity remains `dc24h.eu`. This is one Git branch and one final
+version string `beta-0.2.12`, not six separately shipped releases.
+
+The private Unix-socket API response must have the exact JSON media type
+(optional Content-Type parameters are permitted). Its total deadline is four
+seconds even if bytes keep arriving, and any accumulated private response
+buffers are scrubbed on success, abort, oversize or truncation. Failed reads
+return 503 without cached metrics. Socket-free tests now cover eviction of a
+session while its summary is pending, and 12 concurrent summary reads whose
+grant is revoked in flight: no stale metrics escape, and a fresh login can
+recover after permissions return.
+
+The example Apache TLS vhost additionally rejects cross-site Fetch Metadata
+(`Sec-Fetch-Site: cross-site` or `same-site`) before proxying to Node. Missing,
+`same-origin` or `none` values remain supported for local clients; the Node
+gateway independently performs the same boundary check. Tests exercise the
+actual disposable TLS proxy. The five routes stay strictly local/read-only.
 
 ### beta-0.2.6 minimal status projection and API failures
 

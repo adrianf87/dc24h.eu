@@ -1,6 +1,8 @@
-# dc24h.eu technical documentation
+# dc24h.eu High Starter technical documentation
 
-Current development version: beta-0.2.6.
+Current development version: beta-0.2.12.
+
+[Combined beta-0.2.7–beta-0.2.12 hardening](us/BETA.md) · [PL](pl/BETA.md)
 
 [Beta-0.2.6 status projection privacy](us/BETA.md) · [PL](pl/BETA.md)
 

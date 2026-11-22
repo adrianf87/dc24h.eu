@@ -23,7 +23,7 @@ Systemy docelowe: Debian 12/13 oraz Ubuntu 22.04/24.04/26.04 LTS. Zakres rzeczyw
 ```sh
 sudo apt-get update
 sudo apt-get install build-essential cmake git python3 libutf8proc-dev libgcrypt20-dev libssl-dev openssl ncdc libmariadb-dev
-git clone --branch alpha-0.1.11 https://github.com/adrianf87/dc24h.eu.git
+git clone --branch main https://github.com/adrianf87/dc24h.eu-high-starter.git
 cd dc24h.eu
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel 2

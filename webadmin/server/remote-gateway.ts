@@ -61,6 +61,12 @@ const cookie = (req: IncomingMessage, key: string): string => {
 const setCookie = (key: string, value: string, age: number): string =>
   key + "=" + value + "; Path=" + cookiePath + "; HttpOnly; Secure; SameSite=Strict; Max-Age=" + age;
 
+// Accept the JSON media type with an optional UTF-8 charset, but never
+// prefix lookalikes or ambiguous comma-separated content types.
+export const isJsonContentType = (value: unknown): boolean =>
+  typeof value === "string" &&
+  /^application\/json(?:\s*;\s*charset\s*=\s*(?:utf-8|"utf-8"))?\s*$/i.test(value);
+
 // Fixed upstream paths: a grant never becomes a general-purpose HTTP proxy.
 async function upstream(config: Credentials, path: "/api/v1/admin/access" | "/api/v1/management" | "/api/v1/status",
   method: "GET" | "POST", body = "", session?: Session): Promise<unknown> {
@@ -78,25 +84,33 @@ async function upstream(config: Credentials, path: "/api/v1/admin/access" | "/ap
       headers["Content-Type"] = "application/x-www-form-urlencoded";
       headers["Content-Length"] = String(Buffer.byteLength(body));
     }
-    const call = request({ socketPath: config.socket, path, method, agent: false, headers }, (answer) => {
+    // The socket's idle timeout alone is not a total deadline: a peer that
+    // trickles bytes could otherwise hold a private-API request indefinitely.
+    const call = request({ socketPath: config.socket, path, method, agent: false, headers,
+      signal: AbortSignal.timeout(4000) }, (answer) => {
       const chunks: Buffer[] = [];
       let bytes = 0;
+      const scrub = () => { for (const chunk of chunks) chunk.fill(0); chunks.length = 0; };
+      // 'end' is not emitted on truncated, aborted or oversized responses.
+      answer.on("close", scrub);
       answer.on("data", (part: Buffer) => {
         bytes += part.length;
         if (bytes > 65536) { call.destroy(new Error("upstream_size")); return; }
         chunks.push(part);
       });
       answer.on("end", () => {
+        let assembled: Buffer | undefined;
         try {
-          if (!String(answer.headers["content-type"] ?? "").startsWith("application/json")) throw Error();
-          const value: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+          if (!isJsonContentType(answer.headers["content-type"])) throw Error();
+          assembled = Buffer.concat(chunks);
+          const value: unknown = JSON.parse(assembled.toString("utf8"));
           if (answer.statusCode !== 200) {
             const error = new Error("upstream_status");
             (error as Error & { status: number }).status = answer.statusCode ?? 503;
             reject(error);
           } else resolve(value);
         } catch { reject(new Error("upstream_invalid")); }
-        for (const chunk of chunks) chunk.fill(0);
+        finally { assembled?.fill(0); scrub(); }
       });
     });
     call.setTimeout(4000, () => call.destroy(new Error("upstream_timeout")));

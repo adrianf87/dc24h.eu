@@ -1,5 +1,14 @@
 # Changelog
 
+## beta-0.2.7–beta-0.2.12 finish — 2026-11-22 (one combined branch, final version beta-0.2.12)
+
+- **0.2.7 — Documentation/CI:** Rename the visible product to **dc24h.eu High Starter** and update current README, release, installation, documentation, GitHub Actions links and the combined branch's CI push trigger. Fix the C++/WebAdmin job repository guards so the renamed `dc24h.eu-high-starter` repository actually runs checks; add a regression guarding both jobs. Check the WebAdmin README for current-version/UTF-8/link consistency; preserve the protocol identity `dc24h.eu` and historical version records.
+- **0.2.8 — Sessions:** Add a deterministic regression showing an outstanding status response cannot survive eviction of its browser session by a fifth login. Existing bounded sessions, CSRF, live permission checks and logout semantics are unchanged.
+- **0.2.9 — Private API:** Accept only the actual `application/json` media type, never a matching attacker-controlled prefix. Enforce a four-second absolute upstream deadline in addition to the socket idle timeout to stop trickle responses. Scrub accumulated private API response buffers on completion and premature closure, including oversize/abort. Add a real Unix-socket gateway regression for invalid media types and recovery.
+- **0.2.10 — Apache/HTTPS:** Reject cross-site and same-site Fetch Metadata before proxying fixed remote API routes, with disposable TLS integration tests; legitimate same-origin, none and headerless local clients remain compatible. Public Apache configuration is untouched.
+- **0.2.11 — Reliability:** Exercise a dozen concurrent status reads with an in-flight permission revocation and verify every response fails closed, old cookies stay invalid and a newly authorized login recovers. No performance-capacity claim or cached metrics.
+- **0.2.12 — Final integration boundary:** Advance hub/API/controller/WebAdmin and fixtures to `beta-0.2.12`; retain five local-only read-only routes, CMake/npm package tuple `0.1.0`, MariaDB schema v11 and ADC/ADCS behavior. Run Node, Python baseline/documentation/security checks and the existing C++/WebAdmin/Chromium integration matrix on CI. No public network access, MFA, remote write, migration, automatic merge or deployment is introduced.
+
 ## beta-0.2.6 — 2026-11-22
 
 - Follow-up security audit: close the permission-revocation window between the initial management check and a delayed upstream status response. Before returning any summary, recheck live permissions, session identity and expiration; deny revoked grants with 403 and transient authorization failures with 503, never stale aggregates. Regression tests reproduce both earlier HTTP 200 leaks.

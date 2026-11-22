@@ -1,6 +1,8 @@
-# Dokumentacja dc24h.eu
+# Dokumentacja dc24h.eu High Starter
 
-beta-0.2.6: osobna projekcja bezpiecznych agregatów statusu i walidacja błędów API dla lokalnej bramy WebAdmin tylko do odczytu. Hub, API, kontroler usługi i WebAdmin zgłaszają beta-0.2.6. Schemat v11 i publiczne proxy Apache pozostają bez zmian. Bez MFA brak dostępu publicznego. Brak zapisu administracyjnego i wdrożenia produkcyjnego.
+beta-0.2.12: zbiorcza gałąź poprawek beta-0.2.7–beta-0.2.12 uaktualnia dokumentację wersji i CI, testy wyścigów sesji, limit całkowitego czasu odpowiedzi prywatnego API i kontrolę typu JSON oraz granicę Fetch Metadata w Apache. Hub, API, kontroler i WebAdmin zgłaszają beta-0.2.12; widoczna nazwa projektu to dc24h.eu High Starter. Wewnętrzny identyfikator protokołu `dc24h.eu`, schemat v11 i publiczne proxy Apache pozostają bez zmian. Bez MFA nie ma dostępu publicznego ani zdalnego zapisu administracyjnego czy wdrożenia produkcyjnego.
+
+- [Zbiorcze poprawki beta-0.2.7–beta-0.2.12](BETA.md)
 
 - [Minimalizacja statusu i błędy API — beta-0.2.6](BETA.md)
 - [Apache2, HTTPS i granica loopback — beta-0.2.5](BETA.md)

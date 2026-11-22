@@ -1,5 +1,14 @@
 # Model zagrożeń — alpha-0.9.1
 
+**Aktualizacja beta-0.2.7–beta-0.2.12 High Starter:** Czterosekundowy limit
+całkowitego czasu zmniejsza ryzyko blokowania bramy przez powolną odpowiedź
+prywatnego API. Ścisły typ JSON i zerowanie buforów ograniczają ryzyko
+niepoprawnych odpowiedzi i pozostałości danych w pamięci. Lokalny Apache
+odrzuca Fetch Metadata cross-site przed Node. Testy obejmują równoległe
+cofnięcie uprawnień i usunięcie sesji. Nie chroni to przed przejęciem
+lokalnego hosta, wykradzeniem hasła administratora ani tokenu usługi.
+MFA i publiczna brama pozostają nieobsługiwane.
+
 **beta-0.2.6 — prywatność statusu:** Osobny parser bramy lokalnej sprawdza
 tylko publiczne agregaty i tworzy nową odpowiedź z zamkniętej listy.
 Tożsamości, adresy klientów, konta, tokeny, audyt i prywatne ścieżki,

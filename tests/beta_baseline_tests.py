@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lock beta-0.2.6 metadata and inherited WebAdmin safety limits."""
+"""Lock combined beta-0.2.7–beta-0.2.12 final metadata and WebAdmin safety limits."""
 
 from pathlib import Path
 import sys
@@ -57,7 +57,7 @@ def main():
     errors = []
     cmake = check(ROOT / "CMakeLists.txt", (
         "project(dc24h VERSION 0.1.0 LANGUAGES CXX)",
-        'set(DC24H_VERSION "beta-0.2.6")',
+        'set(DC24H_VERSION "beta-0.2.12")',
         'add_executable(dc24h-service-controller',
         'service.controller.process',
         "add_test(NAME beta.baseline ",
@@ -72,7 +72,7 @@ def main():
         "beta-0.2",
         "beta-0.2.1",
         "beta-0.2-code",
-        "beta-0.2.6",
+        "beta-0.2.7-beta-0.2.12-finish",
         "pull_request:",
         "name: CI (C++ and WebAdmin)",
     ), errors)
@@ -82,11 +82,15 @@ def main():
             "build.yml: both jobs must use the public image matrix", errors)
     require(workflow.count('test "$(nproc)" -eq 4') == 2,
             "build.yml: both jobs must require four logical CPUs", errors)
+    require(workflow.count("github.repository == 'adrianf87/dc24h.eu-high-starter'") == 2,
+            "build.yml: renamed High Starter repository must run both C++ and WebAdmin jobs", errors)
     require("server-747585786" not in workflow, "build.yml: custom runner is selected", errors)
     require("self-hosted" not in workflow, "build.yml: self-hosted runner is selected", errors)
     require("ubuntu-latest" not in workflow, "build.yml: ubuntu-latest is selected", errors)
     check(ROOT / "README.md", (
-        "Current development version: beta-0.2.6",
+        "# dc24h.eu High Starter",
+        "Current development version: beta-0.2.12",
+        "beta-0.2.7–beta-0.2.12 Consolidated hardening",
         "beta-0.2.6 Status projection privacy",
         "beta-0.2.5 Apache2/HTTPS/loopback boundary",
         "beta-0.2.4 Sessions and CSRF",
@@ -97,8 +101,11 @@ def main():
         "beta-0.1.8 Development baseline",
         "<summary>Alpha 0.9.x (17 releases)</summary>",
     ), errors)
-    check(ROOT / "doc/README.md", ("Current development version: beta-0.2.6",), errors)
+    check(ROOT / "doc/README.md", ("Current development version: beta-0.2.12",), errors)
     check(ROOT / "doc/us/BETA.md", (
+        "# Combined hardening release — beta-0.2.7 to beta-0.2.12",
+        "## beta-0.2.9 — private API response hardening",
+        "## beta-0.2.12 — final verification boundary",
         "# Minimal status projection and API failures — beta-0.2.6",
         "# Apache2, HTTPS and loopback boundary — beta-0.2.5",
         "# Session lifetime, rotation and CSRF — beta-0.2.4",
@@ -133,6 +140,9 @@ def main():
         "four logical CPUs and 16 GB",
     ), errors)
     check(ROOT / "doc/pl/BETA.md", (
+        "# Zbiorcze wydanie poprawek — beta-0.2.7 do beta-0.2.12",
+        "## beta-0.2.9 — odpowiedzi prywatnego API",
+        "## beta-0.2.12 — końcowa granica weryfikacji",
         "# Minimalizacja statusu i błędy API — beta-0.2.6",
         "# Apache2, HTTPS i granica loopback — beta-0.2.5",
         "# Czas życia sesji, rotacja i CSRF — beta-0.2.4",
@@ -249,7 +259,7 @@ def main():
         "Owner-only fixed hub status/action",
     ), errors)
     check(ROOT / "webadmin/src/lib/status.ts", (
-        'export const WEBADMIN_VERSION = "beta-0.2.6";',
+        'export const WEBADMIN_VERSION = "beta-0.2.12";',
         '!/^(?:alpha-\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|beta-\\d{1,3}\\.\\d{1,3}(?:\\.\\d{1,3})?)$/.test(server.version)',
     ), errors)
     check(ROOT / "src/security/roles.cpp", (
@@ -275,7 +285,7 @@ def main():
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1
-    print("Beta 0.2.6 metadata and inherited safety limits passed")
+    print("Beta 0.2.12 combined release metadata and inherited safety limits passed")
     return 0
 
 
