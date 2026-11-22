@@ -44,6 +44,18 @@ TraceEnable Off
     RewriteCond %{REQUEST_URI} ^/remote/v1/(?:login|logout)$
     RewriteCond %{REQUEST_METHOD} !^POST$
     RewriteRule ^ - [F,END]
+    # mod_proxy can stream the request without applying LimitRequestBody.
+    # Enforce the POST framing/size limit while the original browser headers
+    # are still available at the TLS boundary, before invoking the backend.
+    RewriteCond %{REQUEST_URI} ^/remote/v1/(?:login|logout)$
+    RewriteCond %{HTTP:Transfer-Encoding} !^$
+    RewriteRule ^ - [F,END]
+    RewriteCond %{REQUEST_URI} ^/remote/v1/(?:login|logout)$
+    RewriteCond %{HTTP:Content-Length} !^[0-9]{1,4}$
+    RewriteRule ^ - [F,END]
+    RewriteCond %{REQUEST_URI} ^/remote/v1/(?:login|logout)$
+    RewriteCond %{HTTP:Content-Length} -gt2048
+    RewriteRule ^ - [F,END]
     RewriteCond %{REQUEST_URI} ^/remote/v1/
     RewriteCond %{HTTP:Origin} !^$
     RewriteCond %{HTTP:Origin} !^https://localhost:8443$

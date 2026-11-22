@@ -55,9 +55,12 @@ The remote document root is shared with the Vite build, but the remote vhost
 now explicitly forbids the ordinary writable WebAdmin `index.html` and
 `local-*` JavaScript/CSS bundles. `/` and `/remote.html` show the remote
 portal; its separate `remote-*` assets remain available. The sample also
-sets Apache `LimitRequestBody 2048`. Disposable Apache TLS integration
-tests exercise wrong Host, methods, query strings, Origin, direct admin and
-secret file paths, overlong bodies and plaintext HTTP attempts, checking
+sets Apache `LimitRequestBody 2048` and explicitly refuses remote POST
+requests without a bounded numeric Content-Length or with Transfer-Encoding;
+the explicit rewrite guard is needed because proxy streaming may bypass the
+general body limit. Disposable Apache TLS integration tests exercise wrong
+Host, methods, query strings, Origin, direct admin and secret file paths,
+2048/2049-byte body boundaries, chunked framing and plaintext HTTP, checking
 that rejected API requests never contact the mock backend. Static tests
 verify the example still binds loopback and requires the service sandbox.
 

@@ -232,12 +232,33 @@ class ApacheRemoteGateway(unittest.TestCase):
         for path in ("/", "/remote.html", "/assets/remote-test.js"):
             status, _, _ = self.fetch(path)
             self.assertEqual(status, 200, path)
+        status, data, _ = self.fetch("/remote/v1/login", "POST",
+                                     {"Origin": self.expected_origin, "Content-Type": "application/json"},
+                                     b"x" * 2048)
+        self.assertEqual(status, 200)
+        self.assertEqual(data, MARKER)
         before = len(self.backend.seen)
         status, body, _ = self.fetch("/remote/v1/login", "POST",
                                      {"Origin": self.expected_origin, "Content-Type": "application/json"},
                                      b"x" * 2049)
         self.assertNotEqual(status, 200)
         self.assertNotIn(MARKER, body)
+        self.assertEqual(len(self.backend.seen), before)
+
+    def test_chunked_post_denied_before_proxy(self):
+        before = len(self.backend.seen)
+        context = ssl.create_default_context(cafile=str(self.cert))
+        conn = http.client.HTTPSConnection("localhost", self.port, context=context, timeout=4)
+        try:
+            conn.request("POST", "/remote/v1/login", body=[b"{}"],
+                         headers={"Origin": self.expected_origin,
+                                  "Content-Type": "application/json",
+                                  "Transfer-Encoding": "chunked"}, encode_chunked=True)
+            response = conn.getresponse()
+            self.assertNotEqual(response.status, 200)
+            self.assertNotIn(MARKER, response.read())
+        finally:
+            conn.close()
         self.assertEqual(len(self.backend.seen), before)
 
     def test_plain_http_never_downgrades_to_the_remote_portal(self):

@@ -2,6 +2,7 @@
 
 ## beta-0.2.5 — 2026-11-22
 
+- CI follow-up: fixed the real-Apache proxy integration failure found on all three Ubuntu images. `LimitRequestBody` alone did not reject the proxied 2049-byte login; enforce the maximum Content-Length and reject absent/ambiguous lengths and chunked POST framing in the vhost's pre-proxy rewrite rules. Add a 2048-byte accepted boundary and a chunked framing refusal test.
 - Harden the separate, loopback-only Apache2 TLS example at the proxy boundary: reject unexpected `Host`, disallowed route methods, query strings, invalid cross-origin requests and login/logout requests without the exact HTTPS `Origin` before they reach the Node gateway. Keep only the five existing allowlisted routes.
 - Prevent the remote vhost from serving the regular administrative `index.html` and its `local-*` bundles from the shared WebAdmin distribution; retain `remote.html` and remote assets. Limit incoming request bodies at Apache to 2048 bytes.
 - Expand disposable Apache HTTPS tests with wrong-host, wrong-method, query, Origin, local-static-file, secret-file, plaintext-to-TLS and overlong-body refusals, asserting the private mock upstream was never contacted. Lock Apache example and service sandbox expectations in static tests.
