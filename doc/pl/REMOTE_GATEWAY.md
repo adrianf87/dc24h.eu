@@ -32,6 +32,11 @@ spóźniona odpowiedź API nie przywraca uprawnień.
 Sesja trwa maksymalnie 10 minut, wygasa po 2 minutach bezczynności. Jednocześnie maksymalnie
 4 sesje. Logowanie wymaga jednorazowego wyzwania CSRF; próby są
 limitowane. Wylogowanie wymaga osobnego CSRF i zgodnego Origin.
+Poprawka `beta-0.2.3-fix` sprawdza czas ważności wyzwania **po** odebraniu
+całej treści żądania logowania oraz ponownie sprawdza ważność sesji po
+asynchronicznej autoryzacji i po pobraniu statystyk. Żądanie rozpoczęte
+przed upływem terminu nie może zakończyć się sukcesem po jego przekroczeniu.
+Pięć tras, numer wersji i uprawnienia tylko do odczytu pozostają bez zmian.
 Audyt zapisuje jedynie ustalone nazwy zdarzeń, bez haseł, tokenów,
 identyfikatorów sesji, adresów IP i treści odpowiedzi.
 

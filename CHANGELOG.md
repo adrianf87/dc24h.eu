@@ -1,5 +1,13 @@
 # Changelog
 
+## beta-0.2.3-fix — 2026-11-22
+
+Follow-up security correction to the merged `beta-0.2.3` baseline; the application continues to identify as `beta-0.2.3`.
+
+- Revalidate the one-use CSRF login challenge against the current time **after** fully reading a potentially delayed request body. An expired challenge cannot authenticate merely because the POST started before expiry.
+- Recheck the browser session's idle and absolute deadlines after asynchronous management authorization and again after receiving status data. Expired sessions cannot return protected status metrics even when an in-flight request started while valid.
+- Add deterministic socket-free regressions that reproduced both failures as unexpected HTTP 200 responses before the correction. No new route, public listener, administrative write, schema migration, ADC/ADCS behavior change or deployment.
+
 ## beta-0.2.3 — 2026-11-22
 
 Remote gateway account authorization and live revalidation hardening on branch `beta-0.2.3`, based on merged `main` `070dd44` (beta-0.2.2).
