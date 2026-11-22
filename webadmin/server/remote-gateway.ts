@@ -5,7 +5,7 @@ import { request } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { parseAccess } from "../src/lib/access.ts";
 import { parseManagement } from "../src/lib/management.ts";
-import { parseSnapshot } from "../src/lib/status.ts";
+import { parseRemoteSummary } from "../src/lib/status.ts";
 
 type Credentials = { socket: string; token: string };
 export type RemoteEvent = "login_ok" | "login_refused" | "logout" | "session_revoked" | "route_refused" | "api_unavailable";
@@ -354,7 +354,7 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
     }
     try {
       if (!config) throw new Error("unavailable");
-      const data = parseSnapshot(await callUpstream(config, "/api/v1/status", "GET"));
+      const data = parseRemoteSummary(await callUpstream(config, "/api/v1/status", "GET"));
       if (sessions.get(key) !== session) {
         reply(res, 403, { error: "forbidden" }, clearSession());
         return;
@@ -364,20 +364,9 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
         reply(res, 401, { error: "unauthorized" }, clearSession());
         return;
       }
-      // Intentionally no user list, identities, IPs, INI, audit, grants or
-      // process counters beyond the explicitly reviewed aggregate fields.
-      reply(res, 200, { schema: 1, mode: "read-only", server: {
-        version: data.server.version, running: data.server.core_running,
-        uptime_seconds: data.server.uptime_seconds,
-      }, network: {
-        active_connections: data.network.active_connections, accepted_connections: data.network.accepted_connections,
-      }, users: { online: data.users.online, peak_online: data.users.peak_online },
-      chat: { received: data.chat.received, rejected: data.chat.rejected },
-      ...(data.search ? { search: { queries: data.search.statistics.queries_received,
-        results: data.search.statistics.results_received } } : {}),
-      ...(data.transfers ? { transfers: { ctm: data.transfers.statistics.ctm_received,
-        rcm: data.transfers.statistics.rcm_received } } : {}),
-      });
+      // The dedicated parser has already validated and constructed only the
+      // reviewed aggregate fields; never serialize a raw private API object.
+      reply(res, 200, { schema: 1, mode: "read-only", ...data });
     } catch {
       log("api_unavailable"); reply(res, 503, { error: "unavailable" });
     }

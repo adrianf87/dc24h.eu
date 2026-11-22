@@ -179,6 +179,55 @@ test("API outages deny session and summary reads without cached metrics", async 
   assert.ok(h.events.includes("api_unavailable"));
 });
 
+test("remote status strips private upstream fields and refuses malformed or unavailable statistics", async () => {
+  const h = harness();
+  const login = await h.login();
+  const browserCookie = login.cookies[0]!.split(";")[0]!;
+  const privateValue = "SECRET_IDENTITY_FROM_PRIVATE_API";
+  const clean = { ...snapshot, server: { ...snapshot.server, version: "beta-0.2.6" } };
+  h.state.statusResponse = async () => ({
+    ...clean, secret: privateValue, audit_rows: [{ account: privateValue }],
+    server: { ...clean.server, private_socket: privateValue },
+    users: { ...clean.users, nick: privateValue, cid: privateValue, ip: privateValue },
+    chat: { ...clean.chat, message: privateValue },
+    dashboard: { malformed: privateValue }, monitoring: { secret: privateValue },
+    configuration: { token: privateValue },
+    search: { statistics: { queries_received: 8, results_received: 9, cid: privateValue }, configuration: { token: privateValue } },
+    transfers: { statistics: { ctm_received: 10, rcm_received: 11, address: privateValue }, configuration: privateValue },
+  });
+  const safe = await h.call("/remote/v1/summary", "GET", "", { cookie: browserCookie });
+  assert.equal(safe.status, 200);
+  assert.deepEqual(JSON.parse(safe.body), {
+    schema: 1, mode: "read-only",
+    server: { version: "beta-0.2.6", running: true, uptime_seconds: 3661 },
+    network: { active_connections: 7, accepted_connections: 48 },
+    users: { online: 4, peak_online: 6 },
+    chat: { received: 12, rejected: 2 },
+    search: { queries: 8, results: 9 }, transfers: { ctm: 10, rcm: 11 },
+  });
+  assert.ok(!safe.body.includes(privateValue));
+
+  for (const bad of [
+    { ...clean, api_version: "v2" },
+    { ...clean, chat: { ...clean.chat, received: Number.MAX_SAFE_INTEGER + 1 } },
+    { ...clean, server: { ...clean.server, version: privateValue } },
+    { ...clean, search: { statistics: { queries_received: "8", results_received: 9 } } },
+    { ...clean, network: undefined },
+  ]) {
+    h.state.statusResponse = async () => bad;
+    const denied = await h.call("/remote/v1/summary", "GET", "", { cookie: browserCookie });
+    assert.equal(denied.status, 503);
+    assert.equal(denied.body, '{"error":"unavailable"}');
+    assert.ok(!denied.body.includes(privateValue));
+  }
+  h.state.statusResponse = async () => { throw new Error(privateValue); };
+  const outage = await h.call("/remote/v1/summary", "GET", "", { cookie: browserCookie });
+  assert.equal(outage.status, 503);
+  assert.equal(outage.body, '{"error":"unavailable"}');
+  h.state.statusResponse = async () => clean;
+  assert.equal((await h.call("/remote/v1/summary", "GET", "", { cookie: browserCookie })).status, 200);
+});
+
 test("a revoked session cannot finish an earlier in-flight status read", async () => {
   const h = harness();
   const login = await h.login();

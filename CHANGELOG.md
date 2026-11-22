@@ -1,5 +1,11 @@
 # Changelog
 
+## beta-0.2.6 — 2026-11-22
+
+- Add an independent, server-side read-only status projection that validates just the fixed public aggregates (server version/running/uptime, connection counts, online/peak users and received/rejected chat, plus optional search/transfer totals). Construct fresh whitelisted objects; never include raw private API fields, user identities, audit rows, tokens or filesystem paths.
+- Decouple the remote gateway from unrelated full local-WebAdmin status sections. Changes or malformed optional configuration/dashboard/monitoring data cannot leak into or unnecessarily break the authorized remote aggregate; absent/malformed *required* counters, changed schema/version, unsafe numbers and broken optional public counters still fail closed with a generic 503 and no cached metrics.
+- Add deterministic projection, privacy, malformed-upstream, outage and recovery tests. Report `beta-0.2.6` in the hub/API, service controller and WebAdmin. Preserve five fixed local-only/read-only routes, HTTPS, bounded sessions/CSRF, package tuple `0.1.0`, MariaDB v11 and ADC/ADCS. No public access, MFA, remote writes, migration, production deployment or automatic merge.
+
 ## beta-0.2.5 — 2026-11-22
 
 - Session race review: a logout with valid CSRF but delayed request body could be overtaken by a new login using the previous cookie; the logout then returned success while the replacement session survived. Block re-login while any valid-CSRF logout is in flight, even if a concurrent malformed logout completes first. Add a deterministic regression reproducing the stale session before the fix.

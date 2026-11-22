@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { parseSnapshot, duration } from "../src/lib/status.ts";
+import { parseSnapshot, parseRemoteSummary, duration } from "../src/lib/status.ts";
 import { snapshot } from "./fixtures.ts";
 test("accepts the C++ status contract and strips unrecognized fields", () => {
   assert.deepEqual(
@@ -109,5 +109,56 @@ test("monitoring sample is optional, allowlisted and decimal", () => {
   assert.ok(!JSON.stringify(parsed).includes("/secret"));
   for (const value of [null, {}, { ...monitoring, available: "yes" }, { ...monitoring, rss_bytes: "01" }, { ...monitoring, cpu_user_ms: "-1" }]) {
     assert.throws(() => parseSnapshot({ ...snapshot, monitoring: value }));
+  }
+});
+
+test("remote status projection includes only reviewed aggregate counters", () => {
+  const minimal = {
+    api_version: "v1", server: snapshot.server,
+    network: { active_connections: 7, accepted_connections: 48 },
+    users: { online: 4, peak_online: 6 },
+    chat: { received: 12, rejected: 2 },
+  };
+  const expected = {
+    server: { version: "beta-0.2.6", running: true, uptime_seconds: 3661 },
+    network: { active_connections: 7, accepted_connections: 48 },
+    users: { online: 4, peak_online: 6 },
+    chat: { received: 12, rejected: 2 },
+  };
+  assert.deepEqual(parseRemoteSummary(minimal), expected);
+  const malicious = {
+    ...minimal, secret: "SECRET_TOKEN", audit: [{ cid: "PRIVATE_CID" }],
+    private_blob: "DO_NOT_FORWARD".repeat(4000),
+    server: { ...minimal.server, private_path: "/private/api.sock" },
+    network: { ...minimal.network, ip: "192.0.2.1" },
+    users: { ...minimal.users, nick: "PRIVATE_NICK" },
+    chat: { ...minimal.chat, text: "PRIVATE_MESSAGE" },
+    configuration: { token: "SECRET_TOKEN", database: null },
+    dashboard: { account: "PRIVATE_ACCOUNT" }, monitoring: { credentials: "SECRET_TOKEN" },
+    search: { statistics: { queries_received: 9, results_received: 11, cid: "PRIVATE_CID" }, configuration: "changed-upstream-format" },
+    transfers: { statistics: { ctm_received: 13, rcm_received: 17, ip: "192.0.2.1" }, configuration: { token: "SECRET_TOKEN" } },
+  };
+  const sanitized = parseRemoteSummary(malicious);
+  assert.deepEqual(sanitized, { ...expected, search: { queries: 9, results: 11 }, transfers: { ctm: 13, rcm: 17 } });
+  for (const needle of ["SECRET_TOKEN", "PRIVATE_CID", "PRIVATE_ACCOUNT", "PRIVATE_NICK", "PRIVATE_MESSAGE", "/private/api.sock", "192.0.2.1", "DO_NOT_FORWARD"]) {
+    assert.ok(!JSON.stringify(sanitized).includes(needle), needle);
+  }
+});
+
+test("remote status rejects malformed mandatory aggregates and optional public counters", () => {
+  const good = { ...snapshot, server: { ...snapshot.server, version: "beta-0.2.6" } };
+  for (const corrupt of [
+    null, [], {}, { ...good, api_version: "v2" }, { ...good, server: undefined },
+    { ...good, server: { ...good.server, version: "<script>" } },
+    { ...good, server: { ...good.server, core_running: "yes" } },
+    { ...good, network: undefined }, { ...good, users: null },
+    { ...good, search: null }, { ...good, search: { statistics: { queries_received: 1 } } },
+    { ...good, transfers: { statistics: { ctm_received: 1, rcm_received: "2" } } },
+  ]) assert.throws(() => parseRemoteSummary(corrupt));
+  for (const part of ["network", "users", "chat"] as const) {
+    const field = part === "network" ? "active_connections" : part === "users" ? "online" : "received";
+    for (const value of [null, -1, 1.2, "2", NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, undefined]) {
+      assert.throws(() => parseRemoteSummary({ ...good, [part]: { ...good[part], [field]: value } }));
+    }
   }
 });

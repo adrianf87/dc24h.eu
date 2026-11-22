@@ -1,6 +1,6 @@
-# Remote WebAdmin — beta-0.2.5 (local-only read access)
+# Remote WebAdmin — beta-0.2.6 (local-only read access)
 
-**Development-only.** The beta-0.2 gateway, hardened through beta-0.2.5, is an **independent** WebAdmin entry
+**Development-only.** The beta-0.2 gateway, hardened through beta-0.2.6, is an **independent** WebAdmin entry
 point: /remote.html and five precisely defined /remote/v1 routes. It is
 **local-only** on 127.0.0.1 and requires HTTPS, an active **administrator**
 or **Owner** account and a valid account password. There is **no MFA** in this
@@ -39,6 +39,26 @@ read-only permission changes.
 Audit events contain only fixed event names (login_ok, login_refused, logout,
 session_revoked, route_refused, api_unavailable), never passwords, session
 secrets, IP addresses or response payloads.
+
+### beta-0.2.6 minimal status projection and API failures
+
+The Node gateway now uses `parseRemoteSummary`, a dedicated parser independent
+of the full local-admin `parseSnapshot`. The browser receives a newly built
+allowlist: server version/running/uptime, active/accepted connections,
+online/peak user counts, received/rejected chat totals and optionally two
+search plus two transfer counters. Account IDs, nicknames, CID/IP, messages,
+configuration, audit rows, grants, secrets, private paths, monitoring and raw
+JSON never enter the projection. Unknown upstream fields and malformed
+*unrelated* status sections are ignored rather than exposed or parsed.
+
+The root still requires the known `v1` schema, valid server identity/version,
+the correct types and nonnegative safe integers for every published counter.
+Malformed or absent required fields and malformed present optional public
+metrics fail closed with a generic 503, never partial metrics or cached
+previous responses. The same generic denial applies to API/socket/DB faults
+and private upstream timeouts. Deterministic tests cover sensitive additions,
+format drift, missing fields, invalid numeric values and recovery; no new
+endpoint, permission or local-admin parser behavior is introduced.
 
 ### beta-0.2.5 Apache2, HTTPS and loopback boundary
 

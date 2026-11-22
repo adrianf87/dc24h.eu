@@ -1,6 +1,6 @@
-# Zdalny WebAdmin — beta-0.2.5 (dostęp lokalny, tylko odczyt)
+# Zdalny WebAdmin — beta-0.2.6 (dostęp lokalny, tylko odczyt)
 
-**Wersja rozwojowa.** beta-0.2 dodaje, a beta-0.2.2–beta-0.2.5 uszczelniają **osobną** bramę WebAdmin:
+**Wersja rozwojowa.** beta-0.2 dodaje, a beta-0.2.2–beta-0.2.6 uszczelniają **osobną** bramę WebAdmin:
 /remote.html i pięć ściśle określonych tras /remote/v1. Działa **tylko
 lokalnie** na 127.0.0.1 i wymaga HTTPS, aktywnego konta
 **administrator** albo **Owner** oraz hasła tego konta. W tej wersji nie
@@ -39,6 +39,26 @@ przed upływem terminu nie może zakończyć się sukcesem po jego przekroczeniu
 Pięć tras, numer wersji i uprawnienia tylko do odczytu pozostają bez zmian.
 Audyt zapisuje jedynie ustalone nazwy zdarzeń, bez haseł, tokenów,
 identyfikatorów sesji, adresów IP i treści odpowiedzi.
+
+### beta-0.2.6 — minimalna projekcja statusu i awarie API
+
+Brama Node korzysta teraz z osobnego parsera `parseRemoteSummary` zamiast
+pełnego lokalnego `parseSnapshot`. Przeglądarka dostaje wyłącznie nowy obiekt
+z listy zatwierdzonej: wersja/działanie/czas huba, połączenia aktywne i
+zaakceptowane, liczba użytkowników online i szczytowa, zbiorcze liczniki
+odebranego/odrzuconego czatu oraz opcjonalnie po dwa liczniki wyszukiwania
+i transferów. ID kont, nicki, CID/IP, wiadomości, konfiguracja, wiersze
+audytu, granty, sekrety, ścieżki, monitoring ani surowy JSON nie trafiają
+do projekcji. Nieznane pola i uszkodzone *nieużywane* sekcje API są pomijane.
+
+Schemat `v1`, tożsamość i wersja serwera oraz typy wymaganych pól muszą być
+poprawne; publikowane liczniki to nieujemne bezpieczne liczby całkowite.
+Braki lub błędy wymaganych agregatów i obecnych opcjonalnych liczników
+publicznych skutkują ogólną odmową 503 bez poprzednich danych. Tak samo
+działają awarie gniazda/API/MariaDB i timeouty prywatnego API. Testy
+deterministyczne obejmują dodane sekrety, zmianę formatu, błędne liczby,
+brak pól i powrót po awarii. Brak nowych tras, uprawnień i zmian w
+dotychczasowym parserze lokalnego WebAdmin.
 
 ### beta-0.2.5 — granica Apache2, HTTPS i loopback
 

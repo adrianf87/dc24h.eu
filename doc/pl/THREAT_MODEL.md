@@ -1,5 +1,14 @@
 # Model zagrożeń — alpha-0.9.1
 
+**beta-0.2.6 — prywatność statusu:** Osobny parser bramy lokalnej sprawdza
+tylko publiczne agregaty i tworzy nową odpowiedź z zamkniętej listy.
+Tożsamości, adresy klientów, konta, tokeny, audyt i prywatne ścieżki,
+nawet zagnieżdżone w odpowiedzi C++, nie są serializowane do przeglądarki.
+Błędny schemat, wymagane liczniki, nadmierne liczby lub awaria API dają
+ogólny błąd 503 bez wcześniej zapisanych danych. Nie chroni to przed
+przejęciem hosta, serwerowego tokenu czy prywatnego API i nie pozwala
+na dostęp publiczny.
+
 **Aktualizacja beta-0.2.5 — granica zaufania:** Osobny rozwojowy vhost
 Apache z TLS na loopback weryfikuje Host, metodę, query string i Origin
 przed przekazaniem pięciu stałych tras `/remote/v1/*`. Wspólny katalog

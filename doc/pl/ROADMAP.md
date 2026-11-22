@@ -1,5 +1,6 @@
 # Plan rozwoju
 
+**beta-0.2.6 Prywatność statusu i błędy API:** [Brama WebAdmin](REMOTE_GATEWAY.md) tworzy minimalną projekcję tylko zatwierdzonych liczników; błędne wartości, zmiany formatu API i awarie odrzuca bez ujawniania wcześniejszych danych. Testy obejmują zagnieżdżone sekrety, nadmierne liczby, brak pól i powrót po awarii. Pięć tras lokalnych tylko do odczytu bez zmian; brak dostępu publicznego i wdrożenia.
 **beta-0.2.5 Apache2/HTTPS/loopback:** [Brama WebAdmin](REMOTE_GATEWAY.md) sprawdza Host, metody, query i Origin przed proxy, blokuje zwykły panel administracyjny oraz jego lokalne pliki JS/CSS; testy uruchamiają jednorazowy serwer Apache z HTTPS i sprawdzają odmowy. Publiczny vhost pozostaje bez zmian. Brak zgody na Internet i wdrożenie.
 **beta-0.2.4 Sesje i CSRF:** [Brama WebAdmin](REMOTE_GATEWAY.md) poprawia rotację po ponownym logowaniu i liczenie czasu po opóźnionej autoryzacji. Testy negatywne obejmują wygasanie, izolację sesji, cookies, ponowne użycie wyzwania, wylogowanie i restart. Po przeglądzie i scaleniu osobnym etapem będzie beta-0.2.5 (granica Apache/HTTPS/loopback); dostęp publiczny pozostaje wyłączony.
 **beta-0.2.3 Uwierzytelnianie:** [Brama WebAdmin](REMOTE_GATEWAY.md) uszczelnia zgodność ID konta, unieważnianie uprawnień oraz wygaśnięcie w trakcie odczytu.

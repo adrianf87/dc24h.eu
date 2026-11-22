@@ -1,7 +1,8 @@
 # Dokumentacja dc24h.eu
 
-beta-0.2.5: dodatkowe zabezpieczenia granicy Apache2, HTTPS i loopback dla lokalnej bramy WebAdmin tylko do odczytu. Hub, API, kontroler usługi i WebAdmin zgłaszają beta-0.2.5. Schemat v11 i publiczne proxy Apache pozostają bez zmian. Bez MFA brak dostępu publicznego. Brak zapisu administracyjnego i wdrożenia produkcyjnego.
+beta-0.2.6: osobna projekcja bezpiecznych agregatów statusu i walidacja błędów API dla lokalnej bramy WebAdmin tylko do odczytu. Hub, API, kontroler usługi i WebAdmin zgłaszają beta-0.2.6. Schemat v11 i publiczne proxy Apache pozostają bez zmian. Bez MFA brak dostępu publicznego. Brak zapisu administracyjnego i wdrożenia produkcyjnego.
 
+- [Minimalizacja statusu i błędy API — beta-0.2.6](BETA.md)
 - [Apache2, HTTPS i granica loopback — beta-0.2.5](BETA.md)
 - [Sesje i CSRF — beta-0.2.4](BETA.md)
 - [Uwierzytelnianie i bieżąca autoryzacja — beta-0.2.3](BETA.md)
