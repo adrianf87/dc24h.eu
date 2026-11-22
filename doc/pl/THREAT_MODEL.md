@@ -191,3 +191,8 @@ wygaśnięcia przy opóźnionej autoryzacji, wylogowania w trakcie odczytu
 oraz utraty wszystkich sesji po restarcie procesu. Brama pozostaje
 lokalna i przechowuje sesje tylko w pamięci; przejęcie hosta lub
 przeglądarki, kradzież hasła i brak MFA pozostają ryzykami.
+
+Dodatkowy audyt usuwa wyścig równoległych ponownych logowań oraz logowania
+trwającego podczas wylogowania, które wcześniej mogły pozostawić nową
+osieroconą sesję. Przeglądarka ignoruje spóźnione statystyki po zmianie
+sesji, więc stary odczyt nie przekracza granicy nowej autoryzacji.

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Language = "us" | "pl";
 type Summary = {
@@ -84,8 +84,16 @@ export function RemoteApp() {
   const [actor, setActor] = useState("");
   const [password, setPassword] = useState("");
   const [summary, setSummary] = useState<Summary | null>(null);
+  // An older HTTP response must never modify a newer authenticated session.
+  const sessionEpoch = useRef(0);
   const t = labels[language];
 
+  const invalidate = (next: Status) => {
+    sessionEpoch.current++;
+    setSummary(null);
+    setCsrf("");
+    setState(next);
+  };
   useEffect(() => {
     let canceled = false;
     call("session").then(({ status, data }) => {
@@ -96,24 +104,31 @@ export function RemoteApp() {
     return () => { canceled = true; };
   }, []);
   const load = async () => {
+    const epoch = sessionEpoch.current;
     try {
       const { status, data } = await call("summary");
+      if (epoch !== sessionEpoch.current) return;
       if (status === 200 && validSummary(data)) { setSummary(data); return; }
-      setSummary(null);
-      if (status !== 200) { setState(failure(status)); setCsrf(""); }
-      else setState("unavailable");
-    } catch { setSummary(null); setState("unavailable"); }
+      invalidate(status === 200 ? "unavailable" : failure(status));
+    } catch {
+      if (epoch === sessionEpoch.current) invalidate("unavailable");
+    }
   };
   useEffect(() => {
     if (state !== "authorized") return;
     void load();
     const timer = window.setInterval(() => { void load(); }, 15000);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearInterval(timer);
+      sessionEpoch.current++;
+    };
     // Session changes drive polling; no retry is scheduled on auth failure.
   }, [state]);
   const login = async (event: React.FormEvent) => {
     event.preventDefault();
-    setState("loading");
+    const proof = password;
+    setPassword(""); // Do not retain a password after a failed challenge.
+    invalidate("loading");
     try {
       const challenge = await call("challenge");
       if (challenge.status !== 200 || !challenge.data || typeof challenge.data !== "object" ||
@@ -123,24 +138,25 @@ export function RemoteApp() {
       const result = await call("login", {
         method: "POST", headers: {
           "Content-Type": "application/json", "X-DC24H-Remote-CSRF": challenge.data.csrf,
-        }, body: JSON.stringify({ actor_id: actor, password }),
+        }, body: JSON.stringify({ actor_id: actor, password: proof }),
       });
-      setPassword("");
       if (result.status === 200 && validSession(result.data)) {
         setCsrf(result.data.csrf); setState("authorized");
-      } else { setState(result.status === 200 ? "unavailable" : failure(result.status)); }
-    } catch { setPassword(""); setState("unavailable"); }
+      } else { invalidate(result.status === 200 ? "unavailable" : failure(result.status)); }
+    } catch { invalidate("unavailable"); }
   };
   const logout = async () => {
     if (!csrf) return;
+    const token = csrf;
+    invalidate("loading");
     try {
       const result = await call("logout", {
-        method: "POST", headers: { "Content-Type": "application/json", "X-DC24H-Remote-CSRF": csrf },
+        method: "POST", headers: { "Content-Type": "application/json", "X-DC24H-Remote-CSRF": token },
         body: "{}",
       });
-      if (result.status !== 200) { setState(failure(result.status)); return; }
-      setCsrf(""); setSummary(null); setState("unauthorized"); setActor("");
-    } catch { setState("unavailable"); }
+      if (result.status !== 200) { invalidate(failure(result.status)); return; }
+      invalidate("unauthorized"); setActor("");
+    } catch { invalidate("unavailable"); }
   };
   const rows: [string, string | number][] = summary ? [
     [t.version, summary.server.version], [t.running, summary.server.running ? t.yes : t.no],

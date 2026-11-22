@@ -190,3 +190,8 @@ through delayed authorizations, logout during in-flight reads and loss of
 all sessions on process restart. The gateway remains local-only and
 in-memory; compromised local browsers/hosts, password theft and missing MFA
 remain residual risks.
+
+The follow-up audit also closes a race in which concurrent re-logins or
+logout during a pending re-login could leave a newly authorized orphan
+session. The browser ignores stale summary responses after logout or
+re-authentication, preventing stale status from crossing session epochs.

@@ -432,3 +432,54 @@ test("logout denies a summary that is still waiting on the private API", async (
   assert.ok(!stale.body.includes("uptime_seconds"));
   assert.equal((await h.call("/remote/v1/summary", "GET", "", { cookie })).status, 401);
 });
+
+test("two concurrent re-logins cannot leave an orphaned session from one old cookie", async () => {
+  const h = harness();
+  const initial = await h.login();
+  assert.equal(initial.status, 200);
+  const oldCookie = initial.cookies[0]!.split(";")[0]!;
+  const releases: Array<() => void> = [];
+  let bothStarted!: () => void;
+  const ready = new Promise<void>((resolve) => { bothStarted = resolve; });
+  h.state.managementGate = () => new Promise<void>((resolve) => {
+    releases.push(resolve);
+    if (releases.length === 2) bothStarted();
+  });
+  const firstPending = h.login("7", "correct", oldCookie);
+  const secondPending = h.login("7", "correct", oldCookie);
+  await ready;
+  h.state.managementGate = async () => {};
+  releases[0]!();
+  const first = await firstPending;
+  assert.equal(first.status, 200);
+  releases[1]!();
+  const second = await secondPending;
+  assert.equal(second.status, 403, "the second login must not outlive a replaced browser session");
+  const activeCookie = first.cookies[0]!.split(";")[0]!;
+  assert.equal((await h.call("/remote/v1/session", "GET", "", { cookie: oldCookie })).status, 401);
+  assert.equal((await h.call("/remote/v1/session", "GET", "", { cookie: activeCookie })).status, 200);
+});
+
+test("logout cancels an in-flight re-login tied to the same session", async () => {
+  const h = harness();
+  const initial = await h.login();
+  const oldCookie = initial.cookies[0]!.split(";")[0]!;
+  const oldCsrf = (JSON.parse(initial.body) as { csrf: string }).csrf;
+  let release!: () => void;
+  let started!: () => void;
+  const ready = new Promise<void>((resolve) => { started = resolve; });
+  h.state.managementGate = () => new Promise<void>((resolve) => {
+    release = resolve;
+    started();
+  });
+  const pending = h.login("7", "correct", oldCookie);
+  await ready;
+  h.state.managementGate = async () => {};
+  const logout = await h.call("/remote/v1/logout", "POST", "{}", {
+    cookie: oldCookie, "x-dc24h-remote-csrf": oldCsrf,
+  });
+  assert.equal(logout.status, 200);
+  release();
+  assert.equal((await pending).status, 403);
+  assert.equal((await h.call("/remote/v1/session", "GET", "", { cookie: oldCookie })).status, 401);
+});

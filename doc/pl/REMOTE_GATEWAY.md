@@ -63,6 +63,15 @@ i CSRF prywatnego API nie trafiają do localStorage, URL ani przeglądarki;
 jedynie CSRF przeglądarki potrzebny do wylogowania jest zwracany w
 autoryzowanym JSON. Nie dodano tras ani możliwości zapisu.
 
+Dodatkowa ochrona wyścigów wymaga, aby poprzednia sesja przeglądarki nadal
+była aktywna w chwili zakończenia równoległego ponownego logowania. Jeśli
+wcześniej wylogowano użytkownika albo inna próba zastąpiła sesję, opóźnione
+logowanie jest odrzucane bez tworzenia osieroconego cookie. Interfejs
+odrzuca również spóźnione odpowiedzi ze starego stanu autoryzacji:
+poprzedni odczyt nie może nadpisać nowych statystyk ani unieważnić nowego
+logowania. Wylogowanie od razu ukrywa metryki, a błędne pobranie wyzwania
+czyści wpisane hasło. Scenariusze te mają testy regresyjne.
+
 ### Dozwolone trasy
 
 | Trasa | Metoda | Działanie |

@@ -64,6 +64,15 @@ service token, private API grant, session and CSRF never enter browser
 storage or URL parameters; only the browser-specific CSRF needed for logout
 appears in authorized session JSON. No new route or write capability exists.
 
+Follow-up race protection requires a previously valid browser session to
+still be current when a concurrent re-login finishes its private permission
+check. If logout or another re-login revoked it first, the late login is
+refused without issuing an orphan cookie. The read-only UI also invalidates
+pending summary responses when its authentication state changes, so a stale
+success cannot replace newer metrics and a stale denial cannot expire a new
+login. Logout hides metrics at once; failed login challenges clear the
+entered password. Regression tests cover these interleavings.
+
 ### Exactly allowed endpoints
 
 | Route | Method | Effect |
