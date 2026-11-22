@@ -1,5 +1,15 @@
 # Changelog
 
+## beta-0.2.3 — 2026-11-22
+
+Remote gateway account authorization and live revalidation hardening on branch `beta-0.2.3`, based on merged `main` `070dd44` (beta-0.2.2).
+
+- Require the C++ password-proof response to identify the exact requested account; a mismatched ID, inactive account, unsupported role or refused grant cannot create a browser session.
+- Reject any in-flight status response if a concurrent read has revoked its session. Later successful private API responses cannot revive a revoked browser session.
+- Add deterministic socket-free regression tests for administrator/Owner success, bad or unknown credentials, role/identity mismatches, revoked grants, database/API outages, concurrent reads and per-actor login throttling. Existing five-route read-only interface is unchanged.
+- Update visible hub/API/controller/WebAdmin version to `beta-0.2.3`. CMake/npm package tuple remains `0.1.0`, database schema stays v11. No new migration, remote write, public access, service operation or ADC/ADCS change.
+- Enable the same GitHub-hosted CI matrix for the `dc24h.eu-chatgpt-high` repository used by this branch; keep the original repository eligible and retain the existing required-check aggregator.
+
 ## beta-0.2.2 — 2026-11-21
 
 HTTP allowlist and malformed-request regression patch on branch `beta-0.2-code`, based on `main` at `fbb7b4e` after merging beta-0.2.1.
