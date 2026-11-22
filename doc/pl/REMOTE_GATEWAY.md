@@ -60,6 +60,15 @@ deterministyczne obejmują dodane sekrety, zmianę formatu, błędne liczby,
 brak pól i powrót po awarii. Brak nowych tras, uprawnień i zmian w
 dotychczasowym parserze lokalnego WebAdmin.
 
+Dodatkowa poprawka wyścigu sprawdza aktualne uprawnienia **ponownie po**
+zakończeniu pobierania statusu, a przed wysłaniem danych ponownie weryfikuje
+tożsamość i czas ważności sesji przeglądarki. Odebranie grantu w trakcie
+odczytu daje 403 bez statystyk; awaria ponownej kontroli daje 503 bez
+danych z pamięci. Oba scenariusze mają testy regresyjne. Brama czyści
+również scalony bufor JSON po parsowaniu logowania, także przy błędnym JSON,
+oprócz wcześniej czyszczonych fragmentów strumienia. Ciągi znaków JavaScript
+podlegają normalnemu odśmiecaniu pamięci przez środowisko uruchomieniowe.
+
 ### beta-0.2.5 — granica Apache2, HTTPS i loopback
 
 Osobny przykładowy vhost nasłuchuje **wyłącznie na 127.0.0.1:8443**,

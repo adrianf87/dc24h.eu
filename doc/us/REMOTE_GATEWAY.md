@@ -60,6 +60,15 @@ and private upstream timeouts. Deterministic tests cover sensitive additions,
 format drift, missing fields, invalid numeric values and recovery; no new
 endpoint, permission or local-admin parser behavior is introduced.
 
+A follow-up race fix checks live permissions **again after** the status API
+responds, then checks that the original browser session is still active and
+not expired before sending any metrics. If a grant is withdrawn during the
+read, the response is 403 without metrics; if the recheck cannot reach the
+private API, it is 503 without cached data. Tests reproduce both races.
+The gateway also wipes the assembled JSON body Buffer after parsing login,
+including parse failures, in addition to its original streamed chunks;
+JavaScript strings remain subject to normal runtime garbage collection.
+
 ### beta-0.2.5 Apache2, HTTPS and loopback boundary
 
 The separate sample vhost listens on **127.0.0.1:8443 only** with TLS 1.2/1.3

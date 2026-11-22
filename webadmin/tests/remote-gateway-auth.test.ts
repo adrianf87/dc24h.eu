@@ -248,6 +248,55 @@ test("a revoked session cannot finish an earlier in-flight status read", async (
   assert.equal((await h.call("/remote/v1/summary", "GET", "", { cookie })).status, 401);
 });
 
+test("status cannot expose metrics when access is revoked while the upstream read is in flight", async () => {
+  const h = harness();
+  const login = await h.login();
+  const cookie = login.cookies[0]!.split(";")[0]!;
+  let releaseStatus!: (value: unknown) => void;
+  let started!: () => void;
+  const statusStarted = new Promise<void>((resolve) => { started = resolve; });
+  h.state.statusResponse = () => new Promise<unknown>((resolve) => {
+    releaseStatus = resolve;
+    started();
+  });
+
+  const pending = h.call("/remote/v1/summary", "GET", "", { cookie });
+  await statusStarted;
+  // No concurrent browser request forces a session recheck or deletes it.
+  // The upstream may revoke the grant while the status API is still running.
+  h.state.allowed = false;
+  releaseStatus(snapshot);
+
+  const denied = await pending;
+  assert.equal(denied.status, 403);
+  assert.equal(denied.body, '{"error":"forbidden"}');
+  assert.ok(!denied.body.includes("uptime_seconds"));
+  assert.equal((await h.call("/remote/v1/session", "GET", "", { cookie })).status, 401);
+});
+
+test("a management outage during a status read never falls back to stale metrics", async () => {
+  const h = harness();
+  const login = await h.login();
+  const cookie = login.cookies[0]!.split(";")[0]!;
+  let releaseStatus!: (value: unknown) => void;
+  let started!: () => void;
+  const statusStarted = new Promise<void>((resolve) => { started = resolve; });
+  h.state.statusResponse = () => new Promise<unknown>((resolve) => {
+    releaseStatus = resolve;
+    started();
+  });
+
+  const pending = h.call("/remote/v1/summary", "GET", "", { cookie });
+  await statusStarted;
+  h.state.managementFailure = 503;
+  releaseStatus(snapshot);
+
+  const denied = await pending;
+  assert.equal(denied.status, 503);
+  assert.equal(denied.body, '{"error":"unavailable"}');
+  assert.ok(!denied.body.includes("uptime_seconds"));
+});
+
 test("login limiter caps password checks for a single actor", async () => {
   const h = harness();
   for (let i = 0; i < 5; i++) {

@@ -195,7 +195,9 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
         if (size > maxBody) throw new Error("bad_body");
       }
       if (size !== Number(length)) throw new Error("bad_body");
-      return JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
+      const assembled = Buffer.concat(chunks);
+      try { return JSON.parse(assembled.toString("utf8")) as unknown; }
+      finally { assembled.fill(0); }
     } finally { for (const chunk of chunks) chunk.fill(0); }
   };
   return async (req: IncomingMessage, res: ServerResponse) => {
@@ -355,6 +357,27 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
     try {
       if (!config) throw new Error("unavailable");
       const data = parseRemoteSummary(await callUpstream(config, "/api/v1/status", "GET"));
+      if (sessions.get(key) !== session) {
+        reply(res, 403, { error: "forbidden" }, clearSession());
+        return;
+      }
+      if (expired(session, clock())) {
+        sessions.delete(key);
+        reply(res, 401, { error: "unauthorized" }, clearSession());
+        return;
+      }
+      // Permission can be revoked while the status request is in flight.
+      // A check performed only before reading status permits a stale request
+      // to expose metrics even after the upstream has withdrawn access.
+      const finalCheck = await authorized(key, session, true);
+      if (finalCheck === "revoked") {
+        reply(res, 403, { error: "forbidden" }, clearSession());
+        return;
+      }
+      if (finalCheck !== "ok") {
+        reply(res, 503, { error: "unavailable" });
+        return;
+      }
       if (sessions.get(key) !== session) {
         reply(res, 403, { error: "forbidden" }, clearSession());
         return;
