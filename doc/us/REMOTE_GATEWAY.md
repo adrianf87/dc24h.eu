@@ -31,6 +31,11 @@ a late status response or regain authority from a previously started read.
 Sessions expire after at most 10 minutes, 2 minutes idle; at most four
 concurrent sessions, short one-time login challenges and rate-limited login
 attempts. Logout requires same-origin Origin and an independent CSRF secret.
+The `beta-0.2.3-fix` follow-up checks one-time challenge expiry **after**
+receiving the complete login body, and checks session deadlines after the
+asynchronous authorization and status reads. A request that began while valid
+cannot bypass the deadline by completing after expiry. No route, version or
+read-only permission changes.
 Audit events contain only fixed event names (login_ok, login_refused, logout,
 session_revoked, route_refused, api_unavailable), never passwords, session
 secrets, IP addresses or response payloads.
@@ -110,7 +115,7 @@ weaken the bind or proxy an unprotected port to make the feature reachable.
 
 - Node gateway tests cover proof and account-role revalidation, including
   beta-0.2.3 identity mismatches, role/grant revocation, DB/API outages,
-  concurrent reads and per-actor limits. Socket-free cases exercise these
+  concurrent reads, delayed requests crossing expiry and per-actor limits. Socket-free cases exercise these
   rules even where opening test sockets is disallowed. Other tests cover CSRF,
   malformed input and length, denied methods/encoded paths/proxy headers,
   no private API calls on refusal, expiry and status projection.

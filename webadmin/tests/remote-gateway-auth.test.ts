@@ -15,15 +15,17 @@ type Failure = Error & { status?: number };
 const failure = (status: number): Failure => Object.assign(new Error("private_failure"), { status });
 
 function harness() {
+  let time = 100_000;
   const calls: string[] = [];
   const events: string[] = [];
   const state = {
     role: "administrator", actor: "7", active: true, allowed: true,
     loginFailure: 0, managementFailure: 0,
+    managementGate: async () => {},
     statusResponse: async () => snapshot as unknown,
   };
   const gateway = remoteGateway({ socket: "/private/test-only.sock", token }, {
-    origin, audit: (event) => events.push(event),
+    origin, now: () => time, audit: (event) => events.push(event),
     upstream: async (_config, path, method, body, session) => {
       calls.push(method + " " + path);
       if (path === "/api/v1/admin/access") {
@@ -43,6 +45,7 @@ function harness() {
         };
       }
       if (path === "/api/v1/management") {
+        await state.managementGate();
         assert.equal(session?.grant, grant);
         assert.equal(session?.apiSession, apiSession);
         assert.equal(session?.apiCsrf, apiCsrf);
@@ -62,7 +65,7 @@ function harness() {
       throw new Error("unexpected_private_route");
     },
   });
-  async function call(path: string, method = "GET", body = "", extra: Record<string, string> = {}) {
+  async function call(path: string, method = "GET", body = "", extra: Record<string, string> = {}, bodyGate?: Promise<void>) {
     const headers = {
       host: "localhost",
       ...(method === "POST" ? {
@@ -72,7 +75,7 @@ function harness() {
     };
     const req = {
       url: path, method, headers, socket: { remoteAddress: "127.0.0.1" },
-      async *[Symbol.asyncIterator]() { if (body) yield Buffer.from(body); },
+      async *[Symbol.asyncIterator]() { if (body) { if (bodyGate) await bodyGate; yield Buffer.from(body); } },
     } as unknown as IncomingMessage;
     const response: { status: number; body: string; cookies: string[] } = { status: 0, body: "", cookies: [] };
     const res = {
@@ -95,7 +98,7 @@ function harness() {
       cookie: issued.cookies[0]!.split(";")[0]!, "x-dc24h-remote-csrf": challenge,
     });
   }
-  return { state, calls, events, call, login };
+  return { state, calls, events, call, login, advance: (milliseconds: number) => { time += milliseconds; } };
 }
 
 test("login accepts current administrator and Owner, but never substitutes an actor", async () => {
@@ -203,4 +206,67 @@ test("login limiter caps password checks for a single actor", async () => {
   }
   assert.equal(h.calls.filter((call) => call === "POST /api/v1/admin/access").length, 4);
   assert.equal(h.calls.includes("GET /api/v1/status"), false);
+});
+
+test("an expired challenge cannot be used by completing a slow login body", async () => {
+  const h = harness();
+  const issued = await h.call("/remote/v1/challenge");
+  assert.equal(issued.status, 200);
+  const body = JSON.stringify({ actor_id: "7", password: "correct" });
+  let finishBody!: () => void;
+  const bodyGate = new Promise<void>((resolve) => { finishBody = resolve; });
+  const pending = h.call("/remote/v1/login", "POST", body, {
+    cookie: issued.cookies[0]!.split(";")[0]!,
+    "x-dc24h-remote-csrf": (JSON.parse(issued.body) as { csrf: string }).csrf,
+  }, bodyGate);
+  h.advance(120_001);
+  finishBody();
+  const result = await pending;
+  assert.equal(result.status, 403);
+  assert.equal(result.body, '{"error":"login_refused"}');
+  assert.equal(h.calls.includes("POST /api/v1/admin/access"), false);
+});
+
+test("a session expiring during a delayed status request cannot return protected metrics", async () => {
+  const h = harness();
+  const login = await h.login();
+  assert.equal(login.status, 200);
+  const sessionCookie = login.cookies[0]!.split(";")[0]!;
+  let releaseStatus!: (value: unknown) => void;
+  let signalStarted!: () => void;
+  const statusStarted = new Promise<void>((resolve) => { signalStarted = resolve; });
+  h.state.statusResponse = () => new Promise<unknown>((resolve) => {
+    releaseStatus = resolve;
+    signalStarted();
+  });
+  const pending = h.call("/remote/v1/summary", "GET", "", { cookie: sessionCookie });
+  await statusStarted;
+  h.advance(600_001);
+  releaseStatus(snapshot);
+  const result = await pending;
+  assert.equal(result.status, 401);
+  assert.equal(result.body, '{"error":"unauthorized"}');
+  assert.ok(!result.body.includes("uptime_seconds"));
+});
+
+test("a session expiring during authorization cannot renew its idle deadline", async () => {
+  const h = harness();
+  const login = await h.login();
+  assert.equal(login.status, 200);
+  const sessionCookie = login.cookies[0]!.split(";")[0]!;
+  let releaseAuth!: () => void;
+  let signalStarted!: () => void;
+  const authStarted = new Promise<void>((resolve) => { signalStarted = resolve; });
+  h.state.managementGate = () => new Promise<void>((resolve) => {
+    releaseAuth = resolve;
+    signalStarted();
+  });
+  const pending = h.call("/remote/v1/session", "GET", "", { cookie: sessionCookie });
+  await authStarted;
+  h.advance(120_001);
+  releaseAuth();
+  const result = await pending;
+  assert.equal(result.status, 401);
+  assert.equal(result.body, '{"error":"unauthorized"}');
+  assert.equal((await h.call("/remote/v1/session", "GET", "", { cookie: sessionCookie })).status, 401);
 });

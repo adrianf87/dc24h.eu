@@ -132,6 +132,8 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
     entry.count++;
     return entry.count > limit;
   };
+  const expired = (session: Session, at: number): boolean =>
+    session.created + absoluteTime <= at || session.used + idleTime <= at;
   const reply = (res: ServerResponse, status: number, data: unknown, cookies: string[] = []) => {
     if (res.writableEnded || res.destroyed) return;
     res.writeHead(status, {
@@ -149,7 +151,7 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
     const id = cookie(req, "dc24h_remote");
     if (!/^[0-9a-f]{64}$/.test(id)) return null;
     const session = sessions.get(id);
-    if (!session || session.created + absoluteTime <= now || session.used + idleTime <= now) {
+    if (!session || expired(session, now)) {
       sessions.delete(id);
       return null;
     }
@@ -244,7 +246,7 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
         BigInt(actor) > 9223372036854775807n ||
         typeof proof !== "string" || !proof.length || proof.length > 1024 ||
         Object.keys(fields).length !== 2 ||
-        typeof csrf !== "string" || !challenge || challenge.expires <= now ||
+        typeof csrf !== "string" || !challenge || challenge.expires <= clock() ||
         !sameSecret(challenge.token, csrf)) {
         log("login_refused"); reply(res, 403, { error: "login_refused" }, [setCookie("dc24h_remote_init", "", 0)]); return;
       }
@@ -303,11 +305,23 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
     const check = await authorized(key, session, true);
     if (check === "revoked") { reply(res, 403, { error: "forbidden" }, clearSession()); return; }
     if (check !== "ok") { reply(res, 503, { error: "unavailable" }); return; }
-    session.used = now;
+    // An upstream read may complete after the original request's session
+    // deadline. Recheck the clock after awaiting authorization.
+    const checkedAt = clock();
+    if (sessions.get(key) !== session) {
+      reply(res, 403, { error: "forbidden" }, clearSession());
+      return;
+    }
+    if (expired(session, checkedAt)) {
+      sessions.delete(key);
+      reply(res, 401, { error: "unauthorized" }, clearSession());
+      return;
+    }
+    session.used = checkedAt;
     if (name === "session") {
       reply(res, 200, {
         schema: 1, authenticated: true, mode: "read-only", csrf: session.csrf,
-        expires_in: Math.max(0, Math.floor(Math.min(session.created + absoluteTime - now, idleTime) / 1000)),
+        expires_in: Math.max(0, Math.floor(Math.min(session.created + absoluteTime - checkedAt, idleTime) / 1000)),
       });
       return;
     }
@@ -316,6 +330,11 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
       const data = parseSnapshot(await callUpstream(config, "/api/v1/status", "GET"));
       if (sessions.get(key) !== session) {
         reply(res, 403, { error: "forbidden" }, clearSession());
+        return;
+      }
+      if (expired(session, clock())) {
+        sessions.delete(key);
+        reply(res, 401, { error: "unauthorized" }, clearSession());
         return;
       }
       // Intentionally no user list, identities, IPs, INI, audit, grants or
