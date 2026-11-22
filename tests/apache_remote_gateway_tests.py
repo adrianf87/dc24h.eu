@@ -261,6 +261,32 @@ class ApacheRemoteGateway(unittest.TestCase):
             conn.close()
         self.assertEqual(len(self.backend.seen), before)
 
+    def test_get_request_bodies_denied_before_proxy(self):
+        # A GET body cannot be forwarded merely because ProxyPassMatch
+        # accepted the fixed path. An explicit zero length remains harmless.
+        status, data, _ = self.fetch("/remote/v1/summary", headers={"Content-Length": "0"})
+        self.assertEqual(status, 200)
+        self.assertEqual(data, MARKER)
+        for name in ("challenge", "session", "summary"):
+            before = len(self.backend.seen)
+            status, body, _ = self.fetch("/remote/v1/" + name, body=b"x")
+            self.assertNotEqual(status, 200, name)
+            self.assertNotIn(MARKER, body)
+            self.assertEqual(len(self.backend.seen), before, name)
+
+        before = len(self.backend.seen)
+        context = ssl.create_default_context(cafile=str(self.cert))
+        conn = http.client.HTTPSConnection("localhost", self.port, context=context, timeout=4)
+        try:
+            conn.request("GET", "/remote/v1/summary", body=[b"x"],
+                         headers={"Transfer-Encoding": "chunked"}, encode_chunked=True)
+            response = conn.getresponse()
+            self.assertNotEqual(response.status, 200)
+            self.assertNotIn(MARKER, response.read())
+        finally:
+            conn.close()
+        self.assertEqual(len(self.backend.seen), before)
+
     def test_plain_http_never_downgrades_to_the_remote_portal(self):
         before = len(self.backend.seen)
         reply = b""

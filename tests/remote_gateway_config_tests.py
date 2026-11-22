@@ -29,6 +29,8 @@ class RemoteConfiguration(unittest.TestCase):
         self.assertIn("RewriteCond %{HTTP:Content-Length} -gt2048", config)
         self.assertIn("RewriteCond %{HTTP:Content-Length} !^[0-9]{1,4}$", config)
         self.assertIn("RewriteCond %{HTTP:Transfer-Encoding} !^$", config)
+        self.assertIn("RewriteCond %{HTTP:Content-Length} !^(?:0)?$", config)
+        self.assertIn("RewriteCond %{REQUEST_URI} ^/remote/v1/(?:challenge|session|summary)$", config)
         self.assertIn('<Files "index.html">', config)
         self.assertIn('^local-[A-Za-z0-9_-]+', config)
         self.assertIn("ProxyPassMatch", config)

@@ -2,6 +2,7 @@
 
 ## beta-0.2.5 — 2026-11-22
 
+- Security review: refuse GET request bodies and chunked GET framing at the Apache TLS boundary for the three fixed read endpoints; previously Node would reject them only after Apache forwarded the request. Add real-Apache negative tests ensuring the mock upstream never sees these requests, while a bodyless GET with `Content-Length: 0` stays permitted.
 - CI follow-up: fixed the real-Apache proxy integration failure found on all three Ubuntu images. `LimitRequestBody` alone did not reject the proxied 2049-byte login; enforce the maximum Content-Length and reject absent/ambiguous lengths and chunked POST framing in the vhost's pre-proxy rewrite rules. Add a 2048-byte accepted boundary and a chunked framing refusal test.
 - Harden the separate, loopback-only Apache2 TLS example at the proxy boundary: reject unexpected `Host`, disallowed route methods, query strings, invalid cross-origin requests and login/logout requests without the exact HTTPS `Origin` before they reach the Node gateway. Keep only the five existing allowlisted routes.
 - Prevent the remote vhost from serving the regular administrative `index.html` and its `local-*` bundles from the shared WebAdmin distribution; retain `remote.html` and remote assets. Limit incoming request bodies at Apache to 2048 bytes.

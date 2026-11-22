@@ -58,10 +58,12 @@ Vhost współdzieli katalog z kompilacją Vite, ale blokuje zwykły
 pozostają dostępne. `LimitRequestBody 2048` uzupełnia jawna reguła rewrite:
 żądania POST do bramy wymagają liczbowego `Content-Length` w granicy 2048
 bajtów i nie mogą używać `Transfer-Encoding`. Jest to konieczne, ponieważ
-strumieniowanie w proxy może ominąć ogólny limit treści. Testy na
-jednorazowym Apache HTTPS obejmują nieprawidłowy Host, metody, query,
+strumieniowanie w proxy może ominąć ogólny limit treści. Trzy trasy GET
+również odrzucają `Transfer-Encoding` i niezerową długość
+treści przed przekazaniem do Node. Testy na jednorazowym Apache HTTPS
+obejmują nieprawidłowy Host, metody, query,
 Origin, dostęp do plików lokalnych i sekretów, 2048/2049 bajtów,
-chunked oraz próbę zwykłego HTTP; odmowy nie docierają do backendu.
+treść GET, chunked oraz próbę zwykłego HTTP; odmowy nie docierają do backendu.
 Testy statyczne sprawdzają nasłuch loopback i izolację usługi systemd.
 
 To dodatkowa ochrona, **nie** konfiguracja do Internetu: tunel/proxy

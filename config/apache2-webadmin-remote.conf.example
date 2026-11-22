@@ -41,6 +41,14 @@ TraceEnable Off
     RewriteCond %{REQUEST_URI} ^/remote/v1/(?:challenge|session|summary)$
     RewriteCond %{REQUEST_METHOD} !^GET$
     RewriteRule ^ - [F,END]
+    # GET endpoints are bodyless. Do not forward a framed/streamed GET body
+    # even though mod_proxy would accept the otherwise allowlisted URL.
+    RewriteCond %{REQUEST_URI} ^/remote/v1/(?:challenge|session|summary)$
+    RewriteCond %{HTTP:Transfer-Encoding} !^$
+    RewriteRule ^ - [F,END]
+    RewriteCond %{REQUEST_URI} ^/remote/v1/(?:challenge|session|summary)$
+    RewriteCond %{HTTP:Content-Length} !^(?:0)?$
+    RewriteRule ^ - [F,END]
     RewriteCond %{REQUEST_URI} ^/remote/v1/(?:login|logout)$
     RewriteCond %{REQUEST_METHOD} !^POST$
     RewriteRule ^ - [F,END]

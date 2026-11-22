@@ -58,9 +58,11 @@ portal; its separate `remote-*` assets remain available. The sample also
 sets Apache `LimitRequestBody 2048` and explicitly refuses remote POST
 requests without a bounded numeric Content-Length or with Transfer-Encoding;
 the explicit rewrite guard is needed because proxy streaming may bypass the
-general body limit. Disposable Apache TLS integration tests exercise wrong
+general body limit. The three GET-only endpoints additionally reject
+Transfer-Encoding and any nonzero Content-Length before proxying.
+Disposable Apache TLS integration tests exercise wrong
 Host, methods, query strings, Origin, direct admin and secret file paths,
-2048/2049-byte body boundaries, chunked framing and plaintext HTTP, checking
+2048/2049-byte body boundaries, framed GET bodies, chunked framing and plaintext HTTP, checking
 that rejected API requests never contact the mock backend. Static tests
 verify the example still binds loopback and requires the service sandbox.
 
