@@ -27,7 +27,7 @@ else()
 endif()
 
 # The VERSION tuple above is the package number; operators see the beta version.
-set(DC24H_VERSION "beta-0.3.10")
+set(DC24H_VERSION "beta-0.3.12")
 configure_file(cmake/version.hpp.in generated/dc24h/version.hpp @ONLY)
 find_package(Threads REQUIRED)
 find_package(OpenSSL 3 REQUIRED COMPONENTS SSL Crypto)
@@ -341,6 +341,9 @@ if(BUILD_TESTING)
     add_test(NAME remote.pilot.preflight COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/remote_pilot_tests.py")
     set_tests_properties(remote.pilot.preflight PROPERTIES TIMEOUT 15)
+    add_test(NAME beta.release.gate COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/beta_release_gate_tests.py")
+    set_tests_properties(beta.release.gate PROPERTIES TIMEOUT 15)
     set_tests_properties(beta.baseline PROPERTIES TIMEOUT 15)
     add_test(NAME service.controller.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/service_controller_process_tests.py"

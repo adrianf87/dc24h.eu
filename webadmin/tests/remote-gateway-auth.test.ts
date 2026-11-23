@@ -210,7 +210,7 @@ test("remote status strips private upstream fields and refuses malformed or unav
   const login = await h.login();
   const browserCookie = login.cookies[0]!.split(";")[0]!;
   const privateValue = "SECRET_IDENTITY_FROM_PRIVATE_API";
-  const clean = { ...snapshot, server: { ...snapshot.server, version: "beta-0.3.10" } };
+  const clean = { ...snapshot, server: { ...snapshot.server, version: "beta-0.3.12" } };
   h.state.statusResponse = async () => ({
     ...clean, secret: privateValue, audit_rows: [{ account: privateValue }],
     server: { ...clean.server, private_socket: privateValue },
@@ -225,7 +225,7 @@ test("remote status strips private upstream fields and refuses malformed or unav
   assert.equal(safe.status, 200);
   assert.deepEqual(JSON.parse(safe.body), {
     schema: 1, mode: "read-only",
-    server: { version: "beta-0.3.10", running: true, uptime_seconds: 3661 },
+    server: { version: "beta-0.3.12", running: true, uptime_seconds: 3661 },
     network: { active_connections: 7, accepted_connections: 48 },
     users: { online: 4, peak_online: 6 },
     chat: { received: 12, rejected: 2 },
@@ -386,6 +386,54 @@ test("login limiter caps password checks for a single actor", async () => {
   }
   assert.equal(h.calls.filter((call) => call === "POST /api/v1/admin/access").length, 4);
   assert.equal(h.calls.includes("GET /api/v1/status"), false);
+});
+
+test("bounded burst of login and anonymous requests cannot bypass rate limits or expose the API", async () => {
+  // Deterministic in-process pressure test, never an external load generator.
+  const h = harness();
+  const attempted = await Promise.all(Array.from({ length: 16 }, () => h.login()));
+  assert.equal(attempted.filter((response) => response.status === 200).length, 4);
+  assert.equal(attempted.filter((response) => response.status === 429).length, 12);
+  assert.equal(h.calls.filter((item) => item === "POST /api/v1/admin/access").length, 4);
+  const cookies = attempted.filter((response) => response.status === 200)
+    .map((response) => response.cookies[0]!.split(";")[0]!);
+  assert.equal(new Set(cookies).size, 4);
+  const responses = await Promise.all(Array.from({ length: 128 }, (_, index) =>
+    h.call(index % 2 ? "/remote/v1/summary" : "/remote/v1/not-allowed")));
+  assert.equal(responses.filter((response) => response.status === 401).length, 64);
+  assert.equal(responses.filter((response) => response.status === 404).length, 64);
+  assert.ok(responses.every((response) => !response.body.includes(grant) && !response.body.includes(apiCsrf)));
+  assert.equal(h.calls.filter((item) => item === "GET /api/v1/status").length, 0);
+  for (const cookie of cookies) {
+    assert.equal((await h.call("/remote/v1/session", "GET", "", { cookie })).status, 200);
+  }
+});
+
+test("64 simultaneous failed status reads return no stale data and recover after API restoration", async () => {
+  const h = harness();
+  const issued = await h.login();
+  const cookie = issued.cookies[0]!.split(";")[0]!;
+  const count = 64;
+  let started = 0;
+  let signalAll!: () => void;
+  let release!: () => void;
+  const allStarted = new Promise<void>((resolve) => { signalAll = resolve; });
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  h.state.statusResponse = async () => {
+    if (++started === count) signalAll();
+    await gate;
+    throw new Error("PRIVATE_DATABASE_FAILURE_DO_NOT_LEAK");
+  };
+  const pending = Array.from({ length: count }, () =>
+    h.call("/remote/v1/summary", "GET", "", { cookie }));
+  await allStarted;
+  release();
+  const results = await Promise.all(pending);
+  assert.ok(results.every((response) => response.status === 503 && response.body === '{"error":"unavailable"}'));
+  assert.ok(results.every((response) => !response.body.includes("PRIVATE_DATABASE_FAILURE_DO_NOT_LEAK")));
+  h.state.statusResponse = async () => snapshot;
+  assert.equal((await h.call("/remote/v1/summary", "GET", "", { cookie })).status, 200);
+  assert.ok(h.events.includes("api_unavailable"));
 });
 
 test("an expired challenge cannot be used by completing a slow login body", async () => {

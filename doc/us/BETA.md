@@ -1,6 +1,20 @@
+# Beta 0.3 Stage IV — beta-0.3.11 through beta-0.3.12 (series finish)
+
+All planned patches from beta-0.3.1 through beta-0.3.12 now live together on the **existing** branch `beta-0.3.1-12-full`; the current runtime version is **`beta-0.3.12`**. This is a development release candidate, not a production deployment, published tag or automatic merge to `main`.
+
+## beta-0.3.11 — bounded stress, failures and audit review
+
+Add deterministic, in-process tests of a 16-login burst and 128 anonymous requests, asserting that only four same-actor password proofs are allowed and anonymous traffic never reaches the C++ status API. Inject a private API outage during 64 simultaneous status reads: all responses must be generic 503 without leaked or stale data; recovery must work on a later request. Existing permission-revocation and session race regressions stay in place. These are bounded security-pressure regressions, **not** a throughput benchmark or production load capacity measurement. A reviewed audit formatter now emits only an allowlisted fixed event name, schema, component and ISO timestamp; rejects forged event names and invalid clock values. This does not make journald a durable or tamper-evident audit.
+
+## beta-0.3.12 — version pin and release gate
+
+Align C++ hub/API/service controller, WebAdmin, browser and process fixtures to `beta-0.3.12`. Add a CTest source-level release guard for version consistency, unchanged five read-only routes, loopback-only Apache and Node, TOTP anti-replay and redacted audit, schema v11, and the required hosted CI matrix. Publish separate EN/PL [manual release-candidate review](RELEASE_BETA_0.3.md) documents with CI, operator checks, failure response and rollback instructions. No new branch, public listener, WebAuthn claims, remote mutation, migration, production deployment, tag or merge to `main`. This stage finishes the planned source patches; the new CI result and human sign-off remain separate decisions.
+
+## Previous stage — beta-0.3.8 through beta-0.3.10
+
 # Beta 0.3 Stage III — beta-0.3.8 through beta-0.3.10
 
-The existing branch `beta-0.3.1-12-full` now reports **`beta-0.3.10`**. Stages I–III are delivered together without another branch, deployment or merge to `main`.
+At the end of Stage III, the existing branch `beta-0.3.1-12-full` reported **`beta-0.3.10`**. Stages I–III were delivered together without another branch, deployment or merge to `main`; Stage IV above supersedes the runtime identifier.
 
 ## beta-0.3.8 — local HTTPS trust boundary
 

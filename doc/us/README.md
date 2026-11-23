@@ -1,6 +1,8 @@
 # dc24h.eu High Starter documentation
 
-beta-0.3.10: Stage I strengthens CI and API safety; Stage II adds local TOTP and session/audit enforcement; Stage III (beta-0.3.8–beta-0.3.10) strengthens loopback HTTPS, systemd isolation and an optional verified-SSH private read-only pilot. Hub, API, controller and WebAdmin report beta-0.3.10; the visible project is dc24h.eu High Starter. The internal protocol identity `dc24h.eu`, public proxy and schema v11 remain unchanged. There is no Internet-facing WebAdmin, administrative write or production deployment. Default development language: EN/US UTF-8.
+beta-0.3.12: Stage I strengthens CI/API safety; Stage II adds local TOTP and session/audit enforcement; Stage III strengthens loopback HTTPS, systemd and an optional verified-SSH private read-only pilot; Stage IV (beta-0.3.11–beta-0.3.12) adds bounded failure/stress tests, fixed-event journal formatting and a manual release gate. Hub, API, controller and WebAdmin report beta-0.3.12; the visible project is dc24h.eu High Starter. The protocol identity `dc24h.eu`, public proxy and schema v11 remain unchanged. No Internet-facing WebAdmin, administrative write or production deployment is included. Default development language: EN/US UTF-8.
+
+- [Beta-0.3.11–beta-0.3.12 Stage IV](BETA.md) · [release-candidate review](RELEASE_BETA_0.3.md)
 
 - [Beta-0.3.8–beta-0.3.10 Stage III](BETA.md) · [private SSH pilot](REMOTE_PILOT.md)
 

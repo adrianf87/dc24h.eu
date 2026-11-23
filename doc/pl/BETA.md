@@ -1,6 +1,20 @@
+# Etap IV beta-0.3 — beta-0.3.11 do beta-0.3.12 (zakończenie serii)
+
+Wszystkie planowane patche od beta-0.3.1 do beta-0.3.12 są teraz na **istniejącej** gałęzi `beta-0.3.1-12-full`; aktualna wersja runtime to **`beta-0.3.12`**. To kandydat wersji rozwojowej, nie wdrożenie produkcyjne, tag ani automatyczne scalenie do `main`.
+
+## beta-0.3.11 — ograniczone obciążenie, awarie i kontrola audytu
+
+Deterministyczne testy w pamięci wysyłają 16 równoległych logowań i 128 anonimowych żądań; tylko cztery dowody hasła na konto mogą przejść przez limit, a anonimowe żądania nie docierają do prywatnego statusu C++. Kolejny test wstrzymuje 64 równoległe odczyty podczas sztucznej awarii API: wszystkie muszą zwrócić ogólny 503 bez danych poufnych lub wcześniejszych; po naprawie kolejny odczyt działa. Zachowano wcześniejsze regresje wycofania uprawnień i wyścigów sesji. To test bezpieczeństwa przy ograniczonej presji, **nie** pomiar przepustowości serwera produkcyjnego. Ujednolicony format audytu zawiera tylko nazwę zdarzenia z listy, schemat, komponent i czas ISO; blokuje podrobione nazwy i błędne czasy. Journald nadal nie zapewnia sam z siebie trwałego ani niezmienialnego audytu.
+
+## beta-0.3.12 — wyrównanie wersji i brama wydania
+
+Hub C++, API, kontroler usług, WebAdmin i fixtures raportują `beta-0.3.12`. Dodano test CTest sprawdzający spójność wersji, pięć lokalnych tras tylko do odczytu, granicę loopback Apache/Node, ochronę replay MFA i redakcję audytu, schemat v11 oraz wymagane kontrole CI. Osobne instrukcje [przeglądu wydania PL](RELEASE_BETA_0.3.md) i EN opisują decyzję ręczną, CI, awarie i wycofanie. Nie utworzono nowego brancha, publicznego portu, zapisu zdalnego, migracji, tagu ani wdrożenia/scalenia do `main`. Etap kończy kod planowanej serii, ale nowy wynik CI i zgoda operatora pozostają odrębnymi decyzjami.
+
+## Poprzedni etap — beta-0.3.8 do beta-0.3.10
+
 # Etap III linii beta-0.3 — beta-0.3.8 do beta-0.3.10
 
-Na istniejącej gałęzi `beta-0.3.1-12-full` aktualny identyfikator to **`beta-0.3.10`**. Etapy I–III są realizowane bez dodatkowego brancha, instalacji czy scalenia z `main`.
+Na końcu Etapu III gałąź `beta-0.3.1-12-full` raportowała **`beta-0.3.10`**. Nie powstał dodatkowy branch, instalacja ani scalenie z `main`; Etap IV powyżej zastępuje identyfikator runtime.
 
 ## beta-0.3.8 — bezpieczeństwo lokalnego HTTPS
 

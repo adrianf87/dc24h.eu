@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { credentials } from "./local-api.ts";
 import { remoteGateway } from "./remote-gateway.ts";
 import { loadTotpVerifier } from "./remote-mfa.ts";
+import { remoteAuditRecord } from "./remote-audit.ts";
 
 // Explicitly local-only. A public listener or MFA-free deployment is not
 // supported by this development release.
@@ -24,7 +25,7 @@ const app = createServer(remoteGateway(config, {
   mfaVerify: mfa.verify,
   // systemd-journald receives one structured, bounded record per event.
   // No passwords, TOTP, cookies, raw request bodies or actor IDs enter the log.
-  audit: (event) => process.stdout.write(JSON.stringify({ component: "remote-gateway", event, at: new Date().toISOString() }) + "\n"),
+  audit: (event) => process.stdout.write(remoteAuditRecord(event, Date.now())),
 }));
 app.requestTimeout = 5000;
 app.headersTimeout = 6000;

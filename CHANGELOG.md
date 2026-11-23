@@ -1,5 +1,12 @@
 # Changelog
 
+## beta-0.3.11–beta-0.3.12 Stage IV — 2026-11-23 (existing branch beta-0.3.1-12-full, current beta-0.3.12)
+
+- **0.3.11 — bounded stress and outages:** Add deterministic in-process 16-login plus 128-anonymous-request pressure regressions for per-account limits, no private API access on refusal and four-session bounds. Hold 64 status reads across a simulated private API outage, require generic 503 without stale/leaked data, then verify recovery. These are bounded security tests, not a throughput or capacity benchmark.
+- **0.3.11 — audit review:** Refactor gateway journal events into a separate fixed-schema JSON formatter, preserving the eight allowlisted authentication/revocation/route/API outcomes with a UTC timestamp. Negative tests reject event injection and invalid clocks; logs never serialize credentials, account IDs, OTP, cookie, grant or response bodies. Journal persistence and tamper-evidence remain operator work.
+- **0.3.12 — final development baseline:** Align hub, local API, service controller, WebAdmin and test fixtures to `beta-0.3.12`; add `beta.release.gate` to CTest for release metadata, CI checks, fixed local-only surface and MFA/audit invariants; document bilingual manual verification, residual risks and rollback. Preserve CMake/npm package `0.1.0`, MariaDB schema v11, ADC/ADCS protocol, public Apache and read-only permissions.
+- This is a release candidate on the existing branch, not a tagged or deployed production release. No automatic merge to `main`, public Internet gateway, WebAuthn, new database migration or administrative write operation is authorized.
+
 ## beta-0.3.8–beta-0.3.10 Stage III — 2026-11-23 (existing branch beta-0.3.1-12-full, current beta-0.3.10)
 
 - **0.3.8 — HTTPS:** Strengthen the separate 127.0.0.1:8443 Apache TLS example with forward-secret TLS 1.2 AEAD ciphers, server cipher preference and explicit cross-origin isolation/permission response headers; keep TLS 1.2/1.3, session-ticket/compression refusal and exact local route/Origin constraints.
