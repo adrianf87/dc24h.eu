@@ -1,0 +1,84 @@
+name: Stage IV isolated Ubuntu VM validation
+
+on:
+  push:
+    branches: [test/stage4-ubuntu-vm-validation]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stage4-ubuntu-vm-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ubuntu-operational:
+    name: Stage IV VM - ${{ matrix.os }}
+    if: github.repository == 'adrianf87/dc24h.eu-high-starter'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
+    env:
+      CI: 'true'
+      CXX: g++
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - name: Install isolated C++ and service-test dependencies
+        run: |
+          bash .github/scripts/install-ci-deps.sh \
+            build-essential cmake python3 libutf8proc-dev libgcrypt20-dev \
+            libssl-dev libmariadb-dev openssl mariadb-server apache2
+
+      - name: Configure C++20 and require the integration fixtures
+        run: cmake -S . -B build/Stage4VM -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DDC24H_REQUIRE_INTEGRATION_TESTS=ON
+
+      - name: Compile server and integration tests
+        run: cmake --build build/Stage4VM --parallel "$(nproc)"
+
+      - name: Exercise disposable MariaDB, private HTTPS, API and ADC/ADCS
+        run: |
+          mkdir -p vm-evidence
+          DC24H_VM_REPORT_DIR="$PWD/vm-evidence" ctest \
+            --test-dir build/Stage4VM \
+            --output-on-failure \
+            --output-junit "$PWD/vm-evidence/ctest.xml" \
+            --parallel 2 \
+            -R '^(database\.(process|resilience\.process|migrations\.process)|apache2\.(https|https\.proxy|remote\.gateway)|api\.(unit|process)|adcs\.tls_security\.process|beta\.04\.stage4\.(perf\.command|recovery|release|vm\.probe)|remote\.(gateway\.config|pilot\.preflight))$'
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: webadmin/package-lock.json
+
+      - name: Install WebAdmin dependencies using the lockfile
+        working-directory: webadmin
+        run: npm ci
+
+      - name: Check React/TypeScript/Vite build
+        working-directory: webadmin
+        run: npm run build
+
+      - name: Run WebAdmin unit and real C++ API integration tests
+        working-directory: webadmin
+        run: |
+          node --import tsx --test --test-concurrency=2 tests/*.test.ts
+          npm run test:integration -- ../build/Stage4VM/dc24h
+
+      - name: Preserve isolated VM metrics and CTest results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: stage4-ubuntu-vm-${{ matrix.os }}
+          path: vm-evidence/
+          if-no-files-found: warn
+          retention-days: 7

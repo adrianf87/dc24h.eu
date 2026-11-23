@@ -351,10 +351,14 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/stage4_private_recovery_tests.py")
     add_test(NAME beta.04.stage4.release COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/stage4_release_gate_tests.py")
+    add_test(NAME beta.04.stage4.vm.probe COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/stage4_ubuntu_vm_probe_tests.py"
+        "$<TARGET_FILE:dc24h>")
     set_tests_properties(beta.04.stage1 PROPERTIES TIMEOUT 15)
     set_tests_properties(beta.04.stage4.perf.command PROPERTIES TIMEOUT 15)
     set_tests_properties(beta.04.stage4.recovery PROPERTIES TIMEOUT 15)
     set_tests_properties(beta.04.stage4.release PROPERTIES TIMEOUT 15)
+    set_tests_properties(beta.04.stage4.vm.probe PROPERTIES TIMEOUT 60)
     set_tests_properties(beta.release.gate PROPERTIES TIMEOUT 15)
     set_tests_properties(beta.baseline PROPERTIES TIMEOUT 15)
     add_test(NAME service.controller.process COMMAND "${Python3_EXECUTABLE}"
