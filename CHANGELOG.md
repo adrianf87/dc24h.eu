@@ -1,5 +1,12 @@
 # Changelog
 
+## beta-0.4.1–beta-0.4.4 Stage I — 2026-11-23 (branch beta-0.4.1-0.4.4-stage1)
+
+- **0.4.1 CI & Stability:** Carry forward the successful 0.3/Alpha-0.1-fix CI baseline, update runtime/WebAdmin fixtures to `beta-0.4.4`, and extend cross-platform regression checks for rotation, persistent replay, audit integrity and denied login when audit is unavailable. PR to `main` and branch pushes run the same GitHub-hosted matrix; no automatic release.
+- **0.4.2 Security Architecture:** Document boundaries from local HTTPS/SSH pilot to loopback Node and private C++ API, plus a WebAuthn/passkey RP-origin, verifier, user-verification, account-binding and recovery design. No new public route, registration ceremony or authentication downgrade.
+- **0.4.3 MFA Hardening:** Add stopped-service, privileged offline seed replacement with fresh/current code proof (or independently approved recovery), safe file/directory fsync and no replay-ledger rewind. Stale verifiers reject enrollment replacement until restart; tests cover seed rotation, consumed steps, recovery, collisions and permissions.
+- **0.4.4 Audit Foundation:** Require a private 0600 audit file for the optional loopback gateway; append fsynced, sequenced SHA-256-linked sanitized records; validate integrity on startup and flag loss/full/rotation. Authenticate only after durable success records; invalidate sessions when the audit sink fails. Explicit 8 MiB cap and operator-managed archival/retention; no claim of external tamper-proof compliance.
+
 ## Alpha 0.1 outstanding operational fixes — 2026-11-23 (fix-alpha-0.1-outstanding; based on main)
 
 - Replace the historical synchronous C++ logger sink path with a single dedicated writer and bounded 256-record queue; preserve private file modes, fixed event budgets, sanitization and ordered best-effort writes. Block termination signals before starting that worker to preserve normal signal shutdown. On overload, discard new records and emit a bounded dropped-record warning when the sink recovers. A permanently blocked sink may still delay final logger destruction; this is not a durable security audit.

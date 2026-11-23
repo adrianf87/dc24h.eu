@@ -14,7 +14,7 @@ const apiCsrf = "d".repeat(64);
 type Failure = Error & { status?: number };
 const failure = (status: number): Failure => Object.assign(new Error("private_failure"), { status });
 
-function harness(mfaConfigured = true) {
+function harness(mfaConfigured = true, strictAudit = false) {
   let time = 100_000;
   const calls: string[] = [];
   const events: string[] = [];
@@ -22,11 +22,17 @@ function harness(mfaConfigured = true) {
     role: "administrator", actor: "7", active: true, allowed: true,
     loginFailure: 0, managementFailure: 0,
     mfaAccepted: true, mfaFailure: false,
+    auditHealthy: true, auditFailure: false,
     managementGate: async () => {},
     statusResponse: async () => snapshot as unknown,
   };
   const gateway = remoteGateway({ socket: "/private/test-only.sock", token }, {
-    origin, now: () => time, audit: (event) => events.push(event),
+    origin, now: () => time,
+    strictAudit, auditHealthy: () => state.auditHealthy,
+    audit: (event) => {
+      events.push(event);
+      if (state.auditFailure && event === "login_ok") throw new Error("audit_write_failed");
+    },
     ...(mfaConfigured ? { mfaVerify: (_actor: string, code: string) => {
       if (state.mfaFailure) throw Error("private_mfa_failure");
       return state.mfaAccepted && code === "000000";
@@ -154,6 +160,24 @@ test("MFA is required after private access authorization and is audited without 
   assert.ok(invalid.events.includes("mfa_refused"));
 });
 
+test("strict durable audit refuses successful logins on missing records and revokes sessions after sink loss", async () => {
+  const fail = harness(true, true);
+  fail.state.auditFailure = true;
+  const denied = await fail.login();
+  assert.equal(denied.status, 503);
+  assert.equal(denied.body, '{"error":"unavailable"}');
+  assert.ok(!denied.cookies.some(c => c.startsWith("dc24h_remote=")));
+  const healthy = harness(true, true);
+  const accepted = await healthy.login();
+  assert.equal(accepted.status, 200);
+  const cookie = accepted.cookies[0]!.split(";")[0]!;
+  healthy.state.auditHealthy = false;
+  assert.equal((await healthy.call("/remote/v1/summary", "GET", "", { cookie })).status, 503);
+  healthy.state.auditHealthy = true;
+  assert.equal((await healthy.call("/remote/v1/summary", "GET", "", { cookie })).status, 401,
+    "an unhealthy audit sink revokes all existing browser sessions");
+});
+
 test("bad passwords, unknown accounts and lost API return generic refusals", async () => {
   for (const [actor, password] of [["7", "bad"], ["8", "correct"]]) {
     const h = harness();
@@ -210,7 +234,7 @@ test("remote status strips private upstream fields and refuses malformed or unav
   const login = await h.login();
   const browserCookie = login.cookies[0]!.split(";")[0]!;
   const privateValue = "SECRET_IDENTITY_FROM_PRIVATE_API";
-  const clean = { ...snapshot, server: { ...snapshot.server, version: "beta-0.3.12" } };
+  const clean = { ...snapshot, server: { ...snapshot.server, version: "beta-0.4.4" } };
   h.state.statusResponse = async () => ({
     ...clean, secret: privateValue, audit_rows: [{ account: privateValue }],
     server: { ...clean.server, private_socket: privateValue },
@@ -225,7 +249,7 @@ test("remote status strips private upstream fields and refuses malformed or unav
   assert.equal(safe.status, 200);
   assert.deepEqual(JSON.parse(safe.body), {
     schema: 1, mode: "read-only",
-    server: { version: "beta-0.3.12", running: true, uptime_seconds: 3661 },
+    server: { version: "beta-0.4.4", running: true, uptime_seconds: 3661 },
     network: { active_connections: 7, accepted_connections: 48 },
     users: { online: 4, peak_online: 6 },
     chat: { received: 12, rejected: 2 },

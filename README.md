@@ -2,7 +2,9 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: beta-0.3.12 (Stages I–IV: beta-0.3.1–beta-0.3.12; local-only WebAdmin with optional private SSH pilot, not a production release).**
+**Current development version: beta-0.4.4 (Stage I: beta-0.4.1–beta-0.4.4; local-only WebAdmin with optional private SSH pilot, not a production release).**
+
+- **beta-0.4.1–beta-0.4.4 Stage I — security foundations** (branch `beta-0.4.1-0.4.4-stage1`): close beta-0.3 CI regressions; document local trust boundaries and future WebAuthn; implement offline TOTP replacement/recovery with preserved replay state, and a private fsynced audit chain with explicit loss detection and fail-closed logins. No public listener, WebAuthn ceremony, remote administrative write, migration, merge or deployment. [Stage plan](doc/us/BETA_0.4_STAGE_I.md) | [PL](doc/pl/BETA_0.4_STAGE_I.md).
 
 CI on `main`: [public GitHub-hosted Ubuntu 22.04, 24.04 and 26.04](doc/us/GITHUB_CI.md) runs C++ Debug, C++ Release and WebAdmin on each image · [PL](doc/pl/GITHUB_CI.md).
 

@@ -2,7 +2,8 @@
 // nor the replay ledger is ever returned by the browser gateway.
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { constants, closeSync, fstatSync, fsyncSync, lstatSync, openSync, readFileSync, readSync, writeSync } from "node:fs";
-import { dirname, isAbsolute } from "node:path";
+import { dirname, isAbsolute, basename, join } from "node:path";
+import { renameSync, unlinkSync } from "node:fs";
 
 type Secrets = Map<string, Buffer>;
 const actorPattern = /^[1-9][0-9]{0,18}$/;
@@ -27,8 +28,11 @@ function visitReplayLedger(fd: number, visit: (entry: ReplayEntry) => void): voi
     }
     const text = bytes.toString("utf8");
     if (text && !text.endsWith("\n")) throw new Error("Incomplete MFA replay ledger");
-    for (const line of text.split("\n")) {
-      if (!line) continue;
+    // A single trailing newline is canonical; an empty interior record is
+    // evidence of damaged or edited state and must not be silently skipped.
+    const lines = text ? text.slice(0, -1).split("\n") : [];
+    for (const line of lines) {
+      if (!line) throw new Error("Invalid MFA replay entry: empty record");
       const record: unknown = JSON.parse(line);
       if (!record || typeof record !== "object" || Array.isArray(record)) throw new Error("Invalid MFA replay ledger");
       const row = record as Record<string, unknown>;
@@ -91,6 +95,7 @@ export function loadTotpVerifier(secretsPath: string, replayPath: string) {
   const secrets: Secrets = new Map();
   const lastUsed = new Map<string, number>();
   const seedFd = privateFile(secretsPath, constants.O_RDONLY | constants.O_NONBLOCK);
+  const enrollmentIdentity = fstatSync(seedFd);
   try {
     if (fstatSync(seedFd).size > 16_384) throw new Error("MFA enrollment file too large");
     const body: unknown = JSON.parse(readFileSync(seedFd, "utf8"));
@@ -120,8 +125,21 @@ export function loadTotpVerifier(secretsPath: string, replayPath: string) {
       lastUsed.set(actor, Math.max(lastUsed.get(actor) ?? -1, step));
     });
   } catch (error) { closeSync(ledgerFd); for (const key of secrets.values()) key.fill(0); throw error; }
+  const ledgerIdentity = fstatSync(ledgerFd);
 
   const verify = (actor: string, code: string, now: number): boolean => {
+    // A new seed must never coexist with a live verifier using cached old
+    // bytes. An offline replacement revokes this process until it restarts.
+    const currentFile = lstatSync(secretsPath);
+    if (!currentFile.isFile() || currentFile.uid !== process.geteuid?.() || currentFile.nlink !== 1 ||
+      currentFile.dev !== enrollmentIdentity.dev ||
+      currentFile.ino !== enrollmentIdentity.ino || currentFile.size !== enrollmentIdentity.size ||
+      currentFile.mtimeMs !== enrollmentIdentity.mtimeMs || (currentFile.mode & 0o077))
+      throw new Error("MFA enrollment changed; restart required");
+    const currentLedger = lstatSync(replayPath);
+    if (!currentLedger.isFile() || currentLedger.uid !== process.geteuid?.() || currentLedger.nlink !== 1 ||
+        currentLedger.dev !== ledgerIdentity.dev || currentLedger.ino !== ledgerIdentity.ino ||
+        (currentLedger.mode & 0o077)) throw new Error("MFA replay ledger changed; restart required");
     const secret = secrets.get(actor);
     if (!secret || !/^\d{6}$/.test(code) || !Number.isSafeInteger(now) || now < 0) return false;
     const current = Math.floor(now / 30_000);
@@ -175,4 +193,139 @@ export function loadTotpVerifier(secretsPath: string, replayPath: string) {
   };
   const close = () => { closeSync(ledgerFd); for (const key of secrets.values()) key.fill(0); secrets.clear(); };
   return { verify, close };
+}
+
+export interface TotpReplacement {
+  enrollmentPath: string;
+  replayPath: string;
+  actor: string;
+  newSeed: string;
+  newCode: string;
+  now: number;
+  // Only an operator with independent identity verification may recover a
+  // lost factor. There is deliberately no HTTP or password-only bypass.
+  recovery?: boolean;
+  oldCode?: string;
+  offlineAcknowledged: true;
+}
+
+// Perform only while the gateway is stopped. The ledger is deliberately
+// PRESERVED across generations; a newly enrolled seed may require waiting
+// until the next 30-second step when the old step has already been consumed.
+export function replaceTotpSecret(options: TotpReplacement): void {
+  const { enrollmentPath, replayPath, actor, newSeed, newCode, now } = options;
+  if (options.offlineAcknowledged !== true || !actorPattern.test(actor) ||
+      !seedPattern.test(newSeed) || !/^\d{6}$/.test(newCode) ||
+      !Number.isSafeInteger(now) || now < 0)
+    throw new Error("Invalid offline MFA replacement request");
+  const expected = Buffer.from(totpCodeForTest(newSeed, now), "ascii");
+  const supplied = Buffer.from(newCode, "ascii");
+  const match = timingSafeEqual(expected, supplied);
+  expected.fill(0); supplied.fill(0);
+  if (!match) throw new Error("New MFA authenticator proof failed");
+
+  const fd = privateFile(enrollmentPath, constants.O_RDONLY);
+  let old: ReturnType<typeof fstatSync>;
+  let encoded: string;
+  try {
+    old = fstatSync(fd);
+    if (old.size > 16_384) throw new Error("MFA enrollment file too large");
+    const body: unknown = JSON.parse(readFileSync(fd, "utf8"));
+    if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error("Invalid MFA enrollment");
+    const data = body as Record<string, unknown>;
+    if (data.schema !== 1 || !data.accounts || typeof data.accounts !== "object" ||
+        Array.isArray(data.accounts) || Object.keys(data).length !== 2)
+      throw new Error("Invalid MFA enrollment");
+    const accounts = data.accounts as Record<string, unknown>;
+    if (!Object.hasOwn(accounts, actor) || Object.keys(accounts).length < 1 || Object.keys(accounts).length > 64 ||
+        Object.entries(accounts).some(([id, v]) => !actorPattern.test(id) || typeof v !== "string" || !seedPattern.test(v)) ||
+        new Set(Object.values(accounts)).size !== Object.keys(accounts).length)
+      throw new Error("Invalid MFA accounts");
+    if (Object.entries(accounts).some(([id, seed]) => id !== actor && seed === newSeed))
+      throw new Error("MFA secrets must differ by account");
+    if (accounts[actor] === newSeed) throw new Error("MFA rotation must change the seed");
+    encoded = JSON.stringify({ schema: 1, accounts: { ...accounts, [actor]: newSeed } }) + "\n";
+    if (Buffer.byteLength(encoded) > 16_384) throw new Error("MFA enrollment file too large");
+  } finally { closeSync(fd); }
+
+  // A malformed or missing replay ledger blocks rotation and recovery.
+  // Preserve it without truncation, even when the old authenticator is lost.
+  const replayFd = privateFile(replayPath, constants.O_RDONLY);
+  try { visitReplayLedger(replayFd, () => {}); }
+  finally { closeSync(replayFd); }
+
+  if (!options.recovery) {
+    if (!options.oldCode) throw new Error("Current MFA proof required for rotation");
+    const verifier = loadTotpVerifier(enrollmentPath, replayPath);
+    try {
+      if (!verifier.verify(actor, options.oldCode, now)) throw new Error("Current MFA proof failed");
+    } finally { verifier.close(); }
+  }
+
+  // The file is replaced, never rewritten in place. fsync the file and its
+  // parent; reject concurrent replacement of the original before rename.
+  const directory = dirname(enrollmentPath);
+  const tmp = join(directory, "." + basename(enrollmentPath) + "." + randomBytes(12).toString("hex") + ".tmp");
+  let created = false;
+  try {
+    const tmpFd = privateFile(tmp, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL, true);
+    created = true;
+    try {
+      const bytes = Buffer.from(encoded, "utf8");
+      try {
+        if (writeSync(tmpFd, bytes) !== bytes.length) throw new Error("MFA replacement write failed");
+        fsyncSync(tmpFd);
+      } finally { bytes.fill(0); }
+    } finally { closeSync(tmpFd); }
+    const current = lstatSync(enrollmentPath);
+    if (current.dev !== old.dev || current.ino !== old.ino || current.size !== old.size ||
+        current.mtimeMs !== old.mtimeMs || current.ctimeMs !== old.ctimeMs ||
+        current.uid !== process.geteuid?.() || current.nlink !== 1 ||
+        !current.isFile() || (current.mode & 0o077))
+      throw new Error("MFA enrollment changed during replacement");
+    renameSync(tmp, enrollmentPath);
+    created = false;
+    const dirFd = openSync(directory, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
+    try { fsyncSync(dirFd); } finally { closeSync(dirFd); }
+  } finally { if (created) unlinkSync(tmp); }
+}
+
+// Offline compaction is safe only after stopping every gateway instance.
+// Retain each account's highest consumed step; no OTP at or before that step
+// becomes reusable. The ledger is replaced atomically, never truncated live.
+export function compactTotpReplay(replayPath: string, offlineAcknowledged: true): void {
+  if (offlineAcknowledged !== true) throw new Error("Offline MFA maintenance required");
+  const fd = privateFile(replayPath, constants.O_RDONLY);
+  const last = new Map<string, number>();
+  let old: ReturnType<typeof fstatSync>;
+  try {
+    old = fstatSync(fd);
+    visitReplayLedger(fd, ({ actor, step }) => last.set(actor, Math.max(last.get(actor) ?? -1, step)));
+  } finally { closeSync(fd); }
+  const text = [...last].sort(([a], [b]) => a.localeCompare(b))
+    .map(([actor, step]) => JSON.stringify({ actor, step }) + "\n").join("");
+  if (Buffer.byteLength(text) > ledgerLimit) throw new Error("MFA compacted ledger too large");
+  const directory = dirname(replayPath);
+  const tmp = join(directory, "." + basename(replayPath) + "." + randomBytes(12).toString("hex") + ".tmp");
+  let created = false;
+  try {
+    const tmpFd = privateFile(tmp, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL, true);
+    created = true;
+    try {
+      const bytes = Buffer.from(text, "utf8");
+      try {
+        if (writeSync(tmpFd, bytes) !== bytes.length) throw new Error("MFA compact write failed");
+        fsyncSync(tmpFd);
+      } finally { bytes.fill(0); }
+    } finally { closeSync(tmpFd); }
+    const current = lstatSync(replayPath);
+    if (!current.isFile() || current.dev !== old.dev || current.ino !== old.ino ||
+        current.size !== old.size || current.mtimeMs !== old.mtimeMs ||
+        current.uid !== process.geteuid?.() || current.nlink !== 1 || (current.mode & 0o077))
+      throw new Error("MFA replay changed during compaction");
+    renameSync(tmp, replayPath);
+    created = false;
+    const dirFd = openSync(directory, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
+    try { fsyncSync(dirFd); } finally { closeSync(dirFd); }
+  } finally { if (created) unlinkSync(tmp); }
 }

@@ -1,4 +1,4 @@
-# Example for a separate, local-only beta-0.3.10 gateway.
+# Example for a separate, local-only beta-0.4.4 gateway.
 # Must be reviewed and installed deliberately; it is never enabled by build.
 # The account must be allowed to read the dedicated local API token and socket.
 # Never set DC24H_REMOTE_PUBLIC or bind the service to a public interface.
@@ -20,6 +20,10 @@ StateDirectory=dc24h-remote
 StateDirectoryMode=0700
 Environment=DC24H_REMOTE_MFA_FILE=/var/lib/dc24h-remote/mfa.json
 Environment=DC24H_REMOTE_MFA_REPLAY_FILE=/var/lib/dc24h-remote/replay.jsonl
+# The gateway refuses to start without this private, durable audit sink.
+# Archive under an operator-approved retention policy BEFORE reaching 8 MiB;
+# stop the service and retain the full chain before replacing the file.
+Environment=DC24H_REMOTE_AUDIT_FILE=/var/lib/dc24h-remote/audit.jsonl
 ExecStart=/usr/bin/node --import tsx server/remote-main.ts
 Restart=on-failure
 RestartSec=3
