@@ -9,7 +9,7 @@ const snapshot = {
   chat: { received: 10, rejected: 1 },
 };
 
-test("remote read-only screen needs a session, supports EN/PL and never offers mutations", async ({ page }) => {
+test("remote read-only screen needs a session, supports EN/PL and never offers hub-control mutations", async ({ page }) => {
   let loggedIn = false;
   await page.route("**/remote/v1/session", async (route) => {
     await route.fulfill({ status: loggedIn ? 200 : 401, contentType: "application/json",
@@ -45,7 +45,7 @@ test("remote read-only screen needs a session, supports EN/PL and never offers m
   await page.getByLabel("ID konta administratora").fill("7");
   await page.getByLabel("Hasło konta").fill("example-proof");
   await page.getByLabel("Kod uwierzytelniający (6 cyfr)").fill("123456");
-  await page.getByRole("button", { name: "Zaloguj" }).click();
+  await page.getByRole("button", { name: "Zaloguj", exact: true }).click();
   await expect(page.getByText("beta-0.4.8")).toBeVisible();
   await expect(page.getByText("Aktywne połączenia")).toBeVisible();
   await expect(page.getByText("Użytkownicy online")).toBeVisible();
@@ -124,7 +124,7 @@ test("remote view clears previously displayed metrics after session expiration",
   await page.goto("/remote.html");
   await expect(page.getByText("Active connections")).toBeVisible();
   expired = true;
-  await page.getByRole("button", { name: "Refresh" }).click();
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
   await expect(page.getByText("Your session expired or was revoked. Sign in again.")).toBeVisible();
   await expect(page.getByText("Active connections")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Sign out" })).toHaveCount(0);
@@ -161,12 +161,12 @@ test("a delayed denial from the previous session cannot expire a new login", asy
 
   await page.goto("/remote.html");
   await firstStarted;
-  await page.getByRole("button", { name: "Refresh" }).click();
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
   await expect(page.getByText("Your session expired or was revoked. Sign in again.")).toBeVisible();
   await page.getByLabel("Administrator account ID").fill("7");
   await page.getByLabel("Account password").fill("correct");
   await page.getByLabel("Authenticator code (6 digits)").fill("123456");
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page.getByText("Active connections")).toBeVisible();
 
   const oldResponse = page.waitForResponse((response) =>
@@ -190,7 +190,7 @@ test("a failed login challenge clears the entered password", async ({ page }) =>
   await page.getByLabel("Administrator account ID").fill("7");
   await page.getByLabel("Account password").fill("sensitive-proof");
   await page.getByLabel("Authenticator code (6 digits)").fill("123456");
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page.getByText(/The gateway or hub API is unavailable/)).toBeVisible();
   await expect(page.getByLabel("Account password")).toHaveValue("");
   await expect(page.getByLabel("Authenticator code (6 digits)")).toHaveValue("");
@@ -232,7 +232,7 @@ test("an old summary cannot overwrite metrics after logout and a new login", asy
   await page.getByLabel("Administrator account ID").fill("7");
   await page.getByLabel("Account password").fill("new-proof");
   await page.getByLabel("Authenticator code (6 digits)").fill("123456");
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page.getByText("99", { exact: true })).toBeVisible();
 
   const staleResponse = page.waitForResponse((response) =>
@@ -263,7 +263,7 @@ test("an older read in the same session cannot replace fresher metrics", async (
 
   await page.goto("/remote.html");
   await firstStarted;
-  await page.getByRole("button", { name: "Refresh" }).click();
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
   await expect(page.getByText("99", { exact: true })).toBeVisible();
 
   const staleResponse = page.waitForResponse((response) =>
