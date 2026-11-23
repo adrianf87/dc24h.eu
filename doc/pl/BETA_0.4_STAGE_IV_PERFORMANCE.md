@@ -18,7 +18,7 @@ python3 scripts/stage4_perf_probe.py --profile webadmin --port 8443 --ca-file /p
 python3 scripts/stage4_perf_probe.py --profile api --port 8443 --ca-file /private/localhost-ca.pem --cookie-file /private/session-cookie --requests 50 --rate 2 --concurrency 2 --ack-isolated
 ```
 
-Narzędzie dopuszcza wyłącznie `localhost`/`127.0.0.1`, wymaga `--ack-isolated`, ogranicza liczbę prób do 1000, tempo do 20/s, współbieżność do 8 i timeout do 5 s. ADC/ADCS wysyła wyłącznie początkowe `HSUP ADBASE`; HTTPS pobiera statyczną stronę `/remote.html`, a API tylko autoryzowany, **odczytowy** `/remote/v1/summary`. Odmowa lub przeterminowana sesja to błąd, nie sukces. Walidacji TLS nie wolno wyłączać przez `--insecure`.
+Narzędzie dopuszcza wyłącznie `localhost`/`127.0.0.1`, wymaga `--ack-isolated`, ogranicza liczbę prób do 1000, tempo do 20/s, współbieżność do 8 i timeout do 5 s. ADC/ADCS wysyła wyłącznie początkowe `HSUP ADBASE ADTIGR` i wymaga poprawnej, kompletnej odpowiedzi `ISUP` z `ADBASE` (komunikat błędu ADC nie jest sukcesem); HTTPS pobiera stronę `/remote.html` o typie HTML, a API tylko autoryzowany, **odczytowy** `/remote/v1/summary` ze schematem JSON 1. Odmowa lub przeterminowana sesja to błąd, nie sukces. Walidacji TLS nie wolno wyłączać przez `--insecure`.
 
 JSON wynikowy zawiera opóźnienia p50/p95/p99, liczbę sukcesów/odmów, rzeczywistą przepustowość i opcjonalne RSS. Zadany limit tempa rozpoczęcia żądań nie jest rzeczywistą przepustowością. Zapisz wyniki i obserwacje hosta bez sekretów, a następnie poproś drugiego operatora o niezależny przegląd.
 

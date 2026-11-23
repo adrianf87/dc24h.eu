@@ -55,7 +55,8 @@ def private_cookie(path):
     file = Path(path)
     if not file.is_absolute():
         raise ValueError("Absolute cookie file required")
-    fd = os.open(file, os.O_RDONLY | os.O_NOFOLLOW)
+    # Refuse a substituted FIFO without waiting indefinitely for a writer.
+    fd = os.open(file, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     try:
         info = os.fstat(fd)
         if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_uid != os.geteuid() or (
@@ -80,6 +81,42 @@ def rss_kib(pid):
         return None
 
 
+def adc_greeting(sock, timeout):
+    """Require a complete ADC hub SUP line; an error/partial banner is not success."""
+    deadline = time.monotonic() + timeout
+    greeting = bytearray()
+    while b"\n" not in greeting and len(greeting) < 2048:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise socket.timeout("Incomplete ADC greeting")
+        sock.settimeout(remaining)
+        piece = sock.recv(min(2048 - len(greeting), 512))
+        if not piece:
+            return False
+        greeting.extend(piece)
+    if b"\n" not in greeting:
+        return False
+    first = bytes(greeting).split(b"\n", 1)[0]
+    return first.startswith(b"ISUP ") and b"ADBASE" in first.split(b" ")[1:]
+
+
+def valid_http_response(profile, response, body):
+    if response.status != 200 or not body or len(body) > 65536:
+        return False
+    content_type = response.getheader("Content-Type", "").lower()
+    if profile == "webadmin":
+        return content_type.split(";", 1)[0].strip() == "text/html"
+    if content_type not in ("application/json", "application/json; charset=utf-8"):
+        return False
+    try:
+        payload = json.loads(body)
+    except (ValueError, UnicodeDecodeError):
+        return False
+    return (isinstance(payload, dict) and type(payload.get("schema")) is int and
+            payload["schema"] == 1 and payload.get("mode") == "read-only" and
+            isinstance(payload.get("server"), dict))
+
+
 def probe(profile, port, timeout, tls, cookie):
     start = time.monotonic_ns()
     try:
@@ -93,7 +130,7 @@ def probe(profile, port, timeout, tls, cookie):
                 conn.request("GET", route, headers=headers)
                 response = conn.getresponse()
                 body = response.read(65537)
-                if response.status != 200 or not body or len(body) > 65536:
+                if not valid_http_response(profile, response, body):
                     return False, (time.monotonic_ns() - start) / 1_000_000, "http_unexpected"
             finally:
                 conn.close()
@@ -103,9 +140,9 @@ def probe(profile, port, timeout, tls, cookie):
                     raw = tls.wrap_socket(raw, server_hostname="localhost")
                 with raw:
                     raw.settimeout(timeout)
-                    raw.sendall(b"HSUP ADBASE\n")
-                    if not raw.recv(2048):
-                        return False, (time.monotonic_ns() - start) / 1_000_000, "empty_protocol"
+                    raw.sendall(b"HSUP ADBASE ADTIGR\n")
+                    if not adc_greeting(raw, timeout):
+                        return False, (time.monotonic_ns() - start) / 1_000_000, "invalid_protocol"
         return True, (time.monotonic_ns() - start) / 1_000_000, "ok"
     except ssl.SSLError:
         reason = "tls_failure"

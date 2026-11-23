@@ -36,10 +36,14 @@ python3 scripts/stage4_private_recovery_drill.py restore --source /var/lib/dc24h
 The target directories must not exist beforehand. `restore` writes only into
 a **new** private directory and never overwrites live files or starts a
 service. The manifest contains only file sizes, hashes and an archive time;
-the tool verifies each file's ownership/mode, digest and audit-chain sequence
-before accepting a backup. A replaced, truncated or corrupt ledger is
-rejected. The backup and restored data remain confidential and should not
-enter CI artifacts or Git.
+the tool checks every source hash again after preflight, rejects changes since
+manifest verification, and checks all five newly written files against the
+original manifest before reporting success. It also validates the private
+gateway's MFA, replay, passkey, rate-limit and audit formats. A replaced,
+truncated or corrupt ledger is rejected. **A failed operation may leave an
+incomplete destination; never install it.** The restored directory contains
+only the five service files, not a manifest. The backup and restored data
+remain confidential and should not enter CI artifacts or Git.
 
 ## Failures to rehearse without losing live data
 

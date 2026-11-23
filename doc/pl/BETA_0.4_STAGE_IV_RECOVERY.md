@@ -17,7 +17,7 @@ python3 scripts/stage4_private_recovery_drill.py verify --source /var/lib/dc24h-
 python3 scripts/stage4_private_recovery_drill.py restore --source /var/lib/dc24h-rehearsals/snapshot-001 --destination /var/lib/dc24h-rehearsals/restored-001 --ack-stopped --ack-isolated
 ```
 
-`restore` zapisuje wyłącznie do **nowego** katalogu; nie zastępuje danych aktywnych usług i niczego nie uruchamia. Manifest sprawdza SHA-256, rozmiary i kolejność/łańcuch haszy audytu, prawa i własność plików. Narzędzie odrzuca kopie zmodyfikowane, ucięte, niespójne i dowiązania. Manifest ani pliki prywatne nie mogą trafić do artefaktów GitHub CI.
+`restore` zapisuje wyłącznie do **nowego** katalogu; nie zastępuje danych aktywnych usług i niczego nie uruchamia. Narzędzie ponownie sprawdza SHA-256 przy kopiowaniu, porównuje pięć odtworzonych plików z oryginalnym manifestem, kontroluje rozmiary, formaty MFA/passkey/replay/limiter i łańcuch haszy audytu. Odrzuca kopie zmodyfikowane, ucięte, niespójne i dowiązania. **Po błędzie może pozostać niekompletny katalog docelowy; nie wolno go instalować.** Odtworzony katalog zawiera tylko pięć plików usług, bez manifestu. Manifest ani pliki prywatne nie mogą trafić do artefaktów GitHub CI.
 
 ## Scenariusze obowiązkowe
 

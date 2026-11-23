@@ -38,9 +38,11 @@ The probe connects only to localhost/127.0.0.1, never to an arbitrary host.
 It refuses to start without the explicit isolation acknowledgment, enforces
 at most 1,000 requests, 20 starts/s, eight concurrent workers and five-second
 per-operation timeouts, and never sends administrative writes. ADC/ADCS send
-only the bounded initial `HSUP ADBASE` and read the first response. WebAdmin
-fetches only `/remote.html`; the API profile fetches only the authorized
-read-only `/remote/v1/summary`. A missing, expired or rejected session counts
+only the bounded initial `HSUP ADBASE ADTIGR` and require a complete `ISUP`
+advertisement with `ADBASE`; an ADC error/status line does not count as success.
+WebAdmin fetches only `/remote.html` with an HTML media type; the API profile
+fetches only the authorized read-only `/remote/v1/summary` and requires the
+versioned read-only JSON response. A missing, expired or rejected session counts
 as an **error**, not a successful request or capacity datapoint.
 
 Each invocation emits JSON with successful throughput, failure rate,
