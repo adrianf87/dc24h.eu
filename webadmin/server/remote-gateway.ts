@@ -193,6 +193,21 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
     res.end(JSON.stringify(data));
   };
   const clearSession = () => [setCookie("dc24h_remote", "", 0)];
+  const rotateSession = (oldKey: string, session: Session, revokePeers = false) => {
+    if (sessions.get(oldKey) !== session || session.pendingLogouts > 0 || expired(session, clock()))
+      throw Error("Session was revoked during credential mutation");
+    const nextKey = randomBytes(32).toString("hex");
+    const nextCsrf = randomBytes(32).toString("hex");
+    if (revokePeers) {
+      // Enrollment changes the actor's authentication factors. Do not leave
+      // older browser sessions alive with their pre-enrollment authority.
+      for (const [id, other] of sessions) if (other.actor === session.actor) sessions.delete(id);
+    } else sessions.delete(oldKey);
+    session.csrf = nextCsrf;
+    session.used = clock();
+    sessions.set(nextKey, session);
+    return { csrf: nextCsrf, cookie: setCookie("dc24h_remote", nextKey, 600) };
+  };
   const active = (req: IncomingMessage, now: number): [string, Session] | null => {
     const id = cookie(req, "dc24h_remote");
     if (!/^[0-9a-f]{64}$/.test(id)) return null;
@@ -500,6 +515,7 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
       if (name === "passkey/enroll/options") {
         try {
           const fields = object(await readBody(req));
+          if (sessions.get(key) !== session || session.pendingLogouts > 0 || expired(session, clock())) throw Error();
           if (Object.keys(fields).length || enrollments.size >= 64 ||
               limited("passkey:enroll:" + session.actor, 5, now)) throw Error();
           const opts = await p.ceremonies.beginEnrollment(session.actor);
@@ -519,25 +535,31 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
           const result = await p.ceremonies.finishEnrollment(session.actor, pending.challenge,
             fields.response as Parameters<PasskeyCeremonies["finishEnrollment"]>[2], clock(),
             async () => sessions.get(key) === session && pending.expires > clock() &&
-              clock() - session.created <= 60_000 && !expired(session, clock()) &&
+              clock() - session.created <= 60_000 && !expired(session, clock()) && session.pendingLogouts === 0 &&
               await authorized(key, session, true) === "ok");
           if (!result || pending.expires <= clock() || clock() - session.created > 60_000 ||
-              sessions.get(key) !== session || expired(session, clock())) throw Error();
+              sessions.get(key) !== session || session.pendingLogouts > 0 || expired(session, clock())) throw Error();
           if (!log("passkey_enrolled") && options.strictAudit) throw Error("audit_unavailable");
-          reply(res, 200, { schema: 1, enrolled: true });
+          const rotated = rotateSession(key, session, true);
+          reply(res, 200, { schema: 1, enrolled: true, csrf: rotated.csrf }, [rotated.cookie]);
         } catch { log("passkey_enroll_refused"); reply(res, 403, { error: "enrollment_refused" }); }
         return;
       }
       if (name === "passkey/device/rename" || name === "passkey/device/revoke") {
         try {
           const fields = object(await readBody(req));
+          // The body may have been streamed while logout, role revocation or
+          // another credential mutation invalidated the caller's session.
+          if (sessions.get(key) !== session || session.pendingLogouts > 0 || expired(session, clock()) ||
+              (options.passkeys && session.passkeyEpoch !== p.store.epoch(session.actor))) throw Error();
           if (limited("passkey:device:" + session.actor, 10, now)) throw Error();
           if (typeof fields.id !== "string" ||
               Object.keys(fields).length !== (name.endsWith("rename") ? 2 : 1)) throw Error();
           if (name.endsWith("rename")) {
             if (typeof fields.name !== "string" || !p.store.rename(session.actor, fields.id, fields.name)) throw Error();
             if (!log("passkey_device_renamed") && options.strictAudit) throw Error();
-            reply(res, 200, { schema: 1, renamed: true });
+            const rotated = rotateSession(key, session);
+            reply(res, 200, { schema: 1, renamed: true, csrf: rotated.csrf }, [rotated.cookie]);
           } else {
             if (!p.store.get(session.actor, fields.id) || (options.strictAudit && !log("passkey_revoke_intent"))) throw Error();
             if (!p.store.revoke(session.actor, fields.id, clock())) throw Error();

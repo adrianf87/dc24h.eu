@@ -79,7 +79,8 @@ test("local passkey inventory exposes only this account's device actions and rev
     const body = route.request().postDataJSON() as { id: string; name: string };
     expect(body.id).toBe("p".repeat(32));
     name = body.name;
-    await route.fulfill({ status: 200, contentType: "application/json", body: '{"schema":1,"renamed":true}' });
+    await route.fulfill({ status: 200, contentType: "application/json",
+      body: JSON.stringify({ schema: 1, renamed: true, csrf: "a".repeat(64) }) });
   });
   await page.route("**/remote/v1/passkey/device/revoke", async route => {
     expect(route.request().headers()["x-dc24h-remote-csrf"]).toBe(sessionCsrf);

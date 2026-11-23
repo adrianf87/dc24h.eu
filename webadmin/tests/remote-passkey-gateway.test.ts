@@ -132,15 +132,36 @@ test("passkey gateway binds login and enrollment to one-use challenges, password
     assert.equal((await call("passkey/enroll/options", "POST", {}, { cookie: sessionCookie })).status, 403);
     const enroll = await call("passkey/enroll/options", "POST", {}, csrfHeader(sessionCsrf, sessionCookie));
     assert.equal(enroll.status, 200);
-    assert.equal((await call("passkey/enroll/finish", "POST", { response: { valid: true } },
-      csrfHeader(sessionCsrf, sessionCookie))).status, 200);
+    const enrolled = await call("passkey/enroll/finish", "POST", { response: { valid: true } },
+      csrfHeader(sessionCsrf, sessionCookie));
+    assert.equal(enrolled.status, 200);
+    assert.ok(enrolled.cookies[0]?.includes("HttpOnly; Secure; SameSite=Strict"));
+    const rotatedCookie = enrolled.cookies[0]!.split(";")[0]!;
+    const rotatedCsrf = JSON.parse(enrolled.body).csrf as string;
+    assert.notEqual(rotatedCookie, sessionCookie);
+    assert.notEqual(rotatedCsrf, sessionCsrf);
+    assert.equal((await call("session", "GET", {}, { cookie: sessionCookie })).status, 401,
+      "enrollment must revoke the earlier session cookie");
+    assert.equal((await call("session", "GET", {}, { cookie: rotatedCookie })).status, 200);
     assert.equal(store.forActor("7").length, 2);
     assert.equal((await call("passkey/enroll/finish", "POST", { response: { valid: true } },
-      csrfHeader(sessionCsrf, sessionCookie))).status, 403);
+      csrfHeader(rotatedCsrf, rotatedCookie))).status, 403);
+    const rename = await call("passkey/device/rename", "POST", { id, name: "Renamed device" },
+      csrfHeader(rotatedCsrf, rotatedCookie));
+    assert.equal(rename.status, 200);
+    const renamedCookie = rename.cookies[0]!.split(";")[0]!;
+    const renamedCsrf = JSON.parse(rename.body).csrf as string;
+    assert.notEqual(renamedCookie, rotatedCookie, "privileged rename must rotate the session identifier");
+    assert.notEqual(renamedCsrf, rotatedCsrf, "privileged rename must rotate CSRF");
+    assert.equal((await call("session", "GET", {}, { cookie: rotatedCookie })).status, 401);
+    assert.equal((await call("session", "GET", {}, { cookie: renamedCookie })).status, 200);
+    assert.equal((await call("passkey/device/rename", "POST", { id, name: "Stale request" },
+      csrfHeader(rotatedCsrf, rotatedCookie))).status, 401);
+    assert.equal(store.get("7", id)?.name, "Renamed device");
     assert.equal((await call("passkey/device/revoke", "POST", { id },
-      csrfHeader(sessionCsrf, sessionCookie))).status, 200);
+      csrfHeader(renamedCsrf, renamedCookie))).status, 200);
     assert.equal(store.epoch("7"), 1);
-    assert.equal((await call("session", "GET", {}, { cookie: sessionCookie })).status, 401);
+    assert.equal((await call("session", "GET", {}, { cookie: renamedCookie })).status, 401);
     assert.equal(store.forActor("7").length, 1);
     assert.ok(called.includes("POST /api/v1/admin/access"));
     assert.ok(events.includes("passkey_revoke_intent") && events.includes("passkey_revoked"));

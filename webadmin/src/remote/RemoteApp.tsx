@@ -224,6 +224,10 @@ export function RemoteApp() {
       if (epoch !== sessionEpoch.current) return;
       const result = await passkeyRequest("passkey/enroll/finish", { response: answer }, csrf);
       if (result.status !== 200) throw Error();
+      if (epoch !== sessionEpoch.current) return;
+      if (!result.data || typeof result.data !== "object" || !("csrf" in result.data) ||
+          typeof result.data.csrf !== "string" || !/^[0-9a-f]{64}$/.test(result.data.csrf)) throw Error();
+      setCsrf(result.data.csrf);
       setActionMessage(t.actionDone); await loadDevices();
     } catch { if (epoch === sessionEpoch.current) setActionMessage(t.actionFailed); }
   };
@@ -237,6 +241,9 @@ export function RemoteApp() {
       if (result.status !== 200) throw Error();
       if (revoke) { invalidate("unauthorized"); setActionMessage(t.revoked); }
       else {
+        if (!result.data || typeof result.data !== "object" || !("csrf" in result.data) ||
+            typeof result.data.csrf !== "string" || !/^[0-9a-f]{64}$/.test(result.data.csrf)) throw Error();
+        setCsrf(result.data.csrf);
         setDeviceLabels(previous => ({ ...previous, [id]: "" }));
         await loadDevices();
         if (epoch === sessionEpoch.current) setActionMessage(t.actionDone);
