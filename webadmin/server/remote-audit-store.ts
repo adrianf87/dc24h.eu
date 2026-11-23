@@ -1,7 +1,7 @@
 // Local durable audit foundation. A SHA-256 chain detects accidental record
 // modification/gaps but is NOT a keyed proof against a privileged attacker.
 import { createHash } from "node:crypto";
-import { constants, closeSync, fstatSync, fsyncSync, lstatSync, openSync, readFileSync, writeSync } from "node:fs";
+import { constants, closeSync, fstatSync, fsyncSync, lstatSync, openSync, readFileSync, readSync, writeSync } from "node:fs";
 import { dirname, isAbsolute } from "node:path";
 import { remoteAuditEvents, remoteAuditRecord } from "./remote-audit.ts";
 import type { RemoteEvent } from "./remote-gateway.ts";
@@ -88,8 +88,42 @@ export function openRemoteAuditStore(path: string) {
     }
   };
   let closed = false;
+  const verify = (): boolean => {
+    if (!healthy || closed) return false;
+    // The append path checks inode/size before writes. This separate bounded
+    // scan catches an in-place rewrite of an existing row of the *same* size,
+    // including during an otherwise idle authentication period.
+    const bytes = Buffer.alloc(size);
+    try {
+      const stat = lstatSync(path), opened = fstatSync(fd);
+      if (!stat.isFile() || stat.dev !== opened.dev || stat.ino !== opened.ino ||
+          stat.uid !== uid || stat.nlink !== 1 || (stat.mode & 0o077) ||
+          opened.size !== size || size > maxBytes) throw Error("Audit file changed");
+      let offset = 0;
+      while (offset < bytes.length) {
+        const count = readSync(fd, bytes, offset, bytes.length - offset, offset);
+        if (!count) throw Error("Audit file truncated");
+        offset += count;
+      }
+      const text = bytes.toString("utf8");
+      if (text.length && !text.endsWith("\n")) throw Error("Audit file truncated");
+      let atSequence = 0, prev = zeroHash;
+      for (const line of text ? text.slice(0, -1).split("\n") : []) {
+        if (!line || atSequence >= Number.MAX_SAFE_INTEGER) throw Error("Audit sequence invalid");
+        const row = checkRow(JSON.parse(line), atSequence + 1, prev);
+        atSequence++; prev = row.digest;
+      }
+      if (atSequence !== sequence || prev !== previous) throw Error("Audit tail changed");
+      return true;
+    } catch {
+      healthy = false;
+      dropped++;
+      return false;
+    } finally { bytes.fill(0); }
+  };
   return {
     append,
+    verify,
     health: () => ({ healthy: healthy && !closed, dropped, sequence }),
     close: () => { if (!closed) { closed = true; closeSync(fd); } },
   };
