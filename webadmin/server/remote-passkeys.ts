@@ -107,37 +107,38 @@ function persist(path: string, doc: Document): void {
   } finally { bytes.fill(0); }
 }
 
+export function initializePasskeyStore(path: string, rpID: string): void {
+  if (!/^(?:localhost|[a-z0-9]+(?:[.-][a-z0-9]+)*)$/.test(rpID) || rpID.length > 253)
+    throw Error("Invalid passkey RP ID");
+  privateParent(path);
+  const doc: Document = { schema: 1, rpID, users: [], credentials: [] };
+  const fd = openSync(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+  try {
+    const bytes = Buffer.from(JSON.stringify(doc) + "\n");
+    try { if (writeSync(fd, bytes) !== bytes.length) throw Error("Incomplete passkey init"); fsyncSync(fd); }
+    finally { bytes.fill(0); }
+  } finally { closeSync(fd); }
+  const dir = openSync(dirname(path), constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
+  try { fsyncSync(dir); } finally { closeSync(dir); }
+}
+
 export function openPasskeyStore(path: string, rpID: string) {
   if (!/^(?:localhost|[a-z0-9]+(?:[.-][a-z0-9]+)*)$/.test(rpID) || rpID.length > 253)
     throw Error("Invalid passkey RP ID");
   privateParent(path);
   let doc: Document;
+  const before = safeStat(path);
+  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
   try {
-    const before = safeStat(path);
-    const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+    const opened = fstatSync(fd);
+    if (opened.dev !== before.dev || opened.ino !== before.ino) throw Error("Passkey file changed");
+    const bytes = readFileSync(fd);
     try {
-      const opened = fstatSync(fd);
-      if (opened.dev !== before.dev || opened.ino !== before.ino) throw Error("Passkey file changed");
-      const bytes = readFileSync(fd);
-      try {
-        if (bytes.length !== opened.size) throw Error("Passkey file changed");
-        doc = JSON.parse(bytes.toString("utf8")) as Document;
-      } finally { bytes.fill(0); }
-    } finally { closeSync(fd); }
-    if (!validDocument(doc!, rpID)) throw Error("Invalid passkey catalog");
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
-    doc = { schema: 1, rpID, users: [], credentials: [] };
-    // Exclusive initial creation; if another process won, fail and restart.
-    const fd = openSync(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
-    try {
-      const bytes = Buffer.from(JSON.stringify(doc) + "\n");
-      try { if (writeSync(fd, bytes) !== bytes.length) throw Error("Incomplete passkey init"); fsyncSync(fd); }
-      finally { bytes.fill(0); }
-    } finally { closeSync(fd); }
-    const dir = openSync(dirname(path), constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
-    try { fsyncSync(dir); } finally { closeSync(dir); }
-  }
+      if (bytes.length !== opened.size) throw Error("Passkey file changed");
+      doc = JSON.parse(bytes.toString("utf8")) as Document;
+    } finally { bytes.fill(0); }
+  } finally { closeSync(fd); }
+  if (!validDocument(doc!, rpID)) throw Error("Invalid passkey catalog");
   let identity = safeStat(path);
   let healthy = true;
   const check = () => {

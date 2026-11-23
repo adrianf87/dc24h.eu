@@ -5,7 +5,7 @@ import { remoteGateway } from "../server/remote-gateway.ts";
 import { PERMISSION_KEYS } from "../src/lib/roles.ts";
 import { ACCESS_ROUTES } from "../src/lib/access.ts";
 import { snapshot } from "./fixtures.ts";
-import { openRemoteRateLimitStore } from "../server/remote-rate-limit-store.ts";
+import { initializeRemoteRateLimitStore, openRemoteRateLimitStore } from "../server/remote-rate-limit-store.ts";
 import type { RemoteRateLimitStore } from "../server/remote-rate-limit-store.ts";
 import { mkdtempSync, chmodSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -123,6 +123,7 @@ test("password and passkey login budgets cannot reset by restarting the gateway"
   const dir = mkdtempSync(join(tmpdir(), "dc24h-gateway-limit-")); chmodSync(dir, 0o700);
   try {
     const path = join(dir, "limits.json");
+    initializeRemoteRateLimitStore(path);
     const first = harness(true, true, openRemoteRateLimitStore(path, token));
     for (let n = 0; n < 4; n++) assert.equal((await first.login("7", "bad")).status, 403);
     const afterRestart = harness(true, true, openRemoteRateLimitStore(path, token));
@@ -261,7 +262,7 @@ test("remote status strips private upstream fields and refuses malformed or unav
   const login = await h.login();
   const browserCookie = login.cookies[0]!.split(";")[0]!;
   const privateValue = "SECRET_IDENTITY_FROM_PRIVATE_API";
-  const clean = { ...snapshot, server: { ...snapshot.server, version: "beta-0.5.4" } };
+  const clean = { ...snapshot, server: { ...snapshot.server, version: "beta-0.5.8" } };
   h.state.statusResponse = async () => ({
     ...clean, secret: privateValue, audit_rows: [{ account: privateValue }],
     server: { ...clean.server, private_socket: privateValue },
@@ -276,7 +277,7 @@ test("remote status strips private upstream fields and refuses malformed or unav
   assert.equal(safe.status, 200);
   assert.deepEqual(JSON.parse(safe.body), {
     schema: 1, mode: "read-only",
-    server: { version: "beta-0.5.4", running: true, uptime_seconds: 3661 },
+    server: { version: "beta-0.5.8", running: true, uptime_seconds: 3661 },
     network: { active_connections: 7, accepted_connections: 48 },
     users: { online: 4, peak_online: 6 },
     chat: { received: 12, rejected: 2 },

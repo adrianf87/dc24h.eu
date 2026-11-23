@@ -25,8 +25,18 @@ Nie zakładamy hasłowego logowania bez MFA ani publicznych operacji administrac
 
 Pierwszą inicjalizację pustych katalogów wykonuje się **wyłącznie offline**, po niezależnym przygotowaniu prywatnego `mfa.json` i zatrzymaniu gatewaya. Utrata pliku na wcześniej działającym systemie wymaga odtworzenia **zgodnej migawki MariaDB + pięciu plików**, a nie stworzenia nowego pustego dziennika. Rejestr TOTP zachowuje najwyższe zużyte kroki. Pęknięty łańcuch audytu, błędne uprawnienia plików lub uszkodzenie limitów logowania blokują dostęp.
 
+Dla **pierwszej instalacji** po utworzeniu poprawnego `mfa.json` (właściciel, `0600`, prywatny katalog `0700`) i zatrzymaniu usługi można z katalogu `webadmin/` uruchomić:
+
+```sh
+node --import tsx server/remote-private-init.ts \
+  --directory /var/lib/dc24h-remote --rp-id YOUR_FIXED_RP_ID \
+  --offline-ack --first-install-ack
+```
+
+Podmień `YOUR_FIXED_RP_ID` na rzeczywisty RP ID. Narzędzie tworzy wyłącznie cztery pozostałe pliki, bez sekretów w logach, i odmawia nadpisania choćby jednego istniejącego pliku. Jeśli próba pierwszej instalacji pozostawi stan częściowy, zatrzymaj i sprawdź pliki. **Nigdy** nie używaj tej procedury do zerowania utraconych limitów, sesji, historii TOTP lub audytu — wtedy odtwórz zgodną kopię. Zwykły start usługi i odzyskiwanie passkeys nie tworzą już brakujących plików.
+
 ## Kryterium zakończenia
 
 Po czterech patchach wykonujemy pełne CI na **GitHub-hosted Ubuntu 22.04/24.04/26.04**: C++ Debug/Release, WebAdmin, ASan/UBSan, negatywne WebAuthn/CSRF/sesje, browser E2E, testy audytu, systemd oraz odzyskiwanie. Dokumentujemy wynik i SHA w issue #234. Brak wymogu niezależnej akceptacji ani uruchomienia produkcji. Etap III rozpocznie się dopiero przy następnym poleceniu.
 
-**Stan:** implementacja 0.5.6–0.5.8 i końcowe CI w toku.
+**Stan:** lokalna implementacja 0.5.5–0.5.8 przygotowana; pełne CI ostatniego SHA oczekuje.

@@ -1,6 +1,8 @@
 # Dokumentacja dc24h.eu High Starter
 
-beta-0.5.4: Etap I dodaje zanonimizowane wyniki CI i pomiary Ubuntu 22.04/24.04/26.04, testy prawdziwego systemd, progi dowodów wydajności i parowanie kopii MariaDB ze stanem gatewaya. **Zgodnie z decyzją właściciela z 23.11.2026 nie wykonujemy testów Debian 12/13 ani Xeona, a wyniki Ubuntu nie zastępują odbioru sprzętu docelowego.** Spójne odtworzenie MariaDB/RPO/RTO i niezależny odbiór pozostają niezmierzone. Logowanie **hasło + passkey** nadal nie jest bezhasłowe. Hub, API, kontroler i WebAdmin raportują beta-0.5.4. Identyfikator protokołu `dc24h.eu`, schemat v11 i publiczne proxy Apache pozostają bez zmian. Bez publicznego WebAdmin, zdalnego zapisu i automatycznego wdrożenia.
+beta-0.5.8: Etap II wzmacnia format danych passkey, ochronę przed odtworzeniem TOTP i wykrywanie utraty stanu audytu, kluczy i limitów. Pierwsze utworzenie stanu wymaga jawnej procedury offline. Etap I dostarczył pomiary CI Ubuntu 22.04/24.04/26.04, test prawdziwego systemd oraz odtwarzanie testowej bazy MariaDB i stanu prywatnego (syntetyczne RPO/RTO, bez odbioru produkcyjnego). **Zgodnie z decyzją właściciela z 23.11.2026 nie wykonujemy testów Debian 12/13 ani Xeona.** Odbiór sprzętu docelowego i niezależny audyt pozostają otwarte. Logowanie **hasło + passkey** nadal nie jest bezhasłowe. Hub, API, kontroler i WebAdmin raportują beta-0.5.8. Identyfikator protokołu `dc24h.eu`, schemat v11 i publiczne proxy Apache pozostają bez zmian. Bez publicznego WebAdmin, zdalnego zapisu i automatycznego wdrożenia.
+
+- [Etap II beta-0.5.5–beta-0.5.8 — przegląd bezpieczeństwa i procedura operatora](BETA_0.5_STAGE_II.md) · [EN/US](../us/BETA_0.5_STAGE_II.md)
 
 - [Etap I beta-0.5.1–beta-0.5.4 — dowody i procedura operatora](BETA_0.5_STAGE_I.md) · [EN/US](../us/BETA_0.5_STAGE_I.md)
 

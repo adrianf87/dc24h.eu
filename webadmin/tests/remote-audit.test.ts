@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { remoteAuditEvents, remoteAuditRecord } from "../server/remote-audit.ts";
 import type { RemoteEvent } from "../server/remote-gateway.ts";
-import { openRemoteAuditStore } from "../server/remote-audit-store.ts";
+import { initializeRemoteAuditStore, openRemoteAuditStore } from "../server/remote-audit-store.ts";
 import { chmodSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -33,6 +33,7 @@ test("durable gateway audit persists a sequential privacy-limited hash chain acr
   const dir = mkdtempSync(join(tmpdir(), "dc24h-audit-"));
   const path = join(dir, "gateway.jsonl");
   try {
+    initializeRemoteAuditStore(path);
     const first = openRemoteAuditStore(path);
     first.append("login_refused", 1_700_000_000_000);
     first.append("mfa_ok", 1_700_000_000_001);
@@ -59,6 +60,7 @@ test("audit files refuse unsafe permissions, incomplete entries and path replace
   const dir = mkdtempSync(join(tmpdir(), "dc24h-audit-sec-"));
   const path = join(dir, "audit.jsonl"), alias = join(dir, "alias.jsonl");
   try {
+    initializeRemoteAuditStore(path);
     const store = openRemoteAuditStore(path);
     store.append("login_refused", 1_700_000_000_000);
     renameSync(path, alias);
@@ -83,6 +85,7 @@ test("periodic audit verification detects same-size in-place rewrites while idle
   const dir = mkdtempSync(join(tmpdir(), "dc24h-audit-verify-"));
   const path = join(dir, "audit.jsonl");
   try {
+    initializeRemoteAuditStore(path);
     const audit = openRemoteAuditStore(path);
     audit.append("login_refused", 1_700_000_000_000);
     assert.equal(audit.verify(), true);
@@ -95,5 +98,22 @@ test("periodic audit verification detects same-size in-place rewrites while idle
     assert.deepEqual(audit.health(), { healthy: false, dropped: 1, sequence: 1 });
     assert.throws(() => audit.append("login_ok", 1_700_000_000_001), /unavailable/);
     audit.close();
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("missing audit chain never silently resets on restart", () => {
+  const dir = mkdtempSync(join(tmpdir(), "dc24h-audit-missing-"));
+  const path = join(dir, "audit.jsonl");
+  try {
+    assert.throws(() => openRemoteAuditStore(path), /ENOENT/);
+    initializeRemoteAuditStore(path);
+    const store = openRemoteAuditStore(path);
+    store.append("login_refused", 1_700_000_000_000);
+    store.close();
+    const retained = readFileSync(path, "utf8");
+    assert.throws(() => initializeRemoteAuditStore(path), /EEXIST/);
+    assert.equal(readFileSync(path, "utf8"), retained);
+    rmSync(path);
+    assert.throws(() => openRemoteAuditStore(path), /ENOENT/);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

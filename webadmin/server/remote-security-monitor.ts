@@ -15,7 +15,11 @@ export function createRemoteSecurityMonitor(emit: (line: string) => void) {
   const signal = (reason: SecurityAlert, now: number) => {
     if (!alertNames.has(reason) || !Number.isSafeInteger(now) || now < 0 || now > 8_640_000_000_000_000)
       throw Error("Invalid security alert");
-    if (last.has(reason) && now < last.get(reason)! + windowMs) return;
+    const prior = last.get(reason);
+    // A backward wall-clock jump must not suppress a critical storage-loss
+    // warning until the old timestamp is reached again. Emit once and begin
+    // a fresh bounded cooldown at the observed time.
+    if (prior !== undefined && now >= prior && now < prior + windowMs) return;
     last.set(reason, now);
     // Fixed-code JSON only. Never log actor, credential, source address,
     // request path, factor proof or account/host identifiers.

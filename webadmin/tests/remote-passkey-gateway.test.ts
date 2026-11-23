@@ -5,7 +5,7 @@ import { mkdtempSync, chmodSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { remoteGateway } from "../server/remote-gateway.ts";
-import { openPasskeyStore } from "../server/remote-passkeys.ts";
+import { initializePasskeyStore, openPasskeyStore } from "../server/remote-passkeys.ts";
 import type { PasskeyCeremonies } from "../server/remote-webauthn.ts";
 import { ACCESS_ROUTES } from "../src/lib/access.ts";
 import { PERMISSION_KEYS } from "../src/lib/roles.ts";
@@ -14,6 +14,7 @@ import { snapshot } from "./fixtures.ts";
 test("passkey gateway binds login and enrollment to one-use challenges, password authority, Origin, CSRF, and revocation", async () => {
   const dir = mkdtempSync(join(tmpdir(), "dc24h-passkey-gateway-")); chmodSync(dir, 0o700);
   try {
+    initializePasskeyStore(join(dir, "passkeys.json"), "localhost");
     const store = openPasskeyStore(join(dir, "passkeys.json"), "localhost");
     const handle = store.userHandle("7");
     const id = "p".repeat(32);

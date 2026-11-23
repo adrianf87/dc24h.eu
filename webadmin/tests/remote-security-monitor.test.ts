@@ -27,3 +27,15 @@ test("security monitor emits bounded reason-only alerts with cooldown", () => {
   assert.equal(lines.filter(line => line.includes("authentication_denials")).length, 2,
     "new window can send one new alert");
 });
+
+test("clock reversal renews one privacy-only alert and throttles the next burst", () => {
+  const messages: string[] = [];
+  const monitor = createRemoteSecurityMonitor(line => messages.push(line));
+  monitor.signal("audit_loss", 200_000);
+  monitor.signal("audit_loss", 200_001);
+  monitor.signal("audit_loss", 100_000); // Clock moves backward.
+  monitor.signal("audit_loss", 100_001);
+  assert.equal(messages.length, 2);
+  assert.deepEqual(messages.map(message => JSON.parse(message).reason), ["audit_loss", "audit_loss"]);
+  assert.ok(messages.every(message => !/actor|password|cookie|token|credential|source_ip/.test(message)));
+});

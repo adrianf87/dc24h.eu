@@ -40,8 +40,20 @@ Repository checks include npm production audit, C++ ASan/UBSan, WebAdmin unit/br
 - An audit-chain validation or write failure invalidates sessions. The SHA-256 chain detects accidental damage and nonprivileged edits; it is not a keyed attestation against a privileged attacker. Retention is bounded (8 MiB); filling the store denies authenticated service until offline maintenance and preservation of evidence.
 - Alerts are fixed-code, throttled journal records without request data or identities. Test repeated denials, audit loss, corruption, storage loss and backward time jumps.
 
+### First-time private-state bootstrap (never disaster recovery)
+
+The offline operator first provisions an already valid and owner-only `mfa.json` in a private `0700` directory and stops the gateway. On a **new installation with none of the four remaining files present**, use this command from `webadmin/` with the actual configured RP ID:
+
+```sh
+node --import tsx server/remote-private-init.ts \
+  --directory /var/lib/dc24h-remote --rp-id YOUR_FIXED_RP_ID \
+  --offline-ack --first-install-ack
+```
+
+It creates `replay.jsonl`, `audit.jsonl`, `passkeys.json` and `rate-limits.json` with exclusive, owner-only, fsync-checked files and never prints a TOTP seed or service token. It refuses an existing or partially present catalog set and cannot overwrite one. If an interrupted first installation leaves a partial state, stop and inspect it; never reset a previously active gateway. A missing file in an existing installation means **restore the matched MariaDB/private-state backup**. Normal gateway startup and the offline passkey-recovery tool do **not** create missing catalogs. The separate `remote-mfa-tool.ts --init-replay` operation is only for deliberately provisioned initial TOTP state, not an audit/recovery bypass.
+
 ## Validation and release boundary
 
 Required test hosts are **GitHub-hosted Ubuntu 22.04, 24.04 and 26.04 only**. After the final Stage II commit, wait for all head-SHA C++ Debug/Release, WebAdmin, ASan/UBSan, security, browser, systemd and recovery jobs to finish successfully. Record exact source SHA, workflow run URLs, failure disposition and outstanding risks on Issue #234. No separate external security assessment or Owner approval is a gate. This stage is not a public deployment decision.
 
-**Status:** pending implementation of 0.5.6–0.5.8 and latest-head CI.
+**Status:** patches 0.5.5–0.5.8 implemented locally; full final-head Ubuntu CI pending.

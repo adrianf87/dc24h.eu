@@ -4,14 +4,15 @@ import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { openPasskeyStore } from "../server/remote-passkeys.ts";
-import { openRemoteAuditStore } from "../server/remote-audit-store.ts";
+import { initializePasskeyStore, openPasskeyStore } from "../server/remote-passkeys.ts";
+import { initializeRemoteAuditStore, openRemoteAuditStore } from "../server/remote-audit-store.ts";
 import { parseRecoveryRequest } from "../server/remote-passkey-recovery.ts";
 
 test("offline recovery requires a private 2-operator request, durably audits and revokes all keys", () => {
   const dir = mkdtempSync(join(tmpdir(), "dc24h-recovery-")); chmodSync(dir, 0o700);
   try {
     const catalog = join(dir, "passkeys.json"), audit = join(dir, "audit.jsonl"), req = join(dir, "request.json");
+    initializePasskeyStore(catalog, "localhost");
     const store = openPasskeyStore(catalog, "localhost");
     const handle = store.userHandle("7");
     for (const id of ["a".repeat(32), "b".repeat(32)]) store.add({
@@ -19,6 +20,7 @@ test("offline recovery requires a private 2-operator request, durably audits and
       deviceType: "singleDevice", backedUp: false, transports: [], name: "Passkey",
       createdAt: 10, lastUsedAt: null, revokedAt: null,
     });
+    initializeRemoteAuditStore(audit);
     openRemoteAuditStore(audit).close();
     writeFileSync(req, JSON.stringify({ schema: 1, actor: "7", approvers: ["op-one", "op-two"] }), { mode: 0o600 });
     assert.equal(parseRecoveryRequest(req).actor, "7");

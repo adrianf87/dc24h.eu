@@ -1,6 +1,14 @@
 # Changelog
 
-## beta-0.5.1–beta-0.5.4 Stage I — 2026-11-23 (single branch beta-0.5.x-stage-full; validation pending)
+## beta-0.5.5–beta-0.5.8 Stage II — 2026-11-24 (single branch beta-0.5.x-stage-full; CI pending)
+
+- **0.5.5 — Security Architecture Review:** Review the browser/Apache TLS, loopback Node gateway, C++ account authority, WebAuthn/TOTP stores, MariaDB recovery and audit trust boundaries. Record findings, dispositions and non-production residual risks in EN/US and PL.
+- **0.5.6 — Passkey Hardening:** Enforce canonical base64url encodings for stored credential IDs, public-key bytes and user handles; reject unexpected credential/user/catalog fields, duplicate transports, counter and ownership anomalies. Add malformed-catalog and negative WebAuthn cases without changing password + passkey policy.
+- **0.5.7 — Session & Recovery Protection:** Refuse to create a new TOTP replay ledger on normal verification startup, preserving consumed-code history through outages. Add exclusive offline first-time initialization and missing-ledger/restart regressions. Convert limiter health exceptions into fail-closed session invalidation rather than unhandled request exceptions.
+- **0.5.8 — Security Audit & Alerts:** Require existing audit, passkey and HMAC rate-limit state for normal startup. Add offline owner-only first-installation bootstrap that never overwrites partial/existing state; test missing-file recovery, symlinks, corruption, audit chain and credentials/replay privacy. Allow one bounded nonidentifying alert following a backward clock jump. Align live runtime and test versions to `beta-0.5.8`.
+- **Boundary:** Single draft PR #235 remains unmerged; no new public listener, browser-exposed secrets, database migration, production writes or deployment. Required GitHub-hosted Ubuntu 22.04/24.04/26.04 CI, browser/cryptographic regressions, sanitizer, real systemd and recovery checks must finish successfully before work unit 2 is checked. [EN/US](doc/us/BETA_0.5_STAGE_II.md) | [PL](doc/pl/BETA_0.5_STAGE_II.md).
+
+## beta-0.5.1–beta-0.5.4 Stage I — 2026-11-23 (single branch beta-0.5.x-stage-full; hosted Ubuntu CI passed)
 
 - **0.5.1 — CI & Test Stability:** Bound hosted build, unit and browser concurrency. Add safe per-job JUnit status summaries, immutable short-retention CI artifacts, explicit missing-report status and sanitized output contract tests. Preserve the required C++/WebAdmin/sanitizer gate.
 - **0.5.2 — Ubuntu Compatibility (owner scope correction):** Retain root-or-sudo dependency provision with apt timeouts and C++20/MariaDB/Apache/ADC/ADCS/Node 22/WebAdmin integration on Ubuntu 22.04/24.04/26.04. Under the owner's 2026-11-23 instruction, remove prior Debian 12/13 container jobs and their helper gate; require a real systemd manager and privileged sandbox check on Ubuntu CI, failing instead of skipping when missing. Debian compatibility is deferred and not claimed.

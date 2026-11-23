@@ -1,6 +1,8 @@
 # dc24h.eu High Starter technical documentation
 
-Current development version: beta-0.5.4.
+Current development version: beta-0.5.8.
+
+[Beta-0.5.5–beta-0.5.8 Stage II: security boundaries, passkey metadata, fail-closed state and private bootstrap](us/BETA_0.5_STAGE_II.md) · [PL](pl/BETA_0.5_STAGE_II.md)
 
 [Beta-0.5.1–beta-0.5.4 Stage I: Ubuntu CI, deferred Debian, performance evidence and matched recovery](us/BETA_0.5_STAGE_I.md) · [PL](pl/BETA_0.5_STAGE_I.md)
 

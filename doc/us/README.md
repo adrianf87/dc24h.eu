@@ -1,6 +1,8 @@
 # dc24h.eu High Starter documentation
 
-beta-0.5.4: Stage I adds redacted Ubuntu 22.04/24.04/26.04 CI status/timing/protocol aggregates, real systemd-host checks, explicit performance evidence thresholds and offline MariaDB/private-state recovery pairing. **Per the 2026-11-23 owner instruction, Debian 12/13 and target Xeon tests are not run; Ubuntu evidence is not target acceptance.** Matched MariaDB recovery/RPO/RTO and independent approval are not measured. Password + passkey remains **not passwordless**. No Internet-facing WebAdmin, remote hub writes, SQL migration or automatic production deployment. Hub, API, controller and WebAdmin report beta-0.5.4. ADC/ADCS identity `dc24h.eu` and public proxy remain unchanged. Default development language: EN/US UTF-8.
+beta-0.5.8: Stage II hardens canonical passkey metadata, fail-closed TOTP replay, audit, credential and rate-limit state, and private offline first-installation bootstrap. Stage I established redacted Ubuntu 22.04/24.04/26.04 CI evidence, actual systemd checks and disposable matched MariaDB/private-state recovery (synthetic RPO/RTO, not target acceptance). **Per the 2026-11-23 owner instruction, Debian 12/13 and target Xeon tests are not run.** Independent approval and target-hardware acceptance remain pending. Password + passkey remains **not passwordless**. No Internet-facing WebAdmin, remote hub writes, SQL migration or automatic production deployment. Hub, API, controller and WebAdmin report beta-0.5.8. ADC/ADCS identity `dc24h.eu` and public proxy remain unchanged. Default development language: EN/US UTF-8.
+
+- [Beta-0.5.5–beta-0.5.8 Stage II security review and operator guide](BETA_0.5_STAGE_II.md) · [PL](../pl/BETA_0.5_STAGE_II.md)
 
 - [Beta-0.5.1–beta-0.5.4 Stage I evidence and operator guide](BETA_0.5_STAGE_I.md) · [PL](../pl/BETA_0.5_STAGE_I.md)
 
