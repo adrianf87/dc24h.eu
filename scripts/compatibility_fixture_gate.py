@@ -18,7 +18,8 @@ REQUIRED = {
 
 
 def check_fixture_names(names):
-    missing = REQUIRED - set(names)
+    names = set(names)
+    missing = REQUIRED - names
     if missing:
         raise ValueError("Required Debian test fixtures missing: " + ", ".join(sorted(missing)))
     return len(names)

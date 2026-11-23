@@ -14,6 +14,7 @@ spec.loader.exec_module(module)
 class CompatibilityGateTests(unittest.TestCase):
     def test_complete_fixture_list(self):
         self.assertEqual(module.check_fixture_names(module.REQUIRED), len(module.REQUIRED))
+        self.assertEqual(module.check_fixture_names(iter(module.REQUIRED)), len(module.REQUIRED))
 
     def test_missing_database_or_apache_fails(self):
         for missing in ("database.process", "apache2.https", "adcs.process"):
