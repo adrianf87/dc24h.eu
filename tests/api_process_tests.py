@@ -93,6 +93,18 @@ class ApiProcessTests(unittest.TestCase):
         fx.decode(fx.request(method='HEAD'), 405, head=True)
         _, health = fx.decode(fx.request(target='/api/v1/health', fragments=True))
         self.assertEqual(health, {'status': 'ok'})
+        # The process harness waits for the listener's log line; the logger
+        # flushes asynchronously, so probe until the reactor signals readiness.
+        deadline = time.monotonic() + 3
+        while True:
+            ready_response = fx.request(target='/api/v1/ready')
+            if b' 503 ' not in ready_response.split(b'\r\n', 1)[0] or time.monotonic() >= deadline:
+                break
+            time.sleep(0.01)
+        _, ready = fx.decode(ready_response)
+        self.assertEqual(ready, {'status': 'ready'})
+        fx.decode(fx.request(target='/api/v1/ready', auth=False), 401)
+        fx.decode(fx.request(target='/api/v1/ready', method='POST'), 405)
         peer = hub.connect(); peer.sendall(b'HSUP ADBASE ADTIGR\n'); peer.shutdown(socket.SHUT_WR)
         drain_until_eof(peer)
         _, directory = fx.decode(fx.request(target='/api/v1/users'))
@@ -153,7 +165,9 @@ class ApiProcessTests(unittest.TestCase):
             'reactor_samples', 'reactor_last_ms', 'reactor_max_ms'})
         self.assertIs(sample['available'], True)
         self.assertGreater(int(sample['rss_bytes']), 0)
-        self.assertEqual(sample['cpu_window_ms'], '0')
+        # Earlier API status/readiness requests may already have opened the
+        # CPU sampling window. Its elapsed time is not deterministically zero.
+        self.assertGreaterEqual(int(sample['cpu_window_ms']), 0)
         self.assertEqual(sample['login_samples'], '0')
         self.assertGreater(int(sample['reactor_samples']), 0)
         self.assertGreaterEqual(int(sample['reactor_max_ms']), int(sample['reactor_last_ms']))

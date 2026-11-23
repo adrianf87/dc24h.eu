@@ -114,9 +114,11 @@ int main(int argc, char* argv[]) {
     }
 
     try {
+        // Block termination signals before the asynchronous logging worker
+        // is created so it inherits the same mask as every later thread.
+        const dc24h::core::TerminationSignals signals;
         dc24h::logging::Logger logger(parsed.settings.logging);
         try {
-            const dc24h::core::TerminationSignals signals;
             logger.info(std::string("Starting dc24h.eu ") + std::string(dc24h::version));
             logger.info("Startup settings: adc_listeners=" + std::to_string(parsed.settings.network.listeners.size()) +
                     " adcs_listeners=" + std::to_string(parsed.settings.network.tls_listeners.size()) +
@@ -208,7 +210,8 @@ int main(int argc, char* argv[]) {
                         stats.sessions_ready, stats.sessions_closing, stats.sessions_closed,
                         stats.sessions_created, stats.sessions_completed,
                         stats.login_samples, stats.login_last_ms, stats.login_max_ms,
-                        stats.reactor_samples, stats.reactor_last_ms, stats.reactor_max_ms};
+                        stats.reactor_samples, stats.reactor_last_ms, stats.reactor_max_ms,
+                        network.listeners_ready()};
                 }, [&] { signal_error.store(true); server.request_stop(); }, dc24h::api::AccountHandler{}, [&] { return network.presence(); });
                 api->start();
             }

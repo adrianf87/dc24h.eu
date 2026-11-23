@@ -6,7 +6,7 @@
 
 **Increment delivered in alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) adds semantic status/quit validation, source-checked B/D/E/F status routing, precise errors and bounded terminal ISTA/own-IQUI output. Historical descriptions below retain the behavior of their original releases.
 
-`dc24h_logging` provides synchronized, best-effort UTC records to stderr or a regular append file. The logger must outlive its callers; stop/join all callers before destruction. Operator messages use US by default, or PL through the compiled catalogs. Protocol data and event keys are not translated.
+`dc24h_logging` provides bounded, asynchronous, best-effort UTC records to stderr or a regular append file. The logger must outlive its callers; stop/join all callers before destruction. Operator messages use US by default, or PL through the compiled catalogs. Protocol data and event keys are not translated. This follow-up fixes the historical alpha-0.1 blocking producer path; older release descriptions are preserved as history.
 
 ## Levels and configuration
 
@@ -47,7 +47,7 @@ No remote addresses, ports, nicknames, CID/PID, PAS hashes or ADC frame bodies a
 
 ## Bounds and flood behavior
 
-A logger emits at most 64 connection lifecycle records in each one-second steady-clock window shared by all its peers and transports. The window starts with the first event and rolls over on demand; it is not a rolling-window guarantee, so adjacent windows can burst at their boundary. Excess records are counted without allocating a queue. One WARN summary reports the suppression count at the next event after rollover, or during logger destruction if no next event arrives. The count saturates at uint64 max. Lifecycle records can therefore be incomplete and should not serve as an audit trail. Severity remains immutable for the logger lifetime.
+A logger emits at most 64 connection lifecycle records in each one-second steady-clock window shared by all its peers and transports. The window starts with the first event and rolls over on demand; it is not a rolling-window guarantee, so adjacent windows can burst at their boundary. Excess lifecycle records are counted without enqueuing them. One WARN summary reports suppression at the next event after rollover, or during logger destruction. The shared output queue holds at most 256 bounded records; when the sink stalls, additional records are dropped and a separate WARN count is emitted after the writer progresses. Both counters saturate at uint64 max. These logs are not a complete audit trail.
 
 The Network reactor separately emits at most one warning every five seconds per category: invalid frames (including truncated EOF), connection limits, ordinary idle expiry, TLS initialization/handshake failure, handshake deadline and peer I/O. Categories are independent, so a limit warning does not hide an idle timeout. Suppressed warning occurrences are not individually queued/reported; aggregate transport/parser counters remain available at INFO shutdown. Accept/watch resource errors retain the existing one-second listener cooldown. Direct Logger warning/error calls are not globally rate limited.
 
@@ -55,7 +55,7 @@ The message body is at most 1024 bytes including `...[truncated]` when needed, p
 
 ## Operational limits
 
-Writes are synchronous on the caller thread. Regular-file I/O and a blocked stderr pipe can still delay the reactor; rate budgets bound routine peer-driven log volume, not storage latency. Partial writes/EINTR are handled, runtime sink errors are best effort, and log exceptions do not escape. File-open failures are startup errors. There is no async queue, rotation, reopen, dynamic level change, SIGHUP reload or remote collector. Manage file growth and use trusted directories. These controls do not replace network rate limits, authentication or DDoS protection. Tests and local verification are described in [TESTING.md](TESTING.md).
+The reactor only formats/enqueues bounded records. A dedicated writer handles potentially blocking regular-file or stderr I/O, without holding the producer mutex. Destructor drains the queue and joins the writer; **a permanently blocked sink can still delay shutdown**. An abrupt kill can lose queued records. Partial writes/EINTR are handled, runtime sink errors remain best effort, and log exceptions do not escape. File-open failures are startup errors. No rotation, reopen, dynamic level change, SIGHUP reload or remote collector is implemented. The explicit `Logger::flush()` is blocking and must never run on the reactor. Manage file growth and use trusted directories. These controls do not replace durable security audit, network limits or DDoS protection. Tests and local verification are described in [TESTING.md](TESTING.md).
 
 ## Security — alpha-0.1.7
 

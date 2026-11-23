@@ -191,11 +191,12 @@ This is HTTP over a local Unix socket; `localhost` is the HTTP Host value, not a
 
 ## Versioned endpoints
 
-Both routes require authentication. JSON keys/protocol errors remain EN/US regardless of operator language.
+All routes require authentication. JSON keys/protocol errors remain EN/US regardless of operator language.
 
 | Method / path | Result |
 | --- | --- |
 | `GET /api/v1/health` | 200 `{"status":"ok"}`: the API worker can process this request; not a database or full ADC readiness probe |
+| `GET /api/v1/ready` | 200 `{"status":"ready"}` only when Core is running and every configured ADC/ADCS listener is bound; otherwise 503 `{"error":"not_ready"}`. This is **transport readiness**, not a live SQL health, authenticated-user, or capacity guarantee. |
 | `GET /api/v1/status` | 200: bounded snapshot below |
 
 ```json

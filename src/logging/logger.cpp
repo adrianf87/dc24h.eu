@@ -19,6 +19,7 @@
 namespace dc24h::logging {
 namespace {
 constexpr std::size_t max_message_bytes = 1024;
+constexpr std::size_t max_pending_records = 256;
 
 std::string sanitize(std::string_view text, bool clipped) {
     std::string result;
@@ -51,6 +52,33 @@ std::string sanitize(std::string_view text, bool clipped) {
         result += marker;
     }
     return result;
+}
+
+std::string log_line(const char* severity, std::string_view message, i18n::Language language) {
+    const auto now = std::time(nullptr);
+    std::tm utc{};
+    char timestamp[32] = "unknown-time";
+    if (::gmtime_r(&now, &utc) != nullptr) {
+        std::strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%SZ", &utc);
+    }
+    std::string line(timestamp);
+    line += " [";
+    line += severity;
+    line += "] ";
+    const auto clipped = message.substr(0, std::min(message.size(), max_message_bytes + 4));
+    line += sanitize(i18n::translate(clipped, language), clipped.size() < message.size());
+    line += '\n';
+    return line;
+}
+
+void output_line(int fd, const std::string& line) noexcept {
+    std::size_t done = 0;
+    while (done < line.size()) {
+        const auto count = ::write(fd, line.data() + done, line.size() - done);
+        if (count < 0 && errno == EINTR) { continue; }
+        if (count <= 0) { break; }
+        done += static_cast<std::size_t>(count);
+    }
 }
 
 bool security_outcome(ConnectionEvent event) noexcept {
@@ -152,9 +180,15 @@ Logger::Logger(Options options)
     if (level_ != Level::info && level_ != Level::warning && level_ != Level::error && level_ != Level::off) {
         throw std::invalid_argument("Invalid log level");
     }
-    if (options.file_path.empty()) { return; }
-    fd_ = open_log_file(options.file_path);
-    owned_ = true;
+    if (!options.file_path.empty()) {
+        fd_ = open_log_file(options.file_path);
+        owned_ = true;
+    }
+    try { writer_ = std::jthread([this] { writer_loop(); }); }
+    catch (...) {
+        if (owned_) { ::close(fd_); owned_ = false; }
+        throw;
+    }
 }
 
 Logger::~Logger() {
@@ -163,8 +197,53 @@ Logger::~Logger() {
         report_suppressed_unlocked();
         report_chat_suppressed_unlocked();
         report_security_suppressed_unlocked();
+        stopping_ = true;
     } catch (...) { /* Best effort during shutdown too. */ }
+    { const std::lock_guard lock(mutex_); stopping_ = true; }
+    wake_.notify_one();
+    if (writer_.joinable()) { writer_.join(); }
     if (owned_) { ::close(fd_); }
+}
+
+void Logger::flush() {
+    std::unique_lock lock(mutex_);
+    drained_.wait(lock, [this] { return pending_.empty() && !writing_ && queue_dropped_ == 0; });
+}
+
+void Logger::writer_loop() noexcept {
+    for (;;) {
+        std::string line;
+        try {
+            std::unique_lock lock(mutex_);
+            wake_.wait(lock, [this] { return stopping_ || !pending_.empty() || queue_dropped_ != 0; });
+            if (!pending_.empty()) {
+                line = std::move(pending_.front());
+                pending_.pop_front();
+            } else if (queue_dropped_ != 0) {
+                const auto count = std::exchange(queue_dropped_, 0);
+                line = log_line("WARN", "Log queue records dropped=" + std::to_string(count), language_);
+            } else if (stopping_) {
+                drained_.notify_all();
+                return;
+            }
+            writing_ = true;
+        } catch (...) {
+            // Allocation failure in a best-effort logger must not terminate
+            // the process. The next wakeup or shutdown can retry the drain.
+            std::lock_guard lock(mutex_);
+            queue_dropped_ = 0;
+            writing_ = false;
+            drained_.notify_all();
+            if (stopping_ && pending_.empty()) return;
+            continue;
+        }
+        output_line(fd_, line); // Only the worker performs potentially blocking I/O.
+        {
+            const std::lock_guard lock(mutex_);
+            writing_ = false;
+            if (pending_.empty() && queue_dropped_ == 0) { drained_.notify_all(); }
+        }
+    }
 }
 
 void Logger::info(std::string_view message) noexcept {
@@ -188,29 +267,14 @@ void Logger::write(const char* level, std::string_view message) noexcept {
 }
 
 void Logger::write_unlocked(const char* severity, std::string_view message) {
-    const auto now = std::time(nullptr);
-    std::tm utc{};
-    char timestamp[32] = "unknown-time";
-    if (::gmtime_r(&now, &utc) != nullptr) {
-        std::strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%SZ", &utc);
+    // Caller holds mutex_; no filesystem/pipe writes on the reactor thread.
+    if (pending_.size() >= max_pending_records) {
+        if (queue_dropped_ != std::numeric_limits<std::uint64_t>::max()) { ++queue_dropped_; }
+        wake_.notify_one();
+        return;
     }
-    std::string line(timestamp);
-    line += " [";
-    line += severity;
-    line += "] ";
-    // Bound allocation and UTF-8 decoding even for an arbitrarily long view.
-    // Four lookahead bytes allow the sanitizer to finish a codepoint at the cap.
-    const auto clipped = message.substr(0, std::min(message.size(), max_message_bytes + 4));
-    const auto localized = i18n::translate(clipped, language_);
-    line += sanitize(localized, clipped.size() < message.size());
-    line += '\n';
-    std::size_t done = 0;
-    while (done < line.size()) {
-        const auto count = ::write(fd_, line.data() + done, line.size() - done);
-        if (count < 0 && errno == EINTR) { continue; }
-        if (count <= 0) { break; }
-        done += static_cast<std::size_t>(count);
-    }
+    pending_.push_back(log_line(severity, message, language_));
+    wake_.notify_one();
 }
 
 void Logger::report_suppressed_unlocked() {

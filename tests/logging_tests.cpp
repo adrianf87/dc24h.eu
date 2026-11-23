@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <utf8proc.h>
 #include <chrono>
+#include <atomic>
 #include <thread>
 #include <vector>
 #include <regex>
@@ -15,10 +16,18 @@
 #include <stdexcept>
 #include <string>
 
-namespace { bool fail_log_writes = false; }
+namespace {
+std::atomic<bool> fail_log_writes{false};
+std::atomic<bool> stall_log_writes{false};
+std::atomic<bool> stalled_writer_seen{false};
+}
 extern "C" ssize_t __real_write(int, const void*, size_t);
 extern "C" ssize_t __wrap_write(int fd, const void* data, size_t bytes) {
-    if (fail_log_writes) { errno=ENOSPC; return -1; }
+    if (stall_log_writes.load()) {
+        stalled_writer_seen.store(true);
+        while (stall_log_writes.load()) { std::this_thread::sleep_for(std::chrono::milliseconds(1)); }
+    }
+    if (fail_log_writes.load()) { errno=ENOSPC; return -1; }
     return __real_write(fd,data,bytes);
 }
 
@@ -248,6 +257,7 @@ void chat_budget_levels_and_localization() {
         dc24h::logging::Logger logger({dc24h::logging::Level::info,(f.dir/"failed.log").string(),Language::us,false,true});
         fail_log_writes=true;
         logger.chat_event(dc24h::chat::Event::private_dispatch);
+        logger.flush(); // The async worker must observe ENOSPC before recovery.
         fail_log_writes=false;
         logger.chat_event(dc24h::chat::Event::public_dispatch);
     }
@@ -256,6 +266,35 @@ void chat_budget_levels_and_localization() {
     const auto pl=f.contents("chat-pl.log");
     require(occurrences(pl,"Czat zdarzenie=rejected")==32 && occurrences(pl,"Czat zdarzenie=public_dispatch")==1 &&
         occurrences(pl,"Pominięte zdarzenia logu czatu=1")==1,"Chat localization/window rollover differs");
+}
+
+void stalled_sink_does_not_block_producers_or_exhaust_the_log_queue() {
+    Fixture f;
+    const auto path = (f.dir / "backpressure.log").string();
+    {
+        dc24h::logging::Logger logger({dc24h::logging::Level::info, path});
+        stall_log_writes.store(true);
+        stalled_writer_seen.store(false);
+        logger.info("FIRST_RECORD");
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+        while (!stalled_writer_seen.load() && std::chrono::steady_clock::now() < deadline) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        if (!stalled_writer_seen.load()) {
+            stall_log_writes.store(false);
+            require(false, "test writer did not reach the blocked sink");
+        }
+        // The writer cannot drain while stalled. The producer must return
+        // after bounded queue insertion rather than perform a blocking write.
+        for (int i = 0; i < 1024; ++i) { logger.info("BACKPRESSURE_BURST"); }
+        stall_log_writes.store(false);
+        logger.flush();
+    }
+    const auto data = f.contents("backpressure.log");
+    require(data.find("FIRST_RECORD") != std::string::npos, "initial log record was lost");
+    require(data.find("Log queue records dropped=") != std::string::npos,
+            "bounded queue saturation lacked a dropped-record warning");
+    require(occurrences(data, "BACKPRESSURE_BURST") <= 256, "queue grew without a bound");
 }
 
 void private_file_and_security_records() {
@@ -410,6 +449,7 @@ int main() {
         unicode_bounds_and_single_records();
         window_rollover_and_polish();
         concurrent_peer_budget();
+        stalled_sink_does_not_block_producers_or_exhaust_the_log_queue();
         chat_budget_levels_and_localization();
         private_file_and_security_records();
         std::cout << "Logging levels, sanitization, connection events and rate budget OK\n";
