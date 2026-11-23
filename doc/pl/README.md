@@ -2,7 +2,7 @@
 
 beta-0.4.16: Etap IV dodaje testy negatywne, odizolowane narzędzia pomiarowe i odtwarzania oraz ręczną kontrolę kandydata do wydania. **Na Debianie 13 nie zmierzono wydajności ani RPO/RTO; niezależny przegląd jest oczekiwany.** Logowanie **hasło + passkey** nadal nie jest bezhasłowe. Hub, API, kontroler i WebAdmin raportują beta-0.4.16. Identyfikator protokołu `dc24h.eu`, schemat v11 i publiczne proxy Apache pozostają bez zmian. Bez publicznego WebAdmin, zdalnego zapisu i automatycznego wdrożenia.
 
-- [Etap IV beta-0.4.13–beta-0.4.16](BETA_0.4_STAGE_IV.md) · [EN/US](../us/BETA_0.4_STAGE_IV.md)
+- [Etap IV beta-0.4.13–beta-0.4.16](BETA_0.4_STAGE_IV.md) · [EN/US](../us/BETA_0.4_STAGE_IV.md) · [wydajność](BETA_0.4_STAGE_IV_PERFORMANCE.md) · [odtwarzanie](BETA_0.4_STAGE_IV_RECOVERY.md)
 
 - [Etap III beta-0.4.9–beta-0.4.12](BETA_0.4_STAGE_III.md) · [EN/US](../us/BETA_0.4_STAGE_III.md)
 
