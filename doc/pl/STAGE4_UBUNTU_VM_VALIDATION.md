@@ -19,8 +19,8 @@ uruchamia jednakowy zestaw na osobnych VM z Ubuntu **22.04**, **24.04** i
 5. Uruchamia rzeczywisty serwer ADC/ADCS jedynie pod `127.0.0.1`, z losowymi
    portami i jednorazowym certyfikatem localhost; wykonuje 12 ograniczonych
    prób na protokół z weryfikacją certyfikatu ADCS.
-6. Buduje WebAdmin (React, TypeScript, Vite) oraz uruchamia testy jednostkowe
-   i integrację z rzeczywistym API C++.
+6. Buduje WebAdmin (React, TypeScript, Vite), instaluje Chromium oraz uruchamia
+   testy przeglądarkowe E2E, jednostkowe i integrację z rzeczywistym API C++.
 
 Niepoufne wyniki opóźnień oraz raport CTest JUnit są przechowywane jako
 artefakt `stage4-ubuntu-vm-<runner>` przez 7 dni.

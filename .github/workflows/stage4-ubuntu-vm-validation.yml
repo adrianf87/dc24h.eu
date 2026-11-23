@@ -68,6 +68,14 @@ jobs:
         working-directory: webadmin
         run: npm run build
 
+      - name: Install Chromium and Playwright system dependencies
+        working-directory: webadmin
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser end-to-end security regressions
+        working-directory: webadmin
+        run: npm run test:e2e -- --workers=2 --fully-parallel
+
       - name: Run WebAdmin unit and real C++ API integration tests
         working-directory: webadmin
         run: |

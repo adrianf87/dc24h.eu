@@ -21,8 +21,8 @@ workflow runs the same operational suite on fresh GitHub-hosted Ubuntu **22.04**
 5. Starts the real C++ ADC and ADCS listeners on `127.0.0.1` and ephemeral
    ports, uses a throwaway self-signed localhost certificate, and checks 12
    bounded handshakes per protocol with certificate verification for ADCS.
-6. Installs locked WebAdmin packages, builds React/TypeScript/Vite, and runs
-   frontend unit and C++ API integration checks.
+6. Installs locked WebAdmin packages, builds React/TypeScript/Vite, installs
+   Chromium and runs browser E2E, frontend unit and C++ API integration checks.
 
 The suite writes only non-secret latency/success aggregates and a CTest JUnit
 report to a seven-day artifact named `stage4-ubuntu-vm-<runner>`.
