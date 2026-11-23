@@ -6,6 +6,7 @@ import { remoteAuditRecord } from "./remote-audit.ts";
 import { openRemoteAuditStore } from "./remote-audit-store.ts";
 import { openPasskeyStore } from "./remote-passkeys.ts";
 import { passkeyCeremonies, relyingParty } from "./remote-webauthn.ts";
+import { openRemoteRateLimitStore } from "./remote-rate-limit-store.ts";
 
 // Explicitly local-only. A public listener or MFA-free deployment is not
 // supported by this development release.
@@ -24,17 +25,21 @@ if (!mfaFile || !replayFile) throw new Error("Private TOTP enrollment and replay
 const auditFile = process.env.DC24H_REMOTE_AUDIT_FILE;
 if (!auditFile) throw new Error("Private durable gateway audit file required");
 const passkeyFile = process.env.DC24H_REMOTE_PASSKEY_FILE;
+const rateLimitFile = process.env.DC24H_REMOTE_RATE_LIMIT_FILE;
 const rpID = process.env.DC24H_REMOTE_RP_ID;
 if (!passkeyFile || !rpID) throw new Error("Private passkey file and fixed RP ID required");
+if (!rateLimitFile) throw new Error("Private persistent rate-limit file required");
 relyingParty(origin, rpID);
 // Both files are checked for ownership, mode and symlinks before listening.
 const mfa = loadTotpVerifier(mfaFile, replayFile);
 const auditStore = openRemoteAuditStore(auditFile);
 const passkeyStore = openPasskeyStore(passkeyFile, rpID);
+const rateLimits = openRemoteRateLimitStore(rateLimitFile, config.token);
 const app = createServer(remoteGateway(config, {
   origin,
   passkeys: { store: passkeyStore, ceremonies: passkeyCeremonies(passkeyStore, origin, rpID) },
   mfaVerify: mfa.verify,
+  rateLimits,
   strictAudit: true,
   auditHealthy: () => auditStore.health().healthy,
   // Durable fsync-checked file first. journald mirrors fixed, privacy-limited

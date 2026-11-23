@@ -9,13 +9,15 @@ import { parseRemoteSummary } from "../src/lib/status.ts";
 import { isJsonContentType } from "./json-content-type.ts";
 import type { PasskeyCeremonies } from "./remote-webauthn.ts";
 import type { PasskeyStore } from "./remote-passkeys.ts";
+import type { RemoteRateLimitStore } from "./remote-rate-limit-store.ts";
 export { isJsonContentType } from "./json-content-type.ts";
 
 type Credentials = { socket: string; token: string };
 export type RemoteEvent = "login_ok" | "login_refused" | "mfa_ok" | "mfa_refused" | "logout" | "session_revoked" | "route_refused" | "api_unavailable" |
   "passkey_enrolled" | "passkey_enroll_refused" | "passkey_login_ok" | "passkey_login_refused" |
   "passkey_device_renamed" | "passkey_revoke_intent" | "passkey_revoked" |
-  "passkey_enroll_intent" | "passkey_recovery_intent" | "passkey_recovered";
+  "passkey_enroll_intent" | "passkey_recovery_intent" | "passkey_recovered" |
+  "rate_limiter_unavailable";
 export interface RemoteOptions {
   origin: string;
   now?: () => number;
@@ -28,6 +30,8 @@ export interface RemoteOptions {
   mfaVerify?: (actor: string, code: string, at: number) => boolean;
   // Only the isolated local gateway passes this pair, never Vite or the public API.
   passkeys?: { store: PasskeyStore; ceremonies: PasskeyCeremonies };
+  // Production uses a private durable HMAC-keyed catalog across restarts.
+  rateLimits?: RemoteRateLimitStore;
   // Optional in-process transport override for deterministic, socket-free tests.
   upstream?: typeof upstream;
 }
@@ -173,6 +177,15 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
     for (const [id, value] of budgets) if (value.starts + 60_000 <= now) budgets.delete(id);
   };
   const limited = (key: string, limit: number, now: number) => {
+    if (options.rateLimits) {
+      try { return options.rateLimits.hit(key, limit, now); }
+      catch {
+        // Storage loss must never reset a budget or permit fresh logins.
+        sessions.clear(); challenges.clear(); passkeyLogins.clear(); enrollments.clear();
+        log("rate_limiter_unavailable");
+        return true;
+      }
+    }
     const entry = budgets.get(key);
     if (!entry || entry.starts + 60_000 <= now) { budgets.set(key, { count: 1, starts: now }); return false; }
     entry.count++;
@@ -318,6 +331,11 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
     }
     if (!auditAvailable) {
       sessions.clear(); challenges.clear(); passkeyLogins.clear(); enrollments.clear();
+      reply(res, 503, { error: "unavailable" }, clearSession()); return;
+    }
+    if (options.rateLimits && !options.rateLimits.healthy()) {
+      sessions.clear(); challenges.clear(); passkeyLogins.clear(); enrollments.clear();
+      log("rate_limiter_unavailable");
       reply(res, 503, { error: "unavailable" }, clearSession()); return;
     }
     if (name === "challenge") {
