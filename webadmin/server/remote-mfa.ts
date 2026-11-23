@@ -1,13 +1,46 @@
 // Local-only TOTP enrollment is deliberately out of band. Neither the seed
 // nor the replay ledger is ever returned by the browser gateway.
-import { createHmac, timingSafeEqual } from "node:crypto";
-import { constants, closeSync, fstatSync, fsyncSync, lstatSync, openSync, readFileSync, writeSync } from "node:fs";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { constants, closeSync, fstatSync, fsyncSync, lstatSync, openSync, readFileSync, readSync, writeSync } from "node:fs";
 import { dirname, isAbsolute } from "node:path";
 
 type Secrets = Map<string, Buffer>;
 const actorPattern = /^[1-9][0-9]{0,18}$/;
 const seedPattern = /^[A-Z2-7]{32}(?:[A-Z2-7]{8}){0,4}$/;
 const ledgerLimit = 1024 * 1024;
+const noncePattern = /^[0-9a-f]{32}$/;
+
+type ReplayEntry = { actor: string; step: number; nonce?: string };
+
+function visitReplayLedger(fd: number, visit: (entry: ReplayEntry) => void): void {
+  const size = fstatSync(fd).size;
+  if (size > ledgerLimit) throw new Error("MFA replay ledger full");
+  // An explicit offset is essential: O_APPEND advances the shared descriptor
+  // on write, so readFileSync(fd) would miss records written by another process.
+  const bytes = Buffer.alloc(size);
+  try {
+    let offset = 0;
+    while (offset < size) {
+      const count = readSync(fd, bytes, offset, size - offset, offset);
+      if (count === 0) throw new Error("Truncated MFA replay ledger");
+      offset += count;
+    }
+    const text = bytes.toString("utf8");
+    if (text && !text.endsWith("\n")) throw new Error("Incomplete MFA replay ledger");
+    for (const line of text.split("\n")) {
+      if (!line) continue;
+      const record: unknown = JSON.parse(line);
+      if (!record || typeof record !== "object" || Array.isArray(record)) throw new Error("Invalid MFA replay ledger");
+      const row = record as Record<string, unknown>;
+      if (typeof row.actor !== "string" || !actorPattern.test(row.actor) || !Number.isSafeInteger(row.step) ||
+        (row.step as number) < 0 || ("nonce" in row &&
+        (typeof row.nonce !== "string" || !noncePattern.test(row.nonce))) ||
+        Object.keys(row).length !== ("nonce" in row ? 3 : 2)) throw new Error("Invalid MFA replay entry");
+      visit({ actor: row.actor, step: row.step as number,
+        ...("nonce" in row ? { nonce: row.nonce as string } : {}) });
+    }
+  } finally { bytes.fill(0); }
+}
 
 function privateFile(path: string, flags: number, create = false): number {
   if (!isAbsolute(path)) throw new Error("Private MFA file configuration required");
@@ -83,20 +116,9 @@ export function loadTotpVerifier(secretsPath: string, replayPath: string) {
   try { ledgerFd = privateFile(replayPath, constants.O_RDWR | constants.O_APPEND | constants.O_CREAT, true); }
   catch (error) { for (const key of secrets.values()) key.fill(0); throw error; }
   try {
-    const size = fstatSync(ledgerFd).size;
-    if (size > ledgerLimit) throw new Error("MFA replay ledger full");
-    const text = readFileSync(ledgerFd, "utf8");
-    if (text && !text.endsWith("\n")) throw new Error("Incomplete MFA replay ledger");
-    for (const line of text.split("\n")) {
-      if (!line) continue;
-      const record: unknown = JSON.parse(line);
-      if (!record || typeof record !== "object" || Array.isArray(record)) throw new Error("Invalid MFA replay ledger");
-      const row = record as Record<string, unknown>;
-      if (typeof row.actor !== "string" || !actorPattern.test(row.actor) || !Number.isSafeInteger(row.step) ||
-        (row.step as number) < 0 || Object.keys(row).length !== 2) throw new Error("Invalid MFA replay entry");
-      const actor = row.actor as string, step = row.step as number;
+    visitReplayLedger(ledgerFd, ({ actor, step }) => {
       lastUsed.set(actor, Math.max(lastUsed.get(actor) ?? -1, step));
-    }
+    });
   } catch (error) { closeSync(ledgerFd); for (const key of secrets.values()) key.fill(0); throw error; }
 
   const verify = (actor: string, code: string, now: number): boolean => {
@@ -115,15 +137,40 @@ export function loadTotpVerifier(secretsPath: string, replayPath: string) {
     }
     presented.fill(0);
     if (accepted <= (lastUsed.get(actor) ?? -1)) return false;
-    const line = JSON.stringify({ actor, step: accepted }) + "\n";
+    // A verifier may have opened this ledger before another instance used the
+    // code. Re-read the on-disk records immediately before attempting a write.
+    let previouslyUsed = lastUsed.get(actor) ?? -1;
+    visitReplayLedger(ledgerFd, ({ actor: usedActor, step }) => {
+      if (usedActor === actor) previouslyUsed = Math.max(previouslyUsed, step);
+    });
+    lastUsed.set(actor, previouslyUsed);
+    if (accepted <= previouslyUsed) return false;
+
+    // Local-filesystem O_APPEND writes have a single append order. The unique
+    // marker lets concurrent verifiers distinguish their own record from an
+    // earlier accepted step, even if both passed the pre-write check.
+    const nonce = randomBytes(16).toString("hex");
+    const line = JSON.stringify({ actor, step: accepted, nonce }) + "\n";
     if (fstatSync(ledgerFd).size + Buffer.byteLength(line) > ledgerLimit)
       throw new Error("MFA replay ledger full");
     const bytes = Buffer.from(line, "utf8");
     try {
       if (writeSync(ledgerFd, bytes) !== bytes.length) throw new Error("MFA replay persistence failed");
       fsyncSync(ledgerFd);
+      let ownRecordSeen = false;
+      let earlierStep = -1;
+      visitReplayLedger(ledgerFd, (entry) => {
+        if (entry.nonce === nonce) {
+          if (ownRecordSeen || entry.actor !== actor || entry.step !== accepted)
+            throw new Error("Invalid MFA replay marker");
+          ownRecordSeen = true;
+        } else if (!ownRecordSeen && entry.actor === actor) {
+          earlierStep = Math.max(earlierStep, entry.step);
+        }
+      });
+      if (!ownRecordSeen) throw new Error("Missing MFA replay marker");
       lastUsed.set(actor, accepted);
-      return true;
+      return earlierStep < accepted;
     } finally { bytes.fill(0); }
   };
   const close = () => { closeSync(ledgerFd); for (const key of secrets.values()) key.fill(0); secrets.clear(); };

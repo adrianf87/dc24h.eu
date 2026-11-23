@@ -64,7 +64,8 @@ client or deliberate forwarding to an untrusted host remains a threat.
    `localhost:8443`, and sends five **unauthenticated GETs** only. It verifies
    the portal is available, session/summary reject unauthenticated access,
    the local admin shell and `/admin-api` remain unavailable, and all checks
-   have no-store/nosniff policies. It sends no password, OTP, cookie or token;
+   have no-store/nosniff policies, and the portal response is actual `text/html`.
+   It sends no password, OTP, cookie or token;
    it refuses redirects, unexpected success and TLS errors. It cannot certify
    full security or substitute for testing on the actual host.
 6. On the same workstation open `https://localhost:8443/remote.html`, trust

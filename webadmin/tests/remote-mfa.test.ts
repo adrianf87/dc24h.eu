@@ -27,6 +27,41 @@ test("RFC 6238 TOTP checks time, account, input and one-time replay across resta
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
+test("independently loaded MFA verifiers cannot both consume the same shared ledger step", () => {
+  const dir = mkdtempSync(join(tmpdir(), "dc24h-mfa-shared-"));
+  const enrollment = join(dir, "mfa.json"), replay = join(dir, "replay.jsonl");
+  try {
+    writeFileSync(enrollment, JSON.stringify({ schema: 1, accounts: { "7": secret } }), { mode: 0o600 });
+    const first = loadTotpVerifier(enrollment, replay);
+    const second = loadTotpVerifier(enrollment, replay);
+    try {
+      assert.equal(first.verify("7", totpCodeForTest(secret, 59_000), 59_000), true);
+      assert.equal(second.verify("7", totpCodeForTest(secret, 59_000), 59_000), false,
+        "a verifier opened before the first acceptance must see the consumed step");
+      assert.equal(second.verify("7", totpCodeForTest(secret, 90_000), 90_000), true);
+      assert.equal(first.verify("7", totpCodeForTest(secret, 90_000), 90_000), false);
+    } finally { first.close(); second.close(); }
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("MFA replay ledger preserves legacy records and rejects malformed append markers", () => {
+  const dir = mkdtempSync(join(tmpdir(), "dc24h-mfa-ledger-"));
+  const enrollment = join(dir, "mfa.json"), replay = join(dir, "replay.jsonl");
+  try {
+    writeFileSync(enrollment, JSON.stringify({ schema: 1, accounts: { "7": secret } }), { mode: 0o600 });
+    writeFileSync(replay, '{"actor":"7","step":1}\n', { mode: 0o600 });
+    const verifier = loadTotpVerifier(enrollment, replay);
+    try {
+      assert.equal(verifier.verify("7", totpCodeForTest(secret, 59_000), 59_000), false,
+        "legacy consumed time steps remain protected");
+      assert.equal(verifier.verify("7", totpCodeForTest(secret, 90_000), 90_000), true);
+    } finally { verifier.close(); }
+    // A partial or invalid marker cannot be silently treated as unused state.
+    writeFileSync(replay, '{"actor":"7","step":3,"nonce":"invalid"}\n', { mode: 0o600 });
+    assert.throws(() => loadTotpVerifier(enrollment, replay), /Invalid MFA replay entry/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
 test("MFA enrollment and replay ledger reject loose permissions and symlink attacks", () => {
   const dir = mkdtempSync(join(tmpdir(), "dc24h-mfa-sec-"));
   const enrollment = join(dir, "mfa.json"), replay = join(dir, "replay.jsonl");

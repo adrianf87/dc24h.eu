@@ -48,6 +48,10 @@ def check_endpoints(context, connector=http.client.HTTPSConnection):
                 raise PilotCheckError(f"{path}: missing no-store cache policy")
             if (response.getheader("X-Content-Type-Options") or "").lower() != "nosniff":
                 raise PilotCheckError(f"{path}: missing nosniff header")
+            if path == "/remote.html":
+                media_type = (response.getheader("Content-Type") or "").split(";", 1)[0].strip().lower()
+                if media_type != "text/html":
+                    raise PilotCheckError(f"{path}: expected HTML portal content type")
             # HTTP headers are sufficient for this trust-boundary smoke check.
         finally:
             connection.close()

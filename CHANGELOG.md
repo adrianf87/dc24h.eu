@@ -1,5 +1,10 @@
 # Changelog
 
+## beta-0.3.12 security follow-up — 2026-11-23 (same beta-0.3.1-12-full branch)
+
+- Close shared-ledger TOTP replay across independently started verifiers: re-read the bounded ledger before use and append a unique ordered marker before granting a code, with a post-write check that only the earliest matching step can succeed. Preserve older two-field ledger records; reject malformed markers and fail closed on replay persistence errors. The ledger requires a local filesystem with atomic append semantics; a single gateway service remains the supported deployment.
+- Make the opt-in HTTPS pilot reject an unexpected HTML portal content type even when the endpoint returned HTTP 200 and the security headers appeared correct. Add reproducible red-to-green MFA and pilot preflight regression tests; preserve all local-only/read-only boundaries.
+
 ## beta-0.3.11–beta-0.3.12 Stage IV — 2026-11-23 (existing branch beta-0.3.1-12-full, current beta-0.3.12)
 
 - **0.3.11 — bounded stress and outages:** Add deterministic in-process 16-login plus 128-anonymous-request pressure regressions for per-account limits, no private API access on refusal and four-session bounds. Hold 64 status reads across a simulated private API outage, require generic 503 without stale/leaked data, then verify recovery. These are bounded security tests, not a throughput or capacity benchmark.

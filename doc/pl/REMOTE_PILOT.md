@@ -61,7 +61,8 @@ może doprowadzić do naruszenia bezpieczeństwa.
    Skrypt zawsze łączy się z `localhost:8443` przez HTTPS z kontrolą
    certyfikatu. Wysyła pięć **nieuwierzytelnionych GET** i sprawdza, że
    portal działa, dane bez sesji oraz panel administracji pozostają
-   zablokowane, a odpowiedzi mają no-store i nosniff. Nie wysyła hasła,
+   zablokowane, a odpowiedzi mają no-store i nosniff; portal musi zwracać
+   `Content-Type: text/html`. Nie wysyła hasła,
    TOTP, cookie ani tokenu; odmowa następuje przy przekierowaniu, błędzie
    certyfikatu lub niespodziewanym sukcesie. Nie zastępuje audytu serwera.
 6. Otwórz na tej samej stacji `https://localhost:8443/remote.html`.

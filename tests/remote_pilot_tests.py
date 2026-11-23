@@ -45,7 +45,12 @@ class Connection:
         self.seen.append(path)
 
     def getresponse(self):
-        return Response(self.statuses[self.path], self.headers_override)
+        headers = self.headers_override
+        if headers is None:
+            headers = {"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"}
+            if self.path == "/remote.html":
+                headers["Content-Type"] = "text/html; charset=utf-8"
+        return Response(self.statuses[self.path], headers)
 
     def close(self):
         pass
@@ -81,6 +86,16 @@ class PilotTests(unittest.TestCase):
                         {"Cache-Control": "no-store"}):
             with self.subTest(headers=headers):
                 Connection.headers_override = headers
+                with self.assertRaises(pilot.PilotCheckError):
+                    pilot.check_endpoints(self.context(), Connection)
+
+    def test_wrong_portal_content_type_fails_closed(self):
+        for content_type in ("application/json", "text/html-malformed", "", "text/plain"):
+            with self.subTest(content_type=content_type):
+                Connection.headers_override = {
+                    "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",
+                    "Content-Type": content_type,
+                }
                 with self.assertRaises(pilot.PilotCheckError):
                     pilot.check_endpoints(self.context(), Connection)
 

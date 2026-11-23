@@ -62,7 +62,12 @@ clock skew. Each account must have an independent random secret of at least
 160 bits. The verifier loads a privately owned, 0600 JSON enrollment file
 from an owner-only 0700 directory. An append-only 0600 replay ledger records
 consumed time steps and synchronizes them to disk before login succeeds;
-codes cannot be reused even if the process restarts. Unknown account,
+the verifier rechecks the ledger and uses ordered unique append markers so
+two processes with an already-open local ledger cannot both accept one code.
+Existing two-field ledger rows are supported. Use a **local filesystem**
+(not a network/shared filesystem) for atomic append ordering; a single gateway
+service remains the supported deployment. Codes cannot be reused even if the
+process restarts. Unknown account,
 missing verifier, malformed input, unsafe file, ledger corruption/full disk
 or write failure fails closed. No seed recovery, WebAuthn/passkeys enrollment
 or browser enrollment route is provided.

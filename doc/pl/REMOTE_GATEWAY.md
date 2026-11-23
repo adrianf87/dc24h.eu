@@ -62,7 +62,12 @@ Każde konto wymaga osobnego losowego sekretu co najmniej 160 bitów.
 Plik JSON z sekretami musi być własnością UID bramy i mieć tryb 0600,
 a katalog nadrzędny 0700. Dziennik 0600 zapisuje i synchronizuje z dyskiem
 zużyte kroki TOTP przed wystawieniem sesji; po restarcie kody nie mogą
-zostać użyte ponownie. Brak MFA, błąd pliku, pełny/uszkodzony dziennik,
+zostać użyte ponownie. Weryfikator ponownie odczytuje dziennik i zapisuje
+unikalny znacznik kolejności, aby dwa procesy korzystające z tego samego
+lokalnego pliku nie przyjęły tego samego kodu. Starsze wpisy dwupolowe
+pozostają obsługiwane. Dziennik musi znajdować się na **lokalnym systemie
+plików** (atomowa kolejność dopisywania), nie na dysku sieciowym; nadal
+wspieramy jeden uruchomiony proces bramy. Brak MFA, błąd pliku, pełny/uszkodzony dziennik,
 zły kod albo awaria zapisu oznaczają odmowę, bez tworzenia sesji.
 Nie ma jeszcze WebAuthn/passkeys, odzyskiwania ani API do rejestracji urządzeń.
 
