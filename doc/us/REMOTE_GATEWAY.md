@@ -1,12 +1,20 @@
-# Remote WebAdmin — beta-0.2.12 (local-only read access)
+# Remote WebAdmin — beta-0.3.12 (local-only MFA, read-only)
 
-**Development-only.** The beta-0.2 gateway, hardened through beta-0.2.12, is an **independent** WebAdmin entry
+**Development-only.** The beta-0.2 gateway, hardened through beta-0.3.12, is an **independent** WebAdmin entry
 point: /remote.html and five precisely defined /remote/v1 routes. It is
 **local-only** on 127.0.0.1 and requires HTTPS, an active **administrator**
-or **Owner** account and a valid account password. There is **no MFA** in this
-release; exposing this gateway on a public network, through a forwarding proxy
+or **Owner** account, a valid account password and an enrolled TOTP code. This is **not phishing-resistant MFA**; exposing this gateway on a public network, through a forwarding proxy
 or an Internet-facing tunnel is **not supported**. Nothing is deployed or
 enabled by the build. The existing public Apache configuration is unchanged.
+
+Stage III provides only an **operator-initiated, SSH-forwarded, private**
+read-only pilot. It is never a public proxy or listener: read the separate
+[SSH pilot procedure](REMOTE_PILOT.md) and verify both the SSH host key and
+the Apache HTTPS certificate before any test.
+
+Stage IV adds bounded concurrency/failure regression tests and a reviewed
+allowlisted audit-event formatter. Read the [manual release gate](RELEASE_BETA_0.3.md)
+before considering any deployment or merge; this remains a development build.
 
 ## Scope and trust boundaries
 
@@ -36,9 +44,43 @@ receiving the complete login body, and checks session deadlines after the
 asynchronous authorization and status reads. A request that began while valid
 cannot bypass the deadline by completing after expiry. No route, version or
 read-only permission changes.
-Audit events contain only fixed event names (login_ok, login_refused, logout,
-session_revoked, route_refused, api_unavailable), never passwords, session
+Audit events contain only fixed event names (login_ok, login_refused, mfa_ok,
+mfa_refused, logout, session_revoked, route_refused, api_unavailable), never passwords, session
 secrets, IP addresses or response payloads.
+
+### beta-0.3.4–beta-0.3.7 MFA, session enforcement and audit
+
+The server requires a second factor *after* the existing C++ password proof,
+account identity check and live role/permission check. Login JSON now has
+exactly `actor_id`, `password`, `otp` (six ASCII digits). The browser demands
+`mfa: true` in both successful login and session responses; the code is
+cleared from the form on submission and never persisted. An old or forged
+session response lacking MFA is rejected. No new HTTP routes were added.
+
+TOTP seeds use RFC 6238 HMAC-SHA1, a 30-second period and ±1 step for
+clock skew. Each account must have an independent random secret of at least
+160 bits. The verifier loads a privately owned, 0600 JSON enrollment file
+from an owner-only 0700 directory. An append-only 0600 replay ledger records
+consumed time steps and synchronizes them to disk before login succeeds;
+the verifier rechecks the ledger and uses ordered unique append markers so
+two processes with an already-open local ledger cannot both accept one code.
+Existing two-field ledger rows are supported. Use a **local filesystem**
+(not a network/shared filesystem) for atomic append ordering; a single gateway
+service remains the supported deployment. Codes cannot be reused even if the
+process restarts. Unknown account,
+missing verifier, malformed input, unsafe file, ledger corruption/full disk
+or write failure fails closed. No seed recovery, WebAuthn/passkeys enrollment
+or browser enrollment route is provided.
+
+The gateway emits structured JSON event lines to stdout for journald, with
+only a fixed event name and timestamp. `journalctl -u dc24h-remote-gateway`
+can inspect them if the example unit is installed under that name. The
+operator must configure journal persistence, access controls, retention and
+alerts. This local event stream is **not** tamper-evident or an immutable
+audit trail. No account IDs, codes, IPs, cookies, tokens or raw requests are
+logged. All previous session constraints still apply: at most four sessions,
+two-minute idle, ten-minute absolute life, revocation checks, CSRF and
+Secure/HttpOnly/SameSite=Strict cookies.
 
 ### beta-0.2.7–beta-0.2.12 consolidated hardening — High Starter
 
@@ -165,7 +207,7 @@ entered password. Regression tests cover these interleavings.
 | Route | Method | Effect |
 | --- | --- | --- |
 | /remote/v1/challenge | GET | Short-lived login CSRF challenge; no hub data |
-| /remote/v1/login | POST | Authenticated password proof and role recheck |
+| /remote/v1/login | POST | Password proof, role recheck and mandatory TOTP |
 | /remote/v1/session | GET | Revalidate current account/role, return session status |
 | /remote/v1/summary | GET | Revalidate, return explicit aggregate projection |
 | /remote/v1/logout | POST | CSRF-protected session invalidation |
@@ -212,18 +254,40 @@ existing local WebAdmin or its maintenance routes.
    DC24H_API_TOKEN_FILE for the independent maintenance API, readable by
    the selected gateway user. Keep credentials outside the WebAdmin root,
    HTTP headers, Vite variables and Git.
-3. Set DC24H_REMOTE_ORIGIN=https://localhost:8443. Run
+3. Enroll every permitted numeric account ID **out of band**. Use a distinct
+   securely generated Base32 secret of 32 characters (160 bits) or more,
+   e.g. locally run `openssl rand -hex 20 | xxd -r -p | base32 -w0` in a
+   private terminal; provision the same secret into a trusted TOTP app.
+   Create the example unit's `/var/lib/dc24h-remote` directory with owner
+   `dc24h-maintenance` and mode `0700`. Write `mfa.json` owned by that
+   account at mode `0600`, using this **schema only**, replacing the placeholder
+   with a unique random secret per user (never commit real secrets):
+
+   ```json
+   {"schema":1,"accounts":{"7":"REPLACE_WITH_PRIVATE_BASE32_SECRET"}}
+   ```
+
+   Configure `DC24H_REMOTE_MFA_FILE` and `DC24H_REMOTE_MFA_REPLAY_FILE` as
+   absolute paths in that same private directory. The second file is created
+   mode 0600 on first startup. Both paths and parent directory must be owned
+   by the gateway UID. Protect both files from backups accessible to others.
+   Enrollment edits require gateway restart. **Never reset/roll back the replay
+   ledger** while retaining a secret: this permits old TOTP reuse. At the
+   1 MiB ledger limit, fail closed and schedule a controlled offline
+   compaction preserving the greatest consumed step for each account; do
+   not simply truncate it. Align the host clock with trusted time.
+4. Set DC24H_REMOTE_ORIGIN=https://localhost:8443. Run
    npm run remote:local inside webadmin/ with those server-side variables.
    The listener is hard-coded to 127.0.0.1:4182. Public bind switches are
    rejected. Review config/dc24h-remote-gateway.service.example if a
    separately managed unit is desired; it is only a template.
-4. Review config/apache2-webadmin-remote.conf.example, install a trusted
+5. Review config/apache2-webadmin-remote.conf.example, install a trusted
    **local** HTTPS certificate and key outside the web root, enable
    mod_ssl, mod_headers, mod_proxy and mod_proxy_http, and start a
    dedicated localhost-only vhost. Its origin must match the gateway.
    Load this vhost only after independently checking your Apache layout.
-5. Visit https://localhost:8443/remote.html **on the same machine**.
-   Use the numeric account ID and account password for an active
+6. Visit https://localhost:8443/remote.html **on the same machine**.
+   Use the numeric account ID, password and current authenticator code for an active
    administrator or Owner. Switch EN/PL at the top; Logout invalidates
    the session. The old local WebAdmin and its admin actions are separate.
 
@@ -240,15 +304,17 @@ weaken the bind or proxy an unprotected port to make the feature reachable.
   rules even where opening test sockets is disallowed. Other tests cover CSRF,
   malformed input and length, denied methods/encoded paths/proxy headers,
   no private API calls on refusal, expiry and status projection.
-- Browser tests cover EN/PL UI, login, summary, logout and refusal.
+- Browser tests cover EN/PL UI, TOTP login, summary, logout and refusal.
+- TOTP tests cover RFC vectors, account binding, same-step replay, restart
+  replay protection and private-file/symlink/ledger refusal.
 - Apache integration launches a disposable localhost HTTPS server and checks
   the exact allowlist, secret header stripping, private-file denial and TLS.
 - CTest checks the static configuration, documentation, metadata and unchanged
   database migration catalog. The normal C++ and WebAdmin suites remain.
 
 Residual risks: localhost users/processes with access to the socket or token,
-compromised browsers or servers, stolen account passwords and local TLS trust
+compromised browsers or servers, stolen account passwords and TOTP codes, phishing, and local TLS trust
 configuration. Rate limits are **per gateway process** and reset on restart;
-they are not a distributed identity defense. The gateway has **no MFA and no
+they are not a distributed identity defense. The gateway has **TOTP only and no
 Internet exposure mode**. A localhost-only implementation is not a secure
 public-access deployment. Schema v11 and package tuple 0.1.0 are unchanged.

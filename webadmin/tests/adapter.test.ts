@@ -41,6 +41,8 @@ test("private credentials and bounded local adapter never expose or accept brows
       res.end("{}");
       return;
     }
+    if (behavior === "mime-lookalike") res.setHeader("Content-Type", "application/json-attacker");
+    if (behavior === "mime-utf8") res.setHeader("Content-Type", "application/json; charset=utf-8");
     if (req.url === "/api/v1/health") res.end(JSON.stringify({ status: "ok" }));
     else if (req.url === "/api/v1/users") res.end(JSON.stringify({ schema: 1, truncated: false, users: [], secret: token }));
     else res.end(JSON.stringify({ ...snapshot, secret: token }));
@@ -131,6 +133,10 @@ test("private credentials and bounded local adapter never expose or accept brows
       JSON.parse((await get("/admin-api/v1/status")).text).error,
       "invalid_api_response",
     );
+    behavior = "mime-lookalike";
+    assert.equal((await get("/admin-api/v1/status")).status, 502);
+    behavior = "mime-utf8";
+    assert.equal((await get("/admin-api/v1/status")).status, 200);
     behavior = "stall";
     const started = Date.now();
     const limited = await Promise.all(

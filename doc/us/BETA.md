@@ -1,3 +1,79 @@
+# Beta 0.3 Stage IV — beta-0.3.11 through beta-0.3.12 (series finish)
+
+All planned patches from beta-0.3.1 through beta-0.3.12 now live together on the **existing** branch `beta-0.3.1-12-full`; the current runtime version is **`beta-0.3.12`**. This is a development release candidate, not a production deployment, published tag or automatic merge to `main`.
+
+## beta-0.3.11 — bounded stress, failures and audit review
+
+Add deterministic, in-process tests of a 16-login burst and 128 anonymous requests, asserting that only four same-actor password proofs are allowed and anonymous traffic never reaches the C++ status API. Inject a private API outage during 64 simultaneous status reads: all responses must be generic 503 without leaked or stale data; recovery must work on a later request. Existing permission-revocation and session race regressions stay in place. These are bounded security-pressure regressions, **not** a throughput benchmark or production load capacity measurement. A reviewed audit formatter now emits only an allowlisted fixed event name, schema, component and ISO timestamp; rejects forged event names and invalid clock values. This does not make journald a durable or tamper-evident audit.
+
+## beta-0.3.12 — version pin and release gate
+
+Align C++ hub/API/service controller, WebAdmin, browser and process fixtures to `beta-0.3.12`. Add a CTest source-level release guard for version consistency, unchanged five read-only routes, loopback-only Apache and Node, TOTP anti-replay and redacted audit, schema v11, and the required hosted CI matrix. Publish separate EN/PL [manual release-candidate review](RELEASE_BETA_0.3.md) documents with CI, operator checks, failure response and rollback instructions. No new branch, public listener, WebAuthn claims, remote mutation, migration, production deployment, tag or merge to `main`. This stage finishes the planned source patches; the new CI result and human sign-off remain separate decisions.
+
+## Previous stage — beta-0.3.8 through beta-0.3.10
+
+# Beta 0.3 Stage III — beta-0.3.8 through beta-0.3.10
+
+At the end of Stage III, the existing branch `beta-0.3.1-12-full` reported **`beta-0.3.10`**. Stages I–III were delivered together without another branch, deployment or merge to `main`; Stage IV above supersedes the runtime identifier.
+
+## beta-0.3.8 — local HTTPS trust boundary
+
+Harden the **existing** `127.0.0.1:8443` Apache TLS vhost: retain TLS 1.2/1.3, restrict TLS 1.2 to forward-secret AEAD cipher suites, disable TLS compression and resumption tickets, and add cross-origin isolation/privacy response headers. Keep exact Host/Origin/route/method/body checks and fixed five local read-only gateway routes. No public listener, reverse proxy or new credential entry point.
+
+## beta-0.3.9 — dedicated system service isolation
+
+Expand the opt-in systemd example: private devices, kernel, cgroup, process and namespace restrictions, SUID/SGID and realtime limits, native syscall architecture and locked personality. Preserve owner-only MFA state, read-only system paths, the local C++ API Unix socket and IPAddressDeny/Allow loopback policy. Do **not** set `PrivateNetwork` (it would isolate the Apache/Node loopback), or `MemoryDenyWriteExecute` (unsafe for the Node/V8 JIT) without specific compatibility proof. The example is never auto-installed.
+
+## beta-0.3.10 — optional private read-only pilot
+
+Document an **operator-initiated** SSH **local** port-forward that carries `localhost:8443` from the workstation to the server's localhost-only Apache TLS vhost. SSH host-key authentication is independent of browser certificate verification; the client must validate both. Add a Python preflight using verified TLS and five fixed unauthenticated GETs; no password, TOTP, cookie, API token, remote host parameter, redirect following or write route. Tests enforce these limits. The pilot changes no listener or public firewall policy, grants no remote writes and is not an Internet-facing/WebAuthn-ready deployment. See [optional pilot](REMOTE_PILOT.md) and [gateway](REMOTE_GATEWAY.md).
+
+Stages beta-0.3.11–beta-0.3.12 remain planned. CMake/npm package tuple `0.1.0`, schema v11, ADC/ADCS and existing public Apache vhost remain unchanged.
+
+## Previous stage — beta-0.3.4 through beta-0.3.7
+
+# Beta 0.3 Stage II — beta-0.3.4 through beta-0.3.7
+
+On completing Stage II, the existing branch `beta-0.3.1-12-full` reported **`beta-0.3.7`** (Stage I plus Stage II). No separate patch branches, tags or deployment were created; Stage III above supersedes the runtime identifier.
+
+## beta-0.3.4 — MFA threat model and contract
+
+The separate remote read-only gateway requires the active administrator/Owner password proof, current live management permission and a server-verified six-digit TOTP code. The login accepts exactly `actor_id`, `password` and `otp`; successful session JSON includes `mfa: true`. No new route or browser-visible seed, enrollment API, privilege or public endpoint is introduced. TOTP is a development second factor, not phishing-resistant WebAuthn or an Internet-access authorization.
+
+## beta-0.3.5 — private TOTP verification
+
+An explicitly provisioned JSON enrollment file maps numeric account IDs to unique random Base32 TOTP secrets (at least 160 bits); it must be owned by the gateway UID and mode 0600 inside an owner-only 0700 directory. Verification uses RFC 6238 HMAC-SHA1, 30-second steps, six digits and a ±1-step clock window. A private append-only JSONL ledger records consumed steps with `fsync`, so a code cannot be reused for that account, including after gateway restart. Invalid/missing credentials fail closed; filesystem and ledger failures deny login. No seed or code is logged.
+
+## beta-0.3.6 — session and browser isolation
+
+The browser discards entered password and OTP on submit, requires `mfa: true` on session JSON, and never persists either credential. Only a successful password, role and TOTP verification creates an opaque read-only session. Secure, HttpOnly, SameSite=Strict cookies, CSRF, loopback HTTPS, four-session cap, two-minute idle and ten-minute absolute deadlines, live permission rechecks and revocation races remain enforced. Unit and browser regressions cover MFA failures and session behavior.
+
+## beta-0.3.7 — structured event audit and safety boundary
+
+The dedicated Node process writes bounded JSON event records (`component`, fixed `event`, ISO timestamp) to systemd-journald: login accepted/refused, MFA accepted/refused, logout, session revocation, refused route and unavailable API. No account ID, IP, password, OTP, API token, cookie, grant or response body is included. Journal persistence, access restrictions, rotation, alerting and independent forwarding remain the operator's responsibility; the sink is not an immutable compliance audit. The service template provisions private MFA storage and remains loopback-only. Tests cover file permissions, replay after restart and generic denials. See [Remote gateway](REMOTE_GATEWAY.md).
+
+Nothing is merged to `main` or exposed to the Internet by this stage. WebAuthn/passkeys, recovery and enrollment administration, phishing-resistant MFA, anti-DoS across gateway restarts and public-edge hardening remain future work. MariaDB schema v11, CMake/npm package tuple `0.1.0`, ADC/ADCS protocol and existing public Apache vhost remain unchanged.
+
+## Previous stage — beta-0.3.1 through beta-0.3.3
+
+# Beta 0.3 Stage I — beta-0.3.1 through beta-0.3.3
+
+Branch `beta-0.3.1-12-full` started from merged `main` after beta-0.2.12. Stage I originally delivered three patches and the runtime version **`beta-0.3.3`**; Stage II above supersedes its runtime identifier. Later beta-0.3.8–beta-0.3.12 work is not included.
+
+## beta-0.3.1 — CI and release baseline
+
+Update the C++ hub/API/service-controller, WebAdmin and live test fixtures. Remove the hardcoded `nproc == 4` assertion, retain Ubuntu 22.04/24.04/26.04 and Debug/Release/WebAdmin coverage, preserve the existing required check name, and trigger CI on the new branch. The CMake/npm package tuple stays `0.1.0` and database schema stays v11.
+
+## beta-0.3.2 — local adapter API safety
+
+Local and remote Node adapters use the same exact JSON content-type policy. Private C++ API response buffers are wiped after success, denial, malformed data, oversize and disconnect. Browser clients receive allowlisted data or generic errors. Socket-based tests cover invalid media-type prefixes and valid UTF-8 JSON. There are no new API routes or privileges.
+
+## beta-0.3.3 — automated security checks
+
+Required GitHub CI adds AddressSanitizer and UndefinedBehaviorSanitizer builds for a subset of C++ security tests, plus a high-severity production npm dependency advisory check. Existing lockfile and shared-library checks remain. No MFA, public access, remote writes, schema migration, ADC/ADCS protocol change or deployment is introduced. CI completion and merge remain separate decisions.
+
+## Previous stage — beta-0.2.7 through beta-0.2.12
+
 # Combined hardening release — beta-0.2.7 to beta-0.2.12
 
 One branch, `beta-0.2.7-beta-0.2.12-finish`, starts at merged `main` `f91ab49` after beta-0.2.6. The **final version string is `beta-0.2.12`**; intermediate patch names describe workstreams, not separately created branches, tags or builds. The visible project name is **dc24h.eu High Starter**; the stable C++/API identity `server.name = "dc24h.eu"` and existing wire contracts remain unchanged.

@@ -1,3 +1,79 @@
+# Etap IV beta-0.3 — beta-0.3.11 do beta-0.3.12 (zakończenie serii)
+
+Wszystkie planowane patche od beta-0.3.1 do beta-0.3.12 są teraz na **istniejącej** gałęzi `beta-0.3.1-12-full`; aktualna wersja runtime to **`beta-0.3.12`**. To kandydat wersji rozwojowej, nie wdrożenie produkcyjne, tag ani automatyczne scalenie do `main`.
+
+## beta-0.3.11 — ograniczone obciążenie, awarie i kontrola audytu
+
+Deterministyczne testy w pamięci wysyłają 16 równoległych logowań i 128 anonimowych żądań; tylko cztery dowody hasła na konto mogą przejść przez limit, a anonimowe żądania nie docierają do prywatnego statusu C++. Kolejny test wstrzymuje 64 równoległe odczyty podczas sztucznej awarii API: wszystkie muszą zwrócić ogólny 503 bez danych poufnych lub wcześniejszych; po naprawie kolejny odczyt działa. Zachowano wcześniejsze regresje wycofania uprawnień i wyścigów sesji. To test bezpieczeństwa przy ograniczonej presji, **nie** pomiar przepustowości serwera produkcyjnego. Ujednolicony format audytu zawiera tylko nazwę zdarzenia z listy, schemat, komponent i czas ISO; blokuje podrobione nazwy i błędne czasy. Journald nadal nie zapewnia sam z siebie trwałego ani niezmienialnego audytu.
+
+## beta-0.3.12 — wyrównanie wersji i brama wydania
+
+Hub C++, API, kontroler usług, WebAdmin i fixtures raportują `beta-0.3.12`. Dodano test CTest sprawdzający spójność wersji, pięć lokalnych tras tylko do odczytu, granicę loopback Apache/Node, ochronę replay MFA i redakcję audytu, schemat v11 oraz wymagane kontrole CI. Osobne instrukcje [przeglądu wydania PL](RELEASE_BETA_0.3.md) i EN opisują decyzję ręczną, CI, awarie i wycofanie. Nie utworzono nowego brancha, publicznego portu, zapisu zdalnego, migracji, tagu ani wdrożenia/scalenia do `main`. Etap kończy kod planowanej serii, ale nowy wynik CI i zgoda operatora pozostają odrębnymi decyzjami.
+
+## Poprzedni etap — beta-0.3.8 do beta-0.3.10
+
+# Etap III linii beta-0.3 — beta-0.3.8 do beta-0.3.10
+
+Na końcu Etapu III gałąź `beta-0.3.1-12-full` raportowała **`beta-0.3.10`**. Nie powstał dodatkowy branch, instalacja ani scalenie z `main`; Etap IV powyżej zastępuje identyfikator runtime.
+
+## beta-0.3.8 — bezpieczeństwo lokalnego HTTPS
+
+Utwardzenie dotychczasowego Apache TLS wyłącznie na `127.0.0.1:8443`: TLS 1.2/1.3, mocne szyfry AEAD z forward secrecy dla TLS 1.2, wyłączenie kompresji i biletów sesji oraz nagłówki ochrony cross-origin i prywatności. Pozostaje ścisłe sprawdzanie Host, Origin, tras, metod i wielkości body. Nie powstaje publiczny port, proxy zewnętrzne ani nowa trasa logowania.
+
+## beta-0.3.9 — izolacja usługi systemowej
+
+Rozbudowany opcjonalny unit systemd ogranicza urządzenia, jądro, cgroup, przestrzenie nazw, widoczność procesów, SUID/SGID, czas rzeczywisty i architekturę wywołań systemowych. Zachowuje prywatny katalog MFA, tylko odczyt systemu, gniazdo Unix API C++ i politykę ruchu loopback. Nie stosuje `PrivateNetwork`, które odcięłoby loopback Apache/Node, ani `MemoryDenyWriteExecute`, które może unieruchomić JIT Node/V8. Wdrożenie pozostaje ręczne.
+
+## beta-0.3.10 — opcjonalny pilotaż prywatnego odczytu
+
+Wyłącznie na decyzję operatora: **lokalne przekierowanie SSH** z `localhost:8443` komputera operatora do lokalnego Apache serwera. Trzeba niezależnie zweryfikować klucz SSH i certyfikat HTTPS w przeglądarce. Skrypt Python sprawdza pięć stałych nieuwierzytelnionych odczytów HTTPS; nie wysyła haseł, TOTP, cookie, tokenów, nie przyjmuje adresu publicznego, nie podąża za przekierowaniami ani nie próbuje operacji zapisu. Testy utrwalają ograniczenia. Nadal brak publicznego listenera, nowych uprawnień i produkcyjnego dostępu internetowego. Szczegóły w [pilotażu](REMOTE_PILOT.md) i [bramie](REMOTE_GATEWAY.md).
+
+Etap beta-0.3.11–beta-0.3.12 jest nadal planowany. Numery pakietów CMake/npm `0.1.0`, schemat v11, ADC/ADCS i publiczny Apache bez zmian.
+
+## Poprzedni etap — beta-0.3.4 do beta-0.3.7
+
+# Etap II linii beta-0.3 — beta-0.3.4 do beta-0.3.7
+
+Po ukończeniu Etapu II na gałęzi `beta-0.3.1-12-full` identyfikator wersji wynosił **`beta-0.3.7`** (Etapy I–II). Nie powstały nowe branche, tagi ani wdrożenia; Etap III powyżej zastępuje ten identyfikator runtime.
+
+## beta-0.3.4 — projekt MFA i granice zaufania
+
+Osobna lokalna brama WebAdmin wymaga dowodu hasła aktywnego konta administrator/Owner, aktualnego uprawnienia i sześciocyfrowego TOTP sprawdzonego po stronie serwera. Logowanie przyjmuje dokładnie `actor_id`, `password`, `otp`; odpowiedź sesji zawiera `mfa: true`. Nie ma nowej trasy, udostępniania sekretu przeglądarce, API rejestracji ani dostępu publicznego. TOTP nie zastępuje odpornego na phishing WebAuthn.
+
+## beta-0.3.5 — prywatna weryfikacja TOTP
+
+Osobno przygotowany JSON mapuje numeryczne ID kont na unikatowe losowe sekrety Base32 (co najmniej 160 bitów). Plik musi mieć właściciela tożsamego z UID bramy i tryb 0600, a katalog 0700. RFC 6238: HMAC-SHA1, krok 30 sekund, sześć cyfr, tolerancja ±1 kroku. Prywatny dziennik JSONL zapisuje z `fsync` zużyty krok, zapobiegając ponownemu użyciu kodu przez dane konto także po restarcie. Brak pliku, błędne prawa, niedostępny dziennik lub błędny kod blokują logowanie. Sekrety i kody nie trafiają do logów.
+
+## beta-0.3.6 — ochrona sesji
+
+Przeglądarka usuwa wpisane hasło i kod po wysłaniu oraz wymaga `mfa: true` w odpowiedzi sesji; nie zapisuje ich w pamięci trwałej. Sesja tylko do odczytu powstaje po pozytywnym sprawdzeniu hasła, roli i TOTP. Pozostają: cookie Secure/HttpOnly/SameSite=Strict, CSRF, HTTPS loopback, maksymalnie 4 sesje, bezczynność 2 minuty, ważność 10 minut, kontrola bieżących uprawnień i ochrona przed wyścigami unieważnień.
+
+## beta-0.3.7 — zdarzenia audytowe
+
+Proces Node wysyła do systemd-journald ograniczone rekordy JSON: komponent, stały typ zdarzenia i czas ISO. Rejestrowane są akceptacja/odmowa logowania i MFA, wylogowanie, odebranie sesji, odrzucenie trasy i awaria API. Bez ID kont, IP, haseł, kodów, cookie, grantów i danych huba. Operator odpowiada za trwałość, uprawnienia, rotację, alerty i eksport journala; nie jest to niezmienialny audyt zgodności. Przykładowy unit przygotowuje izolowany katalog MFA. Testy obejmują prawa dostępu, powtórne użycie TOTP po restarcie, odmowy i sesje. Szczegóły: [Brama zdalna](REMOTE_GATEWAY.md).
+
+Brak scalenia z `main`, Internetu, zdalnego zapisu i wdrożenia. WebAuthn/passkeys, odzyskiwanie i administracja rejestracją, phishing-resistant MFA, ochrona przed atakiem rozłożonym na restarty oraz kontrola publicznej krawędzi wymagają odrębnego etapu. Schemat MariaDB v11, numery pakietów `0.1.0`, ADC/ADCS i publiczny Apache bez zmian.
+
+## Poprzedni etap — beta-0.3.1 do beta-0.3.3
+
+# Etap I linii beta-0.3 — beta-0.3.1 do beta-0.3.3
+
+Gałąź `beta-0.3.1-12-full` powstała z `main` po beta-0.2.12. Etap I pierwotnie dostarczał trzy poprawki i wersję **`beta-0.3.3`**; Etap II powyżej zastępuje ten numer runtime. Etap beta-0.3.8–beta-0.3.12 pozostaje niezrealizowany.
+
+## beta-0.3.1 — CI i wersja bazowa
+
+Aktualizacja C++ huba/API/kontrolera usługi, WebAdmin i testów procesu. Usunięcie sztywnego warunku `nproc == 4` z CI przy zachowaniu Ubuntu 22.04/24.04/26.04, Debug/Release/WebAdmin oraz istniejącej nazwy wymaganego checka. Nowa gałąź uruchamia CI. Pakiety CMake/npm mają nadal wersję `0.1.0`, a MariaDB schemat v11.
+
+## beta-0.3.2 — bezpieczeństwo lokalnych adapterów API
+
+Lokalne i zdalne adaptery Node używają tej samej ścisłej kontroli typu JSON. Bufory odpowiedzi prywatnego API C++ są zerowane po sukcesie, odmowie, błędnych danych, przekroczeniu limitu i zerwaniu połączenia. Przeglądarka dostaje tylko zatwierdzone dane lub ogólne błędy. Testy z gniazdem sprawdzają błędne prefiksy MIME oraz prawidłowy JSON UTF-8. Nie dodano tras ani uprawnień.
+
+## beta-0.3.3 — automatyczne testy bezpieczeństwa
+
+Wymagane CI dodaje kompilacje AddressSanitizer i UndefinedBehaviorSanitizer z wybranymi testami C++ oraz skan zależności npm używanych produkcyjnie pod kątem ostrzeżeń o wysokim ryzyku. Dotychczasowe testy lockfile i bibliotek pozostają. Bez MFA, publicznego dostępu, zdalnego zapisu, migracji, zmian ADC/ADCS ani wdrożenia. CI i scalenie pozostają osobnymi decyzjami.
+
+## Poprzedni etap — beta-0.2.7 do beta-0.2.12
+
 # Zbiorcze wydanie poprawek — beta-0.2.7 do beta-0.2.12
 
 Jedna gałąź `beta-0.2.7-beta-0.2.12-finish` powstaje ze scalonego `main` `f91ab49` po beta-0.2.6. **Końcowa wersja to `beta-0.2.12`**; nazwy pośrednie oznaczają zakresy prac, a nie osobne branche, tagi ani kompilacje. Widoczna nazwa projektu to **dc24h.eu High Starter**; wewnętrzny identyfikator C++/API `server.name = "dc24h.eu"` i kontrakty protokołu pozostają bez zmian.

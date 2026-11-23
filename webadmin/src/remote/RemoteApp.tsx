@@ -3,14 +3,14 @@ import { parseRemoteSummaryResponse } from "../lib/remote-status.ts";
 import type { Summary } from "../lib/remote-status.ts";
 
 type Language = "us" | "pl";
-type Session = { schema: 1; authenticated: true; mode: "read-only"; csrf: string; expires_in: number };
+type Session = { schema: 1; authenticated: true; mfa: true; mode: "read-only"; csrf: string; expires_in: number };
 type Status = "loading" | "unauthorized" | "authorized" | "forbidden" | "unavailable" | "expired" | "rate-limited";
 
 const labels = {
   us: {
     title: "Remote WebAdmin", mode: "Read-only · Local access", id: "Administrator account ID",
-    password: "Account password", signIn: "Sign in", signOut: "Sign out",
-    loginHint: "Use an active administrator or Owner account. No service token is stored in the browser.",
+    password: "Account password", otp: "Authenticator code (6 digits)", signIn: "Sign in", signOut: "Sign out",
+    loginHint: "Use an active administrator or Owner account with TOTP enrolled. No service token is stored in the browser.",
     loading: "Loading current status…", unauthorized: "Sign in to read approved hub metrics.",
     forbidden: "This account is not authorized for remote read-only access.",
     unavailable: "The gateway or hub API is unavailable. Access is denied until it recovers.",
@@ -25,8 +25,8 @@ const labels = {
   },
   pl: {
     title: "WebAdmin zdalny", mode: "Tylko odczyt · Dostęp lokalny", id: "ID konta administratora",
-    password: "Hasło konta", signIn: "Zaloguj", signOut: "Wyloguj",
-    loginHint: "Użyj aktywnego konta administratora lub Ownera. Token usługi nie jest zapisany w przeglądarce.",
+    password: "Hasło konta", otp: "Kod uwierzytelniający (6 cyfr)", signIn: "Zaloguj", signOut: "Wyloguj",
+    loginHint: "Użyj aktywnego konta administratora lub Ownera z włączonym TOTP. Token usługi nie jest zapisany w przeglądarce.",
     loading: "Pobieranie aktualnego stanu…", unauthorized: "Zaloguj się, aby odczytać zatwierdzone dane huba.",
     forbidden: "To konto nie ma uprawnienia do zdalnego odczytu.",
     unavailable: "Brama lub API huba jest niedostępne. Dostęp jest odrzucony do czasu naprawy.",
@@ -52,7 +52,7 @@ async function call(path: string, init?: RequestInit): Promise<{ status: number;
 const validSession = (value: unknown): value is Session => {
   if (!value || typeof value !== "object") return false;
   const s = value as Record<string, unknown>;
-  return s.schema === 1 && s.authenticated === true && s.mode === "read-only" &&
+  return s.schema === 1 && s.authenticated === true && s.mfa === true && s.mode === "read-only" &&
     typeof s.csrf === "string" && /^[0-9a-f]{64}$/.test(s.csrf) &&
     typeof s.expires_in === "number" && s.expires_in > 0 && s.expires_in <= 600;
 };
@@ -69,6 +69,7 @@ export function RemoteApp() {
   const [csrf, setCsrf] = useState("");
   const [actor, setActor] = useState("");
   const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
   const [summary, setSummary] = useState<Summary | null>(null);
   // An older HTTP response must never modify a newer authenticated session.
   const sessionEpoch = useRef(0);
@@ -118,7 +119,9 @@ export function RemoteApp() {
   const login = async (event: React.FormEvent) => {
     event.preventDefault();
     const proof = password;
+    const code = otp;
     setPassword(""); // Do not retain a password after a failed challenge.
+    setOtp("");
     invalidate("loading");
     try {
       const challenge = await call("challenge");
@@ -129,7 +132,7 @@ export function RemoteApp() {
       const result = await call("login", {
         method: "POST", headers: {
           "Content-Type": "application/json", "X-DC24H-Remote-CSRF": challenge.data.csrf,
-        }, body: JSON.stringify({ actor_id: actor, password: proof }),
+        }, body: JSON.stringify({ actor_id: actor, password: proof, otp: code }),
       });
       if (result.status === 200 && validSession(result.data)) {
         setCsrf(result.data.csrf); setState("authorized");
@@ -177,6 +180,8 @@ export function RemoteApp() {
             required pattern="[1-9][0-9]*" value={actor} onChange={(event) => setActor(event.target.value)} /></label>
           <label>{t.password}<input name="password" type="password" autoComplete="current-password"
             required value={password} onChange={(event) => setPassword(event.target.value)} /></label>
+          <label>{t.otp}<input name="otp" type="text" inputMode="numeric" autoComplete="one-time-code"
+            required pattern="[0-9]{6}" maxLength={6} value={otp} onChange={(event) => setOtp(event.target.value)} /></label>
           <p className="remote-hint">{t.loginHint}</p>
           <button type="submit">{t.signIn}</button>
         </form>}

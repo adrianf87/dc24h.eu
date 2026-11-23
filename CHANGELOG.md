@@ -1,5 +1,38 @@
 # Changelog
 
+## beta-0.3.12 security follow-up — 2026-11-23 (same beta-0.3.1-12-full branch)
+
+- Close shared-ledger TOTP replay across independently started verifiers: re-read the bounded ledger before use and append a unique ordered marker before granting a code, with a post-write check that only the earliest matching step can succeed. Preserve older two-field ledger records; reject malformed markers and fail closed on replay persistence errors. The ledger requires a local filesystem with atomic append semantics; a single gateway service remains the supported deployment.
+- Make the opt-in HTTPS pilot reject an unexpected HTML portal content type even when the endpoint returned HTTP 200 and the security headers appeared correct. Add reproducible red-to-green MFA and pilot preflight regression tests; preserve all local-only/read-only boundaries.
+
+## beta-0.3.11–beta-0.3.12 Stage IV — 2026-11-23 (existing branch beta-0.3.1-12-full, current beta-0.3.12)
+
+- **0.3.11 — bounded stress and outages:** Add deterministic in-process 16-login plus 128-anonymous-request pressure regressions for per-account limits, no private API access on refusal and four-session bounds. Hold 64 status reads across a simulated private API outage, require generic 503 without stale/leaked data, then verify recovery. These are bounded security tests, not a throughput or capacity benchmark.
+- **0.3.11 — audit review:** Refactor gateway journal events into a separate fixed-schema JSON formatter, preserving the eight allowlisted authentication/revocation/route/API outcomes with a UTC timestamp. Negative tests reject event injection and invalid clocks; logs never serialize credentials, account IDs, OTP, cookie, grant or response bodies. Journal persistence and tamper-evidence remain operator work.
+- **0.3.12 — final development baseline:** Align hub, local API, service controller, WebAdmin and test fixtures to `beta-0.3.12`; add `beta.release.gate` to CTest for release metadata, CI checks, fixed local-only surface and MFA/audit invariants; document bilingual manual verification, residual risks and rollback. Preserve CMake/npm package `0.1.0`, MariaDB schema v11, ADC/ADCS protocol, public Apache and read-only permissions.
+- This is a release candidate on the existing branch, not a tagged or deployed production release. No automatic merge to `main`, public Internet gateway, WebAuthn, new database migration or administrative write operation is authorized.
+
+## beta-0.3.8–beta-0.3.10 Stage III — 2026-11-23 (existing branch beta-0.3.1-12-full, current beta-0.3.10)
+
+- **0.3.8 — HTTPS:** Strengthen the separate 127.0.0.1:8443 Apache TLS example with forward-secret TLS 1.2 AEAD ciphers, server cipher preference and explicit cross-origin isolation/permission response headers; keep TLS 1.2/1.3, session-ticket/compression refusal and exact local route/Origin constraints.
+- **0.3.9 — systemd:** Add device, kernel, cgroup, process and namespace isolation to the example Node service. Keep MFA StateDirectory 0700, loopback IP restrictions, C++ API Unix socket access and a read-only filesystem; avoid incompatible `PrivateNetwork` and V8/JIT memory execution restrictions.
+- **0.3.10 — private access pilot:** Add operator-only SSH local port-forward guidance and an independent verified-HTTPS smoke script that performs five fixed unauthenticated GETs, checks no-store/nosniff and refuses unsafe responses without sending credentials. Register regression tests in CTest; update all active runtime/test versions to `beta-0.3.10`.
+- No new branch, public listener, hosted tunnel, remote write, MFA bypass, MariaDB migration, ADC/ADCS change, deployment or merge to main. Public-facing access and phishing-resistant MFA remain separate design work.
+
+## beta-0.3.4–beta-0.3.7 Stage II — 2026-11-22 (existing branch beta-0.3.1-12-full, current beta-0.3.7)
+
+- **0.3.4 — MFA contract:** Require TOTP alongside existing password proof, identity and live management checks. Login accepts exactly the three expected fields; session JSON includes a verified-MFA marker. There are still only five loopback-only, read-only routes.
+- **0.3.5 — Enrollment and replay:** Verify six-digit RFC 6238 TOTP against private per-account Base32 seeds; require correct UID and 0600/0700 permissions, reject symlinks and preserve consumed time steps in a synced replay ledger across gateway restarts. Unavailable MFA fails closed.
+- **0.3.6 — Session hardening:** Browser clears OTP and password after submission, demands an MFA-marked session and retains Secure/HttpOnly/SameSite=Strict cookies, CSRF, live role revalidation and strict idle/absolute expiration. Add deterministic MFA, replay and session regressions.
+- **0.3.7 — Audit and operator controls:** Record only fixed event names and timestamps as structured journal lines, include MFA acceptance and refusal, and document retention/recovery requirements. The local-only systemd example gains a private state directory and MFA file paths. This is not a tamper-evident audit or a public gateway.
+- Retain unchanged MariaDB v11, npm/CMake tuple `0.1.0`, ADC/ADCS wire behavior, public Apache and read-only permissions. No deployment or merge to `main` is implied.
+
+## beta-0.3.1–beta-0.3.3 Stage I — 2026-11-22 (branch beta-0.3.1-12-full, current beta-0.3.3)
+
+- **0.3.1 — CI and baseline:** Advance C++ hub/API/controller, WebAdmin and test fixtures to `beta-0.3.3` as the consolidated Stage I runtime version. Add this branch to push CI and stop assuming hosted runners always have exactly four logical CPUs. Keep existing required check name and full three-image C++/WebAdmin matrix.
+- **0.3.2 — Local API hardening:** Share a strict JSON content-type check across remote and local adapters. Reject media-type lookalikes and non-UTF-8 alternatives; scrub private response chunks and assembled buffers on normal, denied, malformed, oversized and aborted responses. Add real-socket adapter regressions and a pure media-type policy test. Preserve generic errors and never disclose a raw private API payload.
+- **0.3.3 — Dependency and memory security:** Add ASan and UBSan C++ security-test builds to required CI and a high-severity npm production-dependency audit. Preserve pinned checkout and existing dependency allowlist checks. No database migration (v11), MFA, public listener, remote mutation, service operation, ADC/ADCS protocol change or deployment.
+
 ## beta-0.2.7–beta-0.2.12 finish — 2026-11-22 (one combined branch, final version beta-0.2.12)
 
 - Additional follow-up audit: validate every nested remote summary counter and version before the browser renders it, and project only approved fields even after a valid HTTP response. Discard out-of-order status results within the same authenticated session, not only across re-logins. Treat an upstream HTTP permission denial as a revocation even when its error body is plain text rather than JSON. Add parser, Chromium and live private-socket regressions; retain existing read-only/local-only restrictions.

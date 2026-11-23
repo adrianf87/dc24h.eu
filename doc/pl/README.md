@@ -1,6 +1,14 @@
 # Dokumentacja dc24h.eu High Starter
 
-beta-0.2.12: zbiorcza gałąź poprawek beta-0.2.7–beta-0.2.12 uaktualnia dokumentację wersji i CI, testy wyścigów sesji, limit całkowitego czasu odpowiedzi prywatnego API i kontrolę typu JSON oraz granicę Fetch Metadata w Apache. Hub, API, kontroler i WebAdmin zgłaszają beta-0.2.12; widoczna nazwa projektu to dc24h.eu High Starter. Wewnętrzny identyfikator protokołu `dc24h.eu`, schemat v11 i publiczne proxy Apache pozostają bez zmian. Bez MFA nie ma dostępu publicznego ani zdalnego zapisu administracyjnego czy wdrożenia produkcyjnego.
+beta-0.3.12: Etap I poprawia CI/API, Etap II dodaje lokalne TOTP, sesje i audyt, Etap III utwardza HTTPS, systemd i prywatny pilotaż SSH, a Etap IV (beta-0.3.11–beta-0.3.12) wprowadza ograniczone testy obciążenia/awarii, stały format dziennika i ręczną bramę wydania. Hub, API, kontroler i WebAdmin raportują beta-0.3.12; nazwa projektu to dc24h.eu High Starter. Wewnętrzny identyfikator `dc24h.eu`, schemat v11 i publiczne proxy Apache pozostają bez zmian. Nie ma dostępu publicznego, zdalnego zapisu ani wdrożenia produkcyjnego.
+
+- [Beta-0.3.11–beta-0.3.12 — Etap IV](BETA.md) · [przegląd kandydata](RELEASE_BETA_0.3.md)
+
+- [Beta-0.3.8–beta-0.3.10 — Etap III](BETA.md) · [pilotaż prywatny SSH](REMOTE_PILOT.md)
+
+- [Beta-0.3.4–beta-0.3.7 — Etap II](BETA.md)
+
+- [Beta-0.3.1–beta-0.3.3 — Etap I](BETA.md)
 
 - [Zbiorcze poprawki beta-0.2.7–beta-0.2.12](BETA.md)
 

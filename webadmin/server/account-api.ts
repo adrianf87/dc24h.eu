@@ -8,6 +8,7 @@ import {parseManagement} from "../src/lib/management.ts";
 import { parseAccount, parseAccounts, parseStaff } from "../src/lib/accounts.ts";
 import {parseConfigurationReview,parseConfigurationValidation,parseConfigurationWrite} from "../src/lib/configuration-editor.ts";
 import {parseHubServiceResult,parseHubServiceStatus} from "../src/lib/hub-service.ts";
+import { isJsonContentType } from "./json-content-type.ts";
 
 export function accountMiddleware(config: {socket:string; token:string}|null) {
   let active = 0;
@@ -56,13 +57,17 @@ export function accountMiddleware(config: {socket:string; token:string}|null) {
     upstream.on("error",()=>{if(!done){finish();reply(503,{error:write?"outcome_unknown":"api_unavailable"});}});
     upstream.on("response", response=>{
       const received:Buffer[]=[];let bytes=0;
-      response.on("data",(chunk:Buffer)=>{bytes+=chunk.length;if(bytes>16384){upstream.destroy();return;}received.push(chunk);});
+      const scrub=()=>{for(const chunk of received)chunk.fill(0);received.length=0;};
+      response.on("close",scrub);
+      response.on("data",(chunk:Buffer)=>{bytes+=chunk.length;if(bytes>16384){chunk.fill(0);upstream.destroy();return;}received.push(chunk);});
       response.on("error",()=>upstream.destroy());
       response.on("end",()=>{
-        if(done)return;
+        if(done){scrub();return;}
+        let assembled:Buffer|undefined;
         try {
-          if(!response.headers["content-type"]?.startsWith("application/json"))throw new Error();
-          const data=JSON.parse(Buffer.concat(received).toString("utf8"));
+          if(!isJsonContentType(response.headers["content-type"]))throw new Error();
+          assembled=Buffer.concat(received);
+          const data=JSON.parse(assembled.toString("utf8"));
           if(response.statusCode!==200){
             const status=[400,401,403,404,409,422,429,501,503].includes(response.statusCode ?? 0)?response.statusCode!:503;
             const error=["outcome_unknown","stale","rate_limited","unauthorized","admin_grant_required","csrf_required","management_refused","confirmation_required","service_refused","service_unavailable","invalid_registration","invalid_input","invalid_configuration","not_implemented","account_unavailable","database_unavailable"].includes(data?.error)?data.error:"api_unavailable";
@@ -74,6 +79,7 @@ export function accountMiddleware(config: {socket:string; token:string}|null) {
             path==="/admin-api/v1/management"?parseManagement(data):path==="/admin-api/v1/admin/access"?parseAccess(data):path==="/admin-api/v1/audit"?parseAudit(data):path.startsWith("/admin-api/v1/bans")?(req.method==="GET"?parseBans(data):parseBanResult(data)):path==="/admin-api/v1/admin"?parseAdmin(data):data && "accounts" in data?(path.includes("?staff_after=")?parseStaff(data):parseAccounts(data)):data?.maintenance===true?{account:parseAccount(data.account),maintenance:true}:null;
           if(!safe)throw new Error();finish();reply(200,safe);
         }catch{finish();reply(503,{error:write?"outcome_unknown":"invalid_api_response"});}
+        finally{assembled?.fill(0);scrub();}
       });
     });
     if(read){upstream.end();return;}

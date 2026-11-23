@@ -1,4 +1,4 @@
-# Example for a separate, local-only beta-0.2 gateway.
+# Example for a separate, local-only beta-0.3.10 gateway.
 # Must be reviewed and installed deliberately; it is never enabled by build.
 # The account must be allowed to read the dedicated local API token and socket.
 # Never set DC24H_REMOTE_PUBLIC or bind the service to a public interface.
@@ -14,19 +14,42 @@ Environment=DC24H_API_SOCKET=/run/dc24h/api.sock
 Environment=DC24H_API_TOKEN_FILE=/run/dc24h/api.token
 Environment=DC24H_REMOTE_ORIGIN=https://localhost:8443
 Environment=DC24H_REMOTE_PORT=4182
+# Provision the enrollment file in the private StateDirectory BEFORE starting.
+# StateDirectory ownership matches User=; no secrets are distributed in Git.
+StateDirectory=dc24h-remote
+StateDirectoryMode=0700
+Environment=DC24H_REMOTE_MFA_FILE=/var/lib/dc24h-remote/mfa.json
+Environment=DC24H_REMOTE_MFA_REPLAY_FILE=/var/lib/dc24h-remote/replay.jsonl
 ExecStart=/usr/bin/node --import tsx server/remote-main.ts
 Restart=on-failure
 RestartSec=3
+StandardOutput=journal
+StandardError=journal
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+RestrictNamespaces=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+SystemCallArchitectures=native
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 IPAddressDeny=any
 IPAddressAllow=localhost
 CapabilityBoundingSet=
 AmbientCapabilities=
 UMask=0077
+# Avoid MemoryDenyWriteExecute here: the Node/V8 JIT may require executable
+# generated memory. Do not enable PrivateNetwork: Apache requires loopback.
 
 [Install]
 WantedBy=multi-user.target
