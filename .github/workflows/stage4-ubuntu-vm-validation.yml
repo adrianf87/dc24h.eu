@@ -54,7 +54,7 @@ jobs:
             --output-on-failure \
             --output-junit "$RUNNER_TEMP/ctest-vm.xml" \
             --parallel 2 \
-            -R '^(database\.(process|resilience\.process|migrations\.process)|apache2\.(https|https\.proxy|remote\.gateway)|api\.(unit|process)|adcs\.tls_security\.process|beta\.04\.stage4\.(perf\.command|recovery|release|vm\.probe)|beta\.05\.stage1\.(perf\.gate|recovery\.pair)|systemd\.sandbox|ci\.timing\.summary|remote\.(gateway\.config|pilot\.preflight))$'
+            -R '^(database\.(process|resilience\.process|migrations\.process)|apache2\.(https|https\.proxy|remote\.gateway)|api\.(unit|process)|adcs\.tls_security\.process|beta\.04\.stage4\.(perf\.command|recovery|release|vm\.probe)|beta\.05\.stage1\.(perf\.gate|recovery\.pair|matched\.recovery)|systemd\.sandbox|ci\.timing\.summary|remote\.(gateway\.config|pilot\.preflight))$'
 
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:

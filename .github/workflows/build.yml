@@ -49,7 +49,11 @@ jobs:
         run: cmake --build "build/$BUILD_TYPE" --parallel 2
 
       - name: Test
-        run: ctest --test-dir "build/$BUILD_TYPE" --parallel 2 --output-on-failure --output-junit "$RUNNER_TEMP/ctest.xml"
+        env:
+          DC24H_VM_REPORT_DIR: ${{ runner.temp }}/evidence
+        run: |
+          mkdir -p "$DC24H_VM_REPORT_DIR"
+          ctest --test-dir "build/$BUILD_TYPE" --parallel 2 --output-on-failure --output-junit "$RUNNER_TEMP/ctest.xml"
 
       - name: Prepare redacted CTest evidence
         if: always()
@@ -60,7 +64,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: cpp-${{ matrix.os }}-${{ matrix.build_type }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/evidence/summary.json
+          path: ${{ runner.temp }}/evidence/
           if-no-files-found: error
           retention-days: 14
 

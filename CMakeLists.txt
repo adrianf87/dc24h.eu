@@ -1095,7 +1095,18 @@ if(BUILD_TESTING)
     find_program(MARIADB_INSTALL_DB_EXECUTABLE mariadb-install-db)
     find_program(MARIADB_CLIENT_EXECUTABLE mariadb)
     find_program(MARIADB_ADMIN_EXECUTABLE mariadb-admin)
+    find_program(MARIADB_DUMP_EXECUTABLE mariadb-dump)
+    if(DC24H_REQUIRE_INTEGRATION_TESTS AND NOT MARIADB_DUMP_EXECUTABLE)
+        message(FATAL_ERROR "Required mariadb-dump unavailable for matched Stage I recovery")
+    endif()
     if(MARIADBD_EXECUTABLE AND MARIADB_INSTALL_DB_EXECUTABLE AND MARIADB_CLIENT_EXECUTABLE AND MARIADB_ADMIN_EXECUTABLE)
+        if(MARIADB_DUMP_EXECUTABLE)
+            add_test(NAME beta.05.stage1.matched.recovery COMMAND "${Python3_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/stage1_matched_recovery_tests.py"
+                "$<TARGET_FILE:dc24h>")
+            set_tests_properties(beta.05.stage1.matched.recovery PROPERTIES TIMEOUT 180
+                ENVIRONMENT "PATH=/usr/sbin:/usr/bin:/sbin:/bin:$ENV{PATH}")
+        endif()
         add_test(NAME bans.process COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/database_process_tests.py"
             "$<TARGET_FILE:dc24h>" "$<TARGET_FILE:database_tests>"
