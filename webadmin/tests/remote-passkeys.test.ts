@@ -69,6 +69,26 @@ test("external rewrite, unsafe permissions, corrupt data or another writer fail 
   assert.throws(() => openPasskeyStore(path, "localhost"), /Invalid passkey catalog/);
 }));
 
+test("noncanonical passkey identifiers, unexpected fields and duplicate transports fail closed", () => {
+  for (const mutate of [
+    (data: any) => { data.credentials[0].id = "A".repeat(42) + "B"; },
+    (data: any) => { data.credentials[0].publicKey = "A".repeat(42) + "B"; },
+    (data: any) => { data.users[0].handle = "A".repeat(42) + "B"; },
+    (data: any) => { data.credentials[0].transports = ["internal", "internal"]; },
+    (data: any) => { data.credentials[0].privateKey = "should-never-exist"; },
+    (data: any) => { data.users[0].admin = true; },
+    (data: any) => { data.unreviewed = true; },
+  ]) withStore(path => {
+    const store = openPasskeyStore(path, "localhost");
+    const handle = store.userHandle("7");
+    store.add({ ...sample("c".repeat(32)), userHandle: handle });
+    const data = JSON.parse(readFileSync(path, "utf8"));
+    mutate(data);
+    writeFileSync(path, JSON.stringify(data) + "\n", { mode: 0o600 });
+    assert.throws(() => openPasskeyStore(path, "localhost"), /Invalid passkey catalog/);
+  });
+});
+
 test("WebAuthn RP configuration does not trust browser Host or forwarded origin", () => {
   assert.deepEqual(relyingParty("https://localhost:8443", "localhost"),
     { origin: "https://localhost:8443", rpID: "localhost" });
