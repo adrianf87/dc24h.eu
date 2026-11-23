@@ -477,6 +477,9 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
         if (!pending || pending.expires <= clock() || typeof csrf !== "string" || !sameSecret(pending.csrf, csrf)) {
           log("passkey_login_refused"); reply(res, 403, { error: "login_refused" }, clear); return;
         }
+        const predecessorActive = () => !pending.oldSession ||
+          (sessions.get(pending.oldKey) === pending.oldSession && pending.oldSession.pendingLogouts === 0 &&
+            !expired(pending.oldSession, clock()));
         try {
           const fields = object(await readBody(req, maxCeremonyBody));
           if (Object.keys(fields).length !== 1 || !fields.response || typeof fields.response !== "object") throw Error();
@@ -484,11 +487,10 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
             fields.response as Parameters<PasskeyCeremonies["finishLogin"]>[2], clock());
           // Verification may await an authenticator or crypto worker. A
           // challenge that expires during that wait cannot mint a session.
-          if (!verified || pending.expires <= clock() || (pending.oldSession &&
-              (sessions.get(pending.oldKey) !== pending.oldSession || pending.oldSession.pendingLogouts > 0))) throw Error();
+          if (!verified || pending.expires <= clock() || !predecessorActive()) throw Error();
           const key = randomBytes(32).toString("hex");
           if (await authorized(key, pending.session) !== "ok" ||
-              pending.expires <= clock() ||
+              pending.expires <= clock() || !predecessorActive() ||
               pending.session.passkeyEpoch !== p.store.epoch(pending.actor)) throw Error();
           pending.session.created = clock(); pending.session.used = pending.session.created;
           if (pending.oldSession) sessions.delete(pending.oldKey);
@@ -533,10 +535,17 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
       if (name === "passkey/enroll/options") {
         try {
           const fields = object(await readBody(req));
-          if (sessions.get(key) !== session || session.pendingLogouts > 0 || expired(session, clock())) throw Error();
+          const sessionCurrent = () => sessions.get(key) === session && session.pendingLogouts === 0 &&
+            !expired(session, clock()) && clock() - session.created <= 60_000 &&
+            session.passkeyEpoch === p.store.epoch(session.actor);
+          if (!sessionCurrent()) throw Error();
           if (Object.keys(fields).length || enrollments.size >= 64 ||
               limited("passkey:enroll:" + session.actor, 5, now)) throw Error();
           const opts = await p.ceremonies.beginEnrollment(session.actor);
+          // Ceremony creation may wait on a device or disk. Revocation,
+          // logout and permission changes during that wait cancel the result.
+          if (!sessionCurrent() || enrollments.size >= 64 ||
+              await authorized(key, session, true) !== "ok" || !sessionCurrent()) throw Error();
           enrollments.set(key, { challenge: opts.challenge, expires: clock() + 60_000, session });
           reply(res, 200, opts);
         } catch { log("passkey_enroll_refused"); reply(res, 403, { error: "enrollment_refused" }); }

@@ -59,15 +59,22 @@ test("remote read-only screen needs a session, supports EN/PL and never offers h
 test("local passkey inventory exposes only this account's device actions and revokes the browser session", async ({ page }) => {
   let revoked = false;
   let name = "My phone";
+  let holdSummary = false;
+  let staleSummary!: Route;
+  let signalStale!: () => void;
+  const staleStarted = new Promise<void>(resolve => { signalStale = resolve; });
   await page.route("**/remote/v1/session", route => route.fulfill({
     status: revoked ? 401 : 200, contentType: "application/json",
     body: revoked ? '{"error":"unauthorized"}' : JSON.stringify({
       schema: 1, authenticated: true, mfa: true, mode: "read-only", csrf: sessionCsrf, expires_in: 600,
     }),
   }));
-  await page.route("**/remote/v1/summary", route => route.fulfill({
-    status: 200, contentType: "application/json", body: JSON.stringify(snapshot),
-  }));
+  await page.route("**/remote/v1/summary", route => {
+    if (holdSummary) { holdSummary = false; staleSummary = route; signalStale(); return; }
+    return route.fulfill({
+      status: 200, contentType: "application/json", body: JSON.stringify(snapshot),
+    });
+  });
   await page.route("**/remote/v1/passkey/devices", route => route.fulfill({
     status: 200, contentType: "application/json", body: JSON.stringify({ schema: 1, devices: [{
       id: "p".repeat(32), name, device_type: "multiDevice", backed_up: true,
@@ -90,11 +97,25 @@ test("local passkey inventory exposes only this account's device actions and rev
   });
   await page.goto("/remote.html");
   await expect(page.getByText("Passkeys / trusted devices")).toBeVisible();
+  await expect(page.getByText("Active connections")).toBeVisible();
   await page.getByRole("button", { name: "Refresh devices" }).click();
   await expect(page.getByText("My phone")).toBeVisible();
+  holdSummary = true;
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
+  await staleStarted;
   await page.getByLabel("Device name").fill("Work laptop");
   await page.getByRole("button", { name: "Rename" }).click();
   await expect(page.getByText("Work laptop")).toBeVisible();
+  // The delayed read still belongs to the old session cookie, revoked by
+  // the rename. Its 403 must not invalidate the successful rotated session.
+  const oldResponse = page.waitForResponse(response =>
+    response.url().endsWith("/remote/v1/summary") && response.status() === 403);
+  await staleSummary.fulfill({ status: 403, contentType: "application/json", body: '{"error":"forbidden"}' });
+  await oldResponse;
+  await page.evaluate(() => new Promise<void>(resolve =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+  await expect(page.getByText("Active connections")).toBeVisible();
   await page.getByRole("button", { name: "Revoke" }).click();
   await expect(page.getByText("Sign in to read approved hub metrics.")).toBeVisible();
   await expect(page.getByText("The key was revoked and sessions were ended.")).toBeVisible();

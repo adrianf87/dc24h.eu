@@ -26,7 +26,11 @@ test("passkey gateway binds login and enrollment to one-use challenges, password
         if (response.expireBeforeReturn) now += 61_000;
         return challenge === "passkey-challenge" && response.valid;
       },
-      beginEnrollment: async () => ({ challenge: "enrollment-challenge", rp: { id: "localhost" } }),
+      beginEnrollment: async () => {
+        const hold = pausedEnrollment;
+        if (hold) { pausedEnrollment = null; hold.entered(); await hold.resume; }
+        return { challenge: "enrollment-challenge", rp: { id: "localhost" } };
+      },
       finishEnrollment: async (_actor: string, challenge: string, response: { valid: boolean; expireBeforePersist?: boolean }, at: number,
         beforePersist: () => Promise<boolean>) => {
         if (response.expireBeforePersist) now += 51_000;
@@ -39,6 +43,8 @@ test("passkey gateway binds login and enrollment to one-use challenges, password
     } as unknown as PasskeyCeremonies;
     const events: string[] = [], called: string[] = [];
     let now = 100_000;
+    let pausedAuthorization: { entered: () => void; resume: Promise<void> } | null = null;
+    let pausedEnrollment: { entered: () => void; resume: Promise<void> } | null = null;
     const gateway = remoteGateway({ socket: "/private/test.sock", token: "a".repeat(64) }, {
       origin: "https://localhost:8443", now: () => now,
       passkeys: { store, ceremonies }, strictAudit: true, auditHealthy: () => true,
@@ -58,14 +64,18 @@ test("passkey gateway binds login and enrollment to one-use challenges, password
               method: verb, path: target, permission, allowed: true })),
           };
         }
-        if (path === "/api/v1/management") return {
-          schema: 2, maintenance: true, restart_required: true,
-          areas: ["accounts", "roles", "bans", "configuration", "hub"].map(key => ({
-            key, permission: key === "accounts" ? "accounts.manage" : key === "roles" ? "roles.manage" :
-              key === "bans" ? "users.ban+blocks.manage" : key === "hub" ? "hub.manage" : "configuration.manage",
-            implemented: key !== "configuration", allowed: true,
-          })),
-        };
+        if (path === "/api/v1/management") {
+          const hold = pausedAuthorization;
+          if (hold) { pausedAuthorization = null; hold.entered(); await hold.resume; }
+          return {
+            schema: 2, maintenance: true, restart_required: true,
+            areas: ["accounts", "roles", "bans", "configuration", "hub"].map(key => ({
+              key, permission: key === "accounts" ? "accounts.manage" : key === "roles" ? "roles.manage" :
+                key === "bans" ? "users.ban+blocks.manage" : key === "hub" ? "hub.manage" : "configuration.manage",
+              implemented: key !== "configuration", allowed: true,
+            })),
+          };
+        }
         if (path === "/api/v1/status") return snapshot;
         throw Error("unexpected private route");
       },
@@ -200,5 +210,51 @@ test("passkey gateway binds login and enrollment to one-use challenges, password
       csrfHeader(freshSessionCsrf, freshSession))).status, 403,
     "expired re-verification cannot register a credential even with a valid challenge");
     assert.equal(store.forActor("7").length, 1, "stale enrollment must not persist a key");
+
+    // A password-authorized passkey re-login must not survive logout of its
+    // predecessor while the *final* C++ permission recheck is still pending.
+    const raceStart = await call("challenge");
+    const raceCsrf = JSON.parse(raceStart.body).csrf as string;
+    const raceOptions = await call("passkey/login/options", "POST", { actor_id: "7", password: "correct" },
+      csrfHeader(raceCsrf, raceStart.cookies[0]!.split(";")[0]! + "; " + freshSession));
+    assert.equal(raceOptions.status, 200);
+    let signalAuthorization!: () => void;
+    let resumeAuthorization!: () => void;
+    const enteredAuthorization = new Promise<void>(resolve => { signalAuthorization = resolve; });
+    const authorizationGate = new Promise<void>(resolve => { resumeAuthorization = resolve; });
+    pausedAuthorization = { entered: signalAuthorization, resume: authorizationGate };
+    const lateFinish = call("passkey/login/finish", "POST", { response: { valid: true } },
+      csrfHeader(raceCsrf, raceOptions.cookies[0]!.split(";")[0]! + "; " + freshSession));
+    await enteredAuthorization;
+    assert.equal((await call("logout", "POST", {}, csrfHeader(freshSessionCsrf, freshSession))).status, 200);
+    resumeAuthorization();
+    const refused = await lateFinish;
+    assert.equal(refused.status, 403, "logout during the final permission check must cancel passkey login");
+    assert.ok(!refused.cookies.some(value => value.startsWith("dc24h_remote=")),
+      "a revoked predecessor must never mint a replacement cookie");
+
+    // Enrollment option generation can also await an HSM/storage worker.
+    // Logout during that wait must not mint a usable stale ceremony.
+    const nextStart = await call("challenge");
+    const nextCsrf = JSON.parse(nextStart.body).csrf as string;
+    const nextOptions = await call("passkey/login/options", "POST", { actor_id: "7", password: "correct" },
+      csrfHeader(nextCsrf, nextStart.cookies[0]!.split(";")[0]!));
+    assert.equal(nextOptions.status, 200);
+    const nextLogin = await call("passkey/login/finish", "POST", { response: { valid: true } },
+      csrfHeader(nextCsrf, nextOptions.cookies[0]!.split(";")[0]!));
+    assert.equal(nextLogin.status, 200);
+    const nextSession = nextLogin.cookies[0]!.split(";")[0]!;
+    const nextSessionCsrf = JSON.parse(nextLogin.body).csrf as string;
+    let signalEnrollment!: () => void;
+    let resumeEnrollment!: () => void;
+    const enteredEnrollment = new Promise<void>(resolve => { signalEnrollment = resolve; });
+    const enrollmentGate = new Promise<void>(resolve => { resumeEnrollment = resolve; });
+    pausedEnrollment = { entered: signalEnrollment, resume: enrollmentGate };
+    const lateOptions = call("passkey/enroll/options", "POST", {}, csrfHeader(nextSessionCsrf, nextSession));
+    await enteredEnrollment;
+    assert.equal((await call("logout", "POST", {}, csrfHeader(nextSessionCsrf, nextSession))).status, 200);
+    resumeEnrollment();
+    assert.equal((await lateOptions).status, 403,
+      "logout during ceremony generation must not expose enrollment options");
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

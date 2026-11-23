@@ -128,6 +128,18 @@ export function RemoteApp() {
       if (epoch === sessionEpoch.current && requestId === summaryRequest.current) invalidate("unavailable");
     }
   };
+  const acceptSessionRotation = (nextCsrf: string) => {
+    // A privileged passkey change replaced the server-side cookie. Reads
+    // issued with the old cookie may still finish with 401/403: they must
+    // not clear the newly authenticated session or its new CSRF secret.
+    const epoch = ++sessionEpoch.current;
+    summaryRequest.current++;
+    deviceRequest.current++;
+    setCsrf(nextCsrf);
+    setSummary(null);
+    void load();
+    return epoch;
+  };
   useEffect(() => {
     if (state !== "authorized") return;
     void load();
@@ -227,8 +239,9 @@ export function RemoteApp() {
       if (epoch !== sessionEpoch.current) return;
       if (!result.data || typeof result.data !== "object" || !("csrf" in result.data) ||
           typeof result.data.csrf !== "string" || !/^[0-9a-f]{64}$/.test(result.data.csrf)) throw Error();
-      setCsrf(result.data.csrf);
-      setActionMessage(t.actionDone); await loadDevices();
+      const rotatedEpoch = acceptSessionRotation(result.data.csrf);
+      await loadDevices();
+      if (rotatedEpoch === sessionEpoch.current) setActionMessage(t.actionDone);
     } catch { if (epoch === sessionEpoch.current) setActionMessage(t.actionFailed); }
   };
   const changeDevice = async (id: string, revoke: boolean) => {
@@ -243,10 +256,10 @@ export function RemoteApp() {
       else {
         if (!result.data || typeof result.data !== "object" || !("csrf" in result.data) ||
             typeof result.data.csrf !== "string" || !/^[0-9a-f]{64}$/.test(result.data.csrf)) throw Error();
-        setCsrf(result.data.csrf);
+        const rotatedEpoch = acceptSessionRotation(result.data.csrf);
         setDeviceLabels(previous => ({ ...previous, [id]: "" }));
         await loadDevices();
-        if (epoch === sessionEpoch.current) setActionMessage(t.actionDone);
+        if (rotatedEpoch === sessionEpoch.current) setActionMessage(t.actionDone);
       }
     } catch { if (epoch === sessionEpoch.current) setActionMessage(t.actionFailed); }
   };
