@@ -9,13 +9,15 @@ import { parseRemoteSummary } from "../src/lib/status.ts";
 import { isJsonContentType } from "./json-content-type.ts";
 import type { PasskeyCeremonies } from "./remote-webauthn.ts";
 import type { PasskeyStore } from "./remote-passkeys.ts";
+import type { RemoteRateLimitStore } from "./remote-rate-limit-store.ts";
 export { isJsonContentType } from "./json-content-type.ts";
 
 type Credentials = { socket: string; token: string };
 export type RemoteEvent = "login_ok" | "login_refused" | "mfa_ok" | "mfa_refused" | "logout" | "session_revoked" | "route_refused" | "api_unavailable" |
   "passkey_enrolled" | "passkey_enroll_refused" | "passkey_login_ok" | "passkey_login_refused" |
   "passkey_device_renamed" | "passkey_revoke_intent" | "passkey_revoked" |
-  "passkey_enroll_intent" | "passkey_recovery_intent" | "passkey_recovered";
+  "passkey_enroll_intent" | "passkey_recovery_intent" | "passkey_recovered" |
+  "rate_limiter_unavailable";
 export interface RemoteOptions {
   origin: string;
   now?: () => number;
@@ -28,6 +30,8 @@ export interface RemoteOptions {
   mfaVerify?: (actor: string, code: string, at: number) => boolean;
   // Only the isolated local gateway passes this pair, never Vite or the public API.
   passkeys?: { store: PasskeyStore; ceremonies: PasskeyCeremonies };
+  // Production uses a private durable HMAC-keyed catalog across restarts.
+  rateLimits?: RemoteRateLimitStore;
   // Optional in-process transport override for deterministic, socket-free tests.
   upstream?: typeof upstream;
 }
@@ -173,6 +177,15 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
     for (const [id, value] of budgets) if (value.starts + 60_000 <= now) budgets.delete(id);
   };
   const limited = (key: string, limit: number, now: number) => {
+    if (options.rateLimits) {
+      try { return options.rateLimits.hit(key, limit, now); }
+      catch {
+        // Storage loss must never reset a budget or permit fresh logins.
+        sessions.clear(); challenges.clear(); passkeyLogins.clear(); enrollments.clear();
+        log("rate_limiter_unavailable");
+        return true;
+      }
+    }
     const entry = budgets.get(key);
     if (!entry || entry.starts + 60_000 <= now) { budgets.set(key, { count: 1, starts: now }); return false; }
     entry.count++;
@@ -193,6 +206,21 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
     res.end(JSON.stringify(data));
   };
   const clearSession = () => [setCookie("dc24h_remote", "", 0)];
+  const rotateSession = (oldKey: string, session: Session, revokePeers = false) => {
+    if (sessions.get(oldKey) !== session || session.pendingLogouts > 0 || expired(session, clock()))
+      throw Error("Session was revoked during credential mutation");
+    const nextKey = randomBytes(32).toString("hex");
+    const nextCsrf = randomBytes(32).toString("hex");
+    if (revokePeers) {
+      // Enrollment changes the actor's authentication factors. Do not leave
+      // older browser sessions alive with their pre-enrollment authority.
+      for (const [id, other] of sessions) if (other.actor === session.actor) sessions.delete(id);
+    } else sessions.delete(oldKey);
+    session.csrf = nextCsrf;
+    session.used = clock();
+    sessions.set(nextKey, session);
+    return { csrf: nextCsrf, cookie: setCookie("dc24h_remote", nextKey, 600) };
+  };
   const active = (req: IncomingMessage, now: number): [string, Session] | null => {
     const id = cookie(req, "dc24h_remote");
     if (!/^[0-9a-f]{64}$/.test(id)) return null;
@@ -303,6 +331,11 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
     }
     if (!auditAvailable) {
       sessions.clear(); challenges.clear(); passkeyLogins.clear(); enrollments.clear();
+      reply(res, 503, { error: "unavailable" }, clearSession()); return;
+    }
+    if (options.rateLimits && !options.rateLimits.healthy()) {
+      sessions.clear(); challenges.clear(); passkeyLogins.clear(); enrollments.clear();
+      log("rate_limiter_unavailable");
       reply(res, 503, { error: "unavailable" }, clearSession()); return;
     }
     if (name === "challenge") {
@@ -444,6 +477,9 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
         if (!pending || pending.expires <= clock() || typeof csrf !== "string" || !sameSecret(pending.csrf, csrf)) {
           log("passkey_login_refused"); reply(res, 403, { error: "login_refused" }, clear); return;
         }
+        const predecessorActive = () => !pending.oldSession ||
+          (sessions.get(pending.oldKey) === pending.oldSession && pending.oldSession.pendingLogouts === 0 &&
+            !expired(pending.oldSession, clock()));
         try {
           const fields = object(await readBody(req, maxCeremonyBody));
           if (Object.keys(fields).length !== 1 || !fields.response || typeof fields.response !== "object") throw Error();
@@ -451,11 +487,10 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
             fields.response as Parameters<PasskeyCeremonies["finishLogin"]>[2], clock());
           // Verification may await an authenticator or crypto worker. A
           // challenge that expires during that wait cannot mint a session.
-          if (!verified || pending.expires <= clock() || (pending.oldSession &&
-              (sessions.get(pending.oldKey) !== pending.oldSession || pending.oldSession.pendingLogouts > 0))) throw Error();
+          if (!verified || pending.expires <= clock() || !predecessorActive()) throw Error();
           const key = randomBytes(32).toString("hex");
           if (await authorized(key, pending.session) !== "ok" ||
-              pending.expires <= clock() ||
+              pending.expires <= clock() || !predecessorActive() ||
               pending.session.passkeyEpoch !== p.store.epoch(pending.actor)) throw Error();
           pending.session.created = clock(); pending.session.used = pending.session.created;
           if (pending.oldSession) sessions.delete(pending.oldKey);
@@ -500,9 +535,17 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
       if (name === "passkey/enroll/options") {
         try {
           const fields = object(await readBody(req));
+          const sessionCurrent = () => sessions.get(key) === session && session.pendingLogouts === 0 &&
+            !expired(session, clock()) && clock() - session.created <= 60_000 &&
+            session.passkeyEpoch === p.store.epoch(session.actor);
+          if (!sessionCurrent()) throw Error();
           if (Object.keys(fields).length || enrollments.size >= 64 ||
               limited("passkey:enroll:" + session.actor, 5, now)) throw Error();
           const opts = await p.ceremonies.beginEnrollment(session.actor);
+          // Ceremony creation may wait on a device or disk. Revocation,
+          // logout and permission changes during that wait cancel the result.
+          if (!sessionCurrent() || enrollments.size >= 64 ||
+              await authorized(key, session, true) !== "ok" || !sessionCurrent()) throw Error();
           enrollments.set(key, { challenge: opts.challenge, expires: clock() + 60_000, session });
           reply(res, 200, opts);
         } catch { log("passkey_enroll_refused"); reply(res, 403, { error: "enrollment_refused" }); }
@@ -519,25 +562,31 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
           const result = await p.ceremonies.finishEnrollment(session.actor, pending.challenge,
             fields.response as Parameters<PasskeyCeremonies["finishEnrollment"]>[2], clock(),
             async () => sessions.get(key) === session && pending.expires > clock() &&
-              clock() - session.created <= 60_000 && !expired(session, clock()) &&
+              clock() - session.created <= 60_000 && !expired(session, clock()) && session.pendingLogouts === 0 &&
               await authorized(key, session, true) === "ok");
           if (!result || pending.expires <= clock() || clock() - session.created > 60_000 ||
-              sessions.get(key) !== session || expired(session, clock())) throw Error();
+              sessions.get(key) !== session || session.pendingLogouts > 0 || expired(session, clock())) throw Error();
           if (!log("passkey_enrolled") && options.strictAudit) throw Error("audit_unavailable");
-          reply(res, 200, { schema: 1, enrolled: true });
+          const rotated = rotateSession(key, session, true);
+          reply(res, 200, { schema: 1, enrolled: true, csrf: rotated.csrf }, [rotated.cookie]);
         } catch { log("passkey_enroll_refused"); reply(res, 403, { error: "enrollment_refused" }); }
         return;
       }
       if (name === "passkey/device/rename" || name === "passkey/device/revoke") {
         try {
           const fields = object(await readBody(req));
+          // The body may have been streamed while logout, role revocation or
+          // another credential mutation invalidated the caller's session.
+          if (sessions.get(key) !== session || session.pendingLogouts > 0 || expired(session, clock()) ||
+              (options.passkeys && session.passkeyEpoch !== p.store.epoch(session.actor))) throw Error();
           if (limited("passkey:device:" + session.actor, 10, now)) throw Error();
           if (typeof fields.id !== "string" ||
               Object.keys(fields).length !== (name.endsWith("rename") ? 2 : 1)) throw Error();
           if (name.endsWith("rename")) {
             if (typeof fields.name !== "string" || !p.store.rename(session.actor, fields.id, fields.name)) throw Error();
             if (!log("passkey_device_renamed") && options.strictAudit) throw Error();
-            reply(res, 200, { schema: 1, renamed: true });
+            const rotated = rotateSession(key, session);
+            reply(res, 200, { schema: 1, renamed: true, csrf: rotated.csrf }, [rotated.cookie]);
           } else {
             if (!p.store.get(session.actor, fields.id) || (options.strictAudit && !log("passkey_revoke_intent"))) throw Error();
             if (!p.store.revoke(session.actor, fields.id, clock())) throw Error();

@@ -2,7 +2,9 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: beta-0.4.8 (Stage II: beta-0.4.5–beta-0.4.8; local-only password + passkey WebAdmin with optional private SSH pilot, not a production release).**
+**Current development version: beta-0.4.12 (Stage III: beta-0.4.9–beta-0.4.12; hardened private sessions, persistent anti-abuse, isolated HTTPS and audit monitoring; not a production release).**
+
+- **beta-0.4.9–beta-0.4.12 Stage III — sessions and infrastructure**: rotate the HttpOnly/Secure/SameSite session cookie and CSRF after passkey enrollment or device rename; refuse concurrent revoked-session mutations. Use private HMAC-keyed, fsynced login/rate budgets across gateway restarts; fail closed on storage loss. Strengthen the localhost-only Apache TLS/SNI/Origin edge and its negative integration tests. Re-verify the durable audit chain periodically and send nonidentifying, cooldown-limited security warnings to journald. No new MariaDB schema, ADC/ADCS change, public WebAdmin, hub-control route or automatic deployment. [Stage III technical/operator guide](doc/us/BETA_0.4_STAGE_III.md) | [PL](doc/pl/BETA_0.4_STAGE_III.md).
 
 - **beta-0.4.5–beta-0.4.8 Stage II — passkeys and devices**: add fixed-origin WebAuthn credential verification, a private fsynced credential catalog, password + passkey second-factor login, one-time enrollment challenges, device listing/renaming/revocation, actor-wide session invalidation and controlled offline recovery. C++ remains the password/role authority; this is **not passwordless**. No new MariaDB migration, public listener, remote hub writes or automatic deployment. [Stage II technical/operator guide](doc/us/BETA_0.4_STAGE_II.md) | [PL](doc/pl/BETA_0.4_STAGE_II.md).
 

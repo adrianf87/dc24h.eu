@@ -182,6 +182,9 @@ class ApacheRemoteGateway(unittest.TestCase):
             "X-Forwarded-Port": "8443",
             "X-Forwarded-Prefix": "/admin-api",
             "X-Forwarded-User": "owner",
+            "X-Forwarded-Client-Cert": "fake-cert",
+            "X-Forwarded-Uri": "/admin-api/v1/status",
+            "X-Forwarded-Method": "POST",
             "Forwarded": "for=8.8.8.8",
             "X-Original-URL": "/api/v1/status",
             "X-Rewrite-URL": "/api/v1/status",
@@ -191,7 +194,8 @@ class ApacheRemoteGateway(unittest.TestCase):
         headers = {key.lower(): value for key, value in self.backend.seen[previous][2].items()}
         for key in ("authorization", "proxy-authorization", "x-dc24h-admin-grant", "x-dc24h-session",
                     "x-dc24h-csrf", "x-forwarded-for", "x-forwarded-port", "x-forwarded-prefix",
-                    "x-forwarded-user", "forwarded", "x-original-url", "x-rewrite-url"):
+                    "x-forwarded-user", "x-forwarded-client-cert", "x-forwarded-uri", "x-forwarded-method",
+                    "forwarded", "x-original-url", "x-rewrite-url"):
             self.assertNotIn(key, headers)
         self.assertEqual(headers.get("cookie"), "dc24h_remote=fixture")
 
@@ -227,6 +231,13 @@ class ApacheRemoteGateway(unittest.TestCase):
             ("/remote/v1/session", "GET", {"Sec-Fetch-Site": "same-site"}, None),
             ("/remote/v1/login", "POST", {"Origin": self.expected_origin,
                                               "Sec-Fetch-Site": "cross-site"}, b"{}"),
+            ("/remote/v1/passkey/enroll/options", "POST", {}, b"{}"),
+            ("/remote/v1/passkey/enroll/options", "POST", {"Origin": "https://evil.example"}, b"{}"),
+            ("/remote/v1/passkey/device/revoke", "POST", {"Origin": "null"}, b"{}"),
+            ("/remote/v1/passkey/login/finish", "GET", {}, None),
+            ("/remote/v1/passkey/login/options?challenge=1", "POST", {"Origin": self.expected_origin}, b"{}"),
+            ("/remote/v1/passkey/device/rename", "POST",
+             {"Origin": self.expected_origin, "Sec-Fetch-Site": "cross-site"}, b"{}"),
         ]
         for path, method, headers, body in cases:
             with self.subTest(path=path, method=method, headers=headers):
@@ -252,6 +263,27 @@ class ApacheRemoteGateway(unittest.TestCase):
         self.assertNotEqual(status, 200)
         self.assertNotIn(MARKER, body)
         self.assertEqual(len(self.backend.seen), before)
+        status, body, _ = self.fetch("/remote/v1/passkey/enroll/finish", "POST",
+                                     {"Origin": self.expected_origin, "Content-Type": "application/json"},
+                                     b"x" * 32769)
+        self.assertNotEqual(status, 200)
+        self.assertNotIn(MARKER, body)
+        self.assertEqual(len(self.backend.seen), before)
+
+    def test_certificate_hostname_and_trust_are_verified_by_client(self):
+        trusted = ssl.create_default_context(cafile=str(self.cert))
+        trusted.minimum_version = ssl.TLSVersion.TLSv1_2
+        # The fixture certificate covers localhost, not unrelated domains.
+        with socket.create_connection(("127.0.0.1", self.port), timeout=4) as raw:
+            with self.assertRaises(ssl.SSLCertVerificationError):
+                with trusted.wrap_socket(raw, server_hostname="evil.example"):
+                    pass
+        untrusted = ssl.create_default_context()
+        untrusted.minimum_version = ssl.TLSVersion.TLSv1_2
+        with socket.create_connection(("127.0.0.1", self.port), timeout=4) as raw:
+            with self.assertRaises(ssl.SSLCertVerificationError):
+                with untrusted.wrap_socket(raw, server_hostname="localhost"):
+                    pass
 
     def test_chunked_post_denied_before_proxy(self):
         before = len(self.backend.seen)

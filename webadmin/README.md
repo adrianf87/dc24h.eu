@@ -1,6 +1,6 @@
 # dc24h.eu WebAdmin
 
-The current development UI is `beta-0.4.8` (dc24h.eu High Starter). Stage II adds WebAuthn **password + passkey** login (not passwordless), enrollment, a private credential catalog, device management, and offline recovery. See the [EN/US Stage II guide](../doc/us/BETA_0.4_STAGE_II.md) ([PL](../doc/pl/BETA_0.4_STAGE_II.md)). Stage I added offline TOTP rotation/recovery and a durable audit chain ([EN/US](../doc/us/BETA_0.4_STAGE_I.md), [PL](../doc/pl/BETA_0.4_STAGE_I.md)). The local Owner-only service controls remain in [Hub WebAdmin](../doc/us/HUB_WEBADMIN.md). Neither the public Apache example nor the remote gateway forwards service-control commands. Public exposure remains disabled.
+The current development UI is `beta-0.4.12` (dc24h.eu High Starter). Stage III strengthens protected browser-session rotation, durable restart-safe rate limits, loopback Apache2 HTTPS and security-audit alerts ([EN/US](../doc/us/BETA_0.4_STAGE_III.md), [PL](../doc/pl/BETA_0.4_STAGE_III.md)). Stage II added WebAuthn **password + passkey** login (not passwordless), enrollment, a private credential catalog, device management and offline recovery ([EN/US](../doc/us/BETA_0.4_STAGE_II.md), [PL](../doc/pl/BETA_0.4_STAGE_II.md)). Stage I added offline TOTP rotation/recovery and durable audit ([EN/US](../doc/us/BETA_0.4_STAGE_I.md), [PL](../doc/pl/BETA_0.4_STAGE_I.md)). The local Owner-only service controls remain in [Hub WebAdmin](../doc/us/HUB_WEBADMIN.md). Neither the public Apache example nor the remote gateway forwards service-control commands. Public exposure remains disabled.
 
 alpha-0.8.1: see [Permissions](../doc/us/PERMISSIONS.md) for the seven-role catalog, pending-action flags, safe VIP delegation and stopped-hub role changes.
 
@@ -32,6 +32,7 @@ an optional independent loopback gateway with server-side sessions:
 set private DC24H_API_SOCKET, DC24H_API_TOKEN_FILE,
 DC24H_REMOTE_MFA_FILE, DC24H_REMOTE_MFA_REPLAY_FILE,
 DC24H_REMOTE_AUDIT_FILE, DC24H_REMOTE_PASSKEY_FILE,
+DC24H_REMOTE_RATE_LIMIT_FILE,
 DC24H_REMOTE_RP_ID=localhost and DC24H_REMOTE_ORIGIN=https://localhost:8443,
 then use npm run remote:local.
 Only the separate localhost HTTPS Apache example exposes its fixed /remote/v1

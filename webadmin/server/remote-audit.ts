@@ -8,6 +8,7 @@ export const remoteAuditEvents = [
   "passkey_enrolled", "passkey_enroll_refused", "passkey_login_ok", "passkey_login_refused",
   "passkey_device_renamed", "passkey_revoke_intent", "passkey_revoked",
   "passkey_enroll_intent", "passkey_recovery_intent", "passkey_recovered",
+  "rate_limiter_unavailable",
 ] as const satisfies readonly RemoteEvent[];
 
 const allowed: ReadonlySet<string> = new Set(remoteAuditEvents);

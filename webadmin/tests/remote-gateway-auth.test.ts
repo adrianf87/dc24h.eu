@@ -5,6 +5,11 @@ import { remoteGateway } from "../server/remote-gateway.ts";
 import { PERMISSION_KEYS } from "../src/lib/roles.ts";
 import { ACCESS_ROUTES } from "../src/lib/access.ts";
 import { snapshot } from "./fixtures.ts";
+import { openRemoteRateLimitStore } from "../server/remote-rate-limit-store.ts";
+import type { RemoteRateLimitStore } from "../server/remote-rate-limit-store.ts";
+import { mkdtempSync, chmodSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const origin = "https://localhost:8443";
 const token = "a".repeat(64);
@@ -14,7 +19,7 @@ const apiCsrf = "d".repeat(64);
 type Failure = Error & { status?: number };
 const failure = (status: number): Failure => Object.assign(new Error("private_failure"), { status });
 
-function harness(mfaConfigured = true, strictAudit = false) {
+function harness(mfaConfigured = true, strictAudit = false, rateLimits?: RemoteRateLimitStore) {
   let time = 100_000;
   const calls: string[] = [];
   const events: string[] = [];
@@ -28,6 +33,7 @@ function harness(mfaConfigured = true, strictAudit = false) {
   };
   const gateway = remoteGateway({ socket: "/private/test-only.sock", token }, {
     origin, now: () => time,
+    rateLimits,
     strictAudit, auditHealthy: () => state.auditHealthy,
     audit: (event) => {
       events.push(event);
@@ -112,6 +118,27 @@ function harness(mfaConfigured = true, strictAudit = false) {
   }
   return { state, calls, events, call, login, advance: (milliseconds: number) => { time += milliseconds; } };
 }
+
+test("password and passkey login budgets cannot reset by restarting the gateway", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "dc24h-gateway-limit-")); chmodSync(dir, 0o700);
+  try {
+    const path = join(dir, "limits.json");
+    const first = harness(true, true, openRemoteRateLimitStore(path, token));
+    for (let n = 0; n < 4; n++) assert.equal((await first.login("7", "bad")).status, 403);
+    const afterRestart = harness(true, true, openRemoteRateLimitStore(path, token));
+    assert.equal((await afterRestart.login()).status, 429, "new process must honor prior actor budget");
+    assert.equal(afterRestart.calls.includes("POST /api/v1/admin/access"), false,
+      "blocked attempts must never reach the C++ password verifier");
+    afterRestart.advance(60_001);
+    const accepted = await afterRestart.login();
+    assert.equal(accepted.status, 200, "bounded lockout eventually recovers");
+    const cookie = accepted.cookies[0]!.split(";")[0]!;
+    chmodSync(path, 0o644);
+    assert.equal((await afterRestart.call("/remote/v1/session", "GET", "", { cookie })).status, 503,
+      "limiter loss must invalidate existing authenticated sessions");
+    assert.ok(afterRestart.events.includes("rate_limiter_unavailable"));
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
 
 test("login accepts current administrator and Owner, but never substitutes an actor", async () => {
   for (const role of ["administrator", "owner"]) {
@@ -234,7 +261,7 @@ test("remote status strips private upstream fields and refuses malformed or unav
   const login = await h.login();
   const browserCookie = login.cookies[0]!.split(";")[0]!;
   const privateValue = "SECRET_IDENTITY_FROM_PRIVATE_API";
-  const clean = { ...snapshot, server: { ...snapshot.server, version: "beta-0.4.8" } };
+  const clean = { ...snapshot, server: { ...snapshot.server, version: "beta-0.4.12" } };
   h.state.statusResponse = async () => ({
     ...clean, secret: privateValue, audit_rows: [{ account: privateValue }],
     server: { ...clean.server, private_socket: privateValue },
@@ -249,7 +276,7 @@ test("remote status strips private upstream fields and refuses malformed or unav
   assert.equal(safe.status, 200);
   assert.deepEqual(JSON.parse(safe.body), {
     schema: 1, mode: "read-only",
-    server: { version: "beta-0.4.8", running: true, uptime_seconds: 3661 },
+    server: { version: "beta-0.4.12", running: true, uptime_seconds: 3661 },
     network: { active_connections: 7, accepted_connections: 48 },
     users: { online: 4, peak_online: 6 },
     chat: { received: 12, rejected: 2 },

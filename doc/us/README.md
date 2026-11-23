@@ -1,6 +1,8 @@
 # dc24h.eu High Starter documentation
 
-beta-0.4.8: Stage II adds local password + passkey WebAuthn authentication, private credential storage, device management and offline recovery. This is **not passwordless** and does not enable Internet-facing WebAdmin, remote administrative hub writes, schema changes or production deployment. Hub, API, controller and WebAdmin report beta-0.4.8. The project is dc24h.eu High Starter; ADC/ADCS identity `dc24h.eu` and public proxy remain unchanged. Default development language: EN/US UTF-8.
+beta-0.4.12: Stage III adds privileged session rotation, durable private anti-abuse budgets, stricter isolated Apache2 HTTPS checks and privacy-safe monitoring of audit-chain failures. Stage II password + passkey login remains **not passwordless**. No Internet-facing WebAdmin, remote hub writes, SQL migration or automatic production deployment. Hub, API, controller and WebAdmin report beta-0.4.12. ADC/ADCS identity `dc24h.eu` and public proxy remain unchanged. Default development language: EN/US UTF-8.
+
+- [Beta-0.4.9–beta-0.4.12 Stage III](BETA_0.4_STAGE_III.md) · [PL](../pl/BETA_0.4_STAGE_III.md)
 
 - [Beta-0.4.5–beta-0.4.8 Stage II](BETA_0.4_STAGE_II.md) · [PL](../pl/BETA_0.4_STAGE_II.md)
 

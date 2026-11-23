@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Remote beta-0.4.8 gateway invariants, including HTTPS and systemd sandbox."""
+"""Remote beta-0.4.12 gateway invariants, including HTTPS and systemd sandbox."""
 from pathlib import Path
 import unittest
 
@@ -16,6 +16,7 @@ class RemoteConfiguration(unittest.TestCase):
         self.assertIn("<VirtualHost 127.0.0.1:8443>", config)
         self.assertIn("Require local", config)
         self.assertIn("SSLEngine On", config)
+        self.assertIn("SSLStrictSNIVHostCheck On", config)
         self.assertIn("SSLProtocol -all +TLSv1.2 +TLSv1.3", config)
         self.assertIn('SSLCipherSuite "ECDHE+AESGCM:ECDHE+CHACHA20:', config)
         self.assertIn("SSLHonorCipherOrder On", config)
@@ -29,6 +30,7 @@ class RemoteConfiguration(unittest.TestCase):
         self.assertIn("RewriteCond %{REQUEST_METHOD} !^GET$", config)
         self.assertIn("RewriteCond %{REQUEST_METHOD} !^POST$", config)
         self.assertIn("RewriteCond %{HTTP:Origin} !^https://localhost:8443$", config)
+        self.assertIn("RewriteCond %{REQUEST_URI} ^/remote/v1/passkey/(?:login/(?:options|finish)|enroll/(?:options|finish)|device/(?:rename|revoke))$", config)
         self.assertIn("RewriteCond %{HTTP:Sec-Fetch-Site} !^(?:same-origin|none)$", config)
         self.assertIn("LimitRequestBody 2048", config)
         self.assertIn("RewriteCond %{HTTP:Content-Length} -gt2048", config)
@@ -109,6 +111,10 @@ class RemoteConfiguration(unittest.TestCase):
         self.assertIn("mfaVerify: mfa.verify", executable)
         self.assertIn("DC24H_REMOTE_PASSKEY_FILE", executable)
         self.assertIn("DC24H_REMOTE_RP_ID", executable)
+        self.assertIn("DC24H_REMOTE_RATE_LIMIT_FILE", executable)
+        self.assertIn("openRemoteRateLimitStore", executable)
+        self.assertIn("auditStore.verify()", executable)
+        self.assertIn("createRemoteSecurityMonitor", executable)
         verifier = self.text("webadmin/server/remote-mfa.ts")
         for expected in ("timingSafeEqual", "O_NOFOLLOW", "fsyncSync", "lastUsed", "0o600", "ledgerLimit"):
             self.assertIn(expected, verifier)
@@ -124,8 +130,8 @@ class RemoteConfiguration(unittest.TestCase):
         self.assertNotIn("sessionStorage", ui)
         self.assertNotIn("Start/Stop/Restart", ui)
         self.assertIn('remote.html', self.text("webadmin/vite.config.ts"))
-        self.assertIn('set(DC24H_VERSION "beta-0.4.8")', self.text("CMakeLists.txt"))
-        self.assertIn('WEBADMIN_VERSION = "beta-0.4.8"', self.text("webadmin/src/lib/status.ts"))
+        self.assertIn('set(DC24H_VERSION "beta-0.4.12")', self.text("CMakeLists.txt"))
+        self.assertIn('WEBADMIN_VERSION = "beta-0.4.12"', self.text("webadmin/src/lib/status.ts"))
         self.assertIn("beta-0.2-code", self.text(".github/workflows/build.yml"))
         self.assertIn("beta-0.2.2-fix", self.text(".github/workflows/build.yml"))
         self.assertIn("beta-0.2.2-source", self.text(".github/workflows/build.yml"))

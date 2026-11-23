@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 test("all fixed gateway audit events serialize as bounded, nonidentifying JSON lines", () => {
-  assert.equal(remoteAuditEvents.length, 18);
+  assert.equal(remoteAuditEvents.length, 19);
   for (const event of remoteAuditEvents) {
     const line = remoteAuditRecord(event, 1_700_000_000_000);
     assert.ok(line.endsWith("\n") && line.length < 150);
@@ -76,5 +76,24 @@ test("audit files refuse unsafe permissions, incomplete entries and path replace
     rmSync(path);
     writeFileSync(path, '{"schema":1}', { mode: 0o600 });
     assert.throws(() => openRemoteAuditStore(path), /Truncated audit record/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("periodic audit verification detects same-size in-place rewrites while idle", () => {
+  const dir = mkdtempSync(join(tmpdir(), "dc24h-audit-verify-"));
+  const path = join(dir, "audit.jsonl");
+  try {
+    const audit = openRemoteAuditStore(path);
+    audit.append("login_refused", 1_700_000_000_000);
+    assert.equal(audit.verify(), true);
+    const original = readFileSync(path, "utf8");
+    // Preserve exact file length to defeat inode/size-only checks.
+    const equalLength = original.replace('"login_refused"', '"route_refused"');
+    assert.equal(equalLength.length, original.length);
+    writeFileSync(path, equalLength, { flag: "r+" });
+    assert.equal(audit.verify(), false);
+    assert.deepEqual(audit.health(), { healthy: false, dropped: 1, sequence: 1 });
+    assert.throws(() => audit.append("login_ok", 1_700_000_000_001), /unavailable/);
+    audit.close();
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

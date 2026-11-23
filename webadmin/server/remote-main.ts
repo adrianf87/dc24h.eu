@@ -6,6 +6,8 @@ import { remoteAuditRecord } from "./remote-audit.ts";
 import { openRemoteAuditStore } from "./remote-audit-store.ts";
 import { openPasskeyStore } from "./remote-passkeys.ts";
 import { passkeyCeremonies, relyingParty } from "./remote-webauthn.ts";
+import { openRemoteRateLimitStore } from "./remote-rate-limit-store.ts";
+import { createRemoteSecurityMonitor } from "./remote-security-monitor.ts";
 
 // Explicitly local-only. A public listener or MFA-free deployment is not
 // supported by this development release.
@@ -24,27 +26,46 @@ if (!mfaFile || !replayFile) throw new Error("Private TOTP enrollment and replay
 const auditFile = process.env.DC24H_REMOTE_AUDIT_FILE;
 if (!auditFile) throw new Error("Private durable gateway audit file required");
 const passkeyFile = process.env.DC24H_REMOTE_PASSKEY_FILE;
+const rateLimitFile = process.env.DC24H_REMOTE_RATE_LIMIT_FILE;
 const rpID = process.env.DC24H_REMOTE_RP_ID;
 if (!passkeyFile || !rpID) throw new Error("Private passkey file and fixed RP ID required");
+if (!rateLimitFile) throw new Error("Private persistent rate-limit file required");
 relyingParty(origin, rpID);
 // Both files are checked for ownership, mode and symlinks before listening.
 const mfa = loadTotpVerifier(mfaFile, replayFile);
 const auditStore = openRemoteAuditStore(auditFile);
 const passkeyStore = openPasskeyStore(passkeyFile, rpID);
+const rateLimits = openRemoteRateLimitStore(rateLimitFile, config.token);
+const monitor = createRemoteSecurityMonitor(line => { process.stderr.write(line); });
+let nextAuditVerification = 0;
 const app = createServer(remoteGateway(config, {
   origin,
   passkeys: { store: passkeyStore, ceremonies: passkeyCeremonies(passkeyStore, origin, rpID) },
   mfaVerify: mfa.verify,
+  rateLimits,
   strictAudit: true,
-  auditHealthy: () => auditStore.health().healthy,
+  auditHealthy: () => {
+    const now = Date.now();
+    if (!auditStore.health().healthy) { monitor.signal("audit_loss", now); return false; }
+    // Rehash the complete (8 MiB maximum) chain periodically, including
+    // periods without authentication writes. A detected gap fails closed.
+    if (now >= nextAuditVerification) {
+      nextAuditVerification = now + 15_000;
+      if (!auditStore.verify()) { monitor.signal("audit_corruption", now); return false; }
+    }
+    return true;
+  },
   // Durable fsync-checked file first. journald mirrors fixed, privacy-limited
   // events only; it never receives credentials, identifiers or raw requests.
   audit: (event) => {
-    try { auditStore.append(event, Date.now()); }
+    const now = Date.now();
+    try { auditStore.append(event, now); }
     catch {
+      monitor.signal("audit_loss", now);
       process.stderr.write("[remote-gateway] AUDIT_LOSS: sink unavailable; authenticated access refused\n");
       throw new Error("Gateway audit unavailable");
     }
+    monitor.observe(event, now);
     try { process.stdout.write(remoteAuditRecord(event, Date.now())); }
     catch { /* Journald mirror is secondary to the durable audit store. */ }
   },
