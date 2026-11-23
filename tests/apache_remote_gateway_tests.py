@@ -272,12 +272,14 @@ class ApacheRemoteGateway(unittest.TestCase):
 
     def test_certificate_hostname_and_trust_are_verified_by_client(self):
         trusted = ssl.create_default_context(cafile=str(self.cert))
+        trusted.minimum_version = ssl.TLSVersion.TLSv1_2
         # The fixture certificate covers localhost, not unrelated domains.
         with socket.create_connection(("127.0.0.1", self.port), timeout=4) as raw:
             with self.assertRaises(ssl.SSLCertVerificationError):
                 with trusted.wrap_socket(raw, server_hostname="evil.example"):
                     pass
         untrusted = ssl.create_default_context()
+        untrusted.minimum_version = ssl.TLSVersion.TLSv1_2
         with socket.create_connection(("127.0.0.1", self.port), timeout=4) as raw:
             with self.assertRaises(ssl.SSLCertVerificationError):
                 with untrusted.wrap_socket(raw, server_hostname="localhost"):
