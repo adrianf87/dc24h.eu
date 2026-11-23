@@ -318,7 +318,7 @@ def main():
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1
-    print("Beta 0.3 safety baseline and beta 0.5.4 runtime metadata verified")
+    print("Beta 0.3 safety baseline and beta 0.5.8 runtime metadata verified")
     return 0
 
 

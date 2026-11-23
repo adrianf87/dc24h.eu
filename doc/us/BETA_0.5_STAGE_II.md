@@ -1,6 +1,6 @@
 # Beta 0.5.5–0.5.8 — Stage II security architecture and validation
 
-Work unit 2 of [Issue #234](https://github.com/adrianf87/dc24h.eu-high-starter/issues/234). Development remains on the single `beta-0.5.x-stage-full` branch and draft PR #235. No public deployment, remote hub-control write route, database migration, self-hosted runner, Debian test or production data is authorized by this work unit.
+Work unit 2 of [Issue #234](https://github.com/adrianf87/dc24h.eu-high-starter/issues/234). Development remains on the single `beta-0.5.x-stage-full` branch and draft PR #235. No public deployment, remote hub-control write route, database migration, non-GitHub runner, Debian test or production data is authorized by this work unit.
 
 ## 0.5.5 — Trust boundaries and threat-model review
 
