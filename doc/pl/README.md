@@ -1,6 +1,8 @@
 # Dokumentacja dc24h.eu High Starter
 
-beta-0.4.16: Etap IV dodaje testy negatywne, odizolowane narzędzia pomiarowe i odtwarzania oraz ręczną kontrolę kandydata do wydania. **Na Debianie 13 nie zmierzono wydajności ani RPO/RTO; niezależny przegląd jest oczekiwany.** Logowanie **hasło + passkey** nadal nie jest bezhasłowe. Hub, API, kontroler i WebAdmin raportują beta-0.4.16. Identyfikator protokołu `dc24h.eu`, schemat v11 i publiczne proxy Apache pozostają bez zmian. Bez publicznego WebAdmin, zdalnego zapisu i automatycznego wdrożenia.
+beta-0.5.4: Etap I dodaje zanonimizowane wyniki CI, kontenerowe testy Debian 12/13, progi dowodów wydajności i parowanie kopii MariaDB ze stanem gatewaya. **Wydajność Xeona, odbiór systemd i realne odtworzenie MariaDB/RPO/RTO pozostają niezmierzone.** Logowanie **hasło + passkey** nadal nie jest bezhasłowe. Hub, API, kontroler i WebAdmin raportują beta-0.5.4. Identyfikator protokołu `dc24h.eu`, schemat v11 i publiczne proxy Apache pozostają bez zmian. Bez publicznego WebAdmin, zdalnego zapisu i automatycznego wdrożenia.
+
+- [Etap I beta-0.5.1–beta-0.5.4 — dowody i procedura operatora](BETA_0.5_STAGE_I.md) · [EN/US](../us/BETA_0.5_STAGE_I.md)
 
 - [Etap IV beta-0.4.13–beta-0.4.16](BETA_0.4_STAGE_IV.md) · [EN/US](../us/BETA_0.4_STAGE_IV.md) · [wydajność](BETA_0.4_STAGE_IV_PERFORMANCE.md) · [odtwarzanie](BETA_0.4_STAGE_IV_RECOVERY.md)
 

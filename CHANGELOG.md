@@ -1,5 +1,12 @@
 # Changelog
 
+## beta-0.5.1–beta-0.5.4 Stage I — 2026-11-23 (single branch beta-0.5.x-stage-full; validation pending)
+
+- **0.5.1 — CI & Test Stability:** Bound hosted build, unit and browser concurrency. Add safe per-job JUnit status summaries, immutable short-retention CI artifacts, explicit missing-report status and sanitized output contract tests. Preserve the required C++/WebAdmin/sanitizer gate.
+- **0.5.2 — Debian & Ubuntu Compatibility:** Add root-or-sudo dependency provision with apt timeouts and Debian 12/13 hosted-container C++20/MariaDB/Apache/ADC/ADCS/Node 22/WebAdmin smoke tests. Require the actual integration fixtures and make Debian checks part of required CI; this is not an actual systemd-host validation.
+- **0.5.3 — Real Server Performance Preparation:** Require complete, running API responses and provide an offline comparator for four target-host probe reports, preapproved p95/p99/error/throughput thresholds and actual CPU/RSS/MariaDB observations. Synthetic test fixtures make no capacity claim.
+- **0.5.4 — MariaDB Disaster Recovery Preparation:** Bind a stopped-pilot MariaDB SQL dump with all five private gateway stores using verified SHA-256 records and fail-closed file checks; test tampering, missing files, permissions and non-overwrite. Actual MariaDB import/recovery, service restart, RPO/RTO, Intel Xeon D-1521 acceptance and independent sign-off remain **NOT MEASURED/PENDING**. No schema, public gateway, remote write or production deployment. [EN/US](doc/us/BETA_0.5_STAGE_I.md) | [PL](doc/pl/BETA_0.5_STAGE_I.md).
+
 ## beta-0.4.1–beta-0.4.4 Stage I — 2026-11-23 (branch beta-0.4.1-0.4.4-stage1)
 
 - **0.4.1 CI & Stability:** Carry forward the successful 0.3/Alpha-0.1-fix CI baseline, update runtime/WebAdmin fixtures to `beta-0.4.4`, and extend cross-platform regression checks for rotation, persistent replay, audit integrity and denied login when audit is unavailable. PR to `main` and branch pushes run the same GitHub-hosted matrix; no automatic release.

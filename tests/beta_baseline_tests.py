@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lock prior beta-0.3 safety limits and current beta-0.4.16 metadata."""
+"""Lock prior beta-0.3 safety limits and current beta-0.5.4 metadata."""
 
 from pathlib import Path
 import sys
@@ -57,7 +57,7 @@ def main():
     errors = []
     cmake = check(ROOT / "CMakeLists.txt", (
         "project(dc24h VERSION 0.1.0 LANGUAGES CXX)",
-        'set(DC24H_VERSION "beta-0.4.16")',
+        'set(DC24H_VERSION "beta-0.5.4")',
         'add_executable(dc24h-service-controller',
         'service.controller.process',
         "add_test(NAME beta.baseline ",
@@ -84,16 +84,16 @@ def main():
             "build.yml: both jobs must use the public image matrix", errors)
     require('test "$(nproc)" -eq 4' not in workflow,
             "build.yml: fixed runner CPU count is not portable", errors)
-    require(workflow.count("github.repository == 'adrianf87/dc24h.eu-high-starter'") == 3,
-            "build.yml: High Starter repository must run C++, WebAdmin and sanitizers", errors)
-    require("needs: [cpp, webadmin, sanitizers]" in workflow,
-            "build.yml: sanitizer failures must block the required CI result", errors)
+    require(workflow.count("github.repository == 'adrianf87/dc24h.eu-high-starter'") == 4,
+            "build.yml: High Starter repository must run C++, WebAdmin, sanitizers and Debian", errors)
+    require("needs: [cpp, webadmin, sanitizers, debian_compat]" in workflow,
+            "build.yml: sanitizer/Debian failures must block the required CI result", errors)
     require("server-747585786" not in workflow, "build.yml: custom runner is selected", errors)
     require("self-hosted" not in workflow, "build.yml: self-hosted runner is selected", errors)
     require("ubuntu-latest" not in workflow, "build.yml: ubuntu-latest is selected", errors)
     check(ROOT / "README.md", (
         "# dc24h.eu High Starter",
-        "Current development version: beta-0.4.16",
+        "Current development version: beta-0.5.4",
         "beta-0.3.11–beta-0.3.12 Stage IV",
         "beta-0.3.8–beta-0.3.10 Stage III",
         "beta-0.3.4–beta-0.3.7 Stage II",
@@ -108,7 +108,7 @@ def main():
         "beta-0.1.8 Development baseline",
         "<summary>Alpha 0.9.x (17 releases)</summary>",
     ), errors)
-    check(ROOT / "doc/README.md", ("Current development version: beta-0.4.16",), errors)
+    check(ROOT / "doc/README.md", ("Current development version: beta-0.5.4",), errors)
     check(ROOT / "doc/us/BETA.md", (
         "# Combined hardening release — beta-0.2.7 to beta-0.2.12",
         "## beta-0.2.9 — private API response hardening",
@@ -266,7 +266,7 @@ def main():
         "Owner-only fixed hub status/action",
     ), errors)
     check(ROOT / "webadmin/src/lib/status.ts", (
-        'export const WEBADMIN_VERSION = "beta-0.4.16";',
+        'export const WEBADMIN_VERSION = "beta-0.5.4";',
         '!/^(?:alpha-\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|beta-\\d{1,3}\\.\\d{1,3}(?:\\.\\d{1,3})?)$/.test(server.version)',
     ), errors)
     check(ROOT / "src/security/roles.cpp", (

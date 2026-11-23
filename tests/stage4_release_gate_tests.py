@@ -1,11 +1,11 @@
-"""Offline, non-deploying beta-0.4.16 release-candidate invariants."""
+"""Offline, non-deploying beta-0.5.4 release-candidate invariants."""
 
 from pathlib import Path
 import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "beta-0.4.16"
+VERSION = "beta-0.5.4"
 BRANCH = "beta-0.4.13-0.4.16-stage4"
 
 
@@ -39,7 +39,7 @@ class StageFourReleaseGate(unittest.TestCase):
         workflow = source(".github/workflows/build.yml")
         for required in (
             BRANCH, "ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04",
-            "sanitizer: [address, undefined]", "needs: [cpp, webadmin, sanitizers]",
+            "sanitizer: [address, undefined]", "needs: [cpp, webadmin, sanitizers, debian_compat]",
         ):
             self.assertIn(required, workflow)
 

@@ -27,7 +27,7 @@ else()
 endif()
 
 # The VERSION tuple above is the package number; operators see the beta version.
-set(DC24H_VERSION "beta-0.4.16")
+set(DC24H_VERSION "beta-0.5.4")
 configure_file(cmake/version.hpp.in generated/dc24h/version.hpp @ONLY)
 find_package(Threads REQUIRED)
 find_package(OpenSSL 3 REQUIRED COMPONENTS SSL Crypto)
@@ -318,6 +318,18 @@ if(DC24H_REQUIRE_INTEGRATION_TESTS AND NOT BUILD_TESTING)
 endif()
 if(BUILD_TESTING)
     find_package(Python3 3.8 REQUIRED COMPONENTS Interpreter)
+    add_test(NAME ci.junit.summary COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/ci_junit_summary_tests.py")
+    set_tests_properties(ci.junit.summary PROPERTIES TIMEOUT 15)
+    add_test(NAME compatibility.fixture.gate COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/compatibility_fixture_gate_tests.py")
+    set_tests_properties(compatibility.fixture.gate PROPERTIES TIMEOUT 15)
+    add_test(NAME beta.05.stage1.perf.gate COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/stage1_perf_gate_tests.py")
+    set_tests_properties(beta.05.stage1.perf.gate PROPERTIES TIMEOUT 15)
+    add_test(NAME beta.05.stage1.recovery.pair COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/stage1_recovery_bundle_tests.py")
+    set_tests_properties(beta.05.stage1.recovery.pair PROPERTIES TIMEOUT 15)
     add_test(NAME integration.ncdc_ports COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_ports_tests.py")
     set_tests_properties(integration.ncdc_ports PROPERTIES TIMEOUT 15)

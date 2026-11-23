@@ -1,4 +1,4 @@
-"""Non-deploying beta-0.4.16 guardrails, retaining beta-0.3 release history.
+"""Non-deploying beta-0.5.4 guardrails, retaining beta-0.3 release history.
 
 This is a deterministic source review gate, NOT a replacement for hosted CI,
 real HTTPS/service integration, an operational penetration test or sign-off.
@@ -9,7 +9,7 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "beta-0.4.16"
+VERSION = "beta-0.5.4"
 
 
 def source(path):
@@ -29,7 +29,7 @@ class BetaReleaseGate(unittest.TestCase):
         workflow = source(".github/workflows/build.yml")
         for check in ("ctest --test-dir", "tests/*.test.ts", "npm run test:e2e",
                       "npm run test:integration", "npm audit --omit=dev --audit-level=high",
-                      "sanitizer: [address, undefined]", "needs: [cpp, webadmin, sanitizers]"):
+                      "sanitizer: [address, undefined]", "needs: [cpp, webadmin, sanitizers, debian_compat]"):
             self.assertIn(check, workflow)
 
     def test_local_only_fixed_routes_no_public_admin_api(self):
