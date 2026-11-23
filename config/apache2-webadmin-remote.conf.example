@@ -19,6 +19,9 @@ TraceEnable Off
     DocumentRoot "/usr/local/share/dc24h/webadmin"
     ServerSignature Off
     SSLEngine On
+    # Require the configured localhost SNI name as well as the HTTP Host.
+    # No public or wildcard virtual host is created by this example.
+    SSLStrictSNIVHostCheck On
     SSLCertificateFile "/etc/dc24h/remote-tls/fullchain.pem"
     SSLCertificateKeyFile "/etc/dc24h/remote-tls/privkey.pem"
     SSLProtocol -all +TLSv1.2 +TLSv1.3
@@ -90,6 +93,11 @@ TraceEnable Off
     RewriteCond %{REQUEST_URI} ^/remote/v1/(?:login|logout)$
     RewriteCond %{HTTP:Origin} !^https://localhost:8443$
     RewriteRule ^ - [F,END]
+    # Apply the same exact Origin enforcement at the TLS edge to every
+    # privileged Passkey operation, not just password/TOTP login and logout.
+    RewriteCond %{REQUEST_URI} ^/remote/v1/passkey/(?:login/(?:options|finish)|enroll/(?:options|finish)|device/(?:rename|revoke))$
+    RewriteCond %{HTTP:Origin} !^https://localhost:8443$
+    RewriteRule ^ - [F,END]
 
     <Directory "/usr/local/share/dc24h/webadmin">
         Options -Indexes -Includes -ExecCGI -FollowSymLinks
@@ -120,6 +128,9 @@ TraceEnable Off
     RequestHeader unset X-Forwarded-Port
     RequestHeader unset X-Forwarded-Prefix
     RequestHeader unset X-Forwarded-User
+    RequestHeader unset X-Forwarded-Client-Cert
+    RequestHeader unset X-Forwarded-Uri
+    RequestHeader unset X-Forwarded-Method
     RequestHeader unset X-Real-IP
     RequestHeader unset X-Original-URL
     RequestHeader unset X-Rewrite-URL
