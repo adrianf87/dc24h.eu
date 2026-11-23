@@ -93,7 +93,15 @@ class ApiProcessTests(unittest.TestCase):
         fx.decode(fx.request(method='HEAD'), 405, head=True)
         _, health = fx.decode(fx.request(target='/api/v1/health', fragments=True))
         self.assertEqual(health, {'status': 'ok'})
-        _, ready = fx.decode(fx.request(target='/api/v1/ready'))
+        # The process harness waits for the listener's log line; the logger
+        # flushes asynchronously, so probe until the reactor signals readiness.
+        deadline = time.monotonic() + 3
+        while True:
+            ready_response = fx.request(target='/api/v1/ready')
+            if b' 503 ' not in ready_response.split(b'\r\n', 1)[0] or time.monotonic() >= deadline:
+                break
+            time.sleep(0.01)
+        _, ready = fx.decode(ready_response)
         self.assertEqual(ready, {'status': 'ready'})
         fx.decode(fx.request(target='/api/v1/ready', auth=False), 401)
         fx.decode(fx.request(target='/api/v1/ready', method='POST'), 405)
