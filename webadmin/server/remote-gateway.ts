@@ -449,10 +449,13 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
           if (Object.keys(fields).length !== 1 || !fields.response || typeof fields.response !== "object") throw Error();
           const verified = await p.ceremonies.finishLogin(pending.actor, pending.challenge,
             fields.response as Parameters<PasskeyCeremonies["finishLogin"]>[2], clock());
-          if (!verified || (pending.oldSession &&
+          // Verification may await an authenticator or crypto worker. A
+          // challenge that expires during that wait cannot mint a session.
+          if (!verified || pending.expires <= clock() || (pending.oldSession &&
               (sessions.get(pending.oldKey) !== pending.oldSession || pending.oldSession.pendingLogouts > 0))) throw Error();
           const key = randomBytes(32).toString("hex");
           if (await authorized(key, pending.session) !== "ok" ||
+              pending.expires <= clock() ||
               pending.session.passkeyEpoch !== p.store.epoch(pending.actor)) throw Error();
           pending.session.created = clock(); pending.session.used = pending.session.created;
           if (pending.oldSession) sessions.delete(pending.oldKey);
@@ -515,9 +518,11 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
           if (options.strictAudit && !log("passkey_enroll_intent")) throw Error("audit_unavailable");
           const result = await p.ceremonies.finishEnrollment(session.actor, pending.challenge,
             fields.response as Parameters<PasskeyCeremonies["finishEnrollment"]>[2], clock(),
-            async () => sessions.get(key) === session && !expired(session, clock()) &&
+            async () => sessions.get(key) === session && pending.expires > clock() &&
+              clock() - session.created <= 60_000 && !expired(session, clock()) &&
               await authorized(key, session, true) === "ok");
-          if (!result || sessions.get(key) !== session || expired(session, clock())) throw Error();
+          if (!result || pending.expires <= clock() || clock() - session.created > 60_000 ||
+              sessions.get(key) !== session || expired(session, clock())) throw Error();
           if (!log("passkey_enrolled") && options.strictAudit) throw Error("audit_unavailable");
           reply(res, 200, { schema: 1, enrolled: true });
         } catch { log("passkey_enroll_refused"); reply(res, 403, { error: "enrollment_refused" }); }

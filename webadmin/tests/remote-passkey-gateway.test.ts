@@ -22,15 +22,18 @@ test("passkey gateway binds login and enrollment to one-use challenges, password
       createdAt: 10, lastUsedAt: null, revokedAt: null });
     const ceremonies = {
       beginLogin: async () => ({ challenge: "passkey-challenge", allowCredentials: [{ id }] }),
-      finishLogin: async (_actor: string, challenge: string, response: { valid: boolean }) =>
-        challenge === "passkey-challenge" && response.valid,
+      finishLogin: async (_actor: string, challenge: string, response: { valid: boolean; expireBeforeReturn?: boolean }) => {
+        if (response.expireBeforeReturn) now += 61_000;
+        return challenge === "passkey-challenge" && response.valid;
+      },
       beginEnrollment: async () => ({ challenge: "enrollment-challenge", rp: { id: "localhost" } }),
-      finishEnrollment: async (_actor: string, challenge: string, response: { valid: boolean }, now: number,
+      finishEnrollment: async (_actor: string, challenge: string, response: { valid: boolean; expireBeforePersist?: boolean }, at: number,
         beforePersist: () => Promise<boolean>) => {
+        if (response.expireBeforePersist) now += 51_000;
         if (challenge !== "enrollment-challenge" || !response.valid || !await beforePersist()) return false;
         store.add({ id: "z".repeat(32), actor: "7", userHandle: handle, publicKey: "q".repeat(60),
           counter: 0, deviceType: "singleDevice", backedUp: false, transports: [],
-          name: "Passkey", createdAt: now, lastUsedAt: null, revokedAt: null });
+          name: "Passkey", createdAt: at, lastUsedAt: null, revokedAt: null });
         return true;
       },
     } as unknown as PasskeyCeremonies;
@@ -141,6 +144,40 @@ test("passkey gateway binds login and enrollment to one-use challenges, password
     assert.equal(store.forActor("7").length, 1);
     assert.ok(called.includes("POST /api/v1/admin/access"));
     assert.ok(events.includes("passkey_revoke_intent") && events.includes("passkey_revoked"));
-    now += 61_000;
+
+    // A cryptographic verification may finish after its one-time challenge
+    // expires. The successful proof must not become a new browser session.
+    const expiredStart = await call("challenge");
+    const expiredCsrf = JSON.parse(expiredStart.body).csrf as string;
+    const expiredOptions = await call("passkey/login/options", "POST", { actor_id: "7", password: "correct" },
+      csrfHeader(expiredCsrf, expiredStart.cookies[0]!.split(";")[0]!));
+    assert.equal(expiredOptions.status, 200);
+    const expiredLogin = await call("passkey/login/finish", "POST", { response: { valid: true, expireBeforeReturn: true } },
+      csrfHeader(expiredCsrf, expiredOptions.cookies[0]!.split(";")[0]!));
+    assert.equal(expiredLogin.status, 403, "expired WebAuthn proof cannot create a session");
+    assert.ok(!expiredLogin.cookies.some(value => value.startsWith("dc24h_remote=")));
+
+    const freshStart = await call("challenge");
+    const freshCsrf = JSON.parse(freshStart.body).csrf as string;
+    const freshOptions = await call("passkey/login/options", "POST", { actor_id: "7", password: "correct" },
+      csrfHeader(freshCsrf, freshStart.cookies[0]!.split(";")[0]!));
+    assert.equal(freshOptions.status, 200);
+    const freshLogin = await call("passkey/login/finish", "POST", { response: { valid: true } },
+      csrfHeader(freshCsrf, freshOptions.cookies[0]!.split(";")[0]!));
+    assert.equal(freshLogin.status, 200);
+    const freshSession = freshLogin.cookies[0]!.split(";")[0]!;
+    const freshSessionCsrf = JSON.parse(freshLogin.body).csrf as string;
+
+    // Issue the enrollment challenge 10s after login, then let verification
+    // finish 51s later: the challenge is valid, but re-verification is stale.
+    now += 10_000;
+    const staleEnrollment = await call("passkey/enroll/options", "POST", {},
+      csrfHeader(freshSessionCsrf, freshSession));
+    assert.equal(staleEnrollment.status, 200);
+    assert.equal((await call("passkey/enroll/finish", "POST",
+      { response: { valid: true, expireBeforePersist: true } },
+      csrfHeader(freshSessionCsrf, freshSession))).status, 403,
+    "expired re-verification cannot register a credential even with a valid challenge");
+    assert.equal(store.forActor("7").length, 1, "stale enrollment must not persist a key");
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

@@ -165,7 +165,10 @@ challenge, replay, cross-account and revoked credential cases. API tests
 cover one-time cookies, CSRF, TOTP fallback and actor-wide session revocation.
 Review dependency advisories and isolate real hardware enrollment tests.
 
-Push each logical patch separately, and report its SHA, PR/CI URL and
-current pending/success/failure state without waiting for GitHub CI to end.
-Do **not** merge while required CI remains pending/failed, and do not deploy
-or expose WebAdmin publicly without a separate explicit go/no-go review.
+Keep the four logical patch commits (beta-0.4.5 through beta-0.4.8) on the
+single `beta-0.4.5-0.4.8-stage2` branch and open one pull request against
+`main`. Record the commit SHAs and PR/CI URLs, **wait for every required CI
+run to finish**, and report its final result. Do **not** merge while required
+CI is pending/failed or before independent security review and Debian 13
+validation. Do not deploy or expose WebAdmin publicly without a separate
+explicit go/no-go review.

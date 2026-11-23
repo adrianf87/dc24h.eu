@@ -93,11 +93,13 @@ export function RemoteApp() {
   const sessionEpoch = useRef(0);
   // A prior refresh must also not replace the latest result within a session.
   const summaryRequest = useRef(0);
+  const deviceRequest = useRef(0);
   const t = labels[language];
 
   const invalidate = (next: Status) => {
     sessionEpoch.current++;
     summaryRequest.current++;
+    deviceRequest.current++;
     setSummary(null);
     setDevices(null);
     setActionMessage("");
@@ -198,15 +200,18 @@ export function RemoteApp() {
   };
   const loadDevices = async () => {
     const epoch = sessionEpoch.current;
+    const requestId = ++deviceRequest.current;
     try {
       const result = await call("passkey/devices");
-      if (epoch !== sessionEpoch.current) return;
+      if (epoch !== sessionEpoch.current || requestId !== deviceRequest.current) return;
       if (result.status !== 200 || !result.data || typeof result.data !== "object" ||
           !("devices" in result.data) || !Array.isArray(result.data.devices)) throw Error();
       const list = result.data.devices as Device[];
       if (list.length > 8 || list.some(d => !d || typeof d.id !== "string" || typeof d.name !== "string")) throw Error();
       setDevices(list); setActionMessage("");
-    } catch { if (epoch === sessionEpoch.current) setActionMessage(t.actionFailed); }
+    } catch {
+      if (epoch === sessionEpoch.current && requestId === deviceRequest.current) setActionMessage(t.actionFailed);
+    }
   };
   const enroll = async () => {
     if (!csrf) return;
@@ -224,13 +229,19 @@ export function RemoteApp() {
   };
   const changeDevice = async (id: string, revoke: boolean) => {
     if (!csrf) return;
+    const epoch = sessionEpoch.current;
     try {
       const result = await passkeyRequest(revoke ? "passkey/device/revoke" : "passkey/device/rename",
         revoke ? { id } : { id, name: deviceLabels[id] ?? "" }, csrf);
+      if (epoch !== sessionEpoch.current) return;
       if (result.status !== 200) throw Error();
       if (revoke) { invalidate("unauthorized"); setActionMessage(t.revoked); }
-      else { setDeviceLabels(previous => ({ ...previous, [id]: "" })); await loadDevices(); setActionMessage(t.actionDone); }
-    } catch { setActionMessage(t.actionFailed); }
+      else {
+        setDeviceLabels(previous => ({ ...previous, [id]: "" }));
+        await loadDevices();
+        if (epoch === sessionEpoch.current) setActionMessage(t.actionDone);
+      }
+    } catch { if (epoch === sessionEpoch.current) setActionMessage(t.actionFailed); }
   };
   const rows: [string, string | number][] = summary ? [
     [t.version, summary.server.version], [t.running, summary.server.running ? t.yes : t.no],

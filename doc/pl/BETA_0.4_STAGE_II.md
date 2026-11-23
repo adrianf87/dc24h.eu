@@ -103,7 +103,9 @@ i integrację na Ubuntu/Debian. Testy obejmują poprawny podpis ES256,
 odmowę dla obcego Origin/RP ID, zużyte wyzwania, CSRF, liczniki,
 uprawnienia, utratę audytu i unieważnienie sesji.
 
-Po każdym pushu zanotuj SHA, PR i stan CI. **Nie czekaj na koniec CI**, aby
-zgłosić postęp, ale **nie scalaj ani nie wdrażaj**, dopóki wymagane testy
-i przeglądy nie zakończą się pozytywnie. Wydanie beta-0.4.8 nie oznacza
-automatycznej zgody na publiczny WebAdmin.
+Zachowaj cztery logiczne commity patchy (beta-0.4.5–0.4.8) na jednej gałęzi
+`beta-0.4.5-0.4.8-stage2` i otwórz jeden PR do `main`. Zanotuj SHA, PR oraz
+odnośniki do CI i **poczekaj na zakończenie wszystkich wymaganych testów CI**.
+**Nie scalaj ani nie wdrażaj**, dopóki testy, niezależny przegląd
+bezpieczeństwa i walidacja na Debianie 13 nie zakończą się pozytywnie.
+Wydanie beta-0.4.8 nie oznacza automatycznej zgody na publiczny WebAdmin.
