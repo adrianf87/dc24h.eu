@@ -83,7 +83,8 @@ test("local passkey inventory exposes only this account's device actions and rev
       body: JSON.stringify({ schema: 1, renamed: true, csrf: "a".repeat(64) }) });
   });
   await page.route("**/remote/v1/passkey/device/revoke", async route => {
-    expect(route.request().headers()["x-dc24h-remote-csrf"]).toBe(sessionCsrf);
+    // Device rename rotates the administrator session and its CSRF token.
+    expect(route.request().headers()["x-dc24h-remote-csrf"]).toBe("a".repeat(64));
     revoked = true;
     await route.fulfill({ status: 200, contentType: "application/json", body: '{"schema":1,"revoked":true}' });
   });
