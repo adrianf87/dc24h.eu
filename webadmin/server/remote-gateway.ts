@@ -14,7 +14,7 @@ export type RemoteEvent = "login_ok" | "login_refused" | "mfa_ok" | "mfa_refused
 export interface RemoteOptions {
   origin: string;
   now?: () => number;
-  audit?: (event: RemoteEvent) => void | Promise<void>;
+  audit?: (event: RemoteEvent) => void;
   // The local operator can require synchronous durable writes before login.
   // A promise-based best-effort sink never satisfies strict audit mode.
   strictAudit?: boolean;
@@ -139,9 +139,10 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
     // Audit integrations are external observers; a failed sink must not crash
     // the HTTP handler or change the decision to reject a request.
     try {
-      const written = audit(event);
-      if (written && typeof written.then === "function") {
-        void written.catch(() => {});
+      const written: unknown = audit(event);
+      if (written && typeof written === "object" && "then" in written &&
+          typeof written.then === "function") {
+        void Promise.resolve(written).catch(() => {});
         return !options.strictAudit;
       }
       return true;

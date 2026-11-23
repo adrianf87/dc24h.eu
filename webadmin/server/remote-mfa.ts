@@ -3,7 +3,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { constants, closeSync, fstatSync, fsyncSync, lstatSync, openSync, readFileSync, readSync, writeSync } from "node:fs";
 import { dirname, isAbsolute, basename, join } from "node:path";
-import { renameSync, statSync, unlinkSync } from "node:fs";
+import { renameSync, unlinkSync } from "node:fs";
 
 type Secrets = Map<string, Buffer>;
 const actorPattern = /^[1-9][0-9]{0,18}$/;
