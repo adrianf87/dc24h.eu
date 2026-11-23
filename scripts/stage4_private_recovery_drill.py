@@ -158,6 +158,31 @@ def make_private_destination(path):
     return private_directory(target)
 
 
+def separate_destination(source, destination):
+    target = Path(destination)
+    if not target.is_absolute():
+        raise ValueError("Absolute destination required")
+    original = Path(source)
+    # Check both lexical and resolved paths: never create a rehearsal inside
+    # the source private state or the backup that is being restored.
+    if (target == original or target.is_relative_to(original) or
+        target.resolve(strict=False) == original.resolve(strict=True) or
+        target.resolve(strict=False).is_relative_to(original.resolve(strict=True))):
+        raise ValueError("Recovery destination must be separate from its source")
+
+
+def canonical_utc_timestamp(value):
+    if not isinstance(value, str) or not re.fullmatch(
+        r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\+00:00", value
+    ):
+        return False
+    try:
+        parsed = datetime.fromisoformat(value)
+        return parsed.isoformat(timespec="seconds") == value
+    except ValueError:
+        return False
+
+
 def validate_audit(data):
     if data and not data.endswith(b"\n"):
         raise ValueError("Truncated audit chain")
@@ -227,6 +252,7 @@ def validate_format(name, data):
 
 def snapshot(source, destination):
     original = private_directory(source)
+    separate_destination(original, destination)
     # Preflight all source paths before creating a destination. A missing
     # ledger must fail closed rather than silently create an empty replacement.
     fingerprints = {}
@@ -286,7 +312,7 @@ def verified_manifest(root):
         raw[:] = b"\0" * len(raw)
     if not isinstance(manifest, dict) or set(manifest) != {"schema", "created_utc", "files"} or (
         type(manifest["schema"]) is not int or manifest["schema"] != 1 or
-        not isinstance(manifest["created_utc"], str) or
+        not canonical_utc_timestamp(manifest["created_utc"]) or
         not isinstance(manifest["files"], dict) or
         set(manifest["files"]) != set(FILES)):
         raise ValueError("Invalid private backup manifest")
@@ -302,6 +328,7 @@ def verify(source):
 
 def restore_to_fresh_directory(source, destination):
     backup = private_directory(source)
+    separate_destination(backup, destination)
     manifest = verified_manifest(backup)
     target = make_private_destination(destination)
     for name, maximum in FILES.items():

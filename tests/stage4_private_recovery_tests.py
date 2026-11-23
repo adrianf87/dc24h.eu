@@ -46,6 +46,34 @@ class StageFourPrivateRecovery(unittest.TestCase):
         declaration = declaration.split("] as const", 1)[0]
         self.assertEqual(recovery.AUDIT_EVENTS, set(re.findall(r'"([a-z_]+)"', declaration)))
 
+    def test_backup_or_restore_must_not_be_nested_inside_source(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = fixture(root)
+            with self.assertRaises(ValueError):
+                recovery.snapshot(str(source), str(source / "nested-backup"))
+            self.assertFalse((source / "nested-backup").exists())
+            backup = root / "backup"
+            self.assertEqual(recovery.snapshot(str(source), str(backup)), 5)
+            with self.assertRaises(ValueError):
+                recovery.restore_to_fresh_directory(str(backup), str(backup / "nested-restore"))
+            self.assertFalse((backup / "nested-restore").exists())
+            self.assertEqual(recovery.verify(str(backup)), 5)
+
+    def test_manifest_timestamp_is_canonical_utc(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            backup = root / "backup"
+            recovery.snapshot(str(fixture(root)), str(backup))
+            manifest_path = backup / "manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf8"))
+            for timestamp in ("not-a-date", "2030-02-30T01:02:03+00:00", "2026-11-23T01:02:03+05:00"):
+                with self.subTest(timestamp=timestamp):
+                    manifest["created_utc"] = timestamp
+                    manifest_path.write_text(json.dumps(manifest) + "\n", encoding="utf8")
+                    with self.assertRaises(ValueError):
+                        recovery.verify(str(backup))
+
     def test_snapshot_verification_and_restoration_without_overwriting_live_state(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -33,9 +33,11 @@ python3 scripts/stage4_private_recovery_drill.py verify --source /var/lib/dc24h-
 python3 scripts/stage4_private_recovery_drill.py restore --source /var/lib/dc24h-rehearsals/snapshot-001 --destination /var/lib/dc24h-rehearsals/restored-001 --ack-stopped --ack-isolated
 ```
 
-The target directories must not exist beforehand. `restore` writes only into
-a **new** private directory and never overwrites live files or starts a
-service. The manifest contains only file sizes, hashes and an archive time;
+The target directories must not exist beforehand and must not be nested
+inside the source directory or backup being restored. `restore` writes only
+into a **new**, separate private directory and never overwrites live files or
+starts a service. The manifest contains only file sizes, hashes and a
+canonical UTC archive timestamp (format validation is not proof of time authenticity);
 the tool checks every source hash again after preflight, rejects changes since
 manifest verification, and checks all five newly written files against the
 original manifest before reporting success. It also validates the private
