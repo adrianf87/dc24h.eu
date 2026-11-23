@@ -60,6 +60,9 @@ test("MFA replay ledger preserves legacy records and rejects malformed append ma
     // A partial or invalid marker cannot be silently treated as unused state.
     writeFileSync(replay, '{"actor":"7","step":3,"nonce":"invalid"}\n', { mode: 0o600 });
     assert.throws(() => loadTotpVerifier(enrollment, replay), /Invalid MFA replay entry/);
+    writeFileSync(replay, '{"actor":"7","step":3}\n\n', { mode: 0o600 });
+    assert.throws(() => loadTotpVerifier(enrollment, replay), /empty record/,
+      "a blank line inside a replay ledger is corruption, not a valid omitted entry");
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 

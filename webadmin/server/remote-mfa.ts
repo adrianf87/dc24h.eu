@@ -28,8 +28,11 @@ function visitReplayLedger(fd: number, visit: (entry: ReplayEntry) => void): voi
     }
     const text = bytes.toString("utf8");
     if (text && !text.endsWith("\n")) throw new Error("Incomplete MFA replay ledger");
-    for (const line of text.split("\n")) {
-      if (!line) continue;
+    // A single trailing newline is canonical; an empty interior record is
+    // evidence of damaged or edited state and must not be silently skipped.
+    const lines = text ? text.slice(0, -1).split("\n") : [];
+    for (const line of lines) {
+      if (!line) throw new Error("Invalid MFA replay entry: empty record");
       const record: unknown = JSON.parse(line);
       if (!record || typeof record !== "object" || Array.isArray(record)) throw new Error("Invalid MFA replay ledger");
       const row = record as Record<string, unknown>;
@@ -276,7 +279,9 @@ export function replaceTotpSecret(options: TotpReplacement): void {
     } finally { closeSync(tmpFd); }
     const current = lstatSync(enrollmentPath);
     if (current.dev !== old.dev || current.ino !== old.ino || current.size !== old.size ||
-        current.mtimeMs !== old.mtimeMs || !current.isFile() || (current.mode & 0o077))
+        current.mtimeMs !== old.mtimeMs || current.ctimeMs !== old.ctimeMs ||
+        current.uid !== process.geteuid?.() || current.nlink !== 1 ||
+        !current.isFile() || (current.mode & 0o077))
       throw new Error("MFA enrollment changed during replacement");
     renameSync(tmp, enrollmentPath);
     created = false;
