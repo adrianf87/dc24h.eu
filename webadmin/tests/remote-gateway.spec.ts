@@ -121,6 +121,41 @@ test("local passkey inventory exposes only this account's device actions and rev
   await expect(page.getByText("The key was revoked and sessions were ended.")).toBeVisible();
 });
 
+test("refused passkey enrollment leaves no device, secret or pending privileged action in the browser", async ({ page }) => {
+  let finishCalls = 0;
+  await page.route("**/remote/v1/session", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify({
+      schema: 1, authenticated: true, mfa: true, mode: "read-only", csrf: sessionCsrf, expires_in: 600,
+    }),
+  }));
+  await page.route("**/remote/v1/summary", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify(snapshot),
+  }));
+  await page.route("**/remote/v1/passkey/devices", route => route.fulfill({
+    status: 200, contentType: "application/json", body: '{"schema":1,"devices":[]}',
+  }));
+  await page.route("**/remote/v1/passkey/enroll/options", async route => {
+    expect(route.request().headers()["x-dc24h-remote-csrf"]).toBe(sessionCsrf);
+    expect(route.request().postDataJSON()).toEqual({});
+    await route.fulfill({ status: 403, contentType: "application/json", body: '{"error":"enrollment_refused"}' });
+  });
+  await page.route("**/remote/v1/passkey/enroll/finish", async route => {
+    finishCalls++;
+    await route.fulfill({ status: 403, contentType: "application/json", body: '{"error":"forbidden"}' });
+  });
+  await page.goto("/remote.html");
+  await expect(page.getByText("Active connections")).toBeVisible();
+  await page.getByRole("button", { name: "Refresh devices" }).click();
+  await expect(page.getByText("No passkeys enrolled yet.")).toBeVisible();
+  await page.getByRole("button", { name: "Add passkey" }).click();
+  await expect(page.getByText("Passkey operation was refused. Sign in again if recent verification is required.")).toBeVisible();
+  await expect(page.getByText("No passkeys enrolled yet.")).toBeVisible();
+  await expect(page.getByText("Active connections")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Revoke" })).toHaveCount(0);
+  expect(finishCalls).toBe(0);
+  await expect(page.locator("main")).not.toContainText("session=" + sessionCsrf);
+});
+
 test("a delayed device revocation response cannot sign out a newer session", async ({ page }) => {
   let oldRevoke!: Route;
   let signalStarted!: () => void;

@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { isoCBOR } from "@simplewebauthn/server/helpers";
 import { openPasskeyStore } from "../server/remote-passkeys.ts";
-import { passkeyCeremonies } from "../server/remote-webauthn.ts";
+import { passkeyCeremonies, relyingParty } from "../server/remote-webauthn.ts";
 
 const origin = "https://localhost:8443", rpID = "localhost";
 const toBase64 = (bytes: Uint8Array) => Buffer.from(bytes).toString("base64url");
@@ -21,10 +21,9 @@ function authenticator() {
     [1, 2], [3, -7], [-1, 1], [-2, Buffer.from(jwk.x!, "base64url")], [-3, Buffer.from(jwk.y!, "base64url")],
   ]));
   const id = randomBytes(32);
-  const rpHash = sha(rpID);
   const counter = (num: number) => { const b = Buffer.alloc(4); b.writeUInt32BE(num); return b; };
-  const registration = (challenge: string, from = origin) => {
-    const data = Buffer.concat([rpHash, Buffer.from([0x45]), counter(0), Buffer.alloc(16),
+  const registration = (challenge: string, from = origin, flags = 0x45, rp = rpID) => {
+    const data = Buffer.concat([sha(rp), Buffer.from([flags]), counter(0), Buffer.alloc(16),
       Buffer.from([0, id.length]), id, Buffer.from(cose)]);
     const attestationObject = isoCBOR.encode(new Map<string, string | Uint8Array | Map<string, string>>([
       ["fmt", "none"], ["attStmt", new Map<string, string>()], ["authData", data],
@@ -34,9 +33,10 @@ function authenticator() {
         attestationObject: toBase64(attestationObject), transports: ["internal"] },
       clientExtensionResults: {}, };
   };
-  const assertion = (challenge: string, userHandle: string, num = 1, from = origin) => {
-    const data = Buffer.concat([rpHash, Buffer.from([0x05]), counter(num)]);
-    const json = client("webauthn.get", challenge, from);
+  const assertion = (challenge: string, userHandle: string, num = 1, from = origin,
+    flags = 0x05, rp = rpID, type = "webauthn.get") => {
+    const data = Buffer.concat([sha(rp), Buffer.from([flags]), counter(num)]);
+    const json = client(type, challenge, from);
     const signature = createSign("SHA256").update(Buffer.concat([data, sha(json)])).sign(privateKey);
     return { id: toBase64(id), rawId: toBase64(id), type: "public-key" as const,
       response: { clientDataJSON: toBase64(json), authenticatorData: toBase64(data),
@@ -56,6 +56,15 @@ test("genuine ES256 WebAuthn registration and assertion reject wrong Origin, cha
     assert.equal(opts.authenticatorSelection?.userVerification, "required");
     await assert.rejects(() => service.finishEnrollment("7", opts.challenge,
       device.registration(opts.challenge, "https://evil.example"), 1000));
+    for (const [label, response] of [
+      ["RP ID hash", device.registration(opts.challenge, origin, 0x45, "evil.example")],
+      ["missing user verification", device.registration(opts.challenge, origin, 0x41)],
+      ["missing user presence", device.registration(opts.challenge, origin, 0x44)],
+      ["wrong challenge", device.registration("replayed-registration-challenge")],
+    ] as const) {
+      await assert.rejects(() => service.finishEnrollment("7", opts.challenge, response, 1000), label);
+      assert.equal(store.forActor("7").length, 0, label + " must not persist a credential");
+    }
     assert.equal(store.forActor("7").length, 0);
     assert.equal(await service.finishEnrollment("7", opts.challenge, device.registration(opts.challenge), 1000), true);
     assert.equal(store.forActor("7").length, 1);
@@ -65,6 +74,15 @@ test("genuine ES256 WebAuthn registration and assertion reject wrong Origin, cha
     const handle = store.userHandle("7");
     await assert.rejects(() => service.finishLogin("7", login!.challenge,
       device.assertion(login!.challenge, handle, 1, "https://evil.example"), 2000));
+    for (const [label, response] of [
+      ["RP ID hash", device.assertion(login!.challenge, handle, 1, origin, 0x05, "evil.example")],
+      ["missing user verification", device.assertion(login!.challenge, handle, 1, origin, 0x01)],
+      ["missing user presence", device.assertion(login!.challenge, handle, 1, origin, 0x04)],
+      ["wrong ceremony type", device.assertion(login!.challenge, handle, 1, origin, 0x05, rpID, "webauthn.create")],
+    ] as const) {
+      await assert.rejects(() => service.finishLogin("7", login!.challenge, response, 2000), label);
+      assert.equal(store.forActor("7")[0]!.counter, 0, label + " must not advance the counter");
+    }
     assert.equal(await service.finishLogin("7", login!.challenge, device.assertion(login!.challenge, handle), 2000), true);
     await assert.rejects(() => service.finishLogin("7", login!.challenge, device.assertion(login!.challenge, handle), 2001));
     assert.equal(await service.finishLogin("8", login!.challenge, device.assertion(login!.challenge, handle, 2), 2002), false);
@@ -72,4 +90,15 @@ test("genuine ES256 WebAuthn registration and assertion reject wrong Origin, cha
     store.revoke("7", store.forActor("7")[0]!.id, 3000);
     assert.equal(await service.finishLogin("7", login!.challenge, device.assertion(login!.challenge, handle, 3), 3001), false);
   } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("relying party identity is pinned to a verified HTTPS origin, never request headers", () => {
+  assert.deepEqual(relyingParty(origin, rpID), { origin, rpID });
+  for (const [candidateOrigin, candidateRP] of [
+    ["http://localhost:8443", "localhost"],
+    ["https://evil.example:8443", "localhost"],
+    ["https://localhost:8443/path", "localhost"],
+    ["https://localhost:8443?rp=evil", "localhost"],
+    ["https://localhost:8443", "evil.example"],
+  ]) assert.throws(() => relyingParty(candidateOrigin!, candidateRP!));
 });

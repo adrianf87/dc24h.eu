@@ -168,6 +168,21 @@ test("passkey gateway binds login and enrollment to one-use challenges, password
     assert.equal((await call("passkey/device/rename", "POST", { id, name: "Stale request" },
       csrfHeader(rotatedCsrf, rotatedCookie))).status, 401);
     assert.equal(store.get("7", id)?.name, "Renamed device");
+    assert.equal((await call("passkey/device/rename", "POST", { id, name: "Stale CSRF" },
+      csrfHeader(rotatedCsrf, renamedCookie))).status, 403,
+    "the new session must not accept the predecessor's CSRF token");
+    assert.equal((await call("passkey/device/rename", "POST", { id, name: "Cross-origin" },
+      { ...csrfHeader(renamedCsrf, renamedCookie), origin: "https://evil.example" })).status, 403,
+    "a correct CSRF token does not override an incorrect Origin");
+    const anotherHandle = store.userHandle("8"), anotherId = "x".repeat(32);
+    store.add({ id: anotherId, actor: "8", userHandle: anotherHandle, publicKey: "q".repeat(60),
+      counter: 0, deviceType: "multiDevice", backedUp: false, transports: [], name: "Other Owner",
+      createdAt: 10, lastUsedAt: null, revokedAt: null });
+    assert.equal((await call("passkey/device/rename", "POST", { id: anotherId, name: "Hijacked" },
+      csrfHeader(renamedCsrf, renamedCookie))).status, 403, "cross-account rename refused");
+    assert.equal((await call("passkey/device/revoke", "POST", { id: anotherId },
+      csrfHeader(renamedCsrf, renamedCookie))).status, 403, "cross-account revocation refused");
+    assert.equal(store.get("8", anotherId)?.name, "Other Owner");
     assert.equal((await call("passkey/device/revoke", "POST", { id },
       csrfHeader(renamedCsrf, renamedCookie))).status, 200);
     assert.equal(store.epoch("7"), 1);
