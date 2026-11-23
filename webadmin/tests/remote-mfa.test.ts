@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { chmodSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { compactTotpReplay, loadTotpVerifier, replaceTotpSecret, totpCodeForTest } from "../server/remote-mfa.ts";
+import { compactTotpReplay, initializeTotpReplay, loadTotpVerifier, replaceTotpSecret, totpCodeForTest } from "../server/remote-mfa.ts";
 
 // RFC 6238 SHA-1 vector at t=59s: 8-digit 94287082, six-digit 287082.
 const secret = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ";
@@ -15,6 +15,7 @@ test("RFC 6238 TOTP checks time, account, input and one-time replay across resta
   const enrollment = join(dir, "mfa.json"), replay = join(dir, "replay.jsonl");
   try {
     writeFileSync(enrollment, JSON.stringify({ schema: 1, accounts: { "7": secret } }), { mode: 0o600 });
+    initializeTotpReplay(replay);
     const first = loadTotpVerifier(enrollment, replay);
     assert.equal(first.verify("8", "287082", 59_000), false, "account binding");
     assert.equal(first.verify("7", "0287082", 59_000), false, "seven digits");
@@ -33,6 +34,7 @@ test("independently loaded MFA verifiers cannot both consume the same shared led
   const enrollment = join(dir, "mfa.json"), replay = join(dir, "replay.jsonl");
   try {
     writeFileSync(enrollment, JSON.stringify({ schema: 1, accounts: { "7": secret } }), { mode: 0o600 });
+    initializeTotpReplay(replay);
     const first = loadTotpVerifier(enrollment, replay);
     const second = loadTotpVerifier(enrollment, replay);
     try {
@@ -42,6 +44,25 @@ test("independently loaded MFA verifiers cannot both consume the same shared led
       assert.equal(second.verify("7", totpCodeForTest(secret, 90_000), 90_000), true);
       assert.equal(first.verify("7", totpCodeForTest(secret, 90_000), 90_000), false);
     } finally { first.close(); second.close(); }
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("deleted TOTP replay history refuses restart and bootstrap never overwrites a prior ledger", () => {
+  const dir = mkdtempSync(join(tmpdir(), "dc24h-mfa-missing-"));
+  const enrollment = join(dir, "mfa.json"), replay = join(dir, "replay.jsonl");
+  try {
+    writeFileSync(enrollment, JSON.stringify({ schema: 1, accounts: { "7": secret } }), { mode: 0o600 });
+    assert.throws(() => loadTotpVerifier(enrollment, replay), /ENOENT/,
+      "a missing consumed-step history must never be treated as a fresh empty ledger");
+    initializeTotpReplay(replay);
+    const verifier = loadTotpVerifier(enrollment, replay);
+    assert.equal(verifier.verify("7", totpCodeForTest(secret, 59_000), 59_000), true);
+    verifier.close();
+    const oldHistory = readFileSync(replay, "utf8");
+    assert.throws(() => initializeTotpReplay(replay), /EEXIST/);
+    assert.equal(readFileSync(replay, "utf8"), oldHistory);
+    unlinkSync(replay);
+    assert.throws(() => loadTotpVerifier(enrollment, replay), /ENOENT/);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
@@ -91,6 +112,7 @@ test("offline TOTP rotation replaces the enrollment atomically, rejects cached o
   const enrollment = join(dir, "mfa.json"), replay = join(dir, "replay.jsonl");
   try {
     writeFileSync(enrollment, JSON.stringify({ schema: 1, accounts: { "7": secret } }), { mode: 0o600 });
+    initializeTotpReplay(replay);
     const old = loadTotpVerifier(enrollment, replay);
     assert.throws(() => replaceTotpSecret({ enrollmentPath: enrollment, replayPath: replay,
       actor: "7", newSeed: replacement, newCode: "000000", oldCode: totpCodeForTest(secret, 59_000),

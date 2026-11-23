@@ -333,7 +333,12 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
       sessions.clear(); challenges.clear(); passkeyLogins.clear(); enrollments.clear();
       reply(res, 503, { error: "unavailable" }, clearSession()); return;
     }
-    if (options.rateLimits && !options.rateLimits.healthy()) {
+    let limiterHealthy = true;
+    if (options.rateLimits) {
+      try { limiterHealthy = options.rateLimits.healthy() === true; }
+      catch { limiterHealthy = false; }
+    }
+    if (!limiterHealthy) {
       sessions.clear(); challenges.clear(); passkeyLogins.clear(); enrollments.clear();
       log("rate_limiter_unavailable");
       reply(res, 503, { error: "unavailable" }, clearSession()); return;
