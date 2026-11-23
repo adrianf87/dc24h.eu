@@ -42,12 +42,14 @@ class StageFourPerfContract(unittest.TestCase):
                 return self.body[:limit]
 
         valid = Response("application/json; charset=utf-8",
-            b'{"schema":1,"mode":"read-only","server":{"version":"beta-0.4.16"}}')
+            b'{"schema":1,"mode":"read-only","server":{"version":"beta-0.4.16","running":true}}')
         self.assertTrue(probe.valid_http_response("api", valid, valid.body))
         for response in (
             Response("text/html", b"<html>Unauthorized</html>"),
             Response("application/json", b'{"error":"unavailable"}'),
             Response("application/json", b'{"schema":1,"mode":"read-only"}'),
+            Response("application/json", b'{"schema":1,"mode":"read-only","server":{}}'),
+            Response("application/json", b'{"schema":1,"mode":"read-only","server":{"version":"beta-0.4.16","running":false}}'),
             Response("application/json", b"not JSON"),
             Response("application/json-attacker", valid.body),
         ):

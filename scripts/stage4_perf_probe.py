@@ -11,6 +11,7 @@ import http.client
 import json
 import os
 from pathlib import Path
+import re
 import socket
 import ssl
 import stat
@@ -112,9 +113,14 @@ def valid_http_response(profile, response, body):
         payload = json.loads(body)
     except (ValueError, UnicodeDecodeError):
         return False
-    return (isinstance(payload, dict) and type(payload.get("schema")) is int and
+    if not (isinstance(payload, dict) and type(payload.get("schema")) is int and
             payload["schema"] == 1 and payload.get("mode") == "read-only" and
-            isinstance(payload.get("server"), dict))
+            isinstance(payload.get("server"), dict)):
+        return False
+    server = payload["server"]
+    return (isinstance(server.get("version"), str) and
+            re.fullmatch(r"beta-\d+\.\d+\.\d+", server["version"]) is not None and
+            server.get("running") is True)
 
 
 def probe(profile, port, timeout, tls, cookie):
