@@ -1,6 +1,8 @@
 # dc24h.eu High Starter documentation
 
-beta-0.4.12: Stage III adds privileged session rotation, durable private anti-abuse budgets, stricter isolated Apache2 HTTPS checks and privacy-safe monitoring of audit-chain failures. Stage II password + passkey login remains **not passwordless**. No Internet-facing WebAdmin, remote hub writes, SQL migration or automatic production deployment. Hub, API, controller and WebAdmin report beta-0.4.12. ADC/ADCS identity `dc24h.eu` and public proxy remain unchanged. Default development language: EN/US UTF-8.
+beta-0.4.16: Stage IV adds negative authentication tests, isolated optional performance and private-state recovery tools, and an explicitly manual release-candidate gate. **Debian 13 performance and disaster recovery are not measured; independent security review is pending.** Stage II password + passkey login remains **not passwordless**. No Internet-facing WebAdmin, remote hub writes, SQL migration or automatic production deployment. Hub, API, controller and WebAdmin report beta-0.4.16. ADC/ADCS identity `dc24h.eu` and public proxy remain unchanged. Default development language: EN/US UTF-8.
+
+- [Beta-0.4.13–beta-0.4.16 Stage IV release review](BETA_0.4_STAGE_IV.md) · [PL](../pl/BETA_0.4_STAGE_IV.md) · [performance](BETA_0.4_STAGE_IV_PERFORMANCE.md) ([PL](../pl/BETA_0.4_STAGE_IV_PERFORMANCE.md)) · [recovery](BETA_0.4_STAGE_IV_RECOVERY.md) ([PL](../pl/BETA_0.4_STAGE_IV_RECOVERY.md))
 
 - [Beta-0.4.9–beta-0.4.12 Stage III](BETA_0.4_STAGE_III.md) · [PL](../pl/BETA_0.4_STAGE_III.md)
 

@@ -1,6 +1,8 @@
 # dc24h.eu High Starter technical documentation
 
-Current development version: beta-0.4.12.
+Current development version: beta-0.4.16.
+
+[Beta-0.4.13–beta-0.4.16 Stage IV: security regressions, measurements, recovery and release gates](us/BETA_0.4_STAGE_IV.md) · [PL](pl/BETA_0.4_STAGE_IV.md)
 
 [Beta-0.4.9–beta-0.4.12 Stage III: sessions, private abuse budgets, HTTPS and security monitoring](us/BETA_0.4_STAGE_III.md) · [PL](pl/BETA_0.4_STAGE_III.md)
 

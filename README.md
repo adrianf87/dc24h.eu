@@ -2,7 +2,9 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: beta-0.4.12 (Stage III: beta-0.4.9–beta-0.4.12; hardened private sessions, persistent anti-abuse, isolated HTTPS and audit monitoring; not a production release).**
+**Current development version: beta-0.4.16 (Stage IV: beta-0.4.13–beta-0.4.16; security tests, isolated measurement and recovery tooling, and manual release-candidate gates; not a production release).**
+
+- **beta-0.4.13–beta-0.4.16 Stage IV — security tests and release preparation**: exercise denied WebAuthn, session and cross-account paths; supply bounded loopback-only ADC/ADCS, HTTPS and read-only API measurement tools; rehearse private-state backup and offline restore into a new directory; align release metadata and manual approval gates. **Performance, database recovery, RPO/RTO and independent review on Debian 13 remain pending.** No schema/protocol changes, public WebAdmin, hub-control writes or automatic deployment. [Stage IV release review](doc/us/BETA_0.4_STAGE_IV.md) | [PL](doc/pl/BETA_0.4_STAGE_IV.md).
 
 - **beta-0.4.9–beta-0.4.12 Stage III — sessions and infrastructure**: rotate the HttpOnly/Secure/SameSite session cookie and CSRF after passkey enrollment or device rename; refuse concurrent revoked-session mutations. Use private HMAC-keyed, fsynced login/rate budgets across gateway restarts; fail closed on storage loss. Strengthen the localhost-only Apache TLS/SNI/Origin edge and its negative integration tests. Re-verify the durable audit chain periodically and send nonidentifying, cooldown-limited security warnings to journald. No new MariaDB schema, ADC/ADCS change, public WebAdmin, hub-control route or automatic deployment. [Stage III technical/operator guide](doc/us/BETA_0.4_STAGE_III.md) | [PL](doc/pl/BETA_0.4_STAGE_III.md).
 
