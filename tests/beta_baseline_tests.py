@@ -84,12 +84,20 @@ def main():
             "build.yml: both jobs must use the public image matrix", errors)
     require('test "$(nproc)" -eq 4' not in workflow,
             "build.yml: fixed runner CPU count is not portable", errors)
-    require(workflow.count("github.repository == 'adrianf87/dc24h.eu-high-starter'") == 4,
-            "build.yml: High Starter repository must run C++, WebAdmin, sanitizers and Debian", errors)
-    require("needs: [cpp, webadmin, sanitizers, debian_compat]" in workflow,
-            "build.yml: sanitizer/Debian failures must block the required CI result", errors)
+    require(workflow.count("github.repository == 'adrianf87/dc24h.eu-high-starter'") == 3,
+            "build.yml: High Starter repository must run C++, WebAdmin and sanitizers", errors)
+    require("needs: [cpp, webadmin, sanitizers]" in workflow,
+            "build.yml: sanitizer failures must block the required CI result", errors)
+    require("debian_compat:" not in workflow and "container:" not in workflow,
+            "build.yml: Debian container tests are disabled by owner instruction", errors)
     require("server-747585786" not in workflow, "build.yml: custom runner is selected", errors)
     require("self-hosted" not in workflow, "build.yml: self-hosted runner is selected", errors)
+    require("DC24H_REQUIRE_SYSTEMD_HOST: '1'" in workflow,
+            "build.yml: real systemd manager must be required for Ubuntu integration", errors)
+    systemd_test = (ROOT / "tests/systemd_sandbox_tests.py").read_text(encoding="utf-8")
+    require('os.environ.get("DC24H_REQUIRE_SYSTEMD_HOST") == "1"' in systemd_test and
+            '"--require-systemd-host"' in systemd_test and 'if REQUIRE_SYSTEMD_HOST:' in systemd_test,
+            "systemd.sandbox: missing fail-closed manager enforcement", errors)
     require("ubuntu-latest" not in workflow, "build.yml: ubuntu-latest is selected", errors)
     check(ROOT / "README.md", (
         "# dc24h.eu High Starter",

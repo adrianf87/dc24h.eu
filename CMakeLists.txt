@@ -321,9 +321,9 @@ if(BUILD_TESTING)
     add_test(NAME ci.junit.summary COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/ci_junit_summary_tests.py")
     set_tests_properties(ci.junit.summary PROPERTIES TIMEOUT 15)
-    add_test(NAME compatibility.fixture.gate COMMAND "${Python3_EXECUTABLE}"
-        "${CMAKE_CURRENT_SOURCE_DIR}/tests/compatibility_fixture_gate_tests.py")
-    set_tests_properties(compatibility.fixture.gate PROPERTIES TIMEOUT 15)
+    add_test(NAME ci.timing.summary COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/ci_timing_summary_tests.py")
+    set_tests_properties(ci.timing.summary PROPERTIES TIMEOUT 15)
     add_test(NAME beta.05.stage1.perf.gate COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/stage1_perf_gate_tests.py")
     set_tests_properties(beta.05.stage1.perf.gate PROPERTIES TIMEOUT 15)

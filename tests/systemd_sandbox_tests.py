@@ -17,6 +17,10 @@ import tempfile
 import time
 import unittest
 
+REQUIRE_SYSTEMD_HOST = (os.environ.get("DC24H_REQUIRE_SYSTEMD_HOST") == "1" or
+                        "--require-systemd-host" in sys.argv)
+if "--require-systemd-host" in sys.argv:
+    sys.argv.remove("--require-systemd-host")
 LAUNCH = sys.argv[:]
 BINARY, SERVICE, SYSUSERS = LAUNCH[1:4]
 del sys.argv[1:4]
@@ -132,7 +136,10 @@ def become_root():
     sudo = shutil.which("sudo")
     if sudo and subprocess.run([sudo, "-n", "true"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
         # sys.argv no longer has the hub and example paths; pass the saved launch line.
-        os.execv(sudo, [sudo, "-n", "--", sys.executable, *LAUNCH])
+        # sudo normally strips unknown environment variables; carry the strict
+        # Ubuntu CI requirement as a private test-runner argument instead.
+        flags = ["--require-systemd-host"] if REQUIRE_SYSTEMD_HOST else []
+        os.execv(sudo, [sudo, "-n", "--", sys.executable, *LAUNCH, *flags])
 
 
 def run(command, check=True, timeout=15):
@@ -146,6 +153,15 @@ class SystemdSandboxTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         become_root()
+        if REQUIRE_SYSTEMD_HOST:
+            if os.geteuid() != 0:
+                raise AssertionError("Required systemd-host test needs root or passwordless sudo")
+            manager = subprocess.run(
+                ["systemctl", "show", "-p", "Version", "--value"],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=15,
+            )
+            if manager.returncode != 0 or not manager.stdout.strip():
+                raise AssertionError("Required systemd manager unavailable; container skip is not a pass")
         cls.text = Path(SERVICE).read_text(encoding="utf-8")
         cls.parsed = sections(cls.text)
         cls.account = pwd.getpwnam("nobody")

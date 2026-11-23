@@ -2,32 +2,34 @@
 
 To **jednostka pracy 1** z [Issue #234](https://github.com/adrianf87/dc24h.eu-high-starter/issues/234), na wspólnej gałęzi `beta-0.5.x-stage-full` z jednym roboczym PR. Wersja rozwojowa **nie oznacza** zgody na wydanie, wdrożenie ani zakończenia odbioru na sprzęcie docelowym.
 
+**Decyzja właściciela (23.11.2026):** Nie wykonywać testów na Debianie 12/13. Wszystkie nowe testy i pomiary prowadzić wyłącznie na hostowanych runnerach GitHub Ubuntu 22.04/24.04/26.04. Nie testować procesora Intel Xeon D-1521 ani prywatnego runnera. Ta decyzja zmienia zakres bieżących działań, ale **nie tworzy dowodów** spełnienia oryginalnych kryteriów Debiana i sprzętu docelowego. Do ich formalnego pominięcia w odbiorze wydania potrzebna byłaby osobna zmiana kryteriów przez właściciela.
+
 ## Cztery kolejne poprawki
 
 | Poprawka | Zmiana | Granica dowodu |
 | --- | --- | --- |
 | 0.5.1 — CI i testy | Ograniczono równoległość kompilacji/testów, zachowano Ubuntu 22.04/24.04/26.04, WebAdmin i ASan/UBSan, dodano niezmienne artefakty statusów CTest bez logów i sekretów oraz testy ich walidacji. | Brak pliku JUnit to `not-run`, nigdy sukces. Artefakt nie jest niezależnym audytem. |
-| 0.5.2 — Debian i Ubuntu | Dodano kontenerowe testy C++20, MariaDB, Apache2, ADC/ADCS, Node 22/TypeScript/Vite na Debianie 12/13 oraz wymaganie rejestracji integracji. Instalacja apt działa jako root lub przez sudo z limitami czasu. | Kontener **nie** potwierdza działania usługi pod prawdziwym systemd ani sprzętu Xeon. |
+| 0.5.2 — Zgodność | Wcześniejszy patch dodał testy kontenerowe Debiana, lecz po decyzji właściciela usunięto job i jego testy pomocnicze. C++20, MariaDB, Apache2, ADC/ADCS, Node 22/TypeScript/Vite są sprawdzane wyłącznie na trzech Ubuntu, z limitami czasu apt. | Brak nowych testów Debiana. Test systemd wymaga rzeczywistego menedżera i root/sudo; brak środowiska oznacza błąd, a nie pominięcie. |
 | 0.5.3 — Przygotowanie pomiarów | Odrzucane są niekompletne odpowiedzi API. Walidator wymaga czterech profili, progów p95/p99/błędów/przepustowości zatwierdzonych przed pomiarem, obserwacji CPU/RSS/MariaDB i cech hosta docelowego. | Testy na sztucznych danych **nie** są wynikami pomiarów na Xeonie. |
 | 0.5.4 — Spójna para kopii | Dodano manifest SHA-256, wiążący zrzut MariaDB i pięć plików gatewaya, z kontrolą prywatnych uprawnień, symlinków, zmian zawartości i brakiem nadpisywania. | Narzędzie **nie** wykonuje backupu SQL/importu, restartu usług ani pomiaru RPO/RTO. |
 
 ## CI oraz systemd
 
-Roboczy PR do `main` uruchamia `.github/workflows/build.yml`. Wymagane są zakończone z sukcesem: C++ Debug i Release na trzech Ubuntu, trzy zadania WebAdmin, ASan i UBSan, oba testy Debian oraz zbiorczy `CI (C++ and WebAdmin)`. Zapisz SHA ostatniego commita, linki do uruchomień i wyniki w Issue #234; stan oczekujący, pominięty, anulowany lub aktywny **nie** jest sukcesem. `scripts/ci_junit_summary.py` publikuje jedynie liczby testów/status/SHA, bez surowych logów, tokenów, odpowiedzi API czy prywatnych ścieżek; 14-dniowe artefakty są unikatowe dla próby CI.
+Roboczy PR do `main` uruchamia `.github/workflows/build.yml`. Wymagane są zakończone z sukcesem: C++ Debug i Release na trzech Ubuntu, trzy zadania WebAdmin, ASan i UBSan oraz zbiorczy `CI (C++ and WebAdmin)`. Brak jobów Debiana i prywatnych runnerów. Zapisz SHA ostatniego commita, linki do uruchomień i wyniki w Issue #234; stan oczekujący, pominięty, anulowany lub aktywny **nie** jest sukcesem. `scripts/ci_junit_summary.py` publikuje wyłącznie liczby testów/status/SHA, bez surowych logów, tokenów, odpowiedzi API i prywatnych ścieżek.
 
-Testy na Debianie uruchamiają się w kontenerach na publicznej infrastrukturze GitHub. Kontener bez działającego menedżera systemd nie potwierdza bezpieczeństwa `systemd-run`. Test `systemd.sandbox` trzeba przeprowadzić oddzielnie na autoryzowanym, nieprodukcyjnym hoście lub VM z rzeczywistym systemd. Zapisz wersję systemu, unit, ograniczenia procesu, restart, awarię i dziennik — nie uznawaj pominięcia testu w Dockerze za zaliczenie.
+Zmienna `DC24H_REQUIRE_SYSTEMD_HOST=1` sprawia, że test Ubuntu kończy się błędem, jeżeli nie ma prawdziwego menedżera systemd lub uprawnień root/sudo. Testy używają `systemd-run` i jednostki testowej, nie symulacji kontenera.
 
-## Wydajność docelowa — do wykonania przez operatora
+## Pomiary Ubuntu w GitHub CI (nie odbiór sprzętu docelowego)
 
-Wymagany host to **Debian 13 Trixie, Intel Xeon D-1521, osiem wątków, 31 997 MiB RAM**. AMD EPYC i kontener Debian nie są zamiennikami. Przygotuj izolowaną replikę ze sztucznymi kontami, loopback ADC/ADCS/HTTPS, zaufanym certyfikatem oraz osobną MariaDB i Apache2. Przed próbą uzgodnij i oznacz czasowo progi dla każdego profilu: max p95/p99, max procent błędów, min udane żądania/s; wspólne progi: max CPU %, szczyt RSS KiB, liczba wątków i błędów MariaDB. Plik progów pozostaje poza Git. `approved_before_utc` musi poprzedzać `measurement_started_utc`.
+Na każdej z trzech wersji Ubuntu workflow zbiera kontrolowane próbki ADC/ADCS na loopback: p50/p95/p99, udane żądania/s, błędy, RSS przed/po oraz przybliżony procent czasu CPU procesu względem jednego wątku. Jednorazowa baza MariaDB w teście CLI dostarcza czas kopii i odtwarzania oraz kontrolę schematu/poświadczeń. Raporty CTest i Chromium dają p50/p95/p99 **czasu wykonania testów**, nie latencji żądań HTTP/SQL. Do artefaktu trafiają tylko agregaty, bez surowego JUnit i danych prywatnych.
 
-Uruchom cztery profile ograniczonego testu z [procedury pomiarowej](BETA_0.4_STAGE_IV_PERFORMANCE.md) z `--ack-isolated`, certyfikatem CA i prywatnym plikiem sesji dla API. W pliku obserwacji umieść raporty `adc`, `adcs`, `webadmin`, `api` w `profiles`, rzeczywiście zmierzone CPU/RSS/MariaDB w `resources`, a dokładne cechy hosta i SHA w `target`. Następnie:
+Narzędzie czterech profili i walidator danych docelowych pozostają w repozytorium na przyszłość, ale **nie wykonujemy ich** na Debianie ani Xeonie w obecnej jednostce:
 
 ```sh
 python3 scripts/stage1_perf_gate.py --policy /private/stage1-policy.json --evidence /private/stage1-observations.json
 ```
 
-Wynik może potwierdzić wyłącznie spełnienie liczbowych progów; zawsze ma `capacity_claim: false` i `release_approved: false`. Dowody i zgody przechowuj poza repozytorium. Ocenę obciążenia i błędów zatwierdza niezależny operator.
+Ta komenda wymaga zatwierdzonych wcześniej realnych danych docelowych i **nie jest uruchamiana przez bieżące CI**. Pomiary Ubuntu nie dowodzą wydajności Debiana 13/Xeona ani RPO/RTO. Raporty zachowują `capacity_claim: false`.
 
 ## Kopia MariaDB i gatewaya — do wykonania przez operatora
 
@@ -46,9 +48,10 @@ Manifest zawiera wyłącznie hashe, rozmiary, znacznik czasu i SHA; nie jest pod
 
 | Wymaganie | Stan bez autoryzowanych dowodów |
 | --- | --- |
-| Pełne najnowsze GitHub Actions z Debianem | **PENDING** |
-| Zgodność i rzeczywisty menedżer systemd na Debianie/Ubuntu | **PENDING** |
-| Pomiary wydajności Xeona i zatwierdzone progi | **NOT MEASURED** |
+| Pełne najnowsze GitHub Actions na Ubuntu 22.04/24.04/26.04 | **PENDING** |
+| Prawdziwy systemd na trzech runnerach Ubuntu | **PENDING** |
+| Zgodność Debian 12/13 | **ODROCZONE PRZEZ WŁAŚCICIELA — bez testów** |
+| Pomiary wydajności Xeona i zatwierdzone progi | **NOT MEASURED — właściciel zabrania testów docelowych w tej jednostce** |
 | Odtworzenie MariaDB + plików, restart, rollback i RPO/RTO | **NOT MEASURED** |
 | Niezależna akceptacja operatora | **PENDING — NO-GO** |
 

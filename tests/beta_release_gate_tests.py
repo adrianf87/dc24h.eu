@@ -29,7 +29,7 @@ class BetaReleaseGate(unittest.TestCase):
         workflow = source(".github/workflows/build.yml")
         for check in ("ctest --test-dir", "tests/*.test.ts", "npm run test:e2e",
                       "npm run test:integration", "npm audit --omit=dev --audit-level=high",
-                      "sanitizer: [address, undefined]", "needs: [cpp, webadmin, sanitizers, debian_compat]"):
+                      "sanitizer: [address, undefined]", "needs: [cpp, webadmin, sanitizers]"):
             self.assertIn(check, workflow)
 
     def test_local_only_fixed_routes_no_public_admin_api(self):

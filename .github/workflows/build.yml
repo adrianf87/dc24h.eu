@@ -30,6 +30,7 @@ jobs:
       CI: 'true'
       BUILD_TYPE: ${{ matrix.build_type }}
       SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      DC24H_REQUIRE_SYSTEMD_HOST: '1'
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -171,74 +172,10 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  debian_compat:
-    name: Debian ${{ matrix.release }} - compatibility smoke
-    if: github.repository == 'adrianf87/dc24h.eu-high-starter'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 100
-    strategy:
-      fail-fast: false
-      matrix:
-        release: [bookworm, trixie]
-    container:
-      image: debian:${{ matrix.release }}
-    env:
-      CI: 'true'
-      CXX: g++
-      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-        with:
-          persist-credentials: false
-
-      - name: Install Debian build and integration dependencies
-        run: |
-          bash .github/scripts/install-ci-deps.sh \
-            build-essential cmake python3 libutf8proc-dev libgcrypt20-dev \
-            libssl-dev libmariadb-dev openssl ncdc mariadb-server apache2
-
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
-        with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: webadmin/package-lock.json
-
-      - name: Build Debian C++20 binaries and tests
-        run: |
-          cmake -S . -B build/Debian -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
-          cmake --build build/Debian --parallel 2
-          python3 scripts/compatibility_fixture_gate.py --build-dir build/Debian
-
-      - name: Real Debian integration smoke without systemd-host claims
-        run: |
-          ctest --test-dir build/Debian --parallel 2 --output-on-failure \
-            --output-junit "$RUNNER_TEMP/ctest.xml" \
-            -R '^(database\.(process|resilience\.process|migrations\.process)|apache2\.(https|remote\.gateway)|api\.process|adc\.process|adcs\.process|beta\.04\.stage4\.vm\.probe|project\.metadata|compatibility\.fixture\.gate|ci\.junit\.summary)$'
-
-      - name: Verify WebAdmin TypeScript, Vite and unit tests on Debian
-        working-directory: webadmin
-        run: |
-          npm ci
-          npm run build
-          node --import tsx --test --test-concurrency=2 tests/*.test.ts
-
-      - name: Prepare Debian evidence
-        if: always()
-        run: python3 scripts/ci_junit_summary.py --junit "$RUNNER_TEMP/ctest.xml" --output "$RUNNER_TEMP/evidence/summary.json" --suite "debian-${{ matrix.release }}" --sha "$SOURCE_SHA"
-
-      - name: Upload immutable Debian smoke status
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: debian-${{ matrix.release }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/evidence/summary.json
-          if-no-files-found: error
-          retention-days: 14
-
   required_ci:
     # Preserve the required check name configured by branch protection.
     name: CI (C++ and WebAdmin)
-    needs: [cpp, webadmin, sanitizers, debian_compat]
+    needs: [cpp, webadmin, sanitizers]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -248,9 +185,7 @@ jobs:
           CPP_RESULT: ${{ needs.cpp.result }}
           WEBADMIN_RESULT: ${{ needs.webadmin.result }}
           SANITIZERS_RESULT: ${{ needs.sanitizers.result }}
-          DEBIAN_RESULT: ${{ needs.debian_compat.result }}
         run: |
           test "$CPP_RESULT" = "success"
           test "$WEBADMIN_RESULT" = "success"
           test "$SANITIZERS_RESULT" = "success"
-          test "$DEBIAN_RESULT" = "success"

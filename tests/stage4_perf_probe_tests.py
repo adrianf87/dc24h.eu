@@ -73,8 +73,13 @@ class StageFourPerfContract(unittest.TestCase):
         self.assertEqual(report["p95_ms"], 20.0)
         self.assertEqual(report["successful_requests_per_second"], 1.0)
         self.assertFalse(report["capacity_claim"])
+        self.assertIsNone(report["target_cpu_mean_percent_one_core"])
         self.assertNotIn("cookie", str(report))
         self.assertEqual(probe.percentile([], 0.95), None)
+        measured = probe.summarize("adc", [(True, 10.0, "ok")], 2.0, 1, 1,
+                                   100, 130, 1.0, 1.5)
+        self.assertEqual(measured["target_cpu_mean_percent_one_core"], 25.0)
+        self.assertEqual(measured["target_rss_before_kib"], 100)
 
     def test_no_implicit_load_or_unverified_tls(self):
         unsafe = [

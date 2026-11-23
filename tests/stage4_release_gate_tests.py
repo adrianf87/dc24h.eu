@@ -39,7 +39,7 @@ class StageFourReleaseGate(unittest.TestCase):
         workflow = source(".github/workflows/build.yml")
         for required in (
             BRANCH, "ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04",
-            "sanitizer: [address, undefined]", "needs: [cpp, webadmin, sanitizers, debian_compat]",
+            "sanitizer: [address, undefined]", "needs: [cpp, webadmin, sanitizers]",
         ):
             self.assertIn(required, workflow)
 

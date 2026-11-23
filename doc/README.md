@@ -2,7 +2,7 @@
 
 Current development version: beta-0.5.4.
 
-[Beta-0.5.1–beta-0.5.4 Stage I: CI, Debian, performance evidence and matched recovery](us/BETA_0.5_STAGE_I.md) · [PL](pl/BETA_0.5_STAGE_I.md)
+[Beta-0.5.1–beta-0.5.4 Stage I: Ubuntu CI, deferred Debian, performance evidence and matched recovery](us/BETA_0.5_STAGE_I.md) · [PL](pl/BETA_0.5_STAGE_I.md)
 
 [Beta-0.4.13–beta-0.4.16 Stage IV: security regressions, measurements, recovery and release gates](us/BETA_0.4_STAGE_IV.md) · [PL](pl/BETA_0.4_STAGE_IV.md)
 
