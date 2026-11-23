@@ -114,6 +114,9 @@ public:
     void request_stop() noexcept;
     // Atomic counters; fields are independently sampled, not a transaction.
     [[nodiscard]] Statistics statistics() const noexcept;
+    // Becomes true only after all configured listeners have been bound and
+    // watched; clears on every normal or exceptional reactor exit.
+    [[nodiscard]] bool listeners_ready() const noexcept { return listeners_ready_.load(); }
     // Plain copy of ready sessions. The mutex guards this copy only.
     // Session models stay on the reactor thread.
     [[nodiscard]] users::PresenceDirectory presence() const;
@@ -124,6 +127,7 @@ private:
     int wake_fd_{-1};
     std::atomic<bool> stop_{false};
     std::atomic<bool> used_{false};
+    std::atomic<bool> listeners_ready_{false};
     std::atomic<std::size_t> active_{0};
     std::atomic<std::uint64_t> accepted_{0};
     std::atomic<std::uint64_t> rejected_{0};

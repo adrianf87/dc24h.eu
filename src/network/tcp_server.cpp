@@ -302,6 +302,10 @@ void TcpServer::run() {
             online.store(0);
         }
     } reset{active_, closed_, online_users_};
+    struct ResetReadiness {
+        std::atomic<bool>& ready;
+        ~ResetReadiness() { ready.store(false); }
+    } reset_readiness{listeners_ready_};
     Fd epoll(::epoll_create1(EPOLL_CLOEXEC));
     if (epoll.get() == -1) { system_failure("epoll_create1"); }
     watch(epoll.get(), wake_fd_, 0, EPOLLIN);
@@ -495,6 +499,10 @@ void TcpServer::run() {
         const auto samples = reactor_samples_.load();
         if (samples != std::numeric_limits<std::uint64_t>::max()) { reactor_samples_.store(samples + 1); }
     };
+    // All listener and session/transport initialization is complete.
+    if (!stop_.load() && listeners.size() == options_.listeners.size() + options_.tls_listeners.size()) {
+        listeners_ready_.store(true);
+    }
     while (!stop_.load()) {
         if (!accepting && Clock::now() >= resume_accepting) {
             for (std::size_t i = 0; i < listeners.size(); ++i) {

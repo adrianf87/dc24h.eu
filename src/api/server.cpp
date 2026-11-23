@@ -426,6 +426,15 @@ struct Server::Impl {
         }
         if (request.method != "GET") { return response(405, "{\"error\":\"method_not_allowed\"}\n", head); }
         if (request.target == "/api/v1/health") { return response(200, "{\"status\":\"ok\"}\n"); }
+        // Do not overload the historical API-worker liveness check with a
+        // readiness promise. This separate probe requires bound ADC/ADCS
+        // listeners and an active Core, not an arbitrary API response.
+        if (request.target == "/api/v1/ready") {
+            const auto snapshot = status();
+            return snapshot.core_running && snapshot.listeners_ready
+                ? response(200, "{\"status\":\"ready\"}\n")
+                : response(503, "{\"error\":\"not_ready\"}\n");
+        }
         if (request.target == "/api/v1/status") { return response(200, status_json(status())); }
         if (request.target == "/api/v1/users" && users) { return response(200, users_json(users())); }
         return response(404, "{\"error\":\"not_found\"}\n");

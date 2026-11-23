@@ -56,6 +56,8 @@ struct Snapshot {
     std::uint64_t sessions_created{}, sessions_completed{};
     std::uint64_t login_samples{}, login_last_ms{}, login_max_ms{};
     std::uint64_t reactor_samples{}, reactor_last_ms{}, reactor_max_ms{};
+    // Internal-only transport readiness. Not serialized in API v1 status.
+    bool listeners_ready{};
 };
 // Fixed read-only summary of counters already stored on Snapshot. Decimal
 // strings keep the full uint64 range. No SQL, secrets, names or derived rates.

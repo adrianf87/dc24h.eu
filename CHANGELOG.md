@@ -1,5 +1,11 @@
 # Changelog
 
+## Alpha 0.1 outstanding operational fixes — 2026-11-23 (fix-alpha-0.1-outstanding; based on main)
+
+- Replace the historical synchronous C++ logger sink path with a single dedicated writer and bounded 256-record queue; preserve private file modes, fixed event budgets, sanitization and ordered best-effort writes. Block termination signals before starting that worker to preserve normal signal shutdown. On overload, discard new records and emit a bounded dropped-record warning when the sink recovers. A permanently blocked sink may still delay final logger destruction; this is not a durable security audit.
+- Add a separate bearer-protected local API `GET /api/v1/ready` probe returning 200 only when Core is running and all configured ADC/ADCS listeners are bound, otherwise 503. Preserve the existing `/api/v1/health` liveness meaning, `/api/v1/status` JSON, local Unix-socket scope and read-only authorization. This is transport readiness, not a live SQL check.
+- Add deterministic C++ backpressure and not-ready regressions plus process coverage for ready/unauthenticated/wrong-method requests; update EN/PL operator guidance. Historical protocol, accounts, fuzzing and slow-reader coverage had already been delivered after alpha-0.1 and are not reimplemented. Configuration/certificate hot reload, public browser administration, live SQL health, and production deployment remain separate reviewed features.
+
 ## beta-0.3.12 security follow-up — 2026-11-23 (same beta-0.3.1-12-full branch)
 
 - Close shared-ledger TOTP replay across independently started verifiers: re-read the bounded ledger before use and append a unique ordered marker before granting a code, with a post-write check that only the earliest matching step can succeed. Preserve older two-field ledger records; reject malformed markers and fail closed on replay persistence errors. The ledger requires a local filesystem with atomic append semantics; a single gateway service remains the supported deployment.

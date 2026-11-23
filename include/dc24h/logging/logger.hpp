@@ -4,11 +4,14 @@
 #include "dc24h/chat/statistics.hpp"
 
 #include <chrono>
+#include <condition_variable>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <mutex>
 #include <string>
 #include <string_view>
+#include <thread>
 
 namespace dc24h::logging {
 
@@ -29,7 +32,7 @@ struct Options {
     bool chat{false};
 };
 
-// Synchronized best-effort UTC logger. A new file is mode 0600.
+// Bounded, asynchronous best-effort UTC logger. A new file is mode 0600.
 // An existing file must already be mode 0600, owned by this user, with one link.
 // The caller must keep the log directory trusted and join users before destruction.
 class Logger final {
@@ -43,6 +46,9 @@ public:
     void info(std::string_view message) noexcept;
     void warning(std::string_view message) noexcept;
     void error(std::string_view message) noexcept;
+    // Explicit blocking drain for controlled tests/operator shutdown only;
+    // never call from the network reactor or a request handler.
+    void flush();
     // At most 64 emitted lifecycle events per one-second steady-clock window.
     void connection(ConnectionEvent event, std::uint64_t id, bool secure) noexcept;
     // Independent budget: at most 32 fixed chat outcome records per second.
@@ -58,7 +64,15 @@ private:
     void report_chat_suppressed_unlocked();
     void report_security_suppressed_unlocked();
     void record_security_unlocked(std::string_view action);
+    void writer_loop() noexcept;
     std::mutex mutex_;
+    std::condition_variable wake_;
+    std::condition_variable drained_;
+    std::deque<std::string> pending_;
+    std::jthread writer_;
+    std::uint64_t queue_dropped_{};
+    bool stopping_{};
+    bool writing_{};
     Level level_;
     i18n::Language language_;
     int fd_{2};

@@ -190,11 +190,12 @@ To HTTP przez gniazdo Unix; `localhost` jest wartością Host, nie połączeniem
 
 ## Wersjonowane endpointy
 
-Obie trasy wymagają uwierzytelnienia. Klucze JSON i błędy protokołu pozostają EN/US niezależnie od języka operatora.
+Wszystkie trasy wymagają uwierzytelnienia. Klucze JSON i błędy protokołu pozostają EN/US niezależnie od języka operatora.
 
 | Metoda / ścieżka | Wynik |
 | --- | --- |
 | `GET /api/v1/health` | 200 `{"status":"ok"}`: wątek API obsługuje żądanie; nie jest to test bazy ani pełnej gotowości ADC |
+| `GET /api/v1/ready` | 200 `{"status":"ready"}` tylko gdy Core działa i wszystkie skonfigurowane nasłuchy ADC/ADCS są uruchomione; w przeciwnym razie 503 `{"error":"not_ready"}`. To **gotowość transportu**, a nie kontrola bieżącego SQL, zalogowanych użytkowników ani wydajności. |
 | `GET /api/v1/status` | 200: ograniczony zestaw danych poniżej |
 
 ```json

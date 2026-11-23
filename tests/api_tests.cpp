@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <cstring>
@@ -201,6 +202,23 @@ void lifecycle() {
         require(::lstat(options.socket_path.c_str(), &state) == 0 && S_ISSOCK(state.st_mode));
         require((state.st_mode & 0777) == 0600);
         rejects([&] { server.start(); });
+        // A responsive API worker must not pretend an unstarted Core/Network
+        // is ready. The historical /health endpoint remains a liveness probe.
+        const int probe = ::socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+        require(probe >= 0);
+        sockaddr_un address{}; address.sun_family = AF_UNIX;
+        std::memcpy(address.sun_path, options.socket_path.c_str(), options.socket_path.size() + 1);
+        require(::connect(probe, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == 0);
+        const auto request = "GET /api/v1/ready HTTP/1.1\r\nHost: x\r\nAuthorization: Bearer " + std::string(64, 'a') + "\r\n\r\n";
+        require(::send(probe, request.data(), request.size(), MSG_NOSIGNAL) == static_cast<ssize_t>(request.size()));
+        std::string denial;
+        std::array<char, 512> reply_bytes{};
+        for (ssize_t received; (received = ::recv(probe, reply_bytes.data(), reply_bytes.size(), 0)) > 0;) {
+            denial.append(reply_bytes.data(), static_cast<std::size_t>(received));
+        }
+        ::close(probe);
+        require(denial.find("503 Service Unavailable") != std::string::npos &&
+                denial.find("{\"error\":\"not_ready\"}") != std::string::npos);
         Server rival(logger, options, status, [] {});
         rejects([&] { rival.start(); });
         require(std::filesystem::exists(options.socket_path));

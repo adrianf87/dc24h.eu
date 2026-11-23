@@ -6,7 +6,7 @@
 
 **Etap dostarczony w alpha-0.2.9:** [STA/QUI](ADC_STATUS.md) dodaje walidację semantyki statusów/rozłączeń, kontrolowany routing B/D/E/F, dokładniejsze błędy i ograniczone końcowe ISTA/własne IQUI. Opisy historyczne poniżej zachowują zachowanie pierwotnych wersji.
 
-`dc24h_logging` zapisuje zsynchronizowane wiersze UTC na stderr lub do zwykłego pliku append. Błędy zapisu działają best effort. Logger musi żyć dłużej niż wywołujący; przed zniszczeniem zakończ i dołącz wszystkie wątki. Domyślne komunikaty są US, opcjonalnie PL z katalogów. Dane protokołu i klucze zdarzeń nie są tłumaczone.
+`dc24h_logging` zapisuje wiersze UTC przez ograniczoną kolejkę asynchroniczną na stderr lub do zwykłego pliku append. Błędy zapisu działają best effort. Logger musi żyć dłużej niż wywołujący; przed zniszczeniem zakończ i dołącz wszystkie wątki. Domyślne komunikaty są US, opcjonalnie PL z katalogów. Dane protokołu i klucze zdarzeń nie są tłumaczone. Ta poprawka usuwa historyczne blokowanie producentów z alpha-0.1; starsze opisy wydań pozostają historyczne.
 
 ## Poziomy i ustawienia
 
@@ -47,7 +47,7 @@ Rekordy nie otrzymują adresów/portów klientów, nicków, CID/PID, hashy PAS a
 
 ## Limity i duży ruch
 
-Logger emituje do 64 zdarzeń połączeń w jednym oknie sekundy zegara monotonicznego, wspólnym dla klientów i transportów. Okno zaczyna pierwszy wpis i odnawia się przy następnym zdarzeniu. Nie jest to okno kroczące, więc granica sąsiednich okien dopuszcza większy chwilowy ruch. Nadmiar jest zliczany bez kolejki. Jeden WARN podaje liczbę pominiętych zdarzeń przy kolejnym zdarzeniu po odnowieniu okna lub w destruktorze. Licznik nasyca się przy uint64 max. Historia może być niepełna i nie stanowi rejestru audytowego. Poziom nie zmienia się w czasie życia loggera.
+Logger emituje do 64 zdarzeń połączeń w jednym oknie sekundy zegara monotonicznego, wspólnym dla klientów i transportów. Okno zaczyna pierwszy wpis i odnawia się przy następnym zdarzeniu. Nie jest to okno kroczące, więc granica sąsiednich okien dopuszcza większy chwilowy ruch. Nadmiar zdarzeń jest zliczany bez ich kolejkowania; jeden WARN podaje liczbę przy odnowieniu okna lub zatrzymaniu. Wspólna kolejka wyjściowa mieści maksymalnie 256 ograniczonych rekordów; przy wolnym odbiorniku kolejne wpisy są pomijane, a po wznowieniu zapisu pojawia się osobne ostrzeżenie z liczbą. Liczniki nasycają się przy uint64 max. Historia nie jest pełnym audytem.
 
 Reaktor sieci osobno emituje najwyżej jedno ostrzeżenie na pięć sekund dla każdej kategorii: błędne ramki (także ucięty EOF), limit połączeń, zwykła bezczynność, błąd tworzenia/negocjacji TLS, termin negocjacji oraz I/O klienta. Kategorie są niezależne: limit nie tłumi ostrzeżenia o bezczynności. Pominięte ostrzeżenia nie mają kolejki ani osobnych raportów; zbiorcze liczniki parsera/sieci pozostają dostępne przy stopie INFO. Błędy accept/watch zachowują sekundową przerwę nasłuchu. Bezpośrednie wywołania warning/error loggera nie mają globalnego limitu.
 
@@ -55,7 +55,7 @@ Treść rekordu ma do 1024 bajtów razem ze znacznikiem `...[truncated]`, poza p
 
 ## Ograniczenia operacyjne
 
-Zapis jest synchroniczny. Dysk i zablokowany potok stderr mogą opóźnić reaktor; limity ograniczają ilość wpisów, nie czas nośnika. Obsługiwane są częściowe zapisy i EINTR, błędy działającego wyjścia są best effort, wyjątki nie wychodzą z loggera. Błąd otwarcia pliku przerywa start. Brak kolejki async, rotacji, reopen, dynamicznego poziomu, reload przez SIGHUP i zdalnego kolektora. Kontroluj wzrost pliku i używaj zaufanych katalogów. Mechanizmy nie zastępują limitów sieci, uwierzytelniania i ochrony DDoS. Testy opisuje [TESTING.md](TESTING.md).
+Reaktor jedynie formatuje i kolejkuje ograniczone wpisy. Osobny wątek wykonuje potencjalnie blokujący zapis na dysk lub stderr bez trzymania blokady producenta. Destruktor opróżnia kolejkę i dołącza wątek; **trwale zablokowany odbiornik może nadal opóźnić zatrzymanie**. Nagłe zabicie procesu może utracić kolejkę. Obsługiwane są częściowe zapisy i EINTR, błędy wyjścia są best effort, a błąd otwarcia pliku przerywa start. Brak rotacji, reopen, dynamicznego poziomu, SIGHUP reload i zdalnego kolektora. `Logger::flush()` jest blokujący i nie może być wołany z reaktora. Nie zastępuje to trwałego audytu, limitów sieci ani ochrony DDoS. Testy opisuje [TESTING.md](TESTING.md).
 
 ## Security — alpha-0.1.7
 
