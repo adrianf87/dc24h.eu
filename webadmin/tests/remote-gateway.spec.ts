@@ -3,13 +3,13 @@ import { test, expect, type Route } from "@playwright/test";
 const sessionCsrf = "d".repeat(64);
 const snapshot = {
   schema: 1, mode: "read-only",
-  server: { version: "beta-0.4.4", running: true, uptime_seconds: 123 },
+  server: { version: "beta-0.4.8", running: true, uptime_seconds: 123 },
   network: { active_connections: 5, accepted_connections: 22 },
   users: { online: 4, peak_online: 7 },
   chat: { received: 10, rejected: 1 },
 };
 
-test("remote read-only screen needs a session, supports EN/PL and never offers mutations", async ({ page }) => {
+test("remote read-only screen needs a session, supports EN/PL and never offers hub-control mutations", async ({ page }) => {
   let loggedIn = false;
   await page.route("**/remote/v1/session", async (route) => {
     await route.fulfill({ status: loggedIn ? 200 : 401, contentType: "application/json",
@@ -45,8 +45,8 @@ test("remote read-only screen needs a session, supports EN/PL and never offers m
   await page.getByLabel("ID konta administratora").fill("7");
   await page.getByLabel("Hasło konta").fill("example-proof");
   await page.getByLabel("Kod uwierzytelniający (6 cyfr)").fill("123456");
-  await page.getByRole("button", { name: "Zaloguj" }).click();
-  await expect(page.getByText("beta-0.4.4")).toBeVisible();
+  await page.getByRole("button", { name: "Zaloguj", exact: true }).click();
+  await expect(page.getByText("beta-0.4.8")).toBeVisible();
   await expect(page.getByText("Aktywne połączenia")).toBeVisible();
   await expect(page.getByText("Użytkownicy online")).toBeVisible();
   for (const title of ["Start", "Stop", "Restart", "Edit", "Restore", "Grant"]) {
@@ -54,6 +54,143 @@ test("remote read-only screen needs a session, supports EN/PL and never offers m
   }
   await page.getByRole("button", { name: "Wyloguj" }).click();
   await expect(page.getByText("Zaloguj się, aby odczytać zatwierdzone dane huba.")).toBeVisible();
+});
+
+test("local passkey inventory exposes only this account's device actions and revokes the browser session", async ({ page }) => {
+  let revoked = false;
+  let name = "My phone";
+  await page.route("**/remote/v1/session", route => route.fulfill({
+    status: revoked ? 401 : 200, contentType: "application/json",
+    body: revoked ? '{"error":"unauthorized"}' : JSON.stringify({
+      schema: 1, authenticated: true, mfa: true, mode: "read-only", csrf: sessionCsrf, expires_in: 600,
+    }),
+  }));
+  await page.route("**/remote/v1/summary", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify(snapshot),
+  }));
+  await page.route("**/remote/v1/passkey/devices", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify({ schema: 1, devices: [{
+      id: "p".repeat(32), name, device_type: "multiDevice", backed_up: true,
+      created_at: 1000, last_used_at: null,
+    }] }),
+  }));
+  await page.route("**/remote/v1/passkey/device/rename", async route => {
+    expect(route.request().headers()["x-dc24h-remote-csrf"]).toBe(sessionCsrf);
+    const body = route.request().postDataJSON() as { id: string; name: string };
+    expect(body.id).toBe("p".repeat(32));
+    name = body.name;
+    await route.fulfill({ status: 200, contentType: "application/json", body: '{"schema":1,"renamed":true}' });
+  });
+  await page.route("**/remote/v1/passkey/device/revoke", async route => {
+    expect(route.request().headers()["x-dc24h-remote-csrf"]).toBe(sessionCsrf);
+    revoked = true;
+    await route.fulfill({ status: 200, contentType: "application/json", body: '{"schema":1,"revoked":true}' });
+  });
+  await page.goto("/remote.html");
+  await expect(page.getByText("Passkeys / trusted devices")).toBeVisible();
+  await page.getByRole("button", { name: "Refresh devices" }).click();
+  await expect(page.getByText("My phone")).toBeVisible();
+  await page.getByLabel("Device name").fill("Work laptop");
+  await page.getByRole("button", { name: "Rename" }).click();
+  await expect(page.getByText("Work laptop")).toBeVisible();
+  await page.getByRole("button", { name: "Revoke" }).click();
+  await expect(page.getByText("Sign in to read approved hub metrics.")).toBeVisible();
+  await expect(page.getByText("The key was revoked and sessions were ended.")).toBeVisible();
+});
+
+test("a delayed device revocation response cannot sign out a newer session", async ({ page }) => {
+  let oldRevoke!: Route;
+  let signalStarted!: () => void;
+  const revokeStarted = new Promise<void>(resolve => { signalStarted = resolve; });
+  await page.route("**/remote/v1/session", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({ schema: 1, authenticated: true, mfa: true,
+      mode: "read-only", csrf: sessionCsrf, expires_in: 600 }),
+  }));
+  await page.route("**/remote/v1/summary", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify(snapshot),
+  }));
+  await page.route("**/remote/v1/passkey/devices", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify({ schema: 1, devices: [{
+      id: "p".repeat(32), name: "Old device", device_type: "multiDevice", backed_up: true,
+      created_at: 1000, last_used_at: null,
+    }] }),
+  }));
+  await page.route("**/remote/v1/passkey/device/revoke", route => {
+    oldRevoke = route;
+    signalStarted();
+    // The server has processed the old revoke, but its HTTP reply is delayed.
+  });
+  await page.route("**/remote/v1/logout", route => route.fulfill({
+    status: 200, contentType: "application/json", body: '{"schema":1,"authenticated":false}',
+  }));
+  await page.route("**/remote/v1/challenge", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify({ schema: 1, csrf: "e".repeat(64) }),
+  }));
+  await page.route("**/remote/v1/login", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify({ schema: 1,
+      authenticated: true, mfa: true, mode: "read-only", csrf: "f".repeat(64), expires_in: 600 }),
+  }));
+
+  await page.goto("/remote.html");
+  await page.getByRole("button", { name: "Refresh devices" }).click();
+  await expect(page.getByText("Old device")).toBeVisible();
+  await page.getByRole("button", { name: "Revoke" }).click();
+  await revokeStarted;
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page.getByText("Sign in to read approved hub metrics.")).toBeVisible();
+  await page.getByLabel("Administrator account ID").fill("8");
+  await page.getByLabel("Account password").fill("new-proof");
+  await page.getByLabel("Authenticator code (6 digits)").fill("123456");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page.getByText("Active connections")).toBeVisible();
+
+  const oldResponse = page.waitForResponse(response =>
+    response.url().endsWith("/remote/v1/passkey/device/revoke") && response.status() === 200);
+  await oldRevoke.fulfill({ status: 200, contentType: "application/json", body: '{"schema":1,"revoked":true}' });
+  await oldResponse;
+  await page.evaluate(() => new Promise<void>(resolve =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+  await expect(page.getByText("Active connections")).toBeVisible();
+  await expect(page.getByText("The key was revoked and sessions were ended.")).toHaveCount(0);
+});
+
+test("an older device inventory cannot replace a newer refresh", async ({ page }) => {
+  let delayed!: Route;
+  let signalStarted!: () => void;
+  const started = new Promise<void>(resolve => { signalStarted = resolve; });
+  let reads = 0;
+  await page.route("**/remote/v1/session", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({ schema: 1, authenticated: true, mfa: true,
+      mode: "read-only", csrf: sessionCsrf, expires_in: 600 }),
+  }));
+  await page.route("**/remote/v1/summary", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify(snapshot),
+  }));
+  const inventory = (name: string) => JSON.stringify({ schema: 1, devices: [{
+    id: "p".repeat(32), name, device_type: "multiDevice", backed_up: true,
+    created_at: 1000, last_used_at: null,
+  }] });
+  await page.route("**/remote/v1/passkey/devices", async route => {
+    if (++reads === 1) { delayed = route; signalStarted(); return; }
+    await route.fulfill({ status: 200, contentType: "application/json", body: inventory("New name") });
+  });
+  await page.goto("/remote.html");
+  await page.getByRole("button", { name: "Refresh devices" }).click();
+  await started;
+  await page.getByRole("button", { name: "Refresh devices" }).click();
+  await expect(page.getByText("New name")).toBeVisible();
+  const oldResponse = page.waitForResponse(response =>
+    response.url().endsWith("/remote/v1/passkey/devices") && response.status() === 200 &&
+    response.request().method() === "GET");
+  await delayed.fulfill({ status: 200, contentType: "application/json", body: inventory("Stale name") });
+  await oldResponse;
+  await page.evaluate(() => new Promise<void>(resolve =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await expect(page.getByText("New name")).toBeVisible();
+  await expect(page.getByText("Stale name")).toHaveCount(0);
 });
 
 test("remote view fails closed on unavailable API and does not render stale metrics", async ({ page }) => {
@@ -82,7 +219,7 @@ test("remote view clears previously displayed metrics after session expiration",
   await page.goto("/remote.html");
   await expect(page.getByText("Active connections")).toBeVisible();
   expired = true;
-  await page.getByRole("button", { name: "Refresh" }).click();
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
   await expect(page.getByText("Your session expired or was revoked. Sign in again.")).toBeVisible();
   await expect(page.getByText("Active connections")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Sign out" })).toHaveCount(0);
@@ -119,12 +256,12 @@ test("a delayed denial from the previous session cannot expire a new login", asy
 
   await page.goto("/remote.html");
   await firstStarted;
-  await page.getByRole("button", { name: "Refresh" }).click();
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
   await expect(page.getByText("Your session expired or was revoked. Sign in again.")).toBeVisible();
   await page.getByLabel("Administrator account ID").fill("7");
   await page.getByLabel("Account password").fill("correct");
   await page.getByLabel("Authenticator code (6 digits)").fill("123456");
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page.getByText("Active connections")).toBeVisible();
 
   const oldResponse = page.waitForResponse((response) =>
@@ -148,7 +285,7 @@ test("a failed login challenge clears the entered password", async ({ page }) =>
   await page.getByLabel("Administrator account ID").fill("7");
   await page.getByLabel("Account password").fill("sensitive-proof");
   await page.getByLabel("Authenticator code (6 digits)").fill("123456");
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page.getByText(/The gateway or hub API is unavailable/)).toBeVisible();
   await expect(page.getByLabel("Account password")).toHaveValue("");
   await expect(page.getByLabel("Authenticator code (6 digits)")).toHaveValue("");
@@ -190,7 +327,7 @@ test("an old summary cannot overwrite metrics after logout and a new login", asy
   await page.getByLabel("Administrator account ID").fill("7");
   await page.getByLabel("Account password").fill("new-proof");
   await page.getByLabel("Authenticator code (6 digits)").fill("123456");
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page.getByText("99", { exact: true })).toBeVisible();
 
   const staleResponse = page.waitForResponse((response) =>
@@ -221,7 +358,7 @@ test("an older read in the same session cannot replace fresher metrics", async (
 
   await page.goto("/remote.html");
   await firstStarted;
-  await page.getByRole("button", { name: "Refresh" }).click();
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
   await expect(page.getByText("99", { exact: true })).toBeVisible();
 
   const staleResponse = page.waitForResponse((response) =>
