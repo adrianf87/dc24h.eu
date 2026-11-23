@@ -165,7 +165,9 @@ class ApiProcessTests(unittest.TestCase):
             'reactor_samples', 'reactor_last_ms', 'reactor_max_ms'})
         self.assertIs(sample['available'], True)
         self.assertGreater(int(sample['rss_bytes']), 0)
-        self.assertEqual(sample['cpu_window_ms'], '0')
+        # Earlier API status/readiness requests may already have opened the
+        # CPU sampling window. Its elapsed time is not deterministically zero.
+        self.assertGreaterEqual(int(sample['cpu_window_ms']), 0)
         self.assertEqual(sample['login_samples'], '0')
         self.assertGreater(int(sample['reactor_samples']), 0)
         self.assertGreaterEqual(int(sample['reactor_max_ms']), int(sample['reactor_last_ms']))
