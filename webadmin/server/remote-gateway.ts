@@ -14,7 +14,11 @@ export type RemoteEvent = "login_ok" | "login_refused" | "mfa_ok" | "mfa_refused
 export interface RemoteOptions {
   origin: string;
   now?: () => number;
-  audit?: (event: RemoteEvent) => void;
+  audit?: (event: RemoteEvent) => void | Promise<void>;
+  // The local operator can require synchronous durable writes before login.
+  // A promise-based best-effort sink never satisfies strict audit mode.
+  strictAudit?: boolean;
+  auditHealthy?: () => boolean;
   // No login session can be created without an explicitly configured second factor.
   mfaVerify?: (actor: string, code: string, at: number) => boolean;
   // Optional in-process transport override for deterministic, socket-free tests.
@@ -131,11 +135,17 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
   const challenges = new Map<string, Challenge>();
   const budgets = new Map<string, Budget>();
 
-  const log = (event: RemoteEvent) => {
+  const log = (event: RemoteEvent): boolean => {
     // Audit integrations are external observers; a failed sink must not crash
     // the HTTP handler or change the decision to reject a request.
-    try { void Promise.resolve(audit(event)).catch(() => {}); }
-    catch { /* A synchronous sink failure is isolated as well. */ }
+    try {
+      const written = audit(event);
+      if (written && typeof written.then === "function") {
+        void written.catch(() => {});
+        return !options.strictAudit;
+      }
+      return true;
+    } catch { return false; }
   };
   const prune = (now: number) => {
     for (const [id, value] of sessions) {
@@ -241,6 +251,15 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
       (req.headers["content-length"] && req.headers["content-length"] !== "0"))) {
       reply(res, 400, { error: "bad_request" }); return;
     }
+    let auditAvailable = !options.strictAudit;
+    if (options.strictAudit) {
+      try { auditAvailable = options.auditHealthy?.() === true; }
+      catch { auditAvailable = false; }
+    }
+    if (!auditAvailable) {
+      sessions.clear(); challenges.clear();
+      reply(res, 503, { error: "unavailable" }, clearSession()); return;
+    }
     if (name === "challenge") {
       if (limited("challenge", 20, now) || challenges.size >= 128) {
         reply(res, 429, { error: "rate_limited" }); return;
@@ -325,8 +344,14 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
         if (prior) sessions.delete(previousSession);
         if (sessions.size >= maxSessions) sessions.delete(sessions.keys().next().value!);
         sessions.set(key, session);
-        log("mfa_ok");
-        log("login_ok");
+        const mfaLogged = log("mfa_ok"), loginLogged = log("login_ok");
+        if (options.strictAudit && (!mfaLogged || !loginLogged)) {
+          // A successful login must never be issued without its durable
+          // authentication records; revoke the just-created session.
+          sessions.delete(key);
+          reply(res, 503, { error: "unavailable" }, [setCookie("dc24h_remote_init", "", 0)]);
+          return;
+        }
         reply(res, 200, { schema: 1, authenticated: true, mfa: true, mode: "read-only", csrf: session.csrf, expires_in: 600 },
           [setCookie("dc24h_remote", key, 600), setCookie("dc24h_remote_init", "", 0)]);
       } catch (error) {

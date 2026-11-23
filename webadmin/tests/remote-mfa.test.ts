@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { chmodSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { loadTotpVerifier, totpCodeForTest } from "../server/remote-mfa.ts";
+import { compactTotpReplay, loadTotpVerifier, replaceTotpSecret, totpCodeForTest } from "../server/remote-mfa.ts";
 
 // RFC 6238 SHA-1 vector at t=59s: 8-digit 94287082, six-digit 287082.
 const secret = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ";
+const replacement = "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP";
 
 test("RFC 6238 TOTP checks time, account, input and one-time replay across restarts", () => {
   assert.equal(totpCodeForTest(secret, 59_000), "287082");
@@ -79,5 +80,67 @@ test("MFA enrollment and replay ledger reject loose permissions and symlink atta
     assert.throws(() => loadTotpVerifier(enrollment, alias));
     writeFileSync(replay, '{"actor":"7","step":1}', { mode: 0o600 });
     assert.throws(() => loadTotpVerifier(enrollment, replay), /Incomplete MFA replay/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("offline TOTP rotation replaces the enrollment atomically, rejects cached old seeds and preserves replay", () => {
+  const dir = mkdtempSync(join(tmpdir(), "dc24h-mfa-rotate-"));
+  const enrollment = join(dir, "mfa.json"), replay = join(dir, "replay.jsonl");
+  try {
+    writeFileSync(enrollment, JSON.stringify({ schema: 1, accounts: { "7": secret } }), { mode: 0o600 });
+    const old = loadTotpVerifier(enrollment, replay);
+    assert.throws(() => replaceTotpSecret({ enrollmentPath: enrollment, replayPath: replay,
+      actor: "7", newSeed: replacement, newCode: "000000", oldCode: totpCodeForTest(secret, 59_000),
+      now: 59_000, offlineAcknowledged: true }), /New MFA authenticator proof failed/);
+    assert.throws(() => replaceTotpSecret({ enrollmentPath: enrollment, replayPath: replay,
+      actor: "7", newSeed: replacement, newCode: totpCodeForTest(replacement, 59_000),
+      now: 59_000, offlineAcknowledged: true }), /Current MFA proof required/);
+    replaceTotpSecret({ enrollmentPath: enrollment, replayPath: replay, actor: "7",
+      newSeed: replacement, newCode: totpCodeForTest(replacement, 59_000),
+      oldCode: totpCodeForTest(secret, 59_000), now: 59_000, offlineAcknowledged: true });
+    assert.throws(() => old.verify("7", totpCodeForTest(secret, 90_000), 90_000), /restart required/);
+    old.close();
+    const fresh = loadTotpVerifier(enrollment, replay);
+    try {
+      assert.equal(fresh.verify("7", totpCodeForTest(replacement, 59_000), 59_000), false,
+        "new seed cannot reuse a step consumed by an old seed");
+      assert.equal(fresh.verify("7", totpCodeForTest(replacement, 90_000), 90_000), true);
+      assert.equal(fresh.verify("7", totpCodeForTest(secret, 120_000), 120_000), false);
+    } finally { fresh.close(); }
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("offline MFA recovery still requires new-factor proof and preserves the old replay ledger", () => {
+  const dir = mkdtempSync(join(tmpdir(), "dc24h-mfa-recover-"));
+  const enrollment = join(dir, "mfa.json"), replay = join(dir, "replay.jsonl");
+  try {
+    writeFileSync(enrollment, JSON.stringify({ schema: 1, accounts: { "7": secret } }), { mode: 0o600 });
+    writeFileSync(replay, '{"actor":"7","step":3}\n', { mode: 0o600 });
+    const request = { enrollmentPath: enrollment, replayPath: replay, actor: "7", newSeed: replacement,
+      newCode: totpCodeForTest(replacement, 120_000), now: 120_000, recovery: true as const, offlineAcknowledged: true as const };
+    replaceTotpSecret(request);
+    assert.equal(readFileSync(replay, "utf8"), '{"actor":"7","step":3}\n', "recovery must not reset replay protection");
+    const verifier = loadTotpVerifier(enrollment, replay);
+    try { assert.equal(verifier.verify("7", request.newCode, 120_000), true); }
+    finally { verifier.close(); }
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("offline replay compaction preserves maximum consumed steps and rejects stale verifiers", () => {
+  const dir = mkdtempSync(join(tmpdir(), "dc24h-mfa-compact-"));
+  const enrollment = join(dir, "mfa.json"), replay = join(dir, "replay.jsonl");
+  try {
+    writeFileSync(enrollment, JSON.stringify({ schema: 1, accounts: { "7": secret } }), { mode: 0o600 });
+    writeFileSync(replay, '{"actor":"7","step":0}\n{"actor":"7","step":1}\n{"actor":"7","step":1}\n', { mode: 0o600 });
+    const old = loadTotpVerifier(enrollment, replay);
+    compactTotpReplay(replay, true);
+    assert.equal(readFileSync(replay, "utf8"), '{"actor":"7","step":1}\n');
+    assert.throws(() => old.verify("7", totpCodeForTest(secret, 90_000), 90_000), /replay ledger changed/);
+    old.close();
+    const fresh = loadTotpVerifier(enrollment, replay);
+    try {
+      assert.equal(fresh.verify("7", totpCodeForTest(secret, 59_000), 59_000), false);
+      assert.equal(fresh.verify("7", totpCodeForTest(secret, 90_000), 90_000), true);
+    } finally { fresh.close(); }
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

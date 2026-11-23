@@ -1,6 +1,8 @@
 # Dokumentacja dc24h.eu High Starter
 
-beta-0.3.12: Etap I poprawia CI/API, Etap II dodaje lokalne TOTP, sesje i audyt, Etap III utwardza HTTPS, systemd i prywatny pilotaż SSH, a Etap IV (beta-0.3.11–beta-0.3.12) wprowadza ograniczone testy obciążenia/awarii, stały format dziennika i ręczną bramę wydania. Hub, API, kontroler i WebAdmin raportują beta-0.3.12; nazwa projektu to dc24h.eu High Starter. Wewnętrzny identyfikator `dc24h.eu`, schemat v11 i publiczne proxy Apache pozostają bez zmian. Nie ma dostępu publicznego, zdalnego zapisu ani wdrożenia produkcyjnego.
+beta-0.4.4: Etap I beta 0.4 dodaje testy stabilności, projekt WebAuthn, lokalną rotację i odzyskiwanie TOTP oraz prywatny, trwały i ograniczony dziennik audytu. Hub, API, kontroler i WebAdmin raportują beta-0.4.4; nazwa projektu to dc24h.eu High Starter. Identyfikator protokołu `dc24h.eu`, schemat v11 i publiczne proxy Apache pozostają bez zmian. Brak publicznego WebAdmin, wdrożonego logowania WebAuthn, zdalnego zapisu i instalacji produkcyjnej.
+
+- [Etap I beta-0.4.1–beta-0.4.4](BETA_0.4_STAGE_I.md) · [EN](../us/BETA_0.4_STAGE_I.md)
 
 - [Beta-0.3.11–beta-0.3.12 — Etap IV](BETA.md) · [przegląd kandydata](RELEASE_BETA_0.3.md)
 

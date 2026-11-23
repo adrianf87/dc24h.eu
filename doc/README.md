@@ -1,6 +1,8 @@
 # dc24h.eu High Starter technical documentation
 
-Current development version: beta-0.3.12.
+Current development version: beta-0.4.4.
+
+[Beta-0.4.1–beta-0.4.4 Stage I: CI, architecture, MFA rotation and durable audit](us/BETA_0.4_STAGE_I.md) · [PL](pl/BETA_0.4_STAGE_I.md)
 
 [Beta-0.3.11–beta-0.3.12 Stage IV: stress, failures, audit and release review](us/BETA.md) · [PL](pl/BETA.md)
 
