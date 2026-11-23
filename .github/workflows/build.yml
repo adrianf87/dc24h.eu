@@ -36,8 +36,7 @@ jobs:
 
       - name: Install build and integration dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
+          bash .github/scripts/install-ci-deps.sh \
             build-essential cmake python3 libutf8proc-dev libgcrypt20-dev \
             libssl-dev libmariadb-dev openssl ncdc mariadb-server apache2
 
@@ -69,8 +68,7 @@ jobs:
 
       - name: Install C++ API build dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
+          bash .github/scripts/install-ci-deps.sh \
             build-essential cmake python3 libutf8proc-dev libgcrypt20-dev \
             libssl-dev libmariadb-dev
 
@@ -132,8 +130,7 @@ jobs:
 
       - name: Install C++ dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
+          bash .github/scripts/install-ci-deps.sh \
             build-essential cmake python3 libutf8proc-dev libgcrypt20-dev \
             libssl-dev libmariadb-dev
 
