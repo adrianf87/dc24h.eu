@@ -7,7 +7,8 @@ import tempfile
 import unittest
 
 from network_process_tests import BINARY, Hub
-from tls_support import TLS_READY, connect_tls, credentials, secure_client_context, tls_endpoint
+from tls_support import (TLS_READY, assert_fatal_tls_alert_or_eof,
+                         connect_tls, credentials, secure_client_context, tls_endpoint)
 
 
 def openssl_cert(directory, name, *extra):
@@ -62,11 +63,17 @@ class TlsSecurityProcessTests(unittest.TestCase):
                 plain.shutdown(socket.SHUT_WR)
                 plain.settimeout(3)
                 try:
-                    wire = plain.recv(128)
+                    wire = bytearray()
+                    while len(wire) < 7:
+                        chunk = plain.recv(7 - len(wire))
+                        if not chunk:
+                            break
+                        wire.extend(chunk)
                 except ConnectionResetError:
-                    wire = b''
-                self.assertNotIn(b'ISUP', wire)
-                self.assertNotIn(b'ISID', wire)
+                    pass  # Reset is equivalent to a fatal rejection.
+                # An empty response or a single fatal TLS alert is acceptable.
+                # A plaintext application reply or arbitrary bytes are not.
+                assert_fatal_tls_alert_or_eof(self, bytes(wire))
             new_hub.stop()
             self.assertIn(b'ADCS stopped; handshakes=', new_hub.log)
 

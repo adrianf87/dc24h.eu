@@ -464,15 +464,34 @@ class AuthenticationTests(unittest.TestCase):
         db_socket = source['database']['socket']
         self.assertTrue(Path(db_socket).is_socket())
 
-        def set_status(status):
+        def set_status(status, *, allow_already=False):
             self.assertIn(status, ('active', 'disabled'))
-            sql = ("UPDATE dc24h.dc24h_accounts SET status='" + status +
-                   "', revision=revision+1 WHERE name='RegisteredADC' AND status<> '" + status + "';")
+            # RegisteredADC is the ADC nickname, *not* the account row name
+            # (the disposable credential fixture calls it AuthAccountOne).
+            # Bind the revocation to its stored nickname/account relationship,
+            # and refuse a no-op so the test cannot go falsely green again.
+            sql = ("UPDATE dc24h.dc24h_accounts AS a "
+                   "JOIN dc24h.dc24h_account_identities AS i ON i.account_id=a.id "
+                   "SET a.status='" + status + "', a.revision=a.revision+1 "
+                   "WHERE i.nickname='RegisteredADC' AND a.status<>'" + status + "'; "
+                   "SELECT ROW_COUNT(); "
+                   "SELECT a.status FROM dc24h.dc24h_accounts AS a "
+                   "JOIN dc24h.dc24h_account_identities AS i ON i.account_id=a.id "
+                   "WHERE i.nickname='RegisteredADC';")
             changed = subprocess.run(
                 ['mariadb', '--no-defaults', '--skip-ssl', '--protocol=socket',
                  '--socket=' + db_socket, '--user=root', '--batch', '--skip-column-names'],
                 input=sql, text=True, capture_output=True, timeout=8)
             self.assertEqual(changed.returncode, 0, 'Disposable account update failed')
+            results = changed.stdout.splitlines()
+            self.assertEqual(len(results), 2, 'Expected one mapped ADC account and one row-count proof')
+            # No-op updates may occur only in best-effort cleanup, never in
+            # the actual revoke/re-enable verification path.
+            if allow_already:
+                self.assertIn(results[0], ('0', '1'))
+            else:
+                self.assertEqual(results[0], '1', 'Revocation SQL affected no mapped account')
+            self.assertEqual(results[1], status, 'Wrong disposable account state after update')
 
         _, ini, cert = self.config(False)
         try:
@@ -512,7 +531,7 @@ class AuthenticationTests(unittest.TestCase):
                 for secret in (PASSWORD, b'HPAS', b'IGPA'):
                     self.assertNotIn(secret, server.log)
         finally:
-            set_status('active')
+            set_status('active', allow_already=True)
 
     def test_wrong_key_refuses_startup_and_config_aliases(self):
         root, ini, _ = self.config(key=Path(str(KEY) + '.wrong'))

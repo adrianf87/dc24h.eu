@@ -70,6 +70,21 @@ class StageOneGateTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "missing/failed"):
                 verify(self.xml, self.previous, self.sha, self.os_image)
 
+    def test_failure_and_skipped_nodes_cannot_be_overridden_by_run_status(self):
+        for name, child in (("adc.sch.process", "failure"),
+                            ("adcs.tls_security.process", "error"),
+                            ("adc.ctm.process", "skipped")):
+            with self.subTest(name=name, child=child):
+                root = ET.Element("testsuite")
+                for case_name in sorted(self.names):
+                    test = ET.SubElement(root, "testcase", {
+                        "name": case_name, "status": "run", "time": "0.1"})
+                    if case_name == name:
+                        ET.SubElement(test, child)
+                ET.ElementTree(root).write(self.xml, encoding="unicode")
+                with self.assertRaisesRegex(ValueError, "missing/failed"):
+                    verify(self.xml, self.previous, self.sha, self.os_image)
+
     def test_wrong_head_digest_and_client_spoofing_refused(self):
         mutated = copy.deepcopy(self.previous)
         for key, value in (("source_sha", "d" * 40), ("os_image", "ubuntu-22.04"),

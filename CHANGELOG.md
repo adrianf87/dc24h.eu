@@ -7,6 +7,12 @@
 - **Reviewed without changed semantics:** Genuine ES256 WebAuthn challenge/Origin/UV/RP binding, monotonic counters and backup eligibility, revocation epochs, TOTP replay/clock rollback, same-size limiter/passkey tamper tests, and CSRF/session expiration. Browser virtual authenticators do not certify physical/synced devices.
 - **Still open:** The private passkey/rate-limit JSON has no Owner-approved persistent authenticity anchor; a valid-shaped offline rewrite before complete restart cannot be detected by an in-process hash. No private-store schema migration, merge, tag, release or deployment. All hosted Ubuntu 22.04/24.04/26.04 exact-head checks remain required, and CI is not pre-accepted.
 
+## beta-0.8.x Fix Pass 1 — 2026-11-24 (draft PR #241; exact-head CI unverified)
+
+- **0.8.2 — Account revocation test defect:** Correct the disposable MariaDB integration fixture's zero-row `UPDATE`: `RegisteredADC` is an ADC nickname on `dc24h_account_identities`, whereas its account is named `AuthAccountOne`. Join nickname to account ID, require exactly one changed row and verify the persisted state before testing controlled restart and ADC/ADCS refusal. This fixes test evidence, **not** a live-revocation behavior claim.
+- **0.8.1/0.8.4 — Negative evidence:** Reject CTest failure/error/skipped child nodes even when marked `status="run"`; reject arbitrary plaintext on the ADCS listener, allowing only EOF/reset or a fatal TLS alert. The 0.8.3 search/transfer boundary was reviewed without a separate confirmed defect. Native DC++/AirDC++ clients remain untested.
+- **Fix Pass 1 handoff:** [EN/US review](doc/us/BETA_0.8_FIX_PASS_1.md) · [PL operator notes](doc/pl/BETA_0.8_FIX_PASS_1.md). Preserve already-committed Stages II–V on `beta-0.8.x-stage-full`. Hosted Ubuntu 22.04/24.04/26.04 exact-new-head CI is required but not yet verified; stop after push/CI trigger without polling, no automatic main merge or release.
+
 ## beta-0.8.17–beta-0.8.20 Stage V — 2026-11-24 (draft PR #241, exact-head CI unverified)
 
 - **0.8.17 — GitHub API provenance:** Add read-only exact-head/attempt workflow, hosted-job and redacted artifact SHA-256 digest verification against GitHub REST API. Refuse stale, pending, failed, skipped and wrong-attempt records; locally generated JSON remains untrusted. Owner approval is still separate.
