@@ -122,7 +122,7 @@ test("remote read-only screen needs a session, supports EN/PL and never offers h
   await expect(page.getByRole("status").filter({ hasText: "Potwierdzono tylko na tym ekranie" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Potwierdź lokalnie" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Potwierdź lokalnie" })).toHaveAttribute("aria-pressed", "true");
-  await page.getByRole("button", { name: "Odśwież" }).click();
+  await page.getByRole("button", { name: "Odśwież", exact: true }).click();
   await expect(page.getByRole("button", { name: "Potwierdź lokalnie" })).toBeEnabled();
   await expect(page.getByRole("button", { name: "Potwierdź lokalnie" })).toHaveAttribute("aria-pressed", "false");
   await page.getByRole("button", { name: "English" }).click();
