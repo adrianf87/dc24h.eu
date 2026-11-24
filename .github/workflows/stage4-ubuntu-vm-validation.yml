@@ -135,6 +135,16 @@ jobs:
             --sha "$SOURCE_SHA" --os-image "${{ matrix.os }}" \
             --output vm-evidence/beta06-authenticated-gate.json
 
+      - name: Require real beta-0.8 Stage II Chromium and matched-restoration proof
+        run: |
+          python3 -m unittest discover -s tests -p beta08_stage2_gate_tests.py
+          python3 scripts/beta08_stage2_gate.py \
+            --browser "$RUNNER_TEMP/playwright-junit.xml" \
+            --restore vm-evidence/beta06-restored-login.json \
+            --auth vm-evidence/beta06-authenticated-gate.json \
+            --sha "$SOURCE_SHA" --os-image "${{ matrix.os }}" \
+            --output vm-evidence/beta08-stage2-authentication.json
+
       - name: Require three comparable within-profile ADC ADCS and authenticated HTTPS windows
         run: |
           python3 -m unittest discover -s tests -p beta07_ubuntu_perf_matrix_tests.py

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { chmodSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync, statSync, utimesSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initializeRemoteRateLimitStore, openRemoteRateLimitStore } from "../server/remote-rate-limit-store.ts";
@@ -67,5 +67,31 @@ test("lost rate-limit state must not reset authentication budgets on restart", (
     assert.equal(readFileSync(path, "utf8"), retained);
     rmSync(path);
     assert.throws(() => openRemoteRateLimitStore(path, secret), /ENOENT/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("same-size same-mtime budget rewrite poisons the live verifier and cannot grant more attempts", () => {
+  const dir = mkdtempSync(join(tmpdir(), "dc24h-rate-integrity-")); chmodSync(dir, 0o700);
+  const path = join(dir, "limits.json");
+  try {
+    initializeRemoteRateLimitStore(path);
+    const setup = openRemoteRateLimitStore(path, secret);
+    for (let n = 0; n < 4; n++) assert.equal(setup.hit("login:7", 4, 100_000), false);
+    const fixed = new Date("2026-01-01T00:00:00Z");
+    utimesSync(path, fixed, fixed);
+    const live = openRemoteRateLimitStore(path, secret);
+    const before = readFileSync(path, "utf8");
+    const changed = JSON.parse(before);
+    changed.buckets[0].count = 1;
+    const after = JSON.stringify(changed) + "\n";
+    assert.equal(Buffer.byteLength(after), Buffer.byteLength(before));
+    writeFileSync(path, after);
+    utimesSync(path, fixed, fixed);
+    assert.equal(statSync(path).mtimeMs, fixed.getTime());
+    assert.equal(live.healthy(), false);
+    assert.throws(() => live.hit("login:7", 4, 100_001), /unavailable/);
+    // Without a separate, durable authenticated integrity anchor an entirely
+    // offline valid JSON rewrite cannot be attested after a new process opens
+    // the file. Do not claim restart authenticity from an in-memory digest.
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

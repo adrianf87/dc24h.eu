@@ -268,6 +268,10 @@ export function RemoteApp() {
       });
       if (epoch !== sessionEpoch.current) return;
       if (result.status === 200 && validSession(result.data)) {
+        // A fresh cookie can replace the authority shared by sibling tabs.
+        // Invalidate their cached metrics without broadcasting any session,
+        // account, CSRF, password or TOTP material.
+        sessionChannel.current?.postMessage("session-revoked");
         setCsrf(result.data.csrf); updateSessionLifetime(result.data.expires_in);
         setState("authorized");
       } else { invalidate(result.status === 200 ? "unavailable" : failure(result.status)); }
@@ -314,6 +318,7 @@ export function RemoteApp() {
       const result = await passkeyRequest("passkey/login/finish", { response: answer }, token);
       if (epoch !== sessionEpoch.current) return;
       if (result.status === 200 && validSession(result.data)) {
+        sessionChannel.current?.postMessage("session-revoked");
         setCsrf(result.data.csrf); updateSessionLifetime(result.data.expires_in);
         setState("authorized");
       } else invalidate(failure(result.status));

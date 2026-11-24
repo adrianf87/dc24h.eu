@@ -5,6 +5,7 @@ import { createHmac, randomBytes } from "node:crypto";
 import { basename, dirname, isAbsolute, join } from "node:path";
 import { closeSync, constants, fstatSync, fsyncSync, lstatSync, openSync, readFileSync,
   renameSync, unlinkSync, writeSync } from "node:fs";
+import { fingerprint, fingerprintPrivateFile } from "./private-catalog-integrity.ts";
 
 type Bucket = { key: string; count: number; starts: number };
 type State = { schema: 1; buckets: Bucket[] };
@@ -78,6 +79,7 @@ export function openRemoteRateLimitStore(path: string, serviceToken: string) {
   if (!/^[0-9a-f]{64}$/.test(serviceToken)) throw Error("Invalid private limiter key");
   parentSafe(path);
   let state: State;
+  let digest = "";
   const prior = fileSafe(path);
   const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
   try {
@@ -87,10 +89,12 @@ export function openRemoteRateLimitStore(path: string, serviceToken: string) {
     try {
       if (bytes.length !== opened.size) throw Error("Rate-limit file changed");
       state = JSON.parse(bytes.toString("utf8")) as State;
+      digest = fingerprint(bytes);
     } finally { bytes.fill(0); }
   } finally { closeSync(fd); }
   if (!validate(state!)) throw Error("Invalid rate-limit catalog");
   let identity = fileSafe(path);
+  if (fingerprintPrivateFile(path, identity) !== digest) throw Error("Rate-limit file changed during open");
   let healthy = true;
   const check = () => {
     if (!healthy) throw Error("Rate limiter unavailable");
@@ -98,7 +102,8 @@ export function openRemoteRateLimitStore(path: string, serviceToken: string) {
       parentSafe(path);
       const s = fileSafe(path);
       if (s.dev !== identity.dev || s.ino !== identity.ino || s.size !== identity.size ||
-          s.mtimeMs !== identity.mtimeMs) throw Error("Rate-limit catalog changed outside gateway");
+          s.mtimeMs !== identity.mtimeMs || s.ctimeMs !== identity.ctimeMs ||
+          fingerprintPrivateFile(path, identity) !== digest) throw Error("Rate-limit catalog changed outside gateway");
     } catch (error) { healthy = false; throw error; }
   };
   const secret = Buffer.from(serviceToken, "hex");
@@ -120,7 +125,14 @@ export function openRemoteRateLimitStore(path: string, serviceToken: string) {
       const next = old ? { ...old, count: Math.min(1_000_000, old.count + 1) } :
         { key: hash, count: 1, starts: now };
       const doc: State = { schema: 1, buckets: [...live.filter(b => b.key !== hash), next] };
-      try { persist(path, doc); identity = fileSafe(path); state = doc; }
+      try {
+        const nextDigest = fingerprint(JSON.stringify(doc) + "\n");
+        persist(path, doc);
+        identity = fileSafe(path);
+        if (fingerprintPrivateFile(path, identity) !== nextDigest) throw Error("Rate-limit catalog changed during write");
+        digest = nextDigest;
+        state = doc;
+      }
       catch (error) { healthy = false; throw error; }
       return next.count > limit;
     },

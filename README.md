@@ -2,7 +2,9 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: beta-0.7.20 (Stage V release candidate; exact-head hosted CI, five later fix passes and Owner approval remain pending; not a production release).**
+**Compiled product identifier: beta-0.7.20.** Beta-0.8.x development proceeds in separate four-patch stages; candidate version alignment belongs to beta-0.8.20 Stage V. This branch is not a production release.
+
+- **beta-0.8.5–beta-0.8.8 — Stage II authentication/device resilience delivered for CI** ([Issue #240](https://github.com/adrianf87/dc24h.eu-high-starter/issues/240), draft [PR #241](https://github.com/adrianf87/dc24h.eu-high-starter/pull/241)): genuine Chromium passkey interruption after matched private restore, in-process passkey/limiter content-integrity checks against same-size/same-mtime rewrite, concurrent revocation and secret-free cross-tab sign-in invalidation. An exact-head browser plus real C++/Node/Apache/MariaDB-v11 recovery gate is required on GitHub-hosted Ubuntu 22.04/24.04/26.04. **Offline valid-looking limiter tampering across a cold restart still needs a separately approved durable MAC/migration**; no release, merge or deployment is implied. [Stage II EN/US](doc/us/BETA_0.8_STAGE_II.md) | [PL](doc/pl/BETA_0.8_STAGE_II.md).
 
 - **beta-0.8.1–beta-0.8.4 — Stage I interoperability work in progress** ([Issue #240](https://github.com/adrianf87/dc24h.eu-high-starter/issues/240), branch `beta-0.8.x-stage-full`): stricter exact-head independent-client evidence, real isolated account revocation with explicit hub restart, combined ADC/ADCS TTH-search-to-peer-transfer tests and TLS 1.2/1.3 certificate cutover. **DC++/AirDC++ are untested** until native binaries actually run. All hosted CI, one draft PR, later Stage II–V and Fix Pass 1–5 gates remain required. `beta-0.7.20` is still the compiled product identifier until planned Stage V version alignment; this is no production release or merge authorization. [Stage I EN/US](doc/us/BETA_0.8_STAGE_I.md) | [PL](doc/pl/BETA_0.8_STAGE_I.md).
 

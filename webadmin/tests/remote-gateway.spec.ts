@@ -34,6 +34,40 @@ test("a successful logout in one tab clears a sibling's private metrics and acti
   } finally { await sibling.close(); }
 });
 
+test("a new password plus TOTP login invalidates the prior sibling view in EN and PL", async ({ page, context }) => {
+  const sibling = await context.newPage();
+  try {
+    await sibling.route("**/remote/v1/session", route => route.fulfill({ status: 200,
+      contentType: "application/json", body: JSON.stringify({ schema: 1, authenticated: true,
+        mfa: true, mode: "read-only", csrf: sessionCsrf, expires_in: 600 }) }));
+    await sibling.route("**/remote/v1/summary", route => route.fulfill({ status: 200,
+      contentType: "application/json", body: JSON.stringify(snapshot) }));
+    await page.route("**/remote/v1/session", route => route.fulfill({ status: 401,
+      contentType: "application/json", body: '{"error":"unauthorized"}' }));
+    await page.route("**/remote/v1/challenge", route => route.fulfill({ status: 200,
+      contentType: "application/json", body: JSON.stringify({ schema: 1, csrf: "e".repeat(64) }) }));
+    await page.route("**/remote/v1/login", route => route.fulfill({ status: 200,
+      contentType: "application/json", body: JSON.stringify({ schema: 1, authenticated: true,
+        mfa: true, mode: "read-only", csrf: "f".repeat(64), expires_in: 600 }) }));
+    await page.route("**/remote/v1/summary", route => route.fulfill({ status: 200,
+      contentType: "application/json", body: JSON.stringify(snapshot) }));
+    await Promise.all([page.goto("/remote.html"), sibling.goto("/remote.html")]);
+    await expect(sibling.getByText("Active connections")).toBeVisible();
+    await page.getByLabel("Administrator account ID").fill("8");
+    await page.getByLabel("Account password").fill("synthetic-proof");
+    await page.getByLabel("Authenticator code (6 digits)").fill("123456");
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await expect(page.getByText("Active connections")).toBeVisible();
+    await expect(sibling.getByText("Your session expired or was revoked. Sign in again.")).toBeVisible();
+    await expect(sibling.getByText("Active connections")).toHaveCount(0);
+    await expect(sibling.getByLabel("Administrator account ID")).toBeFocused();
+    await sibling.getByRole("button", { name: "Polski" }).click();
+    await expect(sibling.getByText("Sesja wygasła albo została unieważniona. Zaloguj się ponownie.")).toBeVisible();
+    await expect(sibling.getByText("Aktywne połączenia")).toHaveCount(0);
+    await expect(sibling.locator("main")).not.toContainText("synthetic-proof");
+  } finally { await sibling.close(); }
+});
+
 test("private bilingual incident timeline remains keyboard-readable on mobile without privileged writes", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   const writes: string[] = [];

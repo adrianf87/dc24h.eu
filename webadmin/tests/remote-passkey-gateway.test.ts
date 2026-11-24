@@ -355,5 +355,36 @@ test("passkey gateway binds login and enrollment to one-use challenges, password
         "the denied mutation must invalidate its browser session");
       grantsAllowed = true;
     }
+
+    // Two legitimate same-cookie device requests can overlap. If revocation
+    // wins while a rename's body is still in flight, the stale rename must
+    // not resurrect the removed key or create a fresh browser cookie.
+    now += 61_000;
+    const concurrentStart = await call("challenge");
+    const concurrentCsrf = JSON.parse(concurrentStart.body).csrf as string;
+    const concurrentOptions = await call("passkey/login/options", "POST",
+      { actor_id: "7", password: "correct" },
+      csrfHeader(concurrentCsrf, concurrentStart.cookies[0]!.split(";")[0]!));
+    assert.equal(concurrentOptions.status, 200);
+    const concurrentLogin = await call("passkey/login/finish", "POST", { response: { valid: true } },
+      csrfHeader(concurrentCsrf, concurrentOptions.cookies[0]!.split(";")[0]!));
+    assert.equal(concurrentLogin.status, 200);
+    const concurrentCookie = concurrentLogin.cookies[0]!.split(";")[0]!;
+    const concurrentSessionCsrf = JSON.parse(concurrentLogin.body).csrf as string;
+    let renameEntered!: () => void, releaseRename!: () => void;
+    const renameBodyStarted = new Promise<void>(resolve => { renameEntered = resolve; });
+    const renameBodyReleased = new Promise<void>(resolve => { releaseRename = resolve; });
+    pausedBody = { name: "passkey/device/rename", entered: renameEntered, resume: renameBodyReleased };
+    const delayedRename = call("passkey/device/rename", "POST",
+      { id: "z".repeat(32), name: "Should not survive" },
+      csrfHeader(concurrentSessionCsrf, concurrentCookie));
+    await renameBodyStarted;
+    assert.equal((await call("passkey/device/revoke", "POST", { id: "z".repeat(32) },
+      csrfHeader(concurrentSessionCsrf, concurrentCookie))).status, 200);
+    releaseRename();
+    const deniedRename = await delayedRename;
+    assert.equal(deniedRename.status, 403, "revocation wins over an in-flight rename");
+    assert.ok(!deniedRename.cookies.some(value => value.startsWith("dc24h_remote=")));
+    assert.equal(store.forActor("7").length, 0, "revoked device cannot be recreated by stale mutation");
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

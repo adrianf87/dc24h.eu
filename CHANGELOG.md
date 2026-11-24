@@ -1,5 +1,13 @@
 # Changelog
 
+## beta-0.8.5–beta-0.8.8 Stage II — 2026-11-24 (single draft PR; exact-head CI pending)
+
+- **0.8.5 — Interrupted WebAuthn recovery:** Add a real Chromium signed assertion pending across a simulated cold gateway process and matched five-store restore; deny the stale challenge and truncated catalog, then require a fresh signed ceremony. The existing hosted C++/Node/Apache/MariaDB v11 fixture remains essential; physical devices are not certified.
+- **0.8.6 — Passkey content and concurrent mutation:** Hash and re-read the open owner-only passkey catalog to detect same-length, same-mtime in-place counter rollback. Test concurrent device revoke beating a streamed rename; retain C++ grant, account, epoch, backup and counter boundaries.
+- **0.8.7 — MFA and rate-budget integrity:** Apply an in-process SHA-256 consistency guard to the private limiter store while retaining the current on-disk format and TOTP/replay invariants. **Offline tampering before a cold restart cannot be authenticated without a separately approved durable MAC/migration; this is an explicit open risk.**
+- **0.8.8 — Cross-tab session safety:** Invalidate sibling tabs after successful TOTP or passkey sign-in using a fixed secret-free signal; test EN/PL expired-session guidance, input focus and private metric removal.
+- **Stage II exact-head evidence:** Fail-closed Chromium JUnit plus matched C++/MariaDB/five-store restore gate in the GitHub-hosted Ubuntu 22.04/24.04/26.04 VM matrix. [EN/US ledger](doc/us/BETA_0.8_STAGE_II.md) | [PL operator notes](doc/pl/BETA_0.8_STAGE_II.md). This is handoff, not CI acceptance, merge, private-store format migration, release or deployment.
+
 ## beta-0.8.1–beta-0.8.4 Stage I — 2026-11-24 (single draft PR planned; exact-head CI pending)
 
 - **0.8.1 — Verifiable multi-client inventory:** Add a strictly bounded Stage I CTest/JUnit provenance gate which composes the existing pinned ncdc package/executable hashes with ADC/ADCS and TLS process cases. Missing, skipped, nonfinite, duplicate, wrong-head and fabricated client evidence fail. DC++ and AirDC++ remain **not executed**, not silently certified.

@@ -9,6 +9,7 @@ import {
 } from "node:fs";
 import { basename, dirname, isAbsolute, join } from "node:path";
 import type { WebAuthnCredential } from "@simplewebauthn/server";
+import { fingerprint, fingerprintPrivateFile } from "./private-catalog-integrity.ts";
 
 export type PasskeyEntry = {
   id: string;
@@ -127,6 +128,7 @@ export function openPasskeyStore(path: string, rpID: string) {
     throw Error("Invalid passkey RP ID");
   privateParent(path);
   let doc: Document;
+  let digest = "";
   const before = safeStat(path);
   const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
   try {
@@ -136,10 +138,12 @@ export function openPasskeyStore(path: string, rpID: string) {
     try {
       if (bytes.length !== opened.size) throw Error("Passkey file changed");
       doc = JSON.parse(bytes.toString("utf8")) as Document;
+      digest = fingerprint(bytes);
     } finally { bytes.fill(0); }
   } finally { closeSync(fd); }
   if (!validDocument(doc!, rpID)) throw Error("Invalid passkey catalog");
   let identity = safeStat(path);
+  if (fingerprintPrivateFile(path, identity) !== digest) throw Error("Passkey file changed during open");
   let healthy = true;
   const check = () => {
     if (!healthy) throw Error("Passkey catalog unavailable");
@@ -147,13 +151,21 @@ export function openPasskeyStore(path: string, rpID: string) {
       privateParent(path);
       const s = safeStat(path);
       if (s.dev !== identity.dev || s.ino !== identity.ino || s.size !== identity.size ||
-          s.mtimeMs !== identity.mtimeMs) throw Error("Passkey catalog changed outside gateway");
+          s.mtimeMs !== identity.mtimeMs || s.ctimeMs !== identity.ctimeMs ||
+          fingerprintPrivateFile(path, identity) !== digest) throw Error("Passkey catalog changed outside gateway");
     } catch (e) { healthy = false; throw e; }
   };
   const write = (next: Document) => {
     check();
     if (!validDocument(next, rpID)) throw Error("Invalid passkey state");
-    try { persist(path, next); identity = safeStat(path); doc = next; }
+    try {
+      const nextDigest = fingerprint(JSON.stringify(next) + "\n");
+      persist(path, next);
+      identity = safeStat(path);
+      if (fingerprintPrivateFile(path, identity) !== nextDigest) throw Error("Passkey catalog changed during write");
+      digest = nextDigest;
+      doc = next;
+    }
     catch (e) { healthy = false; throw e; }
   };
   const forActor = (actor: string) => {
