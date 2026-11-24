@@ -1,6 +1,8 @@
 # Dokumentacja dc24h.eu High Starter
 
-beta-0.5.12: Etap III uzgadnia walidację odtwarzania passkey z działającą bramą, wiąże kopię z opcjonalnym oczekiwanym SHA, dodaje ograniczenia Apache/systemd, testy ponownego startu ADC/ADCS i komunikaty sesji oraz urządzeń w WebAdmin EN/PL. Etap II chroni przed utratą historii TOTP, passkey, audytu i limitów. Etap I dostarczył testy GitHub-hosted Ubuntu 22.04/24.04/26.04, prawdziwego systemd i odtwarzania testowej MariaDB/stanu prywatnego (syntetyczne RPO/RTO, bez odbioru produkcyjnego). **Zgodnie z decyzją właściciela z 23.11.2026 nie wykonujemy testów Debian 12/13 ani Xeona.** Odbiór sprzętu docelowego pozostaje otwarty. Logowanie **hasło + passkey** nie jest bezhasłowe. Hub, API, kontroler i WebAdmin raportują beta-0.5.12. Identyfikator protokołu `dc24h.eu`, schemat v11 i publiczne proxy pozostają bez zmian. Bez publicznego WebAdmin, zdalnego zapisu i automatycznego wdrożenia.
+beta-0.5.16: Etap IV dodaje ograniczone atakujące testy ADC/Node/Apache/WebAuthn, dłuższe pomiary Ubuntu ADC/ADCS z referencją Etapu I, osobne pomiary fikcyjnego backendu HTTPS i testowej MariaDB oraz ćwiczenie zatrzymania/odtwarzania binarki, konfiguracji, SQL i pięciu prywatnych plików. Ujawniono ryzyka resztkowe i ograniczenia (brak bezpośredniej bazy HTTP, brak produkcyjnego SLA). Tylko GitHub-hosted Ubuntu 22.04/24.04/26.04; bez testu docelowego sprzętu. Logowanie nadal **hasło + passkey** lub **hasło + TOTP**. Hub, API, kontroler i WebAdmin raportują beta-0.5.16, schemat MariaDB v11 bez zmian. Brak publicznego WebAdmin, zdalnego zapisu lub wdrożenia; późniejsze cztery poprawki i bramka scalenia nie są jeszcze ukończone.
+
+- [Etap IV beta-0.5.13–beta-0.5.16 — bezpieczeństwo i instrukcja odtwarzania](BETA_0.5_STAGE_IV.md) · [EN/US](../us/BETA_0.5_STAGE_IV.md)
 
 - [Etap III beta-0.5.9–beta-0.5.12 — niezawodność i procedura operatora](BETA_0.5_STAGE_III.md) · [EN/US](../us/BETA_0.5_STAGE_III.md)
 

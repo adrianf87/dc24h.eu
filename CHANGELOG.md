@@ -1,5 +1,13 @@
 # Changelog
 
+## beta-0.5.13–beta-0.5.16 Stage IV — 2026-11-24 (one development branch; release candidate pending latest-head CI)
+
+- **0.5.13 — Advanced Security Testing:** Add bounded ADC parser mutation/fragmentation corpus, Node exact-route alias negatives and Apache encoded/traversal proxy blocking; retain WebAuthn/CSRF/grant, browser, ASan/UBSan, CodeQL and npm dependency audit checks.
+- **0.5.14 — Load & Long-Running:** Capture real hosted Ubuntu ADC/ADCS three-window endurance (48 requests/window, 8/s, 4 concurrent), observed RSS and p50/p95/p99/error/rps drift against pinned Stage I loopback baseline, plus honest separate Apache HTTPS synthetic-upstream and disposable SQL timings. No production capacity or comparable Stage I HTTP/SQL request-latency claim.
+- **0.5.15 — Failure & Rollback:** Inject private disposable MariaDB socket outage and intentionally damaged copied binary/config; reject failures, restore byte-exact artifacts, fresh MariaDB v11/five-file state and revalidate grants, replay/audit/revocation on restart. Record synthetic RPO/RTO, not package-manager downgrade or live operator recovery.
+- **0.5.16 — Final Security Release Candidate:** Update version and active fixtures, publish EN/US security disposition/residual risks and PL runbook; require final-head GitHub-hosted Ubuntu 22.04/24.04/26.04 C++ Debug/Release, WebAdmin, Playwright, ASan/UBSan, CodeQL, systemd, MariaDB/private recovery and rollback. [EN/US](doc/us/BETA_0.5_STAGE_IV.md) | [PL](doc/pl/BETA_0.5_STAGE_IV.md).
+- **Boundary:** Same `beta-0.5.x-stage-full` draft PR #235, not merged/deployed; no external/Owner release sign-off gate, but all latest-head CI must pass and four separate fix passes remain before the final merge gate.
+
 ## beta-0.5.9–beta-0.5.12 Stage III — 2026-11-24 (single branch beta-0.5.x-stage-full; Ubuntu CI results tracked in Issue #234)
 
 - **0.5.9 — Storage & Data Integrity:** Align offline recovery-passkey validation with the runtime canonical base64url/duplicate-transport policy. Add negative snapshot and valid revoked-credential tests, plus optional expected source SHA verification for the MariaDB/private-state pair. Keep five files and MariaDB v11 in one stopped/isolated restore unit. Document why a SQL credential-catalog migration is not justified for this one-gateway pilot.

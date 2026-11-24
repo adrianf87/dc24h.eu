@@ -1,6 +1,8 @@
 # dc24h.eu High Starter technical documentation
 
-Current development version: beta-0.5.12.
+Current development version: beta-0.5.16.
+
+[Beta-0.5.13–beta-0.5.16 Stage IV: adversarial tests, Ubuntu endurance, recovery and release-candidate review](us/BETA_0.5_STAGE_IV.md) · [PL](pl/BETA_0.5_STAGE_IV.md)
 
 [Beta-0.5.9–beta-0.5.12 Stage III: recovery integrity, local systemd/Apache bounds, ADC/ADCS restart and remote WebAdmin UX](us/BETA_0.5_STAGE_III.md) · [PL](pl/BETA_0.5_STAGE_III.md)
 

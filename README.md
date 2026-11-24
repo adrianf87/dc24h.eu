@@ -2,7 +2,9 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: beta-0.5.12 (Stage III: reliability, recovery integrity and safer WebAdmin; GitHub-hosted Ubuntu CI; not a production release).**
+**Current development version: beta-0.5.16 (Stage IV: adversarial security, Ubuntu endurance, disposable failure/rollback and CI release-candidate review; not a production release).**
+
+- **beta-0.5.13–beta-0.5.16 Stage IV — advanced testing and CI release candidate** (single branch `beta-0.5.x-stage-full`, draft PR #235): extend bounded C++/Node/Apache adversarial probes; run hosted Ubuntu 22.04/24.04/26.04 ADC/ADCS endurance and separate fixture-backed HTTPS/MariaDB checks, with pinned Stage I references and explicit incomparable metrics; inject isolated database/package/config failure and restore full MariaDB v11 plus five private-state files; record residual risks. Full latest-head C++/WebAdmin/ASan/UBSan/CodeQL/actual-systemd CI required before Stage IV can be marked complete; four follow-up fix passes remain. No production rollout, public WebAdmin, remote hub-control write or schema migration. [EN/US Stage IV and release gate](doc/us/BETA_0.5_STAGE_IV.md) | [PL recovery runbook](doc/pl/BETA_0.5_STAGE_IV.md).
 
 - **beta-0.5.9–beta-0.5.12 Stage III — data integrity, local infrastructure and WebAdmin operations** (same branch `beta-0.5.x-stage-full`, draft PR #235): align offline backup validation with canonical passkeys; verify the expected source SHA of matched MariaDB/private-state recovery; bound loopback Apache requests and gateway systemd resource use; exercise malformed ADC/ADCS clients and clean restarts; present session expiry and device history with safe passkey-revocation confirmation and fail-closed device-list outages. Retain MariaDB schema v11 and the file-backed credential catalog after explicit migration assessment. No Debian/Xeon test, public gateway, remote hub-control write, SQL migration or deployment. [EN/US operator guide](doc/us/BETA_0.5_STAGE_III.md) | [PL](doc/pl/BETA_0.5_STAGE_III.md).
 
