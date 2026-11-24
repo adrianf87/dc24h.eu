@@ -61,6 +61,18 @@ function privateFile(path: string, flags: number, create = false): number {
   } catch (error) { closeSync(fd); throw error; }
 }
 
+// First-installation-only operation. A missing replay ledger on a previously
+// active gateway must be restored from the matched backup, not reinitialized.
+// O_EXCL ensures that this tool cannot erase an existing history.
+export function initializeTotpReplay(replayPath: string): void {
+  const fd = privateFile(replayPath, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL, true);
+  try { fsyncSync(fd); }
+  finally { closeSync(fd); }
+  const dirFd = openSync(dirname(replayPath), constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
+  try { fsyncSync(dirFd); }
+  finally { closeSync(dirFd); }
+}
+
 function base32Decode(text: string): Buffer {
   if (!seedPattern.test(text)) throw new Error("Invalid MFA seed");
   const result = Buffer.alloc(text.length * 5 / 8);
@@ -118,7 +130,9 @@ export function loadTotpVerifier(secretsPath: string, replayPath: string) {
   } finally { closeSync(seedFd); }
 
   let ledgerFd: number;
-  try { ledgerFd = privateFile(replayPath, constants.O_RDWR | constants.O_APPEND | constants.O_CREAT, true); }
+  // Never silently reset consumed TOTP steps after deletion, backup loss or
+  // partial recovery. Absence is a hard startup failure.
+  try { ledgerFd = privateFile(replayPath, constants.O_RDWR | constants.O_APPEND); }
   catch (error) { for (const key of secrets.values()) key.fill(0); throw error; }
   try {
     visitReplayLedger(ledgerFd, ({ actor, step }) => {

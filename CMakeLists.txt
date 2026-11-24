@@ -27,7 +27,7 @@ else()
 endif()
 
 # The VERSION tuple above is the package number; operators see the beta version.
-set(DC24H_VERSION "beta-0.4.16")
+set(DC24H_VERSION "beta-0.5.16")
 configure_file(cmake/version.hpp.in generated/dc24h/version.hpp @ONLY)
 find_package(Threads REQUIRED)
 find_package(OpenSSL 3 REQUIRED COMPONENTS SSL Crypto)
@@ -318,6 +318,21 @@ if(DC24H_REQUIRE_INTEGRATION_TESTS AND NOT BUILD_TESTING)
 endif()
 if(BUILD_TESTING)
     find_package(Python3 3.8 REQUIRED COMPONENTS Interpreter)
+    add_test(NAME ci.junit.summary COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/ci_junit_summary_tests.py")
+    set_tests_properties(ci.junit.summary PROPERTIES TIMEOUT 15)
+    add_test(NAME ci.timing.summary COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/ci_timing_summary_tests.py")
+    set_tests_properties(ci.timing.summary PROPERTIES TIMEOUT 15)
+    add_test(NAME beta.05.stage1.perf.gate COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/stage1_perf_gate_tests.py")
+    set_tests_properties(beta.05.stage1.perf.gate PROPERTIES TIMEOUT 15)
+    add_test(NAME beta.05.stage4.endurance.gate COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/stage4_endurance_gate_tests.py")
+    set_tests_properties(beta.05.stage4.endurance.gate PROPERTIES TIMEOUT 15)
+    add_test(NAME beta.05.stage1.recovery.pair COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/stage1_recovery_bundle_tests.py")
+    set_tests_properties(beta.05.stage1.recovery.pair PROPERTIES TIMEOUT 15)
     add_test(NAME integration.ncdc_ports COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_ports_tests.py")
     set_tests_properties(integration.ncdc_ports PROPERTIES TIMEOUT 15)
@@ -358,7 +373,7 @@ if(BUILD_TESTING)
     set_tests_properties(beta.04.stage4.perf.command PROPERTIES TIMEOUT 15)
     set_tests_properties(beta.04.stage4.recovery PROPERTIES TIMEOUT 15)
     set_tests_properties(beta.04.stage4.release PROPERTIES TIMEOUT 15)
-    set_tests_properties(beta.04.stage4.vm.probe PROPERTIES TIMEOUT 60)
+    set_tests_properties(beta.04.stage4.vm.probe PROPERTIES TIMEOUT 150)
     set_tests_properties(beta.release.gate PROPERTIES TIMEOUT 15)
     set_tests_properties(beta.baseline PROPERTIES TIMEOUT 15)
     add_test(NAME service.controller.process COMMAND "${Python3_EXECUTABLE}"
@@ -1083,7 +1098,23 @@ if(BUILD_TESTING)
     find_program(MARIADB_INSTALL_DB_EXECUTABLE mariadb-install-db)
     find_program(MARIADB_CLIENT_EXECUTABLE mariadb)
     find_program(MARIADB_ADMIN_EXECUTABLE mariadb-admin)
+    find_program(MARIADB_DUMP_EXECUTABLE mariadb-dump)
+    if(DC24H_REQUIRE_INTEGRATION_TESTS AND NOT MARIADB_DUMP_EXECUTABLE)
+        message(FATAL_ERROR "Required mariadb-dump unavailable for matched Stage I recovery")
+    endif()
     if(MARIADBD_EXECUTABLE AND MARIADB_INSTALL_DB_EXECUTABLE AND MARIADB_CLIENT_EXECUTABLE AND MARIADB_ADMIN_EXECUTABLE)
+        if(MARIADB_DUMP_EXECUTABLE)
+            add_test(NAME beta.05.stage1.matched.recovery COMMAND "${Python3_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/stage1_matched_recovery_tests.py"
+                "$<TARGET_FILE:dc24h>")
+            set_tests_properties(beta.05.stage1.matched.recovery PROPERTIES TIMEOUT 180
+                ENVIRONMENT "PATH=/usr/sbin:/usr/bin:/sbin:/bin:$ENV{PATH}")
+            add_test(NAME beta.05.stage4.rollback COMMAND "${Python3_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/stage4_rollback_process_tests.py"
+                "$<TARGET_FILE:dc24h>")
+            set_tests_properties(beta.05.stage4.rollback PROPERTIES TIMEOUT 180
+                ENVIRONMENT "PATH=/usr/sbin:/usr/bin:/sbin:/bin:$ENV{PATH}")
+        endif()
         add_test(NAME bans.process COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/database_process_tests.py"
             "$<TARGET_FILE:dc24h>" "$<TARGET_FILE:database_tests>"

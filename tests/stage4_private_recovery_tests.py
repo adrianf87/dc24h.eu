@@ -224,7 +224,7 @@ class StageFourPrivateRecovery(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             source = fixture(root)
-            handle = "a" * 43
+            handle = "a" * 42 + "Y"  # Canonical unpadded base64url tail bits.
             passkeys = {"schema": 1, "rpID": "localhost", "users": [
                 {"actor": "7", "handle": handle, "epoch": 1}], "credentials": [
                 {"actor": "7", "id": "c" * 32, "userHandle": handle, "publicKey": "b" * 60,
@@ -236,6 +236,34 @@ class StageFourPrivateRecovery(unittest.TestCase):
             self.assertEqual(recovery.snapshot(str(source), str(backup)), 5)
             self.assertEqual(recovery.restore_to_fresh_directory(str(backup), str(restored)), 5)
             self.assertEqual((source / "passkeys.json").read_bytes(), (restored / "passkeys.json").read_bytes())
+
+    def test_noncanonical_passkeys_and_duplicate_transports_cannot_enter_a_backup(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = fixture(root)
+            handle = "a" * 42 + "Y"
+            record = {"schema": 1, "rpID": "localhost", "users": [
+                {"actor": "7", "handle": handle, "epoch": 1}], "credentials": [
+                {"actor": "7", "id": "c" * 32, "userHandle": handle,
+                 "publicKey": "b" * 60, "counter": 1, "deviceType": "multiDevice",
+                 "backedUp": True, "transports": ["internal"], "name": "Test key",
+                 "createdAt": 1000, "lastUsedAt": None, "revokedAt": None}]}
+            self.assertTrue(recovery.valid_passkeys(record))
+            for mutation in ("id", "publicKey", "handle", "transports"):
+                with self.subTest(field=mutation):
+                    changed = json.loads(json.dumps(record))
+                    if mutation == "handle":
+                        changed["users"][0]["handle"] = "A" * 42 + "B"
+                        changed["credentials"][0]["userHandle"] = "A" * 42 + "B"
+                    elif mutation == "transports":
+                        changed["credentials"][0]["transports"] = ["internal", "internal"]
+                    else:
+                        changed["credentials"][0][mutation] = "A" * 42 + "B"
+                    (source / "passkeys.json").write_text(json.dumps(changed) + "\n", encoding="utf8")
+                    destination = root / ("rejected-" + mutation)
+                    with self.assertRaises(ValueError):
+                        recovery.snapshot(str(source), str(destination))
+                    self.assertFalse(destination.exists())
 
 
 if __name__ == "__main__":

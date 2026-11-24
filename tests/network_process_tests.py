@@ -195,6 +195,60 @@ class NetworkProcessTests(unittest.TestCase):
         hub.stop()
         self.assert_closed(healthy)
 
+    def test_fragmented_malformed_clients_do_not_poison_restart(self):
+        # Two actual hub lifetimes: incomplete frames must not leak a peer
+        # slot or carry parser data into the restarted process. No host state.
+        for generation in range(2):
+            with self.subTest(generation=generation):
+                hub = self.hub('--max-connections', '24')
+                peers = [hub.connect() for _ in range(16)]
+                with ThreadPoolExecutor(max_workers=8) as pool:
+                    list(pool.map(lambda p: p.sendall(b'HSUP ADBASE\nBINF AAAA NIpart'), peers))
+                for peer in peers:
+                    peer.shutdown(socket.SHUT_WR)
+                    self.assert_closed(peer)
+                healthy = hub.connect()
+                healthy.sendall(b'HSUP ADBASE\n')
+                healthy.shutdown(socket.SHUT_WR)
+                self.assert_closed(healthy)
+                self.assertIsNone(hub.process.poll())
+                hub.stop()
+                self.assertNotIn(b'event=output_limit', hub.log)
+
+    def test_adversarial_adc_parser_corpus_is_bounded_and_recovers(self):
+        # Deterministic mutation corpus: no network targets other than the
+        # freshly started loopback hub, no unbounded fuzzing on CI runners.
+        corpus = [
+            b'\x00' * 128, b'\xff\xfe\xfd\n', b'HSUP ADBASE\x00INJECT\n',
+            b'HSUP ADBASE\r\n', b'HSUP ADBASE\nBINF AAAA NI\xff\n',
+            b'HSUP ' + b'A' * 4096 + b'\n', b'\n' * 256,
+            b'BMSG ' + b'\\xFF' * 100 + b'\n',
+            b'\x16\x03\x01\x00\x02\x01\x00',
+            b'HSUP ADBASE\n' + b'BMSG X\n' * 80,
+        ]
+        hub = self.hub('--max-connections', '32')
+
+        def send_case(payload):
+            with socket.create_connection(hub.endpoints[0], timeout=3) as peer:
+                peer.settimeout(2)
+                try:
+                    for offset in range(0, len(payload), 37):
+                        peer.sendall(payload[offset:offset + 37])
+                    peer.shutdown(socket.SHUT_WR)
+                except OSError:
+                    pass  # A rejecting parser may close early.
+                drain_until_eof(peer)
+
+        with ThreadPoolExecutor(max_workers=6) as pool:
+            list(pool.map(send_case, corpus * 2))
+        self.assertIsNone(hub.process.poll())
+        with socket.create_connection(hub.endpoints[0], timeout=3) as healthy:
+            healthy.sendall(b'HSUP ADBASE\n')
+            healthy.shutdown(socket.SHUT_WR)
+            drain_until_eof(healthy)
+        hub.stop()
+        self.assertNotIn(b'INJECT', hub.log)
+
     def test_flood_does_not_delay_shutdown(self):
         hub = self.hub()
         peer = hub.connect()

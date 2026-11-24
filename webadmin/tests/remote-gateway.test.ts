@@ -56,7 +56,15 @@ test("remote gateway refuses untrusted proxy identity headers even on a public c
 test("remote gateway matches only exact raw paths and methods", async () => {
   const handler = remoteGateway(null, { origin });
   for (const path of ["/remote/v1/challenge/", "/remote/v1//challenge", "/remote/v1/%63hallenge",
-    "/remote/v1/challenge?x=1", "/remote/v1/Challenge", "/remote/v1/summary/extra", "/api/v1/status"]) {
+    "/remote/v1/challenge?x=1", "/remote/v1/Challenge", "/remote/v1/summary/extra", "/api/v1/status",
+    // Bounded adversarial path variants must not normalize into privileged routes.
+    "/remote/v1/%2e%2e/challenge", "/remote/v1/challenge%00", "/remote/v1/challenge;%2fadmin",
+    "/remote/v1/challenge#fragment", "/remote/v1/%2563hallenge", "/remote/v1/summary%2f",
+    "/remote/v1/summary%5c", "/remote/v1/%73ummary", "/remote/v1/./summary",
+    "/remote/v1/../v1/summary", "/remote/v1/passkey/device/revoke?role=owner",
+    "/remote/v1/passkey/device/%72evoke", "/remote/v1/passkey/enroll/finish/",
+    "/remote/v1/%00summary", "/remote/v1/summary%20", "/remote/v1/summary%0a",
+  ]) {
     let status = 0;
     const req = { url: path, method: "GET", socket: { remoteAddress: "127.0.0.1" },
       headers: { host: "localhost" } } as unknown as IncomingMessage;
@@ -229,7 +237,7 @@ test("remote gateway authenticates a real API proof but projects only approved a
     assert.equal(summary.status, 200);
     assert.deepEqual(JSON.parse(summary.data), {
       schema: 1, mode: "read-only",
-      server: { version: "beta-0.4.16", running: true, uptime_seconds: 3661 },
+      server: { version: "beta-0.5.16", running: true, uptime_seconds: 3661 },
       network: { active_connections: 7, accepted_connections: 48 },
       users: { online: 4, peak_online: 6 }, chat: { received: 12, rejected: 2 },
     });

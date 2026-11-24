@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Remote beta-0.4.16 gateway invariants, including HTTPS and systemd sandbox."""
+"""Remote beta-0.5.16 gateway invariants, including HTTPS and systemd sandbox."""
 from pathlib import Path
 import unittest
 
@@ -22,9 +22,14 @@ class RemoteConfiguration(unittest.TestCase):
         self.assertIn("SSLHonorCipherOrder On", config)
         self.assertIn("SSLCompression Off", config)
         self.assertIn("SSLSessionTickets Off", config)
+        for limit in ("LimitRequestLine 2048", "LimitRequestFields 48",
+                      "LimitRequestFieldSize 8192", "Timeout 5",
+                      "KeepAliveTimeout 2", "MaxKeepAliveRequests 50"):
+            self.assertIn(limit, config)
         self.assertIn("ProxyAddHeaders Off", config)
         self.assertIn("MergeSlashes Off", config)
         self.assertIn("RewriteEngine On", config)
+        self.assertIn("RewriteCond %{THE_REQUEST}", config)
         self.assertIn("RewriteCond %{HTTP_HOST} !^localhost:8443$ [NC]", config)
         self.assertIn("RewriteCond %{QUERY_STRING} !^$", config)
         self.assertIn("RewriteCond %{REQUEST_METHOD} !^GET$", config)
@@ -64,6 +69,9 @@ class RemoteConfiguration(unittest.TestCase):
         for expected in ("DC24H_REMOTE_ORIGIN=https://localhost:8443",
                          "DC24H_REMOTE_PORT=4182", "IPAddressDeny=any",
                          "StateDirectory=dc24h-remote", "StateDirectoryMode=0700",
+                         "StartLimitIntervalSec=60", "StartLimitBurst=5",
+                         "TimeoutStopSec=20", "KillMode=mixed",
+                         "TasksMax=128", "LimitNOFILE=4096", "MemoryMax=512M",
                          "DC24H_REMOTE_MFA_FILE=/var/lib/dc24h-remote/mfa.json",
                          "DC24H_REMOTE_MFA_REPLAY_FILE=/var/lib/dc24h-remote/replay.jsonl",
                          "IPAddressAllow=localhost", "NoNewPrivileges=true",
@@ -71,7 +79,7 @@ class RemoteConfiguration(unittest.TestCase):
                          "PrivateDevices=true", "ProtectKernelTunables=true",
                          "ProtectKernelModules=true", "ProtectKernelLogs=true",
                          "ProtectControlGroups=true", "ProtectClock=true",
-                         "ProtectHostname=true", "ProtectProc=invisible",
+                         "ProtectHostname=true", "ProtectProc=invisible", "ProcSubset=pid",
                          "RestrictNamespaces=true", "RestrictSUIDSGID=true",
                          "RestrictRealtime=true", "LockPersonality=true",
                          "SystemCallArchitectures=native",
@@ -130,8 +138,8 @@ class RemoteConfiguration(unittest.TestCase):
         self.assertNotIn("sessionStorage", ui)
         self.assertNotIn("Start/Stop/Restart", ui)
         self.assertIn('remote.html', self.text("webadmin/vite.config.ts"))
-        self.assertIn('set(DC24H_VERSION "beta-0.4.16")', self.text("CMakeLists.txt"))
-        self.assertIn('WEBADMIN_VERSION = "beta-0.4.16"', self.text("webadmin/src/lib/status.ts"))
+        self.assertIn('set(DC24H_VERSION "beta-0.5.16")', self.text("CMakeLists.txt"))
+        self.assertIn('WEBADMIN_VERSION = "beta-0.5.16"', self.text("webadmin/src/lib/status.ts"))
         self.assertIn("beta-0.2-code", self.text(".github/workflows/build.yml"))
         self.assertIn("beta-0.2.2-fix", self.text(".github/workflows/build.yml"))
         self.assertIn("beta-0.2.2-source", self.text(".github/workflows/build.yml"))

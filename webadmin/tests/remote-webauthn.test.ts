@@ -5,7 +5,7 @@ import { mkdtempSync, chmodSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { isoCBOR } from "@simplewebauthn/server/helpers";
-import { openPasskeyStore } from "../server/remote-passkeys.ts";
+import { initializePasskeyStore, openPasskeyStore } from "../server/remote-passkeys.ts";
 import { passkeyCeremonies, relyingParty } from "../server/remote-webauthn.ts";
 
 const origin = "https://localhost:8443", rpID = "localhost";
@@ -48,6 +48,7 @@ function authenticator() {
 test("genuine ES256 WebAuthn registration and assertion reject wrong Origin, challenge, replay and account", async () => {
   const dir = mkdtempSync(join(tmpdir(), "dc24h-webauthn-")); chmodSync(dir, 0o700);
   try {
+    initializePasskeyStore(join(dir, "passkeys.json"), rpID);
     const store = openPasskeyStore(join(dir, "passkeys.json"), rpID);
     const service = passkeyCeremonies(store, origin, rpID);
     const device = authenticator();

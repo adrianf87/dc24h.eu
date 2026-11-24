@@ -4,7 +4,7 @@
 // Or: --replay ABS --compact-replay --offline-ack (stopped service only).
 import { constants, closeSync, fstatSync, lstatSync, openSync, readFileSync } from "node:fs";
 import { dirname, isAbsolute } from "node:path";
-import { compactTotpReplay, replaceTotpSecret } from "./remote-mfa.ts";
+import { compactTotpReplay, initializeTotpReplay, replaceTotpSecret } from "./remote-mfa.ts";
 
 function argument(flag: string): string {
   const index = process.argv.indexOf(flag);
@@ -13,11 +13,19 @@ function argument(flag: string): string {
 }
 
 function main(): void {
-  const allowed = new Set(["--enrollment", "--replay", "--request", "--offline-ack", "--recovery", "--compact-replay"]);
+  const allowed = new Set(["--enrollment", "--replay", "--request", "--offline-ack", "--recovery", "--compact-replay", "--init-replay"]);
   for (const item of process.argv.slice(2)) {
     if (item.startsWith("--") && !allowed.has(item)) throw new Error("Unknown maintenance option");
   }
   if (!process.argv.includes("--offline-ack")) throw new Error("Stop gateway and acknowledge offline maintenance");
+  if (process.argv.includes("--init-replay")) {
+    if (process.argv.includes("--compact-replay") || process.argv.includes("--recovery") ||
+        process.argv.includes("--enrollment") || process.argv.includes("--request"))
+      throw new Error("First-time replay initialization must run separately");
+    initializeTotpReplay(argument("--replay"));
+    process.stdout.write("Empty TOTP replay ledger initialized for first installation only.\n");
+    return;
+  }
   if (process.argv.includes("--compact-replay")) {
     if (process.argv.includes("--recovery") || process.argv.includes("--enrollment") ||
         process.argv.includes("--request")) throw new Error("Replay compaction must run separately");

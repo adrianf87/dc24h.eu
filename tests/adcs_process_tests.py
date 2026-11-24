@@ -8,6 +8,7 @@ import sys
 import tempfile
 import time
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 
 from network_process_tests import BINARY, Hub, drain_until_eof
 from adc_process_tests import counters
@@ -174,6 +175,25 @@ class AdcsProcessTests(unittest.TestCase):
         finish_tls(self, peer)
         hub.stop()
         self.assertEqual(counters(self, hub), (1, 0, 0, 0))
+
+    def test_concurrent_bad_tls_handshakes_leave_restarted_adcs_healthy(self):
+        for generation in range(2):
+            with self.subTest(generation=generation):
+                hub = self.hub()
+                endpoint = tls_endpoint(hub)
+
+                def abort_bad_handshake(_):
+                    with socket.create_connection(endpoint, timeout=3) as peer:
+                        peer.sendall(b'NOT TLS\n')
+
+                with ThreadPoolExecutor(max_workers=8) as pool:
+                    list(pool.map(abort_bad_handshake, range(16)))
+                peer = self.connect_tls(hub)
+                peer.sendall(b'HSUP ADBASE\n')
+                finish_tls(self, peer)
+                hub.stop()
+                self.assertEqual(counters(self, hub), (1, 0, 0, 0))
+                self.assertNotIn(b'event=output_limit', hub.log)
 
     def test_simultaneous_large_tls_streams_and_shutdown(self):
         # Transport throughput regression with an explicitly higher security budget.

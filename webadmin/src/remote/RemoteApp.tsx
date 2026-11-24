@@ -30,6 +30,11 @@ const labels = {
     remove: "Revoke", deviceName: "Device name", noDevices: "No passkeys enrolled yet.",
     passkeyHelp: "Passkeys require your administrator password plus an origin-bound device confirmation. Adding or changing devices requires a fresh sign-in (within 60 seconds).",
     actionFailed: "Passkey operation was refused. Sign in again if recent verification is required.",
+    devicesUnavailable: "Device list is unavailable. No cached device data is shown; retry after the gateway recovers.",
+    sessionRemaining: "Session time remaining (approximate)", sessionUnverified: "Session lifetime is being revalidated.",
+    minutes: "min", created: "Added", lastUsed: "Last used", neverUsed: "Not used yet",
+    confirmRevoke: "Confirm revocation", cancel: "Cancel",
+    revokeWarning: "Revoke this passkey? This immediately ends active sessions for the account and cannot be undone here.",
     actionDone: "Passkey operation completed.", revoked: "The key was revoked and sessions were ended. Sign in again.",
   },
   pl: {
@@ -52,6 +57,11 @@ const labels = {
     remove: "Unieważnij", deviceName: "Nazwa urządzenia", noDevices: "Brak dodanych kluczy passkey.",
     passkeyHelp: "Passkeys wymagają hasła administratora i potwierdzenia urządzeniem powiązanym z domeną. Zmiana urządzeń wymaga świeżego logowania (do 60 sekund).",
     actionFailed: "Operacja passkey odrzucona. Zaloguj się ponownie, jeśli wymagane jest świeże potwierdzenie.",
+    devicesUnavailable: "Lista urządzeń jest niedostępna. Nie pokazujemy starych danych; spróbuj po przywróceniu bramy.",
+    sessionRemaining: "Pozostały czas sesji (orientacyjny)", sessionUnverified: "Trwa ponowna weryfikacja czasu sesji.",
+    minutes: "min", created: "Dodano", lastUsed: "Ostatnio użyto", neverUsed: "Jeszcze nie użyto",
+    confirmRevoke: "Potwierdź unieważnienie", cancel: "Anuluj",
+    revokeWarning: "Unieważnić ten passkey? Spowoduje to zakończenie aktywnych sesji konta; tej operacji nie da się tutaj cofnąć.",
     actionDone: "Operacja passkey zakończona.", revoked: "Klucz unieważniono i zakończono sesje. Zaloguj się ponownie.",
   },
 } as const;
@@ -69,7 +79,7 @@ const validSession = (value: unknown): value is Session => {
   const s = value as Record<string, unknown>;
   return s.schema === 1 && s.authenticated === true && s.mfa === true && s.mode === "read-only" &&
     typeof s.csrf === "string" && /^[0-9a-f]{64}$/.test(s.csrf) &&
-    typeof s.expires_in === "number" && s.expires_in > 0 && s.expires_in <= 600;
+    Number.isSafeInteger(s.expires_in) && (s.expires_in as number) > 0 && (s.expires_in as number) <= 600;
 };
 function failure(status: number): Status {
   if (status === 403) return "forbidden";
@@ -88,6 +98,12 @@ export function RemoteApp() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [devices, setDevices] = useState<Device[] | null>(null);
   const [deviceLabels, setDeviceLabels] = useState<Record<string, string>>({});
+  const [pendingRevoke, setPendingRevoke] = useState<string | null>(null);
+  const [deviceMutationBusy, setDeviceMutationBusy] = useState<string | null>(null);
+  const [sessionExpiresAt, setSessionExpiresAt] = useState<number | null>(null);
+  // A wall-clock adjustment must not extend the displayed lifetime of a
+  // server-issued session. Use a monotonic browser clock for the countdown.
+  const [clock, setClock] = useState(() => performance.now());
   const [actionMessage, setActionMessage] = useState("");
   // An older HTTP response must never modify a newer authenticated session.
   const sessionEpoch = useRef(0);
@@ -95,6 +111,13 @@ export function RemoteApp() {
   const summaryRequest = useRef(0);
   const deviceRequest = useRef(0);
   const t = labels[language];
+  const displayTime = (time: number | null) => time === null ? t.neverUsed :
+    new Date(time).toLocaleString(language === "pl" ? "pl-PL" : "en-US");
+  const updateSessionLifetime = (seconds: number) => {
+    const now = performance.now();
+    setClock(now);
+    setSessionExpiresAt(now + seconds * 1000);
+  };
 
   const invalidate = (next: Status) => {
     sessionEpoch.current++;
@@ -102,6 +125,9 @@ export function RemoteApp() {
     deviceRequest.current++;
     setSummary(null);
     setDevices(null);
+    setPendingRevoke(null);
+    setDeviceMutationBusy(null);
+    setSessionExpiresAt(null);
     setActionMessage("");
     setCsrf("");
     setState(next);
@@ -110,10 +136,17 @@ export function RemoteApp() {
     let canceled = false;
     call("session").then(({ status, data }) => {
       if (canceled) return;
-      if (status === 200 && validSession(data)) { setCsrf(data.csrf); setState("authorized"); }
+      if (status === 200 && validSession(data)) {
+        setCsrf(data.csrf); updateSessionLifetime(data.expires_in);
+        setState("authorized");
+      }
       else setState(status === 401 ? "unauthorized" : failure(status));
     }).catch(() => { if (!canceled) setState("unavailable"); });
     return () => { canceled = true; };
+  }, []);
+  useEffect(() => {
+    const timer = window.setInterval(() => setClock(performance.now()), 30_000);
+    return () => window.clearInterval(timer);
   }, []);
   const load = async () => {
     const epoch = sessionEpoch.current;
@@ -136,7 +169,18 @@ export function RemoteApp() {
     summaryRequest.current++;
     deviceRequest.current++;
     setCsrf(nextCsrf);
+    setSessionExpiresAt(null); // Rotation may change the expiry; never invent a new lifetime.
+    setPendingRevoke(null);
+    setDeviceMutationBusy(null);
     setSummary(null);
+    // Only the server can establish the lifetime of the rotated cookie. A
+    // stale or failed inspection cannot overwrite the new CSRF identifier.
+    void call("session").then(({ status, data }) => {
+      if (epoch !== sessionEpoch.current) return;
+      if (status === 200 && validSession(data) && data.csrf === nextCsrf)
+        updateSessionLifetime(data.expires_in);
+      else if (status === 401) invalidate("expired");
+    }).catch(() => { /* Remain unknown until the next explicit sign-in. */ });
     void load();
     return epoch;
   };
@@ -169,7 +213,8 @@ export function RemoteApp() {
         }, body: JSON.stringify({ actor_id: actor, password: proof, otp: code }),
       });
       if (result.status === 200 && validSession(result.data)) {
-        setCsrf(result.data.csrf); setState("authorized");
+        setCsrf(result.data.csrf); updateSessionLifetime(result.data.expires_in);
+        setState("authorized");
       } else { invalidate(result.status === 200 ? "unavailable" : failure(result.status)); }
     } catch { invalidate("unavailable"); }
   };
@@ -206,7 +251,8 @@ export function RemoteApp() {
       const answer = await startAuthentication({ optionsJSON: options.data as Parameters<typeof startAuthentication>[0]["optionsJSON"] });
       const result = await passkeyRequest("passkey/login/finish", { response: answer }, token);
       if (result.status === 200 && validSession(result.data)) {
-        setCsrf(result.data.csrf); setState("authorized");
+        setCsrf(result.data.csrf); updateSessionLifetime(result.data.expires_in);
+        setState("authorized");
       } else invalidate(failure(result.status));
     } catch { invalidate("unavailable"); }
   };
@@ -216,13 +262,17 @@ export function RemoteApp() {
     try {
       const result = await call("passkey/devices");
       if (epoch !== sessionEpoch.current || requestId !== deviceRequest.current) return;
+      if (result.status === 401 || result.status === 403) { invalidate(failure(result.status)); return; }
       if (result.status !== 200 || !result.data || typeof result.data !== "object" ||
           !("devices" in result.data) || !Array.isArray(result.data.devices)) throw Error();
       const list = result.data.devices as Device[];
       if (list.length > 8 || list.some(d => !d || typeof d.id !== "string" || typeof d.name !== "string")) throw Error();
       setDevices(list); setActionMessage("");
+      setPendingRevoke(previous => list.some(device => device.id === previous) ? previous : null);
     } catch {
-      if (epoch === sessionEpoch.current && requestId === deviceRequest.current) setActionMessage(t.actionFailed);
+      if (epoch === sessionEpoch.current && requestId === deviceRequest.current) {
+        setDevices(null); setPendingRevoke(null); setActionMessage(t.devicesUnavailable);
+      }
     }
   };
   const enroll = async () => {
@@ -245,8 +295,9 @@ export function RemoteApp() {
     } catch { if (epoch === sessionEpoch.current) setActionMessage(t.actionFailed); }
   };
   const changeDevice = async (id: string, revoke: boolean) => {
-    if (!csrf) return;
+    if (!csrf || deviceMutationBusy) return;
     const epoch = sessionEpoch.current;
+    setDeviceMutationBusy(id);
     try {
       const result = await passkeyRequest(revoke ? "passkey/device/revoke" : "passkey/device/rename",
         revoke ? { id } : { id, name: deviceLabels[id] ?? "" }, csrf);
@@ -262,6 +313,7 @@ export function RemoteApp() {
         if (rotatedEpoch === sessionEpoch.current) setActionMessage(t.actionDone);
       }
     } catch { if (epoch === sessionEpoch.current) setActionMessage(t.actionFailed); }
+    finally { if (epoch === sessionEpoch.current) setDeviceMutationBusy(null); }
   };
   const rows: [string, string | number][] = summary ? [
     [t.version, summary.server.version], [t.running, summary.server.running ? t.yes : t.no],
@@ -300,6 +352,8 @@ export function RemoteApp() {
         </form>}
         {state === "authorized" && <>
           <div className="remote-toolbar"><span>{t.mode}</span><button type="button" onClick={() => void load()}>{t.refresh}</button></div>
+          <p className="remote-hint" role="status">{sessionExpiresAt === null ? t.sessionUnverified :
+            `${t.sessionRemaining}: ${Math.max(0, Math.ceil((sessionExpiresAt - clock) / 60_000))} ${t.minutes}`}</p>
           {summary ? <dl className="remote-grid">{rows.map(([key, value]) =>
             <div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}</dl> : <p>{t.loading}</p>}
           {summary && !summary.search && !summary.transfers && <p className="remote-hint">{t.noData}</p>}
@@ -312,12 +366,23 @@ export function RemoteApp() {
             </div>
             {devices && (devices.length ? <ul>{devices.map(device => <li key={device.id}>
               <strong>{device.name}</strong> ({device.device_type}, {device.backed_up ? "backup" : "local"})
+              <span className="remote-hint">{t.created}: {displayTime(device.created_at)} · {t.lastUsed}: {displayTime(device.last_used_at)}</span>
               <label>{t.deviceName}<input value={deviceLabels[device.id] ?? ""} maxLength={64}
                 onChange={event => setDeviceLabels(previous => ({ ...previous, [device.id]: event.target.value }))} /></label>
               <div className="remote-actions">
-                <button type="button" onClick={() => void changeDevice(device.id, false)} disabled={!(deviceLabels[device.id] ?? "").trim()}>{t.rename}</button>
-                <button type="button" onClick={() => void changeDevice(device.id, true)}>{t.remove}</button>
+                <button type="button" onClick={() => void changeDevice(device.id, false)}
+                  disabled={!!deviceMutationBusy || !!pendingRevoke || !(deviceLabels[device.id] ?? "").trim()}>{t.rename}</button>
+                {pendingRevoke !== device.id && <button type="button" onClick={() => setPendingRevoke(device.id)}
+                  disabled={!!deviceMutationBusy}>{t.remove}</button>}
               </div>
+              {pendingRevoke === device.id && <div className="remote-confirm" role="group" aria-label={t.confirmRevoke}>
+                <p role="alert">{t.revokeWarning}</p>
+                <div className="remote-actions">
+                  <button type="button" disabled={!!deviceMutationBusy}
+                    onClick={() => { setPendingRevoke(null); void changeDevice(device.id, true); }}>{t.confirmRevoke}</button>
+                  <button type="button" disabled={!!deviceMutationBusy} onClick={() => setPendingRevoke(null)}>{t.cancel}</button>
+                </div>
+              </div>}
             </li>)}</ul> : <p>{t.noDevices}</p>)}
             {actionMessage && <p role="status">{actionMessage}</p>}
           </section>

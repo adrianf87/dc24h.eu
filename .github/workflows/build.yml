@@ -29,6 +29,8 @@ jobs:
       CXX: g++
       CI: 'true'
       BUILD_TYPE: ${{ matrix.build_type }}
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      DC24H_REQUIRE_SYSTEMD_HOST: '1'
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -44,10 +46,27 @@ jobs:
         run: cmake -S . -B "build/$BUILD_TYPE" -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DBUILD_TESTING=ON -DDC24H_REQUIRE_INTEGRATION_TESTS=ON
 
       - name: Build
-        run: cmake --build "build/$BUILD_TYPE" --parallel "$(nproc)"
+        run: cmake --build "build/$BUILD_TYPE" --parallel 2
 
       - name: Test
-        run: ctest --test-dir "build/$BUILD_TYPE" --parallel "$(nproc)" --output-on-failure
+        env:
+          DC24H_VM_REPORT_DIR: ${{ runner.temp }}/evidence
+        run: |
+          mkdir -p "$DC24H_VM_REPORT_DIR"
+          ctest --test-dir "build/$BUILD_TYPE" --parallel 2 --output-on-failure --output-junit "$RUNNER_TEMP/ctest.xml"
+
+      - name: Prepare redacted CTest evidence
+        if: always()
+        run: python3 scripts/ci_junit_summary.py --junit "$RUNNER_TEMP/ctest.xml" --output "$RUNNER_TEMP/evidence/summary.json" --suite "cpp-${{ matrix.os }}-${{ matrix.build_type }}" --sha "$SOURCE_SHA"
+
+      - name: Upload immutable status artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: cpp-${{ matrix.os }}-${{ matrix.build_type }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/evidence/
+          if-no-files-found: error
+          retention-days: 14
 
   webadmin:
     name: WebAdmin - ${{ matrix.os }}
@@ -81,7 +100,7 @@ jobs:
       - name: Build Release C++ API for browser integration
         run: |
           cmake -S . -B build/Release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
-          cmake --build build/Release --target dc24h --parallel "$(nproc)"
+          cmake --build build/Release --target dc24h --parallel 2
 
       - name: Install frontend dependencies
         working-directory: webadmin
@@ -97,7 +116,7 @@ jobs:
 
       - name: Frontend unit tests
         working-directory: webadmin
-        run: node --import tsx --test --test-concurrency="$(nproc)" tests/*.test.ts
+        run: node --import tsx --test --test-concurrency=2 tests/*.test.ts
 
       - name: Install Chromium and system dependencies
         working-directory: webadmin
@@ -105,7 +124,7 @@ jobs:
 
       - name: Browser tests
         working-directory: webadmin
-        run: npm run test:e2e -- --workers="$(nproc)" --fully-parallel
+        run: npm run test:e2e -- --workers=2 --fully-parallel
 
       - name: Real C++ API integration
         working-directory: webadmin
@@ -123,6 +142,7 @@ jobs:
     env:
       CXX: g++
       CI: 'true'
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -138,10 +158,23 @@ jobs:
         run: cmake -S . -B "build/sanitizer-${{ matrix.sanitizer }}" -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DDC24H_SANITIZER="${{ matrix.sanitizer }}"
 
       - name: Build instrumented unit tests
-        run: cmake --build "build/sanitizer-${{ matrix.sanitizer }}" --parallel "$(nproc)"
+        run: cmake --build "build/sanitizer-${{ matrix.sanitizer }}" --parallel 2
 
       - name: Run sanitizer and security regression subset
-        run: ctest --test-dir "build/sanitizer-${{ matrix.sanitizer }}" --output-on-failure -R '^(memory\.safety|adc\.security|security\.unit|api\.unit|beta\.baseline)$'
+        run: ctest --test-dir "build/sanitizer-${{ matrix.sanitizer }}" --output-on-failure --output-junit "$RUNNER_TEMP/ctest.xml" -R '^(memory\.safety|adc\.security|security\.unit|api\.unit|beta\.baseline)$'
+
+      - name: Prepare redacted sanitizer evidence
+        if: always()
+        run: python3 scripts/ci_junit_summary.py --junit "$RUNNER_TEMP/ctest.xml" --output "$RUNNER_TEMP/evidence/summary.json" --suite "sanitizer-${{ matrix.sanitizer }}" --sha "$SOURCE_SHA"
+
+      - name: Upload immutable sanitizer status
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sanitizer-${{ matrix.sanitizer }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/evidence/summary.json
+          if-no-files-found: error
+          retention-days: 14
 
   required_ci:
     # Preserve the required check name configured by branch protection.

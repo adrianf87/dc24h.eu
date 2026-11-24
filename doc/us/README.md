@@ -1,6 +1,14 @@
 # dc24h.eu High Starter documentation
 
-beta-0.4.16: Stage IV adds negative authentication tests, isolated optional performance and private-state recovery tools, and an explicitly manual release-candidate gate. **Debian 13 performance and disaster recovery are not measured; independent security review is pending.** Stage II password + passkey login remains **not passwordless**. No Internet-facing WebAdmin, remote hub writes, SQL migration or automatic production deployment. Hub, API, controller and WebAdmin report beta-0.4.16. ADC/ADCS identity `dc24h.eu` and public proxy remain unchanged. Default development language: EN/US UTF-8.
+beta-0.5.16: Stage IV adds bounded parser/proxy/WebAuthn adversarial coverage, three-window real ADC/ADCS Ubuntu endurance referenced to Stage I, fixture-based HTTPS/API and MariaDB measurements, disposable binary/config/SQL/five-file failure recovery and a bilingual residual-risk runbook. Stage I–III security, fail-closed storage, WebAdmin sessions and actual systemd checks remain active. Only GitHub-hosted Ubuntu 22.04/24.04/26.04 measures this work unit; no target-host capacity claim. Password + passkey is **not passwordless**. No Internet-facing WebAdmin, remote hub-control writes, SQL migration or production deployment. Hub, API, controller and WebAdmin report beta-0.5.16; ADC/ADCS identity `dc24h.eu` and public proxy remain unchanged. Four later fix passes and final PR merge gate remain outstanding. Default language: EN/US UTF-8.
+
+- [Beta-0.5.13–beta-0.5.16 Stage IV advanced testing and release readiness](BETA_0.5_STAGE_IV.md) · [PL](../pl/BETA_0.5_STAGE_IV.md)
+
+- [Beta-0.5.9–beta-0.5.12 Stage III reliability and operator guide](BETA_0.5_STAGE_III.md) · [PL](../pl/BETA_0.5_STAGE_III.md)
+
+- [Beta-0.5.5–beta-0.5.8 Stage II security review and operator guide](BETA_0.5_STAGE_II.md) · [PL](../pl/BETA_0.5_STAGE_II.md)
+
+- [Beta-0.5.1–beta-0.5.4 Stage I evidence and operator guide](BETA_0.5_STAGE_I.md) · [PL](../pl/BETA_0.5_STAGE_I.md)
 
 - [Beta-0.4.13–beta-0.4.16 Stage IV release review](BETA_0.4_STAGE_IV.md) · [PL](../pl/BETA_0.4_STAGE_IV.md) · [performance](BETA_0.4_STAGE_IV_PERFORMANCE.md) ([PL](../pl/BETA_0.4_STAGE_IV_PERFORMANCE.md)) · [recovery](BETA_0.4_STAGE_IV_RECOVERY.md) ([PL](../pl/BETA_0.4_STAGE_IV_RECOVERY.md))
 

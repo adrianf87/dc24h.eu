@@ -1,6 +1,14 @@
 # Dokumentacja dc24h.eu High Starter
 
-beta-0.4.16: Etap IV dodaje testy negatywne, odizolowane narzędzia pomiarowe i odtwarzania oraz ręczną kontrolę kandydata do wydania. **Na Debianie 13 nie zmierzono wydajności ani RPO/RTO; niezależny przegląd jest oczekiwany.** Logowanie **hasło + passkey** nadal nie jest bezhasłowe. Hub, API, kontroler i WebAdmin raportują beta-0.4.16. Identyfikator protokołu `dc24h.eu`, schemat v11 i publiczne proxy Apache pozostają bez zmian. Bez publicznego WebAdmin, zdalnego zapisu i automatycznego wdrożenia.
+beta-0.5.16: Etap IV dodaje ograniczone atakujące testy ADC/Node/Apache/WebAuthn, dłuższe pomiary Ubuntu ADC/ADCS z referencją Etapu I, osobne pomiary fikcyjnego backendu HTTPS i testowej MariaDB oraz ćwiczenie zatrzymania/odtwarzania binarki, konfiguracji, SQL i pięciu prywatnych plików. Ujawniono ryzyka resztkowe i ograniczenia (brak bezpośredniej bazy HTTP, brak produkcyjnego SLA). Tylko GitHub-hosted Ubuntu 22.04/24.04/26.04; bez testu docelowego sprzętu. Logowanie nadal **hasło + passkey** lub **hasło + TOTP**. Hub, API, kontroler i WebAdmin raportują beta-0.5.16, schemat MariaDB v11 bez zmian. Brak publicznego WebAdmin, zdalnego zapisu lub wdrożenia; późniejsze cztery poprawki i bramka scalenia nie są jeszcze ukończone.
+
+- [Etap IV beta-0.5.13–beta-0.5.16 — bezpieczeństwo i instrukcja odtwarzania](BETA_0.5_STAGE_IV.md) · [EN/US](../us/BETA_0.5_STAGE_IV.md)
+
+- [Etap III beta-0.5.9–beta-0.5.12 — niezawodność i procedura operatora](BETA_0.5_STAGE_III.md) · [EN/US](../us/BETA_0.5_STAGE_III.md)
+
+- [Etap II beta-0.5.5–beta-0.5.8 — przegląd bezpieczeństwa i procedura operatora](BETA_0.5_STAGE_II.md) · [EN/US](../us/BETA_0.5_STAGE_II.md)
+
+- [Etap I beta-0.5.1–beta-0.5.4 — dowody i procedura operatora](BETA_0.5_STAGE_I.md) · [EN/US](../us/BETA_0.5_STAGE_I.md)
 
 - [Etap IV beta-0.4.13–beta-0.4.16](BETA_0.4_STAGE_IV.md) · [EN/US](../us/BETA_0.4_STAGE_IV.md) · [wydajność](BETA_0.4_STAGE_IV_PERFORMANCE.md) · [odtwarzanie](BETA_0.4_STAGE_IV_RECOVERY.md)
 

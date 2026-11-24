@@ -222,7 +222,9 @@ def main():
             sql("INSERT INTO dc24h.dc24h_account_credentials (account_id,verifier,created_at) "
                 "VALUES (7,UNHEX('00FF61'),1)")
             snapshot = folder / 'cli-backup.bk'
+            backup_started = time.monotonic()
             saved = cli(path, '--backup-database', str(snapshot))
+            backup_elapsed_ms = round((time.monotonic() - backup_started) * 1000, 3)
             require(saved.returncode == 0 and saved.stdout.startswith('Database backup written bytes='), saved.stderr)
             no_secrets(saved)
             require(str(folder) not in saved.stdout + saved.stderr, 'Backup path leaked')
@@ -244,11 +246,29 @@ def main():
             require(exposed.returncode == 1 and sql('SELECT COUNT(*) FROM dc24h.dc24h_accounts') == '0', exposed.stderr)
             no_secrets(exposed)
             snapshot.chmod(0o600)
+            restore_started = time.monotonic()
             loaded = cli(path, '--language', 'pl', '--restore-database', str(snapshot))
+            restore_elapsed_ms = round((time.monotonic() - restore_started) * 1000, 3)
             require(loaded.returncode == 0 and 'wiersze=' in loaded.stdout, loaded.stderr)
             require(str(folder) not in loaded.stdout + loaded.stderr, 'Restore path leaked')
             require(sql("SELECT HEX(verifier) FROM dc24h.dc24h_account_credentials WHERE account_id=7") == '00FF61',
                     'Restored credential bytes differ')
+            report_dir = os.environ.get('DC24H_VM_REPORT_DIR')
+            if report_dir and CORE_TEST is None and not any((BANS_TEST, ADMIN_CORE_TEST, OWNER_CLI_TEST,
+                    WEBADMIN_TEST, RESILIENCE_TEST, MANAGEMENT_TEST, ADC_AUTH_TEST, PASSWORD_TEST,
+                    IDENTITY_TEST, REGISTRATION_TEST, ACCOUNT_TEST, MIGRATION_TEST)):
+                destination = Path(report_dir)
+                require(destination.is_dir(), 'Missing Ubuntu VM report directory')
+                with (destination / 'disposable-db-cli-restore.json').open('x', encoding='utf8') as report_file:
+                    json.dump({'schema': 1, 'evidence': 'ubuntu-ci-disposable-cli-backup-restore-only',
+                               'backup_elapsed_ms': backup_elapsed_ms,
+                               'restore_elapsed_ms': restore_elapsed_ms,
+                               'verified_schema_version': 11,
+                               'credential_bytes_revalidated': True,
+                               'matched_gateway_restored': False,
+                               'rpo_rto_measured': False, 'capacity_claim': False},
+                              report_file, sort_keys=True)
+                    report_file.write('\n')
             repeat = cli(path, '--restore-database', str(snapshot))
             require(repeat.returncode == 1 and sql('SELECT COUNT(*) FROM dc24h.dc24h_accounts') == '1', repeat.stderr)
             sql('DELETE FROM dc24h.dc24h_account_credentials')

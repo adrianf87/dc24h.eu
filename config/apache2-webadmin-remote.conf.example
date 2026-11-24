@@ -31,6 +31,14 @@ TraceEnable Off
     SSLHonorCipherOrder On
     SSLCompression Off
     SSLSessionTickets Off
+    # Keep slow or abusive requests local, bounded and short-lived. A wider
+    # reverse proxy or upload route must never inherit this private vhost.
+    LimitRequestLine 2048
+    LimitRequestFields 48
+    LimitRequestFieldSize 8192
+    Timeout 5
+    KeepAliveTimeout 2
+    MaxKeepAliveRequests 50
     ProxyTimeout 5
     LimitRequestBody 2048
 
@@ -39,6 +47,15 @@ TraceEnable Off
     # Only the configured HTTPS origin may reach the remote portal.
     RewriteEngine On
     RewriteCond %{HTTP_HOST} !^localhost:8443$ [NC]
+    RewriteRule ^ - [F,END]
+    # The route allowlist is literal. Reject percent-encoded path segments or
+    # parameter suffixes in the *original* request before Apache normalizes
+    # them into a potentially valid fixed route.
+    RewriteCond %{THE_REQUEST} \s/remote/v1/[^\s?]*[%;] [NC]
+    RewriteRule ^ - [F,END]
+    # Apache canonicalizes /./ and /../ before ProxyPassMatch. Reject them
+    # using the original request line, not the already-normalized URI.
+    RewriteCond %{THE_REQUEST} \s/[^\s?]*/\.\.?(?:/|\?|\s) [NC]
     RewriteRule ^ - [F,END]
 
     # Defense in depth at the TLS boundary, before the Node route allowlist.

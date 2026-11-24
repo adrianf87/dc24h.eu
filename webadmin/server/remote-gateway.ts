@@ -47,9 +47,9 @@ type Session = {
   pendingLogouts: number;
   passkeyEpoch: number;
 };
-type Challenge = { token: string; expires: number };
+type Challenge = { token: string; issued: number; expires: number };
 type PasskeyPending = { actor: string; session: Session; challenge: string; csrf: string;
-  expires: number; oldKey: string; oldSession?: Session };
+  issued: number; expires: number; oldKey: string; oldSession?: Session };
 type Budget = { count: number; starts: number };
 
 const prefix = "/remote/v1/";
@@ -192,7 +192,12 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
     return entry.count > limit;
   };
   const expired = (session: Session, at: number): boolean =>
+    // A wall-clock rollback must revoke the old authority immediately, not
+    // extend its 2-minute idle / 10-minute absolute lifetime indefinitely.
+    at < session.created || at < session.used ||
     session.created + absoluteTime <= at || session.used + idleTime <= at;
+  const validChallenge = (value: Challenge, at: number): boolean =>
+    value.issued <= at && at < value.expires;
   const reply = (res: ServerResponse, status: number, data: unknown, cookies: string[] = []) => {
     if (res.writableEnded || res.destroyed) return;
     res.writeHead(status, {
@@ -333,7 +338,12 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
       sessions.clear(); challenges.clear(); passkeyLogins.clear(); enrollments.clear();
       reply(res, 503, { error: "unavailable" }, clearSession()); return;
     }
-    if (options.rateLimits && !options.rateLimits.healthy()) {
+    let limiterHealthy = true;
+    if (options.rateLimits) {
+      try { limiterHealthy = options.rateLimits.healthy() === true; }
+      catch { limiterHealthy = false; }
+    }
+    if (!limiterHealthy) {
       sessions.clear(); challenges.clear(); passkeyLogins.clear(); enrollments.clear();
       log("rate_limiter_unavailable");
       reply(res, 503, { error: "unavailable" }, clearSession()); return;
@@ -344,7 +354,7 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
       }
       const id = randomBytes(32).toString("hex");
       const token = randomBytes(32).toString("hex");
-      challenges.set(id, { token, expires: now + challengeTime });
+      challenges.set(id, { token, issued: now, expires: now + challengeTime });
       reply(res, 200, { schema: 1, csrf: token }, [setCookie("dc24h_remote_init", id, 120)]);
       return;
     }
@@ -367,7 +377,7 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
         BigInt(actor) > 9223372036854775807n ||
         typeof proof !== "string" || !proof.length || proof.length > 1024 ||
         typeof otp !== "string" || !/^\d{6}$/.test(otp) || Object.keys(fields).length !== 3 ||
-        typeof csrf !== "string" || !challenge || challenge.expires <= clock() ||
+        typeof csrf !== "string" || !challenge || !validChallenge(challenge, clock()) ||
         !sameSecret(challenge.token, csrf)) {
         log("login_refused"); reply(res, 403, { error: "login_refused" }, [setCookie("dc24h_remote_init", "", 0)]); return;
       }
@@ -391,6 +401,7 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
           throw fault;
         }
         if (!verified) { log("mfa_refused"); throw new Error("mfa_refused"); }
+        if (!validChallenge(challenge, clock())) throw new Error("challenge_expired_during_login");
         // A concurrent logout or earlier re-login may have removed this
         // browser session while credentials were being verified. Do not
         // create an orphaned new session from the revoked predecessor.
@@ -446,7 +457,7 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
         if (typeof actor !== "string" || !/^[1-9]\d{0,18}$/.test(actor) ||
             BigInt(actor) > 9223372036854775807n || typeof proof !== "string" ||
             !proof || proof.length > 1024 || Object.keys(fields).length !== 2 ||
-            typeof csrf !== "string" || !initial || initial.expires <= clock() ||
+            typeof csrf !== "string" || !initial || !validChallenge(initial, clock()) ||
             !sameSecret(initial.token, csrf)) {
           log("passkey_login_refused"); reply(res, 403, { error: "login_refused" }); return;
         }
@@ -458,10 +469,13 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
           const prior = sessions.get(previousKey);
           const session = await provePassword(actor, proof);
           const opts = await p.ceremonies.beginLogin(actor);
-          if (!opts) { log("passkey_login_refused"); reply(res, 403, { error: "login_refused" }); return; }
+          if (!opts || !validChallenge(initial, clock())) {
+            log("passkey_login_refused"); reply(res, 403, { error: "login_refused" }); return;
+          }
           const token = randomBytes(32).toString("hex");
+          const issued = clock();
           passkeyLogins.set(token, { actor, session, challenge: opts.challenge, csrf: initial.token,
-            expires: clock() + 60_000, oldKey: previousKey, oldSession: prior });
+            issued, expires: issued + 60_000, oldKey: previousKey, oldSession: prior });
           reply(res, 200, opts, [setCookie("dc24h_remote_passkey", token, 60), setCookie("dc24h_remote_init", "", 0)]);
         } catch {
           log("passkey_login_refused"); reply(res, 403, { error: "login_refused" });
@@ -474,7 +488,8 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
         passkeyLogins.delete(token); // consume before parsing/awaiting verification
         const clear = [setCookie("dc24h_remote_passkey", "", 0)];
         const csrf = req.headers["x-dc24h-remote-csrf"];
-        if (!pending || pending.expires <= clock() || typeof csrf !== "string" || !sameSecret(pending.csrf, csrf)) {
+        if (!pending || clock() < pending.issued || pending.expires <= clock() ||
+            typeof csrf !== "string" || !sameSecret(pending.csrf, csrf)) {
           log("passkey_login_refused"); reply(res, 403, { error: "login_refused" }, clear); return;
         }
         const predecessorActive = () => !pending.oldSession ||
@@ -487,10 +502,10 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
             fields.response as Parameters<PasskeyCeremonies["finishLogin"]>[2], clock());
           // Verification may await an authenticator or crypto worker. A
           // challenge that expires during that wait cannot mint a session.
-          if (!verified || pending.expires <= clock() || !predecessorActive()) throw Error();
+          if (!verified || clock() < pending.issued || pending.expires <= clock() || !predecessorActive()) throw Error();
           const key = randomBytes(32).toString("hex");
           if (await authorized(key, pending.session) !== "ok" ||
-              pending.expires <= clock() || !predecessorActive() ||
+              clock() < pending.issued || pending.expires <= clock() || !predecessorActive() ||
               pending.session.passkeyEpoch !== p.store.epoch(pending.actor)) throw Error();
           pending.session.created = clock(); pending.session.used = pending.session.created;
           if (pending.oldSession) sessions.delete(pending.oldKey);

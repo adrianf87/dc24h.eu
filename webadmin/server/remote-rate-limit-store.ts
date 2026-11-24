@@ -16,10 +16,13 @@ const hashPattern = /^[0-9a-f]{64}$/;
 function validate(value: unknown): value is State {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const v = value as Partial<State>;
-  if (v.schema !== 1 || !Array.isArray(v.buckets) || v.buckets.length > maxBuckets) return false;
+  if (Object.keys(v).sort().join(",") !== "buckets,schema" || v.schema !== 1 ||
+      !Array.isArray(v.buckets) || v.buckets.length > maxBuckets) return false;
   const keys = new Set<string>();
   for (const b of v.buckets) {
-    if (!b || typeof b.key !== "string" || !hashPattern.test(b.key) || keys.has(b.key) ||
+    if (!b || typeof b !== "object" || Array.isArray(b) ||
+        Object.keys(b).sort().join(",") !== "count,key,starts" ||
+        typeof b.key !== "string" || !hashPattern.test(b.key) || keys.has(b.key) ||
         !Number.isSafeInteger(b.count) || b.count < 1 || b.count > 1_000_000 || !validTime(b.starts)) return false;
     keys.add(b.key);
   }
@@ -41,6 +44,17 @@ function fileSafe(path: string) {
 function flushDirectory(path: string) {
   const fd = openSync(dirname(path), constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
   try { fsyncSync(fd); } finally { closeSync(fd); }
+}
+
+export function initializeRemoteRateLimitStore(path: string): void {
+  parentSafe(path);
+  const fd = openSync(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+  try {
+    const bytes = Buffer.from('{"schema":1,"buckets":[]}\n');
+    try { if (writeSync(fd, bytes) !== bytes.length) throw Error("Incomplete limiter init"); fsyncSync(fd); }
+    finally { bytes.fill(0); }
+  } finally { closeSync(fd); }
+  flushDirectory(path);
 }
 function persist(path: string, state: State) {
   const bytes = Buffer.from(JSON.stringify(state) + "\n");
@@ -64,30 +78,18 @@ export function openRemoteRateLimitStore(path: string, serviceToken: string) {
   if (!/^[0-9a-f]{64}$/.test(serviceToken)) throw Error("Invalid private limiter key");
   parentSafe(path);
   let state: State;
+  const prior = fileSafe(path);
+  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
   try {
-    const prior = fileSafe(path);
-    const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+    const opened = fstatSync(fd);
+    if (opened.dev !== prior.dev || opened.ino !== prior.ino) throw Error("Rate-limit file changed");
+    const bytes = readFileSync(fd);
     try {
-      const opened = fstatSync(fd);
-      if (opened.dev !== prior.dev || opened.ino !== prior.ino) throw Error("Rate-limit file changed");
-      const bytes = readFileSync(fd);
-      try {
-        if (bytes.length !== opened.size) throw Error("Rate-limit file changed");
-        state = JSON.parse(bytes.toString("utf8")) as State;
-      } finally { bytes.fill(0); }
-    } finally { closeSync(fd); }
-    if (!validate(state!)) throw Error("Invalid rate-limit catalog");
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-    state = { schema: 1, buckets: [] };
-    const fd = openSync(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
-    try {
-      const payload = Buffer.from(JSON.stringify(state) + "\n");
-      try { if (writeSync(fd, payload) !== payload.length) throw Error("Incomplete limiter init"); fsyncSync(fd); }
-      finally { payload.fill(0); }
-    } finally { closeSync(fd); }
-    flushDirectory(path);
-  }
+      if (bytes.length !== opened.size) throw Error("Rate-limit file changed");
+      state = JSON.parse(bytes.toString("utf8")) as State;
+    } finally { bytes.fill(0); }
+  } finally { closeSync(fd); }
+  if (!validate(state!)) throw Error("Invalid rate-limit catalog");
   let identity = fileSafe(path);
   let healthy = true;
   const check = () => {

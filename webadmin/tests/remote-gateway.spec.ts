@@ -3,7 +3,7 @@ import { test, expect, type Route } from "@playwright/test";
 const sessionCsrf = "d".repeat(64);
 const snapshot = {
   schema: 1, mode: "read-only",
-  server: { version: "beta-0.4.16", running: true, uptime_seconds: 123 },
+  server: { version: "beta-0.5.16", running: true, uptime_seconds: 123 },
   network: { active_connections: 5, accepted_connections: 22 },
   users: { online: 4, peak_online: 7 },
   chat: { received: 10, rejected: 1 },
@@ -46,7 +46,8 @@ test("remote read-only screen needs a session, supports EN/PL and never offers h
   await page.getByLabel("Hasło konta").fill("example-proof");
   await page.getByLabel("Kod uwierzytelniający (6 cyfr)").fill("123456");
   await page.getByRole("button", { name: "Zaloguj", exact: true }).click();
-  await expect(page.getByText("beta-0.4.16")).toBeVisible();
+  await expect(page.getByText("beta-0.5.16")).toBeVisible();
+  await expect(page.getByText(/Pozostały czas sesji \(orientacyjny\):/)).toBeVisible();
   await expect(page.getByText("Aktywne połączenia")).toBeVisible();
   await expect(page.getByText("Użytkownicy online")).toBeVisible();
   for (const title of ["Start", "Stop", "Restart", "Edit", "Restore", "Grant"]) {
@@ -117,8 +118,59 @@ test("local passkey inventory exposes only this account's device actions and rev
   await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
   await expect(page.getByText("Active connections")).toBeVisible();
   await page.getByRole("button", { name: "Revoke" }).click();
+  await expect(page.getByText(/Revoke this passkey\?/)).toBeVisible();
+  expect(revoked).toBe(false);
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByText(/Revoke this passkey\?/)).toHaveCount(0);
+  await page.getByRole("button", { name: "Revoke" }).click();
+  await page.getByRole("button", { name: "Confirm revocation" }).click();
   await expect(page.getByText("Sign in to read approved hub metrics.")).toBeVisible();
   await expect(page.getByText("The key was revoked and sessions were ended.")).toBeVisible();
+});
+
+test("device inventory outage removes stale device actions without losing read-only session", async ({ page }) => {
+  let outage = false;
+  await page.route("**/remote/v1/session", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify({ schema: 1,
+      authenticated: true, mfa: true, mode: "read-only", csrf: sessionCsrf, expires_in: 90 }),
+  }));
+  await page.route("**/remote/v1/summary", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify(snapshot),
+  }));
+  await page.route("**/remote/v1/passkey/devices", route => route.fulfill({
+    status: outage ? 503 : 200, contentType: "application/json",
+    body: outage ? '{"error":"unavailable"}' : JSON.stringify({schema: 1, devices: [{
+      id: "p".repeat(32), name: "Current key", device_type: "singleDevice", backed_up: false,
+      created_at: 1000, last_used_at: null,
+    }]}),
+  }));
+  await page.goto("/remote.html");
+  await expect(page.getByText(/Session time remaining \(approximate\):/)).toBeVisible();
+  await page.getByRole("button", { name: "Refresh devices" }).click();
+  await expect(page.getByText("Current key")).toBeVisible();
+  await expect(page.getByText(/Last used: Not used yet/)).toBeVisible();
+  outage = true;
+  await page.getByRole("button", { name: "Refresh devices" }).click();
+  await expect(page.getByText("Current key")).toHaveCount(0);
+  await expect(page.getByText(/Device list is unavailable/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Revoke" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+});
+
+test("session countdown starts at the server lifetime even after delayed inspection", async ({ page }) => {
+  await page.route("**/remote/v1/session", async route => {
+    // The old wall-clock deadline was calculated later than the initial clock
+    // state. ceil() then displayed 11 minutes for a 10-minute session.
+    await new Promise(resolve => setTimeout(resolve, 100));
+    await route.fulfill({ status: 200, contentType: "application/json",
+      body: JSON.stringify({ schema: 1, authenticated: true, mfa: true,
+        mode: "read-only", csrf: sessionCsrf, expires_in: 600 }) });
+  });
+  await page.route("**/remote/v1/summary", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify(snapshot),
+  }));
+  await page.goto("/remote.html");
+  await expect(page.getByText("Session time remaining (approximate): 10 min")).toBeVisible();
 });
 
 test("refused passkey enrollment leaves no device, secret or pending privileged action in the browser", async ({ page }) => {
@@ -194,6 +246,9 @@ test("a delayed device revocation response cannot sign out a newer session", asy
   await page.getByRole("button", { name: "Refresh devices" }).click();
   await expect(page.getByText("Old device")).toBeVisible();
   await page.getByRole("button", { name: "Revoke" }).click();
+  // Stage III requires an explicit second confirmation before the mutation
+  // request starts. Its delayed response must still not revoke a new login.
+  await page.getByRole("button", { name: "Confirm revocation" }).click();
   await revokeStarted;
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page.getByText("Sign in to read approved hub metrics.")).toBeVisible();

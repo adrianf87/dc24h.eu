@@ -11,6 +11,7 @@ import http.client
 import json
 import os
 from pathlib import Path
+import re
 import socket
 import ssl
 import stat
@@ -27,7 +28,8 @@ def percentile(sorted_values, fraction):
     return round(sorted_values[min(index, len(sorted_values) - 1)], 3)
 
 
-def summarize(profile, samples, seconds, rate, concurrency, rss_before=None, rss_after=None):
+def summarize(profile, samples, seconds, rate, concurrency, rss_before=None, rss_after=None,
+              cpu_before=None, cpu_after=None):
     latency = sorted(round(s[1], 3) for s in samples if s[0])
     errors = {}
     for ok, _, reason in samples:
@@ -45,6 +47,13 @@ def summarize(profile, samples, seconds, rate, concurrency, rss_before=None, rss
         "p99_ms": percentile(latency, 0.99), "max_ms": max(latency, default=None),
         "configured_rate_per_second": rate, "concurrency": concurrency,
         "target_rss_before_kib": rss_before, "target_rss_after_kib": rss_after,
+        # Process CPU time / elapsed wall time, in units of one logical CPU;
+        # not a peak or a host-wide CPU measurement.
+        "target_cpu_mean_percent_one_core": (
+            round(100 * (cpu_after - cpu_before) / seconds, 3)
+            if cpu_before is not None and cpu_after is not None and
+            cpu_after >= cpu_before and seconds > 0 else None
+        ),
         "capacity_claim": False,
     }
 
@@ -81,6 +90,20 @@ def rss_kib(pid):
         return None
 
 
+def process_cpu_seconds(pid):
+    if pid is None:
+        return None
+    try:
+        record = Path(f"/proc/{pid}/stat").read_text(encoding="ascii")
+        # A process name can contain spaces and parentheses; fields after the
+        # final ') ' start at Linux stat field 3 (state).
+        fields = record.rsplit(") ", 1)[1].split()
+        clock_ticks = os.sysconf("SC_CLK_TCK")
+        return (int(fields[11]) + int(fields[12])) / clock_ticks
+    except (OSError, ValueError, IndexError):
+        return None
+
+
 def adc_greeting(sock, timeout):
     """Require a complete ADC hub SUP line; an error/partial banner is not success."""
     deadline = time.monotonic() + timeout
@@ -112,9 +135,14 @@ def valid_http_response(profile, response, body):
         payload = json.loads(body)
     except (ValueError, UnicodeDecodeError):
         return False
-    return (isinstance(payload, dict) and type(payload.get("schema")) is int and
+    if not (isinstance(payload, dict) and type(payload.get("schema")) is int and
             payload["schema"] == 1 and payload.get("mode") == "read-only" and
-            isinstance(payload.get("server"), dict))
+            isinstance(payload.get("server"), dict)):
+        return False
+    server = payload["server"]
+    return (isinstance(server.get("version"), str) and
+            re.fullmatch(r"beta-\d+\.\d+\.\d+", server["version"]) is not None and
+            server.get("running") is True)
 
 
 def probe(profile, port, timeout, tls, cookie):
@@ -189,6 +217,7 @@ def main(argv=None):
         tls = ssl.create_default_context(cafile=args.ca_file)
         tls.minimum_version = ssl.TLSVersion.TLSv1_2
     before = rss_kib(args.target_pid)
+    cpu_before = process_cpu_seconds(args.target_pid)
     samples = []
     started = time.monotonic()
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.concurrency) as executor:
@@ -203,7 +232,8 @@ def main(argv=None):
             samples.append(result.result())
     seconds = time.monotonic() - started
     print(json.dumps(summarize(args.profile, samples, seconds, args.rate, args.concurrency,
-                               before, rss_kib(args.target_pid)), sort_keys=True))
+                               before, rss_kib(args.target_pid), cpu_before,
+                               process_cpu_seconds(args.target_pid)), sort_keys=True))
     return 0 if all(ok for ok, _, _ in samples) else 1
 
 

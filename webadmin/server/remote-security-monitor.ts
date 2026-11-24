@@ -9,13 +9,36 @@ const alertNames = new Set<SecurityAlert>([
   "authentication_denials", "upstream_outage", "audit_loss", "audit_corruption", "rate_limiter_loss",
 ]);
 
+// Periodic audit integrity checks must not be postponed indefinitely by a
+// backwards wall-clock adjustment. The check is also mandatory immediately
+// after a reversal, even when the previous deadline was in the future.
+export function createPeriodicAuditVerifier(verify: () => boolean) {
+  let last = -1, next = 0;
+  let healthy = true;
+  return (now: number): boolean => {
+    if (!healthy || !Number.isSafeInteger(now) || now < 0 || now > 8_640_000_000_000_000) return false;
+    if (now < last || now >= next) {
+      last = now;
+      next = now + 15_000;
+      try { healthy = verify() === true; }
+      catch { healthy = false; }
+      return healthy;
+    }
+    return true;
+  };
+}
+
 export function createRemoteSecurityMonitor(emit: (line: string) => void) {
   let since = 0, denials = 0, outages = 0;
   const last = new Map<SecurityAlert, number>();
   const signal = (reason: SecurityAlert, now: number) => {
     if (!alertNames.has(reason) || !Number.isSafeInteger(now) || now < 0 || now > 8_640_000_000_000_000)
       throw Error("Invalid security alert");
-    if (last.has(reason) && now < last.get(reason)! + windowMs) return;
+    const prior = last.get(reason);
+    // A backward wall-clock jump must not suppress a critical storage-loss
+    // warning until the old timestamp is reached again. Emit once and begin
+    // a fresh bounded cooldown at the observed time.
+    if (prior !== undefined && now >= prior && now < prior + windowMs) return;
     last.set(reason, now);
     // Fixed-code JSON only. Never log actor, credential, source address,
     // request path, factor proof or account/host identifiers.

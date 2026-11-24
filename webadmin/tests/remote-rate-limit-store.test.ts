@@ -3,13 +3,14 @@ import { test } from "node:test";
 import { chmodSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { openRemoteRateLimitStore } from "../server/remote-rate-limit-store.ts";
+import { initializeRemoteRateLimitStore, openRemoteRateLimitStore } from "../server/remote-rate-limit-store.ts";
 
 const secret = "a".repeat(64);
 test("durable hashed budgets survive restart, expire only after the window, and never record identities", () => {
   const dir = mkdtempSync(join(tmpdir(), "dc24h-rate-")); chmodSync(dir, 0o700);
   const path = join(dir, "limits.json");
   try {
+    initializeRemoteRateLimitStore(path);
     const first = openRemoteRateLimitStore(path, secret);
     for (let n = 0; n < 4; n++) assert.equal(first.hit("login:12345", 4, 100_000), false);
     const text = readFileSync(path, "utf8");
@@ -26,6 +27,7 @@ test("unsafe files, concurrent writers, corruption and outside replacement fail 
   const dir = mkdtempSync(join(tmpdir(), "dc24h-rate-sec-")); chmodSync(dir, 0o700);
   const path = join(dir, "limits.json"), alias = join(dir, "alias.json");
   try {
+    initializeRemoteRateLimitStore(path);
     const first = openRemoteRateLimitStore(path, secret);
     const second = openRemoteRateLimitStore(path, secret);
     first.hit("login:7", 4, 10);
@@ -41,5 +43,29 @@ test("unsafe files, concurrent writers, corruption and outside replacement fail 
     rmSync(path);
     writeFileSync(path, '{"schema":1,"buckets":[{"key":"bad"}]}', { mode: 0o600 });
     assert.throws(() => openRemoteRateLimitStore(path, secret), /Invalid rate-limit catalog/);
+    writeFileSync(path, '{"schema":1,"buckets":[],"ignore_quota":true}', { mode: 0o600 });
+    assert.throws(() => openRemoteRateLimitStore(path, secret), /Invalid rate-limit catalog/,
+      "an unexpected top-level field is evidence of unreviewed or corrupt private state");
+    writeFileSync(path, JSON.stringify({ schema: 1, buckets: [
+      { key: "0".repeat(64), count: 2, starts: 10, ignore_quota: true },
+    ] }), { mode: 0o600 });
+    assert.throws(() => openRemoteRateLimitStore(path, secret), /Invalid rate-limit catalog/,
+      "unexpected per-actor bucket fields must also fail closed");
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("lost rate-limit state must not reset authentication budgets on restart", () => {
+  const dir = mkdtempSync(join(tmpdir(), "dc24h-rate-missing-")); chmodSync(dir, 0o700);
+  const path = join(dir, "limits.json");
+  try {
+    assert.throws(() => openRemoteRateLimitStore(path, secret), /ENOENT/);
+    initializeRemoteRateLimitStore(path);
+    const live = openRemoteRateLimitStore(path, secret);
+    live.hit("login:7", 4, 100_000);
+    const retained = readFileSync(path, "utf8");
+    assert.throws(() => initializeRemoteRateLimitStore(path), /EEXIST/);
+    assert.equal(readFileSync(path, "utf8"), retained);
+    rmSync(path);
+    assert.throws(() => openRemoteRateLimitStore(path, secret), /ENOENT/);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

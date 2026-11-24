@@ -3,13 +3,17 @@ import { test } from "node:test";
 import { mkdtempSync, readFileSync, rmSync, chmodSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { openPasskeyStore } from "../server/remote-passkeys.ts";
+import { initializePasskeyStore, openPasskeyStore } from "../server/remote-passkeys.ts";
 import { passkeyCeremonies, relyingParty } from "../server/remote-webauthn.ts";
 
 function withStore(fn: (path: string) => void) {
   const dir = mkdtempSync(join(tmpdir(), "dc24h-passkey-"));
   chmodSync(dir, 0o700);
-  try { fn(join(dir, "passkeys.json")); }
+  try {
+    const path = join(dir, "passkeys.json");
+    initializePasskeyStore(path, "localhost");
+    fn(path);
+  }
   finally { rmSync(dir, { recursive: true, force: true }); }
 }
 const sample = (id: string, actor = "7") => ({
@@ -17,6 +21,24 @@ const sample = (id: string, actor = "7") => ({
   counter: 0, deviceType: "singleDevice" as const, backedUp: false,
   transports: ["internal"], name: "Passkey", createdAt: 1000,
   lastUsedAt: null, revokedAt: null,
+});
+
+test("deleted passkey catalog refuses restart and first-install init cannot reset revoked keys", () => {
+  const dir = mkdtempSync(join(tmpdir(), "dc24h-passkey-missing-")); chmodSync(dir, 0o700);
+  const path = join(dir, "passkeys.json");
+  try {
+    assert.throws(() => openPasskeyStore(path, "localhost"), /ENOENT/);
+    initializePasskeyStore(path, "localhost");
+    const store = openPasskeyStore(path, "localhost");
+    const handle = store.userHandle("7"), id = "c".repeat(32);
+    store.add({ ...sample(id), userHandle: handle });
+    store.revoke("7", id, 2000);
+    const old = readFileSync(path, "utf8");
+    assert.throws(() => initializePasskeyStore(path, "localhost"), /EEXIST/);
+    assert.equal(readFileSync(path, "utf8"), old);
+    rmSync(path);
+    assert.throws(() => openPasskeyStore(path, "localhost"), /ENOENT/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
 test("private file catalogs are bounded, reusable after restart, and require an exact RP ID", () => withStore(path => {
@@ -68,6 +90,26 @@ test("external rewrite, unsafe permissions, corrupt data or another writer fail 
   writeFileSync(path, "{\"schema\":1}");
   assert.throws(() => openPasskeyStore(path, "localhost"), /Invalid passkey catalog/);
 }));
+
+test("noncanonical passkey identifiers, unexpected fields and duplicate transports fail closed", () => {
+  for (const mutate of [
+    (data: any) => { data.credentials[0].id = "A".repeat(42) + "B"; },
+    (data: any) => { data.credentials[0].publicKey = "A".repeat(42) + "B"; },
+    (data: any) => { data.users[0].handle = "A".repeat(42) + "B"; },
+    (data: any) => { data.credentials[0].transports = ["internal", "internal"]; },
+    (data: any) => { data.credentials[0].privateKey = "should-never-exist"; },
+    (data: any) => { data.users[0].admin = true; },
+    (data: any) => { data.unreviewed = true; },
+  ]) withStore(path => {
+    const store = openPasskeyStore(path, "localhost");
+    const handle = store.userHandle("7");
+    store.add({ ...sample("c".repeat(32)), userHandle: handle });
+    const data = JSON.parse(readFileSync(path, "utf8"));
+    mutate(data);
+    writeFileSync(path, JSON.stringify(data) + "\n", { mode: 0o600 });
+    assert.throws(() => openPasskeyStore(path, "localhost"), /Invalid passkey catalog/);
+  });
+});
 
 test("WebAuthn RP configuration does not trust browser Host or forwarded origin", () => {
   assert.deepEqual(relyingParty("https://localhost:8443", "localhost"),

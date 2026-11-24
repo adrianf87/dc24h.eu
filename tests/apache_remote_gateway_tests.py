@@ -2,8 +2,10 @@
 import grp
 import http.client
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import json
 import os
 from pathlib import Path
+import platform
 import pwd
 import signal
 import socket
@@ -14,6 +16,10 @@ import tempfile
 import threading
 import time
 import unittest
+from concurrent.futures import ThreadPoolExecutor
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+import stage4_endurance_gate as endurance_gate
 
 APACHE, MODULES, EXAMPLE = sys.argv[1:4]
 del sys.argv[1:4]
@@ -203,7 +209,9 @@ class ApacheRemoteGateway(unittest.TestCase):
         for path in ("/api/v1/status", "/admin-api/v1/management", "/management",
                      "/remote/v1/admin", "/remote/v1/wildcard", "/remote/v1/challenge/",
                      "/remote/v1//challenge",
-                     "/remote/v1/Challenge",
+                     "/remote/v1/Challenge", "/remote/v1/%73ummary",
+                     "/remote/v1/summary%2F", "/remote/v1/summary;ignored=1",
+                     "/remote/v1/../api/v1/status", "/remote/v1/%2e%2e/api/v1/status",
                      "/.env", "/secret.ini", "/private.key", "/api.token",
                      "/secret.sql", "/index.html", "/assets/local-test.js"):
             before = len(self.backend.seen)
@@ -212,6 +220,79 @@ class ApacheRemoteGateway(unittest.TestCase):
             self.assertNotIn(MARKER, body)
             self.assertNotIn(b"PRIVATE_FIXTURE_NOT_FOR_HTTP", body)
             self.assertEqual(len(self.backend.seen), before, path)
+
+    def test_adversarial_paths_are_never_normalized_into_private_proxy(self):
+        corpus = [
+            "/remote/v1/%2573ummary", "/remote/v1/summary%2f", "/remote/v1/summary%5c",
+            "/remote/v1/summary;ignored", "/remote/v1/summary%00", "/remote/v1/summary%0a",
+            "/remote/v1/./summary", "/remote/v1/../v1/summary", "/remote/v1/%2e/summary",
+            "/remote/v1/%2e%2e/v1/summary", "/remote/v1/passkey/device/revoke/",
+            "/remote/v1/passkey/device/%72evoke", "/remote/v1/passkey/enroll/finish%2f",
+            "/remote/v1/summary?admin=true", "/admin-api/v1/status%00",
+        ]
+        for path in corpus:
+            with self.subTest(path=path):
+                before = len(self.backend.seen)
+                status, body, _ = self.fetch(path)
+                self.assertNotEqual(status, 200, path)
+                self.assertNotIn(MARKER, body)
+                self.assertEqual(len(self.backend.seen), before, path)
+
+    def test_bounded_https_api_and_portal_concurrency(self):
+        # Exercises real loopback Apache TLS/proxy/HTML, with a synthetic API
+        # upstream. It deliberately does NOT claim an authenticated Node or
+        # C++ API request latency baseline.
+        if os.environ.get("GITHUB_ACTIONS") != "true":
+            self.skipTest("Stage IV HTTPS endurance is reserved for hosted Ubuntu CI")
+        self.assertEqual(os.environ.get("RUNNER_ENVIRONMENT"), "github-hosted")
+        self.assertEqual(os.environ.get("RUNNER_OS"), "Linux")
+        import time
+
+        def rss_kib():
+            status = Path(f"/proc/{self.server.pid}/status").read_text(encoding="ascii")
+            return int(next(line.split()[1] for line in status.splitlines() if line.startswith("VmRSS:")))
+
+        reports = {}
+        for profile, path, baseline_test_ms in (
+            ("api_proxy_fixture", "/remote/v1/summary", 1956.9),
+            ("webadmin_static_html", "/remote.html", 4141.0),
+        ):
+            before = rss_kib()
+            started = time.monotonic()
+
+            def once(_):
+                begin = time.monotonic()
+                status, body, _ = self.fetch(path, headers={"Cookie": "dc24h_remote=fixture"})
+                return status, body, (time.monotonic() - begin) * 1000
+
+            with ThreadPoolExecutor(max_workers=4) as pool:
+                samples = list(pool.map(once, range(48)))
+            elapsed = time.monotonic() - started
+            self.assertTrue(all(status == 200 and body for status, body, _ in samples), profile)
+            latencies = sorted(sample[2] for sample in samples)
+            p99 = round(latencies[-1], 3)
+            self.assertLess(p99, 4000, profile + " bounded HTTPS CI regression")
+            reports[profile] = {
+                "requests": 48, "errors": 0, "concurrency": 4,
+                "p50_ms": round(latencies[23], 3), "p95_ms": round(latencies[45], 3),
+                "p99_ms": p99, "successful_rps": round(48 / elapsed, 3),
+                "apache_rss_before_kib": before, "apache_rss_after_kib": rss_kib(),
+                "stage1_test_duration_p99_ms": baseline_test_ms,
+                "stage1_request_level_baseline_available": False,
+            }
+        destination = os.environ.get("DC24H_VM_REPORT_DIR")
+        if destination:
+            path = Path(destination) / "stage4-https-endurance.json"
+            with path.open("x", encoding="utf-8") as file:
+                json.dump({"schema": 1, "evidence": "hosted-ubuntu-apache-https-fixture",
+                           "source_sha": endurance_gate.required_source_sha(
+                               os.environ.get("SOURCE_SHA")),
+                           "os": "ubuntu-" + platform.freedesktop_os_release()["VERSION_ID"],
+                           "stage1_run": 45283779224, "profiles": reports,
+                           "production_capacity_claim": False,
+                           "note": "Stage I API/browser figures are test durations, not HTTP request latency. No direct numerical regression inference; API backend here is a synthetic fixture."},
+                          file, indent=2, sort_keys=True)
+                file.write("\n")
 
     def test_host_method_query_and_origin_denied_before_proxy(self):
         cases = [

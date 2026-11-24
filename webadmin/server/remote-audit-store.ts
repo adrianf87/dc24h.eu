@@ -11,6 +11,21 @@ const zeroHash = "0".repeat(64);
 type Row = { schema: 1; sequence: number; previous: string; event: RemoteEvent; at: string; digest: string };
 const eventNames: ReadonlySet<string> = new Set(remoteAuditEvents);
 
+// Explicit first-installation only. Normal startup must never replace a lost
+// audit chain with an empty file (which would conceal missing security events).
+export function initializeRemoteAuditStore(path: string): void {
+  if (!isAbsolute(path)) throw new Error("Absolute audit file required");
+  const parent = lstatSync(dirname(path));
+  if (!parent.isDirectory() || parent.uid !== process.geteuid?.() || (parent.mode & 0o077))
+    throw new Error("Unsafe audit directory");
+  const fd = openSync(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+  try { fsyncSync(fd); }
+  finally { closeSync(fd); }
+  const dirFd = openSync(dirname(path), constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
+  try { fsyncSync(dirFd); }
+  finally { closeSync(dirFd); }
+}
+
 function digest(sequence: number, previous: string, event: RemoteEvent, at: string): string {
   return createHash("sha256").update(JSON.stringify([1, sequence, previous, event, at])).digest("hex");
 }
@@ -36,7 +51,7 @@ export function openRemoteAuditStore(path: string) {
   const parent = lstatSync(dirname(path));
   if (!parent.isDirectory() || parent.uid !== uid || (parent.mode & 0o077))
     throw new Error("Unsafe audit directory");
-  const fd = openSync(path, constants.O_RDWR | constants.O_APPEND | constants.O_CREAT | constants.O_NOFOLLOW, 0o600);
+  const fd = openSync(path, constants.O_RDWR | constants.O_APPEND | constants.O_NOFOLLOW);
   let sequence = 0, previous = zeroHash, size = 0, healthy = true, dropped = 0;
   try {
     const state = fstatSync(fd);

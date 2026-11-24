@@ -27,6 +27,14 @@ export type PasskeyEntry = {
 type User = { actor: string; handle: string; epoch: number };
 type Document = { schema: 1; rpID: string; users: User[]; credentials: PasskeyEntry[] };
 const idPattern = /^[A-Za-z0-9_-]{20,1400}$/;
+// Node's base64url decoder accepts ignored trailing bits. Credential IDs and
+// user handles are security identifiers, so require one representation per
+// underlying byte string across storage, WebAuthn and account ownership.
+const canonical = (value: unknown): value is string =>
+  typeof value === "string" && idPattern.test(value) &&
+  Buffer.from(value, "base64url").toString("base64url") === value;
+const exact = (value: object, names: readonly string[]) =>
+  Object.keys(value).sort().join(",") === [...names].sort().join(",");
 const actorPattern = /^[1-9]\d{0,18}$/;
 const maxBytes = 1024 * 1024;
 const transports = new Set(["ble", "cable", "hybrid", "internal", "nfc", "smart-card", "usb"]);
@@ -36,24 +44,30 @@ const safeActor = (v: unknown): v is string => typeof v === "string" && actorPat
 function validDocument(v: unknown, rpID: string): v is Document {
   if (!v || typeof v !== "object" || Array.isArray(v)) return false;
   const doc = v as Partial<Document>;
-  if (doc.schema !== 1 || doc.rpID !== rpID || !Array.isArray(doc.users) ||
+  if (!exact(doc, ["schema", "rpID", "users", "credentials"]) ||
+      doc.schema !== 1 || doc.rpID !== rpID || !Array.isArray(doc.users) ||
       !Array.isArray(doc.credentials) || doc.users.length > 64 || doc.credentials.length > 256) return false;
   const actors = new Set<string>(), handles = new Set<string>(), ids = new Set<string>();
   for (const user of doc.users) {
-    if (!user || !safeActor(user.actor) || typeof user.handle !== "string" ||
-        !idPattern.test(user.handle) || !safeTime(user.epoch) ||
+    if (!user || typeof user !== "object" ||
+        !exact(user, ["actor", "handle", "epoch"]) ||
+        !safeActor(user.actor) || !canonical(user.handle) || !safeTime(user.epoch) ||
         actors.has(user.actor) || handles.has(user.handle)) return false;
     actors.add(user.actor); handles.add(user.handle);
   }
   for (const c of doc.credentials) {
-    if (!c || typeof c !== "object" || !safeActor(c.actor) || !actors.has(c.actor) ||
-        typeof c.id !== "string" || !idPattern.test(c.id) || ids.has(c.id) ||
+    if (!c || typeof c !== "object" || !exact(c, [
+          "actor", "id", "userHandle", "publicKey", "counter", "deviceType", "backedUp",
+          "transports", "name", "createdAt", "lastUsedAt", "revokedAt",
+        ]) || !safeActor(c.actor) || !actors.has(c.actor) ||
+        !canonical(c.id) || ids.has(c.id) ||
         typeof c.userHandle !== "string" || c.userHandle !== doc.users.find(u => u.actor === c.actor)?.handle ||
-        typeof c.publicKey !== "string" || !idPattern.test(c.publicKey) ||
+        !canonical(c.publicKey) ||
         !safeTime(c.counter) || !["singleDevice", "multiDevice"].includes(c.deviceType) ||
         typeof c.backedUp !== "boolean" || (c.deviceType === "singleDevice" && c.backedUp) ||
         !Array.isArray(c.transports) || c.transports.length > 7 ||
         !c.transports.every(t => typeof t === "string" && transports.has(t)) ||
+        new Set(c.transports).size !== c.transports.length ||
         typeof c.name !== "string" || c.name.length > 64 || !/^[^\u0000-\u001f\u007f<>]*$/.test(c.name) ||
         !safeTime(c.createdAt) || (c.lastUsedAt !== null && !safeTime(c.lastUsedAt)) ||
         (c.revokedAt !== null && !safeTime(c.revokedAt))) return false;
@@ -93,37 +107,38 @@ function persist(path: string, doc: Document): void {
   } finally { bytes.fill(0); }
 }
 
+export function initializePasskeyStore(path: string, rpID: string): void {
+  if (!/^(?:localhost|[a-z0-9]+(?:[.-][a-z0-9]+)*)$/.test(rpID) || rpID.length > 253)
+    throw Error("Invalid passkey RP ID");
+  privateParent(path);
+  const doc: Document = { schema: 1, rpID, users: [], credentials: [] };
+  const fd = openSync(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+  try {
+    const bytes = Buffer.from(JSON.stringify(doc) + "\n");
+    try { if (writeSync(fd, bytes) !== bytes.length) throw Error("Incomplete passkey init"); fsyncSync(fd); }
+    finally { bytes.fill(0); }
+  } finally { closeSync(fd); }
+  const dir = openSync(dirname(path), constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
+  try { fsyncSync(dir); } finally { closeSync(dir); }
+}
+
 export function openPasskeyStore(path: string, rpID: string) {
   if (!/^(?:localhost|[a-z0-9]+(?:[.-][a-z0-9]+)*)$/.test(rpID) || rpID.length > 253)
     throw Error("Invalid passkey RP ID");
   privateParent(path);
   let doc: Document;
+  const before = safeStat(path);
+  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
   try {
-    const before = safeStat(path);
-    const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+    const opened = fstatSync(fd);
+    if (opened.dev !== before.dev || opened.ino !== before.ino) throw Error("Passkey file changed");
+    const bytes = readFileSync(fd);
     try {
-      const opened = fstatSync(fd);
-      if (opened.dev !== before.dev || opened.ino !== before.ino) throw Error("Passkey file changed");
-      const bytes = readFileSync(fd);
-      try {
-        if (bytes.length !== opened.size) throw Error("Passkey file changed");
-        doc = JSON.parse(bytes.toString("utf8")) as Document;
-      } finally { bytes.fill(0); }
-    } finally { closeSync(fd); }
-    if (!validDocument(doc!, rpID)) throw Error("Invalid passkey catalog");
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
-    doc = { schema: 1, rpID, users: [], credentials: [] };
-    // Exclusive initial creation; if another process won, fail and restart.
-    const fd = openSync(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
-    try {
-      const bytes = Buffer.from(JSON.stringify(doc) + "\n");
-      try { if (writeSync(fd, bytes) !== bytes.length) throw Error("Incomplete passkey init"); fsyncSync(fd); }
-      finally { bytes.fill(0); }
-    } finally { closeSync(fd); }
-    const dir = openSync(dirname(path), constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
-    try { fsyncSync(dir); } finally { closeSync(dir); }
-  }
+      if (bytes.length !== opened.size) throw Error("Passkey file changed");
+      doc = JSON.parse(bytes.toString("utf8")) as Document;
+    } finally { bytes.fill(0); }
+  } finally { closeSync(fd); }
+  if (!validDocument(doc!, rpID)) throw Error("Invalid passkey catalog");
   let identity = safeStat(path);
   let healthy = true;
   const check = () => {
