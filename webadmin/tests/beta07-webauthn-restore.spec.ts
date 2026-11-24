@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import type { BrowserContext, Page } from "@playwright/test";
 import { createServer } from "node:https";
 import { spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
@@ -37,6 +38,7 @@ test("real virtual authenticator authenticates after fresh private-file restore 
   let store = openPasskeyStore(sourceFile, "localhost");
   let origin = "";
   let ceremonies!: ReturnType<typeof passkeyCeremonies>;
+  let secondContext: BrowserContext | undefined;
   let enrollmentChallenge = "", loginChallenge = "";
   const responses: Array<{ path: string; status: number }> = [];
 
@@ -103,22 +105,40 @@ test("real virtual authenticator authenticates after fresh private-file restore 
         hasUserVerification: true, isUserVerified: true },
     });
 
-    const enroll = await page.evaluate(async () => {
-      const bytes = (s: string) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(s.length / 4) * 4, "=")), c => c.charCodeAt(0));
-      const options = await (await fetch("/enroll/options", { method: "POST", body: JSON.stringify({ actor: "7" }) })).json();
-      const credential = await navigator.credentials.create({ publicKey: {
-        ...options, challenge: bytes(options.challenge), user: { ...options.user, id: bytes(options.user.id) },
-        excludeCredentials: (options.excludeCredentials ?? []).map((c: { id: string }) => ({ ...c, id: bytes(c.id) })),
-      } });
-      if (!credential || !("toJSON" in credential)) throw Error("Browser WebAuthn JSON missing");
-      return (credential as PublicKeyCredential & { toJSON(): unknown }).toJSON();
-    });
-    const enrolled = await page.evaluate(async response => {
-      const answer = await fetch("/enroll/finish", { method: "POST", body: JSON.stringify({ actor: "7", response }) });
-      return answer.status;
-    }, enroll);
-    expect(enrolled).toBe(200);
+    const enrollOn = async (target: Page) => {
+      const response = await target.evaluate(async () => {
+        const bytes = (s: string) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(s.length / 4) * 4, "=")), c => c.charCodeAt(0));
+        const options = await (await fetch("/enroll/options", { method: "POST", body: JSON.stringify({ actor: "7" }) })).json();
+        const credential = await navigator.credentials.create({ publicKey: {
+          ...options, challenge: bytes(options.challenge), user: { ...options.user, id: bytes(options.user.id) },
+          excludeCredentials: (options.excludeCredentials ?? []).map((c: { id: string }) => ({ ...c, id: bytes(c.id) })),
+        } });
+        if (!credential || !("toJSON" in credential)) throw Error("Browser WebAuthn JSON missing");
+        return (credential as PublicKeyCredential & { toJSON(): unknown }).toJSON();
+      });
+      const status = await target.evaluate(async r => (await fetch("/enroll/finish", {
+        method: "POST", body: JSON.stringify({ actor: "7", response: r }),
+      })).status, response);
+      expect(status).toBe(200);
+    };
+    await enrollOn(page);
     expect(store.forActor("7")).toHaveLength(1);
+
+    // A separate browser context owns a second, independent cryptographic
+    // virtual authenticator. Device one cannot sign with device two's key.
+    const browser = page.context().browser();
+    if (!browser) throw Error("Real Chromium browser required");
+    secondContext = await browser.newContext({ ignoreHTTPSErrors: true });
+    const secondPage = await secondContext.newPage();
+    await secondPage.goto(origin);
+    const secondCdp = await secondContext.newCDPSession(secondPage);
+    await secondCdp.send("WebAuthn.enable");
+    await secondCdp.send("WebAuthn.addVirtualAuthenticator", {
+      options: { protocol: "ctap2", transport: "internal", hasResidentKey: true,
+        hasUserVerification: true, isUserVerified: true },
+    });
+    await enrollOn(secondPage);
+    expect(store.forActor("7")).toHaveLength(2);
 
     // Close the actual HTTPS writer before asserting --ack-stopped. The
     // authenticator retains its key in Chromium while we snapshot offline.
@@ -142,7 +162,7 @@ test("real virtual authenticator authenticates after fresh private-file restore 
       server.once("error", reject);
       server.listen(Number(new URL(origin).port), "localhost", resolve);
     });
-    const assertion = await page.evaluate(async () => {
+    const loginOn = async (target: Page) => target.evaluate(async () => {
       const bytes = (s: string) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(s.length / 4) * 4, "=")), c => c.charCodeAt(0));
       const optionsResponse = await fetch("/login/options", { method: "POST", body: JSON.stringify({ actor: "7", password: "synthetic-password" }) });
       if (optionsResponse.status !== 200) throw Error("Login option refusal");
@@ -154,6 +174,7 @@ test("real virtual authenticator authenticates after fresh private-file restore 
       if (!credential || !("toJSON" in credential)) throw Error("Browser WebAuthn JSON missing");
       return (credential as PublicKeyCredential & { toJSON(): unknown }).toJSON();
     });
+    const assertion = await loginOn(page);
     const finish = async (response: unknown) => page.evaluate(async r => {
       const answer = await fetch("/login/finish", { method: "POST", body: JSON.stringify({ actor: "7", response: r }) });
       return answer.status;
@@ -164,27 +185,40 @@ test("real virtual authenticator authenticates after fresh private-file restore 
     // A browser-origin credential cannot be accepted by a restored verifier
     // accidentally configured for a different HTTPS origin/port.
     ceremonies = passkeyCeremonies(store, origin.replace(/:\d+$/, ":65535"), "localhost");
-    const wrongOriginAssertion = await page.evaluate(async () => {
-      const bytes = (s: string) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(s.length / 4) * 4, "=")), c => c.charCodeAt(0));
-      const options = await (await fetch("/login/options", { method: "POST",
-        body: JSON.stringify({ actor: "7", password: "synthetic-password" }) })).json();
-      const credential = await navigator.credentials.get({ publicKey: {
-        ...options, challenge: bytes(options.challenge),
-        allowCredentials: (options.allowCredentials ?? []).map((c: { id: string }) => ({ ...c, id: bytes(c.id) })),
-      } });
-      if (!credential || !("toJSON" in credential)) throw Error("Browser WebAuthn JSON missing");
-      return (credential as PublicKeyCredential & { toJSON(): unknown }).toJSON();
-    });
+    const wrongOriginAssertion = await loginOn(page);
     expect(await finish(wrongOriginAssertion)).toBe(403);
     ceremonies = passkeyCeremonies(store, origin, "localhost");
     expect(store.revoke("7", (assertion as { id: string }).id, Date.now())).toBe(true);
-    const afterRevoke = await page.evaluate(async () => (await fetch("/login/options", {
-      method: "POST", body: JSON.stringify({ actor: "7", password: "synthetic-password" }),
-    })).status);
-    expect(afterRevoke).toBe(403);
-    expect(responses.filter(r => r.path === "/login/finish").map(r => r.status)).toEqual([200, 403, 403]);
+    const afterRevoke = await page.evaluate(async () => {
+      const response = await fetch("/login/options", { method: "POST",
+        body: JSON.stringify({ actor: "7", password: "synthetic-password" }) });
+      return { status: response.status, credentials: (await response.json()).allowCredentials as Array<{ id: string }> };
+    });
+    expect(afterRevoke.status).toBe(200);
+    expect(afterRevoke.credentials).toHaveLength(1);
+    expect(afterRevoke.credentials[0].id).not.toBe((assertion as { id: string }).id);
+    // The original authenticator cannot satisfy the remaining device's
+    // allowCredentials, while the independent device still signs successfully.
+    const revokedCanSign = await page.evaluate(async () => {
+      const bytes = (s: string) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(s.length / 4) * 4, "=")), c => c.charCodeAt(0));
+      const options = await (await fetch("/login/options", { method: "POST",
+        body: JSON.stringify({ actor: "7", password: "synthetic-password" }) })).json();
+      try {
+        await navigator.credentials.get({ publicKey: {
+          ...options, timeout: 1500, challenge: bytes(options.challenge),
+          allowCredentials: options.allowCredentials.map((c: { id: string }) => ({ ...c, id: bytes(c.id) })),
+        } });
+        return true;
+      } catch { return false; }
+    });
+    expect(revokedCanSign).toBe(false);
+    const otherAssertion = await loginOn(secondPage);
+    expect(await finish(otherAssertion)).toBe(200);
+    expect(store.get("7", (otherAssertion as { id: string }).id)?.lastUsedAt).not.toBeNull();
+    expect(responses.filter(r => r.path === "/login/finish").map(r => r.status)).toEqual([200, 403, 403, 200]);
     await cdp.send("WebAuthn.removeVirtualAuthenticator", { authenticatorId });
   } finally {
+    await secondContext?.close();
     if (server.listening) await new Promise<void>(resolve => server.close(() => resolve()));
     rmSync(base, { recursive: true, force: true });
   }
