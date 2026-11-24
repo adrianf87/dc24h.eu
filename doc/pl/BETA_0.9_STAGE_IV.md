@@ -17,7 +17,7 @@ W kodzie testowym znajduje się **wyłącznie prototyp w pamięci** weryfikując
 
 ## 0.9.14 — klucz i zabezpieczenie przed podrobieniem
 
-Prototyp wiąże HMAC-SHA256 ze skrótem całego archiwum, końcówką łańcucha, numeracją, poprzednim punktem i generacją. Testy odrzucają podmianę na plik tej samej długości ze świadomie przeliczonym zwykłym SHA-256, obcy klucz, brak archiwum i cofnięcie generacji. Klucz w testach jest **sztuczny**.
+Prototyp wiąże HMAC-SHA256 ze skrótem całego archiwum, końcówką łańcucha, numeracją, poprzednim punktem i generacją. Testy odrzucają podmianę na plik tej samej długości ze świadomie przeliczonym zwykłym SHA-256, obcy klucz, brak archiwum i cofnięcie generacji. Publiczny 128-bitowy identyfikator klucza OWNER jest wyprowadzany przez HMAC z oddzielnym kontekstem, a nie przez szybki, niekluczowany skrót materiału klucza. Klucz w testach jest **sztuczny**.
 
 Przed włączeniem rozwiązania OWNER musi osobno ustalić: przechowywanie klucza poza pięcioma magazynami, rotację/utratę klucza, odporny na rollback rejestr generacji, migrację v1→v2, procedurę awaryjnego odzyskania, zgodność z kopią zapasową i zasady wyłączności zapisu. Sam HMAC nie zapewnia niezaprzeczalności. Przejęcie klucza albo równoczesna podmiana lokalnego rejestru i plików przez uprzywilejowaną osobę pozostaje ryzykiem.
 

@@ -17,7 +17,7 @@ The existing production writer does not implement steps 3–4. In-memory `webadm
 
 ## 0.9.14 — candidate authenticity and key lifecycle (design only)
 
-The prototype uses an HMAC-SHA256 checkpoint bound to the complete archive SHA-256, chain tail, contiguous sequence, predecessor checkpoint and monotonically increasing generation. It rejects same-length changes to an otherwise internally recomputed unkeyed chain, missing/replaced archives, wrong key and replay against an independently supplied minimum generation. Tests use only a synthetic disposable 32-byte key.
+The prototype uses an HMAC-SHA256 checkpoint bound to the complete archive SHA-256, chain tail, contiguous sequence, predecessor checkpoint and monotonically increasing generation. It rejects same-length changes to an otherwise internally recomputed unkeyed chain, missing/replaced archives, wrong key and replay against an independently supplied minimum generation. Its public 128-bit Owner key identifier is a domain-separated HMAC tag rather than a fast, unkeyed hash of key material. Tests use only a synthetic disposable 32-byte key.
 
 **Owner decisions required before enabling:** independent key custody and rotation/offline recovery, hardware or separately sealed generation ledger and anti-rollback anchoring, machine restart consistency, audit/recovery cohort pairing, versioned v1→v2 checkpoint migration and rollback, exact privilege and stop-window protocol, key-loss refusal and storage volume capacity. An HMAC is **not public-key nonrepudiation**, and anyone with the key can forge it; a ledger stored beside the files alone cannot defeat a privileged offline rollback. None of these mechanisms is enabled in production.
 

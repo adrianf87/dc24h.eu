@@ -31,6 +31,18 @@ test("design-only Owner checkpoint binds two archived segments and a continuous 
   assert.throws(() => verifyProposedCheckpoint(second, checkpoint2, key, 3, checkpoint1), /rolled-back/);
 });
 
+test("checkpoint key_id is a domain-separated HMAC tag, not a fast Owner key hash", () => {
+  const raw = archive(record(1, zero, "login_refused"));
+  const proof = proposeAuditCheckpoint(raw, key);
+  assert.match(proof.key_id, /^[0-9a-f]{32}$/);
+  assert.equal(proposeAuditCheckpoint(raw, key).key_id, proof.key_id);
+  assert.notEqual(proposeAuditCheckpoint(raw, Buffer.alloc(32, 0x41)).key_id, proof.key_id);
+  assert.throws(
+    () => verifyProposedCheckpoint(raw, { ...proof, key_id: "0".repeat(32) }, key, 1),
+    /rolled-back/,
+  );
+});
+
 test("prototype refuses recomputed unkeyed chains, missing archives, replay, and same-size forgery", () => {
   const one = record(1, zero, "login_refused");
   const raw = archive(one);
