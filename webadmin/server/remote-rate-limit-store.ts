@@ -3,10 +3,10 @@
 // a raw actor ID, password, IP address, credential ID or recovery identity.
 import { createHmac, randomBytes } from "node:crypto";
 import { basename, dirname, join } from "node:path";
-import { closeSync, constants, fstatSync, fsyncSync, lstatSync, openSync, readFileSync,
-  renameSync, unlinkSync, writeSync } from "node:fs";
+import { closeSync, constants, fstatSync, fsyncSync, readFileSync, writeSync } from "node:fs";
 import { fingerprint, fingerprintPrivateFile } from "./private-catalog-integrity.ts";
-import { assertPrivateParent } from "./remote-private-path.ts";
+import { assertPrivateParent, lstatPrivateLeaf, openPrivateLeaf, renamePrivateLeaf,
+  syncPrivateParent, unlinkPrivateLeaf } from "./remote-private-path.ts";
 
 type Bucket = { key: string; count: number; starts: number };
 type State = { schema: 1; buckets: Bucket[] };
@@ -35,19 +35,18 @@ function parentSafe(path: string) {
   assertPrivateParent(path);
 }
 function fileSafe(path: string) {
-  const s = lstatSync(path);
+  const s = lstatPrivateLeaf(path);
   if (!s.isFile() || s.uid !== process.geteuid?.() || s.nlink !== 1 || (s.mode & 0o077) ||
       s.size < 2 || s.size > maxBytes) throw Error("Unsafe rate-limit catalog");
   return s;
 }
 function flushDirectory(path: string) {
-  const fd = openSync(dirname(path), constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
-  try { fsyncSync(fd); } finally { closeSync(fd); }
+  syncPrivateParent(path);
 }
 
 export function initializeRemoteRateLimitStore(path: string): void {
   parentSafe(path);
-  const fd = openSync(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+  const fd = openPrivateLeaf(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL, 0o600);
   try {
     const bytes = Buffer.from('{"schema":1,"buckets":[]}\n');
     try { if (writeSync(fd, bytes) !== bytes.length) throw Error("Incomplete limiter init"); fsyncSync(fd); }
@@ -62,15 +61,15 @@ function persist(path: string, state: State) {
   const tmp = join(dirname(path), "." + basename(path) + "." + randomBytes(12).toString("hex"));
   let fd: number | undefined;
   try {
-    fd = openSync(tmp, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+    fd = openPrivateLeaf(tmp, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL, 0o600);
     if (writeSync(fd, bytes) !== bytes.length) throw Error("Incomplete rate-limit write");
     fsyncSync(fd); closeSync(fd); fd = undefined;
     parentSafe(path);
-    renameSync(tmp, path);
+    renamePrivateLeaf(tmp, path);
     flushDirectory(path);
   } catch (error) {
     if (fd !== undefined) closeSync(fd);
-    try { unlinkSync(tmp); } catch { /* The rename may already be durable. */ }
+    try { unlinkPrivateLeaf(tmp); } catch { /* The rename may already be durable. */ }
     throw error;
   } finally { bytes.fill(0); }
 }
@@ -81,7 +80,7 @@ export function openRemoteRateLimitStore(path: string, serviceToken: string) {
   let state: State;
   let digest = "";
   const prior = fileSafe(path);
-  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+  const fd = openPrivateLeaf(path, constants.O_RDONLY);
   try {
     const opened = fstatSync(fd);
     if (opened.dev !== prior.dev || opened.ino !== prior.ino) throw Error("Rate-limit file changed");

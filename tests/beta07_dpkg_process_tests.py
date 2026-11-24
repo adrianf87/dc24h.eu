@@ -35,7 +35,10 @@ def exact_file_sha(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
-def run(current, historical, checkout):
+def run(current, historical, checkout, *, current_admin=None, historical_admin=None, seeder=None):
+    historical_auth = (current_admin, historical_admin, seeder)
+    if any(value is None for value in historical_auth) and any(value is not None for value in historical_auth):
+        raise AssertionError("Both maintenance binaries and the synthetic account seeder are required")
     if (os.environ.get("CI") != "true" or os.environ.get("GITHUB_ACTIONS") != "true" or
             os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted" or
             os.environ.get("RUNNER_OS") != "Linux" or
@@ -58,14 +61,17 @@ def run(current, historical, checkout):
         raise AssertionError("The inert fixture unit guard must remain absent")
 
     installed_binary = Path("/usr/lib") / deb.PACKAGE / "dc24h"
+    installed_admin = Path("/") / deb.ADMIN_BIN
     with tempfile.TemporaryDirectory(prefix="beta07-hosted-dpkg-") as directory:
         root = Path(directory)
-        old_pkg = deb.build(historical, root / "old-stage", deb.VERSIONS["previous"], previous.PREVIOUS_SHA)
-        new_pkg = deb.build(current, root / "new-stage", deb.VERSIONS["current"], sha)
+        old_pkg = deb.build(historical, root / "old-stage", deb.VERSIONS["previous"], previous.PREVIOUS_SHA,
+                            account_admin=historical_admin)
+        new_pkg = deb.build(current, root / "new-stage", deb.VERSIONS["current"], sha,
+                            account_admin=current_admin)
         failed_pkg = deb.build(current, root / "failed-stage", deb.FAILED_UPGRADE_VERSION,
-                               sha, fail_preinst=True)
+                               sha, account_admin=current_admin, fail_preinst=True)
         post_failed_pkg = deb.build(current, root / "failed-post-stage", deb.FAILED_POSTINST_VERSION,
-                                    sha, fail_postinst=True)
+                                    sha, account_admin=current_admin, fail_postinst=True)
         original, recovered = matched.IsolatedDatabase(root / "source"), matched.IsolatedDatabase(root / "recovered")
         installed = False
         try:
@@ -116,6 +122,8 @@ def run(current, historical, checkout):
                 raise AssertionError("Installed current binary failed to execute")
             if exact_file_sha(installed_binary) != exact_file_sha(current):
                 raise AssertionError("Installed current executable hash mismatch")
+            if current_admin is not None and exact_file_sha(installed_admin) != exact_file_sha(current_admin):
+                raise AssertionError("Installed current maintenance executable hash mismatch")
             if quiet(["dpkg-query", "-W", "-f=${Status}", deb.PACKAGE]).stdout.decode() != "install ok installed":
                 raise AssertionError("Current version is not configured in dpkg")
             # Distinguish an archive-reader refusal from a real dpkg upgrade
@@ -150,9 +158,15 @@ def run(current, historical, checkout):
             if exact_file_sha(installed_binary) != exact_file_sha(historical) or (
                     previous.execute(installed_binary, "--version") != previous.PREVIOUS_VERSION):
                 raise AssertionError("Previous installed executable not restored")
+            if historical_admin is not None:
+                if (exact_file_sha(installed_admin) != exact_file_sha(historical_admin) or
+                        previous.execute(installed_admin, "--version") !=
+                        "dc24h-account-admin " + previous.PREVIOUS_VERSION.split(" ")[-1]):
+                    raise AssertionError("Actual installed historical maintenance executable not restored")
             owned = quiet(["dpkg-query", "-L", deb.PACKAGE]).stdout.decode("utf8")
             if not all(path in owned for path in ("/" + deb.BIN, "/" + deb.UNIT_PATH,
-                                                   "/" + deb.DOC_PATH)):
+                                                   "/" + deb.DOC_PATH) +
+                       (("/" + deb.ADMIN_BIN,) if historical_admin is not None else ())):
                 raise AssertionError("Package lacks exact binary/unit/provenance ownership")
             if quiet(["dpkg-query", "-W", "-f=${Version}", deb.PACKAGE]).stdout.decode() != deb.VERSIONS["previous"]:
                 raise AssertionError("dpkg database did not record previous version")
@@ -168,7 +182,7 @@ def run(current, historical, checkout):
                 raise AssertionError("Matched rollback preflight refused the v11 source")
             authenticity.verify(dump, snapshot, pair_dir, sha, signed, key, pinned_id, ledger,
                                 consume=True)
-            recovered.initialize(); recovered.start(); recovered.setup_schema()
+            recovered.initialize(); recovered.start(); recovered_config = recovered.setup_schema()
             recovered.restore_sql(dump)
             matched.private.restore_to_fresh_directory(snapshot, restored)
             matched.verify_recovered(recovered, restored, installed_binary)
@@ -176,6 +190,9 @@ def run(current, historical, checkout):
             matched.verify_recovered(recovered, restored, installed_binary)
             if recovered.sql("SELECT status FROM dc24h.dc24h_accounts WHERE id=8;") != "disabled":
                 raise AssertionError("Revoked account unexpectedly active after prior-binary restart")
+            if historical_admin is not None:
+                from beta09_systemd_cpp_service import rehearse
+                rehearse(installed_admin, recovered_config, recovered.root)
             # Reopen the restored private stores in the actual Node gateway
             # verifier after the previous C++ package and fresh DB restart.
             quiet(["node", "--import", "tsx", "tests/beta08-postrollback-state.ts", str(restored)],
@@ -186,6 +203,24 @@ def run(current, historical, checkout):
                 pass
             else:
                 raise AssertionError("Consumed rollback pair was erroneously reusable")
+
+            # This is deliberately a *second*, independent v11+five-store
+            # disposable matched restoration. It exercises the actual old
+            # account-maintenance executable installed by dpkg (not merely a
+            # linked historical library) through the real Node + Apache TLS
+            # + Chromium password/TOTP and password/passkey flows. The auth
+            # fixture itself enforces restored replay, revocation and grants.
+            # Any protocol incompatibility is a hard test failure.
+            if historical_admin is not None:
+                auth_environment = dict(os.environ)
+                auth_environment.pop("DC24H_VM_REPORT_DIR", None)
+                fixture = Path(__file__).with_name("beta06_authenticated_api_process_tests.py")
+                result = subprocess.run(
+                    [sys.executable, str(fixture), str(current), str(seeder), str(installed_admin)],
+                    stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                    cwd=Path(__file__).resolve().parents[1], env=auth_environment, timeout=600)
+                if result.returncode:
+                    raise AssertionError("Historical installed maintenance login or matched recovery refused")
 
             report_dir = os.environ.get("DC24H_VM_REPORT_DIR")
             if report_dir:
@@ -206,6 +241,10 @@ def run(current, historical, checkout):
                           "reopened_node_totp_revocation_audit_and_budget_state": True,
                           "revoked_account_stays_disabled_after_previous_binary_restart": True,
                           "restart_of_fresh_database_accepted": True,
+                          "historical_maintenance_binary_installed_and_hashed": historical_admin is not None,
+                          "historical_maintenance_actual_password_totp_and_browser_passkey": historical_admin is not None,
+                          "historical_maintenance_independent_matched_v11_five_store_recovery": historical_admin is not None,
+                          "actual_systemd_old_cpp_maintenance_start_restart_stop": historical_admin is not None,
                           "production_package_or_rollback_claim": False}
                 with (Path(report_dir) / "beta07-dpkg-rollback.json").open("x", encoding="utf8") as output:
                     json.dump(report, output, sort_keys=True); output.write("\n")
@@ -217,7 +256,10 @@ def run(current, historical, checkout):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 4:
-        raise SystemExit("Usage: beta07_dpkg_process_tests.py CURRENT PREVIOUS PREVIOUS-CHECKOUT")
+    if len(sys.argv) not in (4, 7):
+        raise SystemExit("Usage: beta07_dpkg_process_tests.py CURRENT PREVIOUS PREVIOUS-CHECKOUT "
+                         "[CURRENT-ADMIN PREVIOUS-ADMIN SEEDER]")
     run(Path(sys.argv[1]).resolve(strict=True), Path(sys.argv[2]).resolve(strict=True),
-        Path(sys.argv[3]).resolve(strict=True))
+        Path(sys.argv[3]).resolve(strict=True),
+        **(dict(zip(("current_admin", "historical_admin", "seeder"),
+                    (Path(value).resolve(strict=True) for value in sys.argv[4:]))) if len(sys.argv) == 7 else {}))

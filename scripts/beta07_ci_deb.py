@@ -18,6 +18,7 @@ import subprocess
 PACKAGE = "dc24h-high-starter-ci-fixture"
 UNIT = "dc24h-high-starter-ci-fixture.service"
 BIN = f"usr/lib/{PACKAGE}/dc24h"
+ADMIN_BIN = f"usr/lib/{PACKAGE}/dc24h-account-admin"
 UNIT_PATH = f"lib/systemd/system/{UNIT}"
 DOC_PATH = f"usr/share/doc/{PACKAGE}/ci-provenance"
 VERSIONS = {"previous": "0.5.16+ci1", "current": "0.8.20+ci1"}
@@ -29,7 +30,8 @@ FAILED_UPGRADE_VERSION = "0.8.20+ci2"
 FAILED_POSTINST_VERSION = "0.8.20+ci3"
 
 
-def build(binary: Path, destination: Path, version: str, sha: str, *, fail_preinst=False, fail_postinst=False):
+def build(binary: Path, destination: Path, version: str, sha: str, *,
+          account_admin=None, fail_preinst=False, fail_postinst=False):
     if fail_preinst and fail_postinst:
         raise ValueError("Only one controlled package failure is allowed")
     allowed = (version == FAILED_UPGRADE_VERSION if fail_preinst else
@@ -37,9 +39,16 @@ def build(binary: Path, destination: Path, version: str, sha: str, *, fail_prein
     if not allowed or not re.fullmatch(r"[0-9a-f]{40}", sha):
         raise ValueError("Unreviewed package version or source identity")
     binary = Path(binary).resolve(strict=True)
+    if account_admin is not None:
+        try:
+            account_admin = Path(account_admin).resolve(strict=True)
+        except OSError as error:
+            raise ValueError("Exact account-maintenance executable required") from error
     destination = Path(destination)
     if not binary.is_file() or not os.access(binary, os.X_OK) or not destination.is_absolute():
         raise ValueError("Exact executable and absolute fixture directory required")
+    if account_admin is not None and (not account_admin.is_file() or not os.access(account_admin, os.X_OK)):
+        raise ValueError("Exact account-maintenance executable required")
     if destination.exists() or destination.is_symlink():
         raise ValueError("CI staging directory must not exist")
     package = destination.parent / f"{PACKAGE}_{version}_amd64.deb"
@@ -75,6 +84,10 @@ def build(binary: Path, destination: Path, version: str, sha: str, *, fail_prein
     executable.parent.mkdir(parents=True, mode=0o755)
     shutil.copy2(binary, executable)
     executable.chmod(0o755)
+    if account_admin is not None:
+        maintenance = destination / ADMIN_BIN
+        shutil.copy2(account_admin, maintenance)
+        maintenance.chmod(0o755)
     unit = destination / UNIT_PATH
     unit.parent.mkdir(parents=True, mode=0o755)
     unit.write_text(
@@ -87,7 +100,9 @@ def build(binary: Path, destination: Path, version: str, sha: str, *, fail_prein
     record = destination / DOC_PATH
     record.parent.mkdir(parents=True, mode=0o755)
     record.write_text(f"synthetic-test-only\nsource-sha={sha}\n"
-                      f"binary-sha256={hashlib.sha256(binary.read_bytes()).hexdigest()}\n",
+                      f"binary-sha256={hashlib.sha256(binary.read_bytes()).hexdigest()}\n" +
+                      (f"account-admin-sha256={hashlib.sha256(account_admin.read_bytes()).hexdigest()}\n"
+                       if account_admin is not None else ""),
                       encoding="ascii")
     record.chmod(0o644)
     result = subprocess.run(["dpkg-deb", "--build", "--root-owner-group", str(destination), str(package)],

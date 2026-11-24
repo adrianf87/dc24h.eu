@@ -84,12 +84,9 @@ def sql_migration_row_count(dump):
     """
     table_count, versions = 0, {}
     path = Path(dump)
-    private.private_directory(path.parent)
-    # Read precisely the same kind of owner-only, single-link regular file
-    # accepted by the pair manifest. A replaced symlink/FIFO must fail rather
-    # than redirect the second (SQL-shape) pass or block it indefinitely.
-    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-    with os.fdopen(descriptor, "rb") as source:
+    # Pin the parent directory and the opened file across the separate SQL
+    # shape pass; no ancestor/path swap may redirect a later restore decision.
+    with private.read_private_stream(path) as source:
         before = os.fstat(source.fileno())
         if (not stat.S_ISREG(before.st_mode) or before.st_uid != os.geteuid() or
                 before.st_nlink != 1 or before.st_mode & 0o077 or

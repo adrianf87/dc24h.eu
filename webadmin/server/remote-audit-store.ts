@@ -1,11 +1,10 @@
 // Local durable audit foundation. A SHA-256 chain detects accidental record
 // modification/gaps but is NOT a keyed proof against a privileged attacker.
 import { createHash } from "node:crypto";
-import { constants, closeSync, fstatSync, fsyncSync, lstatSync, openSync, readFileSync, readSync, writeSync } from "node:fs";
-import { dirname } from "node:path";
+import { constants, closeSync, fstatSync, fsyncSync, readFileSync, readSync, writeSync } from "node:fs";
 import { remoteAuditEvents, remoteAuditRecord } from "./remote-audit.ts";
 import type { RemoteEvent } from "./remote-gateway.ts";
-import { assertPrivateParent } from "./remote-private-path.ts";
+import { assertPrivateParent, lstatPrivateLeaf, openPrivateLeaf, syncPrivateParent } from "./remote-private-path.ts";
 
 const maxBytes = 8 * 1024 * 1024;
 const zeroHash = "0".repeat(64);
@@ -16,12 +15,10 @@ const eventNames: ReadonlySet<string> = new Set(remoteAuditEvents);
 // audit chain with an empty file (which would conceal missing security events).
 export function initializeRemoteAuditStore(path: string): void {
   assertPrivateParent(path);
-  const fd = openSync(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+  const fd = openPrivateLeaf(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL, 0o600);
   try { fsyncSync(fd); }
   finally { closeSync(fd); }
-  const dirFd = openSync(dirname(path), constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
-  try { fsyncSync(dirFd); }
-  finally { closeSync(dirFd); }
+  syncPrivateParent(path);
 }
 
 function digest(sequence: number, previous: string, event: RemoteEvent, at: string): string {
@@ -50,7 +47,7 @@ export function openRemoteAuditStore(path: string, limitBytes = maxBytes) {
   if (!Number.isSafeInteger(limitBytes) || limitBytes < 512 || limitBytes > maxBytes)
     throw new Error("Invalid audit capacity");
   const uid = process.geteuid?.();
-  const fd = openSync(path, constants.O_RDWR | constants.O_APPEND | constants.O_NOFOLLOW);
+  const fd = openPrivateLeaf(path, constants.O_RDWR | constants.O_APPEND);
   let sequence = 0, previous = zeroHash, size = 0, healthy = true, dropped = 0;
   try {
     const state = fstatSync(fd);
@@ -71,8 +68,7 @@ export function openRemoteAuditStore(path: string, limitBytes = maxBytes) {
       }
     } finally { bytes.fill(0); }
     // Persist the directory entry if this call created the log file.
-    const dirFd = openSync(dirname(path), constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
-    try { fsyncSync(dirFd); } finally { closeSync(dirFd); }
+    syncPrivateParent(path);
   } catch (error) { closeSync(fd); throw error; }
 
   const append = (event: RemoteEvent, milliseconds: number): void => {
@@ -85,7 +81,7 @@ export function openRemoteAuditStore(path: string, limitBytes = maxBytes) {
         digest: digest(sequence + 1, previous, event, at) };
       const payload = Buffer.from(JSON.stringify(row) + "\n", "utf8");
       try {
-        const stat = lstatSync(path), opened = fstatSync(fd);
+        const stat = lstatPrivateLeaf(path), opened = fstatSync(fd);
         if (!stat.isFile() || stat.dev !== opened.dev || stat.ino !== opened.ino ||
             stat.uid !== uid || stat.nlink !== 1 || (stat.mode & 0o077) ||
             opened.size !== size || size + payload.length > limitBytes)
@@ -111,7 +107,7 @@ export function openRemoteAuditStore(path: string, limitBytes = maxBytes) {
     const bytes = Buffer.alloc(size);
     try {
       assertPrivateParent(path);
-      const stat = lstatSync(path), opened = fstatSync(fd);
+      const stat = lstatPrivateLeaf(path), opened = fstatSync(fd);
       if (!stat.isFile() || stat.dev !== opened.dev || stat.ino !== opened.ino ||
           stat.uid !== uid || stat.nlink !== 1 || (stat.mode & 0o077) ||
           opened.size !== size || size > limitBytes) throw Error("Audit file changed");

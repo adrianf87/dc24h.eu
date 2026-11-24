@@ -1,5 +1,13 @@
 # Changelog
 
+## beta-0.9.9–beta-0.9.12 Stage III — 2026-11-24 (draft PR #243; hosted CI pending)
+
+- **0.9.9 — Installed old C++ password authority:** Extend disposable dpkg to package both previous-version binaries, hash and execute the installed beta-0.5.16 account-maintenance program after a real downgrade, and demand full Node/Apache/Chromium password+TOTP and passkey authentication on a separately matched MariaDB v11/five-store restoration. Incompatibility is a failed gate, never a simulated pass.
+- **0.9.10 — Linux directory descriptor pinning:** Replace sensitive Node path-based catalog access with owner-only pinned parent dirfd operations through Linux `/proc/self/fd`, fail closed on intermediate symlink/rename and unsupported procfs; retain file-identity and private-mode checks. No portable `openat2` claim.
+- **0.9.11 — Consistent trusted rollback:** Stream migration SQL relative to a pinned directory descriptor, detect same-content mid-scan replacement, test authenticated six-component manifests, one-use ledger, invalid generation and torn stores with fresh destinations.
+- **0.9.12 — Real ephemeral systemd units:** Exercise installed old C++ maintenance start/restart/stop with a Unix-only, network-isolated transient service, and compiled production-only Node gateway start/restart/stop with a strictly loopback-only listener. Preserve inert dpkg unit and no production activation.
+- **Evidence:** [EN/US Stage III](doc/us/BETA_0.9_STAGE_III.md) | [PL operator notes](doc/pl/BETA_0.9_STAGE_III.md). CI is unobserved at handoff, not accepted. Single branch and draft PR #243 only; no protected-main merge, release, public listener or production rollback.
+
 ## beta-0.9.5–beta-0.9.8 Stage II — 2026-11-24 (draft PR #243; design approval and CI pending)
 
 - **0.9.5 — Offline authenticity design:** Add a pure in-memory, nondeployable HMAC-SHA256 five-store proposal with an independently pinned generation/MAC, previous-generation link, SQL-pair digest and key ID. Synthetic negatives reject same-length/mtime-preserved modifications, missing/torn stores, wrong key and stale manifest. No real migration, key creation or v2 startup preflight.
