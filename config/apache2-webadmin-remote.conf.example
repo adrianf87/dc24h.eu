@@ -53,6 +53,10 @@ TraceEnable Off
     # them into a potentially valid fixed route.
     RewriteCond %{THE_REQUEST} \s/remote/v1/[^\s?]*[%;] [NC]
     RewriteRule ^ - [F,END]
+    # Apache canonicalizes /./ and /../ before ProxyPassMatch. Reject them
+    # using the original request line, not the already-normalized URI.
+    RewriteCond %{THE_REQUEST} \s/[^\s?]*/\.\.?(?:/|\?|\s) [NC]
+    RewriteRule ^ - [F,END]
 
     # Defense in depth at the TLS boundary, before the Node route allowlist.
     # A query string or wrong method must not reach even a mock upstream.

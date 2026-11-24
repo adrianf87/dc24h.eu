@@ -1,7 +1,7 @@
 """Evaluate bounded Ubuntu-only ADC/ADCS endurance against pinned Stage I smoke.
 
 The reference is sourced from run 45283779224, commit 96c3f873. Workloads
-differ (12 versus 3 x 48 requests). Comparisons show drift and broad CI guard
+differ (12 versus 3 x 32 requests). Comparisons show drift and broad CI guard
 rails, not a throughput SLA, statistical significance or hardware rating.
 """
 
@@ -11,7 +11,7 @@ from pathlib import Path
 
 REFERENCE = Path(__file__).resolve().parents[1] / "tests/fixtures/stage1_ubuntu_loopback_reference.json"
 WINDOWS = 3
-REQUESTS_PER_WINDOW = 48
+REQUESTS_PER_WINDOW = 32
 
 
 def compare(os_image, runs, reference=None):
@@ -68,5 +68,5 @@ def compare(os_image, runs, reference=None):
         "baseline_workload": baseline["workload"], "profiles": evidence,
         "ci_regression_gate_passed": all(e["ci_regression_gate_passed"] for e in evidence.values()),
         "production_capacity_claim": False,
-        "note": "Different workload durations: Stage I 12 requests; Stage IV three 48-request windows. API/WebAdmin lack comparable Stage I request-level measurements.",
+        "note": "Different workload durations: Stage I 12 requests; Stage IV three 32-request windows. All 216 ADC/ADCS connections including Stage I-style smokes remain below the default per-IP 256 admissions/minute; API/WebAdmin lack comparable Stage I request-level measurements.",
     }

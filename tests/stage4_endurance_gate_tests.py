@@ -12,7 +12,7 @@ import stage4_endurance_gate as gate
 def fixture(profile):
     return {
         "profile": profile, "target": "127.0.0.1 only", "capacity_claim": False,
-        "requests": 48, "success": 48, "failure": 0, "error_rate": 0,
+        "requests": 32, "success": 32, "failure": 0, "error_rate": 0,
         "p50_ms": 1, "p95_ms": 2, "p99_ms": 3,
         "successful_requests_per_second": 7.5, "concurrency": 4,
         "configured_rate_per_second": 8,
