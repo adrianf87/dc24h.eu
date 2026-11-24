@@ -230,6 +230,9 @@ test("a delayed device revocation response cannot sign out a newer session", asy
   await page.getByRole("button", { name: "Refresh devices" }).click();
   await expect(page.getByText("Old device")).toBeVisible();
   await page.getByRole("button", { name: "Revoke" }).click();
+  // Stage III requires an explicit second confirmation before the mutation
+  // request starts. Its delayed response must still not revoke a new login.
+  await page.getByRole("button", { name: "Confirm revocation" }).click();
   await revokeStarted;
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page.getByText("Sign in to read approved hub metrics.")).toBeVisible();
