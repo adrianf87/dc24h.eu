@@ -10,7 +10,6 @@ import json
 import os
 from pathlib import Path
 import platform
-import re
 import shutil
 import subprocess
 import sys
@@ -19,6 +18,7 @@ import time
 import unittest
 
 import stage1_matched_recovery_tests as matched
+import stage4_endurance_gate as endurance_gate
 
 
 def digest(path):
@@ -57,7 +57,7 @@ class IsolatedFailureRollback(unittest.TestCase):
                 source.dump(dump)
                 pair = root / "pair"
                 pair.mkdir(mode=0o700)
-                sha = matched.SOURCE_SHA if re.fullmatch(r"[0-9a-f]{40}", matched.SOURCE_SHA) else "0" * 40
+                sha = endurance_gate.required_source_sha(matched.SOURCE_SHA)
                 matched.bundle.create_pair(dump, snapshot, pair, sha)
                 self.assertEqual(matched.bundle.verified_pair(dump, snapshot,
                                  pair / matched.bundle.NAME)["verified_files"], 6)

@@ -42,3 +42,30 @@ CI tworzy tylko prywatne tymczasowe katalogi i sockety MariaDB, stan syntetyczny
 6. Jeżeli manifest, uprawnienia, stan audytu, granty, hasła lub test sesji nie przejdą — **nie uruchamiaj publicznej usługi**. Zachowaj wyłącznie zanonimizowane dowody i ustal przyczynę. Rzeczywisty plan powrotu do starszej wersji binarnej wymaga dodatkowej zgodności schematu i pakietów, której ten test nie potwierdza.
 
 Zobacz [Etap I](BETA_0.5_STAGE_I.md), [Etap II](BETA_0.5_STAGE_II.md), [Etap III](BETA_0.5_STAGE_III.md) i [EN/US Stage IV](../us/BETA_0.5_STAGE_IV.md).
+
+## Fix Pass 4 — ponowny przegląd Etapu IV (2026-11-24)
+
+Ponownie sprawdzono testy atakujące parser ADC i Apache/Node, bramkę
+obciążeniową z referencją Stage I, próbę odzyskania MariaDB/pakietu/konfiguracji,
+identyfikację wersji oraz ryzyka wydania. Naprawiono dwa potwierdzone błędy
+dotyczące wiarygodności dowodów CI, bez zmian konfiguracji produkcyjnej:
+
+- **S4-F1 — akceptowanie sprzecznych wyników obciążenia.** Bramka Stage IV
+  pozwalała podać sztucznie zawyżony RPS niezależny od czasu i liczby żądań,
+  ignorowała brak danych CPU oraz najniższe RSS przed późniejszymi oknami.
+  Teraz sprawdza komplet metryk, percentyle, czas/RPS z tolerancją zaokrągleń,
+  obserwacje CPU/RSS, wzrost RSS we wszystkich oknach i pochodzenie referencji.
+  Dodano negatywne testy nieprawdziwych pomiarów oraz przekroczenia limitów.
+- **S4-F2 — niepewna identyfikacja kodu w raportach.** Test rollbacku zastępował
+  brakujące/błędne `SOURCE_SHA` ciągiem 40 zer, a raporty ADC/ADCS i Apache
+  mogły zawierać pusty SHA. Teraz wymagają niezerowego, dokładnie zapisanego
+  identyfikatora rewizji i odmawiają publikacji pozornie pełnego dowodu bez
+  niego. Sprawdzenie formatu nie zastępuje podpisanej atestacji kompilacji.
+
+W sprawdzonych testach atakujących proxy/parser i rollbacku syntetycznym nie
+potwierdzono innych usterek. Nadal nie wykazano cofnięcia pakietów w `apt/dpkg`,
+przywrócenia danych produkcyjnych ani logowania prawdziwej sesji po odtwarzaniu.
+Fix Pass 4 można zaznaczyć dopiero po pełnym zielonym CI najnowszego SHA na
+GitHub-hosted Ubuntu 22.04/24.04/26.04 (CodeQL, ASan/UBSan, systemd, Apache,
+przeglądarka, endurance i odtwarzanie). PR #235 pozostaje draftem, a Issue #234
+otwarte do osobnej bramki końcowego scalenia.

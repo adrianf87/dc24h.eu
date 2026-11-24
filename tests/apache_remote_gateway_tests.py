@@ -18,6 +18,9 @@ import time
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+import stage4_endurance_gate as endurance_gate
+
 APACHE, MODULES, EXAMPLE = sys.argv[1:4]
 del sys.argv[1:4]
 MARKER = b"REMOTE_UPSTREAM_ONLY"
@@ -282,7 +285,8 @@ class ApacheRemoteGateway(unittest.TestCase):
             path = Path(destination) / "stage4-https-endurance.json"
             with path.open("x", encoding="utf-8") as file:
                 json.dump({"schema": 1, "evidence": "hosted-ubuntu-apache-https-fixture",
-                           "source_sha": os.environ.get("SOURCE_SHA"),
+                           "source_sha": endurance_gate.required_source_sha(
+                               os.environ.get("SOURCE_SHA")),
                            "os": "ubuntu-" + platform.freedesktop_os_release()["VERSION_ID"],
                            "stage1_run": 45283779224, "profiles": reports,
                            "production_capacity_claim": False,

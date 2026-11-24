@@ -119,7 +119,8 @@ class UbuntuVmHubProbe(unittest.TestCase):
                     endurance = stage4_endurance_gate.compare(os_image, windows)
                     self.assertTrue(endurance["ci_regression_gate_passed"],
                                     "Hosted Ubuntu Stage IV endurance exceeded bounded regression limits")
-                    endurance["source_sha"] = os.environ.get("SOURCE_SHA")
+                    endurance["source_sha"] = stage4_endurance_gate.required_source_sha(
+                        os.environ.get("SOURCE_SHA"))
 
                 destination = os.environ.get("DC24H_VM_REPORT_DIR")
                 if destination:

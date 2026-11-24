@@ -6,7 +6,9 @@ rails, not a throughput SLA, statistical significance or hardware rating.
 """
 
 import json
+import math
 from pathlib import Path
+import re
 
 
 REFERENCE = Path(__file__).resolve().parents[1] / "tests/fixtures/stage1_ubuntu_loopback_reference.json"
@@ -14,9 +16,21 @@ WINDOWS = 3
 REQUESTS_PER_WINDOW = 32
 
 
+def required_source_sha(value):
+    # CI reports must identify a real, exact source revision. Never silently
+    # substitute an all-zero placeholder for a missing environment variable.
+    if (not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{40}", value) or
+        value == "0" * 40):
+        raise ValueError("Exact nonzero source commit SHA required")
+    return value
+
+
 def compare(os_image, runs, reference=None):
     baseline = reference if reference is not None else json.loads(REFERENCE.read_text())
-    if baseline.get("schema") != 1 or baseline.get("source_sha") != "96c3f873c2c94ea5e252b7db7e9b007b470330c2":
+    if (type(baseline.get("schema")) is not int or baseline["schema"] != 1 or
+        baseline.get("source_sha") != "96c3f873c2c94ea5e252b7db7e9b007b470330c2" or
+        baseline.get("workflow_run") != 45283779224 or
+        baseline.get("workload") != {"requests": 12, "rate": 4, "concurrency": 2}):
         raise ValueError("Unexpected Stage I baseline provenance")
     if os_image not in baseline["profiles"] or set(runs) != {"adc", "adcs"}:
         raise ValueError("Missing hosted Ubuntu image or ADC/ADCS profile")
@@ -25,32 +39,47 @@ def compare(os_image, runs, reference=None):
         if len(windows) != WINDOWS:
             raise ValueError("Incomplete endurance windows")
         original = baseline["profiles"][os_image][profile]
-        if any(not isinstance(original.get(k), (int, float)) or original[k] < 0
+        if any(type(original.get(k)) not in (int, float) or not 0 <= original[k] < float("inf")
                for k in ("p99_ms", "rps", "rss_after_kib", "error_rate")):
             raise ValueError("Incomplete Stage I reference")
-        p99, rps, rss = [], [], []
+        if original["rps"] <= 0 or original["rss_after_kib"] <= 0 or original["error_rate"] != 0:
+            raise ValueError("Invalid successful Stage I reference")
+        p99, rps, rss, rss_before = [], [], [], []
         for report in windows:
-            if (report.get("profile") != profile or report.get("target") != "127.0.0.1 only" or
+            if (type(report.get("schema")) is not int or report["schema"] != 1 or
+                report.get("profile") != profile or report.get("target") != "127.0.0.1 only" or
                 report.get("capacity_claim") is not False or
-                report.get("requests") != REQUESTS_PER_WINDOW or report.get("success") != REQUESTS_PER_WINDOW or
-                report.get("failure") != 0 or report.get("error_rate") != 0 or
+                type(report.get("requests")) is not int or report["requests"] != REQUESTS_PER_WINDOW or
+                type(report.get("success")) is not int or report["success"] != REQUESTS_PER_WINDOW or
+                type(report.get("failure")) is not int or report["failure"] != 0 or
+                type(report.get("error_rate")) not in (int, float) or report["error_rate"] != 0 or
                 report.get("concurrency") != 4 or report.get("configured_rate_per_second") != 8):
                 raise ValueError("Unsafe, failed or incomplete endurance workload")
-            for key in ("p50_ms", "p95_ms", "p99_ms", "successful_requests_per_second",
-                        "target_rss_before_kib", "target_rss_after_kib"):
+            for key in ("p50_ms", "p95_ms", "p99_ms", "max_ms",
+                        "elapsed_seconds", "successful_requests_per_second",
+                        "target_rss_before_kib", "target_rss_after_kib",
+                        "target_cpu_mean_percent_one_core"):
                 value = report.get(key)
                 if type(value) not in (int, float) or not 0 <= value < float("inf"):
                     raise ValueError("Missing finite endurance measurement: " + key)
-            if not report["p50_ms"] <= report["p95_ms"] <= report["p99_ms"]:
-                raise ValueError("Invalid percentile ordering")
+            if (not report["p50_ms"] <= report["p95_ms"] <= report["p99_ms"] <= report["max_ms"] or
+                report["elapsed_seconds"] <= 0 or report["successful_requests_per_second"] <= 0 or
+                report["target_rss_before_kib"] <= 0 or report["target_rss_after_kib"] <= 0 or
+                # The probe rounds elapsed seconds and successful RPS to 3 decimals;
+                # an invented throughput must not satisfy the regression threshold.
+                not math.isclose(report["successful_requests_per_second"],
+                                 REQUESTS_PER_WINDOW / report["elapsed_seconds"],
+                                 rel_tol=0.01, abs_tol=0.005)):
+                raise ValueError("Inconsistent endurance measurement")
             p99.append(report["p99_ms"])
             rps.append(report["successful_requests_per_second"])
             rss.append(report["target_rss_after_kib"])
+            rss_before.append(report["target_rss_before_kib"])
         # Generous, explicit *CI regression* ceilings account for short Stage I
         # samples and runner scheduling. No capacity or stability certification.
         max_p99 = max(200.0 if profile == "adc" else 500.0, original["p99_ms"] * 10)
         min_rps = original["rps"] * 0.4
-        growth = max(rss) - min(rss[0], windows[0]["target_rss_before_kib"])
+        growth = max(0, max(rss) - min(rss_before))
         passed = max(p99) <= max_p99 and min(rps) >= min_rps and growth <= 32768
         evidence[profile] = {
             "windows": WINDOWS, "total_requests": WINDOWS * REQUESTS_PER_WINDOW,

@@ -46,3 +46,34 @@ Release-candidate evidence should include exact source SHA, all Ubuntu C++ Debug
 5. For a rollback, stop writers again, use a distinct fresh instance with the known-good package/config plus the **original matching SQL/private snapshot**, verify hashes, measure RPO/RTO against the chosen checkpoint and confirm the service/grants. Do not overwrite existing active state or assume a real session is still valid.
 
 For detailed Stage I/II/III context see [Stage I](BETA_0.5_STAGE_I.md), [Stage II](BETA_0.5_STAGE_II.md), [Stage III](BETA_0.5_STAGE_III.md) and [PL recovery runbook](../pl/BETA_0.5_STAGE_IV.md).
+
+## Fix Pass 4 — Stage IV re-review (2026-11-24)
+
+Re-examined the bounded ADC/parser and Apache/Node adversarial tests, the
+endurance gate and pinned Stage I evidence, disposable MariaDB/package/config
+recovery, source metadata and residual release risks. Two confirmed evidence
+integrity defects were repaired without changing production configuration or
+making a capacity/deployment claim:
+
+- **S4-F1 — Inconsistent endurance results accepted.** The Stage IV gate could
+  accept a fabricated successful requests/s value unrelated to its declared
+  elapsed time and request count. It also ignored missing CPU observations and
+  later-window low-water RSS readings. It now validates complete bounded
+  metrics, percentile order, max latency, elapsed-time/RPS consistency (with
+  probe rounding tolerance), CPU/RSS presence, all-window RSS growth and the
+  pinned baseline's run/workload provenance. Negative offline tests cover
+  fabricated throughput, malformed metrics and regression-limit breaches.
+- **S4-F2 — Unverifiable source identity in reports.** The rollback rehearsal
+  substituted an all-zero 40-character hash when `SOURCE_SHA` was missing or
+  malformed; the ADC/ADCS and Apache endurance reports could emit a null SHA.
+  These CI reports now require a nonzero, correctly formatted source SHA and
+  stop without publishing apparently complete evidence otherwise. This checks
+  metadata format and presence; it is not a signed build attestation.
+
+No additional confirmed defect was found in the reviewed proxy/parser attack
+cases or synthetic rollback checks. The existing limitations remain: no actual
+package-manager downgrade, production load, user-data restoration or live
+gateway browser reauthentication. Fix Pass 4 may be checked only after all
+latest-head hosted Ubuntu 22.04/24.04/26.04 CI, CodeQL, sanitizers, systemd,
+Apache, browser, endurance and disposable recovery jobs succeed. Keep PR #235
+draft and Issue #234 open until its separate final merge gate.
