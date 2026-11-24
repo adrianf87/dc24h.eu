@@ -306,6 +306,32 @@ test("remote status strips private upstream fields and refuses malformed or unav
   assert.equal((await h.call("/remote/v1/summary", "GET", "", { cookie: browserCookie })).status, 200);
 });
 
+test("authenticated summary exposes only thresholded login/rate alerts after verified C++ observation", async () => {
+  const h = harness(true, true);
+  const login = await h.login();
+  assert.equal(login.status, 200);
+  const browserCookie = login.cookies[0]!.split(";")[0]!;
+  h.state.statusResponse = async () => ({ ...snapshot,
+    observation: { schema: 1, observed_unix_ms: Date.now() },
+    network: { ...snapshot.network, security_rejected: 12345 },
+  });
+  const read = async () => {
+    const response = await h.call("/remote/v1/summary", "GET", "", { cookie: browserCookie });
+    assert.equal(response.status, 200);
+    assert.ok(!response.body.includes("12345"), "raw transport counters must stay private");
+    return JSON.parse(response.body) as { incidents: { state: string; alerts: Array<{ kind: string }> } };
+  };
+  assert.deepEqual((await read()).incidents.alerts, []);
+  for (let i = 0; i < 5; i++) await h.login("7", "wrong");
+  assert.deepEqual((await read()).incidents.alerts.map(a => a.kind), ["login_refusals"]);
+  for (let i = 0; i < 4; i++) await h.login("7", "wrong");
+  assert.deepEqual((await read()).incidents.alerts.map(a => a.kind),
+    ["login_refusals", "rate_limit_refusals"]);
+  assert.ok(h.events.includes("rate_limited"));
+  h.state.auditHealthy = false;
+  assert.equal((await h.call("/remote/v1/summary", "GET", "", { cookie: browserCookie })).status, 503);
+});
+
 test("a revoked session cannot finish an earlier in-flight status read", async () => {
   const h = harness();
   const login = await h.login();
