@@ -79,8 +79,10 @@ def browser_phase(process, expected, timeout=60):
     if process.stdout is None:
         raise AssertionError("Browser client protocol unavailable")
     ready, _, _ = select.select([process.stdout], [], [], timeout)
-    if not ready or process.stdout.readline().strip() != expected:
-        raise AssertionError("Real Chromium passkey " + expected + " phase failed")
+    result = process.stdout.readline().strip() if ready else ""
+    if result != expected:
+        diagnostic = result if re.fullmatch(r"client_error:[a-z_0-9]{1,48}", result) else "no_verified_result"
+        raise AssertionError("Real Chromium passkey " + expected + " phase failed: " + diagnostic)
 
 
 def browser_command(process, instruction):
@@ -468,6 +470,8 @@ def run(binary, seeder, account_admin):
                 before = {name: matched.bundle.private_hash(gateway_dir / name, maximum)
                           for name, maximum in matched.private.FILES.items()}
                 db.dump(dump)
+                if matched.offline_preflight.sql_migration_row_count(dump) != 11:
+                    raise AssertionError("Stopped-writer SQL export lacks migration v11 proof")
                 matched.private.snapshot(gateway_dir, snapshot)
                 matched.bundle.create_pair(dump, snapshot, pair, sha)
                 matched.bundle.verified_pair(dump, snapshot, pair / matched.bundle.NAME, sha)
@@ -482,6 +486,8 @@ def run(binary, seeder, account_admin):
             recovered_db.start()
             recovered_config = recovered_db.setup_schema()
             recovered_db.restore_sql(dump)
+            if recovered_db.sql("SELECT MAX(version) FROM dc24h.dc24h_schema_migrations;") != "11":
+                raise AssertionError("Recovered MariaDB is not schema v11")
             if recovered_db.sql("SELECT role FROM dc24h.dc24h_accounts WHERE id=" + actor + ";") != "administrator":
                 raise AssertionError("Recovered C++ actor authority changed")
             restored_private = recovery_root / "restored-private"
@@ -616,6 +622,13 @@ def run(binary, seeder, account_admin):
                                "real_browser_webauthn_exercised": True}, file, indent=2, sort_keys=True)
                     file.write("\n")
         finally:
+            if browser is not None and browser.poll() is None:
+                # Chromium children share the disposable helper's private
+                # process group. Reap them even if the TS driver failed.
+                try:
+                    os.killpg(browser.pid, signal.SIGTERM)
+                except ProcessLookupError:
+                    pass
             terminate(browser)
             terminate(apache)
             terminate(node)

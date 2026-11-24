@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 import stage1_recovery_bundle as bundle
 import stage4_private_recovery_drill as private
+import beta07_recovery_preflight as offline_preflight
 
 SOURCE_SHA = os.environ.get("SOURCE_SHA", "")
 EXPECTED_ROW = "00FF61\towner\tactive\t2"
@@ -286,6 +287,8 @@ class MatchedRecoveryTests(unittest.TestCase):
                     before = {name: bundle.private_hash(gateway / name, maximum)
                               for name, maximum in private.FILES.items()}
                     source.dump(dump)
+                    if offline_preflight.sql_migration_row_count(dump) != 11:
+                        raise AssertionError("Isolated SQL export lacks migration v11 evidence")
                     private.snapshot(gateway, snapshot)
                     bundle.create_pair(dump, snapshot, pair_dir, sha)
                     after = {name: bundle.private_hash(gateway / name, maximum)

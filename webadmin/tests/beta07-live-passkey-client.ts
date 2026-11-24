@@ -23,6 +23,7 @@ async function command(): Promise<Record<string, unknown>> {
   return decoded as Record<string, unknown>;
 }
 
+async function main() {
 const startup = await command() as Start;
 if (!/^https:\/\/localhost:\d{2,5}$/.test(startup.origin) ||
     !/^[1-9]\d{0,18}$/.test(startup.actor) ||
@@ -34,7 +35,7 @@ try {
   const context = await browser.newContext({ ignoreHTTPSErrors: true });
   const page = await context.newPage();
   await context.addCookies([{ name: "dc24h_remote", value: startup.sessionCookie.split("=")[1],
-    url: startup.origin, httpOnly: true, secure: true, sameSite: "Lax" }]);
+    domain: "localhost", path: "/remote/v1", httpOnly: true, secure: true, sameSite: "Strict" }]);
   await page.goto(startup.origin + "/remote.html");
   const cdp = await context.newCDPSession(page);
   await cdp.send("WebAuthn.enable");
@@ -50,7 +51,7 @@ try {
     const optionsResponse = await fetch("/remote/v1/passkey/enroll/options", {
       method: "POST", headers: { "Content-Type": "application/json", "X-DC24H-Remote-CSRF": csrf }, body: "{}",
     });
-    if (optionsResponse.status !== 200) return false;
+    if (optionsResponse.status !== 200) return `enroll_options_${optionsResponse.status}`;
     const options = await optionsResponse.json();
     const credential = await navigator.credentials.create({ publicKey: {
       ...options, challenge: decode(options.challenge),
@@ -58,14 +59,18 @@ try {
       excludeCredentials: (options.excludeCredentials ?? []).map((entry: { id: string }) =>
         ({ ...entry, id: decode(entry.id) })),
     } });
-    if (!credential || !("toJSON" in credential)) return false;
+    if (!credential || !("toJSON" in credential)) return "enroll_no_credential";
     const finish = await fetch("/remote/v1/passkey/enroll/finish", {
       method: "POST", headers: { "Content-Type": "application/json", "X-DC24H-Remote-CSRF": csrf },
       body: JSON.stringify({ response: (credential as PublicKeyCredential & { toJSON(): unknown }).toJSON() }),
     });
-    return finish.status === 200 && (await finish.json()).enrolled === true;
+    if (finish.status !== 200) return `enroll_finish_${finish.status}`;
+    if ((await finish.json()).enrolled !== true) return "enroll_result_invalid";
+    const session = await fetch("/remote/v1/session");
+    if (session.status !== 200) return `enroll_session_${session.status}`;
+    return "ok";
   }, startup.csrf);
-  if (!enrolled) throw Error("Browser enrollment against C++ grant refused");
+  if (enrolled !== "ok") throw Error(enrolled);
   process.stdout.write("enrolled\n");
 
   const next = await command();
@@ -73,6 +78,9 @@ try {
   // The original authenticated cookie has no authority in the new Node
   // process. A new C++ password grant and a fresh challenge are mandatory.
   const restored = await page.evaluate(async actor => {
+    // This is the *rotated* live browser cookie from enrollment, not an
+    // already-invalid pre-enrollment cookie retained by the Python harness.
+    if ((await fetch("/remote/v1/session")).status !== 401) return false;
     const decode = (value: string) => Uint8Array.from(
       atob(value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=")),
       character => character.charCodeAt(0));
@@ -121,3 +129,18 @@ try {
   await browser.close();
   lines.return?.();
 }
+}
+
+await main().catch(async (error: unknown) => {
+  // A runner may collect stdout. Emit only fixed failure categories and
+  // integer HTTP statuses, never browser errors with echoed options/cookies.
+  const message = error instanceof Error ? error.message : "";
+  const category = /^(?:enroll_(?:options|finish|session)_[0-9]{3}|enroll_no_credential|enroll_result_invalid)$/.test(message)
+    ? message : message === "Invalid isolated fixture parameters" ? "fixture_parameters"
+    : message === "Missing harness instruction" ? "harness_protocol"
+    : message === "Restored browser C++ password/passkey grant or revocation refused" ? "restored_flow"
+    : "browser_exception";
+  process.stdout.write(`client_error:${category}\n`);
+  process.exitCode = 1;
+  await lines.return?.();
+});

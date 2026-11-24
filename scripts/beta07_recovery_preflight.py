@@ -9,17 +9,58 @@ schema-v11 authenticity; hash matching alone cannot prove either property.
 import argparse
 import json
 from pathlib import Path
+import re
 import sys
 
 import stage1_recovery_bundle as pair
 import stage4_private_recovery_drill as private
 
 
+MIGRATION_CREATE = b"CREATE TABLE `dc24h_schema_migrations` ("
+MIGRATION_INSERT = b"INSERT INTO `dc24h_schema_migrations` VALUES "
+# A *necessary* check of a standard mariadb-dump export, never a SQL parser,
+# schema migration, statement sanitizer or substitute for C++ inspection after
+# an import on a disposable fresh MariaDB instance.
+MIGRATION_ROW = re.compile(
+    rb"\(([1-9][0-9]*),'([a-z0-9_]+)','([0-9a-f]{64})','([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2})','applied'\)"
+)
+
+
+def sql_migration_row_count(dump):
+    """Fail closed unless a standard offline export contains all 11 applied rows.
+
+    No SQL is executed, printed or parsed as trusted executable statements.
+    Caller already verified this owner's SQL file and matched its paired hash.
+    """
+    table_count, versions = 0, {}
+    with Path(dump).open("rb") as source:
+        for line in source:
+            if len(line) > 1024 * 1024:
+                raise ValueError("Oversized SQL export line")
+            if line.rstrip(b"\r\n") == MIGRATION_CREATE:
+                table_count += 1
+            if not line.startswith(MIGRATION_INSERT):
+                continue
+            values = line[len(MIGRATION_INSERT):].rstrip(b"\r\n")
+            matches = list(MIGRATION_ROW.finditer(values))
+            if not matches or b",".join(match.group(0) for match in matches) + b";" != values:
+                raise ValueError("Malformed migration export")
+            for match in matches:
+                version = int(match.group(1))
+                if version in versions or version > 11:
+                    raise ValueError("Unexpected/duplicate migration version")
+                versions[version] = True
+    if table_count != 1 or set(versions) != set(range(1, 12)):
+        raise ValueError("Missing applied schema-v11 migration export")
+    return len(versions)
+
+
 def preflight(dump, snapshot, pair_directory, commit_sha, sql_destination, private_destination):
     """Prove source integrity and that both chosen destinations are fresh.
 
     No file system changes are made; dangling symlinks are not fresh paths.
-    This intentionally does not equate an arbitrary SQL dump with schema v11.
+    The SQL-migration scan is a necessary offline format check; only C++ and
+    MariaDB can prove imported schema/version validity on a fresh instance.
     """
     sources = [Path(dump), Path(snapshot), Path(pair_directory)]
     targets = [Path(sql_destination), Path(private_destination)]
@@ -43,11 +84,14 @@ def preflight(dump, snapshot, pair_directory, commit_sha, sql_destination, priva
         if target.is_symlink() or target.exists():
             raise ValueError("Recovery target already exists")
     evidence = pair.verified_pair(sources[0], sources[1], sources[2] / pair.NAME, commit_sha)
+    migration_rows = sql_migration_row_count(sources[0])
     # Report only an exact commit, counts and booleans. The SQL dump, private
     # material, local paths and even account/host labels are not emitted.
     return {"schema": 1, "source_sha": evidence["commit_sha"],
             "verified_components": evidence["verified_files"],
             "pair_sha256": evidence["pair_hash"], "fresh_targets_checked": 2,
+            "sql_export_applied_migration_rows": migration_rows,
+            "sql_export_shape_checked": True,
             "schema_v11_verified_after_import": False,
             "writers_quiescent_verified": False,
             "restore_performed": False, "destructive_changes": False}

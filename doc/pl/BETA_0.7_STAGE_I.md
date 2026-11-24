@@ -21,6 +21,7 @@ Zadanie [#238](https://github.com/adrianf87/dc24h.eu-high-starter/issues/238), g
 
 13. Test Chromium używa dwóch niezależnych wirtualnych uwierzytelniaczy w osobnych kontekstach przeglądarki. Po odtworzeniu kompletnego prywatnego stanu unieważnienie pierwszego klucza usuwa go z listy dozwolonych poświadczeń, a drugi nadal powinien podpisywać poprawne żądania.
 14. Dodatkowa próba integracyjna rejestruje rzeczywisty klucz Chromium przez Apache TLS, Node i hasło+TOTP zweryfikowane przez C++. Zachowuje uwierzytelniacz w przeglądarce przez zatrzymanie procesów, blokadę MariaDB oraz zgodną kopię SQL v11 i pięciu plików. Po odtworzeniu nowy grant wymaga **prawdziwego hasła C++ i podpisu passkey**; sprawdza odczyt chronionego podsumowania, odmowę replay, unieważnienie sesji oraz trwałość odwołania klucza po kolejnym restarcie Node. Skrypt i negatywna bramka dowodów są gotowe, lecz wymagają jeszcze wykonania i zielonego wyniku na trzech hostowanych Ubuntu.
+15. Dry-run weryfikuje także, że standardowy zrzut `mariadb-dump` zawiera jedenaście kolejnych, zastosowanych wpisów migracji; sama zgodność hashy nie wystarcza. **Nie jest to parser SQL ani dowód poprawności bazy**. Dopiero import do świeżej, odizolowanej MariaDB, kontrola `MAX(version)=11` i weryfikacja przez C++ potwierdzają rzeczywistą zgodność schematu. Przy błędzie preflight nie tworzy wskazanych miejsc docelowych.
 
 ## Aktualna realizacja
 

@@ -81,6 +81,8 @@ def run(current, historical, checkout):
                 before = {name: matched.bundle.private_hash(gateway / name, maximum)
                           for name, maximum in matched.private.FILES.items()}
                 original.dump(dump)
+                if matched.offline_preflight.sql_migration_row_count(dump) != 11:
+                    raise AssertionError("Package rollback source is not a v11 SQL export")
                 matched.private.snapshot(gateway, snapshot)
                 matched.bundle.create_pair(dump, snapshot, pair_dir, sha)
                 after = {name: matched.bundle.private_hash(gateway / name, maximum)
