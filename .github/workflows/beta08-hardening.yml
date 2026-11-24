@@ -2,7 +2,7 @@ name: Beta 0.8 bounded TSAN and parser fuzz
 
 on:
   push:
-    branches: [main]
+    branches: [main, beta-0.9.x-stage-full-fix-pass]
   pull_request:
     branches: [main]
   workflow_dispatch:

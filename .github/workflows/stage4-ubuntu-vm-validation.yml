@@ -2,7 +2,7 @@ name: Stage IV isolated Ubuntu VM validation
 
 on:
   push:
-    branches: [main, test/stage4-ubuntu-vm-validation]
+    branches: [main, test/stage4-ubuntu-vm-validation, beta-0.9.x-stage-full-fix-pass]
   pull_request:
     branches: [main]
   workflow_dispatch:

@@ -34,6 +34,13 @@ void require_current(const X509* certificate) {
 void require_leaf(X509* leaf) {
     if (leaf == nullptr) { throw std::runtime_error("TLS certificate is not valid at startup"); }
     require_current(leaf);
+    // A CA certificate must not be installed as the hub's end-entity leaf,
+    // even if its key and serverAuth usage would otherwise pass these checks.
+    // Also reject an invalid critical basic-constraints extension.
+    const auto flags = X509_get_extension_flags(leaf);
+    if ((flags & (EXFLAG_INVALID | EXFLAG_CA)) != 0) {
+        throw std::runtime_error("TLS certificate is not a valid server leaf");
+    }
     switch (X509_get_signature_nid(leaf)) {
     case NID_sha256WithRSAEncryption:
     case NID_sha384WithRSAEncryption:
@@ -72,11 +79,10 @@ void require_leaf(X509* leaf) {
     }
     if (!strong) { throw std::runtime_error("TLS certificate public key is too weak"); }
     constexpr std::uint32_t absent = 0xffffffffu;
-    constexpr std::uint32_t listener_usage = static_cast<std::uint32_t>(KU_DIGITAL_SIGNATURE) |
-                                             static_cast<std::uint32_t>(KU_KEY_ENCIPHERMENT) |
-                                             static_cast<std::uint32_t>(KU_KEY_AGREEMENT);
     const std::uint32_t usage = X509_get_key_usage(leaf);
-    if (usage != absent && (usage & listener_usage) == 0) {
+    // The only allowed TLS 1.2 suites use ECDHE authentication, which needs a
+    // digital signature; keyEncipherment/keyAgreement alone are insufficient.
+    if (usage != absent && (usage & static_cast<std::uint32_t>(KU_DIGITAL_SIGNATURE)) == 0) {
         throw std::runtime_error("TLS certificate key usage does not allow a hub listener");
     }
     const std::uint32_t extended = X509_get_extended_key_usage(leaf);

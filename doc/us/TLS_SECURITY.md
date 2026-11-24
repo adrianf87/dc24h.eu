@@ -10,7 +10,7 @@ Startup reads the system clock once. The leaf must already be valid: notBefore i
 
 The signature must be RSA or ECDSA with SHA-256, SHA-384 or SHA-512, or Ed25519 or Ed448. The public key must be an RSA key of at least 2048 bits, NIST P-256, P-384 or P-521, or Ed25519 or Ed448. A smaller RSA key, another curve or a SHA-1 signature is refused.
 
-If the leaf has a key-usage extension, it must allow digitalSignature, keyEncipherment or keyAgreement. If it has an extended-key-usage extension, that extension must include serverAuth. A missing extension is not treated as proof of either property. The hub does not check the hostname, the trust anchor or revocation. Clients still do that. No client certificate is requested.
+The leaf must not be a CA certificate and malformed basic constraints are refused. If the leaf has a key-usage extension, it must allow digitalSignature: the configured TLS 1.2 ECDHE suites need a signing certificate. keyEncipherment or keyAgreement alone cannot satisfy this requirement. If it has an extended-key-usage extension, that extension must include serverAuth. A missing extension is not treated as proof of either property. The hub does not check the hostname, the trust anchor or revocation. Clients still do that. No client certificate is requested.
 
 An expired, not-yet-valid, weak or mis-scoped leaf fails startup and `--check-config` before a port is opened. The diagnostic does not include the certificate or the private key. The US and PL catalogs carry the same sentences. The help text is unchanged.
 

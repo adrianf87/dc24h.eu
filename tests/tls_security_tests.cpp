@@ -67,7 +67,8 @@ void add_extension(X509* certificate, int nid, const char* value) {
 struct Material { std::string certificate; std::string key; };
 
 Material issue(Workspace& workspace, const std::string& stem, EVP_PKEY* key, const EVP_MD* digest,
-               long not_before, long not_after, const char* usage, const char* extended) {
+               long not_before, long not_after, const char* usage, const char* extended,
+               const char* basic_constraints = nullptr) {
     Certificate certificate(X509_new(), &X509_free);
     require(certificate != nullptr, "Cannot allocate test certificate");
     require(X509_set_version(certificate.get(), 2L) == 1, "Cannot set certificate version");
@@ -82,6 +83,7 @@ Material issue(Workspace& workspace, const std::string& stem, EVP_PKEY* key, con
     require(X509_set_issuer_name(certificate.get(), name) == 1, "Cannot set issuer");
     if (usage != nullptr) { add_extension(certificate.get(), NID_key_usage, usage); }
     if (extended != nullptr) { add_extension(certificate.get(), NID_ext_key_usage, extended); }
+    if (basic_constraints != nullptr) { add_extension(certificate.get(), NID_basic_constraints, basic_constraints); }
     require(X509_sign(certificate.get(), key, digest) != 0, "Cannot sign test certificate");
     Material material{workspace.file(stem + ".pem"), workspace.file(stem + ".key")};
     std::unique_ptr<BIO, decltype(&BIO_free)> certificate_file(BIO_new_file(material.certificate.c_str(), "w"), &BIO_free);
@@ -123,6 +125,7 @@ void policy() {
     accept(issue(workspace, "plain", rsa.get(), EVP_sha256(), 0, day, nullptr, nullptr));
     accept(issue(workspace, "p256", curve.get(), EVP_sha256(), 0, day, "digitalSignature", "serverAuth"));
     accept(issue(workspace, "ed25519", edwards.get(), nullptr, 0, day, "digitalSignature", "serverAuth"));
+    accept(issue(workspace, "non-ca", rsa.get(), EVP_sha256(), 0, day, server_usage, "serverAuth", "critical,CA:FALSE"));
     reject(issue(workspace, "expired", rsa.get(), EVP_sha256(), -2L * day, -day, server_usage, "serverAuth"),
            {"TLS certificate is not valid at startup"});
     reject(issue(workspace, "future", rsa.get(), EVP_sha256(), 2L * day, 3L * day, server_usage, "serverAuth"),
@@ -139,6 +142,13 @@ void policy() {
            {"TLS certificate is not authorized for server authentication"});
     reject(issue(workspace, "ca-only", rsa.get(), EVP_sha256(), 0, day, "keyCertSign", "serverAuth"),
            {"TLS certificate key usage does not allow a hub listener"});
+    reject(issue(workspace, "ca-with-server-usage", rsa.get(), EVP_sha256(), 0, day, server_usage,
+                 "serverAuth", "critical,CA:TRUE"),
+           {"TLS certificate is not a valid server leaf"});
+    reject(issue(workspace, "encipherment-only", rsa.get(), EVP_sha256(), 0, day, "keyEncipherment", "serverAuth"),
+           {"TLS certificate key usage does not allow a hub listener"});
+    reject(issue(workspace, "agreement-only", curve.get(), EVP_sha256(), 0, day, "keyAgreement", "serverAuth"),
+           {"TLS certificate key usage does not allow a hub listener"});
 }
 } // namespace
 
@@ -149,6 +159,6 @@ int main() {
         std::cerr << error.what() << '\n';
         return 1;
     }
-    std::cout << "PASS: hub leaf validity, key strength, server use and AEAD context\n";
+    std::cout << "PASS: hub non-CA leaf validity, ECDHE signing use, key strength and AEAD context\n";
     return 0;
 }
