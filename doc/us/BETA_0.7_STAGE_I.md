@@ -31,7 +31,7 @@ Issue [#238](https://github.com/adrianf87/dc24h.eu-high-starter/issues/238), sin
 | 0.7.17 | Comparable multi-transport benchmarks | Three-window hosted ADC/ADCS + authenticated HTTPS gate implemented; full VM evidence pending | `stage4_ubuntu_vm_probe_tests.py` persists three real ADC/ADCS windows; `beta06_authenticated_api_process_tests.py` now measures three 8-request password+TOTP HTTPS windows with C++/Node/Apache CPU/RSS; `beta07_ubuntu_perf_matrix.py` requires exact SHA/image, numeric p50/p95/p99/RPS, three windows and predeclared CI budgets; **rates are comparable within each profile only**, not a cross-protocol SLA |
 | 0.7.18 | Exhaustion and drain | Real 20 half-open TLS/ADC progress and bounded RSS/drain regression added; broader fault matrix and hosted sanitizer proof pending | `adc.close.process` exercises 20 deliberately incomplete TLS peers while an authenticated ADC peer progresses, enforces ≤64 MiB RSS growth and ≤2s graceful SIGTERM, retains blocked-output/three-lifetime regressions; full burst/SIGTERM/ASan/UBSan outcomes pending |
 | 0.7.19 | Supply chain and provenance | Exact-head checkout, locked npm/action inventory and pinned CodeQL workflow added; hosted proof and advisory disposition pending | `beta07_supply_chain.py` refuses wrong SHA/OS, missing npm integrity or floating actions, emits redacted inventory; build/VM now checkout **actual PR head**, code scanning uses pinned CodeQL C++/TS on all three Ubuntu images; npm audit already rejects high production advisories |
-| 0.7.20 | Release qualification | Pending | Consistent versions, changelog, risk and final hosted CI |
+| 0.7.20 | Release qualification | Fail-closed exact-head 20-patch/17-job/evidence checker added; final metadata, changelog, actual full green CI pending | `beta07_stage1_completion_gate.py` requires all 20 accepted patches, all 17 hosted Ubuntu C++/browser/VM/CodeQL/sanitizer jobs completed successfully on the exact final head and ten real evidence categories. It **cannot pass** while the version is still `beta-0.6.16`; metadata bump and release sign-off deliberately deferred until prior requirements truly pass |
 
 ## Patch 0.7.1 evidence semantics
 
@@ -42,3 +42,14 @@ Pinned `ncdc` Ubuntu packages (amd64): jammy 22.04 `1.22.1-3`, noble 24.04 `1.23
 ## Stage 1 stop/go
 
 **NO-GO** while any ledger row, required synthetic real-process test, numeric performance/recovery evidence or same-head hosted CI is missing. Do not check Issue #238 Stage 1, mark the draft PR ready, merge, close the issue or deploy. Record the final exact head SHA and all Ubuntu/CodeQL/browser/sanitizer/systemd/ADC/ADCS/recovery/dpkg evidence before declaring this work unit complete.
+
+## Explicit beta-0.7.20 risk and unresolved gates
+
+- **R1: Full browser restore and authorization.** The isolated Chromium ceremony does not execute the final C++ password+passkey grant after a matching MariaDB/five-file restore. Negative origin/replay proof exists but cannot replace the required integrated acceptance.
+- **R2: Writer quiescence.** Hash-paired six-store snapshots and non-destructive target preflight do not coordinate stopping all MariaDB/gateway writers or certify cross-generation identity independently.
+- **R3: Third-party boundaries.** ncdc is the only independent client exercised; DC++/AirDC++ are honest `untested` rows, never certified.
+- **R4: Package safety.** The `.deb` is an intentionally inert test fixture, not a production installer. Executed downgrade and schema-v11 recovery must pass on all three disposable hosted runners.
+- **R5: Telemetry.** Source observation age is bounded; login-refusal/rate-limit aggregate alerts and audit-loss behavior are not fully integrated. In-memory event streams have no restart history.
+- **R6: Quality/provenance.** Full CodeQL, accessibility review, numeric three-transport windows, sanitizers and full exact-final-head matrix must be green. Pending/skipped/cancelled/wrong-head jobs prohibit the version bump or release claim.
+
+The final package metadata, changelog release section, and operator handoff must not advertise `beta-0.7.20` as ready until these items are resolved. A positive *synthetic* unit test of the completion gate is not real GitHub CI evidence.

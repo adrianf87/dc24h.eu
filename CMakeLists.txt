@@ -354,6 +354,9 @@ if(BUILD_TESTING)
     add_test(NAME beta.07.ubuntu.perf.matrix COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/beta07_ubuntu_perf_matrix_tests.py")
     set_tests_properties(beta.07.ubuntu.perf.matrix PROPERTIES TIMEOUT 15)
+    add_test(NAME beta.07.stage1.completion.gate COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/beta07_stage1_completion_gate_tests.py")
+    set_tests_properties(beta.07.stage1.completion.gate PROPERTIES TIMEOUT 15)
     add_test(NAME integration.ncdc_ports COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_ports_tests.py")
     set_tests_properties(integration.ncdc_ports PROPERTIES TIMEOUT 15)

@@ -15,6 +15,7 @@ Zadanie [#238](https://github.com/adrianf87/dc24h.eu-high-starter/issues/238), g
 9. Każdy raport CI musi pochodzić z faktycznie pobranego SHA gałęzi PR, nie z automatycznego commita scaleniowego. Kontrola `.deb`, npm i akcji GitHub obejmuje przypięte wersje, SHA i metadane bez sekretów; CodeQL i audyt podatności muszą być zielone na tym samym head. Brak pełnego wyniku nie jest akceptacją wydania.
 10. Dla ADC, ADCS oraz prywatnego HTTPS z prawdziwym hasłem+TOTP wymagane są po trzy okna pomiarowe (kolejno 32, 32 i 8 żądań na okno). Raport zawiera dokładny SHA, system, p50/p95/p99, RPS, błędy, CPU/RSS i jawne limity regresji CI. Przepustowości różnych protokołów nie należy bezpośrednio porównywać ani traktować jako obietnicy wydajności produkcyjnej.
 11. Próba wyczerpania zasobów otwiera 20 niedokończonych połączeń TLS, sprawdza postęp zdrowego klienta ADC, wzrost RSS do 64 MiB oraz zamknięcie procesu po SIGTERM do 2 sekund. Parametry dotyczą wyłącznie jednorazowego hosta CI; nie zwiększaj limitów produkcyjnych na podstawie tego testu.
+12. Przed kwalifikacją `beta-0.7.20` zastosuj bramkę 20 patchy, 17 wymaganych zielonych zadań i 10 kategorii rzeczywistego dowodu na **jednym SHA**. Aktualne metadane produktu pozostają `beta-0.6.16`, dopóki wszystkie testy i ryzyka nie będą rozstrzygnięte. Nawet pozytywny Etap I nie daje zgody na merge: Etap II i końcowe scalenie wymagają odrębnych poleceń.
 
 ## Aktualna realizacja
 
