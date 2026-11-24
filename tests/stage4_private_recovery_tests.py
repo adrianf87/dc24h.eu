@@ -120,6 +120,23 @@ class StageFourPrivateRecovery(unittest.TestCase):
             with self.assertRaises(ValueError):
                 recovery.snapshot(str(source), str(root / "invalid-fifo"))
 
+    def test_recovery_refuses_mfa_actor_outside_mariadb_signed_64_bit_range(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = fixture(root)
+            invalid = "9223372036854775808"
+            mfa = source / "mfa.json"
+            mfa.write_text(json.dumps({"schema": 1, "accounts": {invalid: "A" * 32}}) + "\n")
+            with self.assertRaisesRegex(ValueError, "Invalid private MFA catalog"):
+                recovery.snapshot(str(source), str(root / "refused-mfa"))
+            self.assertFalse((root / "refused-mfa").exists())
+
+            mfa.write_text(json.dumps({"schema": 1, "accounts": {"7": "A" * 32}}) + "\n")
+            (source / "replay.jsonl").write_text(json.dumps({"actor": invalid, "step": 1}) + "\n")
+            with self.assertRaisesRegex(ValueError, "Invalid replay ledger"):
+                recovery.snapshot(str(source), str(root / "refused-ledger"))
+            self.assertFalse((root / "refused-ledger").exists())
+
     def test_private_source_refuses_symlinked_ancestor_even_if_leaf_is_private(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

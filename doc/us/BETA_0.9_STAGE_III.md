@@ -89,3 +89,24 @@ stopped/reset on failure; no production unit is installed, enabled or changed.
   production dpkg/systemd changes or a production rollback. Owner must review
   the final exact-head Ubuntu matrix and explicitly authorize the next step.
 
+## Fix-pass follow-up — MariaDB preflight, private restore and service isolation
+
+- The read-only SQL preflight now checks **all 11 migration names and exact
+  SQL SHA-256 identities** reconstructed from the trusted source manifest,
+  not just the number of rows and their `applied` states. This detects an
+  incompatible-but-self-consistently-hashed backup before any fresh MariaDB
+  import. The real C++/MariaDB post-import schema inspection is still required.
+- The five-store recovery validator now applies the signed 64-bit C++ account
+  ID bound to TOTP enrollment and replay history as well as passkeys. An
+  unusable account ID cannot be certified as a successful recoverable backup.
+- The transient installed-historical C++ systemd test now verifies the
+  **effective** Unix-only address-family and additional kernel/home hardening
+  properties. The compiled Node gateway systemd test additionally checks
+  its effective address-family/private-device/kernel settings and rejects
+  any matching **IPv6 listener**, not only public IPv4 binds.
+- New negative regressions run on the GitHub-hosted Ubuntu 22.04/24.04/26.04
+  matrix. These are disposable tests: no production MariaDB, schema v11,
+  installed unit, listener or recovery key/checkpoint is changed. Do not
+  equate a passed offline preflight with a completed production restore or
+  Owner approval for the separately gated runtime authenticity migration.
+

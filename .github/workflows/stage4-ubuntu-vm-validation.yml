@@ -218,6 +218,7 @@ jobs:
           python3 -m unittest discover -s tests -p beta09_stage2_cold_start_tests.py
           python3 -m unittest discover -s tests -p beta08_fix_pass3_tests.py
           python3 -m unittest discover -s tests -p beta09_stage3_recovery_tests.py
+          python3 -m unittest discover -s tests -p beta09_systemd_cpp_service_tests.py
           python3 -m unittest discover -s tests -p beta08_postrollback_state_tests.py
           DC24H_VM_REPORT_DIR="$PWD/vm-evidence" python3 \
             tests/beta07_dpkg_process_tests.py \

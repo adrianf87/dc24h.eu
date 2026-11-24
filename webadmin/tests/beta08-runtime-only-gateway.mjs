@@ -47,6 +47,7 @@ async function systemdGateway(bundle, install, root, port, env) {
       "--property=Type=exec", `--property=User=${runner}`, `--property=WorkingDirectory=${install}`,
       `--property=EnvironmentFile=${environmentFile}`, "--property=NoNewPrivileges=yes",
       "--property=ProtectSystem=strict", "--property=ProtectHome=read-only",
+      "--property=PrivateDevices=yes", "--property=ProtectKernelModules=yes",
       "--property=ProtectKernelTunables=yes", "--property=ProtectControlGroups=yes",
       "--property=CapabilityBoundingSet=", "--property=RestrictAddressFamilies=AF_UNIX AF_INET",
       `--property=ReadWritePaths=${root}`, process.execPath, bundle]);
@@ -74,15 +75,23 @@ async function systemdGateway(bundle, install, root, port, env) {
       assert.ok(Number.isInteger(pid) && pid > 1);
       if (firstPid !== null) assert.notEqual(pid, firstPid, "systemd_restart_did_not_replace_process");
       firstPid = pid;
-      for (const [property, value] of [["User", runner], ["NoNewPrivileges", "yes"], ["ProtectSystem", "strict"]]) {
+      for (const [property, value] of [["User", runner], ["NoNewPrivileges", "yes"],
+        ["ProtectSystem", "strict"], ["ProtectHome", "read-only"],
+        ["PrivateDevices", "yes"], ["ProtectKernelModules", "yes"],
+        ["ProtectKernelTunables", "yes"], ["ProtectControlGroups", "yes"]]) {
         assert.equal(systemdCommand("systemctl", ["show", `--property=${property}`, "--value", unit]), value);
       }
+      assert.deepEqual(new Set(systemdCommand("systemctl", ["show", "--property=RestrictAddressFamilies",
+        "--value", unit]).split(/\s+/)), new Set(["AF_UNIX", "AF_INET"]));
       // The gateway must have a *single loopback-only* TCP listener on the
       // selected port, never a wildcard or public-interface binding.
       const hexPort = port.toString(16).toUpperCase().padStart(4, "0");
       const tcp = readFileSync("/proc/net/tcp", "utf8").trim().split("\n").slice(1)
         .map(line => line.trim().split(/\s+/)).filter(fields => fields[1]?.endsWith(`:${hexPort}`) && fields[3] === "0A");
       assert.deepEqual(tcp.map(fields => fields[1]), [`0100007F:${hexPort}`]);
+      const tcp6 = readFileSync("/proc/net/tcp6", "utf8").trim().split("\n").slice(1)
+        .map(line => line.trim().split(/\s+/)).filter(fields => fields[1]?.endsWith(`:${hexPort}`) && fields[3] === "0A");
+      assert.deepEqual(tcp6, [], "systemd gateway must not expose an IPv6 listener");
       if (iteration === 0) systemdCommand("sudo", ["systemctl", "restart", unit]);
     }
     systemdCommand("sudo", ["systemctl", "stop", unit]);
