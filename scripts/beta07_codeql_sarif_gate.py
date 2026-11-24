@@ -11,6 +11,16 @@ from pathlib import Path
 
 
 EXPECTED_LANGUAGES = {"cpp", "javascript-typescript"}
+# CodeQL writes javascript.sarif for its combined JavaScript/TypeScript
+# extractor, even when init uses the language ID javascript-typescript.
+SARIF_LANGUAGE_BY_FILENAME = {
+    "cpp.sarif": "cpp",
+    "cpp.sarif.json": "cpp",
+    "javascript.sarif": "javascript-typescript",
+    "javascript.sarif.json": "javascript-typescript",
+    "javascript-typescript.sarif": "javascript-typescript",
+    "javascript-typescript.sarif.json": "javascript-typescript",
+}
 
 
 def evaluate(paths):
@@ -33,9 +43,9 @@ def evaluate(paths):
             language = properties.get("semmle.formatSpecifier") or properties.get("language")
             if language in EXPECTED_LANGUAGES:
                 languages.add(language)
-            for suffix in EXPECTED_LANGUAGES:
-                if path.name.lower() in (f"{suffix}.sarif", f"{suffix}.sarif.json"):
-                    languages.add(suffix)
+            by_filename = SARIF_LANGUAGE_BY_FILENAME.get(path.name.lower())
+            if by_filename:
+                languages.add(by_filename)
             rules = {rule["id"]: rule for rule in driver.get("rules", []) if isinstance(rule, dict) and "id" in rule}
             for result in run.get("results", []):
                 total += 1

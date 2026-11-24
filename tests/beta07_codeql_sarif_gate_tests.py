@@ -30,6 +30,14 @@ class TestCodeQLGate(unittest.TestCase):
         results = evaluate([self.sarif("cpp"), self.sarif("javascript-typescript")])
         self.assertEqual(results["findings_total"], 2)
 
+    def test_actual_codeql_javascript_filename_is_typescript_analyzer(self):
+        results = evaluate([self.sarif("cpp"), self.sarif("javascript")])
+        self.assertEqual(results["languages"], ["cpp", "javascript-typescript"])
+
+    def test_unrecognized_analyzer_filename_does_not_satisfy_language_gate(self):
+        with self.assertRaisesRegex(ValueError, "Incomplete"):
+            evaluate([self.sarif("cpp"), self.sarif("untrusted")])
+
     def test_high_security_rejected(self):
         with self.assertRaisesRegex(ValueError, "high_security=1"):
             evaluate([self.sarif("cpp", security="8.1"), self.sarif("javascript-typescript")])
