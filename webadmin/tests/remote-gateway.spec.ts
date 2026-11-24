@@ -62,7 +62,7 @@ test("private bilingual incident timeline remains keyboard-readable on mobile wi
   await page.getByRole("button", { name: "Potwierdź lokalnie" }).focus();
   await page.keyboard.press("Enter");
   await expect(page.getByText("Potwierdzono tylko na tym ekranie; nie wysłano żadnej akcji do serwera.")).toBeVisible();
-  expect(writes).toEqual([], "local acknowledgment and language changes cannot send mutations");
+  expect(writes).toEqual([]);
   for (const title of ["Start", "Stop", "Restart", "Grant"]) {
     await expect(page.getByRole("button", { name: title, exact: true })).toHaveCount(0);
   }

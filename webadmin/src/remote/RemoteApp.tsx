@@ -40,6 +40,7 @@ const labels = {
     serviceReady: "Hub reported running", lastUpdated: "Read age", chatDenied: "Rejected chat total",
     maintenance: "Recovery / maintenance", maintenanceUnknown: "Not exposed by approved read-only projection",
     incidentReady: "Verified", incidentDegraded: "Degraded", stale: "Read expired; old counters are hidden until a verified refresh.",
+    sourceUnknown: "Unknown",
     timeline: "Recent aggregate service events", noEvents: "No verified transitions recorded in this process.",
     alertTitle: "Aggregate security signals", hubStarted: "Hub started", hubStopped: "Hub stopped",
     transportRefused: "Transport security refusal threshold reached", secondsAgo: "seconds ago",
@@ -75,6 +76,7 @@ const labels = {
     serviceReady: "Hub zgłasza pracę", lastUpdated: "Wiek odczytu", chatDenied: "Łączna liczba odrzuconych wiadomości",
     maintenance: "Odtwarzanie / konserwacja", maintenanceUnknown: "Niedostępne w zatwierdzonym widoku tylko do odczytu",
     incidentReady: "Zweryfikowano", incidentDegraded: "Pogorszenie", stale: "Odczyt nieaktualny; poprzednie liczniki ukryto do czasu weryfikacji.",
+    sourceUnknown: "Nieznane",
     timeline: "Ostatnie zbiorcze zdarzenia usługi", noEvents: "Brak zweryfikowanych zmian stanu w tym procesie.",
     alertTitle: "Zbiorcze sygnały bezpieczeństwa", hubStarted: "Hub uruchomiony", hubStopped: "Hub zatrzymany",
     transportRefused: "Próg odmów bezpieczeństwa transportu został osiągnięty", secondsAgo: "sekund temu",
@@ -420,11 +422,11 @@ export function RemoteApp() {
             <h2>{t.incidentTitle}</h2>
             <dl className="remote-grid">
               <div><dt>{t.gatewayReady}</dt><dd>{t.incidentReady}</dd></div>
-              <div><dt>{t.serviceReady}</dt><dd>{!freshSummary.observation ? t.maintenanceUnknown :
+              <div><dt>{t.serviceReady}</dt><dd>{!freshSummary.observation ? t.sourceUnknown :
                 freshSummary.server.running ? t.incidentReady : t.incidentDegraded}</dd></div>
               <div><dt>{t.lastUpdated}</dt><dd>{freshSummary.observation ?
                 `${Math.max(0, Math.floor((freshSummary.observation.source_age_ms + clock - summaryFetchedAt!) / 1000))} s` :
-                t.maintenanceUnknown}</dd></div>
+                t.sourceUnknown}</dd></div>
               <div><dt>{t.chatDenied}</dt><dd>{freshSummary.chat.rejected}</dd></div>
               <div><dt>{t.maintenance}</dt><dd className="remote-unknown">{t.maintenanceUnknown}</dd></div>
             </dl>

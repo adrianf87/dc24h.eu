@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: read
-  security-events: write
   actions: read
 
 concurrency:
@@ -52,3 +51,13 @@ jobs:
 
       - name: Analyze C++ and TypeScript at the exact source head
         uses: github/codeql-action/analyze@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4
+        with:
+          # The repository already enables CodeQL default setup. Advanced SARIF
+          # uploads are rejected by GitHub; retain the full hosted scan locally.
+          upload: never
+          output: ${{ runner.temp }}/beta07-codeql-sarif
+
+      - name: Qualify local CodeQL SARIF without competing with default setup
+        run: |
+          python3 scripts/beta07_codeql_sarif_gate.py \
+            --input "${{ runner.temp }}/beta07-codeql-sarif"
