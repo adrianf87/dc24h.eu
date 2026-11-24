@@ -8,9 +8,40 @@ import unittest
 from network_process_tests import Hub
 from adc_login_process_tests import Peer
 from tls_support import credentials, secure_client_context, tls_endpoint
+from stage4_perf_probe import rss_kib
 
 
 class CloseDeadlineTest(unittest.TestCase):
+    def test_beta07_half_open_tls_admission_preserves_healthy_adc_and_bounded_drain(self):
+        """Real isolated reactor under incomplete TLS clients, no global host tuning."""
+        with tempfile.TemporaryDirectory(prefix='beta07-drain-') as directory:
+            cert, key = credentials(directory)
+            hub = Hub(self, cert, key)
+            before = rss_kib(hub.process.pid)
+            self.assertIsNotNone(before)
+            clients = []
+            try:
+                for index in range(20):
+                    peer = socket.create_connection(tls_endpoint(hub), timeout=3)
+                    peer.settimeout(1)
+                    if index % 2 == 0:
+                        peer.sendall(b'\x16\x03')  # Incomplete TLS record, never valid auth.
+                    clients.append(peer)
+                healthy = Peer(self, hub.connect())
+                healthy.login(b'PressureHealthy', 220)
+                healthy.send(b'BMSG ' + healthy.sid + b' StillAlive')
+                self.assertEqual(healthy.line(), b'BMSG ' + healthy.sid + b' StillAlive')
+                after = rss_kib(hub.process.pid)
+                self.assertIsNotNone(after)
+                self.assertLessEqual(after - before, 64 * 1024,
+                                     '20 stalled handshakes exceeded the disposable 64-MiB growth budget')
+                hub.stop(signal.SIGTERM)
+                self.assertEqual(hub.log.count(b'Network stopped; all TCP sockets closed'), 1)
+                self.assertNotIn(b'PressureHealthy', hub.log)
+            finally:
+                for peer in clients:
+                    peer.close()
+
     def test_beta06_bounded_drain_and_reconnect_across_three_lifetimes(self):
         """Three isolated SIGTERM lifetimes with queued ADC/ADCS and half-open TLS."""
         with tempfile.TemporaryDirectory(prefix='dc24h-restart-') as directory:

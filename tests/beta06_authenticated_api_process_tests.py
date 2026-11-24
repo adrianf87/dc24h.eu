@@ -339,20 +339,47 @@ def run(binary, seeder, account_admin):
                 return valid, elapsed
 
             processes = {"account_admin": cpp.pid, "gateway": node.pid, "apache": apache.pid}
-            cpu_before = {name: process_cpu_seconds(pid) for name, pid in processes.items()}
-            rss_before = {name: rss_kib(pid) for name, pid in processes.items()}
-            if any(value is None or value <= 0 for value in rss_before.values()) or (
-                any(value is None for value in cpu_before.values())):
-                raise AssertionError("Missing process CPU/RSS baseline")
-            started = time.monotonic()
-            with ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
-                readings = list(pool.map(measure, range(REQUESTS)))
-            elapsed = time.monotonic() - started
-            cpu_after = {name: process_cpu_seconds(pid) for name, pid in processes.items()}
-            rss_after = {name: rss_kib(pid) for name, pid in processes.items()}
-            if any(value is None or value <= 0 for value in rss_after.values()) or (
-                any(value is None or value < cpu_before[name] for name, value in cpu_after.items())):
-                raise AssertionError("Missing or regressed process CPU/RSS observation")
+            windows = []
+            readings = []
+            all_started = time.monotonic()
+            for window in range(3):
+                if window:
+                    # Preserve the C++ grant recheck budget between windows.
+                    time.sleep(BATCH_SPACING_SECONDS)
+                window_cpu_before = {name: process_cpu_seconds(pid) for name, pid in processes.items()}
+                window_rss_before = {name: rss_kib(pid) for name, pid in processes.items()}
+                if any(value is None or value <= 0 for value in window_rss_before.values()) or (
+                        any(value is None for value in window_cpu_before.values())):
+                    raise AssertionError("Missing process CPU/RSS baseline")
+                started = time.monotonic()
+                with ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
+                    observed = list(pool.map(measure, range(REQUESTS // 3)))
+                window_elapsed = time.monotonic() - started
+                window_cpu_after = {name: process_cpu_seconds(pid) for name, pid in processes.items()}
+                window_rss_after = {name: rss_kib(pid) for name, pid in processes.items()}
+                if any(value is None or value <= 0 for value in window_rss_after.values()) or (
+                        any(value is None or value < window_cpu_before[name] for name, value in window_cpu_after.items())):
+                    raise AssertionError("Missing or regressed process CPU/RSS observation")
+                successes = [duration for valid, duration in observed if valid]
+                windows.append({"schema": 1, "window": window + 1,
+                                "requests": len(observed), "success": len(successes),
+                                "failure": len(observed) - len(successes),
+                                "rate_limit_safe_batch_spacing_ms": int(BATCH_SPACING_SECONDS * 1000),
+                                "concurrency": CONCURRENCY, "elapsed_seconds": round(window_elapsed, 3),
+                                "successful_requests_per_second": round(len(successes) / window_elapsed, 3),
+                                "p50_ms": percentile(successes, 50) if successes else None,
+                                "p95_ms": percentile(successes, 95) if successes else None,
+                                "p99_ms": percentile(successes, 99) if successes else None,
+                                "rss_before_kib": window_rss_before,
+                                "rss_after_kib": window_rss_after,
+                                "cpu_mean_percent_one_core": round(100 * sum(
+                                    window_cpu_after[name] - window_cpu_before[name] for name in processes
+                                ) / window_elapsed, 3), "production_sla_claim": False})
+                readings.extend(observed)
+                if window == 0:
+                    cpu_before, rss_before = window_cpu_before, window_rss_before
+                cpu_after, rss_after = window_cpu_after, window_rss_after
+            elapsed = time.monotonic() - all_started
             success = [duration for valid, duration in readings if valid]
             if len(success) != REQUESTS or not elapsed > 0:
                 raise AssertionError("Real authenticated API workload had failed requests")
@@ -372,6 +399,7 @@ def run(binary, seeder, account_admin):
                 "p99_ms": p99, "max_ci_p99_ms": MAX_P99_MS,
                 "max_ms": round(max(success), 3),
                 "rss_before_kib": rss_before, "rss_after_kib": rss_after,
+                "beta07_three_windows": windows,
                 "cpu_mean_percent_one_core": round(
                     100 * sum(cpu_after[name] - cpu_before[name] for name in processes) / elapsed, 3),
                 "synthetic_credentials_only": True,

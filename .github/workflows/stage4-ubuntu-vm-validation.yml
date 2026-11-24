@@ -124,6 +124,15 @@ jobs:
             --sha "$SOURCE_SHA" --os-image "${{ matrix.os }}" \
             --output vm-evidence/beta06-authenticated-gate.json
 
+      - name: Require three comparable within-profile ADC ADCS and authenticated HTTPS windows
+        run: |
+          python3 -m unittest discover -s tests -p beta07_ubuntu_perf_matrix_tests.py
+          python3 scripts/beta07_ubuntu_perf_matrix.py \
+            --sha "$SOURCE_SHA" --os-image "${{ matrix.os }}" \
+            --adc-windows vm-evidence/beta07-adc-adcs-windows.json \
+            --https-report vm-evidence/beta06-authenticated-https.json \
+            --output vm-evidence/beta07-transport-performance.json
+
       - name: Rehearse actual previous-version binary rollback on disposable state
         run: |
           DC24H_VM_REPORT_DIR="$PWD/vm-evidence" python3 \

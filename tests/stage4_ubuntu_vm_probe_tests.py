@@ -135,6 +135,12 @@ class UbuntuVmHubProbe(unittest.TestCase):
                         with (report_dir / "stage4-endurance.json").open("x", encoding="utf-8") as file:
                             json.dump(endurance, file, indent=2, sort_keys=True)
                             file.write("\n")
+                        # Preserve only the numeric, synthetic three-window
+                        # ADC/ADCS reports; no client transcript or secret.
+                        with (report_dir / "beta07-adc-adcs-windows.json").open("x", encoding="utf-8") as file:
+                            json.dump({"schema": 1, "source_sha": endurance["source_sha"],
+                                       "os_image": os_image, "windows": windows}, file, sort_keys=True)
+                            file.write("\n")
                 for profile, report in samples.items():
                     print(f"{profile}: {report['success']}/{report['requests']} successful, "
                           f"p95={report['p95_ms']} ms (isolated VM; no capacity claim)")
