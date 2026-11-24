@@ -38,8 +38,18 @@ const passkeyStore = openPasskeyStore(passkeyFile, rpID);
 const rateLimits = openRemoteRateLimitStore(rateLimitFile, config.token);
 const monitor = createRemoteSecurityMonitor(line => { process.stderr.write(line); });
 const verifyAudit = createPeriodicAuditVerifier(() => auditStore.verify());
+let nextDiagnosticLogAt = 0;
 const app = createServer(remoteGateway(config, {
   origin,
+  diagnostic: (requestId, outcome) => {
+    // Bounded, nonidentifying outage-only breadcrumbs. Normal activity and
+    // authentication failures never create high-volume per-user logs.
+    if (outcome !== "unavailable") return;
+    const now = Date.now();
+    if (now < nextDiagnosticLogAt) return;
+    nextDiagnosticLogAt = now + 30_000;
+    process.stderr.write("[remote-gateway] request=" + requestId + " outcome=unavailable\n");
+  },
   passkeys: { store: passkeyStore, ceremonies: passkeyCeremonies(passkeyStore, origin, rpID) },
   mfaVerify: mfa.verify,
   rateLimits,

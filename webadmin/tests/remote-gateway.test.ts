@@ -53,6 +53,38 @@ test("remote gateway refuses untrusted proxy identity headers even on a public c
   }
 });
 
+test("diagnostics expose only fresh server-generated request IDs and fixed outcomes", async () => {
+  const seen: Array<{ id: string; outcome: string }> = [];
+  const handler = remoteGateway(null, {
+    origin, diagnostic: (id, outcome) => seen.push({ id, outcome }),
+  });
+  async function invoke(path: string, supplied: string) {
+    const req = { url: path, method: "GET", socket: { remoteAddress: "127.0.0.1" },
+      headers: { host: "localhost", "x-dc24h-request-id": supplied } } as unknown as IncomingMessage;
+    const recorded: { status: number; headers: Record<string, string> } = { status: 0, headers: {} };
+    const res = { writableEnded: false, destroyed: false,
+      writeHead(status: number, headers: Record<string, string>) {
+        recorded.status = status; recorded.headers = headers;
+      }, end() {},
+    } as unknown as ServerResponse;
+    await handler(req, res);
+    return recorded;
+  }
+  const accepted = await invoke("/remote/v1/challenge", "attacker-chosen");
+  const refused = await invoke("/remote/v1/does-not-exist", "attacker-chosen");
+  for (const response of [accepted, refused]) {
+    assert.match(response.headers["X-DC24H-Request-ID"]!, /^[0-9a-f]{32}$/);
+    assert.notEqual(response.headers["X-DC24H-Request-ID"], "attacker-chosen");
+  }
+  assert.notEqual(accepted.headers["X-DC24H-Request-ID"], refused.headers["X-DC24H-Request-ID"]);
+  assert.deepEqual(seen, [
+    { id: accepted.headers["X-DC24H-Request-ID"], outcome: "ok" },
+    { id: refused.headers["X-DC24H-Request-ID"], outcome: "refused" },
+  ]);
+  assert.equal(accepted.status, 200);
+  assert.equal(refused.status, 404);
+});
+
 test("remote gateway matches only exact raw paths and methods", async () => {
   const handler = remoteGateway(null, { origin });
   for (const path of ["/remote/v1/challenge/", "/remote/v1//challenge", "/remote/v1/%63hallenge",
