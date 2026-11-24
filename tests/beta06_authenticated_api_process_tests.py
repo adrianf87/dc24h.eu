@@ -176,6 +176,10 @@ def run(binary, seeder, account_admin):
                 raise AssertionError("Maintenance fixture unexpectedly has serving hub")
             if synthetic_password_proof_status(api_socket, api_token, actor) != 200:
                 raise AssertionError("Real C++ account-maintenance password proof unavailable")
+            # Account authority intentionally applies a 1-second global POST
+            # budget. A diagnostic proof must not throttle the actual TOTP
+            # login whose latency and success are being measured.
+            time.sleep(1.1)
 
             enrollment = gateway_dir / "mfa.json"
             fd = os.open(enrollment, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
@@ -474,6 +478,9 @@ def run(binary, seeder, account_admin):
                                    if name.lower() == "set-cookie")
             if fetch("/remote/v1/summary", headers={"Cookie": restored_cookie})[0] != 200:
                 raise AssertionError("Fresh restored read-only grant not usable")
+            # An independent, valid password proof is required for this passkey
+            # refusal, rather than an incidental C++ one-second POST throttle.
+            time.sleep(1.1)
             # A revoked device in the restored catalog must never yield a
             # passkey challenge, even with the correct C++ password.
             status, payload, headers, _ = fetch("/remote/v1/challenge")
