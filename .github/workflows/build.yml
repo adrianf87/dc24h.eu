@@ -55,6 +55,14 @@ jobs:
           mkdir -p "$DC24H_VM_REPORT_DIR"
           ctest --test-dir "build/$BUILD_TYPE" --parallel 2 --output-on-failure --output-junit "$RUNNER_TEMP/ctest.xml"
 
+      - name: Verify pinned independent ADC client and redact capability evidence
+        run: |
+          python3 -m unittest discover -s tests -p 'beta07_client_evidence_tests.py'
+          python3 scripts/beta07_client_evidence.py \
+            --junit "$RUNNER_TEMP/ctest.xml" --sha "$SOURCE_SHA" \
+            --os-image "${{ matrix.os }}" \
+            --output "$RUNNER_TEMP/evidence/beta07-client-capabilities.json"
+
       - name: Prepare redacted CTest evidence
         if: always()
         run: python3 scripts/ci_junit_summary.py --junit "$RUNNER_TEMP/ctest.xml" --output "$RUNNER_TEMP/evidence/summary.json" --suite "cpp-${{ matrix.os }}-${{ matrix.build_type }}" --sha "$SOURCE_SHA"
