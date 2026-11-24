@@ -109,7 +109,8 @@ jobs:
         run: |
           DC24H_VM_REPORT_DIR="$PWD/vm-evidence" python3 \
             tests/beta06_authenticated_api_process_tests.py \
-            build/Stage4VM/dc24h build/Stage4VM/account_webadmin_tests
+            build/Stage4VM/dc24h build/Stage4VM/account_webadmin_tests \
+            build/Stage4VM/dc24h-account-admin
           python3 scripts/beta06_auth_gate.py \
             --report vm-evidence/beta06-authenticated-https.json \
             --sha "$SOURCE_SHA" --os-image "${{ matrix.os }}" \

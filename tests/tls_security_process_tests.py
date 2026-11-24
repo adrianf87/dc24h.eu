@@ -7,7 +7,7 @@ import tempfile
 import unittest
 
 from network_process_tests import BINARY, Hub
-from tls_support import TLS_READY, connect_tls, credentials, tls_endpoint
+from tls_support import TLS_READY, connect_tls, credentials, secure_client_context, tls_endpoint
 
 
 def openssl_cert(directory, name, *extra):
@@ -20,6 +20,11 @@ def openssl_cert(directory, name, *extra):
 
 
 class TlsSecurityProcessTests(unittest.TestCase):
+    def test_client_context_never_allows_tls_10_or_11(self):
+        with tempfile.TemporaryDirectory(prefix='dc24h-tls-client-') as directory:
+            cert, _ = credentials(directory)
+            self.assertGreaterEqual(secure_client_context(cert).minimum_version, ssl.TLSVersion.TLSv1_2)
+
     def test_beta06_certificate_replacement_requires_restart_and_rejects_stale_trust(self):
         """Disposable ADCS certificate generation, cutover, and negative host/key checks."""
         with tempfile.TemporaryDirectory(prefix='dc24h-tls-rotation-') as directory:
@@ -50,12 +55,12 @@ class TlsSecurityProcessTests(unittest.TestCase):
             endpoint = tls_endpoint(next_hub)
             with socket.create_connection(endpoint, timeout=3) as raw:
                 with self.assertRaises(ssl.SSLError):
-                    ssl.create_default_context(cafile=str(old_ca)).wrap_socket(raw, server_hostname='localhost')
+                    secure_client_context(old_ca).wrap_socket(raw, server_hostname='localhost')
             replacement_peer = connect_tls(self, next_hub, old_cert)
             replacement_peer.close()
             with socket.create_connection(endpoint, timeout=3) as raw:
                 with self.assertRaises(ssl.SSLCertVerificationError):
-                    ssl.create_default_context(cafile=old_cert).wrap_socket(raw, server_hostname='wrong.example')
+                    secure_client_context(old_cert).wrap_socket(raw, server_hostname='wrong.example')
             next_hub.stop()
 
             # Mispaired replacement must fail config validation, not enter service.
@@ -114,7 +119,7 @@ class TlsSecurityProcessTests(unittest.TestCase):
             peer.sendall(b'HSUP ADBASE\n')
             session = peer.session
             peer.close()
-            resumed = ssl.create_default_context(cafile=cert)
+            resumed = secure_client_context(cert)
             raw = socket.create_connection(endpoint, timeout=3)
             self.addCleanup(raw.close)
             second = resumed.wrap_socket(raw, server_hostname='localhost', session=session)

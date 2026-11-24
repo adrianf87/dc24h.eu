@@ -1,14 +1,13 @@
 """Force a pending TCP/TLS write and verify the absolute terminal drain limit."""
 import socket
 import signal
-import ssl
 import tempfile
 import time
 import unittest
 
 from network_process_tests import Hub
 from adc_login_process_tests import Peer
-from tls_support import credentials, tls_endpoint
+from tls_support import credentials, secure_client_context, tls_endpoint
 
 
 class CloseDeadlineTest(unittest.TestCase):
@@ -23,7 +22,7 @@ class CloseDeadlineTest(unittest.TestCase):
                     plain.login(b'ReconnectPlain', 210)
                     raw_tls = socket.create_connection(tls_endpoint(hub), timeout=3)
                     self.addCleanup(raw_tls.close)
-                    tls = ssl.create_default_context(cafile=cert).wrap_socket(raw_tls, server_hostname='localhost')
+                    tls = secure_client_context(cert).wrap_socket(raw_tls, server_hostname='localhost')
                     self.addCleanup(tls.close)
                     encrypted = Peer(self, tls)
                     encrypted.login(b'ReconnectTls', 211)
@@ -56,7 +55,7 @@ class CloseDeadlineTest(unittest.TestCase):
                 raw.setsockopt(socket.SOL_SOCKET,socket.SO_RCVBUF,1024)
                 raw.settimeout(5)
                 raw.connect(tls_endpoint(hub) if encrypted else hub.endpoints[0])
-                peer=ssl.create_default_context(cafile=cert).wrap_socket(raw,server_hostname='localhost') if encrypted else raw
+                peer=secure_client_context(cert).wrap_socket(raw,server_hostname='localhost') if encrypted else raw
                 self.addCleanup(peer.close)
                 client=Peer(self,peer);client.login(b'SlowTLS' if encrypted else b'SlowTCP',3 if encrypted else 2)
                 slow.append(client)

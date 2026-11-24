@@ -1,4 +1,4 @@
-"""Real C++ -> Node -> Apache HTTPS authenticated API measurements, Ubuntu CI only.
+"""Real maintenance C++ -> Node -> Apache HTTPS authenticated measurements, Ubuntu CI only.
 
 All accounts, TOTP factors, SQL data, TLS certificates and gateway catalogs are
 ephemeral. Results contain aggregate timings only; raw responses and cookies
@@ -21,14 +21,14 @@ import secrets
 import shutil
 import signal
 import socket
-import ssl
 import subprocess
 import sys
 import tempfile
 import time
 
 import stage1_matched_recovery_tests as matched
-from api_support import enable_api
+from api_support import enable_api, fetch_status
+from tls_support import secure_client_context
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -80,12 +80,26 @@ def code_now():
     return f"{(int.from_bytes(digest[offset:offset + 4], 'big') & 0x7fffffff) % 1000000:06d}"
 
 
+def synthetic_password_proof_status(endpoint, token, actor):
+    """Return only the status of the disposable C++ password proof, never its grant."""
+    body = ("actor_id=" + actor + "&proof=WebAdmin+operator+password!").encode("ascii")
+    headers = ("POST /api/v1/admin/access HTTP/1.1\r\nHost: localhost\r\n"
+               "Authorization: Bearer " + token + "\r\n"
+               "Content-Type: application/x-www-form-urlencoded\r\n"
+               "Content-Length: " + str(len(body)) + "\r\nConnection: close\r\n\r\n").encode("ascii")
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as peer:
+        peer.settimeout(4)
+        peer.connect(str(endpoint))
+        peer.sendall(headers + body)
+        return int(peer.recv(64).split(b" ", 2)[1])
+
+
 def percentile(samples, percentile_value):
     at = max(0, (len(samples) * percentile_value + 99) // 100 - 1)
     return round(sorted(samples)[at], 3)
 
 
-def run(binary, seeder):
+def run(binary, seeder, account_admin):
     if not (os.environ.get("GITHUB_ACTIONS") == "true" and
             os.environ.get("RUNNER_ENVIRONMENT") == "github-hosted" and
             os.environ.get("RUNNER_OS") == "Linux"):
@@ -94,8 +108,8 @@ def run(binary, seeder):
     if version not in ("22.04", "24.04", "26.04"):
         raise AssertionError("Unsupported measurement OS")
     sha = gates.required_source_sha(os.environ.get("SOURCE_SHA"))
-    if not Path(binary).is_file() or not Path(seeder).is_file():
-        raise AssertionError("Built C++ executable and real database fixture required")
+    if any(not Path(path).is_file() for path in (binary, seeder, account_admin)):
+        raise AssertionError("Built C++ hub, maintenance authority and real database fixture required")
     if not Path("webadmin/node_modules/tsx").is_dir():
         raise AssertionError("Installed Node gateway dependencies required")
 
@@ -129,14 +143,39 @@ def run(binary, seeder):
                 raise AssertionError("Synthetic C++ account seed missing")
             actor = actors.group(1)
             api_socket, api_token = enable_api(config, db.root)
+            # The serving hub deliberately does not accept account-password
+            # POSTs. Verify its real read-only status before shutting it down;
+            # the separate maintenance binary is the sole password authority.
             cpp = subprocess.Popen([str(binary), "--config", str(config)],
                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                                    start_new_session=True)
             until = time.monotonic() + 15
             while not api_socket.exists():
                 if cpp.poll() is not None or time.monotonic() > until:
-                    raise AssertionError("Real C++ maintenance API did not start")
+                    raise AssertionError("Serving hub read-only API did not start")
                 time.sleep(0.05)
+            until = time.monotonic() + 15
+            while fetch_status(api_socket, api_token)["server"]["core_running"] is not True:
+                if cpp.poll() is not None or time.monotonic() > until:
+                    raise AssertionError("Serving hub read-only API preflight failed")
+                time.sleep(0.05)
+            if synthetic_password_proof_status(api_socket, api_token, actor) != 400:
+                raise AssertionError("Serving hub unexpectedly exposes C++ password authority")
+            terminate(cpp); cpp = None
+            if api_socket.exists():
+                raise AssertionError("Serving hub did not release private API socket")
+            cpp = subprocess.Popen([str(account_admin), "--config", str(config)],
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                   start_new_session=True)
+            until = time.monotonic() + 15
+            while not api_socket.exists():
+                if cpp.poll() is not None or time.monotonic() > until:
+                    raise AssertionError("Real C++ account maintenance API did not start")
+                time.sleep(0.05)
+            if fetch_status(api_socket, api_token)["server"]["core_running"] is not False:
+                raise AssertionError("Maintenance fixture unexpectedly has serving hub")
+            if synthetic_password_proof_status(api_socket, api_token, actor) != 200:
+                raise AssertionError("Real C++ account-maintenance password proof unavailable")
 
             enrollment = gateway_dir / "mfa.json"
             fd = os.open(enrollment, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
@@ -210,7 +249,7 @@ def run(binary, seeder):
                                       start_new_session=True)
             wait_tcp(apache_port, apache)
 
-            context = ssl.create_default_context(cafile=str(cert))
+            context = secure_client_context(cert)
 
             def fetch(route, method="GET", data=None, headers=None):
                 conn = http.client.HTTPSConnection("localhost", apache_port,
@@ -263,16 +302,7 @@ def run(binary, seeder):
                 upstream_status = "unavailable"
                 try:
                     time.sleep(1.1)
-                    form = ("actor_id=" + actor + "&proof=WebAdmin+operator+password!").encode("ascii")
-                    wire = ("POST /api/v1/admin/access HTTP/1.1\r\nHost: localhost\r\n"
-                            "Authorization: Bearer " + api_token + "\r\n"
-                            "Content-Type: application/x-www-form-urlencoded\r\n"
-                            "Content-Length: " + str(len(form)) + "\r\nConnection: close\r\n\r\n").encode("ascii")
-                    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as probe:
-                        probe.settimeout(4)
-                        probe.connect(str(api_socket))
-                        probe.sendall(wire + form)
-                        upstream_status = str(int(probe.recv(64).split(b" ", 2)[1]))
+                    upstream_status = str(synthetic_password_proof_status(api_socket, api_token, actor))
                 except (OSError, ValueError, IndexError):
                     upstream_status = "unavailable"
                 raise AssertionError(f"Real synthetic TOTP login refused: HTTP={status} "
@@ -286,12 +316,12 @@ def run(binary, seeder):
                 try:
                     value = json.loads(payload)
                     valid = (status == 200 and value.get("schema") == 1 and
-                             value.get("mode") == "read-only" and value.get("server", {}).get("running") is True)
+                             value.get("mode") == "read-only" and value.get("server", {}).get("running") is False)
                 except (ValueError, AttributeError):
                     valid = False
                 return valid, elapsed
 
-            processes = {"hub": cpp.pid, "gateway": node.pid, "apache": apache.pid}
+            processes = {"account_admin": cpp.pid, "gateway": node.pid, "apache": apache.pid}
             cpu_before = {name: process_cpu_seconds(pid) for name, pid in processes.items()}
             rss_before = {name: rss_kib(pid) for name, pid in processes.items()}
             if any(value is None or value <= 0 for value in rss_before.values()) or (
@@ -314,7 +344,8 @@ def run(binary, seeder):
                 raise AssertionError("Real authenticated API p99 exceeded CI regression ceiling")
             report = {
                 "schema": 1, "source_sha": sha, "os_image": f"ubuntu-{version}",
-                "evidence": "real-cpp-node-apache-authenticated-totp",
+                "evidence": "real-account-admin-node-apache-authenticated-totp",
+                "maintenance_mode": True, "hub_readonly_boundary_verified": True,
                 "requests": REQUESTS, "success": len(success), "failure": 0,
                 "concurrency": CONCURRENCY, "elapsed_seconds": round(elapsed, 3),
                 "successful_requests_per_second": round(len(success) / elapsed, 3),
@@ -376,7 +407,7 @@ def run(binary, seeder):
                 raise AssertionError("Invalid disposable API token")
             (recovered_db.root / "admin.token").write_text(api_token + "\n", encoding="ascii")
             (recovered_db.root / "admin.token").chmod(0o600)
-            cpp = subprocess.Popen([str(binary), "--config", str(recovered_config)],
+            cpp = subprocess.Popen([str(account_admin), "--config", str(recovered_config)],
                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                                    start_new_session=True)
             until = time.monotonic() + 15
@@ -480,6 +511,6 @@ def run(binary, seeder):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        raise SystemExit("Usage: beta06_authenticated_api_process_tests.py HUB ACCOUNT_WEBADMIN_SEED")
-    run(str(Path(sys.argv[1]).resolve()), str(Path(sys.argv[2]).resolve()))
+    if len(sys.argv) != 4:
+        raise SystemExit("Usage: beta06_authenticated_api_process_tests.py HUB ACCOUNT_WEBADMIN_SEED ACCOUNT_ADMIN")
+    run(*(str(Path(value).resolve()) for value in sys.argv[1:]))

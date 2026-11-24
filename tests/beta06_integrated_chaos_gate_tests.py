@@ -17,12 +17,13 @@ class IntegratedGateTests(unittest.TestCase):
         data = {
             "beta06-authenticated-https.json": {
                 "schema": 1, "source_sha": SHA, "os_image": OS,
-                "evidence": "real-cpp-node-apache-authenticated-totp",
+                "evidence": "real-account-admin-node-apache-authenticated-totp",
+                "maintenance_mode": True, "hub_readonly_boundary_verified": True,
                 "requests": 24, "success": 24, "failure": 0,
                 "capacity_claim": False, "synthetic_credentials_only": True,
                 "p99_ms": 45, "max_ci_p99_ms": 2500,
                 "successful_requests_per_second": 17.6, "cpu_mean_percent_one_core": 45,
-                "rss_after_kib": {"hub": 1234, "gateway": 4567, "apache": 2222},
+                "rss_after_kib": {"account_admin": 1234, "gateway": 4567, "apache": 2222},
             },
             "beta06-restored-login.json": {
                 "schema": 1, "source_sha": SHA, "os_image": OS,

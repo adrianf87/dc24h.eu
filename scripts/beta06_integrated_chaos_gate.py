@@ -48,7 +48,9 @@ def assess(directory, junit, sha, os_image):
     require(type(auth.get("requests")) is int and type(auth.get("success")) is int and
             type(auth.get("failure")) is int and
             auth.get("requests") == 24 and auth.get("success") == 24 and auth.get("failure") == 0 and
-            auth.get("evidence") == "real-cpp-node-apache-authenticated-totp" and
+            auth.get("evidence") == "real-account-admin-node-apache-authenticated-totp" and
+            auth.get("maintenance_mode") is True and
+            auth.get("hub_readonly_boundary_verified") is True and
             auth.get("capacity_claim") is False and auth.get("synthetic_credentials_only") is True and
             type(auth.get("p99_ms")) in (float, int) and
             0 <= auth["p99_ms"] <= auth.get("max_ci_p99_ms", -1) and
@@ -57,7 +59,7 @@ def assess(directory, junit, sha, os_image):
             type(auth.get("cpu_mean_percent_one_core")) in (float, int) and
             0 <= auth["cpu_mean_percent_one_core"] <= 400,
             "Real authenticated fixture failed numeric evidence contract")
-    for category in ("hub", "gateway", "apache"):
+    for category in ("account_admin", "gateway", "apache"):
         require(type(auth.get("rss_after_kib")) is dict and
                 type(auth["rss_after_kib"].get(category)) is int and
                 0 < auth["rss_after_kib"][category] <= 524288,

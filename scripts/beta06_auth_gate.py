@@ -12,7 +12,7 @@ from pathlib import Path
 from beta06_ci_provenance import IMAGES, SHA
 
 WORKLOAD = {"requests": 24, "concurrency": 2, "max_ci_p99_ms": 2000}
-PROCESSES = {"hub", "gateway", "apache"}
+PROCESSES = {"account_admin", "gateway", "apache"}
 
 
 def validate(report, *, sha, image):
@@ -21,7 +21,9 @@ def validate(report, *, sha, image):
     if image not in IMAGES or not isinstance(report, dict) or (
         report.get("schema") != 1 or report.get("source_sha") != sha or
         report.get("os_image") != image or
-        report.get("evidence") != "real-cpp-node-apache-authenticated-totp" or
+        report.get("evidence") != "real-account-admin-node-apache-authenticated-totp" or
+        report.get("maintenance_mode") is not True or
+        report.get("hub_readonly_boundary_verified") is not True or
         report.get("synthetic_credentials_only") is not True or
         report.get("passkey_browser_flow_exercised") is not False or
         report.get("capacity_claim") is not False or

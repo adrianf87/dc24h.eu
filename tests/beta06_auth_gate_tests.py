@@ -13,13 +13,14 @@ SHA = "b" * 40
 
 def report():
     return {"schema": 1, "source_sha": SHA, "os_image": "ubuntu-24.04",
-            "evidence": "real-cpp-node-apache-authenticated-totp",
+            "evidence": "real-account-admin-node-apache-authenticated-totp",
+            "maintenance_mode": True, "hub_readonly_boundary_verified": True,
             "requests": 24, "success": 24, "failure": 0, "concurrency": 2,
             "elapsed_seconds": 3.2, "successful_requests_per_second": 7.5,
             "p50_ms": 10, "p95_ms": 25, "p99_ms": 35, "max_ms": 35,
             "max_ci_p99_ms": 2000,
-            "rss_before_kib": {"hub": 9000, "gateway": 20000, "apache": 6000},
-            "rss_after_kib": {"hub": 9001, "gateway": 20200, "apache": 6000},
+            "rss_before_kib": {"account_admin": 9000, "gateway": 20000, "apache": 6000},
+            "rss_after_kib": {"account_admin": 9001, "gateway": 20200, "apache": 6000},
             "cpu_mean_percent_one_core": 12.5, "synthetic_credentials_only": True,
             "passkey_browser_flow_exercised": False,
             "capacity_claim": False, "production_sla_claim": False}
@@ -45,8 +46,9 @@ class RealAuthGateTests(unittest.TestCase):
                  {"failure": 1}, {"successful_requests_per_second": 700},
                  {"p50_ms": 90}, {"p99_ms": 2100}, {"p99_ms": float("nan")},
                  {"cpu_mean_percent_one_core": None},
-                 {"rss_after_kib": {"hub": 4, "gateway": 5}},
-                 {"rss_before_kib": {"hub": 0, "gateway": 1, "apache": 1}})
+                 {"rss_after_kib": {"account_admin": 4, "gateway": 5}},
+                 {"rss_before_kib": {"account_admin": 0, "gateway": 1, "apache": 1}},
+                 {"maintenance_mode": False}, {"hub_readonly_boundary_verified": False})
         for changes in cases:
             item = copy.deepcopy(report()); item.update(changes)
             with self.subTest(changes=changes), self.assertRaises(ValueError):
