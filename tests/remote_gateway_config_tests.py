@@ -22,6 +22,10 @@ class RemoteConfiguration(unittest.TestCase):
         self.assertIn("SSLHonorCipherOrder On", config)
         self.assertIn("SSLCompression Off", config)
         self.assertIn("SSLSessionTickets Off", config)
+        for limit in ("LimitRequestLine 2048", "LimitRequestFields 48",
+                      "LimitRequestFieldSize 8192", "Timeout 5",
+                      "KeepAliveTimeout 2", "MaxKeepAliveRequests 50"):
+            self.assertIn(limit, config)
         self.assertIn("ProxyAddHeaders Off", config)
         self.assertIn("MergeSlashes Off", config)
         self.assertIn("RewriteEngine On", config)
@@ -64,6 +68,9 @@ class RemoteConfiguration(unittest.TestCase):
         for expected in ("DC24H_REMOTE_ORIGIN=https://localhost:8443",
                          "DC24H_REMOTE_PORT=4182", "IPAddressDeny=any",
                          "StateDirectory=dc24h-remote", "StateDirectoryMode=0700",
+                         "StartLimitIntervalSec=60", "StartLimitBurst=5",
+                         "TimeoutStopSec=20", "KillMode=mixed",
+                         "TasksMax=128", "LimitNOFILE=4096", "MemoryMax=512M",
                          "DC24H_REMOTE_MFA_FILE=/var/lib/dc24h-remote/mfa.json",
                          "DC24H_REMOTE_MFA_REPLAY_FILE=/var/lib/dc24h-remote/replay.jsonl",
                          "IPAddressAllow=localhost", "NoNewPrivileges=true",
@@ -71,7 +78,7 @@ class RemoteConfiguration(unittest.TestCase):
                          "PrivateDevices=true", "ProtectKernelTunables=true",
                          "ProtectKernelModules=true", "ProtectKernelLogs=true",
                          "ProtectControlGroups=true", "ProtectClock=true",
-                         "ProtectHostname=true", "ProtectProc=invisible",
+                         "ProtectHostname=true", "ProtectProc=invisible", "ProcSubset=pid",
                          "RestrictNamespaces=true", "RestrictSUIDSGID=true",
                          "RestrictRealtime=true", "LockPersonality=true",
                          "SystemCallArchitectures=native",

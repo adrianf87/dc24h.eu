@@ -5,6 +5,8 @@
 [Unit]
 Description=dc24h remote read-only gateway (local-only development)
 After=network.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
 
 [Service]
 Type=simple
@@ -34,6 +36,13 @@ Environment=DC24H_REMOTE_RATE_LIMIT_FILE=/var/lib/dc24h-remote/rate-limits.json
 ExecStart=/usr/bin/node --import tsx server/remote-main.ts
 Restart=on-failure
 RestartSec=3
+TimeoutStopSec=20
+KillMode=mixed
+# Bound an unattended local pilot without changing the C++ hub's quotas.
+# Review these limits for the chosen Node/V8 build before installing the unit.
+TasksMax=128
+LimitNOFILE=4096
+MemoryMax=512M
 StandardOutput=journal
 StandardError=journal
 NoNewPrivileges=true
@@ -48,6 +57,7 @@ ProtectControlGroups=true
 ProtectClock=true
 ProtectHostname=true
 ProtectProc=invisible
+ProcSubset=pid
 RestrictNamespaces=true
 RestrictSUIDSGID=true
 RestrictRealtime=true

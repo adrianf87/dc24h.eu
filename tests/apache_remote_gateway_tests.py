@@ -203,7 +203,9 @@ class ApacheRemoteGateway(unittest.TestCase):
         for path in ("/api/v1/status", "/admin-api/v1/management", "/management",
                      "/remote/v1/admin", "/remote/v1/wildcard", "/remote/v1/challenge/",
                      "/remote/v1//challenge",
-                     "/remote/v1/Challenge",
+                     "/remote/v1/Challenge", "/remote/v1/%73ummary",
+                     "/remote/v1/summary%2F", "/remote/v1/summary;ignored=1",
+                     "/remote/v1/../api/v1/status", "/remote/v1/%2e%2e/api/v1/status",
                      "/.env", "/secret.ini", "/private.key", "/api.token",
                      "/secret.sql", "/index.html", "/assets/local-test.js"):
             before = len(self.backend.seen)
