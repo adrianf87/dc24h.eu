@@ -46,6 +46,18 @@ jobs:
       - name: Compile server and integration tests
         run: cmake --build build/Stage4VM --parallel "$(nproc)"
 
+      - name: Checkout immutable beta-0.5.16 historical baseline
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: 5cd7b571fd974cbb7d59d8e4478185ff819e248a
+          path: beta05-reference
+          persist-credentials: false
+
+      - name: Compile actual previous-version server separately
+        run: |
+          cmake -S beta05-reference -B build/Beta05 -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
+          cmake --build build/Beta05 --target dc24h --parallel 2
+
       - name: Exercise disposable MariaDB, private HTTPS, API and ADC/ADCS
         run: |
           mkdir -p vm-evidence
@@ -95,6 +107,12 @@ jobs:
             --report vm-evidence/beta06-authenticated-https.json \
             --sha "$SOURCE_SHA" --os-image "${{ matrix.os }}" \
             --output vm-evidence/beta06-authenticated-gate.json
+
+      - name: Rehearse actual previous-version binary rollback on disposable state
+        run: |
+          DC24H_VM_REPORT_DIR="$PWD/vm-evidence" python3 \
+            tests/beta06_previous_version_rollback.py \
+            build/Stage4VM/dc24h build/Beta05/dc24h beta05-reference
 
       - name: Prepare non-sensitive Ubuntu test timing report
         if: always()
