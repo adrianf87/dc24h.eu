@@ -360,6 +360,34 @@ test("legacy hub downgrade and failed source read invalidate aggregate timeline"
   assert.deepEqual(JSON.parse(recovered.body).incidents.alerts, []);
 });
 
+test("slow final C++ grant check cannot present an expired observation as fresh", async () => {
+  const h = harness(true, true);
+  const login = await h.login();
+  const cookie = login.cookies[0]!.split(";")[0]!;
+  let checks = 0;
+  h.state.managementGate = async () => {
+    // The first check precedes the source read, the second follows it.
+    if (++checks === 2) await new Promise(resolve => setTimeout(resolve, 220));
+  };
+  h.state.statusResponse = async () => ({ ...snapshot,
+    observation: { schema: 1, observed_unix_ms: Date.now() - 9_900 },
+    network: { ...snapshot.network, security_rejected: 0 },
+  });
+  const expired = await h.call("/remote/v1/summary", "GET", "", { cookie });
+  assert.equal(expired.status, 503);
+  assert.equal(expired.body, '{"error":"unavailable"}');
+  checks = 0;
+  h.state.managementGate = async () => {};
+  h.state.statusResponse = async () => ({ ...snapshot,
+    observation: { schema: 1, observed_unix_ms: Date.now() },
+    network: { ...snapshot.network, security_rejected: 0 },
+  });
+  const recovered = await h.call("/remote/v1/summary", "GET", "", { cookie });
+  assert.equal(recovered.status, 200);
+  assert.equal(JSON.parse(recovered.body).incidents.state, "observed");
+  assert.deepEqual(JSON.parse(recovered.body).incidents.events, []);
+});
+
 test("a revoked session cannot finish an earlier in-flight status read", async () => {
   const h = harness();
   const login = await h.login();

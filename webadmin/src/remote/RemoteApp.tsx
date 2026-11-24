@@ -408,7 +408,9 @@ export function RemoteApp() {
           {state === "authorized" && <button type="button" onClick={() => void logout()}>{t.signOut}</button>}
         </div>
       </header>
-      <section className="remote-panel" aria-live="polite">
+      {/* Announce discrete status messages, not the entire metric dashboard:
+          its counters and incident ages re-render every second. */}
+      <section className="remote-panel">
         {state !== "authorized" && <p role="status">{state === "loading" ? t.loading : state === "unauthorized" ? t.unauthorized :
           state === "forbidden" ? t.forbidden : state === "expired" ? t.expired :
           state === "rate-limited" ? t.limited : t.unavailable}</p>}

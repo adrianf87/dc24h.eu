@@ -19,6 +19,7 @@ const alertCooldownMs = 60_000;
 export function aggregateObservability(monotonic: () => number) {
   const events: { kind: RedactedEventKind; at: number }[] = [];
   let last: { running: boolean; rejects: number; uptime: number; at: number } | undefined;
+  let lastClockAt: number | undefined;
   let lastAlertAt = Number.NEGATIVE_INFINITY;
   const auditWindow: Record<"login_refusals" | "rate_limit_refusals", number[]> = {
     login_refusals: [], rate_limit_refusals: [],
@@ -27,7 +28,8 @@ export function aggregateObservability(monotonic: () => number) {
     login_refusals: Number.NEGATIVE_INFINITY, rate_limit_refusals: Number.NEGATIVE_INFINITY,
   };
   const reset = () => {
-    last = undefined; events.length = 0; lastAlertAt = Number.NEGATIVE_INFINITY;
+    last = undefined; lastClockAt = undefined;
+    events.length = 0; lastAlertAt = Number.NEGATIVE_INFINITY;
     auditWindow.login_refusals.length = 0; auditWindow.rate_limit_refusals.length = 0;
     lastAuditAlert.login_refusals = Number.NEGATIVE_INFINITY;
     lastAuditAlert.rate_limit_refusals = Number.NEGATIVE_INFINITY;
@@ -39,8 +41,15 @@ export function aggregateObservability(monotonic: () => number) {
     events.push({ kind, at });
     if (events.length > maximumEvents) events.shift();
   };
+  const validClock = (at: number) => {
+    if (!Number.isFinite(at) || at < 0 ||
+        (lastClockAt !== undefined && at < lastClockAt)) { reset(); return false; }
+    lastClockAt = at;
+    return true;
+  };
   const observe = (sample: RemoteStatusProjection) => {
     const at = monotonic();
+    if (!validClock(at)) return;
     // Only C++ observations accepted through the bounded source-age contract
     // are eligible. Unknown older-v1 data cannot create verified incidents.
     const observation = sample.observation;
@@ -48,7 +57,6 @@ export function aggregateObservability(monotonic: () => number) {
     if (!observation || observation.schema !== 1 ||
         !Number.isSafeInteger(observation.source_age_ms) ||
         observation.source_age_ms < 0 || observation.source_age_ms > 10_000 ||
-        !Number.isFinite(at) || at < 0 ||
         typeof rejects !== "number" || !Number.isSafeInteger(rejects) || rejects < 0 ||
         !Number.isSafeInteger(sample.server.uptime_seconds) || sample.server.uptime_seconds < 0) {
       reset();
@@ -74,9 +82,9 @@ export function aggregateObservability(monotonic: () => number) {
   };
   const observeAudit = (event: "login_refused" | "mfa_refused" | "passkey_login_refused" | "rate_limited") => {
     const at = monotonic();
+    if (!validClock(at)) return;
     // Do not present an audit-derived alert as verified until a valid, recent
     // C++ read sample has been observed in this process. Record no identities.
-    if (!Number.isFinite(at) || at < 0 || (last && at < last.at)) { reset(); return; }
     if (!last || at - last.at > sampleValidityMs) { reset(); return; }
     const kind = event === "rate_limited" ? "rate_limit_refusals" : "login_refusals";
     const window = auditWindow[kind];
@@ -92,8 +100,7 @@ export function aggregateObservability(monotonic: () => number) {
   const sourceUnavailable = () => { reset(); };
   const read = () => {
     const at = monotonic();
-    if (!Number.isFinite(at) || at < 0 ||
-        (last && (at < last.at || at - last.at > sampleValidityMs))) {
+    if (!validClock(at) || (last && at - last.at > sampleValidityMs)) {
       reset();
       return { schema: 1 as const, state: "unknown" as const, events: [] as RedactedEvent[], alerts: [] as RedactedAlert[] };
     }

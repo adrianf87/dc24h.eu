@@ -28,3 +28,10 @@ Scope: [#238](https://github.com/adrianf87/dc24h.eu-high-starter/issues/238), th
 ## CI and handoff
 
 Node and Playwright regressions cover source age, legacy/invalid readings, monotonic reversal, hub restart, aggregate privacy, alert bounds/cooldown, bilingual keyboard/mobile UX and privilege exclusions. Acceptance requires green CI on the **exact final SHA** for GitHub-hosted Ubuntu 22.04/24.04/26.04. Per OWNER, **stop after the push triggers CI without waiting for results**. Pending CI is not Stage IV acceptance. Leave the PR in draft and do not merge, deploy or operate a production hub.
+
+## Fix Pass 4 — review and repairs (2026-11-24)
+
+- Rechecked the private C++→Node→browser observation chain. The final C++ grant check can await another upstream request after status receipt: sample age must include this monotonic wait and reject any now-over-10-second observation, not publish the previous age as current. Added a delayed-final-grant negative test and a recovery-to-unknown baseline check.
+- Rechecked timeline/alert boundedness, raw-counter redaction and audit-loss invalidation. A monotonic reversal *after* an audit alert but *before* the next C++ observation could produce a negative event age; enforce one clock ordering across source receipts, audit events and incident reads. Added a regression covering this ordering.
+- Rechecked EN/PL mobile incident region, keyboard-only local acknowledgment and absence of hub control writes. Removed the all-panel `aria-live` announcement that could repeatedly announce rapidly changing incident ages/counters; discrete `role=status` messages remain exposed to assistive technology.
+- These targeted regressions do not substitute for the required complete Ubuntu 22.04/24.04/26.04 exact-head browser/C++/security/CodeQL/sanitizer/systemd/recovery/benchmark CI matrix. No acceptance, deployment or merge is claimed before its separate verification.

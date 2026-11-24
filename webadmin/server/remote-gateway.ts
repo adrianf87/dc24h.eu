@@ -694,6 +694,10 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
     try {
       if (!config) throw new Error("unavailable");
       const data = parseRemoteSummary(await callUpstream(config, "/api/v1/status", "GET"));
+      // The C++ sample may wait behind the final grant check. Account for
+      // that wait with a monotonic clock before handing its age to browsers;
+      // otherwise a delayed response can masquerade as a fresh observation.
+      const sourceReceipt = performance.now();
       if (sessions.get(key) !== session) {
         reply(res, 403, { error: "forbidden" }, clearSession());
         return;
@@ -723,6 +727,14 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
         sessions.delete(key);
         reply(res, 401, { error: "unauthorized" }, clearSession());
         return;
+      }
+      if (data.observation) {
+        const elapsed = performance.now() - sourceReceipt;
+        const age = data.observation.source_age_ms + Math.ceil(elapsed);
+        if (!Number.isFinite(elapsed) || elapsed < 0 ||
+            !Number.isSafeInteger(age) || age > 10_000)
+          throw new Error("source_observation_expired");
+        data.observation = { schema: 1, source_age_ms: age };
       }
       // The dedicated parser has already validated and constructed only the
       // reviewed aggregate fields; never serialize a raw private API object.

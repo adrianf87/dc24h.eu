@@ -52,6 +52,7 @@ test("private bilingual incident timeline remains keyboard-readable on mobile wi
     }) }));
   await page.goto("/remote.html");
   const incidentRegion = page.getByRole("region", { name: "Private incident overview" });
+  await expect(page.locator(".remote-panel")).not.toHaveAttribute("aria-live", "polite");
   await expect(page.locator("main.remote-shell")).toHaveAttribute("lang", "en");
   await expect(incidentRegion.getByRole("heading", { name: "Recent aggregate service events" })).toBeVisible();
   await expect(incidentRegion.getByText("Transport security refusal threshold reached")).toBeVisible();

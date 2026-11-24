@@ -119,6 +119,21 @@ test("hub uptime reversal and monotonic reversal cannot fabricate a transition",
   assert.equal(monitor.read().state, "unknown");
 });
 
+test("clock reversal after audit events clears future-dated incident alerts", () => {
+  let at = 10_000;
+  const monitor = aggregateObservability(() => at);
+  monitor.observe(sample(true, 0));
+  at = 12_000;
+  for (let n = 0; n < 5; n++) monitor.observeAudit("login_refused");
+  assert.equal(monitor.read().alerts.length, 1);
+  // Older code compared the clock only to the source sample at 10 seconds,
+  // overlooking newer audit events and producing negative event ages.
+  at = 11_000;
+  assert.deepEqual(monitor.read(), { schema: 1, state: "unknown", events: [], alerts: [] });
+  monitor.observe(sample(true, 0));
+  assert.deepEqual(monitor.read().alerts, [], "a reversed audit window cannot join a fresh source");
+});
+
 test("real performance.now fractional milliseconds are valid monotonic receipts", () => {
   let at = 100.125;
   const monitor = aggregateObservability(() => at);

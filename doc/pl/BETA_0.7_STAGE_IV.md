@@ -30,3 +30,10 @@ Zakres: [#238](https://github.com/adrianf87/dc24h.eu-high-starter/issues/238), j
 ## Weryfikacja i granice
 
 Regresje Node i Playwright obejmują cofnięcie zegara, restart generacji, brak poświadczenia świeżości, utratę audytu i API, ograniczenia alertów, prywatność pól, wygasanie odczytów, EN/PL i klawiaturę. Ostatecznym warunkiem akceptacji jest CI na **dokładnym SHA** w GitHub-hosted Ubuntu 22.04/24.04/26.04. Zgodnie z OWNER **nie czekamy na wyniki CI** po wypchnięciu. `Pending` nie oznacza zaliczenia. Nie wykonujemy merge, instalacji ani wdrożenia bez osobnej zgody.
+
+## Fix Pass 4 — kontrola i poprawki (2026-11-24)
+
+- Po końcowej weryfikacji uprawnień C++ uwzględniamy także czas oczekiwania bramki Node w monotonicznym wieku próbki. Jeśli przekroczy 10 sekund, odczyt zostanie odrzucony jako niedostępny; nie przedstawiamy go jako świeżego. Dodano test opóźnionej kontroli i bezpiecznego wznowienia.
+- Cofnięcie zegara między sygnałami audytu a kolejnym odczytem nie może dać ujemnego wieku alertu. Jedna kontrola kolejności czasu obowiązuje odbiór źródła, zdarzenia audytu i odczyt historii. Po wykryciu cofnięcia historia staje się nieznana.
+- Wyłączono automatyczne odczytywanie przez czytnik ekranu całego panelu liczników aktualizowanych co sekundę; pojedyncze komunikaty mają nadal semantykę `role=status`. Pozostawiono klawiaturowe potwierdzenie tylko lokalne, bez zmiany uprawnień czy usługi.
+- Po wypchnięciu poprawek wymagane jest osobne potwierdzenie pełnej macierzy CI Ubuntu 22.04/24.04/26.04 na dokładnym SHA. Nie oznaczaj zadania jako zaakceptowanego przed sprawdzeniem testów, nie wykonuj merge ani wdrożenia.
