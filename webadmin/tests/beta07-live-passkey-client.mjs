@@ -12,22 +12,25 @@
 import { chromium } from "@playwright/test";
 import { createInterface } from "node:readline";
 
-type Start = { origin: string; actor: string; sessionCookie: string; csrf: string };
+// Playwright serializes page.evaluate callbacks into the browser. The tsx
+// TypeScript loader transforms nested functions to __name(...) calls, but that
+// module-local helper is not available inside Chromium. Keep this fixture as
+// native ESM JavaScript so the exact callback runs without loader rewrites.
 // Public output stays fixed-word only. This phase identifies the failed step
 // without exposing browser exceptions, credentials, URLs or HTTP bodies.
 let clientPhase = "startup";
 
 const lines = createInterface({ input: process.stdin, crlfDelay: Infinity })[Symbol.asyncIterator]();
-async function command(): Promise<Record<string, unknown>> {
+async function command() {
   const next = await lines.next();
   if (next.done) throw Error("Missing harness instruction");
-  const decoded: unknown = JSON.parse(next.value);
+  const decoded = JSON.parse(next.value);
   if (!decoded || typeof decoded !== "object" || Array.isArray(decoded)) throw Error("Invalid instruction");
-  return decoded as Record<string, unknown>;
+  return decoded;
 }
 
 async function main() {
-const startup = await command() as Start;
+const startup = await command();
 if (!/^https:\/\/localhost:\d{2,5}$/.test(startup.origin) ||
     !/^[1-9]\d{0,18}$/.test(startup.actor) ||
     !/^dc24h_remote=[0-9a-f]{64}$/.test(startup.sessionCookie) ||
@@ -92,7 +95,7 @@ try {
     // could contain a URL, request options or private WebAuthn material.
     let operation = "options_fetch";
     try {
-    const decode = (value: string) => Uint8Array.from(
+    const decode = value => Uint8Array.from(
       atob(value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=")),
       character => character.charCodeAt(0));
     const optionsResponse = await fetch("/remote/v1/passkey/enroll/options", {
@@ -102,12 +105,12 @@ try {
     operation = "options_json";
     const options = await optionsResponse.json();
     operation = "create";
-    let credential: Credential | null;
+    let credential;
     try {
       credential = await navigator.credentials.create({ publicKey: {
         ...options, challenge: decode(options.challenge),
         user: { ...options.user, id: decode(options.user.id) },
-        excludeCredentials: (options.excludeCredentials ?? []).map((entry: { id: string }) =>
+        excludeCredentials: (options.excludeCredentials ?? []).map(entry =>
           ({ ...entry, id: decode(entry.id) })),
       } });
     } catch (error) {
@@ -121,7 +124,7 @@ try {
     }
     if (!credential || !("toJSON" in credential)) return "enroll_no_credential";
     operation = "finish_build";
-    const response = (credential as PublicKeyCredential & { toJSON(): unknown }).toJSON();
+    const response = credential.toJSON();
     operation = "finish_fetch";
     const finish = await fetch("/remote/v1/passkey/enroll/finish", {
       method: "POST", headers: { "Content-Type": "application/json", "X-DC24H-Remote-CSRF": csrf },
@@ -156,7 +159,7 @@ try {
     // This is the *rotated* live browser cookie from enrollment, not an
     // already-invalid pre-enrollment cookie retained by the Python harness.
     if ((await fetch("/remote/v1/session")).status !== 401) return false;
-    const decode = (value: string) => Uint8Array.from(
+    const decode = value => Uint8Array.from(
       atob(value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=")),
       character => character.charCodeAt(0));
     const challengeResponse = await fetch("/remote/v1/challenge");
@@ -171,11 +174,11 @@ try {
     const options = await optionsResponse.json();
     const credential = await navigator.credentials.get({ publicKey: {
       ...options, challenge: decode(options.challenge),
-      allowCredentials: (options.allowCredentials ?? []).map((entry: { id: string }) =>
+        allowCredentials: (options.allowCredentials ?? []).map(entry =>
         ({ ...entry, id: decode(entry.id) })),
     } });
     if (!credential || !("toJSON" in credential)) return false;
-    const response = (credential as PublicKeyCredential & { toJSON(): unknown }).toJSON();
+    const response = credential.toJSON();
     const finish = () => fetch("/remote/v1/passkey/login/finish", {
       method: "POST", headers: { "Content-Type": "application/json", "X-DC24H-Remote-CSRF": csrf },
       body: JSON.stringify({ response }),
@@ -206,7 +209,7 @@ try {
 }
 }
 
-await main().catch(async (error: unknown) => {
+await main().catch(async error => {
   // A runner may collect stdout. Emit only fixed failure categories and
   // integer HTTP statuses, never browser errors with echoed options/cookies.
   const message = error instanceof Error ? error.message : "";

@@ -123,6 +123,9 @@ jobs:
 
       - name: Measure authenticated real C++ to Node to Apache HTTPS
         run: |
+          # The Playwright browser callback must remain native ESM. Running
+          # this fixture via tsx injects __name helpers unavailable in Chromium.
+          node --check webadmin/tests/beta07-live-passkey-client.mjs
           DC24H_VM_REPORT_DIR="$PWD/vm-evidence" python3 \
             tests/beta06_authenticated_api_process_tests.py \
             build/Stage4VM/dc24h build/Stage4VM/account_webadmin_tests \

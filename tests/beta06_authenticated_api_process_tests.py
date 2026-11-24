@@ -469,7 +469,7 @@ def run(binary, seeder, account_admin):
             # grant. Keep Chromium and its credential across the MariaDB and
             # five-store offline checkpoint; do not export the private key.
             browser = subprocess.Popen([
-                "node", "--import", "tsx", "tests/beta07-live-passkey-client.ts",
+                "node", "tests/beta07-live-passkey-client.mjs",
             ], cwd=ROOT / "webadmin", stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
                 bufsize=1, start_new_session=True)
