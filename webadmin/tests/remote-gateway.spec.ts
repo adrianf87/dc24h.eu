@@ -50,11 +50,14 @@ test("remote read-only screen needs a session, supports EN/PL and never offers h
   await expect(page.getByText(/Pozostały czas sesji \(orientacyjny\):/)).toBeVisible();
   await expect(page.getByText("Aktywne połączenia")).toBeVisible();
   await expect(page.getByText("Użytkownicy online")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Prywatny przegląd incydentów" })).toBeVisible();
+  await expect(page.getByText("Niedostępne w zatwierdzonym widoku tylko do odczytu")).toBeVisible();
   for (const title of ["Start", "Stop", "Restart", "Edit", "Restore", "Grant"]) {
     await expect(page.getByRole("button", { name: title, exact: true })).toHaveCount(0);
   }
   await page.getByRole("button", { name: "Wyloguj" }).click();
   await expect(page.getByText("Zaloguj się, aby odczytać zatwierdzone dane huba.")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Prywatny przegląd incydentów" })).toHaveCount(0);
 });
 
 test("local passkey inventory exposes only this account's device actions and revokes the browser session", async ({ page }) => {

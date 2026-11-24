@@ -36,6 +36,10 @@ const labels = {
     confirmRevoke: "Confirm revocation", cancel: "Cancel",
     revokeWarning: "Revoke this passkey? This immediately ends active sessions for the account and cannot be undone here.",
     actionDone: "Passkey operation completed.", revoked: "The key was revoked and sessions were ended. Sign in again.",
+    incidentTitle: "Private incident overview", gatewayReady: "Authenticated gateway read",
+    serviceReady: "Hub reported running", lastUpdated: "Read age", chatDenied: "Rejected chat total",
+    maintenance: "Recovery / maintenance", maintenanceUnknown: "Not exposed by approved read-only projection",
+    incidentReady: "Verified", incidentDegraded: "Degraded", stale: "Read expired; old counters are hidden until a verified refresh.",
   },
   pl: {
     title: "WebAdmin zdalny", mode: "Tylko odczyt · Dostęp lokalny", id: "ID konta administratora",
@@ -63,6 +67,10 @@ const labels = {
     confirmRevoke: "Potwierdź unieważnienie", cancel: "Anuluj",
     revokeWarning: "Unieważnić ten passkey? Spowoduje to zakończenie aktywnych sesji konta; tej operacji nie da się tutaj cofnąć.",
     actionDone: "Operacja passkey zakończona.", revoked: "Klucz unieważniono i zakończono sesje. Zaloguj się ponownie.",
+    incidentTitle: "Prywatny przegląd incydentów", gatewayReady: "Uwierzytelniony odczyt bramy",
+    serviceReady: "Hub zgłasza pracę", lastUpdated: "Wiek odczytu", chatDenied: "Łączna liczba odrzuconych wiadomości",
+    maintenance: "Odtwarzanie / konserwacja", maintenanceUnknown: "Niedostępne w zatwierdzonym widoku tylko do odczytu",
+    incidentReady: "Zweryfikowano", incidentDegraded: "Pogorszenie", stale: "Odczyt nieaktualny; poprzednie liczniki ukryto do czasu weryfikacji.",
   },
 } as const;
 
@@ -96,6 +104,7 @@ export function RemoteApp() {
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [summaryFetchedAt, setSummaryFetchedAt] = useState<number | null>(null);
   const [devices, setDevices] = useState<Device[] | null>(null);
   const [deviceLabels, setDeviceLabels] = useState<Record<string, string>>({});
   const [pendingRevoke, setPendingRevoke] = useState<string | null>(null);
@@ -124,6 +133,7 @@ export function RemoteApp() {
     summaryRequest.current++;
     deviceRequest.current++;
     setSummary(null);
+    setSummaryFetchedAt(null);
     setDevices(null);
     setPendingRevoke(null);
     setDeviceMutationBusy(null);
@@ -155,7 +165,10 @@ export function RemoteApp() {
       const { status, data } = await call("summary");
       if (epoch !== sessionEpoch.current || requestId !== summaryRequest.current) return;
       const parsed = status === 200 ? parseRemoteSummaryResponse(data) : null;
-      if (parsed) { setSummary(parsed); return; }
+      if (parsed) {
+        const fetchedAt = performance.now();
+        setClock(fetchedAt); setSummaryFetchedAt(fetchedAt); setSummary(parsed); return;
+      }
       invalidate(status === 200 ? "unavailable" : failure(status));
     } catch {
       if (epoch === sessionEpoch.current && requestId === summaryRequest.current) invalidate("unavailable");
@@ -173,6 +186,7 @@ export function RemoteApp() {
     setPendingRevoke(null);
     setDeviceMutationBusy(null);
     setSummary(null);
+    setSummaryFetchedAt(null);
     // Only the server can establish the lifetime of the rotated cookie. A
     // stale or failed inspection cannot overwrite the new CSRF identifier.
     void call("session").then(({ status, data }) => {
@@ -315,14 +329,18 @@ export function RemoteApp() {
     } catch { if (epoch === sessionEpoch.current) setActionMessage(t.actionFailed); }
     finally { if (epoch === sessionEpoch.current) setDeviceMutationBusy(null); }
   };
-  const rows: [string, string | number][] = summary ? [
-    [t.version, summary.server.version], [t.running, summary.server.running ? t.yes : t.no],
-    [t.uptime, summary.server.uptime_seconds], [t.connections, summary.network.active_connections],
-    [t.accepted, summary.network.accepted_connections], [t.online, summary.users.online],
-    [t.peak, summary.users.peak_online], [t.chat, summary.chat.received],
-    [t.rejected, summary.chat.rejected],
-    ...(summary.search ? [[t.queries, summary.search.queries], [t.results, summary.search.results]] as [string, number][] : []),
-    ...(summary.transfers ? [[t.ctm, summary.transfers.ctm], [t.rcm, summary.transfers.rcm]] as [string, number][] : []),
+  // Monotonic client receipt age is the only timestamp the approved gateway
+  // supplies. Never invent a server-side recovery state or an audit timeline.
+  const freshSummary = summary && summaryFetchedAt !== null &&
+    clock >= summaryFetchedAt && clock - summaryFetchedAt <= 45_000 ? summary : null;
+  const rows: [string, string | number][] = freshSummary ? [
+    [t.version, freshSummary.server.version], [t.running, freshSummary.server.running ? t.yes : t.no],
+    [t.uptime, freshSummary.server.uptime_seconds], [t.connections, freshSummary.network.active_connections],
+    [t.accepted, freshSummary.network.accepted_connections], [t.online, freshSummary.users.online],
+    [t.peak, freshSummary.users.peak_online], [t.chat, freshSummary.chat.received],
+    [t.rejected, freshSummary.chat.rejected],
+    ...(freshSummary.search ? [[t.queries, freshSummary.search.queries], [t.results, freshSummary.search.results]] as [string, number][] : []),
+    ...(freshSummary.transfers ? [[t.ctm, freshSummary.transfers.ctm], [t.rcm, freshSummary.transfers.rcm]] as [string, number][] : []),
   ] : [];
   return (
     <main className="remote-shell">
@@ -354,9 +372,20 @@ export function RemoteApp() {
           <div className="remote-toolbar"><span>{t.mode}</span><button type="button" onClick={() => void load()}>{t.refresh}</button></div>
           <p className="remote-hint" role="status">{sessionExpiresAt === null ? t.sessionUnverified :
             `${t.sessionRemaining}: ${Math.max(0, Math.ceil((sessionExpiresAt - clock) / 60_000))} ${t.minutes}`}</p>
-          {summary ? <dl className="remote-grid">{rows.map(([key, value]) =>
+          {freshSummary && <section className="remote-incidents" aria-label={t.incidentTitle}>
+            <h2>{t.incidentTitle}</h2>
+            <dl className="remote-grid">
+              <div><dt>{t.gatewayReady}</dt><dd>{t.incidentReady}</dd></div>
+              <div><dt>{t.serviceReady}</dt><dd>{freshSummary.server.running ? t.incidentReady : t.incidentDegraded}</dd></div>
+              <div><dt>{t.lastUpdated}</dt><dd>{Math.max(0, Math.floor((clock - summaryFetchedAt!) / 1000))} s</dd></div>
+              <div><dt>{t.chatDenied}</dt><dd>{freshSummary.chat.rejected}</dd></div>
+              <div><dt>{t.maintenance}</dt><dd className="remote-unknown">{t.maintenanceUnknown}</dd></div>
+            </dl>
+          </section>}
+          {freshSummary ? <dl className="remote-grid">{rows.map(([key, value]) =>
             <div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}</dl> : <p>{t.loading}</p>}
-          {summary && !summary.search && !summary.transfers && <p className="remote-hint">{t.noData}</p>}
+          {summary && !freshSummary && <p role="status">{t.stale}</p>}
+          {freshSummary && !freshSummary.search && !freshSummary.transfers && <p className="remote-hint">{t.noData}</p>}
           <section className="remote-devices">
             <h2>{t.devices}</h2>
             <p className="remote-hint">{t.passkeyHelp}</p>
