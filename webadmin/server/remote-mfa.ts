@@ -2,8 +2,10 @@
 // nor the replay ledger is ever returned by the browser gateway.
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { constants, closeSync, fstatSync, fsyncSync, lstatSync, openSync, readFileSync, readSync, writeSync } from "node:fs";
-import { dirname, isAbsolute, basename, join } from "node:path";
+import { dirname, basename, join } from "node:path";
 import { renameSync, unlinkSync } from "node:fs";
+import { assertPrivateParent } from "./remote-private-path.ts";
+import { fingerprint, fingerprintPrivateFile } from "./private-catalog-integrity.ts";
 
 type Secrets = Map<string, Buffer>;
 const actorPattern = /^[1-9][0-9]{0,18}$/;
@@ -47,11 +49,8 @@ function visitReplayLedger(fd: number, visit: (entry: ReplayEntry) => void): voi
 }
 
 function privateFile(path: string, flags: number, create = false): number {
-  if (!isAbsolute(path)) throw new Error("Private MFA file configuration required");
+  assertPrivateParent(path);
   const uid = process.geteuid?.();
-  const parent = lstatSync(dirname(path));
-  if (!parent.isDirectory() || parent.uid !== uid || (parent.mode & 0o077))
-    throw new Error("Unsafe MFA directory");
   const fd = openSync(path, flags | constants.O_NOFOLLOW, create ? 0o600 : undefined);
   try {
     const file = fstatSync(fd);
@@ -108,9 +107,16 @@ export function loadTotpVerifier(secretsPath: string, replayPath: string) {
   const lastUsed = new Map<string, number>();
   const seedFd = privateFile(secretsPath, constants.O_RDONLY | constants.O_NONBLOCK);
   const enrollmentIdentity = fstatSync(seedFd);
+  let enrollmentDigest = "";
   try {
-    if (fstatSync(seedFd).size > 16_384) throw new Error("MFA enrollment file too large");
-    const body: unknown = JSON.parse(readFileSync(seedFd, "utf8"));
+    if (enrollmentIdentity.size > 16_384) throw new Error("MFA enrollment file too large");
+    const bytes = readFileSync(seedFd);
+    let body: unknown;
+    try {
+      if (bytes.length !== enrollmentIdentity.size) throw new Error("MFA enrollment changed during read");
+      enrollmentDigest = fingerprint(bytes);
+      body = JSON.parse(bytes.toString("utf8"));
+    } finally { bytes.fill(0); }
     if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error("Invalid MFA enrollment");
     const root = body as Record<string, unknown>;
     if (root.schema !== 1 || !root.accounts || typeof root.accounts !== "object" ||
@@ -128,6 +134,13 @@ export function loadTotpVerifier(secretsPath: string, replayPath: string) {
     for (const key of secrets.values()) key.fill(0);
     throw error;
   } finally { closeSync(seedFd); }
+  try {
+    if (fingerprintPrivateFile(secretsPath, enrollmentIdentity) !== enrollmentDigest)
+      throw new Error("MFA enrollment changed during open");
+  } catch (error) {
+    for (const key of secrets.values()) key.fill(0);
+    throw error;
+  }
 
   let ledgerFd: number;
   // Never silently reset consumed TOTP steps after deletion, backup loss or
@@ -144,11 +157,15 @@ export function loadTotpVerifier(secretsPath: string, replayPath: string) {
   const verify = (actor: string, code: string, now: number): boolean => {
     // A new seed must never coexist with a live verifier using cached old
     // bytes. An offline replacement revokes this process until it restarts.
+    assertPrivateParent(secretsPath);
+    assertPrivateParent(replayPath);
     const currentFile = lstatSync(secretsPath);
     if (!currentFile.isFile() || currentFile.uid !== process.geteuid?.() || currentFile.nlink !== 1 ||
       currentFile.dev !== enrollmentIdentity.dev ||
       currentFile.ino !== enrollmentIdentity.ino || currentFile.size !== enrollmentIdentity.size ||
-      currentFile.mtimeMs !== enrollmentIdentity.mtimeMs || (currentFile.mode & 0o077))
+      currentFile.mtimeMs !== enrollmentIdentity.mtimeMs ||
+      currentFile.ctimeMs !== enrollmentIdentity.ctimeMs || (currentFile.mode & 0o077) ||
+      fingerprintPrivateFile(secretsPath, enrollmentIdentity) !== enrollmentDigest)
       throw new Error("MFA enrollment changed; restart required");
     const currentLedger = lstatSync(replayPath);
     if (!currentLedger.isFile() || currentLedger.uid !== process.geteuid?.() || currentLedger.nlink !== 1 ||
@@ -297,6 +314,7 @@ export function replaceTotpSecret(options: TotpReplacement): void {
         current.uid !== process.geteuid?.() || current.nlink !== 1 ||
         !current.isFile() || (current.mode & 0o077))
       throw new Error("MFA enrollment changed during replacement");
+    assertPrivateParent(enrollmentPath);
     renameSync(tmp, enrollmentPath);
     created = false;
     const dirFd = openSync(directory, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
@@ -337,6 +355,7 @@ export function compactTotpReplay(replayPath: string, offlineAcknowledged: true)
         current.size !== old.size || current.mtimeMs !== old.mtimeMs ||
         current.uid !== process.geteuid?.() || current.nlink !== 1 || (current.mode & 0o077))
       throw new Error("MFA replay changed during compaction");
+    assertPrivateParent(replayPath);
     renameSync(tmp, replayPath);
     created = false;
     const dirFd = openSync(directory, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);

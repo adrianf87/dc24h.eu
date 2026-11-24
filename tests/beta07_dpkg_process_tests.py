@@ -18,13 +18,14 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import beta07_ci_deb as deb
+import beta08_recovery_auth as authenticity
 import stage1_matched_recovery_tests as matched
 import beta06_previous_version_rollback as previous
 
 
-def quiet(argv, success=True, timeout=50):
+def quiet(argv, success=True, timeout=50, cwd=None):
     result = subprocess.run(argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE, timeout=timeout, check=False)
+                            stderr=subprocess.PIPE, timeout=timeout, check=False, cwd=cwd)
     if success and result.returncode:
         raise AssertionError("Isolated dpkg fixture transition refused; inspect runner privately")
     return result
@@ -49,7 +50,7 @@ def run(current, historical, checkout):
         raise AssertionError("Unexpected previous package source")
     if previous.execute(historical, "--version") != previous.PREVIOUS_VERSION:
         raise AssertionError("Previous binary version mismatch")
-    if previous.execute(current, "--version") != "dc24h.eu beta-0.7.20":
+    if previous.execute(current, "--version") != "dc24h.eu beta-0.8.20":
         raise AssertionError("Current test fixture version mismatch")
     if quiet(["dpkg-query", "-W", "-f=${Status}", deb.PACKAGE], success=False).returncode == 0:
         raise AssertionError("CI-only package name is already installed; refuse interference")
@@ -63,6 +64,8 @@ def run(current, historical, checkout):
         new_pkg = deb.build(current, root / "new-stage", deb.VERSIONS["current"], sha)
         failed_pkg = deb.build(current, root / "failed-stage", deb.FAILED_UPGRADE_VERSION,
                                sha, fail_preinst=True)
+        post_failed_pkg = deb.build(current, root / "failed-post-stage", deb.FAILED_POSTINST_VERSION,
+                                    sha, fail_postinst=True)
         original, recovered = matched.IsolatedDatabase(root / "source"), matched.IsolatedDatabase(root / "recovered")
         installed = False
         try:
@@ -74,6 +77,9 @@ def run(current, historical, checkout):
             original.sql("INSERT INTO dc24h.dc24h_accounts "
                          "(id,name,role,status,created_at,updated_at,revision) "
                          "VALUES (7,'ci-dpkg','owner','active',1,2,2);"
+                         "INSERT INTO dc24h.dc24h_accounts "
+                         "(id,name,role,status,created_at,updated_at,revision) "
+                         "VALUES (8,'ci-disabled','administrator','disabled',1,2,3);"
                          "INSERT INTO dc24h.dc24h_account_credentials "
                          "(account_id,verifier,created_at) VALUES (7,UNHEX('00FF61'),2);")
             gateway = root / "gateway"; gateway.mkdir(mode=0o700)
@@ -93,13 +99,20 @@ def run(current, historical, checkout):
                          for name, maximum in matched.private.FILES.items()}
                 if before != after:
                     raise AssertionError("Private state changed during package capture")
+            trust = root / "offline-trust"; trust.mkdir(mode=0o700)
+            key = trust / "key"
+            matched.private.write_private(trust, key.name, os.urandom(32))
+            ledger = trust / "accepted-recovery-pairs"
+            authenticity.initialize_ledger(ledger)
+            signed = root / "authenticated-pair"; signed.mkdir(mode=0o700)
+            pinned_id = authenticity.sign(pair_dir, key, signed)
             original.stop()
 
             quiet(["sudo", "dpkg", "--install", str(old_pkg)]); installed = True
             if previous.execute(installed_binary, "--version") != previous.PREVIOUS_VERSION:
                 raise AssertionError("Installed previous binary failed to execute")
             quiet(["sudo", "dpkg", "--install", str(new_pkg)])
-            if previous.execute(installed_binary, "--version") != "dc24h.eu beta-0.7.20":
+            if previous.execute(installed_binary, "--version") != "dc24h.eu beta-0.8.20":
                 raise AssertionError("Installed current binary failed to execute")
             if exact_file_sha(installed_binary) != exact_file_sha(current):
                 raise AssertionError("Installed current executable hash mismatch")
@@ -121,6 +134,18 @@ def run(current, historical, checkout):
                     "install ok installed|" + deb.VERSIONS["current"]):
                 raise AssertionError("Failed pre-unpack upgrade altered dpkg installed state")
 
+            # A genuine post-unpack failure is more disruptive than preinst:
+            # dpkg may have replaced files and left the new package in a
+            # half-configured state. Recovery must perform an actual downgrade.
+            if quiet(["sudo", "dpkg", "--install", str(post_failed_pkg)], success=False).returncode == 0:
+                raise AssertionError("Injected dpkg postinst failure unexpectedly succeeded")
+            status = quiet(["dpkg-query", "-W", "-f=${Status}|${Version}", deb.PACKAGE]).stdout.decode()
+            if status == "install ok installed|" + deb.FAILED_POSTINST_VERSION or (
+                    not status.endswith("|" + deb.FAILED_POSTINST_VERSION)):
+                raise AssertionError("Post-unpack failure state was not captured honestly")
+            if quiet(["systemctl", "is-active", "--quiet", deb.UNIT], success=False).returncode == 0:
+                raise AssertionError("Inert CI fixture service unexpectedly activated")
+
             quiet(["sudo", "dpkg", "--install", str(old_pkg)])  # Real package downgrade.
             if exact_file_sha(installed_binary) != exact_file_sha(historical) or (
                     previous.execute(installed_binary, "--version") != previous.PREVIOUS_VERSION):
@@ -141,12 +166,26 @@ def run(current, historical, checkout):
                 dump, snapshot, pair_dir, sha, recovered.datadir, restored)
             if preflight["verified_components"] != 6 or preflight["sql_export_applied_migration_rows"] != 11:
                 raise AssertionError("Matched rollback preflight refused the v11 source")
+            authenticity.verify(dump, snapshot, pair_dir, sha, signed, key, pinned_id, ledger,
+                                consume=True)
             recovered.initialize(); recovered.start(); recovered.setup_schema()
             recovered.restore_sql(dump)
             matched.private.restore_to_fresh_directory(snapshot, restored)
             matched.verify_recovered(recovered, restored, installed_binary)
             recovered.stop(); recovered.start()
             matched.verify_recovered(recovered, restored, installed_binary)
+            if recovered.sql("SELECT status FROM dc24h.dc24h_accounts WHERE id=8;") != "disabled":
+                raise AssertionError("Revoked account unexpectedly active after prior-binary restart")
+            # Reopen the restored private stores in the actual Node gateway
+            # verifier after the previous C++ package and fresh DB restart.
+            quiet(["node", "--import", "tsx", "tests/beta08-postrollback-state.ts", str(restored)],
+                  cwd=Path(__file__).resolve().parents[1] / "webadmin")
+            try:
+                authenticity.verify(dump, snapshot, pair_dir, sha, signed, key, pinned_id, ledger)
+            except ValueError:
+                pass
+            else:
+                raise AssertionError("Consumed rollback pair was erroneously reusable")
 
             report_dir = os.environ.get("DC24H_VM_REPORT_DIR")
             if report_dir:
@@ -157,10 +196,15 @@ def run(current, historical, checkout):
                           "actual_dpkg_installed_upgrade_downgrade": True,
                           "failed_upgrade_refused_without_binary_replacement": True,
                           "valid_preinst_failure_kept_previous_installed_state": True,
+                          "valid_postinst_failure_required_explicit_previous_package_recovery": True,
+                          "inert_ci_service_remained_inactive": True,
                           "installed_binary_and_unit_owned": True,
                           "previous_executable_hash_and_version_matched": True,
                           "fresh_sql_and_five_store_preflight_succeeded": True,
                           "schema_v11_and_private_five_file_restore_verified": True,
+                          "independently_pinned_offline_hmac_and_anti_reuse_gate": True,
+                          "reopened_node_totp_revocation_audit_and_budget_state": True,
+                          "revoked_account_stays_disabled_after_previous_binary_restart": True,
                           "restart_of_fresh_database_accepted": True,
                           "production_package_or_rollback_claim": False}
                 with (Path(report_dir) / "beta07-dpkg-rollback.json").open("x", encoding="utf8") as output:

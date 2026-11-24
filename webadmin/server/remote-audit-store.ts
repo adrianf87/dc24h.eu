@@ -2,9 +2,10 @@
 // modification/gaps but is NOT a keyed proof against a privileged attacker.
 import { createHash } from "node:crypto";
 import { constants, closeSync, fstatSync, fsyncSync, lstatSync, openSync, readFileSync, readSync, writeSync } from "node:fs";
-import { dirname, isAbsolute } from "node:path";
+import { dirname } from "node:path";
 import { remoteAuditEvents, remoteAuditRecord } from "./remote-audit.ts";
 import type { RemoteEvent } from "./remote-gateway.ts";
+import { assertPrivateParent } from "./remote-private-path.ts";
 
 const maxBytes = 8 * 1024 * 1024;
 const zeroHash = "0".repeat(64);
@@ -14,10 +15,7 @@ const eventNames: ReadonlySet<string> = new Set(remoteAuditEvents);
 // Explicit first-installation only. Normal startup must never replace a lost
 // audit chain with an empty file (which would conceal missing security events).
 export function initializeRemoteAuditStore(path: string): void {
-  if (!isAbsolute(path)) throw new Error("Absolute audit file required");
-  const parent = lstatSync(dirname(path));
-  if (!parent.isDirectory() || parent.uid !== process.geteuid?.() || (parent.mode & 0o077))
-    throw new Error("Unsafe audit directory");
+  assertPrivateParent(path);
   const fd = openSync(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
   try { fsyncSync(fd); }
   finally { closeSync(fd); }
@@ -45,18 +43,19 @@ function checkRow(value: unknown, sequence: number, previous: string): Row {
     at: item.at as string, digest: item.digest as string };
 }
 
-export function openRemoteAuditStore(path: string) {
-  if (!isAbsolute(path)) throw new Error("Absolute audit file required");
+export function openRemoteAuditStore(path: string, limitBytes = maxBytes) {
+  assertPrivateParent(path);
+  // Production always uses 8 MiB. A lower fixed limit permits deterministic
+  // disposable boundary tests without writing tens of thousands of fsyncs.
+  if (!Number.isSafeInteger(limitBytes) || limitBytes < 512 || limitBytes > maxBytes)
+    throw new Error("Invalid audit capacity");
   const uid = process.geteuid?.();
-  const parent = lstatSync(dirname(path));
-  if (!parent.isDirectory() || parent.uid !== uid || (parent.mode & 0o077))
-    throw new Error("Unsafe audit directory");
   const fd = openSync(path, constants.O_RDWR | constants.O_APPEND | constants.O_NOFOLLOW);
   let sequence = 0, previous = zeroHash, size = 0, healthy = true, dropped = 0;
   try {
     const state = fstatSync(fd);
     if (!state.isFile() || state.uid !== uid || state.nlink !== 1 || (state.mode & 0o077) ||
-        state.size > maxBytes) throw new Error("Unsafe or full audit file");
+        state.size > limitBytes) throw new Error("Unsafe or full audit file");
     size = state.size;
     const bytes = readFileSync(fd);
     try {
@@ -79,6 +78,7 @@ export function openRemoteAuditStore(path: string) {
   const append = (event: RemoteEvent, milliseconds: number): void => {
     if (!healthy) throw new Error("Audit sink unavailable");
     try {
+      assertPrivateParent(path);
       const at = JSON.parse(remoteAuditRecord(event, milliseconds)).at as string;
       if (sequence >= Number.MAX_SAFE_INTEGER) throw new Error("Audit sequence exhausted");
       const row: Row = { schema: 1, sequence: sequence + 1, previous, event, at,
@@ -88,7 +88,7 @@ export function openRemoteAuditStore(path: string) {
         const stat = lstatSync(path), opened = fstatSync(fd);
         if (!stat.isFile() || stat.dev !== opened.dev || stat.ino !== opened.ino ||
             stat.uid !== uid || stat.nlink !== 1 || (stat.mode & 0o077) ||
-            opened.size !== size || size + payload.length > maxBytes)
+            opened.size !== size || size + payload.length > limitBytes)
           throw new Error("Audit sink rotated, corrupted or full");
         if (writeSync(fd, payload) !== payload.length) throw new Error("Incomplete audit write");
         fsyncSync(fd);
@@ -110,10 +110,11 @@ export function openRemoteAuditStore(path: string) {
     // including during an otherwise idle authentication period.
     const bytes = Buffer.alloc(size);
     try {
+      assertPrivateParent(path);
       const stat = lstatSync(path), opened = fstatSync(fd);
       if (!stat.isFile() || stat.dev !== opened.dev || stat.ino !== opened.ino ||
           stat.uid !== uid || stat.nlink !== 1 || (stat.mode & 0o077) ||
-          opened.size !== size || size > maxBytes) throw Error("Audit file changed");
+          opened.size !== size || size > limitBytes) throw Error("Audit file changed");
       let offset = 0;
       while (offset < bytes.length) {
         const count = readSync(fd, bytes, offset, bytes.length - offset, offset);
@@ -140,6 +141,9 @@ export function openRemoteAuditStore(path: string) {
     append,
     verify,
     health: () => ({ healthy: healthy && !closed, dropped, sequence }),
+    // Only a local operator signal; never projected to authenticated browsers.
+    capacity: () => ({ used_bytes: size, limit_bytes: limitBytes,
+      near_limit: size >= Math.floor(limitBytes * 0.75) }),
     close: () => { if (!closed) { closed = true; closeSync(fd); } },
   };
 }

@@ -12,6 +12,7 @@ import type { PasskeyCeremonies } from "./remote-webauthn.ts";
 import type { PasskeyStore } from "./remote-passkeys.ts";
 import type { RemoteRateLimitStore } from "./remote-rate-limit-store.ts";
 import { aggregateObservability } from "./remote-observability.ts";
+import type { IncidentJournalSink } from "./remote-observability.ts";
 export { isJsonContentType } from "./json-content-type.ts";
 
 type Credentials = { socket: string; token: string };
@@ -31,6 +32,8 @@ export interface RemoteOptions {
   // A promise-based best-effort sink never satisfies strict audit mode.
   strictAudit?: boolean;
   auditHealthy?: () => boolean;
+  // Optional disposable redacted timeline; never grants access to raw audit.
+  incidentJournal?: IncidentJournalSink;
   // No login session can be created without an explicitly configured second factor.
   mfaVerify?: (actor: string, code: string, at: number) => boolean;
   // Only the isolated local gateway passes this pair, never Vite or the public API.
@@ -159,7 +162,7 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
   const enrollments = new Map<string, { challenge: string; expires: number; session: Session }>();
   const budgets = new Map<string, Budget>();
   const requestIds = new WeakMap<ServerResponse, string>();
-  const observability = aggregateObservability(() => performance.now());
+  const observability = aggregateObservability(() => performance.now(), options.incidentJournal);
 
   const log = (event: RemoteEvent): boolean => {
     // Audit integrations are external observers; a failed sink must not crash
@@ -595,6 +598,7 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
       if (name === "passkey/enroll/finish") {
         const pending = enrollments.get(key);
         enrollments.delete(key); // one use, including invalid payloads
+        let persisted = false;
         try {
           if (!pending || pending.session !== session || pending.expires <= clock()) throw Error();
           const fields = object(await readBody(req, maxCeremonyBody));
@@ -605,12 +609,19 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
             async () => sessions.get(key) === session && pending.expires > clock() &&
               clock() - session.created <= 60_000 && !expired(session, clock()) && session.pendingLogouts === 0 &&
               await authorized(key, session, true) === "ok");
+          // The credential write is durable before the post-ceremony checks
+          // and audit outcome. If either fails, the HTTP response may be 403,
+          // but every old actor session must still lose authority.
+          persisted = result === true;
           if (!result || pending.expires <= clock() || clock() - session.created > 60_000 ||
               sessions.get(key) !== session || session.pendingLogouts > 0 || expired(session, clock())) throw Error();
           if (!log("passkey_enrolled") && options.strictAudit) throw Error("audit_unavailable");
           const rotated = rotateSession(key, session, true);
           reply(res, 200, { schema: 1, enrolled: true, csrf: rotated.csrf }, [rotated.cookie]);
-        } catch { log("passkey_enroll_refused"); reply(res, 403, { error: "enrollment_refused" }); }
+        } catch {
+          if (persisted) for (const [id, old] of sessions) if (old.actor === session.actor) sessions.delete(id);
+          log("passkey_enroll_refused"); reply(res, 403, { error: "enrollment_refused" });
+        }
         return;
       }
       if (name === "passkey/device/rename" || name === "passkey/device/revoke") {

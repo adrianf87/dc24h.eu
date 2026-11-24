@@ -1,0 +1,107 @@
+name: Beta 0.8 bounded TSAN and parser fuzz
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: beta08-hardening-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  tsan:
+    name: TSAN - ubuntu-24.04
+    if: github.repository == 'adrianf87/dc24h.eu-high-starter'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Check exact checkout and install disposable dependencies
+        run: |
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          bash .github/scripts/install-ci-deps.sh \
+            build-essential cmake python3 libutf8proc-dev libgcrypt20-dev \
+            libssl-dev libmariadb-dev
+      - name: Compile TSAN-instrumented C++ parser, network and security
+        run: |
+          cmake -S . -B "$RUNNER_TEMP/beta08-tsan" -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_TESTING=ON -DDC24H_SANITIZER=thread
+          cmake --build "$RUNNER_TEMP/beta08-tsan" \
+            --target adc_tests network_tests adc_security_tests --parallel 2
+      - name: Execute bounded TSAN regressions (incompatible runtime fails closed)
+        run: |
+          ctest --test-dir "$RUNNER_TEMP/beta08-tsan" --output-on-failure \
+            --output-junit "$RUNNER_TEMP/beta08-tsan.xml" --timeout 60 \
+            -R '^(adc\.parser|network\.unit|adc\.security)$'
+          mkdir -p "$RUNNER_TEMP/beta08-evidence"
+          python3 scripts/ci_junit_summary.py \
+            --junit "$RUNNER_TEMP/beta08-tsan.xml" \
+            --suite beta08-tsan --sha "$SOURCE_SHA" \
+            --output "$RUNNER_TEMP/beta08-evidence/tsan-summary.json"
+          python3 scripts/beta06_ci_provenance.py \
+            --summary "$RUNNER_TEMP/beta08-evidence/tsan-summary.json" \
+            --sha "$SOURCE_SHA" --suite beta08-tsan --os-image ubuntu-24.04 \
+            --output "$RUNNER_TEMP/beta08-evidence/tsan-provenance.json"
+      - name: Upload sanitized TSAN outcome (no raw logs)
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: tsan-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/beta08-evidence/
+          if-no-files-found: error
+          retention-days: 7
+
+  fuzz:
+    name: ADC parser fuzz - ubuntu-24.04
+    if: github.repository == 'adrianf87/dc24h.eu-high-starter'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Check exact checkout and install Clang/libFuzzer dependencies
+        run: |
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          bash .github/scripts/install-ci-deps.sh \
+            build-essential cmake clang python3 libutf8proc-dev libgcrypt20-dev \
+            libssl-dev libmariadb-dev
+      - name: Build coverage-instrumented standalone ADC parser fuzzer
+        run: |
+          cmake -S . -B "$RUNNER_TEMP/beta08-fuzz" -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_COMPILER=clang++ -DBUILD_TESTING=OFF \
+            -DDC24H_ENABLE_LIBFUZZER=ON
+          cmake --build "$RUNNER_TEMP/beta08-fuzz" \
+            --target adc_parser_fuzzer --parallel 2
+      - name: Execute seed-pinned 1024-run fuzz smoke with bounded memory and time
+        run: |
+          mkdir -p "$RUNNER_TEMP/beta08-evidence"
+          python3 -m unittest discover -s tests -p beta08_fuzz_smoke_tests.py
+          python3 -m unittest discover -s tests -p beta08_github_evidence_tests.py
+          python3 -m unittest discover -s tests -p beta08_release_candidate_gate_tests.py
+          python3 scripts/beta08_fuzz_smoke.py \
+            --root "$GITHUB_WORKSPACE" \
+            --binary "$RUNNER_TEMP/beta08-fuzz/adc_parser_fuzzer" \
+            --corpus "$GITHUB_WORKSPACE/tests/fuzz_corpus/adc" \
+            --sha "$SOURCE_SHA" \
+            --output "$RUNNER_TEMP/beta08-evidence/fuzz-smoke.json"
+      - name: Upload only bounded fuzz statistics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fuzz-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/beta08-evidence/
+          if-no-files-found: error
+          retention-days: 7

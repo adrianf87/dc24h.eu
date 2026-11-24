@@ -14,6 +14,46 @@ TEST_TTH = b'LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHHHZWCLNQ'
 
 
 class SchProcessTests(unittest.TestCase):
+    def test_beta08_search_reply_to_peer_connection_survives_bad_active_mode(self):
+        """One search-to-transfer window on TCP and TLS; refusals do not leak tokens."""
+        for encrypted in (False, True):
+            with self.subTest(encrypted=encrypted):
+                hub, cert, endpoint, token, source, observer = self.fixture(encrypted)
+                challenge = b'Stage1OpaqueSearchToken'
+                tth = TEST_TTH
+                query = (b'DSCH ' + source.sid + b' ' + observer.sid +
+                         b' ANStage1Search TR' + tth + b' TO' + challenge)
+                source.send(query)
+                self.assertEqual(observer.line(), query)
+                reply = (b'DRES ' + observer.sid + b' ' + source.sid +
+                         b' FN/stage1.txt SI12 TR' + tth + b' TO' + challenge)
+                observer.send(reply)
+                self.assertEqual(source.line(), reply)
+                self.fence(source, observer)
+
+                # Search authorization is not a grant to advertise a TCP peer
+                # listener. The same user can recover after a valid INF update.
+                connect = (b'DCTM ' + source.sid + b' ' + observer.sid +
+                           b' ADCS/1.0 1515 Stage1PrivateConnection')
+                source.send(connect)
+                self.assertTrue(source.line().startswith(b'ISTA 100 CTM\\ssender\\sis\\snot\\sTCP\\sactive'))
+                self.fence(source, observer)
+                update = b'BINF ' + source.sid + b' SUTCP4 I4127.0.0.1'
+                source.send(update)
+                self.assertEqual(source.line(), update)
+                self.assertEqual(observer.line(), update)
+                source.send(connect)
+                self.assertEqual(observer.line(), connect)
+                self.fence(source, observer)
+
+                # A made-up recipient SID is never a valid transfer target.
+                source.send(b'DCTM ' + source.sid + b' ZZZZ ADCS/1.0 1515 Stage1PrivateConnection')
+                self.assertTrue(source.line().startswith(b'ISTA 140 '))
+                self.fence(source, observer)
+                hub.stop()
+                for value in (challenge, tth, b'Stage1PrivateConnection', token.encode()):
+                    self.assertNotIn(value, hub.log)
+
     def fixture(self, encrypted):
         directory = tempfile.TemporaryDirectory(prefix='dc24h-sch-')
         self.addCleanup(directory.cleanup)

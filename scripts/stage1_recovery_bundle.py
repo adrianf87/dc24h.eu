@@ -25,31 +25,44 @@ HASH = re.compile(r"[0-9a-f]{64}\Z")
 
 def private_hash(path, maximum):
     file = Path(path)
-    private.private_directory(file.parent)
-    fd = os.open(file, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-    try:
-        before = os.fstat(fd)
-        if (not stat.S_ISREG(before.st_mode) or before.st_uid != os.geteuid() or
-            before.st_nlink != 1 or before.st_mode & 0o077 or
-            not 0 < before.st_size <= maximum):
-            raise ValueError("Unsafe recovery input file")
-        digest = hashlib.sha256()
-        total = 0
-        while True:
-            data = os.read(fd, 1024 * 1024)
-            if not data:
-                break
-            total += len(data)
-            if total > maximum:
-                raise ValueError("Recovery input grew beyond limit")
-            digest.update(data)
-        after = os.fstat(fd)
-        if (total != before.st_size or after.st_size != before.st_size or
-            after.st_mtime_ns != before.st_mtime_ns or after.st_ctime_ns != before.st_ctime_ns):
-            raise ValueError("Recovery input changed during hashing")
-        return {"size": total, "sha256": digest.hexdigest()}
-    finally:
-        os.close(fd)
+    with private.private_directory_fd(file.parent) as directory_fd:
+        fd = os.open(file.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
+                     dir_fd=directory_fd)
+        try:
+            before = os.fstat(fd)
+            if (not stat.S_ISREG(before.st_mode) or before.st_uid != os.geteuid() or
+                before.st_nlink != 1 or before.st_mode & 0o077 or
+                not 0 < before.st_size <= maximum):
+                raise ValueError("Unsafe recovery input file")
+            digests = []
+            # Detect an in-place change even on filesystems whose timestamp
+            # precision cannot distinguish both reads. Do not allocate the
+            # entire (up to 20 GiB) offline SQL dump in memory.
+            for _ in range(2):
+                os.lseek(fd, 0, os.SEEK_SET)
+                digest = hashlib.sha256()
+                total = 0
+                while True:
+                    data = os.read(fd, 1024 * 1024)
+                    if not data:
+                        break
+                    total += len(data)
+                    if total > maximum:
+                        raise ValueError("Recovery input grew beyond limit")
+                    digest.update(data)
+                if total != before.st_size:
+                    raise ValueError("Recovery input size changed during hashing")
+                digests.append(digest.digest())
+            after = os.fstat(fd)
+            current = os.stat(file.name, dir_fd=directory_fd, follow_symlinks=False)
+            if (digests[0] != digests[1] or after.st_size != before.st_size or
+                after.st_mtime_ns != before.st_mtime_ns or after.st_ctime_ns != before.st_ctime_ns or
+                not stat.S_ISREG(current.st_mode) or
+                (current.st_dev, current.st_ino) != (before.st_dev, before.st_ino)):
+                raise ValueError("Recovery input changed during hashing")
+            return {"size": total, "sha256": digests[0].hex()}
+        finally:
+            os.close(fd)
 
 
 def verified_pair(dump, snapshot, pair_file, expected_commit_sha=None):
@@ -83,11 +96,11 @@ def create_pair(dump, snapshot, destination, commit_sha):
     if not SHA.fullmatch(commit_sha):
         raise ValueError("Exact 40-character git commit SHA required")
     private.verify(str(snapshot))
-    private.private_directory(destination)
     # A pair manifest is an extra file, not a member of the private snapshot.
     # Writing it into the snapshot would invalidate an otherwise recoverable
     # five-store backup, even though the post-write verification rejects it.
     private.separate_destination(snapshot, destination)
+    private.private_directory(destination)
     # Pair only immutable offline inputs: the stored hashes are reverified
     # after the manifest has been written, including every private file.
     data = {"schema": 1,

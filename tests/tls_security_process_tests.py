@@ -7,7 +7,8 @@ import tempfile
 import unittest
 
 from network_process_tests import BINARY, Hub
-from tls_support import TLS_READY, connect_tls, credentials, secure_client_context, tls_endpoint
+from tls_support import (TLS_READY, assert_fatal_tls_alert_or_eof,
+                         connect_tls, credentials, secure_client_context, tls_endpoint)
 
 
 def openssl_cert(directory, name, *extra):
@@ -20,6 +21,62 @@ def openssl_cert(directory, name, *extra):
 
 
 class TlsSecurityProcessTests(unittest.TestCase):
+    def test_beta08_certificate_cutover_blocks_stale_trust_and_plaintext_on_both_versions(self):
+        """Pin a new disposable ADCS leaf; never silently fall back to ADC."""
+        with tempfile.TemporaryDirectory(prefix='dc24h-beta08-tls-') as directory:
+            root = pathlib.Path(directory)
+            first = root / 'first'
+            second = root / 'second'
+            first.mkdir()
+            second.mkdir()
+            old_cert, old_key = credentials(first)
+            new_cert, new_key = credentials(second)
+            old_hub = Hub(self, '--adcs-listen', '127.0.0.1:0',
+                          '--tls-cert', old_cert, '--tls-key', old_key,
+                          ready_pattern=TLS_READY)
+            old_peer = connect_tls(self, old_hub, old_cert)
+            old_peer.sendall(b'HSUP ADBASE\n')
+            old_peer.close()
+            old_hub.stop()
+
+            new_hub = Hub(self, '--adcs-listen', '127.0.0.1:0',
+                          '--tls-cert', new_cert, '--tls-key', new_key,
+                          ready_pattern=TLS_READY)
+            endpoint = tls_endpoint(new_hub)
+            for version in (ssl.TLSVersion.TLSv1_2, ssl.TLSVersion.TLSv1_3):
+                with self.subTest(version=version.name):
+                    stale = secure_client_context(old_cert)
+                    stale.minimum_version = version
+                    stale.maximum_version = version
+                    with socket.create_connection(endpoint, timeout=3) as raw:
+                        with self.assertRaises(ssl.SSLCertVerificationError):
+                            stale.wrap_socket(raw, server_hostname='localhost')
+                    valid = connect_tls(self, new_hub, new_cert, version)
+                    self.assertEqual(valid.version(),
+                                     'TLSv1.2' if version == ssl.TLSVersion.TLSv1_2 else 'TLSv1.3')
+                    self.assertFalse(valid.session_reused)
+                    valid.sendall(b'HSUP ADBASE\n')
+                    valid.close()
+
+            with socket.create_connection(endpoint, timeout=3) as plain:
+                plain.sendall(b'HSUP ADBASE\n')
+                plain.shutdown(socket.SHUT_WR)
+                plain.settimeout(3)
+                try:
+                    wire = bytearray()
+                    while len(wire) < 7:
+                        chunk = plain.recv(7 - len(wire))
+                        if not chunk:
+                            break
+                        wire.extend(chunk)
+                except ConnectionResetError:
+                    pass  # Reset is equivalent to a fatal rejection.
+                # An empty response or a single fatal TLS alert is acceptable.
+                # A plaintext application reply or arbitrary bytes are not.
+                assert_fatal_tls_alert_or_eof(self, bytes(wire))
+            new_hub.stop()
+            self.assertIn(b'ADCS stopped; handshakes=', new_hub.log)
+
     def test_client_context_never_allows_tls_10_or_11(self):
         with tempfile.TemporaryDirectory(prefix='dc24h-tls-client-') as directory:
             cert, _ = credentials(directory)

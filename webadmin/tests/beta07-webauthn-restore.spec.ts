@@ -121,6 +121,18 @@ test("real virtual authenticator authenticates after fresh private-file restore 
       })).status, response);
       expect(status).toBe(200);
     };
+    const loginOn = async (target: Page) => target.evaluate(async () => {
+      const bytes = (s: string) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(s.length / 4) * 4, "=")), c => c.charCodeAt(0));
+      const optionsResponse = await fetch("/login/options", { method: "POST", body: JSON.stringify({ actor: "7", password: "synthetic-password" }) });
+      if (optionsResponse.status !== 200) throw Error("Login option refusal");
+      const options = await optionsResponse.json();
+      const credential = await navigator.credentials.get({ publicKey: {
+        ...options, challenge: bytes(options.challenge),
+        allowCredentials: (options.allowCredentials ?? []).map((c: { id: string }) => ({ ...c, id: bytes(c.id) })),
+      } });
+      if (!credential || !("toJSON" in credential)) throw Error("Browser WebAuthn JSON missing");
+      return (credential as PublicKeyCredential & { toJSON(): unknown }).toJSON();
+    });
     await enrollOn(page);
     expect(store.forActor("7")).toHaveLength(1);
 
@@ -140,9 +152,16 @@ test("real virtual authenticator authenticates after fresh private-file restore 
     await enrollOn(secondPage);
     expect(store.forActor("7")).toHaveLength(2);
 
+    // An assertion may be cryptographically complete while its one-use
+    // server-side challenge is still pending. A gateway restart must lose
+    // that pending authority, even if the credential catalog is restored.
+    const interruptedAssertion = await loginOn(page);
+
     // Close the actual HTTPS writer before asserting --ack-stopped. The
     // authenticator retains its key in Chromium while we snapshot offline.
     await new Promise<void>(resolve => server.close(() => resolve()));
+    enrollmentChallenge = "";
+    loginChallenge = ""; // new gateway process has no pre-restart challenges
     // The same recovery tool as the Ubuntu VM tests copies and verifies all
     // five stores, creating fresh directories with owner-only permissions.
     const recovery = (action: "snapshot" | "restore", from: string, to: string) =>
@@ -156,29 +175,26 @@ test("real virtual authenticator authenticates after fresh private-file restore 
       expect(readFileSync(join(restored, name))).toEqual(readFileSync(join(source, name)));
       expect(statSync(join(restored, name)).mode & 0o077).toBe(0);
     }
+    const truncated = join(base, "truncated-catalog");
+    mkdirSync(truncated, { mode: 0o700 });
+    const completeCatalog = readFileSync(restoredFile);
+    writeFileSync(join(truncated, "passkeys.json"), completeCatalog.subarray(0, completeCatalog.length - 4),
+      { mode: 0o600 });
+    expect(() => openPasskeyStore(join(truncated, "passkeys.json"), "localhost")).toThrow();
+    completeCatalog.fill(0);
     store = openPasskeyStore(restoredFile, "localhost");
     ceremonies = passkeyCeremonies(store, origin, "localhost");
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
       server.listen(Number(new URL(origin).port), "localhost", resolve);
     });
-    const loginOn = async (target: Page) => target.evaluate(async () => {
-      const bytes = (s: string) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(s.length / 4) * 4, "=")), c => c.charCodeAt(0));
-      const optionsResponse = await fetch("/login/options", { method: "POST", body: JSON.stringify({ actor: "7", password: "synthetic-password" }) });
-      if (optionsResponse.status !== 200) throw Error("Login option refusal");
-      const options = await optionsResponse.json();
-      const credential = await navigator.credentials.get({ publicKey: {
-        ...options, challenge: bytes(options.challenge),
-        allowCredentials: (options.allowCredentials ?? []).map((c: { id: string }) => ({ ...c, id: bytes(c.id) })),
-      } });
-      if (!credential || !("toJSON" in credential)) throw Error("Browser WebAuthn JSON missing");
-      return (credential as PublicKeyCredential & { toJSON(): unknown }).toJSON();
-    });
-    const assertion = await loginOn(page);
     const finish = async (response: unknown) => page.evaluate(async r => {
       const answer = await fetch("/login/finish", { method: "POST", body: JSON.stringify({ actor: "7", response: r }) });
       return answer.status;
     }, response);
+    expect(await finish(interruptedAssertion),
+      "restarting and restoring private state must not revive an in-flight login challenge").toBe(403);
+    const assertion = await loginOn(page);
     expect(await finish(assertion)).toBe(200);
     expect(await finish(assertion)).toBe(403); // One-time challenge consumed.
     expect(store.get("7", (assertion as { id: string }).id)?.lastUsedAt).not.toBeNull();
@@ -215,7 +231,7 @@ test("real virtual authenticator authenticates after fresh private-file restore 
     const otherAssertion = await loginOn(secondPage);
     expect(await finish(otherAssertion)).toBe(200);
     expect(store.get("7", (otherAssertion as { id: string }).id)?.lastUsedAt).not.toBeNull();
-    expect(responses.filter(r => r.path === "/login/finish").map(r => r.status)).toEqual([200, 403, 403, 200]);
+    expect(responses.filter(r => r.path === "/login/finish").map(r => r.status)).toEqual([403, 200, 403, 403, 200]);
     await cdp.send("WebAuthn.removeVirtualAuthenticator", { authenticatorId });
   } finally {
     await secondContext?.close();

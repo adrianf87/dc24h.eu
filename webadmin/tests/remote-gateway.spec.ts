@@ -3,7 +3,7 @@ import { test, expect, type Route } from "@playwright/test";
 const sessionCsrf = "d".repeat(64);
 const snapshot = {
   schema: 1, mode: "read-only",
-  server: { version: "beta-0.7.20", running: true, uptime_seconds: 123 },
+  server: { version: "beta-0.8.20", running: true, uptime_seconds: 123 },
   network: { active_connections: 5, accepted_connections: 22 },
   users: { online: 4, peak_online: 7 },
   chat: { received: 10, rejected: 1 },
@@ -31,6 +31,40 @@ test("a successful logout in one tab clears a sibling's private metrics and acti
     await expect(sibling.getByText("Your session expired or was revoked. Sign in again.")).toBeVisible();
     await expect(sibling.getByText("Active connections")).toHaveCount(0);
     await expect(sibling.getByRole("button", { name: "Sign out" })).toHaveCount(0);
+  } finally { await sibling.close(); }
+});
+
+test("a new password plus TOTP login invalidates the prior sibling view in EN and PL", async ({ page, context }) => {
+  const sibling = await context.newPage();
+  try {
+    await sibling.route("**/remote/v1/session", route => route.fulfill({ status: 200,
+      contentType: "application/json", body: JSON.stringify({ schema: 1, authenticated: true,
+        mfa: true, mode: "read-only", csrf: sessionCsrf, expires_in: 600 }) }));
+    await sibling.route("**/remote/v1/summary", route => route.fulfill({ status: 200,
+      contentType: "application/json", body: JSON.stringify(snapshot) }));
+    await page.route("**/remote/v1/session", route => route.fulfill({ status: 401,
+      contentType: "application/json", body: '{"error":"unauthorized"}' }));
+    await page.route("**/remote/v1/challenge", route => route.fulfill({ status: 200,
+      contentType: "application/json", body: JSON.stringify({ schema: 1, csrf: "e".repeat(64) }) }));
+    await page.route("**/remote/v1/login", route => route.fulfill({ status: 200,
+      contentType: "application/json", body: JSON.stringify({ schema: 1, authenticated: true,
+        mfa: true, mode: "read-only", csrf: "f".repeat(64), expires_in: 600 }) }));
+    await page.route("**/remote/v1/summary", route => route.fulfill({ status: 200,
+      contentType: "application/json", body: JSON.stringify(snapshot) }));
+    await Promise.all([page.goto("/remote.html"), sibling.goto("/remote.html")]);
+    await expect(sibling.getByText("Active connections")).toBeVisible();
+    await page.getByLabel("Administrator account ID").fill("8");
+    await page.getByLabel("Account password").fill("synthetic-proof");
+    await page.getByLabel("Authenticator code (6 digits)").fill("123456");
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await expect(page.getByText("Active connections")).toBeVisible();
+    await expect(sibling.getByText("Your session expired or was revoked. Sign in again.")).toBeVisible();
+    await expect(sibling.getByText("Active connections")).toHaveCount(0);
+    await expect(sibling.getByLabel("Administrator account ID")).toBeFocused();
+    await sibling.getByRole("button", { name: "Polski" }).click();
+    await expect(sibling.getByText("Sesja wygasła albo została unieważniona. Zaloguj się ponownie.")).toBeVisible();
+    await expect(sibling.getByText("Aktywne połączenia")).toHaveCount(0);
+    await expect(sibling.locator("main")).not.toContainText("synthetic-proof");
   } finally { await sibling.close(); }
 });
 
@@ -71,6 +105,32 @@ test("private bilingual incident timeline remains keyboard-readable on mobile wi
   }
 });
 
+test("retained incidents after restart are labeled historical in EN/PL and allow only local acknowledgment", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  const writes: string[] = [];
+  page.on("request", req => { if (req.method() !== "GET") writes.push(req.url()); });
+  await page.route("**/remote/v1/session", route => route.fulfill({ status: 200,
+    contentType: "application/json", body: JSON.stringify({ schema: 1, authenticated: true,
+      mfa: true, mode: "read-only", csrf: sessionCsrf, expires_in: 600 }) }));
+  await page.route("**/remote/v1/summary", route => route.fulfill({ status: 200,
+    contentType: "application/json", body: JSON.stringify({ ...snapshot,
+      observation: { schema: 1, source_age_ms: 100 },
+      incidents: { schema: 1, state: "unknown", events: [], alerts: [],
+        retained: { state: "available", events: [{ kind: "hub_stopped", age_seconds: 3 }] } },
+    }) }));
+  await page.goto("/remote.html");
+  await expect(page.getByText("Incident history is unavailable or not yet verified; this does not mean the service is healthy.")).toBeVisible();
+  const history = page.getByRole("region", { name: "Retained local incident history (not live)" });
+  await expect(history.getByText(/Hub stopped/)).toBeVisible();
+  await page.getByRole("button", { name: "Polski" }).click();
+  const polish = page.getByRole("region", { name: "Zachowana lokalna historia incydentów (nie na żywo)" });
+  await expect(polish.getByText(/Hub zatrzymany/)).toBeVisible();
+  await page.getByRole("button", { name: "Potwierdź lokalnie" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("status").filter({ hasText: "Potwierdzono tylko na tym ekranie" })).toBeVisible();
+  expect(writes).toEqual([]);
+});
+
 test("remote read-only screen needs a session, supports EN/PL and never offers hub-control mutations", async ({ page }) => {
   let loggedIn = false;
   await page.route("**/remote/v1/session", async (route) => {
@@ -108,7 +168,7 @@ test("remote read-only screen needs a session, supports EN/PL and never offers h
   await page.getByLabel("Hasło konta").fill("example-proof");
   await page.getByLabel("Kod uwierzytelniający (6 cyfr)").fill("123456");
   await page.getByRole("button", { name: "Zaloguj", exact: true }).click();
-  await expect(page.getByText("beta-0.7.20")).toBeVisible();
+  await expect(page.getByText("beta-0.8.20")).toBeVisible();
   await expect(page.getByText(/Pozostały czas sesji \(orientacyjny\):/)).toBeVisible();
   await expect(page.getByText("Aktywne połączenia")).toBeVisible();
   await expect(page.getByText("Użytkownicy online")).toBeVisible();

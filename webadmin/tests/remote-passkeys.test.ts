@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { mkdtempSync, readFileSync, rmSync, chmodSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, chmodSync, writeFileSync, statSync, utimesSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initializePasskeyStore, openPasskeyStore } from "../server/remote-passkeys.ts";
@@ -124,6 +124,26 @@ test("external rewrite, unsafe permissions, corrupt data or another writer fail 
   chmodSync(path, 0o600);
   writeFileSync(path, "{\"schema\":1}");
   assert.throws(() => openPasskeyStore(path, "localhost"), /Invalid passkey catalog/);
+}));
+
+test("same-length counter rollback with the previous mtime fails closed, even if JSON remains valid", () => withStore(path => {
+  const initial = openPasskeyStore(path, "localhost");
+  const handle = initial.userHandle("7"), id = "f".repeat(32);
+  initial.add({ ...sample(id), userHandle: handle });
+  assert.equal(initial.markUsed("7", id, 0, 5, "singleDevice", false, 2000), true);
+  const fixed = new Date("2026-01-01T00:00:00Z");
+  utimesSync(path, fixed, fixed);
+  const live = openPasskeyStore(path, "localhost");
+  const before = readFileSync(path, "utf8");
+  const modified = JSON.parse(before);
+  modified.credentials[0].counter = 0;
+  const after = JSON.stringify(modified) + "\n";
+  assert.equal(Buffer.byteLength(after), Buffer.byteLength(before), "same-length corruption fixture");
+  writeFileSync(path, after);
+  utimesSync(path, fixed, fixed);
+  assert.equal(statSync(path).mtimeMs, fixed.getTime(), "mtime was restored after the in-place write");
+  assert.equal(live.healthy(), false, "content changed despite unchanged inode/size/mtime");
+  assert.throws(() => live.markUsed("7", id, 5, 6, "singleDevice", false, 3000), /unavailable/);
 }));
 
 test("noncanonical passkey identifiers, unexpected fields and duplicate transports fail closed", () => {

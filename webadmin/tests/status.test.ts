@@ -120,7 +120,7 @@ test("remote status projection includes only reviewed aggregate counters", () =>
     chat: { received: 12, rejected: 2 },
   };
   const expected = {
-    server: { version: "beta-0.7.20", running: true, uptime_seconds: 3661 },
+    server: { version: "beta-0.8.20", running: true, uptime_seconds: 3661 },
     network: { active_connections: 7, accepted_connections: 48 },
     users: { online: 4, peak_online: 6 },
     chat: { received: 12, rejected: 2 },
@@ -164,7 +164,7 @@ test("C++ observation schema verifies bounded source age and degrades old v1 to 
 });
 
 test("remote status rejects malformed mandatory aggregates and optional public counters", () => {
-  const good = { ...snapshot, server: { ...snapshot.server, version: "beta-0.7.20" } };
+  const good = { ...snapshot, server: { ...snapshot.server, version: "beta-0.8.20" } };
   for (const corrupt of [
     null, [], {}, { ...good, api_version: "v2" }, { ...good, server: undefined },
     { ...good, server: { ...good.server, version: "<script>" } },

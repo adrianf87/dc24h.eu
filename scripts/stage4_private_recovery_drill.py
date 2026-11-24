@@ -8,6 +8,7 @@ is a separate operator-approved step. This tool never touches a live service.
 import argparse
 import base64
 import binascii
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -113,79 +114,118 @@ def private_directory(path):
     candidate = Path(path)
     if not candidate.is_absolute():
         raise ValueError("Absolute private directory required")
+    if ".." in candidate.parts:
+        raise ValueError("Noncanonical private directory")
     # lstat(candidate) alone follows symlinks in its ancestors. An operator
     # supplied path must never escape through an intermediate symlink, even
     # when the final directory itself has owner-only permissions.
     ancestor = Path(candidate.anchor)
+    fingerprints = []
     for component in candidate.parts[1:]:
         ancestor = ancestor / component
         metadata = ancestor.lstat()
         if not stat.S_ISDIR(metadata.st_mode):
             raise ValueError("Symlink or non-directory in private path")
+        fingerprints.append((ancestor, metadata.st_dev, metadata.st_ino))
+    for ancestor, device, inode in fingerprints:
+        metadata = ancestor.lstat()
+        if (not stat.S_ISDIR(metadata.st_mode) or
+                (metadata.st_dev, metadata.st_ino) != (device, inode)):
+            raise ValueError("Private path changed during validation")
     s = candidate.lstat()
     if not stat.S_ISDIR(s.st_mode) or s.st_uid != os.geteuid() or s.st_mode & 0o077:
         raise ValueError("Unsafe private directory")
     return candidate
 
 
+@contextmanager
+def private_directory_fd(path):
+    """Pin a checked directory so later file opens cannot follow a replaced parent.
+
+    Absolute path checks alone have a validation-to-open race. All file opens
+    using this descriptor are relative to the same verified directory inode.
+    """
+    directory = private_directory(path)
+    before = directory.lstat()
+    fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        opened = os.fstat(fd)
+        after = private_directory(directory).lstat()
+        identity = (before.st_dev, before.st_ino)
+        if (opened.st_dev, opened.st_ino) != identity or (
+                after.st_dev, after.st_ino) != identity:
+            raise ValueError("Private directory changed while opening")
+        try:
+            yield fd
+        finally:
+            after = private_directory(directory).lstat()
+            if (after.st_dev, after.st_ino) != identity:
+                raise ValueError("Private directory changed during operation")
+    finally:
+        os.close(fd)
+
+
 def read_private(root, name, maximum, allow_empty=False):
     # A replaced FIFO must fail promptly; a blocking open would hang before
     # fstat could reject its type.
-    fd = os.open(root / name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-    try:
-        s = os.fstat(fd)
-        if not stat.S_ISREG(s.st_mode) or s.st_uid != os.geteuid() or s.st_nlink != 1 or (
-            s.st_mode & 0o077) or s.st_size > maximum or (s.st_size == 0 and not allow_empty):
-            raise ValueError("Unsafe private source file")
-        data = bytearray()
-        while len(data) < s.st_size:
-            chunk = os.read(fd, min(65536, s.st_size - len(data)))
-            if not chunk:
-                raise ValueError("Truncated private source")
-            data.extend(chunk)
-        # Timestamp granularity differs across Ubuntu runner filesystems: a
-        # same-size in-place rewrite can leave mtime/ctime indistinguishable
-        # from the initial fstat. Compare the same inode's bytes a second time
-        # before checking metadata, without trusting timestamps alone.
-        os.lseek(fd, 0, os.SEEK_SET)
-        verified = 0
-        while verified < len(data):
-            chunk = os.read(fd, min(65536, len(data) - verified))
-            if not chunk or chunk != data[verified:verified + len(chunk)]:
+    if Path(name).name != name or name in (".", ".."):
+        raise ValueError("Private source must be a single filename")
+    with private_directory_fd(root) as directory_fd:
+        fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
+                     dir_fd=directory_fd)
+        try:
+            s = os.fstat(fd)
+            if not stat.S_ISREG(s.st_mode) or s.st_uid != os.geteuid() or s.st_nlink != 1 or (
+                s.st_mode & 0o077) or s.st_size > maximum or (s.st_size == 0 and not allow_empty):
+                raise ValueError("Unsafe private source file")
+            data = bytearray()
+            while len(data) < s.st_size:
+                chunk = os.read(fd, min(65536, s.st_size - len(data)))
+                if not chunk:
+                    raise ValueError("Truncated private source")
+                data.extend(chunk)
+            # A same-size in-place rewrite can preserve timestamps; check
+            # the same descriptor's content a second time before accepting.
+            os.lseek(fd, 0, os.SEEK_SET)
+            verified = 0
+            while verified < len(data):
+                chunk = os.read(fd, min(65536, len(data) - verified))
+                if not chunk or chunk != data[verified:verified + len(chunk)]:
+                    raise ValueError("Private source changed while reading")
+                verified += len(chunk)
+            after = os.fstat(fd)
+            current = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
+            if (after.st_size != s.st_size or after.st_mtime_ns != s.st_mtime_ns or
+                    after.st_ctime_ns != s.st_ctime_ns or
+                    (current.st_dev, current.st_ino) != (s.st_dev, s.st_ino) or
+                    not stat.S_ISREG(current.st_mode)):
                 raise ValueError("Private source changed while reading")
-            verified += len(chunk)
-        after = os.fstat(fd)
-        current = (root / name).lstat()
-        if (after.st_size != s.st_size or after.st_mtime_ns != s.st_mtime_ns or
-                after.st_ctime_ns != s.st_ctime_ns or
-                (current.st_dev, current.st_ino) != (s.st_dev, s.st_ino) or
-                not stat.S_ISREG(current.st_mode)):
-            raise ValueError("Private source changed while reading")
-        return data
-    finally:
-        os.close(fd)
+            return data
+        finally:
+            os.close(fd)
 
 
 def write_private(root, name, data):
-    fd = os.open(root / name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
-    try:
-        at = 0
-        while at < len(data):
-            written = os.write(fd, memoryview(data)[at:])
-            if not written:
-                raise OSError("Incomplete private archive write")
-            at += written
-        os.fsync(fd)
-    finally:
-        os.close(fd)
+    if Path(name).name != name or name in (".", ".."):
+        raise ValueError("Private output must be a single filename")
+    with private_directory_fd(root) as directory_fd:
+        fd = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                     0o600, dir_fd=directory_fd)
+        try:
+            at = 0
+            while at < len(data):
+                written = os.write(fd, memoryview(data)[at:])
+                if not written:
+                    raise OSError("Incomplete private archive write")
+                at += written
+            os.fsync(fd)
+        finally:
+            os.close(fd)
 
 
 def sync_directory(path):
-    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
-    try:
+    with private_directory_fd(path) as fd:
         os.fsync(fd)
-    finally:
-        os.close(fd)
 
 
 def make_private_destination(path):

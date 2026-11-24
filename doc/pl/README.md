@@ -1,5 +1,11 @@
 # Dokumentacja dc24h.eu High Starter
 
+beta-0.8.x — sprawdzenie 5 etapów i 5 Fix Passów: wszystkie zmiany są na gałęzi roboczej, ale Ubuntu 26.04 zgłosił HTTP 429 w teście passkey po odtworzeniu prywatnego limitu logowań. Poprawka CI czeka na wygaśnięcie prawdziwego okna limitera bez wyłączania zabezpieczeń. Odbiór wymaga zielonego CI na nowym SHA i osobnej decyzji Ownera. [Raport PL](BETA_0.8_CI_REPAIR.md) · [EN/US](../us/BETA_0.8_CI_REPAIR.md).
+
+beta-0.8.x Fix Pass 1 (Etap I 0.8.1–0.8.4): naprawiono błąd testu cofnięcia dostępu w odizolowanej bazie MariaDB (nazwa konta kontra nick ADC), zaostrzono odmowę nieszyfrowanego połączenia z ADCS i kontrolę błędów CTest/JUnit. Ten sam draft PR #241 zawiera już Etapy II–V i metadane kandydata beta-0.8.20. [Raport PL](BETA_0.8_FIX_PASS_1.md) · [EN/US](../us/BETA_0.8_FIX_PASS_1.md). Brak zgody na merge, wydanie lub wdrożenie; nowy CI na dokładnym SHA wciąż wymagany.
+
+beta-0.8.1–beta-0.8.4: Etap I na `beta-0.8.x-stage-full` — testy interoperacyjności ADC/ADCS, odmowa dla odebranego konta po kontrolowanym restarcie huba, TTH/CTM i wymiana certyfikatów TLS. Późniejszy Etap V wyrównał metadane kandydata do `beta-0.8.20`; bez wydania. Dowody CI na dokładnym SHA pozostają wymagane; po push i uruchomieniu CI **nie czekamy na wyniki**. Brak poświadczenia fizycznych klientów DC++/AirDC++, automatycznego merge i wdrożenia. [Etap I PL](BETA_0.8_STAGE_I.md) · [EN/US](../us/BETA_0.8_STAGE_I.md).
+
 beta-0.7.20: Etap V — roboczy kandydat w PR #239, obejmujący kompatybilność ADC/ADCS, passkeys/MFA, spójne odtwarzanie MariaDB v11 i pięciu plików, testowe aktualizacje dpkg, historię incydentów, porównywalne pomiary i zabezpieczoną kwalifikację. Hub, API, kontroler i WebAdmin raportują beta-0.7.20. Pomiary wyłącznie na GitHub-hosted Ubuntu 22.04/24.04/26.04, bez gwarancji produkcyjnego RPO/RTO lub wydajności. Logowanie nadal wymaga **hasła + passkey** albo **hasła + TOTP**. CI końcowego SHA, pięć późniejszych etapów poprawek i osobna zgoda Ownera pozostają wymagane. Brak automatycznego merge, wdrożenia, publicznego WebAdmin i zmiany schematu SQL.
 
 - [Etap V beta-0.7.17–beta-0.7.20 — instrukcja operatora i rollback](BETA_0.7_STAGE_V.md) · [EN/US](../us/BETA_0.7_STAGE_V.md)

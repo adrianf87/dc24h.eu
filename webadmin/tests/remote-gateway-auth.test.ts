@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { remoteGateway } from "../server/remote-gateway.ts";
+import type { IncidentJournalSink } from "../server/remote-observability.ts";
+import { initializeIncidentJournal, openIncidentJournal } from "../server/remote-incident-journal.ts";
 import { PERMISSION_KEYS } from "../src/lib/roles.ts";
 import { ACCESS_ROUTES } from "../src/lib/access.ts";
 import { snapshot } from "./fixtures.ts";
@@ -19,7 +21,8 @@ const apiCsrf = "d".repeat(64);
 type Failure = Error & { status?: number };
 const failure = (status: number): Failure => Object.assign(new Error("private_failure"), { status });
 
-function harness(mfaConfigured = true, strictAudit = false, rateLimits?: RemoteRateLimitStore) {
+function harness(mfaConfigured = true, strictAudit = false, rateLimits?: RemoteRateLimitStore,
+  incidentJournal?: IncidentJournalSink) {
   let time = 100_000;
   const calls: string[] = [];
   const events: string[] = [];
@@ -34,6 +37,7 @@ function harness(mfaConfigured = true, strictAudit = false, rateLimits?: RemoteR
   const gateway = remoteGateway({ socket: "/private/test-only.sock", token }, {
     origin, now: () => time,
     rateLimits,
+    incidentJournal,
     strictAudit, auditHealthy: () => state.auditHealthy,
     audit: (event) => {
       events.push(event);
@@ -262,7 +266,7 @@ test("remote status strips private upstream fields and refuses malformed or unav
   const login = await h.login();
   const browserCookie = login.cookies[0]!.split(";")[0]!;
   const privateValue = "SECRET_IDENTITY_FROM_PRIVATE_API";
-  const clean = { ...snapshot, server: { ...snapshot.server, version: "beta-0.7.20" } };
+  const clean = { ...snapshot, server: { ...snapshot.server, version: "beta-0.8.20" } };
   h.state.statusResponse = async () => ({
     ...clean, secret: privateValue, audit_rows: [{ account: privateValue }],
     server: { ...clean.server, private_socket: privateValue },
@@ -277,7 +281,7 @@ test("remote status strips private upstream fields and refuses malformed or unav
   assert.equal(safe.status, 200);
   assert.deepEqual(JSON.parse(safe.body), {
     schema: 1, mode: "read-only",
-    server: { version: "beta-0.7.20", running: true, uptime_seconds: 3661 },
+    server: { version: "beta-0.8.20", running: true, uptime_seconds: 3661 },
     network: { active_connections: 7, accepted_connections: 48 },
     users: { online: 4, peak_online: 6 },
     chat: { received: 12, rejected: 2 },
@@ -358,6 +362,44 @@ test("legacy hub downgrade and failed source read invalidate aggregate timeline"
   h.state.statusResponse = async () => observed;
   const recovered = await h.call("/remote/v1/summary", "GET", "", { cookie });
   assert.deepEqual(JSON.parse(recovered.body).incidents.alerts, []);
+});
+
+test("fresh authenticated C++ reads distinguish retained incident history from post-restart live state", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "dc24h-incident-gateway-"));
+  const path = join(dir, "incidents.json");
+  try {
+    initializeIncidentJournal(path);
+    const first = harness(true, true, undefined, openIncidentJournal(path));
+    const login = await first.login();
+    const cookie = login.cookies[0]!.split(";")[0]!;
+    first.state.statusResponse = async () => ({ ...snapshot,
+      observation: { schema: 1, observed_unix_ms: Date.now() },
+      network: { ...snapshot.network, security_rejected: 0, private_ip: "private-source" },
+      private_actor: "private-actor",
+    });
+    assert.equal((await first.call("/remote/v1/summary", "GET", "", { cookie })).status, 200);
+    for (let n = 0; n < 5; n++) await first.login("7", "wrong");
+    const incident = await first.call("/remote/v1/summary", "GET", "", { cookie });
+    assert.equal(incident.status, 200);
+    assert.equal(JSON.parse(incident.body).incidents.retained.events[0].kind, "login_refusals");
+    assert.ok(!incident.body.includes("private-source") && !incident.body.includes("private-actor"));
+
+    const second = harness(true, true, undefined, openIncidentJournal(path));
+    const fresh = await second.login();
+    const secondCookie = fresh.cookies[0]!.split(";")[0]!;
+    second.state.statusResponse = first.state.statusResponse;
+    const afterRestart = await second.call("/remote/v1/summary", "GET", "", { cookie: secondCookie });
+    assert.equal(afterRestart.status, 200);
+    const projection = JSON.parse(afterRestart.body).incidents;
+    assert.deepEqual(projection.events, [], "a new process has no witnessed live transition");
+    assert.deepEqual(projection.retained.events.map((e: { kind: string }) => e.kind), ["login_refusals"]);
+    second.state.statusResponse = async () => ({ ...snapshot,
+      observation: { schema: 1, observed_unix_ms: Date.now() + 60_000 },
+    });
+    const future = await second.call("/remote/v1/summary", "GET", "", { cookie: secondCookie });
+    assert.equal(future.status, 503);
+    assert.ok(!future.body.includes("retained"), "future source timestamps cannot expose the journal");
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
 test("slow final C++ grant check cannot present an expired observation as fresh", async () => {

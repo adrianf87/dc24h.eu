@@ -74,6 +74,15 @@ jobs:
             --os-image "${{ matrix.os }}" \
             --output "$RUNNER_TEMP/evidence/beta07-client-capabilities.json"
 
+      - name: Verify beta-0.8 Stage I ADC ADCS interoperability evidence
+        run: |
+          python3 -m unittest discover -s tests -p 'beta08_stage1_gate_tests.py'
+          python3 scripts/beta08_stage1_gate.py \
+            --junit "$RUNNER_TEMP/ctest.xml" \
+            --ncdc-report "$RUNNER_TEMP/evidence/beta07-client-capabilities.json" \
+            --sha "$SOURCE_SHA" --os-image "${{ matrix.os }}" \
+            --output "$RUNNER_TEMP/evidence/beta08-stage1-interoperability.json"
+
       - name: Prepare redacted CTest evidence
         if: always()
         run: python3 scripts/ci_junit_summary.py --junit "$RUNNER_TEMP/ctest.xml" --output "$RUNNER_TEMP/evidence/summary.json" --suite "cpp-${{ matrix.os }}-${{ matrix.build_type }}" --sha "$SOURCE_SHA"
@@ -154,6 +163,23 @@ jobs:
         with:
           name: beta07-npm-audit-${{ matrix.os }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/evidence/beta07-npm-audit.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Qualify runtime and CI/build-chain npm advisories
+        working-directory: webadmin
+        run: |
+          python3 -m unittest discover -s ../tests -p beta08_build_chain_audit_tests.py
+          python3 ../scripts/beta08_build_chain_audit.py \
+            --root "$GITHUB_WORKSPACE" --sha "$SOURCE_SHA" \
+            --os-image "${{ matrix.os }}" \
+            --output "$RUNNER_TEMP/evidence/beta08-build-chain-audit.json"
+
+      - name: Upload only aggregated full-dependency advisory totals
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: beta08-build-audit-${{ matrix.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/evidence/beta08-build-chain-audit.json
           if-no-files-found: error
           retention-days: 7
 

@@ -1,14 +1,25 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.7.20 LANGUAGES CXX)
+project(dc24h VERSION 0.8.20 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
 endif()
 
+# Isolated hosted-CI hardening only. Never build a fuzz entry point into the
+# service or an installed package. All linked project code gets coverage hooks.
+option(DC24H_ENABLE_LIBFUZZER "Build an isolated Clang/libFuzzer ADC parser target" OFF)
+
 # One sanitizer per build directory. AddressSanitizer and ThreadSanitizer cannot
 # share a binary. Empty is the normal Debug or Release build.
 set(DC24H_SANITIZER "" CACHE STRING
     "One sanitizer for this build: address, undefined, or thread. Empty leaves the build uninstrumented.")
+if(DC24H_ENABLE_LIBFUZZER)
+    if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR NOT DC24H_SANITIZER STREQUAL "")
+        message(FATAL_ERROR "libFuzzer requires Clang and no competing DC24H_SANITIZER")
+    endif()
+    add_compile_options(-fsanitize=fuzzer-no-link,address -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address)
+endif()
 if(DC24H_SANITIZER STREQUAL "")
 elseif(DC24H_SANITIZER STREQUAL "address")
     add_compile_options(-fsanitize=address -fno-omit-frame-pointer -fno-sanitize-recover=address)
@@ -27,7 +38,7 @@ else()
 endif()
 
 # The VERSION tuple above is the package number; operators see the beta version.
-set(DC24H_VERSION "beta-0.7.20")
+set(DC24H_VERSION "beta-0.8.20")
 configure_file(cmake/version.hpp.in generated/dc24h/version.hpp @ONLY)
 find_package(Threads REQUIRED)
 find_package(OpenSSL 3 REQUIRED COMPONENTS SSL Crypto)
@@ -125,6 +136,12 @@ target_compile_features(dc24h_adc PUBLIC cxx_std_20)
 set_target_properties(dc24h_adc PROPERTIES CXX_EXTENSIONS OFF)
 target_include_directories(dc24h_adc PUBLIC include)
 target_link_libraries(dc24h_adc PUBLIC dc24h_identity dc24h_ban_model dc24h_moderation dc24h_users dc24h_chat dc24h_search dc24h_transfers dc24h_security PRIVATE dc24h_text UTF8Proc::UTF8Proc Gcrypt::Gcrypt OpenSSL::Crypto)
+if(DC24H_ENABLE_LIBFUZZER)
+    add_executable(adc_parser_fuzzer tests/adc_parser_fuzzer.cpp)
+    target_link_libraries(adc_parser_fuzzer PRIVATE dc24h_adc)
+    target_link_options(adc_parser_fuzzer PRIVATE -fsanitize=fuzzer,address)
+    set_target_properties(adc_parser_fuzzer PROPERTIES CXX_EXTENSIONS OFF)
+endif()
 set_source_files_properties(src/adc/protocol_control.cpp src/adc/presence_flood.cpp PROPERTIES
     COMPILE_OPTIONS "-Wall;-Wextra;-Wpedantic;-Wconversion;-Wshadow")
 

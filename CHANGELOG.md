@@ -1,5 +1,72 @@
 # Changelog
 
+## beta-0.8.x exact-head CI repair — 2026-11-24 (draft PR #241; next hosted matrix unverified)
+
+- **Ten work units present:** Source commits for Stages I–V and Fix Passes 1–5 are on `beta-0.8.x-stage-full`; none has been automatically accepted or merged.
+- **Ubuntu 26.04 VM-only failure:** Previous head `c3c939d` passed 22.04/24.04 VM, C++/WebAdmin, CodeQL and TSAN/fuzz, but the faster 26.04 real Chromium restoration flow received `restored_options_429` after its intentionally persisted four-per-minute private login budget was exhausted by TOTP/replay/restore checks.
+- **CI fixture correction:** Read the actual synthetic recovered HMAC login buckets and wait for the genuine window expiration before the next separately authenticated passkey attempt. Fail on missing/malformed preserved state; never reset private quotas or alter production security behavior. Run five focused tests on every hosted VM image. [EN/US assessment](doc/us/BETA_0.8_CI_REPAIR.md) · [PL operator notes](doc/pl/BETA_0.8_CI_REPAIR.md).
+- **Boundary:** Require full green checks on the *new exact head*. Stop after push/CI trigger without waiting; no release, tag, deployment, Owner approval or merge into protected main.
+
+## beta-0.8 Fix Pass 5 — 2026-11-24 (Stage V review; exact-head hosted CI still NO-GO)
+
+- **Verified defects:** Prevent old green CI from qualifying after the branch HEAD advances; reject out-of-attempt artifact timestamps/foreign branch metadata. The GitHub-provided digest is metadata, not an independently downloaded/hashed ZIP; preserve that explicit limitation.
+- **Full supply-chain coverage:** Invoke the exact `npm audit --include=dev --include=prod` command inside a bounded private gate; reject caller-provided production-only JSON disguised as a full audit and missing dev/runtime lockfile nodes.
+- **Resource and metadata:** Reject oversized fuzzer diagnostics, symlinked/unbounded corpus and persistent crash artifacts; align the active incident journal test fixture to beta-0.8.20 and enforce candidate metadata/full audit scope. Add negative tests and bilingual Fix Pass 5 report.
+- **Boundary:** CI is pending, not accepted; do not wait for CI. Remain in the one draft PR #241 and branch. No Owner merge decision, tag, publish, data migration, public gateway or deployment.
+
+## beta-0.8.9–beta-0.8.12 Fix Pass 3 — 2026-11-24 (draft PR #241, exact-head CI pending)
+
+- **Confirmed path-swap risk in offline recovery:** Pin a second-checked owner-only directory descriptor and open private source/output files, streamed SQL/hash inputs and the independent HMAC anti-reuse ledger relative to that descriptor. Reject noncanonical `..` directory traversal, final-component links, source inode replacement mid-hash and ledger replacement before consumption. Add deterministic synthetic tests; stopped writers and isolated offline recovery remain required.
+- **Node private path aliases:** Refuse redundant separators, dot components and trailing directory slashes in the shared five-store validator, with a direct negative test, without changing private-state formats or broadening grants.
+- **Runtime-only gateway harness:** Register gateway exit before readiness/shutdown and cancel completed timeouts, so a fast post-SIGTERM exit cannot be falsely reported as a failed restart. Keep the production-dependency-only hosted startup requirement; no local Unix-socket or systemd success is fabricated.
+- **Packaging and traceability:** Retain genuine injected `preinst`/`postinst` failures, explicit prior-version `dpkg` downgrade, and correct the failure-package version in Stage III documentation to `0.8.20+ci3` after Stage V metadata alignment.
+- **Open evidence limits:** Full password+TOTP and password+passkey authentication against the actually downgraded beta-0.5.16 binary remains **unproven** by the existing separate SQL/Node checks. Likewise, this does not establish an installed systemd gateway rehearsal, a live atomic backup, kernel-atomic resolution of hostile path swaps, or production RPO/RTO. These are blockers to the stronger Stage III acceptance claim, not silently marked green. [EN/US review](doc/us/BETA_0.8_FIX_PASS_III.md) | [PL disposition](doc/pl/BETA_0.8_FIX_PASS_III.md).
+
+## beta-0.8.5–beta-0.8.8 Fix Pass 2 — 2026-11-24 (draft PR #241; exact-head CI unverified)
+
+- **MFA same-length rewrite:** Hash the bounded TOTP enrollment at startup and compare the pinned bytes on every verification, including `ctime`. A valid-length, same-mtime in-place seed replacement now invalidates the live verifier before any consumed step can be written. This is runtime tamper detection, not cold-start authenticity.
+- **Passkey enrollment/audit race:** If WebAuthn enrollment has already durably added a credential but its final age, session or strict-audit check fails, revoke **every** existing session for that actor even though the HTTP response refuses enrollment. A second-browser negative regression reproduces failure of the completion audit sink.
+- **Reviewed without changed semantics:** Genuine ES256 WebAuthn challenge/Origin/UV/RP binding, monotonic counters and backup eligibility, revocation epochs, TOTP replay/clock rollback, same-size limiter/passkey tamper tests, and CSRF/session expiration. Browser virtual authenticators do not certify physical/synced devices.
+- **Still open:** The private passkey/rate-limit JSON has no Owner-approved persistent authenticity anchor; a valid-shaped offline rewrite before complete restart cannot be detected by an in-process hash. No private-store schema migration, merge, tag, release or deployment. All hosted Ubuntu 22.04/24.04/26.04 exact-head checks remain required, and CI is not pre-accepted.
+
+## beta-0.8.x Fix Pass 1 — 2026-11-24 (draft PR #241; exact-head CI unverified)
+
+- **0.8.2 — Account revocation test defect:** Correct the disposable MariaDB integration fixture's zero-row `UPDATE`: `RegisteredADC` is an ADC nickname on `dc24h_account_identities`, whereas its account is named `AuthAccountOne`. Join nickname to account ID, require exactly one changed row and verify the persisted state before testing controlled restart and ADC/ADCS refusal. This fixes test evidence, **not** a live-revocation behavior claim.
+- **0.8.1/0.8.4 — Negative evidence:** Reject CTest failure/error/skipped child nodes even when marked `status="run"`; reject arbitrary plaintext on the ADCS listener, allowing only EOF/reset or a fatal TLS alert. The 0.8.3 search/transfer boundary was reviewed without a separate confirmed defect. Native DC++/AirDC++ clients remain untested.
+- **Fix Pass 1 handoff:** [EN/US review](doc/us/BETA_0.8_FIX_PASS_1.md) · [PL operator notes](doc/pl/BETA_0.8_FIX_PASS_1.md). Preserve already-committed Stages II–V on `beta-0.8.x-stage-full`. Hosted Ubuntu 22.04/24.04/26.04 exact-new-head CI is required but not yet verified; stop after push/CI trigger without polling, no automatic main merge or release.
+
+## beta-0.8.17–beta-0.8.20 Stage V — 2026-11-24 (draft PR #241, exact-head CI unverified)
+
+- **0.8.17 — GitHub API provenance:** Add read-only exact-head/attempt workflow, hosted-job and redacted artifact SHA-256 digest verification against GitHub REST API. Refuse stale, pending, failed, skipped and wrong-attempt records; locally generated JSON remains untrusted. Owner approval is still separate.
+- **0.8.18 — Reproducible transport budgets:** Recompute the existing three ADC, ADCS and authenticated private HTTPS measurement windows from the numeric-only original inputs, bind compiler/Node/npm-lock and input SHA-256 identity, and preserve the no-cross-protocol-equivalence/no-production-SLA boundary.
+- **0.8.19 — Bounded sanitizer and parser hardening:** Add isolated GitHub-hosted Ubuntu 24.04 ThreadSanitizer unit checks and Clang coverage-guided ADC parser libFuzzer smoke (1024 deterministic runs, memory/input/time budget). An incompatible/failed sanitizer is a blocked gate, not a skipped-green job.
+- **0.8.20 — Candidate version and supply chain:** Align active C++/Node/React/npm metadata with beta-0.8.20, audit full production **plus build-chain** npm dependencies, and add fail-closed offline consistency tests, EN/US risk register and PL rollback notes. Remaining Stage I–IV gates, five Fix Passes, actual final-head Ubuntu 22.04/24.04/26.04 checks and an explicit Owner merge decision remain mandatory.
+- **Boundary:** A draft source candidate only. No tag, publish, package deployment, public operator listener, change to MariaDB v11/five private stores, production SLA/RPO/RTO or automatic main merge. Stop after push/CI trigger without waiting for results.
+
+## beta-0.8.9–beta-0.8.12 Stage III — 2026-11-24 (single draft PR; final-head CI required)
+
+- **0.8.9:** Check all ancestor components of Node owner-only state paths for symlinks and path swaps, shared across MFA/replay, audit, passkeys, rate limits and first-installation. Preserve six-component stopped-writer SQL/private capture and strict non-overwrite rules.
+- **0.8.10:** Add opt-in detached offline HMAC authenticity for the exact recovery pair with an independently pinned owner key and a separate fsynced, anti-reuse ledger. Reject unknown key, mismatched pair, invalid format and consumed copies; HMAC is not a nonrepudiable operator signature or evidence of online atomicity.
+- **0.8.11:** Add a genuine post-unpack `dpkg postinst` failure fixture and explicit prior-version recovery. Compile the private Node gateway to runtime-only JS, require a production-dependency-only hosted start/restart fixture, and remove dev-only `tsx` from the example service command. No deployable production package or service activation.
+- **0.8.12:** Recheck previous C++ binary, restored MariaDB v11 account/grant/disabled-account state and reopened Node TOTP/replay, revoked passkey, audit and rate-limit catalogs following a disposable downgrade and restart. No claim of real browser login against the downgraded binary or live revocation without a separate rehearsal.
+- **Evidence:** [EN/US Stage III](doc/us/BETA_0.8_STAGE_III.md) | [PL operator notes](doc/pl/BETA_0.8_STAGE_III.md). Only Stage III is authorized by this change. Complete exact-final-head GitHub-hosted Ubuntu 22.04/24.04/26.04 CI is required; stop after push and CI trigger without waiting, and keep draft PR/main untouched.
+
+## beta-0.8.5–beta-0.8.8 Stage II — 2026-11-24 (single draft PR; exact-head CI pending)
+
+- **0.8.5 — Interrupted WebAuthn recovery:** Add a real Chromium signed assertion pending across a simulated cold gateway process and matched five-store restore; deny the stale challenge and truncated catalog, then require a fresh signed ceremony. The existing hosted C++/Node/Apache/MariaDB v11 fixture remains essential; physical devices are not certified.
+- **0.8.6 — Passkey content and concurrent mutation:** Hash and re-read the open owner-only passkey catalog to detect same-length, same-mtime in-place counter rollback. Test concurrent device revoke beating a streamed rename; retain C++ grant, account, epoch, backup and counter boundaries.
+- **0.8.7 — MFA and rate-budget integrity:** Apply an in-process SHA-256 consistency guard to the private limiter store while retaining the current on-disk format and TOTP/replay invariants. **Offline tampering before a cold restart cannot be authenticated without a separately approved durable MAC/migration; this is an explicit open risk.**
+- **0.8.8 — Cross-tab session safety:** Invalidate sibling tabs after successful TOTP or passkey sign-in using a fixed secret-free signal; test EN/PL expired-session guidance, input focus and private metric removal.
+- **Stage II exact-head evidence:** Fail-closed Chromium JUnit plus matched C++/MariaDB/five-store restore gate in the GitHub-hosted Ubuntu 22.04/24.04/26.04 VM matrix. [EN/US ledger](doc/us/BETA_0.8_STAGE_II.md) | [PL operator notes](doc/pl/BETA_0.8_STAGE_II.md). This is handoff, not CI acceptance, merge, private-store format migration, release or deployment.
+
+## beta-0.8.1–beta-0.8.4 Stage I — 2026-11-24 (single draft PR planned; exact-head CI pending)
+
+- **0.8.1 — Verifiable multi-client inventory:** Add a strictly bounded Stage I CTest/JUnit provenance gate which composes the existing pinned ncdc package/executable hashes with ADC/ADCS and TLS process cases. Missing, skipped, nonfinite, duplicate, wrong-head and fabricated client evidence fail. DC++ and AirDC++ remain **not executed**, not silently certified.
+- **0.8.2 — Negotiation and account-revocation boundary:** Extend the disposable real MariaDB/C++ process tests to disable a registered account, stop the hub, prove all old sessions are disconnected and reject fresh ADC/ADCS login until explicit re-enable/restart. Live SQL status edits are **not** a hot-reload guarantee.
+- **0.8.3 — Search-to-transfer continuity:** Add real TCP and TLS directed TTH search/RES/CTM tests across denied passive requests, a permitted INF active update and unknown-recipient refusal. Existing IPv4/IPv6, NAT scope, token and transfer limits remain mandatory.
+- **0.8.4 — TLS trust renewal:** Add independent TLS 1.2/1.3 certificate cutover, old-CA rejection, new-CA acceptance and no-plaintext-fallback on the ADCS listener. Retain expired-leaf, weak-cipher, hostname, wrong-key and downgrade negatives.
+- **Stage I gate and boundary:** `scripts/beta08_stage1_gate.py`, negative unit tests, hosted Ubuntu 22.04/24.04/26.04 C++ matrix and [EN/US ledger](doc/us/BETA_0.8_STAGE_I.md) / [PL operator notes](doc/pl/BETA_0.8_STAGE_I.md). Only four planned patches; Stage II–V and Fix Pass 1 remain separate requests. Stop after push/CI trigger **without waiting**. Product identifiers remain `beta-0.7.20` until the planned beta-0.8.20 synchronization; no release, deployment or merge is implied.
+
 ## beta-0.7.1–beta-0.7.4 Fix Pass 1 — 2026-11-24 (draft PR #239; exact-head CI pending)
 
 - **Client evidence provenance defect:** Bind the pinned ncdc capability report to the actual `git rev-parse HEAD`, require a matching GitHub-hosted Ubuntu 22.04/24.04/26.04 environment, and reject wrong-head/incorrect-runner evidence before writing a report. Add negative unit tests for SHA and runner drift.

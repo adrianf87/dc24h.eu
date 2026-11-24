@@ -14,8 +14,11 @@ test("security monitor emits bounded reason-only alerts with cooldown", () => {
   monitor.signal("audit_corruption", 101_004);
   monitor.signal("audit_loss", 101_005);
   monitor.signal("audit_loss", 101_006);
+  monitor.signal("audit_near_capacity", 101_007);
+  monitor.signal("audit_near_capacity", 101_008);
   assert.deepEqual(lines.map(line => JSON.parse(line).reason), [
     "authentication_denials", "upstream_outage", "rate_limiter_loss", "audit_corruption", "audit_loss",
+    "audit_near_capacity",
   ]);
   for (const line of lines) {
     assert.ok(line.length < 170 && line.endsWith("\n"));
