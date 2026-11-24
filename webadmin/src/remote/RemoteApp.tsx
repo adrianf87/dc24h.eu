@@ -40,6 +40,7 @@ const labels = {
     serviceReady: "Hub reported running", lastUpdated: "Read age", chatDenied: "Rejected chat total",
     maintenance: "Recovery / maintenance", maintenanceUnknown: "Not exposed by approved read-only projection",
     incidentReady: "Verified", incidentDegraded: "Degraded", stale: "Read expired; old counters are hidden until a verified refresh.",
+    acknowledge: "Acknowledge locally", acknowledged: "Acknowledged on this screen only; no server action was sent.",
   },
   pl: {
     title: "WebAdmin zdalny", mode: "Tylko odczyt · Dostęp lokalny", id: "ID konta administratora",
@@ -71,6 +72,7 @@ const labels = {
     serviceReady: "Hub zgłasza pracę", lastUpdated: "Wiek odczytu", chatDenied: "Łączna liczba odrzuconych wiadomości",
     maintenance: "Odtwarzanie / konserwacja", maintenanceUnknown: "Niedostępne w zatwierdzonym widoku tylko do odczytu",
     incidentReady: "Zweryfikowano", incidentDegraded: "Pogorszenie", stale: "Odczyt nieaktualny; poprzednie liczniki ukryto do czasu weryfikacji.",
+    acknowledge: "Potwierdź lokalnie", acknowledged: "Potwierdzono tylko na tym ekranie; nie wysłano żadnej akcji do serwera.",
   },
 } as const;
 
@@ -114,6 +116,7 @@ export function RemoteApp() {
   // server-issued session. Use a monotonic browser clock for the countdown.
   const [clock, setClock] = useState(() => performance.now());
   const [actionMessage, setActionMessage] = useState("");
+  const [incidentAcknowledged, setIncidentAcknowledged] = useState(false);
   // An older HTTP response must never modify a newer authenticated session.
   const sessionEpoch = useRef(0);
   // A prior refresh must also not replace the latest result within a session.
@@ -139,6 +142,7 @@ export function RemoteApp() {
     setDeviceMutationBusy(null);
     setSessionExpiresAt(null);
     setActionMessage("");
+    setIncidentAcknowledged(false);
     setCsrf("");
     setState(next);
   };
@@ -187,6 +191,7 @@ export function RemoteApp() {
     setDeviceMutationBusy(null);
     setSummary(null);
     setSummaryFetchedAt(null);
+    setIncidentAcknowledged(false);
     // Only the server can establish the lifetime of the rotated cookie. A
     // stale or failed inspection cannot overwrite the new CSRF identifier.
     void call("session").then(({ status, data }) => {
@@ -215,8 +220,10 @@ export function RemoteApp() {
     setPassword(""); // Do not retain a password after a failed challenge.
     setOtp("");
     invalidate("loading");
+    const epoch = sessionEpoch.current;
     try {
       const challenge = await call("challenge");
+      if (epoch !== sessionEpoch.current) return;
       if (challenge.status !== 200 || !challenge.data || typeof challenge.data !== "object" ||
         !("csrf" in challenge.data) || typeof challenge.data.csrf !== "string") {
         setState(failure(challenge.status)); return;
@@ -226,24 +233,27 @@ export function RemoteApp() {
           "Content-Type": "application/json", "X-DC24H-Remote-CSRF": challenge.data.csrf,
         }, body: JSON.stringify({ actor_id: actor, password: proof, otp: code }),
       });
+      if (epoch !== sessionEpoch.current) return;
       if (result.status === 200 && validSession(result.data)) {
         setCsrf(result.data.csrf); updateSessionLifetime(result.data.expires_in);
         setState("authorized");
       } else { invalidate(result.status === 200 ? "unavailable" : failure(result.status)); }
-    } catch { invalidate("unavailable"); }
+    } catch { if (epoch === sessionEpoch.current) invalidate("unavailable"); }
   };
   const logout = async () => {
     if (!csrf) return;
     const token = csrf;
     invalidate("loading");
+    const epoch = sessionEpoch.current;
     try {
       const result = await call("logout", {
         method: "POST", headers: { "Content-Type": "application/json", "X-DC24H-Remote-CSRF": token },
         body: "{}",
       });
+      if (epoch !== sessionEpoch.current) return;
       if (result.status !== 200) { invalidate(failure(result.status)); return; }
       invalidate("unauthorized"); setActor("");
-    } catch { invalidate("unavailable"); }
+    } catch { if (epoch === sessionEpoch.current) invalidate("unavailable"); }
   };
   const passkeyRequest = (path: string, data: unknown, token: string) => call(path, {
     method: "POST", headers: { "Content-Type": "application/json", "X-DC24H-Remote-CSRF": token },
@@ -253,22 +263,27 @@ export function RemoteApp() {
     const proof = password;
     setPassword(""); setOtp("");
     invalidate("loading");
+    const epoch = sessionEpoch.current;
     try {
       const issued = await call("challenge");
+      if (epoch !== sessionEpoch.current) return;
       if (issued.status !== 200 || !issued.data || typeof issued.data !== "object" ||
           !("csrf" in issued.data) || typeof issued.data.csrf !== "string") {
         invalidate(failure(issued.status)); return;
       }
       const token = issued.data.csrf;
       const options = await passkeyRequest("passkey/login/options", { actor_id: actor, password: proof }, token);
+      if (epoch !== sessionEpoch.current) return;
       if (options.status !== 200) { invalidate(failure(options.status)); return; }
       const answer = await startAuthentication({ optionsJSON: options.data as Parameters<typeof startAuthentication>[0]["optionsJSON"] });
+      if (epoch !== sessionEpoch.current) return;
       const result = await passkeyRequest("passkey/login/finish", { response: answer }, token);
+      if (epoch !== sessionEpoch.current) return;
       if (result.status === 200 && validSession(result.data)) {
         setCsrf(result.data.csrf); updateSessionLifetime(result.data.expires_in);
         setState("authorized");
       } else invalidate(failure(result.status));
-    } catch { invalidate("unavailable"); }
+    } catch { if (epoch === sessionEpoch.current) invalidate("unavailable"); }
   };
   const loadDevices = async () => {
     const epoch = sessionEpoch.current;
@@ -359,6 +374,7 @@ export function RemoteApp() {
         {state !== "authorized" && actionMessage && <p role="status">{actionMessage}</p>}
         {state !== "authorized" && state !== "loading" && <form onSubmit={(event) => { void login(event); }}>
           <label>{t.id}<input name="actor" inputMode="numeric" autoComplete="username"
+            autoFocus={state === "expired" || state === "forbidden"}
             required pattern="[1-9][0-9]*" value={actor} onChange={(event) => setActor(event.target.value)} /></label>
           <label>{t.password}<input name="password" type="password" autoComplete="current-password"
             required value={password} onChange={(event) => setPassword(event.target.value)} /></label>
@@ -381,6 +397,9 @@ export function RemoteApp() {
               <div><dt>{t.chatDenied}</dt><dd>{freshSummary.chat.rejected}</dd></div>
               <div><dt>{t.maintenance}</dt><dd className="remote-unknown">{t.maintenanceUnknown}</dd></div>
             </dl>
+            <button type="button" aria-pressed={incidentAcknowledged}
+              onClick={() => setIncidentAcknowledged(true)} disabled={incidentAcknowledged}>{t.acknowledge}</button>
+            {incidentAcknowledged && <p role="status">{t.acknowledged}</p>}
           </section>}
           {freshSummary ? <dl className="remote-grid">{rows.map(([key, value]) =>
             <div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}</dl> : <p>{t.loading}</p>}

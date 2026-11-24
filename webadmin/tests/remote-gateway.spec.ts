@@ -52,6 +52,19 @@ test("remote read-only screen needs a session, supports EN/PL and never offers h
   await expect(page.getByText("Użytkownicy online")).toBeVisible();
   await expect(page.getByRole("region", { name: "Prywatny przegląd incydentów" })).toBeVisible();
   await expect(page.getByText("Niedostępne w zatwierdzonym widoku tylko do odczytu")).toBeVisible();
+  const acknowledgedRequests: string[] = [];
+  page.on("request", request => {
+    if (request.method() !== "GET") acknowledgedRequests.push(request.url());
+  });
+  await page.getByRole("button", { name: "Potwierdź lokalnie" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("status").filter({ hasText: "Potwierdzono tylko na tym ekranie" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Potwierdź lokalnie" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Potwierdź lokalnie" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "English" }).click();
+  await expect(page.getByText("Acknowledged on this screen only; no server action was sent.")).toBeVisible();
+  await page.getByRole("button", { name: "Polski" }).click();
+  expect(acknowledgedRequests).toEqual([]);
   for (const title of ["Start", "Stop", "Restart", "Edit", "Restore", "Grant"]) {
     await expect(page.getByRole("button", { name: title, exact: true })).toHaveCount(0);
   }
