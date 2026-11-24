@@ -108,16 +108,17 @@ def verify_ncdc(os_image):
             "executable_sha256": executable_sha}
 
 
-def collect_tests(junit):
+def collect_tests(junit, allowed_names=None):
     root = ET.parse(junit).getroot()
     cases = root.findall(".//testcase")
     names = [item.attrib.get("name") for item in cases]
     if len(names) != len(set(names)):
         raise ValueError("Duplicate CTest test case")
     states = {}
+    allowed = set(CAPABILITIES.values()) if allowed_names is None else set(allowed_names)
     for item in cases:
         name = item.attrib.get("name", "")
-        if name in CAPABILITIES.values():
+        if name in allowed:
             try:
                 duration = float(item.attrib.get("time", "nan"))
             except ValueError:
