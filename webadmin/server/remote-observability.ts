@@ -50,7 +50,14 @@ export function aggregateObservability(monotonic: () => number, journal?: Incide
     // A journal is optional and never becomes an authentication authority.
     // If it fails, report unknown retained history without crashing C++ auth.
     try { journal?.append(kind); }
-    catch { journal?.unavailable(); }
+    catch { try { journal?.unavailable(); } catch { /* Optional telemetry stays unavailable. */ } }
+  };
+  const retained = (): RetainedIncidents => {
+    try { return journal!.read(); }
+    catch {
+      try { journal!.unavailable(); } catch { /* Optional telemetry stays unavailable. */ }
+      return { state: "unknown", events: [] };
+    }
   };
   const validClock = (at: number) => {
     if (!Number.isFinite(at) || at < 0 ||
@@ -107,14 +114,17 @@ export function aggregateObservability(monotonic: () => number, journal?: Incide
       lastAuditAlert[kind] = at;
     }
   };
-  const auditLost = () => { reset(); journal?.unavailable(); };
+  const auditLost = () => {
+    reset();
+    try { journal?.unavailable(); } catch { /* Auth outage must remain observable. */ }
+  };
   const sourceUnavailable = () => { reset(); };
   const read = () => {
     const at = monotonic();
     if (!validClock(at) || (last && at - last.at > sampleValidityMs)) {
       reset();
       return { schema: 1 as const, state: "unknown" as const, events: [] as RedactedEvent[], alerts: [] as RedactedAlert[],
-        ...(journal ? { retained: journal.read() } : {}) };
+        ...(journal ? { retained: retained() } : {}) };
     }
     prune(at);
     const visible: RedactedEvent[] = events.map(e => ({ kind: e.kind,
@@ -122,7 +132,7 @@ export function aggregateObservability(monotonic: () => number, journal?: Incide
     return { schema: 1 as const, state: last ? "observed" as const : "unknown" as const,
       events: visible, alerts: visible.filter((e): e is RedactedAlert =>
         e.kind === "transport_refusals" || e.kind === "login_refusals" || e.kind === "rate_limit_refusals"),
-      ...(journal ? { retained: journal.read() } : {}) };
+      ...(journal ? { retained: retained() } : {}) };
   };
   return { observe, observeAudit, auditLost, sourceUnavailable, read };
 }

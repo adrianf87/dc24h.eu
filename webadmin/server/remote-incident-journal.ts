@@ -47,7 +47,15 @@ function decode(bytes: Buffer): Snapshot {
   return { schema: 1, events };
 }
 
-function readSnapshot(path: string): { value: Snapshot; fingerprint: string } {
+type FileIdentity = { dev: number; ino: number };
+type JournalSnapshot = { value: Snapshot; fingerprint: string; identity: FileIdentity };
+
+function sameGeneration(a: JournalSnapshot, b: JournalSnapshot): boolean {
+  return a.identity.dev === b.identity.dev && a.identity.ino === b.identity.ino &&
+    a.fingerprint === b.fingerprint;
+}
+
+function readSnapshot(path: string): JournalSnapshot {
   assertParent(path);
   const stat = lstatSync(path);
   const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
@@ -61,7 +69,8 @@ function readSnapshot(path: string): { value: Snapshot; fingerprint: string } {
     const bytes = readFileSync(fd);
     try {
       if (bytes.length !== opened.size) throw Error("Incident journal changed during read");
-      return { value: decode(bytes), fingerprint: createHash("sha256").update(bytes).digest("hex") };
+      return { value: decode(bytes), fingerprint: createHash("sha256").update(bytes).digest("hex"),
+        identity: { dev: opened.dev, ino: opened.ino } };
     } finally { bytes.fill(0); }
   } finally { closeSync(fd); }
 }
@@ -98,7 +107,7 @@ export function openIncidentJournal(path: string, now: () => number = Date.now) 
     try {
       const time = checkedTime();
       const fresh = readSnapshot(path);
-      if (fresh.fingerprint !== current.fingerprint) throw Error("Incident journal changed outside writer");
+      if (!sameGeneration(fresh, current)) throw Error("Incident journal changed outside writer");
       if (fresh.value.events.some(e => e.at_unix_ms > time)) throw Error("Incident clock reversed");
       return { state: "available", events: fresh.value.events
         .filter(e => time - e.at_unix_ms <= retentionMs)
@@ -111,7 +120,7 @@ export function openIncidentJournal(path: string, now: () => number = Date.now) 
     try {
       const time = checkedTime();
       const fresh = readSnapshot(path);
-      if (fresh.fingerprint !== current.fingerprint ||
+      if (!sameGeneration(fresh, current) ||
           fresh.value.events.some(e => e.at_unix_ms > time)) throw Error("Incident generation invalid");
       const entries = fresh.value.events.filter(e => time - e.at_unix_ms <= retentionMs);
       entries.push({ kind, at_unix_ms: time });
@@ -125,7 +134,7 @@ export function openIncidentJournal(path: string, now: () => number = Date.now) 
           fsyncSync(fd);
         } finally { closeSync(fd); }
         // A changed/aliased destination must not be silently replaced.
-        if (readSnapshot(path).fingerprint !== current.fingerprint)
+        if (!sameGeneration(readSnapshot(path), current))
           throw Error("Incident destination changed");
         renameSync(temporary, path);
         temporary = undefined;

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { chmodSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync, mkdirSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { aggregateObservability } from "../server/remote-observability.ts";
@@ -78,4 +78,44 @@ test("journal rejects corrupted, public and aliased files without overwriting th
     symlinkSync(real, alias);
     assert.throws(() => initializeIncidentJournal(join(alias, "secret.json")), /Symlink|ancestor/);
   } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("journal fails closed on an identical-content inode replacement, including before append", () => {
+  const dir = mkdtempSync(join(tmpdir(), "dc24h-incident-generation-"));
+  const path = join(dir, "incidents.json"), moved = join(dir, "previous.json");
+  try {
+    initializeIncidentJournal(path);
+    const reader = openIncidentJournal(path, () => 1_700_000_000_000);
+    const writer = openIncidentJournal(path, () => 1_700_000_000_000);
+    const original = readFileSync(path);
+    renameSync(path, moved);
+    writeFileSync(path, original, { mode: 0o600 });
+    assert.deepEqual(reader.read(), { state: "unknown", events: [] });
+    assert.throws(() => writer.append("hub_started"), /generation invalid/);
+    assert.deepEqual(readFileSync(path), original, "writer must not replace a swapped destination");
+    assert.deepEqual(readFileSync(moved), original);
+    const recovery = openIncidentJournal(path, () => 1_700_000_000_000);
+    recovery.append("hub_started");
+    assert.deepEqual(recovery.read(), { state: "available", events: [{ kind: "hub_started", age_seconds: 0 }] });
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("failed optional incident telemetry cannot break a fresh status read or audit-loss handling", () => {
+  let mono = 1_000, unavailableCalls = 0;
+  const observed = aggregateObservability(() => mono, {
+    append: () => { throw Error("disk full"); },
+    read: () => { throw Error("disk unavailable"); },
+    unavailable: () => { unavailableCalls++; throw Error("journal already unavailable"); },
+  });
+  assert.deepEqual(observed.read().retained, { state: "unknown", events: [] });
+  observed.observe(sample(true));
+  mono += 1_000;
+  observed.observe(sample(false));
+  const status = observed.read();
+  assert.equal(status.state, "observed", "C++ freshness is independent of the optional journal");
+  assert.deepEqual(status.events, [{ kind: "hub_stopped", age_seconds: 0 }]);
+  assert.deepEqual(status.retained, { state: "unknown", events: [] });
+  assert.ok(unavailableCalls >= 2);
+  assert.doesNotThrow(() => observed.auditLost());
+  assert.equal(observed.read().state, "unknown");
 });

@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { remoteAuditEvents, remoteAuditRecord } from "../server/remote-audit.ts";
 import type { RemoteEvent } from "../server/remote-gateway.ts";
 import { initializeRemoteAuditStore, openRemoteAuditStore } from "../server/remote-audit-store.ts";
-import { archiveStoppedRemoteAudit } from "../server/remote-audit-archive.ts";
+import { archiveStoppedRemoteAudit, openPinnedAuditSource } from "../server/remote-audit-archive.ts";
 import { chmodSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -182,5 +182,28 @@ test("Owner-approved stopped-writer archive preserves every original byte and re
     writeFileSync(path, readFileSync(path, "utf8").replace('"rate_limited"', '"route_refused"'));
     assert.throws(() => archiveStoppedRemoteAudit(path, join(dir, "bad.jsonl"), "OWNER_STOPPED_WRITER_ACK"));
     assert.deepEqual(readFileSync(destination), original, "a bad source must not alter a prior archive");
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("offline archival source stays pinned across identical-content path swaps", () => {
+  const dir = mkdtempSync(join(tmpdir(), "dc24h-audit-archive-generation-"));
+  const path = join(dir, "audit.jsonl"), moved = join(dir, "previous.jsonl");
+  try {
+    initializeRemoteAuditStore(path);
+    const writer = openRemoteAuditStore(path);
+    writer.append("login_refused", 1_700_000_000_000);
+    writer.close();
+    const pinned = openPinnedAuditSource(path);
+    try {
+      const original = pinned.read();
+      renameSync(path, moved);
+      writeFileSync(path, original, { mode: 0o600 });
+      assert.throws(() => pinned.read(), /path replaced/,
+        "matching audit bytes under a new inode cannot pass the stopped-writer generation check");
+      assert.deepEqual(readFileSync(moved), original);
+    } finally { pinned.close(); }
+    const alias = join(dir, "alias.jsonl");
+    symlinkSync(path, alias);
+    assert.throws(() => openPinnedAuditSource(alias), /ELOOP/);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
