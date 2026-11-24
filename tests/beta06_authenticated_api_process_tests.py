@@ -114,6 +114,7 @@ def run(binary, seeder):
         (public / "remote.html").write_text("<title>Disposable remote fixture</title>")
         (apache_dir / "mime.types").write_text("text/html html\napplication/json json\n")
         cpp = node = apache = None
+        recovered_db = None
         try:
             db.initialize()
             db.start()
@@ -295,11 +296,147 @@ def run(binary, seeder):
                     json.dump(report, file, sort_keys=True, indent=2)
                     file.write("\n")
             print(f"Authenticated HTTPS: {len(success)}/{REQUESTS} success, p99={p99} ms (CI fixture)")
+
+            # The prior beta-0.5 recovery test checked SQL and file bytes but
+            # did not reauthenticate through a *restored* C++/Node instance.
+            # Stop all application writers and checkpoint the actual synthetic
+            # gateway session, MFA replay, audit, limiter and passkey files.
+            terminate(node); node = None
+            terminate(cpp); cpp = None
+            with tempfile.TemporaryDirectory(prefix="dc24h-beta06-revoked-") as revoked_temp:
+                revoked_root = Path(revoked_temp) / "private"
+                revoked_root.mkdir(mode=0o700)
+                matched.make_gateway_fixture(revoked_root)
+                # A previously revoked, synthetic credential must remain
+                # unusable after restore; this is never a real private key.
+                shutil.copy2(revoked_root / "passkeys.json", gateway_dir / "passkeys.json")
+            snapshot = base / "snapshot"
+            matched.private.snapshot(gateway_dir, snapshot)
+            dump = base / "checkpoint.sql"
+            db.dump(dump)
+            pair = base / "pair"
+            pair.mkdir(mode=0o700)
+            matched.bundle.create_pair(dump, snapshot, pair, sha)
+            matched.bundle.verified_pair(dump, snapshot, pair / matched.bundle.NAME, sha)
+            db.stop()
+
+            recovered_db = matched.IsolatedDatabase(base / "recovered-sql")
+            recovered_db.initialize()
+            recovered_db.start()
+            recovered_config = recovered_db.setup_schema()
+            recovered_db.restore_sql(dump)
+            if recovered_db.sql("SELECT role FROM dc24h.dc24h_accounts WHERE id=" + actor + ";") != "administrator":
+                raise AssertionError("Recovered C++ actor authority changed")
+            restored_private = base / "restored-private"
+            matched.private.restore_to_fresh_directory(snapshot, restored_private)
+            restored_api, fresh_token = enable_api(recovered_config, recovered_db.root)
+            # Preserve the HMAC limiter key across a matched state recovery;
+            # minting a new gateway key would silently reset old rate budgets.
+            if len(fresh_token) != 64:
+                raise AssertionError("Invalid disposable API token")
+            (recovered_db.root / "admin.token").write_text(api_token + "\n", encoding="ascii")
+            (recovered_db.root / "admin.token").chmod(0o600)
+            cpp = subprocess.Popen([str(binary), "--config", str(recovered_config)],
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                   start_new_session=True)
+            until = time.monotonic() + 15
+            while not restored_api.exists():
+                if cpp.poll() is not None or time.monotonic() > until:
+                    raise AssertionError("Recovered C++ API did not start")
+                time.sleep(0.05)
+            restored_env = {**env, "DC24H_API_SOCKET": str(restored_api),
+                            "DC24H_API_TOKEN_FILE": str(recovered_db.root / "admin.token"),
+                            "DC24H_REMOTE_MFA_FILE": str(restored_private / "mfa.json"),
+                            "DC24H_REMOTE_MFA_REPLAY_FILE": str(restored_private / "replay.jsonl"),
+                            "DC24H_REMOTE_AUDIT_FILE": str(restored_private / "audit.jsonl"),
+                            "DC24H_REMOTE_PASSKEY_FILE": str(restored_private / "passkeys.json"),
+                            "DC24H_REMOTE_RATE_LIMIT_FILE": str(restored_private / "rate-limits.json")}
+            node = subprocess.Popen(["node", "--import", "tsx", "server/remote-main.ts"],
+                                    cwd=ROOT / "webadmin", env=restored_env,
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                    start_new_session=True)
+            wait_tcp(node_port, node)
+            if fetch("/remote/v1/session", headers={"Cookie": cookie})[0] != 401:
+                raise AssertionError("Pre-restore browser cookie must not survive process restart")
+
+            # A consumed OTP step is still in the restored replay ledger.
+            original_code = json.loads((restored_private / "replay.jsonl").read_text().splitlines()[-1])["step"]
+            if type(original_code) is not int:
+                raise AssertionError("Invalid restored MFA replay step")
+            status, payload, headers, _ = fetch("/remote/v1/challenge")
+            if status != 200:
+                raise AssertionError("Recovered browser challenge unavailable")
+            init_cookie = next(v.split(";", 1)[0] for name, v in headers if name.lower() == "set-cookie")
+            csrf = json.loads(payload)["csrf"]
+            replay_code = f"{int(code_now()):06d}"
+            # If the restored step is already older, this check cannot prove
+            # replay of the original OTP; explicitly require its time window.
+            if int(time.time() // 30) == original_code:
+                denied = json.dumps({"actor_id": actor, "password": "WebAdmin operator password!",
+                                     "otp": replay_code}).encode()
+                replay_status, _, _, _ = fetch("/remote/v1/login", "POST", denied, {
+                    "Origin": origin, "Content-Type": "application/json", "Cookie": init_cookie,
+                    "X-DC24H-Remote-CSRF": csrf})
+                if replay_status != 403:
+                    raise AssertionError("Restored MFA replay ledger failed to reject consumed OTP")
+
+            # Wait for a fresh TOTP step so restoring the replay ledger cannot
+            # be mistaken for a password/second-factor lockout.
+            until = time.monotonic() + 35
+            while int(time.time() // 30) <= original_code:
+                if time.monotonic() > until:
+                    raise AssertionError("Fresh restored TOTP window did not arrive")
+                time.sleep(0.25)
+            status, payload, headers, _ = fetch("/remote/v1/challenge")
+            if status != 200:
+                raise AssertionError("Restored fresh challenge unavailable")
+            init_cookie = next(v.split(";", 1)[0] for name, v in headers if name.lower() == "set-cookie")
+            fresh_csrf = json.loads(payload)["csrf"]
+            login_body = json.dumps({"actor_id": actor, "password": "WebAdmin operator password!",
+                                     "otp": code_now()}).encode()
+            login_status, response, headers, _ = fetch("/remote/v1/login", "POST", login_body, {
+                "Origin": origin, "Content-Type": "application/json", "Cookie": init_cookie,
+                "X-DC24H-Remote-CSRF": fresh_csrf})
+            if login_status != 200 or json.loads(response).get("authenticated") is not True:
+                raise AssertionError("Fresh restored C++/Node login failed")
+            restored_cookie = next(v.split(";", 1)[0] for name, v in headers
+                                   if name.lower() == "set-cookie")
+            if fetch("/remote/v1/summary", headers={"Cookie": restored_cookie})[0] != 200:
+                raise AssertionError("Fresh restored read-only grant not usable")
+            # A revoked device in the restored catalog must never yield a
+            # passkey challenge, even with the correct C++ password.
+            status, payload, headers, _ = fetch("/remote/v1/challenge")
+            if status != 200:
+                raise AssertionError("Passkey negative challenge unavailable")
+            passkey_init = next(v.split(";", 1)[0] for name, v in headers
+                                if name.lower() == "set-cookie")
+            denied_options, _, _, _ = fetch("/remote/v1/passkey/login/options", "POST",
+                json.dumps({"actor_id": actor, "password": "WebAdmin operator password!"}).encode(), {
+                    "Origin": origin, "Content-Type": "application/json", "Cookie": passkey_init,
+                    "X-DC24H-Remote-CSRF": json.loads(payload)["csrf"]})
+            if denied_options != 403:
+                raise AssertionError("Revoked restored passkey unexpectedly began authentication")
+            if os.environ.get("DC24H_VM_REPORT_DIR"):
+                with (Path(os.environ["DC24H_VM_REPORT_DIR"]) / "beta06-restored-login.json").open(
+                    "x", encoding="utf-8") as file:
+                    json.dump({"schema": 1, "source_sha": sha, "os_image": f"ubuntu-{version}",
+                               "evidence": "fresh-mariadb-five-store-real-reauth",
+                               "old_browser_cookie_refused": True,
+                               "fresh_password_totp_login_accepted": True,
+                               "fresh_private_summary_accepted": True,
+                               "replay_ledger_preserved": True,
+                               "revoked_passkey_catalog_restored": True,
+                               "revoked_passkey_login_options_refused": True,
+                               "production_recovery_claim": False,
+                               "real_browser_webauthn_exercised": False}, file, indent=2, sort_keys=True)
+                    file.write("\n")
         finally:
             terminate(apache)
             terminate(node)
             terminate(cpp)
             db.stop()
+            if recovered_db is not None:
+                recovered_db.stop()
 
 
 if __name__ == "__main__":
