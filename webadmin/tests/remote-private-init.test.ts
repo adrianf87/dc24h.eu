@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { chmodSync, mkdtempSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initializeRemotePrivateState } from "../server/remote-private-init.ts";
-import { loadTotpVerifier } from "../server/remote-mfa.ts";
-import { openRemoteAuditStore } from "../server/remote-audit-store.ts";
-import { openPasskeyStore } from "../server/remote-passkeys.ts";
-import { openRemoteRateLimitStore } from "../server/remote-rate-limit-store.ts";
+import { initializeTotpReplay, loadTotpVerifier, totpCodeForTest } from "../server/remote-mfa.ts";
+import { initializeRemoteAuditStore, openRemoteAuditStore } from "../server/remote-audit-store.ts";
+import { initializePasskeyStore, openPasskeyStore } from "../server/remote-passkeys.ts";
+import { initializeRemoteRateLimitStore, openRemoteRateLimitStore } from "../server/remote-rate-limit-store.ts";
 
 const secret = "A".repeat(32);
 const token = "a".repeat(64);
@@ -53,4 +53,56 @@ test("bootstrap refuses symlinks and unsafe MFA enrollment without creating any 
     assert.throws(() => initializeRemotePrivateState(dir, "localhost"), /Existing private MFA enrollment/);
     assert.throws(() => openRemoteAuditStore(file(dir, "audit.jsonl")), /ENOENT/);
   } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("intermediate ancestor symlink is rejected for every private store", () => {
+  const root = mkdtempSync(join(tmpdir(), "dc24h-private-ancestor-")); chmodSync(root, 0o700);
+  try {
+    const real = join(root, "real"); mkdirSync(real, { mode: 0o700 });
+    const state = join(real, "state"); mkdirSync(state, { mode: 0o700 });
+    writeFileSync(file(state, "mfa.json"),
+      JSON.stringify({ schema: 1, accounts: { "7": secret } }), { mode: 0o600 });
+    initializeRemotePrivateState(state, "localhost");
+    const alias = join(root, "alias"); symlinkSync(real, alias, "dir");
+    const throughAlias = join(alias, "state");
+    assert.throws(() => initializeRemotePrivateState(throughAlias, "localhost"), /Symlink/);
+    assert.throws(() => loadTotpVerifier(file(throughAlias, "mfa.json"),
+      file(throughAlias, "replay.jsonl")), /Symlink/);
+    assert.throws(() => openRemoteAuditStore(file(throughAlias, "audit.jsonl")), /Symlink/);
+    assert.throws(() => openPasskeyStore(file(throughAlias, "passkeys.json"), "localhost"), /Symlink/);
+    assert.throws(() => openRemoteRateLimitStore(file(throughAlias, "rate-limits.json"), token), /Symlink/);
+    assert.throws(() => initializeRemoteAuditStore(file(throughAlias, "new-audit.jsonl")), /Symlink/);
+    assert.throws(() => initializePasskeyStore(file(throughAlias, "new-passkeys.json"), "localhost"), /Symlink/);
+    assert.throws(() => initializeRemoteRateLimitStore(file(throughAlias, "new-rate-limits.json")), /Symlink/);
+    assert.throws(() => initializeTotpReplay(file(throughAlias, "new-replay.jsonl")), /Symlink/);
+    for (const name of ["new-audit.jsonl", "new-passkeys.json", "new-rate-limits.json", "new-replay.jsonl"])
+      assert.throws(() => readFileSync(file(state, name)), /ENOENT/);
+    // The real path remains usable; the test proves refusal of the alias,
+    // not an artificial permanent denial of a valid restored catalog.
+    const good = openPasskeyStore(file(state, "passkeys.json"), "localhost");
+    assert.equal(good.healthy(), true);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("an ancestor swapped to a symlink after opening fails subsequent state checks", () => {
+  const root = mkdtempSync(join(tmpdir(), "dc24h-private-swap-")); chmodSync(root, 0o700);
+  try {
+    const real = join(root, "real"); mkdirSync(real, { mode: 0o700 });
+    const state = join(real, "state"); mkdirSync(state, { mode: 0o700 });
+    writeFileSync(file(state, "mfa.json"), JSON.stringify({ schema: 1, accounts: { "7": secret } }),
+      { mode: 0o600 });
+    initializeRemotePrivateState(state, "localhost");
+    const mfa = loadTotpVerifier(file(state, "mfa.json"), file(state, "replay.jsonl"));
+    const audit = openRemoteAuditStore(file(state, "audit.jsonl"));
+    const passkeys = openPasskeyStore(file(state, "passkeys.json"), "localhost");
+    const rate = openRemoteRateLimitStore(file(state, "rate-limits.json"), token);
+    try {
+      const moved = join(root, "moved"); renameSync(real, moved);
+      symlinkSync(moved, real, "dir");
+      assert.throws(() => mfa.verify("7", totpCodeForTest(secret, 1_700_000_000_000), 1_700_000_000_000), /Symlink/);
+      assert.equal(audit.verify(), false);
+      assert.equal(passkeys.healthy(), false);
+      assert.equal(rate.healthy(), false);
+    } finally { mfa.close(); audit.close(); }
+  } finally { rmSync(root, { recursive: true, force: true }); }
 });

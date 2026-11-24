@@ -2,10 +2,11 @@
 // Keys are HMACed with the private C++ service token; the catalog never stores
 // a raw actor ID, password, IP address, credential ID or recovery identity.
 import { createHmac, randomBytes } from "node:crypto";
-import { basename, dirname, isAbsolute, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { closeSync, constants, fstatSync, fsyncSync, lstatSync, openSync, readFileSync,
   renameSync, unlinkSync, writeSync } from "node:fs";
 import { fingerprint, fingerprintPrivateFile } from "./private-catalog-integrity.ts";
+import { assertPrivateParent } from "./remote-private-path.ts";
 
 type Bucket = { key: string; count: number; starts: number };
 type State = { schema: 1; buckets: Bucket[] };
@@ -31,10 +32,7 @@ function validate(value: unknown): value is State {
 }
 
 function parentSafe(path: string) {
-  if (!isAbsolute(path)) throw Error("Absolute private rate-limit path required");
-  const s = lstatSync(dirname(path));
-  if (!s.isDirectory() || s.uid !== process.geteuid?.() || (s.mode & 0o077))
-    throw Error("Unsafe rate-limit directory");
+  assertPrivateParent(path);
 }
 function fileSafe(path: string) {
   const s = lstatSync(path);
@@ -58,6 +56,7 @@ export function initializeRemoteRateLimitStore(path: string): void {
   flushDirectory(path);
 }
 function persist(path: string, state: State) {
+  parentSafe(path);
   const bytes = Buffer.from(JSON.stringify(state) + "\n");
   if (bytes.length > maxBytes) throw Error("Rate-limit catalog full");
   const tmp = join(dirname(path), "." + basename(path) + "." + randomBytes(12).toString("hex"));
@@ -66,6 +65,7 @@ function persist(path: string, state: State) {
     fd = openSync(tmp, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
     if (writeSync(fd, bytes) !== bytes.length) throw Error("Incomplete rate-limit write");
     fsyncSync(fd); closeSync(fd); fd = undefined;
+    parentSafe(path);
     renameSync(tmp, path);
     flushDirectory(path);
   } catch (error) {

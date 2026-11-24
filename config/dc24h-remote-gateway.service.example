@@ -33,7 +33,10 @@ Environment=DC24H_REMOTE_PASSKEY_FILE=/var/lib/dc24h-remote/passkeys.json
 # HMAC-keyed attempt budgets survive service restarts. Never reset this file
 # just to unlock a guessed account; use the reviewed operator recovery path.
 Environment=DC24H_REMOTE_RATE_LIMIT_FILE=/var/lib/dc24h-remote/rate-limits.json
-ExecStart=/usr/bin/node --import tsx server/remote-main.ts
+# Build the local-only gateway with `npm run build:remote:ci` in a separate,
+# reviewed staging directory before installing runtime-only dependencies.
+# This example is NOT a deployable unit; paths/ownership need Owner review.
+ExecStart=/usr/bin/node /opt/dc24h/webadmin/dist/remote-main.mjs
 Restart=on-failure
 RestartSec=3
 TimeoutStopSec=20

@@ -23,10 +23,16 @@ VERSIONS = {"previous": "0.5.16+ci1", "current": "0.7.20+ci1"}
 # A real dpkg pre-unpack failure, not merely a malformed .deb rejected by the
 # archive reader. This higher version is never a deployable package.
 FAILED_UPGRADE_VERSION = "0.7.20+ci2"
+# A separate, valid package that fails *after* unpack during configuration.
+# The hosted test must explicitly reinstall the known-good previous package.
+FAILED_POSTINST_VERSION = "0.7.20+ci3"
 
 
-def build(binary: Path, destination: Path, version: str, sha: str, *, fail_preinst=False):
-    allowed = version == FAILED_UPGRADE_VERSION if fail_preinst else version in VERSIONS.values()
+def build(binary: Path, destination: Path, version: str, sha: str, *, fail_preinst=False, fail_postinst=False):
+    if fail_preinst and fail_postinst:
+        raise ValueError("Only one controlled package failure is allowed")
+    allowed = (version == FAILED_UPGRADE_VERSION if fail_preinst else
+               version == FAILED_POSTINST_VERSION if fail_postinst else version in VERSIONS.values())
     if not allowed or not re.fullmatch(r"[0-9a-f]{40}", sha):
         raise ValueError("Unreviewed package version or source identity")
     binary = Path(binary).resolve(strict=True)
@@ -50,6 +56,7 @@ def build(binary: Path, destination: Path, version: str, sha: str, *, fail_prein
         "Depends: libc6, libstdc++6\n"
         "Description: Ephemeral dc24h package-manager regression fixture\n" +
         (" Injected pre-unpack failure; never deploy or start.\n" if fail_preinst else
+         " Injected post-unpack failure; never deploy or start.\n" if fail_postinst else
          " Not a deployable service, cannot be enabled, has no maintainer scripts.\n"),
         encoding="ascii")
     (control / "control").chmod(0o644)
@@ -59,6 +66,10 @@ def build(binary: Path, destination: Path, version: str, sha: str, *, fail_prein
         preinst = control / "preinst"
         preinst.write_text("#!/bin/sh\nexit 41\n", encoding="ascii")
         preinst.chmod(0o755)
+    if fail_postinst:
+        postinst = control / "postinst"
+        postinst.write_text("#!/bin/sh\nexit 42\n", encoding="ascii")
+        postinst.chmod(0o755)
     executable = destination / BIN
     executable.parent.mkdir(parents=True, mode=0o755)
     shutil.copy2(binary, executable)

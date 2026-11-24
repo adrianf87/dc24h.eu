@@ -1,5 +1,13 @@
 # Changelog
 
+## beta-0.8.9–beta-0.8.12 Stage III — 2026-11-24 (single draft PR; final-head CI required)
+
+- **0.8.9:** Check all ancestor components of Node owner-only state paths for symlinks and path swaps, shared across MFA/replay, audit, passkeys, rate limits and first-installation. Preserve six-component stopped-writer SQL/private capture and strict non-overwrite rules.
+- **0.8.10:** Add opt-in detached offline HMAC authenticity for the exact recovery pair with an independently pinned owner key and a separate fsynced, anti-reuse ledger. Reject unknown key, mismatched pair, invalid format and consumed copies; HMAC is not a nonrepudiable operator signature or evidence of online atomicity.
+- **0.8.11:** Add a genuine post-unpack `dpkg postinst` failure fixture and explicit prior-version recovery. Compile the private Node gateway to runtime-only JS, require a production-dependency-only hosted start/restart fixture, and remove dev-only `tsx` from the example service command. No deployable production package or service activation.
+- **0.8.12:** Recheck previous C++ binary, restored MariaDB v11 account/grant/disabled-account state and reopened Node TOTP/replay, revoked passkey, audit and rate-limit catalogs following a disposable downgrade and restart. No claim of real browser login against the downgraded binary or live revocation without a separate rehearsal.
+- **Evidence:** [EN/US Stage III](doc/us/BETA_0.8_STAGE_III.md) | [PL operator notes](doc/pl/BETA_0.8_STAGE_III.md). Only Stage III is authorized by this change. Complete exact-final-head GitHub-hosted Ubuntu 22.04/24.04/26.04 CI is required; stop after push and CI trigger without waiting, and keep draft PR/main untouched.
+
 ## beta-0.8.5–beta-0.8.8 Stage II — 2026-11-24 (single draft PR; exact-head CI pending)
 
 - **0.8.5 — Interrupted WebAuthn recovery:** Add a real Chromium signed assertion pending across a simulated cold gateway process and matched five-store restore; deny the stale challenge and truncated catalog, then require a fresh signed ceremony. The existing hosted C++/Node/Apache/MariaDB v11 fixture remains essential; physical devices are not certified.

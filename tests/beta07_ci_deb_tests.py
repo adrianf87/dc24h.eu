@@ -67,6 +67,27 @@ class DebPrototypeTests(unittest.TestCase):
                           fail_preinst=True)
             self.assertFalse((root / "unsafe").exists())
 
+    @unittest.skipUnless(shutil.which("dpkg-deb") and shutil.which("dpkg"), "requires Debian dpkg tools")
+    def test_postunpack_failure_is_real_configuration_script_not_normal_package(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            binary = root / "fake-binary"
+            binary.write_bytes(b"#!/bin/sh\necho synthetic\n")
+            binary.chmod(0o700)
+            if subprocess.check_output(["dpkg", "--print-architecture"]).strip() != b"amd64":
+                self.skipTest("CI fixture architecture is amd64")
+            archive = deb.build(binary, root / "post-stage", deb.FAILED_POSTINST_VERSION,
+                                "b" * 40, fail_postinst=True)
+            control = subprocess.check_output(["dpkg-deb", "--ctrl-tarfile", str(archive)])
+            self.assertIn(b"postinst", control)
+            self.assertIn(b"#!/bin/sh\nexit 42\n", control)
+            with self.assertRaises(ValueError):
+                deb.build(binary, root / "invalid-stage", deb.FAILED_POSTINST_VERSION, "b" * 40)
+            with self.assertRaises(ValueError):
+                deb.build(binary, root / "invalid-stage", deb.FAILED_POSTINST_VERSION,
+                          "b" * 40, fail_postinst=True, fail_preinst=True)
+            self.assertFalse((root / "invalid-stage").exists())
+
     def test_refuses_unknown_version_sha_and_missing_binary_without_writes(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

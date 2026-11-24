@@ -7,9 +7,10 @@ import {
   closeSync, constants, fstatSync, fsyncSync, lstatSync, openSync,
   readFileSync, renameSync, unlinkSync, writeSync,
 } from "node:fs";
-import { basename, dirname, isAbsolute, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import type { WebAuthnCredential } from "@simplewebauthn/server";
 import { fingerprint, fingerprintPrivateFile } from "./private-catalog-integrity.ts";
+import { assertPrivateParent } from "./remote-private-path.ts";
 
 export type PasskeyEntry = {
   id: string;
@@ -78,10 +79,7 @@ function validDocument(v: unknown, rpID: string): v is Document {
 }
 
 function privateParent(path: string): void {
-  if (!isAbsolute(path)) throw Error("Absolute private passkey path required");
-  const dir = lstatSync(dirname(path));
-  if (!dir.isDirectory() || dir.uid !== process.geteuid?.() || (dir.mode & 0o077))
-    throw Error("Unsafe passkey directory");
+  assertPrivateParent(path);
 }
 function safeStat(path: string) {
   const s = lstatSync(path);
@@ -90,6 +88,7 @@ function safeStat(path: string) {
   return s;
 }
 function persist(path: string, doc: Document): void {
+  privateParent(path);
   const bytes = Buffer.from(JSON.stringify(doc) + "\n", "utf8");
   if (bytes.length > maxBytes) throw Error("Passkey catalog full");
   const tmp = join(dirname(path), "." + basename(path) + "." + randomBytes(12).toString("hex"));
@@ -98,6 +97,7 @@ function persist(path: string, doc: Document): void {
     fd = openSync(tmp, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
     if (writeSync(fd, bytes) !== bytes.length) throw Error("Incomplete passkey write");
     fsyncSync(fd); closeSync(fd); fd = undefined;
+    privateParent(path);
     renameSync(tmp, path);
     const dir = openSync(dirname(path), constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
     try { fsyncSync(dir); } finally { closeSync(dir); }

@@ -3,6 +3,7 @@
 // from its matched backup; this command is never a recovery/reset operation.
 import { lstatSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
+import { assertPrivateDirectory } from "./remote-private-path.ts";
 import { initializeTotpReplay } from "./remote-mfa.ts";
 import { initializeRemoteAuditStore } from "./remote-audit-store.ts";
 import { initializePasskeyStore } from "./remote-passkeys.ts";
@@ -10,9 +11,7 @@ import { initializeRemoteRateLimitStore } from "./remote-rate-limit-store.ts";
 
 export function initializeRemotePrivateState(directory: string, rpID: string): void {
   if (!isAbsolute(directory)) throw Error("Absolute first-installation state directory required");
-  const parent = lstatSync(directory);
-  if (!parent.isDirectory() || parent.uid !== process.geteuid?.() || (parent.mode & 0o077))
-    throw Error("Unsafe first-installation state directory");
+  assertPrivateDirectory(directory);
   // MFA enrollment is provisioned separately by the offline operator. Do not
   // mint, copy, print or replace any TOTP seed as part of this initialization.
   const enrollment = lstatSync(join(directory, "mfa.json"));

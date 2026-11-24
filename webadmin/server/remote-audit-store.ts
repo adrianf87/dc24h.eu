@@ -2,9 +2,10 @@
 // modification/gaps but is NOT a keyed proof against a privileged attacker.
 import { createHash } from "node:crypto";
 import { constants, closeSync, fstatSync, fsyncSync, lstatSync, openSync, readFileSync, readSync, writeSync } from "node:fs";
-import { dirname, isAbsolute } from "node:path";
+import { dirname } from "node:path";
 import { remoteAuditEvents, remoteAuditRecord } from "./remote-audit.ts";
 import type { RemoteEvent } from "./remote-gateway.ts";
+import { assertPrivateParent } from "./remote-private-path.ts";
 
 const maxBytes = 8 * 1024 * 1024;
 const zeroHash = "0".repeat(64);
@@ -14,10 +15,7 @@ const eventNames: ReadonlySet<string> = new Set(remoteAuditEvents);
 // Explicit first-installation only. Normal startup must never replace a lost
 // audit chain with an empty file (which would conceal missing security events).
 export function initializeRemoteAuditStore(path: string): void {
-  if (!isAbsolute(path)) throw new Error("Absolute audit file required");
-  const parent = lstatSync(dirname(path));
-  if (!parent.isDirectory() || parent.uid !== process.geteuid?.() || (parent.mode & 0o077))
-    throw new Error("Unsafe audit directory");
+  assertPrivateParent(path);
   const fd = openSync(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
   try { fsyncSync(fd); }
   finally { closeSync(fd); }
@@ -46,11 +44,8 @@ function checkRow(value: unknown, sequence: number, previous: string): Row {
 }
 
 export function openRemoteAuditStore(path: string) {
-  if (!isAbsolute(path)) throw new Error("Absolute audit file required");
+  assertPrivateParent(path);
   const uid = process.geteuid?.();
-  const parent = lstatSync(dirname(path));
-  if (!parent.isDirectory() || parent.uid !== uid || (parent.mode & 0o077))
-    throw new Error("Unsafe audit directory");
   const fd = openSync(path, constants.O_RDWR | constants.O_APPEND | constants.O_NOFOLLOW);
   let sequence = 0, previous = zeroHash, size = 0, healthy = true, dropped = 0;
   try {
@@ -79,6 +74,7 @@ export function openRemoteAuditStore(path: string) {
   const append = (event: RemoteEvent, milliseconds: number): void => {
     if (!healthy) throw new Error("Audit sink unavailable");
     try {
+      assertPrivateParent(path);
       const at = JSON.parse(remoteAuditRecord(event, milliseconds)).at as string;
       if (sequence >= Number.MAX_SAFE_INTEGER) throw new Error("Audit sequence exhausted");
       const row: Row = { schema: 1, sequence: sequence + 1, previous, event, at,
@@ -110,6 +106,7 @@ export function openRemoteAuditStore(path: string) {
     // including during an otherwise idle authentication period.
     const bytes = Buffer.alloc(size);
     try {
+      assertPrivateParent(path);
       const stat = lstatSync(path), opened = fstatSync(fd);
       if (!stat.isFile() || stat.dev !== opened.dev || stat.ino !== opened.ino ||
           stat.uid !== uid || stat.nlink !== 1 || (stat.mode & 0o077) ||
