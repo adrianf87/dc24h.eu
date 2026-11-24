@@ -50,7 +50,7 @@ def run(current, historical, checkout):
         raise AssertionError("Unexpected previous package source")
     if previous.execute(historical, "--version") != previous.PREVIOUS_VERSION:
         raise AssertionError("Previous binary version mismatch")
-    if previous.execute(current, "--version") != "dc24h.eu beta-0.7.20":
+    if previous.execute(current, "--version") != "dc24h.eu beta-0.8.20":
         raise AssertionError("Current test fixture version mismatch")
     if quiet(["dpkg-query", "-W", "-f=${Status}", deb.PACKAGE], success=False).returncode == 0:
         raise AssertionError("CI-only package name is already installed; refuse interference")
@@ -112,7 +112,7 @@ def run(current, historical, checkout):
             if previous.execute(installed_binary, "--version") != previous.PREVIOUS_VERSION:
                 raise AssertionError("Installed previous binary failed to execute")
             quiet(["sudo", "dpkg", "--install", str(new_pkg)])
-            if previous.execute(installed_binary, "--version") != "dc24h.eu beta-0.7.20":
+            if previous.execute(installed_binary, "--version") != "dc24h.eu beta-0.8.20":
                 raise AssertionError("Installed current binary failed to execute")
             if exact_file_sha(installed_binary) != exact_file_sha(current):
                 raise AssertionError("Installed current executable hash mismatch")

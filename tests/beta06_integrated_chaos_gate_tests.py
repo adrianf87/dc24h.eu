@@ -42,7 +42,7 @@ class IntegratedGateTests(unittest.TestCase):
                 "schema": 1, "source_sha": SHA, "os_image": OS,
                 "historical_binary_distinct": True, "previous_binary_database_status_accepted": True,
                 "fresh_mariadb_v11_and_five_private_files_restored": True,
-                "previous_version": "beta-0.5.16", "current_version": "beta-0.7.20",
+                "previous_version": "beta-0.5.16", "current_version": "beta-0.8.20",
                 "production_rollback_claim": False,
             },
             "stage4-endurance.json": {

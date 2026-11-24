@@ -1,5 +1,13 @@
 # Changelog
 
+## beta-0.8.17–beta-0.8.20 Stage V — 2026-11-24 (draft PR #241, exact-head CI unverified)
+
+- **0.8.17 — GitHub API provenance:** Add read-only exact-head/attempt workflow, hosted-job and redacted artifact SHA-256 digest verification against GitHub REST API. Refuse stale, pending, failed, skipped and wrong-attempt records; locally generated JSON remains untrusted. Owner approval is still separate.
+- **0.8.18 — Reproducible transport budgets:** Recompute the existing three ADC, ADCS and authenticated private HTTPS measurement windows from the numeric-only original inputs, bind compiler/Node/npm-lock and input SHA-256 identity, and preserve the no-cross-protocol-equivalence/no-production-SLA boundary.
+- **0.8.19 — Bounded sanitizer and parser hardening:** Add isolated GitHub-hosted Ubuntu 24.04 ThreadSanitizer unit checks and Clang coverage-guided ADC parser libFuzzer smoke (1024 deterministic runs, memory/input/time budget). An incompatible/failed sanitizer is a blocked gate, not a skipped-green job.
+- **0.8.20 — Candidate version and supply chain:** Align active C++/Node/React/npm metadata with beta-0.8.20, audit full production **plus build-chain** npm dependencies, and add fail-closed offline consistency tests, EN/US risk register and PL rollback notes. Remaining Stage I–IV gates, five Fix Passes, actual final-head Ubuntu 22.04/24.04/26.04 checks and an explicit Owner merge decision remain mandatory.
+- **Boundary:** A draft source candidate only. No tag, publish, package deployment, public operator listener, change to MariaDB v11/five private stores, production SLA/RPO/RTO or automatic main merge. Stop after push/CI trigger without waiting for results.
+
 ## beta-0.8.9–beta-0.8.12 Stage III — 2026-11-24 (single draft PR; final-head CI required)
 
 - **0.8.9:** Check all ancestor components of Node owner-only state paths for symlinks and path swaps, shared across MFA/replay, audit, passkeys, rate limits and first-installation. Preserve six-component stopped-writer SQL/private capture and strict non-overwrite rules.

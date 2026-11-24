@@ -39,4 +39,4 @@ This **does not** independently establish a full user-operated browser password+
 
 ## CI and Owner gate
 
-Locally run Python recovery/auth/package unit tests and Node TypeScript/private-store tests; the runtime-only process smoke depends on Unix sockets and must complete on GitHub-hosted Ubuntu 22.04/24.04/26.04, with the actual MariaDB/dpkg/C++ and Chromium/CodeQL/sanitizer matrix. Record the exact final source SHA and workflow links in PR #241. **Stop immediately after push/CI trigger. CI pending is not accepted.** No self-hosted/Debian/Xeon tests, release, main merge or production deployment.
+Locally run Python recovery/auth/package unit tests and Node TypeScript/private-store tests; the runtime-only process smoke depends on Unix sockets and must complete on GitHub-hosted Ubuntu 22.04/24.04/26.04, with the actual MariaDB/dpkg/C++ and Chromium/CodeQL/sanitizer matrix. Record the exact final source SHA and workflow links in PR #241. **Stop immediately after push/CI trigger. CI pending is not accepted.** No private-runner/Debian/Xeon tests, release, main merge or production deployment.

@@ -166,6 +166,31 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Qualify runtime and CI/build-chain npm advisories
+        working-directory: webadmin
+        run: |
+          python3 -m unittest discover -s ../tests -p beta08_build_chain_audit_tests.py
+          private_full_audit="$RUNNER_TEMP/beta08-full-npm-private.json"
+          trap 'rm -f "$private_full_audit"' EXIT
+          if npm audit --include=dev --include=prod --audit-level=high --json > "$private_full_audit"; then
+            audit_result=0
+          else
+            audit_result=$?
+          fi
+          python3 ../scripts/beta08_build_chain_audit.py \
+            --root "$GITHUB_WORKSPACE" --sha "$SOURCE_SHA" \
+            --os-image "${{ matrix.os }}" --audit "$private_full_audit" \
+            --audit-exit "$audit_result" \
+            --output "$RUNNER_TEMP/evidence/beta08-build-chain-audit.json"
+
+      - name: Upload only aggregated full-dependency advisory totals
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: beta08-build-audit-${{ matrix.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/evidence/beta08-build-chain-audit.json
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Typecheck and production build
         working-directory: webadmin
         run: npm run build

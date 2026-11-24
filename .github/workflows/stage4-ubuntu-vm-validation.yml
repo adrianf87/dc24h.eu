@@ -167,6 +167,17 @@ jobs:
             --https-report vm-evidence/beta06-authenticated-https.json \
             --output vm-evidence/beta07-transport-performance.json
 
+      - name: Bind Stage V transport evidence to raw windows and toolchain identity
+        run: |
+          python3 -m unittest discover -s tests -p beta08_transport_evidence_tests.py
+          python3 scripts/beta08_transport_evidence.py \
+            --root "$GITHUB_WORKSPACE" --sha "$SOURCE_SHA" \
+            --os-image "${{ matrix.os }}" \
+            --adc vm-evidence/beta07-adc-adcs-windows.json \
+            --https vm-evidence/beta06-authenticated-https.json \
+            --summary vm-evidence/beta07-transport-performance.json \
+            --output vm-evidence/beta08-transport-evidence.json
+
       - name: Rehearse actual previous-version binary rollback on disposable state
         run: |
           DC24H_VM_REPORT_DIR="$PWD/vm-evidence" python3 \
