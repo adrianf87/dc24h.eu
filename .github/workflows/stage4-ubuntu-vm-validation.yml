@@ -122,6 +122,13 @@ jobs:
             tests/beta06_previous_version_rollback.py \
             build/Stage4VM/dc24h build/Beta05/dc24h beta05-reference
 
+      - name: Install, fail upgrade and downgrade disposable dpkg fixture with matched v11 recovery
+        run: |
+          python3 -m unittest discover -s tests -p beta07_ci_deb_tests.py
+          DC24H_VM_REPORT_DIR="$PWD/vm-evidence" python3 \
+            tests/beta07_dpkg_process_tests.py \
+            build/Stage4VM/dc24h build/Beta05/dc24h beta05-reference
+
       - name: Require complete integrated chaos evidence on this exact Ubuntu head
         run: |
           python3 scripts/beta06_integrated_chaos_gate.py \

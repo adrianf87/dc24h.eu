@@ -345,6 +345,9 @@ if(BUILD_TESTING)
     add_test(NAME beta.07.recovery.preflight COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/beta07_recovery_preflight_tests.py")
     set_tests_properties(beta.07.recovery.preflight PROPERTIES TIMEOUT 15)
+    add_test(NAME beta.07.ci.deb.prototype COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/beta07_ci_deb_tests.py")
+    set_tests_properties(beta.07.ci.deb.prototype PROPERTIES TIMEOUT 15)
     add_test(NAME integration.ncdc_ports COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_ports_tests.py")
     set_tests_properties(integration.ncdc_ports PROPERTIES TIMEOUT 15)
