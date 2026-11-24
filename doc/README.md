@@ -1,6 +1,8 @@
 # dc24h.eu High Starter technical documentation
 
-Current development version: beta-0.5.8.
+Current development version: beta-0.5.12.
+
+[Beta-0.5.9–beta-0.5.12 Stage III: recovery integrity, local systemd/Apache bounds, ADC/ADCS restart and remote WebAdmin UX](us/BETA_0.5_STAGE_III.md) · [PL](pl/BETA_0.5_STAGE_III.md)
 
 [Beta-0.5.5–beta-0.5.8 Stage II: security boundaries, passkey metadata, fail-closed state and private bootstrap](us/BETA_0.5_STAGE_II.md) · [PL](pl/BETA_0.5_STAGE_II.md)
 

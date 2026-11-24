@@ -56,4 +56,4 @@ It creates `replay.jsonl`, `audit.jsonl`, `passkeys.json` and `rate-limits.json`
 
 Required test hosts are **GitHub-hosted Ubuntu 22.04, 24.04 and 26.04 only**. After the final Stage II commit, wait for all head-SHA C++ Debug/Release, WebAdmin, ASan/UBSan, security, browser, systemd and recovery jobs to finish successfully. Record exact source SHA, workflow run URLs, failure disposition and outstanding risks on Issue #234. No separate external security assessment or Owner approval is a gate. This stage is not a public deployment decision.
 
-**Status:** patches 0.5.5–0.5.8 implemented locally; full final-head Ubuntu CI pending.
+**Status:** Stage II completed on `0010814682a84c24b1ddcb6205af207028263dab`; [Check status CI](https://github.com/adrianf87/dc24h.eu-high-starter/actions/runs/45288419207) passed 12/12 and [isolated Ubuntu VM](https://github.com/adrianf87/dc24h.eu-high-starter/actions/runs/45288419166) passed 3/3. Work unit 2 is checked in Issue #234; later stages remain separate units.

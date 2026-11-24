@@ -5,6 +5,7 @@
 .remote-head p,.remote-hint{color:#aabbd5}.remote-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 button{border:1px solid #4e709f;border-radius:9px;padding:10px 15px;color:#ecf4ff;background:#223b5b;cursor:pointer;font:inherit}
 button:hover{background:#33547c}button:focus-visible,input:focus-visible{outline:3px solid #96c4ff;outline-offset:2px}
+button:disabled{opacity:.55;cursor:not-allowed}
 .remote-panel{background:#172439;border:1px solid #2f4666;border-radius:16px;padding:clamp(18px,4vw,30px);min-height:190px}
 .remote-panel form{max-width:470px;display:grid;gap:18px}.remote-panel label{display:grid;gap:6px;font-weight:600}
 input{font:inherit;color:#fff;background:#101c2e;border:1px solid #536986;border-radius:8px;padding:12px;width:100%}
@@ -15,4 +16,6 @@ input{font:inherit;color:#fff;background:#101c2e;border:1px solid #536986;border
 .remote-devices{margin-top:24px;border-top:1px solid #2f4666;padding-top:20px}.remote-devices h2{font-size:1.2rem}
 .remote-devices ul{list-style:none;padding:0;display:grid;gap:14px}.remote-devices li{display:grid;gap:10px;border:1px solid #2f4666;padding:14px;border-radius:10px}
 .remote-devices label{max-width:350px}.remote-devices .remote-actions{margin-top:10px}
+.remote-confirm{border:1px solid #c5a571;background:#302a27;padding:12px;border-radius:9px}
+.remote-confirm p{margin:0 0 10px}
 @media(max-width:580px){.remote-head{align-items:flex-start;flex-direction:column}.remote-shell{padding:16px}}

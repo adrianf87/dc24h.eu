@@ -39,4 +39,4 @@ Podmień `YOUR_FIXED_RP_ID` na rzeczywisty RP ID. Narzędzie tworzy wyłącznie 
 
 Po czterech patchach wykonujemy pełne CI na **GitHub-hosted Ubuntu 22.04/24.04/26.04**: C++ Debug/Release, WebAdmin, ASan/UBSan, negatywne WebAuthn/CSRF/sesje, browser E2E, testy audytu, systemd oraz odzyskiwanie. Dokumentujemy wynik i SHA w issue #234. Brak wymogu niezależnej akceptacji ani uruchomienia produkcji. Etap III rozpocznie się dopiero przy następnym poleceniu.
 
-**Stan:** lokalna implementacja 0.5.5–0.5.8 przygotowana; pełne CI ostatniego SHA oczekuje.
+**Stan:** Etap II zakończony na `0010814682a84c24b1ddcb6205af207028263dab`; [CI Check status](https://github.com/adrianf87/dc24h.eu-high-starter/actions/runs/45288419207) zakończyło się 12/12, a [izolowane Ubuntu VM](https://github.com/adrianf87/dc24h.eu-high-starter/actions/runs/45288419166) — 3/3. Work unit 2 jest zaznaczone w Issue #234; dalsze etapy pozostają osobnymi zadaniami.

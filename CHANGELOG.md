@@ -1,6 +1,14 @@
 # Changelog
 
-## beta-0.5.5–beta-0.5.8 Stage II — 2026-11-24 (single branch beta-0.5.x-stage-full; CI pending)
+## beta-0.5.9–beta-0.5.12 Stage III — 2026-11-24 (single branch beta-0.5.x-stage-full; Ubuntu CI results tracked in Issue #234)
+
+- **0.5.9 — Storage & Data Integrity:** Align offline recovery-passkey validation with the runtime canonical base64url/duplicate-transport policy. Add negative snapshot and valid revoked-credential tests, plus optional expected source SHA verification for the MariaDB/private-state pair. Keep five files and MariaDB v11 in one stopped/isolated restore unit. Document why a SQL credential-catalog migration is not justified for this one-gateway pilot.
+- **0.5.10 — Apache2 & Systemd Hardening:** Bound local TLS vhost request and keep-alive budgets; add encoded/traversal/suffix negative proxy tests; cap gateway restart bursts, descriptors, tasks, memory and shutdown duration. Preserve localhost-only TLS, C++ read-only authority and Node/JIT compatibility.
+- **0.5.11 — ADC/ADCS Reliability:** Exercise simultaneous malformed and fragmented ADC clients, failed TLS handshakes and healthy clients across two fresh server lifetimes on disposable loopback sockets. Preserve existing overload, shutdown, TLS, parser and recovery gates.
+- **0.5.12 — WebAdmin Improvements:** Display approximate authenticated session expiry and passkey creation/last-use; revalidate rotated cookie lifetime, require accessible EN/PL two-step device revocation and clear stale device controls on outage. Align runtime and fixtures to `beta-0.5.12`.
+- **Boundary:** Existing draft PR #235, no merge, production deployment, public listener, database schema migration, remote hub-control writes or target-capacity claims. Complete latest-head GitHub-hosted Ubuntu 22.04/24.04/26.04 C++ Debug/Release, WebAdmin, ASan/UBSan, real systemd, browser, security and disposable recovery CI before checking Work unit 3. [EN/US](doc/us/BETA_0.5_STAGE_III.md) | [PL](doc/pl/BETA_0.5_STAGE_III.md).
+
+## beta-0.5.5–beta-0.5.8 Stage II — 2026-11-24 (single branch beta-0.5.x-stage-full; hosted Ubuntu CI passed on 0010814)
 
 - **0.5.5 — Security Architecture Review:** Review the browser/Apache TLS, loopback Node gateway, C++ account authority, WebAuthn/TOTP stores, MariaDB recovery and audit trust boundaries. Record findings, dispositions and non-production residual risks in EN/US and PL.
 - **0.5.6 — Passkey Hardening:** Enforce canonical base64url encodings for stored credential IDs, public-key bytes and user handles; reject unexpected credential/user/catalog fields, duplicate transports, counter and ownership anomalies. Add malformed-catalog and negative WebAuthn cases without changing password + passkey policy.
