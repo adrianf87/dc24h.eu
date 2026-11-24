@@ -86,6 +86,12 @@ jobs:
           node --import tsx --test --test-concurrency=2 tests/*.test.ts
           npm run test:integration -- ../build/Stage4VM/dc24h
 
+      - name: Measure authenticated real C++ to Node to Apache HTTPS
+        run: |
+          DC24H_VM_REPORT_DIR="$PWD/vm-evidence" python3 \
+            tests/beta06_authenticated_api_process_tests.py \
+            build/Stage4VM/dc24h build/Stage4VM/account_webadmin_tests
+
       - name: Prepare non-sensitive Ubuntu test timing report
         if: always()
         run: |
