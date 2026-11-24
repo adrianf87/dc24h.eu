@@ -95,6 +95,19 @@ test("genuine ES256 WebAuthn registration and assertion reject wrong Origin, cha
       "an account without enrolled credentials cannot start passkey-only login");
     assert.equal(await service.finishLogin("8", login!.challenge, device.assertion(login!.challenge, handle, 2), 2002), false);
     await assert.rejects(() => service.finishLogin("7", "wrong-challenge", device.assertion(login!.challenge, handle, 2), 2002));
+    // Two genuine ES256 assertions can be signed from one cached challenge
+    // before either asynchronous verification resolves. Only one may advance
+    // the durable counter. A second tab's duplicate never gets authority.
+    const overlapped = await service.beginLogin("7");
+    assert.ok(overlapped);
+    const signed = device.assertion(overlapped!.challenge, handle, 2);
+    const parallel = await Promise.allSettled([
+      service.finishLogin("7", overlapped!.challenge, signed, 2003),
+      service.finishLogin("7", overlapped!.challenge, signed, 2003),
+    ]);
+    assert.equal(parallel.filter(row => row.status === "fulfilled" && row.value === true).length, 1,
+      "concurrent identical authenticators must not both advance the counter");
+    assert.equal(store.get("7", store.forActor("7")[0]!.id)?.counter, 2);
     store.revoke("7", store.forActor("7")[0]!.id, 3000);
     assert.equal(await service.finishLogin("7", login!.challenge, device.assertion(login!.challenge, handle, 3), 3001), false);
   } finally { rmSync(dir, { recursive: true, force: true }); }

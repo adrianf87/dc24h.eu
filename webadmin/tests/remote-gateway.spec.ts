@@ -68,6 +68,47 @@ test("a new password plus TOTP login invalidates the prior sibling view in EN an
   } finally { await sibling.close(); }
 });
 
+test("refused lost-device passkey flow keeps a keyboard-accessible EN/PL password plus TOTP fallback", async ({ page }) => {
+  let totpLoginAttempted = false;
+  await page.route("**/remote/v1/session", route => route.fulfill({ status: 401,
+    contentType: "application/json", body: '{"error":"unauthorized"}' }));
+  await page.route("**/remote/v1/challenge", route => route.fulfill({ status: 200,
+    contentType: "application/json", body: JSON.stringify({ schema: 1, csrf: "e".repeat(64) }) }));
+  await page.route("**/remote/v1/passkey/login/options", route => {
+    const form = route.request().postDataJSON() as { actor_id: string; password: string };
+    expect(form).toEqual({ actor_id: "7", password: "synthetic-device-proof" });
+    return route.fulfill({ status: 403, contentType: "application/json", body: '{"error":"login_refused"}' });
+  });
+  await page.route("**/remote/v1/login", route => {
+    const form = route.request().postDataJSON() as { actor_id: string; password: string; otp: string };
+    expect(form).toEqual({ actor_id: "7", password: "synthetic-fallback-proof", otp: "123456" });
+    totpLoginAttempted = true;
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
+      schema: 1, authenticated: true, mfa: true, mode: "read-only", csrf: sessionCsrf, expires_in: 600,
+    }) });
+  });
+  await page.route("**/remote/v1/summary", route => route.fulfill({ status: 200,
+    contentType: "application/json", body: JSON.stringify(snapshot) }));
+  await page.goto("/remote.html");
+  await page.getByLabel("Administrator account ID").fill("7");
+  await page.getByLabel("Account password").fill("synthetic-device-proof");
+  await page.getByRole("button", { name: "Sign in with passkey" }).click();
+  await expect(page.getByText("This account is not authorized for remote read-only access.")).toBeVisible();
+  await expect(page.getByLabel("Administrator account ID")).toBeFocused();
+  await expect(page.getByLabel("Account password")).toHaveValue("");
+  await expect(page.getByLabel("Authenticator code (6 digits)")).toBeVisible();
+  await page.getByRole("button", { name: "Polski" }).click();
+  await expect(page.getByLabel("Kod uwierzytelniający (6 cyfr)")).toBeVisible();
+  await page.getByLabel("Hasło konta").fill("synthetic-fallback-proof");
+  await page.getByLabel("Kod uwierzytelniający (6 cyfr)").fill("123456");
+  await page.getByRole("button", { name: "Zaloguj", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("Aktywne połączenia")).toBeVisible();
+  expect(totpLoginAttempted).toBe(true);
+  await expect(page.locator("main")).not.toContainText("synthetic-device-proof");
+  await expect(page.locator("main")).not.toContainText("synthetic-fallback-proof");
+});
+
 test("private bilingual incident timeline remains keyboard-readable on mobile without privileged writes", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   const writes: string[] = [];

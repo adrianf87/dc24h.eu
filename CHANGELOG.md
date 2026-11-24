@@ -1,5 +1,13 @@
 # Changelog
 
+## beta-0.9.5–beta-0.9.8 Stage II — 2026-11-24 (draft PR #243; design approval and CI pending)
+
+- **0.9.5 — Offline authenticity design:** Add a pure in-memory, nondeployable HMAC-SHA256 five-store proposal with an independently pinned generation/MAC, previous-generation link, SQL-pair digest and key ID. Synthetic negatives reject same-length/mtime-preserved modifications, missing/torn stores, wrong key and stale manifest. No real migration, key creation or v2 startup preflight.
+- **0.9.6 — Existing cold-start backup checks:** Add a real disposable stopped-writer six-component HMAC-pair test that rejects same-size same-mtime edits in every private snapshot file after reopening. **Live cold-start authentication remains blocked pending a separately approved Owner key/checkpoint, atomic commit scheme and v1→v2 migration/rollback**; no false runtime authenticity claim.
+- **0.9.7 — WebAuthn post-write and replay races:** Detect a passkey catalog addition when a ceremony throws after the durable add but before returning true; revoke prior actor sessions (or all sessions if catalog read fails). Preserve denied duplicate finish without session revocation. Test two genuine concurrent ES256 assertions: exactly one advances the counter.
+- **0.9.8 — Lost-factor recovery and accessible fallback:** Offline two-operator-request regression revokes a lost passkey while retaining other actors and consumed TOTP steps across restart. EN/PL keyboard Playwright test checks passkey refusal, cleared password and password+TOTP fallback. Hardware/synced-key verification, live C++ grant and production recovery remain separate requirements.
+- **CI/Owner boundary:** Add new negatives to hosted Ubuntu 22.04/24.04/26.04 C++ and VM workflows; exact-final-head browser and integrated checks remain required. [EN/US design and evidence](doc/us/BETA_0.9_STAGE_II.md) · [PL operator/approval notes](doc/pl/BETA_0.9_STAGE_II.md). Preserve five schema-1 stores, MariaDB v11, beta-0.8.20 candidate metadata, single draft PR and protected main; no automatic merge or deployment. Stop after push/CI trigger without polling.
+
 ## beta-0.8.x exact-head CI repair — 2026-11-24 (draft PR #241; next hosted matrix unverified)
 
 - **Ten work units present:** Source commits for Stages I–V and Fix Passes 1–5 are on `beta-0.8.x-stage-full`; none has been automatically accepted or merged.
