@@ -119,6 +119,8 @@ def run(binary, seeder, account_admin):
         # Apache serves only a synthetic public directory; private files live
         # in owner-only subdirectories outside DocumentRoot.
         base.chmod(0o755)
+        recovery_root = base / "recovery-private"
+        recovery_root.mkdir(mode=0o700)
         db = matched.IsolatedDatabase(base / "sql")
         gateway_dir = base / "private"
         gateway_dir.mkdir(mode=0o700)
@@ -398,11 +400,15 @@ def run(binary, seeder, account_admin):
                 # A previously revoked, synthetic credential must remain
                 # unusable after restore; this is never a real private key.
                 shutil.copy2(revoked_root / "passkeys.json", gateway_dir / "passkeys.json")
-            snapshot = base / "snapshot"
+            # The recovery library refuses even synthetic backups under a
+            # traversable parent. Apache needs the outer fixture root at 0755,
+            # so keep SQL, manifest and restore staging under this separate
+            # owner-only 0700 directory instead of weakening its checks.
+            snapshot = recovery_root / "snapshot"
             matched.private.snapshot(gateway_dir, snapshot)
-            dump = base / "checkpoint.sql"
+            dump = recovery_root / "checkpoint.sql"
             db.dump(dump)
-            pair = base / "pair"
+            pair = recovery_root / "pair"
             pair.mkdir(mode=0o700)
             matched.bundle.create_pair(dump, snapshot, pair, sha)
             matched.bundle.verified_pair(dump, snapshot, pair / matched.bundle.NAME, sha)
@@ -415,7 +421,7 @@ def run(binary, seeder, account_admin):
             recovered_db.restore_sql(dump)
             if recovered_db.sql("SELECT role FROM dc24h.dc24h_accounts WHERE id=" + actor + ";") != "administrator":
                 raise AssertionError("Recovered C++ actor authority changed")
-            restored_private = base / "restored-private"
+            restored_private = recovery_root / "restored-private"
             matched.private.restore_to_fresh_directory(snapshot, restored_private)
             restored_api, fresh_token = enable_api(recovered_config, recovered_db.root)
             # Preserve the HMAC limiter key across a matched state recovery;
