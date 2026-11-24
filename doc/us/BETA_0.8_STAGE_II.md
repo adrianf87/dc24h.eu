@@ -2,6 +2,19 @@
 
 Scope: work unit **2 of 10** in [Issue #240](https://github.com/adrianf87/dc24h.eu-high-starter/issues/240), on the existing `beta-0.8.x-stage-full` branch and single draft [PR #241](https://github.com/adrianf87/dc24h.eu-high-starter/pull/241). Stage I is preserved. Stages III–V and five subsequent fix passes need separate Owner authorization. **Implementation is not acceptance, merge approval or permission to deploy.**
 
+## Fix Pass 2 — independent review and repairs (work unit 7/10)
+
+Two confirmed defects received code changes and negative regressions:
+
+1. **TOTP enrollment rewritten in place:** A live verifier previously pinned inode/size/mtime but did not authenticate content. An outside same-length replacement of a private seed with restored mtime could leave the old in-memory secret usable after the intended rotation. The verifier now checks a bounded SHA-256 digest and ctime of its pinned enrollment before every attempt, including an opening-time reread. A test changes one valid seed to another without altering file length or mtime, then demands fail-closed behavior and no replay-ledger append.
+2. **Passkey persisted, completion refused:** After a valid WebAuthn enrollment was durably added, a failing strict completion audit could return HTTP 403 while leaving the enrollment caller and its sibling sessions valid. Now any failure *after confirmed persistence* removes all existing sessions of that actor. A two-browser gateway regression injects a failing `passkey_enrolled` audit event and asserts both cookies are refused, without representing the persisted credential as rolled back.
+
+**Reviewed, existing negative evidence:** Real ES256 RP/Origin/UV/UP/challenge validation; signed counter monotonicity and immutable backup eligibility; revoke/epoch races and C++ grants; TOTP consumed-step persistence, independent verifiers, rotation and backward clock; same-length/same-mtime passkey counter and rate-limit budget modifications; one-use challenges, CSRF, and stale browser sessions. Software/Chromium virtual authentication is not physical hardware or synchronized-passkey certification.
+
+**Explicit residual risk:** Existing schema-1 passkey and limiter catalogs have an in-memory digest only. A fully offline valid-shaped rewrite before restart cannot be authenticated by SHA-256 on a fresh process. Neither schema, extra MAC/anchor nor rollback semantics is changed without Owner approval. A hostile actor able to rewrite owner-only state is outside this pass's cold-start authenticity claim.
+
+Locally, the 26 targeted MFA/passkey/limiter/WebAuthn/gateway tests and WebAdmin TypeScript typecheck passed. Hosted Chromium, C++/Node/Apache/MariaDB restore, full Node and required Ubuntu matrix are separate CI evidence, not claimed passing by this local review. The exact pushed SHA belongs in the PR handoff; stop after push/CI trigger without waiting for outcomes.
+
 ## Patch ledger and negative regressions
 
 | Patch | Changes and coverage | Remaining qualification |

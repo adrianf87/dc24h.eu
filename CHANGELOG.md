@@ -1,5 +1,12 @@
 # Changelog
 
+## beta-0.8.5–beta-0.8.8 Fix Pass 2 — 2026-11-24 (draft PR #241; exact-head CI unverified)
+
+- **MFA same-length rewrite:** Hash the bounded TOTP enrollment at startup and compare the pinned bytes on every verification, including `ctime`. A valid-length, same-mtime in-place seed replacement now invalidates the live verifier before any consumed step can be written. This is runtime tamper detection, not cold-start authenticity.
+- **Passkey enrollment/audit race:** If WebAuthn enrollment has already durably added a credential but its final age, session or strict-audit check fails, revoke **every** existing session for that actor even though the HTTP response refuses enrollment. A second-browser negative regression reproduces failure of the completion audit sink.
+- **Reviewed without changed semantics:** Genuine ES256 WebAuthn challenge/Origin/UV/RP binding, monotonic counters and backup eligibility, revocation epochs, TOTP replay/clock rollback, same-size limiter/passkey tamper tests, and CSRF/session expiration. Browser virtual authenticators do not certify physical/synced devices.
+- **Still open:** The private passkey/rate-limit JSON has no Owner-approved persistent authenticity anchor; a valid-shaped offline rewrite before complete restart cannot be detected by an in-process hash. No private-store schema migration, merge, tag, release or deployment. All hosted Ubuntu 22.04/24.04/26.04 exact-head checks remain required, and CI is not pre-accepted.
+
 ## beta-0.8.17–beta-0.8.20 Stage V — 2026-11-24 (draft PR #241, exact-head CI unverified)
 
 - **0.8.17 — GitHub API provenance:** Add read-only exact-head/attempt workflow, hosted-job and redacted artifact SHA-256 digest verification against GitHub REST API. Refuse stale, pending, failed, skipped and wrong-attempt records; locally generated JSON remains untrusted. Owner approval is still separate.

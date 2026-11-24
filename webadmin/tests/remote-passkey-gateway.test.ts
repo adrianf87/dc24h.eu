@@ -388,3 +388,98 @@ test("passkey gateway binds login and enrollment to one-use challenges, password
     assert.equal(store.forActor("7").length, 0, "revoked device cannot be recreated by stale mutation");
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
+
+test("a passkey persisted before audit failure revokes every older actor session despite HTTP refusal", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "dc24h-enroll-audit-race-")); chmodSync(dir, 0o700);
+  try {
+    const path = join(dir, "passkeys.json");
+    initializePasskeyStore(path, "localhost");
+    const store = openPasskeyStore(path, "localhost");
+    let rejectCompletionAudit = true;
+    const ceremonies = {
+      beginEnrollment: async () => ({ challenge: "enroll-audit-challenge" }),
+      finishEnrollment: async (actor: string, challenge: string, _response: unknown, now: number,
+        beforePersist: () => Promise<boolean>) => {
+        if (challenge !== "enroll-audit-challenge" || !await beforePersist()) return false;
+        store.add({ actor, id: "x".repeat(32), userHandle: store.userHandle(actor),
+          publicKey: "q".repeat(60), counter: 0, deviceType: "singleDevice", backedUp: false,
+          transports: [], name: "Device", createdAt: now, lastUsedAt: null, revokedAt: null });
+        return true;
+      },
+    } as unknown as PasskeyCeremonies;
+    const gateway = remoteGateway({ socket: "/private/test.sock", token: "a".repeat(64) }, {
+      origin: "https://localhost:8443", now: () => 100_000,
+      mfaVerify: () => true, passkeys: { store, ceremonies },
+      strictAudit: true, auditHealthy: () => true,
+      audit: event => {
+        if (event === "passkey_enrolled" && rejectCompletionAudit) {
+          rejectCompletionAudit = false;
+          throw new Error("durable audit sink failed after catalog persistence");
+        }
+      },
+      upstream: async (_cfg, route, method, body) => {
+        if (route === "/api/v1/admin/access" && method === "POST") {
+          assert.equal(new URLSearchParams(body).get("actor_id"), "7");
+          return { maintenance: true, restart_required: true, expires_in: 600,
+            actor: { id: "7", role: "owner", status: "active" },
+            grant: "b".repeat(64), session: "c".repeat(32), csrf: "d".repeat(64),
+            permissions: PERMISSION_KEYS.map(key => ({ key, granted: true,
+              implemented: key !== "configuration.manage" })),
+            routes: ACCESS_ROUTES.map(([verb, path, permission]) => ({
+              method: verb, path, permission, allowed: true })),
+          };
+        }
+        if (route === "/api/v1/management") return {
+          schema: 2, maintenance: true, restart_required: true,
+          areas: ["accounts", "roles", "bans", "configuration", "hub"].map(key => ({
+            key, permission: key === "accounts" ? "accounts.manage" : key === "roles" ? "roles.manage" :
+              key === "bans" ? "users.ban+blocks.manage" : key === "hub" ? "hub.manage" : "configuration.manage",
+            implemented: key !== "configuration", allowed: true,
+          })),
+        };
+        throw Error("unexpected upstream call");
+      },
+    });
+    const call = async (route: string, data?: unknown, cookie = "", csrf = "") => {
+      const post = data !== undefined, body = post ? JSON.stringify(data) : "";
+      const headers: Record<string, string> = { host: "localhost", ...(cookie ? { cookie } : {}),
+        ...(csrf ? { "x-dc24h-remote-csrf": csrf } : {}),
+        ...(post ? { origin: "https://localhost:8443", "content-type": "application/json",
+          "content-length": String(Buffer.byteLength(body)) } : {}),
+      };
+      const req = { url: "/remote/v1/" + route, method: post ? "POST" : "GET", headers,
+        socket: { remoteAddress: "127.0.0.1" },
+        async *[Symbol.asyncIterator]() { if (body) yield Buffer.from(body); },
+      } as unknown as IncomingMessage;
+      const result = { status: 0, body: "", cookies: [] as string[] };
+      const res = { writableEnded: false, destroyed: false,
+        writeHead(status: number, responseHeaders: Record<string, unknown>) {
+          result.status = status;
+          result.cookies = responseHeaders["Set-Cookie"] as string[] ?? [];
+        },
+        end(text: string) { result.body = text; },
+      } as unknown as ServerResponse;
+      await gateway(req, res);
+      return result;
+    };
+    const login = async () => {
+      const challenge = await call("challenge");
+      const init = challenge.cookies[0]!.split(";")[0]!;
+      const csrf = JSON.parse(challenge.body).csrf as string;
+      const authorized = await call("login", { actor_id: "7", password: "correct", otp: "123456" }, init, csrf);
+      assert.equal(authorized.status, 200);
+      return { cookie: authorized.cookies[0]!.split(";")[0]!, csrf: JSON.parse(authorized.body).csrf as string };
+    };
+    const first = await login(), second = await login();
+    assert.equal((await call("session", undefined, first.cookie)).status, 200);
+    assert.equal((await call("session", undefined, second.cookie)).status, 200);
+    assert.equal((await call("passkey/enroll/options", {}, first.cookie, first.csrf)).status, 200);
+    const rejected = await call("passkey/enroll/finish", { response: { valid: true } }, first.cookie, first.csrf);
+    assert.equal(rejected.status, 403, "audit failure after persistence must not report successful enrollment");
+    assert.ok(!rejected.cookies.some(value => value.startsWith("dc24h_remote=")));
+    assert.equal(store.forActor("7").length, 1, "the credential was already durably persisted");
+    assert.equal((await call("session", undefined, first.cookie)).status, 401);
+    assert.equal((await call("session", undefined, second.cookie)).status, 401,
+      "a second browser must not retain pre-enrollment authority after the audit failure");
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});

@@ -5,6 +5,7 @@ import { constants, closeSync, fstatSync, fsyncSync, lstatSync, openSync, readFi
 import { dirname, basename, join } from "node:path";
 import { renameSync, unlinkSync } from "node:fs";
 import { assertPrivateParent } from "./remote-private-path.ts";
+import { fingerprint, fingerprintPrivateFile } from "./private-catalog-integrity.ts";
 
 type Secrets = Map<string, Buffer>;
 const actorPattern = /^[1-9][0-9]{0,18}$/;
@@ -106,9 +107,16 @@ export function loadTotpVerifier(secretsPath: string, replayPath: string) {
   const lastUsed = new Map<string, number>();
   const seedFd = privateFile(secretsPath, constants.O_RDONLY | constants.O_NONBLOCK);
   const enrollmentIdentity = fstatSync(seedFd);
+  let enrollmentDigest = "";
   try {
-    if (fstatSync(seedFd).size > 16_384) throw new Error("MFA enrollment file too large");
-    const body: unknown = JSON.parse(readFileSync(seedFd, "utf8"));
+    if (enrollmentIdentity.size > 16_384) throw new Error("MFA enrollment file too large");
+    const bytes = readFileSync(seedFd);
+    let body: unknown;
+    try {
+      if (bytes.length !== enrollmentIdentity.size) throw new Error("MFA enrollment changed during read");
+      enrollmentDigest = fingerprint(bytes);
+      body = JSON.parse(bytes.toString("utf8"));
+    } finally { bytes.fill(0); }
     if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error("Invalid MFA enrollment");
     const root = body as Record<string, unknown>;
     if (root.schema !== 1 || !root.accounts || typeof root.accounts !== "object" ||
@@ -126,6 +134,13 @@ export function loadTotpVerifier(secretsPath: string, replayPath: string) {
     for (const key of secrets.values()) key.fill(0);
     throw error;
   } finally { closeSync(seedFd); }
+  try {
+    if (fingerprintPrivateFile(secretsPath, enrollmentIdentity) !== enrollmentDigest)
+      throw new Error("MFA enrollment changed during open");
+  } catch (error) {
+    for (const key of secrets.values()) key.fill(0);
+    throw error;
+  }
 
   let ledgerFd: number;
   // Never silently reset consumed TOTP steps after deletion, backup loss or
@@ -148,7 +163,9 @@ export function loadTotpVerifier(secretsPath: string, replayPath: string) {
     if (!currentFile.isFile() || currentFile.uid !== process.geteuid?.() || currentFile.nlink !== 1 ||
       currentFile.dev !== enrollmentIdentity.dev ||
       currentFile.ino !== enrollmentIdentity.ino || currentFile.size !== enrollmentIdentity.size ||
-      currentFile.mtimeMs !== enrollmentIdentity.mtimeMs || (currentFile.mode & 0o077))
+      currentFile.mtimeMs !== enrollmentIdentity.mtimeMs ||
+      currentFile.ctimeMs !== enrollmentIdentity.ctimeMs || (currentFile.mode & 0o077) ||
+      fingerprintPrivateFile(secretsPath, enrollmentIdentity) !== enrollmentDigest)
       throw new Error("MFA enrollment changed; restart required");
     const currentLedger = lstatSync(replayPath);
     if (!currentLedger.isFile() || currentLedger.uid !== process.geteuid?.() || currentLedger.nlink !== 1 ||

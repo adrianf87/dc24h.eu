@@ -598,6 +598,7 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
       if (name === "passkey/enroll/finish") {
         const pending = enrollments.get(key);
         enrollments.delete(key); // one use, including invalid payloads
+        let persisted = false;
         try {
           if (!pending || pending.session !== session || pending.expires <= clock()) throw Error();
           const fields = object(await readBody(req, maxCeremonyBody));
@@ -608,12 +609,19 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
             async () => sessions.get(key) === session && pending.expires > clock() &&
               clock() - session.created <= 60_000 && !expired(session, clock()) && session.pendingLogouts === 0 &&
               await authorized(key, session, true) === "ok");
+          // The credential write is durable before the post-ceremony checks
+          // and audit outcome. If either fails, the HTTP response may be 403,
+          // but every old actor session must still lose authority.
+          persisted = result === true;
           if (!result || pending.expires <= clock() || clock() - session.created > 60_000 ||
               sessions.get(key) !== session || session.pendingLogouts > 0 || expired(session, clock())) throw Error();
           if (!log("passkey_enrolled") && options.strictAudit) throw Error("audit_unavailable");
           const rotated = rotateSession(key, session, true);
           reply(res, 200, { schema: 1, enrolled: true, csrf: rotated.csrf }, [rotated.cookie]);
-        } catch { log("passkey_enroll_refused"); reply(res, 403, { error: "enrollment_refused" }); }
+        } catch {
+          if (persisted) for (const [id, old] of sessions) if (old.actor === session.actor) sessions.delete(id);
+          log("passkey_enroll_refused"); reply(res, 403, { error: "enrollment_refused" });
+        }
         return;
       }
       if (name === "passkey/device/rename" || name === "passkey/device/revoke") {

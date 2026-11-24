@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { appendFileSync, chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
+import { appendFileSync, chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, unlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { compactTotpReplay, initializeTotpReplay, loadTotpVerifier, replaceTotpSecret, totpCodeForTest } from "../server/remote-mfa.ts";
@@ -132,6 +132,31 @@ test("offline TOTP rotation replaces the enrollment atomically, rejects cached o
       assert.equal(fresh.verify("7", totpCodeForTest(replacement, 90_000), 90_000), true);
       assert.equal(fresh.verify("7", totpCodeForTest(secret, 120_000), 120_000), false);
     } finally { fresh.close(); }
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("same-length same-mtime TOTP seed rewrite poisons an already open verifier", () => {
+  const dir = mkdtempSync(join(tmpdir(), "dc24h-mfa-seed-integrity-"));
+  const enrollment = join(dir, "mfa.json"), replay = join(dir, "replay.jsonl");
+  try {
+    writeFileSync(enrollment, JSON.stringify({ schema: 1, accounts: { "7": secret } }), { mode: 0o600 });
+    initializeTotpReplay(replay);
+    const fixed = new Date("2026-01-01T00:00:00Z");
+    utimesSync(enrollment, fixed, fixed);
+    const verifier = loadTotpVerifier(enrollment, replay);
+    try {
+      const before = readFileSync(enrollment, "utf8");
+      const after = before.replace(secret, replacement);
+      assert.equal(Buffer.byteLength(after), Buffer.byteLength(before));
+      assert.notEqual(after, before);
+      writeFileSync(enrollment, after);
+      utimesSync(enrollment, fixed, fixed);
+      assert.equal(statSync(enrollment).mtimeMs, fixed.getTime());
+      assert.throws(() => verifier.verify("7", totpCodeForTest(secret, 59_000), 59_000),
+        /MFA enrollment changed|Private catalog changed/,
+        "a live verifier must not trust a cached seed after an in-place rewrite");
+      assert.equal(readFileSync(replay, "utf8"), "", "corrupt enrollment must not consume a TOTP step");
+    } finally { verifier.close(); }
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
