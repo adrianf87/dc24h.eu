@@ -27,6 +27,9 @@ PINS = {
 CAPABILITIES = {
     "adc_guest_login": "adc.ncdc",
     "adcs_guest_login": "adcs.ncdc",
+    # This CTest exercises real ncdc's failed and successful GPA/PAS
+    # password challenge on both ADC and ADCS with isolated MariaDB accounts.
+    "adc_adcs_registered_password": "accounts.adc_authentication.process",
     "adc_tth_search": "adc.tth.ncdc",
     "adcs_tth_search": "adcs.tth.ncdc",
     "adc_active_passive": "adc.activepassive.ncdc",

@@ -18,6 +18,7 @@ class EvidenceTests(unittest.TestCase):
         report = evidence.produce("ubuntu-24.04", "1" * 40, self.client, self.states)
         self.assertEqual(report["result"], "passed")
         self.assertEqual(report["capabilities"]["ncdc"]["adcs_ctm"]["state"], "passed")
+        self.assertEqual(report["capabilities"]["ncdc"]["adc_adcs_registered_password"]["state"], "passed")
         for capability in ("adc_capability_negotiation", "adcs_capability_negotiation",
                            "adc_ctm_tls_peer", "adcs_ctm_tls_peer",
                            "adc_rcm_tls_peer", "adcs_rcm_tls_peer"):
