@@ -29,4 +29,4 @@ All listed synthetic/offline checks passed before the handoff commit. They do **
 - The npm lock subset is not a complete C++ OS-package SBOM or a substitute for CodeQL, dependency-advisory review and Ubuntu image verification. Do not accept any pending/skipped/failed final-head check.
 - The offline release manifest is **not cryptographically authenticated by the scripts**. Owner acceptance, all stage/fix evidence, final run authentication and a separate merge request remain mandatory.
 
-**Owner rule:** push once, let GitHub-hosted Ubuntu 22.04/24.04/26.04 CI start on the draft PR, record pending status, and stop immediately. Never wait for the result in this work unit. No Debian, self-hosted Xeon or production environment is involved.
+**Owner rule:** push once, let GitHub-hosted Ubuntu 22.04/24.04/26.04 CI start on the draft PR, record pending status, and stop immediately. Never wait for the result in this work unit. No Debian, on-premises Xeon or production environment is involved.

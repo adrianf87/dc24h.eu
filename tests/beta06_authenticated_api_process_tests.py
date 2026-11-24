@@ -604,7 +604,10 @@ def run(binary, seeder, account_admin):
             # maintenance authority, checked grant and read-only gateway.
             # The same device subsequently revokes itself via the authorized
             # CSRF-protected route, invalidating its live session.
-            time.sleep(1.1)
+            # Allow a full extra second beyond the maintenance authority's
+            # one-second global POST budget before asking Chromium to make
+            # a second independent password proof after restored TOTP login.
+            time.sleep(2.2)
             browser_command(browser, {"action": "restore"})
             browser_phase(browser, "authenticated_and_revoked")
             if browser.wait(timeout=10) != 0:

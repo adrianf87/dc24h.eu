@@ -166,50 +166,57 @@ try {
   const restored = await page.evaluate(async actor => {
     // This is the *rotated* live browser cookie from enrollment, not an
     // already-invalid pre-enrollment cookie retained by the Python harness.
-    if ((await fetch("/remote/v1/session")).status !== 401) return false;
+    if ((await fetch("/remote/v1/session")).status !== 401) return "restored_old_cookie";
     const decode = value => Uint8Array.from(
       atob(value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=")),
       character => character.charCodeAt(0));
     const challengeResponse = await fetch("/remote/v1/challenge");
-    if (challengeResponse.status !== 200) return false;
+    if (challengeResponse.status !== 200) return `restored_challenge_${challengeResponse.status}`;
     const { csrf } = await challengeResponse.json();
     const optionsResponse = await fetch("/remote/v1/passkey/login/options", {
       method: "POST", headers: { "Content-Type": "application/json", "X-DC24H-Remote-CSRF": csrf },
       body: JSON.stringify({ actor_id: actor,
         password: "WebAdmin operator password!" }),
     });
-    if (optionsResponse.status !== 200) return false;
+    if (optionsResponse.status !== 200) return `restored_options_${optionsResponse.status}`;
     const options = await optionsResponse.json();
     const credential = await navigator.credentials.get({ publicKey: {
       ...options, challenge: decode(options.challenge),
         allowCredentials: (options.allowCredentials ?? []).map(entry =>
         ({ ...entry, id: decode(entry.id) })),
     } });
-    if (!credential || !("toJSON" in credential)) return false;
+    if (!credential || !("toJSON" in credential)) return "restored_no_credential";
     const response = credential.toJSON();
     const finish = () => fetch("/remote/v1/passkey/login/finish", {
       method: "POST", headers: { "Content-Type": "application/json", "X-DC24H-Remote-CSRF": csrf },
       body: JSON.stringify({ response }),
     });
     const success = await finish();
-    if (success.status !== 200) return false;
+    if (success.status !== 200) return `restored_finish_${success.status}`;
     const authenticated = await success.json();
-    if (!authenticated.authenticated || !authenticated.mfa || authenticated.mode !== "read-only") return false;
-    if ((await finish()).status !== 403) return false; // challenge is consumed
-    if ((await fetch("/remote/v1/summary")).status !== 200) return false;
+    if (!authenticated.authenticated || !authenticated.mfa || authenticated.mode !== "read-only")
+      return "restored_grant_invalid";
+    const replay = await finish();
+    if (replay.status !== 403) return `restored_replay_${replay.status}`; // consumed challenge
+    const summary = await fetch("/remote/v1/summary");
+    if (summary.status !== 200) return `restored_summary_${summary.status}`;
     const devices = await fetch("/remote/v1/passkey/devices");
-    if (devices.status !== 200) return false;
+    if (devices.status !== 200) return `restored_devices_${devices.status}`;
     const list = (await devices.json()).devices;
-    if (!Array.isArray(list) || list.length !== 1 || typeof list[0].id !== "string") return false;
+    if (!Array.isArray(list) || list.length !== 1 || typeof list[0].id !== "string")
+      return "restored_device_mismatch";
     const revoked = await fetch("/remote/v1/passkey/device/revoke", {
       method: "POST", headers: { "Content-Type": "application/json",
         "X-DC24H-Remote-CSRF": authenticated.csrf },
       body: JSON.stringify({ id: list[0].id }),
     });
-    if (revoked.status !== 200 || !(await revoked.json()).revoked) return false;
-    return (await fetch("/remote/v1/session")).status === 401;
+    if (revoked.status !== 200) return `restored_revoke_${revoked.status}`;
+    if (!(await revoked.json()).revoked) return "restored_revoke_invalid";
+    const gone = await fetch("/remote/v1/session");
+    if (gone.status !== 401) return `restored_session_${gone.status}`;
+    return "ok";
   }, startup.actor);
-  if (!restored) throw Error("Restored browser C++ password/passkey grant or revocation refused");
+  if (restored !== "ok") throw Error(restored);
 } finally {
   try {
     await browser.close();
@@ -226,7 +233,7 @@ await main().catch(async error => {
   // A runner may collect stdout. Emit only fixed failure categories and
   // integer HTTP statuses, never browser errors with echoed options/cookies.
   const message = error instanceof Error ? error.message : "";
-  const category = /^(?:enroll_(?:options|finish|session)_[0-9]{3}|enroll_session_network|enroll_(?:options_fetch|options_json|create|finish_build|finish_fetch|finish_json|session_fetch|evaluate)_exception|enroll_options_network_(?:unknown|no_request|csp|certificate|proxy|connection|tls|http2|aborted|client_blocked|failed|other)|enroll_no_credential|enroll_result_invalid|enroll_create_(?:not_allowed|security|unsupported|invalid_state|type|exception))$/.test(message)
+  const category = /^(?:enroll_(?:options|finish|session)_[0-9]{3}|enroll_session_network|enroll_(?:options_fetch|options_json|create|finish_build|finish_fetch|finish_json|session_fetch|evaluate)_exception|enroll_options_network_(?:unknown|no_request|csp|certificate|proxy|connection|tls|http2|aborted|client_blocked|failed|other)|enroll_no_credential|enroll_result_invalid|enroll_create_(?:not_allowed|security|unsupported|invalid_state|type|exception)|restored_(?:challenge|options|finish|replay|summary|devices|revoke|session)_[0-9]{3}|restored_(?:old_cookie|no_credential|grant_invalid|device_mismatch|revoke_invalid))$/.test(message)
     ? message : message === "Invalid isolated fixture parameters" ? "fixture_parameters"
     : message === "Missing harness instruction" ? "harness_protocol"
     : message === "Restored browser C++ password/passkey grant or revocation refused" ? "restored_flow"
