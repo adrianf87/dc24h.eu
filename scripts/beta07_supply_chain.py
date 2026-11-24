@@ -40,18 +40,26 @@ def inventory(root: Path, source_sha: str, os_image: str, checked_out_sha: str):
             if not isinstance(version, str) or not SEMVER.fullmatch(version):
                 raise ValueError("Floating npm direct dependency")
     resolved = 0
+    components = []
     for name, entry in lock["packages"].items():
         if not name:
             continue
         if not name.startswith("node_modules/") or not isinstance(entry, dict) or (
                 not SEMVER.fullmatch(str(entry.get("version", "")))):
             raise ValueError("Unexpected npm lock entry")
-        if "resolved" in entry:
-            if not isinstance(entry["resolved"], str) or not entry["resolved"].startswith("https://registry.npmjs.org/") or (
-                    not isinstance(entry.get("integrity"), str) or
-                    not re.fullmatch(r"sha512-[A-Za-z0-9+/=]+", entry["integrity"])):
-                raise ValueError("Missing authenticated npm registry package hash")
-            resolved += 1
+        # No unpublished, local-path, link, git, file: or mutable registry
+        # dependency may silently enter the hosted release inventory.
+        if not isinstance(entry.get("resolved"), str) or not entry["resolved"].startswith("https://registry.npmjs.org/") or (
+                not isinstance(entry.get("integrity"), str) or
+                not re.fullmatch(r"sha512-[A-Za-z0-9+/=]+", entry["integrity"])):
+            raise ValueError("Missing authenticated npm registry package hash")
+        resolved += 1
+        # Inventory is a privacy-limited SBOM subset. Package names and exact
+        # versions are public; keep registry URLs and raw integrity strings
+        # out of CI artifacts. SHA-256 binds each locked integrity value.
+        components.append({"package": name.removeprefix("node_modules/"),
+                           "version": entry["version"],
+                           "integrity_sha256": hashlib.sha256(entry["integrity"].encode("ascii")).hexdigest()})
     actions = set()
     workflows = sorted((root / ".github/workflows").glob("*.yml"))
     if not workflows:
@@ -71,6 +79,8 @@ def inventory(root: Path, source_sha: str, os_image: str, checked_out_sha: str):
             "npm_direct_dependencies": len(package["dependencies"]) + len(package["devDependencies"]),
             "npm_transitive_locked_packages": len(lock["packages"]) - 1,
             "npm_registry_integrity_entries": resolved,
+            "sbom_format": "npm-lockfile-v3-public-package-inventory-v1",
+            "sbom_components": sorted(components, key=lambda item: item["package"]),
             "pinned_actions": sorted(actions),
             "npm_advisories_checked_separately": True,
             "codeql_checked_separately": True, "production_release_approved": False}

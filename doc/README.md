@@ -1,6 +1,8 @@
 # dc24h.eu High Starter technical documentation
 
-Current development version: beta-0.6.16.
+Current development version: beta-0.7.20 (draft, awaiting exact-head CI and subsequent fix passes).
+
+[Beta-0.7.17–beta-0.7.20 Stage V: hosted performance, bounded faults, supply-chain and release handoff](us/BETA_0.7_STAGE_V.md) · [PL runbook](pl/BETA_0.7_STAGE_V.md). No production approval or automatic merge.
 
 [Beta-0.6.1–beta-0.6.16 Stage I: implementation evidence, boundaries and risks](us/BETA_0.6_STAGE_I.md) · [PL recovery/operator runbook](pl/BETA_0.6_STAGE_I.md). Final-head CI is not assumed green; Stage II remains a separate full-series fix pass.
 

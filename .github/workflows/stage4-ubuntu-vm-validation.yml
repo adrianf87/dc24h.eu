@@ -83,6 +83,14 @@ jobs:
             -R '^(transfers\.protocol\.process|adc\.login\.process|adc\.close\.process|adcs\.tls_security\.process|beta\.04\.stage4\.recovery|systemd\.sandbox)$'
           python3 -m unittest discover -s tests -p 'beta06_integrated_chaos_gate_tests.py'
 
+      - name: Qualify exact-head bounded fault and drain durations without raw logs
+        run: |
+          python3 -m unittest discover -s tests -p beta07_bounded_fault_gate_tests.py
+          python3 scripts/beta07_bounded_fault_gate.py \
+            --junit "$RUNNER_TEMP/ctest-beta06-chaos.xml" \
+            --sha "$SOURCE_SHA" --os-image "${{ matrix.os }}" \
+            --output "$PWD/vm-evidence/beta07-bounded-faults.json"
+
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '22'

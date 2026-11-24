@@ -7,6 +7,7 @@ the Code Scanning upload; this workflow verifies the exact PR head locally.
 
 import argparse
 import json
+import math
 from pathlib import Path
 
 
@@ -54,8 +55,17 @@ def evaluate(paths):
                     errors += 1
                 rule = rules.get(result.get("ruleId"), {})
                 severity = result.get("properties", {}).get("security-severity", rule.get("properties", {}).get("security-severity"))
-                if severity is not None and float(severity) >= 7:
-                    high += 1
+                if severity is not None:
+                    if type(severity) not in (int, float, str):
+                        raise ValueError("Invalid CodeQL security severity")
+                    try:
+                        score = float(severity)
+                    except ValueError:
+                        raise ValueError("Invalid CodeQL security severity") from None
+                    if not math.isfinite(score) or not 0 <= score <= 10:
+                        raise ValueError("Invalid CodeQL security severity")
+                    if score >= 7:
+                        high += 1
     if languages != EXPECTED_LANGUAGES:
         raise ValueError("Incomplete C++ and TypeScript CodeQL languages")
     if high or errors:

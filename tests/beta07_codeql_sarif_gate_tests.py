@@ -56,6 +56,12 @@ class TestCodeQLGate(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Incomplete"):
             evaluate([self.sarif("cpp")])
 
+    def test_malformed_nonfinite_or_out_of_range_scores_cannot_bypass_policy(self):
+        for score in ("nan", "inf", "unknown", "-1", "11", True):
+            with self.subTest(score=score):
+                with self.assertRaisesRegex(ValueError, "Invalid CodeQL security severity"):
+                    evaluate([self.sarif("cpp", security=score), self.sarif("javascript-typescript")])
+
 
 if __name__ == "__main__":
     unittest.main()

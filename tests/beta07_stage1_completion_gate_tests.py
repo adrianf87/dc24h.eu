@@ -30,6 +30,7 @@ class GateTests(unittest.TestCase):
         self.assertEqual(result["accepted_patches"], 20)
         self.assertEqual(result["successful_required_jobs"], 17)
         self.assertFalse(result["stage2_complete"])
+        self.assertFalse(result["five_post_stage_fix_passes_complete"])
         self.assertFalse(result["merge_authorized"])
         self.assertFalse(result["production_deployment_authorized"])
 

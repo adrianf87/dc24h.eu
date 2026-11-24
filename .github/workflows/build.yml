@@ -58,6 +58,9 @@ jobs:
 
       - name: Verify exact checked-out head and pinned action/npm inventory
         run: |
+          python3 -m unittest discover -s tests -p beta07_supply_chain_tests.py
+          python3 -m unittest discover -s tests -p beta07_stage1_completion_gate_tests.py
+          python3 -m unittest discover -s tests -p beta07_release_candidate_gate_tests.py
           python3 scripts/beta07_supply_chain.py \
             --root "$GITHUB_WORKSPACE" --sha "$SOURCE_SHA" \
             --os-image "${{ matrix.os }}" \
@@ -128,9 +131,31 @@ jobs:
         working-directory: webadmin
         run: npm ci
 
-      - name: Audit production npm dependencies for high-severity advisories
+      - name: Audit production npm dependencies and require redacted exact-head evidence
         working-directory: webadmin
-        run: npm audit --omit=dev --audit-level=high
+        run: |
+          python3 -m unittest discover -s ../tests -p beta07_npm_audit_gate_tests.py
+          private_audit="$RUNNER_TEMP/beta07-npm-audit-private.json"
+          trap 'rm -f "$private_audit"' EXIT
+          if npm audit --omit=dev --audit-level=high --json > "$private_audit"; then
+            audit_result=0
+          else
+            audit_result=$?
+          fi
+          mkdir -p "$RUNNER_TEMP/evidence"
+          python3 ../scripts/beta07_npm_audit_gate.py \
+            --root "$GITHUB_WORKSPACE" --sha "$SOURCE_SHA" \
+            --os-image "${{ matrix.os }}" --audit "$private_audit" \
+            --audit-exit "$audit_result" \
+            --output "$RUNNER_TEMP/evidence/beta07-npm-audit.json"
+
+      - name: Upload de-identified production dependency audit only
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (Node 24)
+        with:
+          name: beta07-npm-audit-${{ matrix.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/evidence/beta07-npm-audit.json
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Typecheck and production build
         working-directory: webadmin

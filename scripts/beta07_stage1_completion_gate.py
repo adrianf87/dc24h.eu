@@ -61,6 +61,7 @@ def evaluate(doc, checked_out_sha):
             "hosted_ubuntu_images": list(IMAGES), "accepted_patches": 20,
             "successful_required_jobs": len(REQUIRED), "accepted_evidence_categories": len(names),
             "stage1_ci_complete": True, "stage2_complete": False,
+            "five_post_stage_fix_passes_complete": False,
             "merge_authorized": False, "production_deployment_authorized": False}
 
 

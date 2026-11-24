@@ -22,8 +22,12 @@ class SupplyChainTests(unittest.TestCase):
         self.assertGreater(data["npm_registry_integrity_entries"], 10)
         self.assertGreater(data["npm_direct_dependencies"], 10)
         self.assertGreaterEqual(len(data["pinned_actions"]), 3)
+        self.assertEqual(data["npm_transitive_locked_packages"], len(data["sbom_components"]))
+        self.assertTrue(all(set(row) == {"package", "version", "integrity_sha256"}
+                            for row in data["sbom_components"]))
         self.assertFalse(data["production_release_approved"])
         self.assertNotIn("password", json.dumps(data).lower())
+        self.assertNotIn("registry.npmjs.org", json.dumps(data))
 
     def test_wrong_head_image_or_unpinned_action_fail_closed(self):
         with self.assertRaises(ValueError):
@@ -40,6 +44,21 @@ class SupplyChainTests(unittest.TestCase):
             (new / ".github/workflows/unsafe.yml").write_text("steps:\n  - uses: actions/checkout@v5\n")
             with self.assertRaisesRegex(ValueError, "Unpinned"):
                 supply.inventory(new, HEAD, "ubuntu-22.04", HEAD)
+
+    def test_missing_package_integrity_cannot_be_disguised_as_an_omitted_entry(self):
+        with tempfile.TemporaryDirectory() as directory:
+            new = Path(directory)
+            (new / "webadmin").mkdir()
+            (new / ".github/workflows").mkdir(parents=True)
+            lock = json.loads((ROOT / "webadmin/package-lock.json").read_text())
+            target = next(name for name in lock["packages"] if name.startswith("node_modules/"))
+            del lock["packages"][target]["integrity"]
+            (new / "webadmin/package-lock.json").write_text(json.dumps(lock))
+            (new / "webadmin/package.json").write_bytes((ROOT / "webadmin/package.json").read_bytes())
+            (new / ".github/workflows/pinned.yml").write_text(
+                "steps:\n  - uses: actions/checkout@" + "a" * 40 + "\n")
+            with self.assertRaisesRegex(ValueError, "Missing authenticated npm"):
+                supply.inventory(new, HEAD, "ubuntu-24.04", HEAD)
 
 
 if __name__ == "__main__":

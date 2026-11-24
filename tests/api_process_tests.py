@@ -114,7 +114,7 @@ class ApiProcessTests(unittest.TestCase):
         self.assertEqual(snapshot['observation']['schema'], 1)
         self.assertIsInstance(snapshot['observation']['observed_unix_ms'], int)
         self.assertLess(abs(snapshot['observation']['observed_unix_ms'] - int(time.time() * 1000)), 10_000)
-        self.assertEqual(snapshot['server']['version'], 'beta-0.6.16')
+        self.assertEqual(snapshot['server']['version'], 'beta-0.7.20')
         self.assertTrue(snapshot['server']['core_running'])
         board = snapshot['dashboard']
         self.assertEqual(board['schema'], 1)

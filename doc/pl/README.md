@@ -1,6 +1,8 @@
 # Dokumentacja dc24h.eu High Starter
 
-beta-0.6.16: Etap I obejmuje rzeczywiste testowe logowanie przez prywatny HTTPS, sprawdzanie pochodzenia wyników CI, odtwarzanie MariaDB v11 i pięciu plików bramy, cofanie do binarki 0.5.16, rotację lokalnego tokenu, testy ADC/ADCS/TLS i prywatny ekran incydentów. Pomiary wyłącznie na GitHub-hosted Ubuntu 22.04/24.04/26.04, bez deklaracji wydajności produkcyjnej. Logowanie to nadal **hasło + passkey** albo **hasło + TOTP**; bez zmiany schematu SQL i bez publicznego WebAdmin. Hub, API, kontroler i WebAdmin raportują beta-0.6.16. CI końcowego SHA i jeden późniejszy, wspólny etap napraw są nadal wymagane. Wdrożenie nie następuje automatycznie.
+beta-0.7.20: Etap V — roboczy kandydat w PR #239, obejmujący kompatybilność ADC/ADCS, passkeys/MFA, spójne odtwarzanie MariaDB v11 i pięciu plików, testowe aktualizacje dpkg, historię incydentów, porównywalne pomiary i zabezpieczoną kwalifikację. Hub, API, kontroler i WebAdmin raportują beta-0.7.20. Pomiary wyłącznie na GitHub-hosted Ubuntu 22.04/24.04/26.04, bez gwarancji produkcyjnego RPO/RTO lub wydajności. Logowanie nadal wymaga **hasła + passkey** albo **hasła + TOTP**. CI końcowego SHA, pięć późniejszych etapów poprawek i osobna zgoda Ownera pozostają wymagane. Brak automatycznego merge, wdrożenia, publicznego WebAdmin i zmiany schematu SQL.
+
+- [Etap V beta-0.7.17–beta-0.7.20 — instrukcja operatora i rollback](BETA_0.7_STAGE_V.md) · [EN/US](../us/BETA_0.7_STAGE_V.md)
 
 - [Etap I beta-0.6.1–beta-0.6.16 — procedura operatora i odtwarzania](BETA_0.6_STAGE_I.md) · [EN/US](../us/BETA_0.6_STAGE_I.md)
 
