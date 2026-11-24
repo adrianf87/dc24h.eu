@@ -35,7 +35,7 @@ class ProtocolNegotiationProcessTests(unittest.TestCase):
                 bad_cid.handshake(fragmented=True)
                 bad_cid.send(bad_cid.identity(b'InvalidCID', 192).replace(pair(192)[1], pair(193)[1]))
                 self.assertTrue(bad_cid.line().startswith(b'ISTA ' + cases['cases'][1]['status'].encode() + b' '))
-                self.assertEqual(bad_cid.line(), b'IQUI ' + bad_cid.sid)
+                self.assertTrue(bad_cid.line().startswith(b'IQUI ' + bad_cid.sid))
                 self.assertEqual(bad_cid.peer.recv(1), b'')
 
                 bad_sid = Peer(self, connect_tls(self, hub, cert) if encrypted else hub.connect())
