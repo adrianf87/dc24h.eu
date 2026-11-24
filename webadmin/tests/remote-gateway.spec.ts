@@ -157,6 +157,22 @@ test("device inventory outage removes stale device actions without losing read-o
   await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 });
 
+test("session countdown starts at the server lifetime even after delayed inspection", async ({ page }) => {
+  await page.route("**/remote/v1/session", async route => {
+    // The old wall-clock deadline was calculated later than the initial clock
+    // state. ceil() then displayed 11 minutes for a 10-minute session.
+    await new Promise(resolve => setTimeout(resolve, 100));
+    await route.fulfill({ status: 200, contentType: "application/json",
+      body: JSON.stringify({ schema: 1, authenticated: true, mfa: true,
+        mode: "read-only", csrf: sessionCsrf, expires_in: 600 }) });
+  });
+  await page.route("**/remote/v1/summary", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify(snapshot),
+  }));
+  await page.goto("/remote.html");
+  await expect(page.getByText("Session time remaining (approximate): 10 min")).toBeVisible();
+});
+
 test("refused passkey enrollment leaves no device, secret or pending privileged action in the browser", async ({ page }) => {
   let finishCalls = 0;
   await page.route("**/remote/v1/session", route => route.fulfill({

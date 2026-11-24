@@ -36,3 +36,29 @@ Real loopback process tests now exercise two successive hub lifetimes after conc
 4. Record exact final SHA, workflow links and limitations in Issue #234 and PR #235. Keep the PR draft, issue open and subsequent units unchecked; no production deployment or additional assessment is part of this work unit.
 
 **Validation state:** Follow the latest-head CI evidence and Stage III checklist in Issue #234; no independent security or target-hardware acceptance claim is made here.
+
+## Fix Pass 3 — Stage III re-review (2026-11-24)
+
+The review revisited the matched recovery pair, Apache/systemd restrictions,
+ADC/ADCS fault regressions and authenticated device/session feedback. Two
+confirmed defects were repaired without changing the recovery schema, remote
+listener, privilege model or C++ protocol budgets:
+
+- **S3-F1 — Recovery pair placement:** `stage1_recovery_bundle.py` could create
+  `recovery-pair.json` **inside** an otherwise valid private snapshot. Its
+  post-write verification then failed because the snapshot had an unexpected
+  seventh file, leaving a previously usable backup invalid. Pair creation now
+  refuses that directory or any resolving alias before writing; a regression
+  revalidates the unmodified snapshot after rejection.
+- **S3-F2 — Session countdown:** the React clock was captured before the
+  asynchronous session inspection. Rounding up a fresh 600-second lifetime
+  could therefore display **11 min** instead of 10 min, and wall-clock reversal
+  could make the countdown grow. The display now uses a monotonic elapsed-time
+  clock and updates the deadline and display clock together. Browser coverage
+  exercises a delayed session response.
+
+The Apache rule set, service sandbox and ADC/ADCS restart regressions were
+reviewed for Stage III scope. No further confirmed code defect was identified
+in those components during this pass. The final SHA and full GitHub-hosted
+Ubuntu 22.04/24.04/26.04 CI outcome must be recorded in Issue #234 before
+marking Fix Pass 3 complete. Local checks are not substitutes for that gate.

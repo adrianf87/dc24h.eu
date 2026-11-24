@@ -101,7 +101,9 @@ export function RemoteApp() {
   const [pendingRevoke, setPendingRevoke] = useState<string | null>(null);
   const [deviceMutationBusy, setDeviceMutationBusy] = useState<string | null>(null);
   const [sessionExpiresAt, setSessionExpiresAt] = useState<number | null>(null);
-  const [clock, setClock] = useState(Date.now());
+  // A wall-clock adjustment must not extend the displayed lifetime of a
+  // server-issued session. Use a monotonic browser clock for the countdown.
+  const [clock, setClock] = useState(() => performance.now());
   const [actionMessage, setActionMessage] = useState("");
   // An older HTTP response must never modify a newer authenticated session.
   const sessionEpoch = useRef(0);
@@ -111,6 +113,11 @@ export function RemoteApp() {
   const t = labels[language];
   const displayTime = (time: number | null) => time === null ? t.neverUsed :
     new Date(time).toLocaleString(language === "pl" ? "pl-PL" : "en-US");
+  const updateSessionLifetime = (seconds: number) => {
+    const now = performance.now();
+    setClock(now);
+    setSessionExpiresAt(now + seconds * 1000);
+  };
 
   const invalidate = (next: Status) => {
     sessionEpoch.current++;
@@ -130,7 +137,7 @@ export function RemoteApp() {
     call("session").then(({ status, data }) => {
       if (canceled) return;
       if (status === 200 && validSession(data)) {
-        setCsrf(data.csrf); setSessionExpiresAt(Date.now() + data.expires_in * 1000);
+        setCsrf(data.csrf); updateSessionLifetime(data.expires_in);
         setState("authorized");
       }
       else setState(status === 401 ? "unauthorized" : failure(status));
@@ -138,7 +145,7 @@ export function RemoteApp() {
     return () => { canceled = true; };
   }, []);
   useEffect(() => {
-    const timer = window.setInterval(() => setClock(Date.now()), 30_000);
+    const timer = window.setInterval(() => setClock(performance.now()), 30_000);
     return () => window.clearInterval(timer);
   }, []);
   const load = async () => {
@@ -171,7 +178,7 @@ export function RemoteApp() {
     void call("session").then(({ status, data }) => {
       if (epoch !== sessionEpoch.current) return;
       if (status === 200 && validSession(data) && data.csrf === nextCsrf)
-        setSessionExpiresAt(Date.now() + data.expires_in * 1000);
+        updateSessionLifetime(data.expires_in);
       else if (status === 401) invalidate("expired");
     }).catch(() => { /* Remain unknown until the next explicit sign-in. */ });
     void load();
@@ -206,7 +213,7 @@ export function RemoteApp() {
         }, body: JSON.stringify({ actor_id: actor, password: proof, otp: code }),
       });
       if (result.status === 200 && validSession(result.data)) {
-        setCsrf(result.data.csrf); setSessionExpiresAt(Date.now() + result.data.expires_in * 1000);
+        setCsrf(result.data.csrf); updateSessionLifetime(result.data.expires_in);
         setState("authorized");
       } else { invalidate(result.status === 200 ? "unavailable" : failure(result.status)); }
     } catch { invalidate("unavailable"); }
@@ -244,7 +251,7 @@ export function RemoteApp() {
       const answer = await startAuthentication({ optionsJSON: options.data as Parameters<typeof startAuthentication>[0]["optionsJSON"] });
       const result = await passkeyRequest("passkey/login/finish", { response: answer }, token);
       if (result.status === 200 && validSession(result.data)) {
-        setCsrf(result.data.csrf); setSessionExpiresAt(Date.now() + result.data.expires_in * 1000);
+        setCsrf(result.data.csrf); updateSessionLifetime(result.data.expires_in);
         setState("authorized");
       } else invalidate(failure(result.status));
     } catch { invalidate("unavailable"); }

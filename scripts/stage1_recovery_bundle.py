@@ -84,6 +84,10 @@ def create_pair(dump, snapshot, destination, commit_sha):
         raise ValueError("Exact 40-character git commit SHA required")
     private.verify(str(snapshot))
     private.private_directory(destination)
+    # A pair manifest is an extra file, not a member of the private snapshot.
+    # Writing it into the snapshot would invalidate an otherwise recoverable
+    # five-store backup, even though the post-write verification rejects it.
+    private.separate_destination(snapshot, destination)
     # Pair only immutable offline inputs: the stored hashes are reverified
     # after the manifest has been written, including every private file.
     data = {"schema": 1,

@@ -36,3 +36,27 @@ Testy realnych procesów loopback obejmują dwa kolejne uruchomienia huba po ró
 4. Zapisać finalne SHA, linki i ograniczenia w Issue #234 oraz PR #235. PR pozostaje draftem, issue otwarte, a dalsze jednostki niezaznaczone; bez wdrożenia produkcyjnego i bez dodatkowej akceptacji zewnętrznej.
 
 **Stan walidacji:** aktualne dowody CI i checklista Etapu III znajdują się w Issue #234. Nie deklarujemy niezależnego odbioru bezpieczeństwa ani sprzętu docelowego.
+
+## Fix Pass 3 — ponowny przegląd Etapu III (2026-11-24)
+
+Ponownie sprawdzono spójność pary kopii, ograniczenia Apache/systemd, regresje
+ADC/ADCS po błędach i restarcie oraz widok sesji/urządzeń. Naprawiono dwa
+potwierdzone błędy, bez zmiany schematu, publicznego dostępu, uprawnień ani
+limitów protokołu:
+
+- **S3-F1 — położenie manifestu pary:** `stage1_recovery_bundle.py` pozwalał
+  utworzyć `recovery-pair.json` w samym katalogu poprawnej kopii prywatnej.
+  Późniejsza kontrola odrzucała kopię z dodatkowym plikiem, ale manifest już
+  pozostawał i uniemożliwiał prawidłowe odtwarzanie. Teraz przed zapisem
+  blokujemy ten katalog i jego aliasy; test upewnia się, że kopia pozostaje
+  poprawna po odmowie.
+- **S3-F2 — licznik sesji:** opóźniona odpowiedź serwera mogła sprawić, że
+  świeża sesja 600 sekund była wyświetlana jako **11 min** zamiast 10 min.
+  Cofnięcie zegara systemowego mogło też pozornie przedłużyć licznik.
+  Interfejs używa teraz zegara monotonicznego, równocześnie aktualizując
+  czas pozostały i punkt odniesienia. Dodano test opóźnionej odpowiedzi.
+
+Nie potwierdzono dodatkowej usterki w sprawdzonych regułach Apache, jednostce
+systemd ani regresjach ADC/ADCS. Przed zaznaczeniem Fix Pass 3 jako ukończonego
+trzeba zapisać finalny SHA oraz pełny zielony wynik CI GitHub-hosted Ubuntu
+22.04/24.04/26.04 w Issue #234. Kontrole lokalne nie zastępują tego wymogu.

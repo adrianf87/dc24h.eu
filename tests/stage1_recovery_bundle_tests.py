@@ -87,6 +87,21 @@ class RecoveryBundleTests(unittest.TestCase):
             with self.assertRaises(FileExistsError):
                 bundle.create_pair(dump, snapshot, pair_dir, "a" * 40)
 
+    def test_pair_manifest_must_not_corrupt_the_verified_private_snapshot(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dump, snapshot, _ = offline_fixture(Path(directory))
+            with self.assertRaisesRegex(ValueError, "separate from its source"):
+                bundle.create_pair(dump, snapshot, snapshot, "a" * 40)
+            self.assertFalse((snapshot / bundle.NAME).exists())
+            self.assertEqual(bundle.private.verify(str(snapshot)), len(bundle.private.FILES))
+
+            # Also refuse an alias to the snapshot, including a path with a
+            # lexical '..' component that resolves to the same directory.
+            alias = snapshot / ".." / snapshot.name
+            with self.assertRaisesRegex(ValueError, "separate from its source"):
+                bundle.create_pair(dump, snapshot, alias, "a" * 40)
+            self.assertEqual(bundle.private.verify(str(snapshot)), len(bundle.private.FILES))
+
 
 if __name__ == "__main__":
     unittest.main()
