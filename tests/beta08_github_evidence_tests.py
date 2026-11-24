@@ -14,6 +14,7 @@ SHA = "a" * 40
 
 def fixture():
     data = {}
+    data[f"/branches/{gate.BRANCH}"] = {"name": gate.BRANCH, "commit": {"sha": SHA}}
     runs = []
     for index, (workflow, names) in enumerate(gate.WORKFLOWS.items(), start=1):
         run_id, attempt = 700 + index, 2
@@ -26,13 +27,18 @@ def fixture():
         for name in sorted(names):
             image = next((i for i in gate.IMAGES if name.endswith(i)), "ubuntu-24.04")
             jobs.append({"name": name, "head_sha": SHA, "run_id": run_id,
+                         "started_at": "2026-11-24T20:00:00Z",
+                         "completed_at": "2026-11-24T20:05:00Z",
                          "status": "completed", "conclusion": "success", "labels": [image]})
         data[f"/actions/runs/{run_id}/attempts/{attempt}/jobs?per_page=100"] = {
             "total_count": len(jobs), "jobs": jobs}
         artifacts = [
-            {"name": name, "digest": "sha256:" + "b" * 64, "expired": False,
-             "size_in_bytes": 100, "workflow_run": {"id": run_id, "head_sha": SHA}}
-            for name in sorted(gate._expected_artifacts(workflow, run_id, attempt))]
+            {"id": run_id * 100 + artifact_index, "name": name,
+             "digest": "sha256:" + "b" * 64, "expired": False,
+             "size_in_bytes": 100, "created_at": "2026-11-24T20:04:00Z",
+             "workflow_run": {"id": run_id, "head_sha": SHA, "head_branch": gate.BRANCH}}
+            for artifact_index, name in enumerate(
+                sorted(gate._expected_artifacts(workflow, run_id, attempt)), start=1)]
         data[f"/actions/runs/{run_id}/artifacts?per_page=100"] = {
             "total_count": len(artifacts), "artifacts": artifacts}
     data[f"/actions/runs?head_sha={SHA}&per_page=100"] = {
@@ -48,6 +54,7 @@ class AuthenticatedEvidenceTests(unittest.TestCase):
         self.assertTrue(report["all_required_hosted_checks_successful"])
         self.assertFalse(report["owner_release_approval"])
         self.assertFalse(report["merge_authorized"])
+        self.assertFalse(report["artifact_archive_contents_independently_verified"])
         self.assertNotIn("token", str(report).lower())
 
     def test_wrong_head_attempt_artifact_or_required_job_fail_closed(self):
@@ -66,12 +73,37 @@ class AuthenticatedEvidenceTests(unittest.TestCase):
             data["/actions/runs/703/attempts/2/jobs?per_page=100"]["jobs"][0]["labels"] = ["self-hosted"]
         def incomplete_page(data):
             data[f"/actions/runs?head_sha={SHA}&per_page=100"]["total_count"] += 1
+        def stale_branch(data):
+            data[f"/branches/{gate.BRANCH}"]["commit"]["sha"] = "c" * 40
+        def wrong_artifact_branch(data):
+            data["/actions/runs/701/artifacts?per_page=100"]["artifacts"][0]["workflow_run"]["head_branch"] = "main"
+        def old_attempt_artifact(data):
+            data["/actions/runs/701/artifacts?per_page=100"]["artifacts"][0]["created_at"] = "2026-11-23T20:04:00Z"
+        def duplicate_artifact_id(data):
+            artifacts = data["/actions/runs/701/artifacts?per_page=100"]["artifacts"]
+            artifacts[1]["id"] = artifacts[0]["id"]
         for damage in (pending, missing_job, wrong_attempt, no_digest, wrong_head,
-                       self_hosted, incomplete_page):
+                       self_hosted, incomplete_page, stale_branch,
+                       wrong_artifact_branch, old_attempt_artifact, duplicate_artifact_id):
             data = copy.deepcopy(fixture())
             damage(data)
             with self.subTest(damage=damage.__name__), self.assertRaises(ValueError):
                 gate.evaluate(lambda key: data[key], SHA)
+
+    def test_branch_advancing_during_validation_invalidates_old_green_matrix(self):
+        data = fixture()
+        reads = 0
+
+        def get(key):
+            nonlocal reads
+            if key == f"/branches/{gate.BRANCH}":
+                reads += 1
+                if reads == 2:
+                    return {"name": gate.BRANCH, "commit": {"sha": "c" * 40}}
+            return data[key]
+
+        with self.assertRaisesRegex(ValueError, "current development branch HEAD"):
+            gate.evaluate(get, SHA)
 
     def test_latest_failed_run_overrides_older_green_run(self):
         data = fixture()

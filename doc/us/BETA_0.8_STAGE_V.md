@@ -8,6 +8,8 @@
 
 This verifier is intended for a **separate final-head check**, after all workflows succeed. The script does not make a GitHub API transcript cryptographically independent of GitHub or the token holder. Synthetic unit tests verify rejection logic; they never represent real CI results. Do not supply a manually constructed green manifest as acceptance.
 
+**Fix Pass 5 clarification:** The checker now queries the live development branch before and after processing runs and refuses artifacts with a foreign branch, replayed creation time or duplicate ID. **SHA-256 digests are verified as GitHub API metadata only; ZIP bytes and report JSON are not downloaded and independently hashed here.** The redacted output discloses this distinction. Review [Fix Pass 5](BETA_0.8_FIX_PASS_5.md) and inspect the sanitized archive contents separately before any final acceptance.
+
 ## 0.8.18 — pinned transport envelopes
 
 Keep the existing predeclared three windows on each GitHub-hosted Ubuntu 22.04/24.04/26.04 image:
@@ -25,6 +27,7 @@ Keep the existing predeclared three windows on each GitHub-hosted Ubuntu 22.04/2
 - The existing disposable half-open TLS, slow peer, blocked output, restart, SIGTERM, recovery and queue tests remain mandatory in the Ubuntu VM matrix, plus ASan and UBSan in the C++ workflow.
 - `beta08-hardening.yml` adds a **required** Ubuntu 24.04 C++ ThreadSanitizer job against parser/network/security unit targets. A runtime incompatibility, unsupported suppression, missing JUnit or sanitizer finding is a **failed/blocked gate**, never a passing skipped check.
 - A separate Clang coverage-guided libFuzzer target exercises ADC frame parsing and stream decoding with synthetic seed inputs. Fixed seed `424242`, **1024 runs**, max input **4096 bytes**, 5-second per-input timeout, 512 MiB RSS and 180-second wall-time ceiling. Only a bounded, allowlisted successful-run summary is uploaded; crash inputs/raw traces are not published. An unavailable toolchain or failed run remains visible as a failure.
+- Fix Pass 5 runs the fuzzer only against an ephemeral bounded seed copy, drops stdout, caps diagnostics at **1 MiB** and deletes private crash artifacts; excessive output fails the smoke rather than filling CI disk.
 
 These smoke tests are deliberately short. They cannot prove absence of all parser, concurrency or exhaustion flaws on production hardware.
 
@@ -33,6 +36,8 @@ These smoke tests are deliberately short. They cannot prove absence of all parse
 The C++ package/version, Node/React WebAdmin metadata, npm package+lock tuple, active version assertions, README and changelog identify **`beta-0.8.20`**. MariaDB remains schema **v11** plus five private owner-only stores. This is a development **candidate**, not a tag or deployable production package.
 
 Hosted WebAdmin CI retains its production-only npm audit and now performs a **second full npm audit including dev/build-chain dependencies**. High/critical unreviewed findings, invalid network output or a mismatched head fail. The redacted report contains only aggregate severities, exact lock digest and an explicit **empty dependency-exception list**; no exception is invented by a tool. Pinned Actions, public npm lock inventory, CodeQL and sanitizer checks remain independently mandatory.
+
+Fix Pass 5 makes the full-audit gate invoke the exact command itself, with an explicit production **and** dev package scope; a caller-supplied production-only JSON file is no longer trusted as proof. The active incident journal test fixture and metadata gate now agree on beta-0.8.20.
 
 `scripts/beta08_release_candidate_gate.py` checks candidate metadata plus 8 redacted evidence categories × 3 Ubuntu images and the two Ubuntu 24.04 hardening results. Even a structurally positive offline output says `authenticated_github_api_verification_still_required=true`, `merge_authorized=false`. A later Owner-approved acceptance step must run the direct GitHub API checker on the **final** SHA and compare artifact origin and release evidence. No stage is accepted from a pending/synthetic result.
 

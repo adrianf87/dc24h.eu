@@ -89,6 +89,8 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/beta08-evidence"
           python3 -m unittest discover -s tests -p beta08_fuzz_smoke_tests.py
+          python3 -m unittest discover -s tests -p beta08_github_evidence_tests.py
+          python3 -m unittest discover -s tests -p beta08_release_candidate_gate_tests.py
           python3 scripts/beta08_fuzz_smoke.py \
             --root "$GITHUB_WORKSPACE" \
             --binary "$RUNNER_TEMP/beta08-fuzz/adc_parser_fuzzer" \

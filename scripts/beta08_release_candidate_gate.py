@@ -43,7 +43,9 @@ def evaluate(checkout, sha, reports, hardening):
     expected = {
         "CMakeLists.txt": ('project(dc24h VERSION 0.8.20', 'set(DC24H_VERSION "beta-0.8.20")'),
         "webadmin/src/lib/status.ts": ('WEBADMIN_VERSION = "beta-0.8.20"',),
+        "webadmin/tests/remote-incident-journal.test.ts": ('version: "beta-0.8.20"',),
         "README.md": ("Current development version: beta-0.8.20",),
+        "doc/README.md": ("Current development version: beta-0.8.20",),
         "CHANGELOG.md": ("beta-0.8.17–beta-0.8.20",),
         "doc/us/BETA_0.8_STAGE_V.md": ("NO-GO",),
         "doc/pl/BETA_0.8_STAGE_V.md": ("NO-GO",),
@@ -70,7 +72,9 @@ def evaluate(checkout, sha, reports, hardening):
         audit = content["beta08-build-chain-audit.json"]
         if (audit.get("npm_lock_sha256") != digest or
                 audit.get("runtime_and_build_chain_audited") is not True or
-                audit.get("unreviewed_high_or_critical") != 0 or
+                audit.get("scope_enforced_by_invoking_npm") is not True or
+                type(audit.get("unreviewed_high_or_critical")) is not int or
+                audit["unreviewed_high_or_critical"] != 0 or
                 audit.get("dependency_exceptions") != [] or
                 audit.get("raw_advisories_exported") is not False):
             raise ValueError("Unreviewed runtime or build-chain advisories")

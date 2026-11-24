@@ -19,4 +19,4 @@
 
 ## Kontrola i przekazanie
 
-Nowe testy negatywne: `tests/beta08_fix_pass3_tests.py` i `webadmin/tests/remote-private-init.test.ts`. Uruchamiaj wyłącznie GitHub-hosted Ubuntu **22.04/24.04/26.04** dla pełnej macierzy C++/Node/Apache/MariaDB/pakiet/Chromium/CodeQL. Dokładny commit SHA i odnośnik do nowego CI trafiają do PR #241. `pending` ani anulowany poprzedni przebieg nie oznacza sukcesu. Po push i potwierdzeniu uruchomienia CI zakończyć bez oczekiwania. Bez Debian, self-hosted, Xeon, merge, tagu, publikacji pakietu i wdrożenia.
+Nowe testy negatywne: `tests/beta08_fix_pass3_tests.py` i `webadmin/tests/remote-private-init.test.ts`. Uruchamiaj wyłącznie GitHub-hosted Ubuntu **22.04/24.04/26.04** dla pełnej macierzy C++/Node/Apache/MariaDB/pakiet/Chromium/CodeQL. Dokładny commit SHA i odnośnik do nowego CI trafiają do PR #241. `pending` ani anulowany poprzedni przebieg nie oznacza sukcesu. Po push i potwierdzeniu uruchomienia CI zakończyć bez oczekiwania. Bez Debian, prywatnych runnerów, Xeon, merge, tagu, publikacji pakietu i wdrożenia.

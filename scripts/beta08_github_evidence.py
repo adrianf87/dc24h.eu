@@ -7,6 +7,7 @@ from GitHub's REST API. This checker never merges, releases or deploys.
 """
 
 import argparse
+from datetime import datetime, timedelta
 import json
 import os
 import re
@@ -58,9 +59,30 @@ def _expected_artifacts(workflow, run_id, attempt):
     return set()  # CodeQL is a successful completed job, not a fabricated artifact.
 
 
+def _time(value):
+    if not isinstance(value, str) or not value.endswith("Z"):
+        raise ValueError("Missing GitHub UTC event timestamp")
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as error:
+        raise ValueError("Invalid GitHub event timestamp") from error
+    return parsed
+
+
+def _current_branch(get, sha):
+    ref = get(f"/branches/{BRANCH}")
+    if (not isinstance(ref, dict) or ref.get("name") != BRANCH or
+            not isinstance(ref.get("commit"), dict) or ref["commit"].get("sha") != sha):
+        raise ValueError("Source SHA is no longer the current development branch HEAD")
+
+
 def evaluate(get, sha, branch=BRANCH):
-    if not isinstance(sha, str) or not SHA.fullmatch(sha) or branch != BRANCH:
+    if (not isinstance(sha, str) or not SHA.fullmatch(sha) or
+            sha == "0" * 40 or branch != BRANCH):
         raise ValueError("Invalid exact source head or development branch")
+    # An old, entirely green run is not final-head evidence after a new push.
+    # Re-read the authoritative branch at the end to catch concurrent updates.
+    _current_branch(get, sha)
     runs = _collection(get(f"/actions/runs?head_sha={sha}&per_page=100"), "workflow_runs")
     selected = {}
     for workflow in WORKFLOWS:
@@ -81,6 +103,7 @@ def evaluate(get, sha, branch=BRANCH):
         run_id, attempt = run["id"], run["run_attempt"]
         jobs = _collection(get(f"/actions/runs/{run_id}/attempts/{attempt}/jobs?per_page=100"), "jobs")
         identities = set()
+        job_windows = []
         for job in jobs:
             if not isinstance(job, dict):
                 raise ValueError("Malformed workflow job")
@@ -93,31 +116,46 @@ def evaluate(get, sha, branch=BRANCH):
                     not isinstance(job.get("labels"), list) or image not in job["labels"]):
                 raise ValueError("Missing, skipped, foreign or non-hosted CI job")
             identities.add(name)
+            start, end = _time(job.get("started_at")), _time(job.get("completed_at"))
+            if end < start:
+                raise ValueError("Invalid workflow attempt job time window")
+            job_windows.append((start, end))
         if identities != WORKFLOWS[workflow]:
             raise ValueError("Incomplete exact-attempt workflow job matrix")
         artifacts = _collection(get(f"/actions/runs/{run_id}/artifacts?per_page=100"), "artifacts")
         expected = _expected_artifacts(workflow, run_id, attempt)
         observed = {}
+        artifact_ids = set()
         for artifact in artifacts:
             if not isinstance(artifact, dict) or artifact.get("name") not in expected:
                 continue  # Older attempts may remain in the same workflow run.
             name = artifact["name"]
-            if (name in observed or artifact.get("expired") is not False or
+            created = _time(artifact.get("created_at"))
+            artifact_id = artifact.get("id")
+            if (name in observed or type(artifact_id) is not int or artifact_id <= 0 or
+                    artifact_id in artifact_ids or artifact.get("expired") is not False or
                     type(artifact.get("size_in_bytes")) is not int or
                     not 0 < artifact["size_in_bytes"] <= 64 * 1024 * 1024 or
                     not isinstance(artifact.get("digest"), str) or
                     not DIGEST.fullmatch(artifact["digest"]) or
                     artifact.get("workflow_run", {}).get("id") != run_id or
-                    artifact.get("workflow_run", {}).get("head_sha") != sha):
+                    artifact.get("workflow_run", {}).get("head_sha") != sha or
+                    artifact.get("workflow_run", {}).get("head_branch") != branch or
+                    created < min(start for start, _ in job_windows) - timedelta(minutes=2) or
+                    created > max(end for _, end in job_windows) + timedelta(minutes=2)):
                 raise ValueError("Unverified artifact digest, origin or attempt")
             observed[name] = artifact["digest"]
+            artifact_ids.add(artifact_id)
         if set(observed) != expected:
             raise ValueError("Missing exact-attempt redacted artifact with digest")
         selected[workflow] = {"run_id": run_id, "attempt": attempt,
                               "jobs": len(identities), "artifact_digests": observed}
+    _current_branch(get, sha)
     return {"schema": 1, "source_sha": sha, "branch": branch,
             "github_api_authenticated": True, "verified_workflows": selected,
             "all_required_hosted_checks_successful": True,
+            "artifact_digests_verified_from_github_metadata_only": True,
+            "artifact_archive_contents_independently_verified": False,
             "owner_release_approval": False, "merge_authorized": False,
             "production_deployment_authorized": False}
 

@@ -170,17 +170,9 @@ jobs:
         working-directory: webadmin
         run: |
           python3 -m unittest discover -s ../tests -p beta08_build_chain_audit_tests.py
-          private_full_audit="$RUNNER_TEMP/beta08-full-npm-private.json"
-          trap 'rm -f "$private_full_audit"' EXIT
-          if npm audit --include=dev --include=prod --audit-level=high --json > "$private_full_audit"; then
-            audit_result=0
-          else
-            audit_result=$?
-          fi
           python3 ../scripts/beta08_build_chain_audit.py \
             --root "$GITHUB_WORKSPACE" --sha "$SOURCE_SHA" \
-            --os-image "${{ matrix.os }}" --audit "$private_full_audit" \
-            --audit-exit "$audit_result" \
+            --os-image "${{ matrix.os }}" \
             --output "$RUNNER_TEMP/evidence/beta08-build-chain-audit.json"
 
       - name: Upload only aggregated full-dependency advisory totals

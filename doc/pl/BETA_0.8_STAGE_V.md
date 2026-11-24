@@ -26,3 +26,5 @@
 - **Wydajność i bezpieczeństwo:** krótkie testy na Ubuntu nie dowodzą odporności na wszystkie ataki ani wydajności produkcyjnego Debian 13/Xeon. Nie ma zgody na publiczny WebAdmin, nowe uprawnienia ani wdrożenie.
 
 **Instrukcja Ownera:** po zapisie commita i uruchomieniu CI **zakończyć działanie natychmiast, bez czekania na wyniki**. Etap V pozostaje `CI pending / NO-GO`, dopóki osobny przegląd nie potwierdzi pełnego finalnego SHA i wszystkich Fix Passów. Nie wykonywać merge, tagu ani wdrożenia.
+
+**Uzupełnienie Fix Pass 5:** kontrola odrzuca stare zielone wyniki po zmianie HEAD, sprawdza próbę i czas pochodzenia artefaktów, uruchamia audyt npm z jawnym zakresem produkcyjnym i deweloperskim oraz ogranicza logi/ziarna fuzzingu. **Suma SHA-256 artefaktu pochodzi z metadanych API GitHub; sam ZIP nie jest tu pobierany i ponownie haszowany.** Osobny przegląd zawartości jest wymagany. [Pełny opis napraw i ryzyk](BETA_0.8_FIX_PASS_5.md).

@@ -19,7 +19,9 @@ def fixture(root):
     fragments = {
         "CMakeLists.txt": 'project(dc24h VERSION 0.8.20\nset(DC24H_VERSION "beta-0.8.20")',
         "webadmin/src/lib/status.ts": 'WEBADMIN_VERSION = "beta-0.8.20"',
+        "webadmin/tests/remote-incident-journal.test.ts": 'version: "beta-0.8.20"',
         "README.md": "Current development version: beta-0.8.20",
+        "doc/README.md": "Current development version: beta-0.8.20",
         "CHANGELOG.md": "beta-0.8.17–beta-0.8.20",
         "doc/us/BETA_0.8_STAGE_V.md": "NO-GO",
         "doc/pl/BETA_0.8_STAGE_V.md": "NO-GO",
@@ -50,6 +52,7 @@ def fixture(root):
                 "production_sla_or_capacity_claim": False},
             "beta08-build-chain-audit.json": {
                 "npm_lock_sha256": locksha, "runtime_and_build_chain_audited": True,
+                "scope_enforced_by_invoking_npm": True,
                 "unreviewed_high_or_critical": 0, "dependency_exceptions": [],
                 "raw_advisories_exported": False},
             "beta07-bounded-faults.json": {
@@ -94,6 +97,21 @@ class CandidateGateTests(unittest.TestCase):
                 gate.evaluate(checkout, SHA, reports, hardening)
             target.unlink()
             with self.assertRaises(ValueError):
+                gate.evaluate(checkout, SHA, reports, hardening)
+
+    def test_old_active_fixture_version_and_unproven_build_scope_fail_closed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            checkout, reports, hardening = fixture(Path(directory))
+            active = checkout / "webadmin/tests/remote-incident-journal.test.ts"
+            active.write_text('version: "beta-0.7.20"')
+            with self.assertRaisesRegex(ValueError, "release-candidate metadata"):
+                gate.evaluate(checkout, SHA, reports, hardening)
+            active.write_text('version: "beta-0.8.20"')
+            report = reports / "ubuntu-22.04/beta08-build-chain-audit.json"
+            data = json.loads(report.read_text())
+            data["scope_enforced_by_invoking_npm"] = False
+            report.write_text(json.dumps(data))
+            with self.assertRaisesRegex(ValueError, "runtime or build-chain"):
                 gate.evaluate(checkout, SHA, reports, hardening)
 
 

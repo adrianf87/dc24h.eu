@@ -1,5 +1,12 @@
 # Changelog
 
+## beta-0.8 Fix Pass 5 — 2026-11-24 (Stage V review; exact-head hosted CI still NO-GO)
+
+- **Verified defects:** Prevent old green CI from qualifying after the branch HEAD advances; reject out-of-attempt artifact timestamps/foreign branch metadata. The GitHub-provided digest is metadata, not an independently downloaded/hashed ZIP; preserve that explicit limitation.
+- **Full supply-chain coverage:** Invoke the exact `npm audit --include=dev --include=prod` command inside a bounded private gate; reject caller-provided production-only JSON disguised as a full audit and missing dev/runtime lockfile nodes.
+- **Resource and metadata:** Reject oversized fuzzer diagnostics, symlinked/unbounded corpus and persistent crash artifacts; align the active incident journal test fixture to beta-0.8.20 and enforce candidate metadata/full audit scope. Add negative tests and bilingual Fix Pass 5 report.
+- **Boundary:** CI is pending, not accepted; do not wait for CI. Remain in the one draft PR #241 and branch. No Owner merge decision, tag, publish, data migration, public gateway or deployment.
+
 ## beta-0.8.9–beta-0.8.12 Fix Pass 3 — 2026-11-24 (draft PR #241, exact-head CI pending)
 
 - **Confirmed path-swap risk in offline recovery:** Pin a second-checked owner-only directory descriptor and open private source/output files, streamed SQL/hash inputs and the independent HMAC anti-reuse ledger relative to that descriptor. Reject noncanonical `..` directory traversal, final-component links, source inode replacement mid-hash and ledger replacement before consumption. Add deterministic synthetic tests; stopped writers and isolated offline recovery remain required.
@@ -20,6 +27,7 @@
 - **0.8.2 — Account revocation test defect:** Correct the disposable MariaDB integration fixture's zero-row `UPDATE`: `RegisteredADC` is an ADC nickname on `dc24h_account_identities`, whereas its account is named `AuthAccountOne`. Join nickname to account ID, require exactly one changed row and verify the persisted state before testing controlled restart and ADC/ADCS refusal. This fixes test evidence, **not** a live-revocation behavior claim.
 - **0.8.1/0.8.4 — Negative evidence:** Reject CTest failure/error/skipped child nodes even when marked `status="run"`; reject arbitrary plaintext on the ADCS listener, allowing only EOF/reset or a fatal TLS alert. The 0.8.3 search/transfer boundary was reviewed without a separate confirmed defect. Native DC++/AirDC++ clients remain untested.
 - **Fix Pass 1 handoff:** [EN/US review](doc/us/BETA_0.8_FIX_PASS_1.md) · [PL operator notes](doc/pl/BETA_0.8_FIX_PASS_1.md). Preserve already-committed Stages II–V on `beta-0.8.x-stage-full`. Hosted Ubuntu 22.04/24.04/26.04 exact-new-head CI is required but not yet verified; stop after push/CI trigger without polling, no automatic main merge or release.
+
 ## beta-0.8.17–beta-0.8.20 Stage V — 2026-11-24 (draft PR #241, exact-head CI unverified)
 
 - **0.8.17 — GitHub API provenance:** Add read-only exact-head/attempt workflow, hosted-job and redacted artifact SHA-256 digest verification against GitHub REST API. Refuse stale, pending, failed, skipped and wrong-attempt records; locally generated JSON remains untrusted. Owner approval is still separate.

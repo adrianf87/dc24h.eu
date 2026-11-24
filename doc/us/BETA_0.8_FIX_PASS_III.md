@@ -36,4 +36,4 @@ GitHub-hosted Ubuntu **22.04, 24.04, 26.04** must additionally execute the full 
 3. Full reauthentication through the old packaged executable, installed-systemd startup/restart (not just the compiled process), and real browser/passkey downgrade remain **unverified**. Do not authorize a production rollback or claim Stage III final acceptance on the existing synthetic checks alone.
 4. The detached HMAC proves shared-key knowledge, not nonrepudiable signer identity; a lost or corrupt external anti-reuse ledger must stop acceptance, never be silently reinitialized.
 
-Stop after publishing the exact Fix Pass 3 head and observing CI start. No merge to `main`, release, deployment, tag, production key use, Debian/self-hosted/Xeon testing or Owner acceptance is implied.
+Stop after publishing the exact Fix Pass 3 head and observing CI start. No merge to `main`, release, deployment, tag, production key use, Debian/private-runner/Xeon testing or Owner acceptance is implied.
