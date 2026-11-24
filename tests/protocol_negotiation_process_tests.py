@@ -3,14 +3,53 @@ import json
 import pathlib
 import tempfile
 import unittest
-from adc_login_process_tests import Peer
+from adc_login_process_tests import Peer, pair
 from transfer_statistics_support import assert_statistics
 from api_support import enable_api, fetch_status
 from network_process_tests import Hub, drain_until_eof
 from tls_support import credentials, connect_tls
 
 
+CORPUS = pathlib.Path(__file__).with_name('beta06_adc_compatibility_corpus.json')
+
+
 class ProtocolNegotiationProcessTests(unittest.TestCase):
+    def test_beta06_versioned_adc_adcs_wire_corpus(self):
+        """Actual on-loopback peers, never a simulated ADC parser or external client."""
+        cases = json.loads(CORPUS.read_text(encoding='utf-8'))
+        self.assertEqual(cases['schema'], 1)
+        self.assertEqual(cases['version'], 'beta-0.6.9')
+        self.assertEqual(len(cases['cases']), 4)
+        for encrypted in (False, True):
+            with self.subTest(transport='ADCS' if encrypted else 'ADC'), tempfile.TemporaryDirectory(prefix='dc24h-adc-corpus-') as directory:
+                cert, _ = credentials(directory)
+                ini = pathlib.Path(directory) / 'hub.ini'
+                ini.write_text('[network]\nlisten=127.0.0.1:0\nadcs_listen=127.0.0.1:0\n'
+                               '[tls]\ncertificate=certificate.pem\nprivate_key=private.pem\n')
+                hub = Hub(self, '--config', str(ini))
+                peer = Peer(self, connect_tls(self, hub, cert) if encrypted else hub.connect())
+                peer.login(cases['cases'][0]['nick'].encode('utf-8'), 191, fragmented=True)
+                self.assertTrue(peer.sid)
+
+                bad_cid = Peer(self, connect_tls(self, hub, cert) if encrypted else hub.connect())
+                bad_cid.handshake(fragmented=True)
+                bad_cid.send(bad_cid.identity(b'InvalidCID', 192).replace(pair(192)[1], pair(193)[1]))
+                self.assertTrue(bad_cid.line().startswith(b'ISTA ' + cases['cases'][1]['status'].encode() + b' '))
+                self.assertEqual(bad_cid.line(), b'IQUI ' + bad_cid.sid)
+                self.assertEqual(bad_cid.peer.recv(1), b'')
+
+                bad_sid = Peer(self, connect_tls(self, hub, cert) if encrypted else hub.connect())
+                bad_sid.handshake()
+                bad_sid.send(cases['cases'][2]['frame'].encode('ascii'))
+                self.assertTrue(bad_sid.line().startswith(b'ISTA ' + cases['cases'][2]['status'].encode() + b' '))
+
+                early = Peer(self, connect_tls(self, hub, cert) if encrypted else hub.connect())
+                early.send(cases['cases'][3]['frame'].encode('ascii'))
+                self.assertTrue(early.line().startswith(b'ISTA ' + cases['cases'][3]['status'].encode() + b' '))
+                peer.send(b'BSTA ' + peer.sid + b' 000 CorpusAlive')
+                self.assertEqual(peer.line(), b'BSTA ' + peer.sid + b' 000 CorpusAlive')
+                hub.stop()
+
     def test_explicit_protocols_and_peer_rejections(self):
         for ipv6 in (False, True):
             with self.subTest(ipv6=ipv6), tempfile.TemporaryDirectory(prefix='dc24h-protocol-') as directory:
