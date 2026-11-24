@@ -34,7 +34,11 @@ if (!/^https:\/\/localhost:\d{2,5}$/.test(startup.origin) ||
     !/^[0-9a-f]{64}$/.test(startup.csrf)) throw Error("Invalid isolated fixture parameters");
 
 clientPhase = "launch";
-const browser = await chromium.launch({ headless: true });
+// The isolated Apache vhost listens on IPv4 loopback only. Keep Chromium on
+// that same interface even on hosted images where localhost also has AAAA.
+const browser = await chromium.launch({ headless: true,
+  args: ["--host-resolver-rules=MAP localhost 127.0.0.1"],
+});
 try {
   clientPhase = "navigation";
   const context = await browser.newContext({ ignoreHTTPSErrors: true });
@@ -43,8 +47,13 @@ try {
   // allowlisted error *kind* for this one disposable endpoint, never a full
   // request URL, cookie, JavaScript exception or response body.
   let optionsNetworkFailure = "unknown";
+  let optionsRequestSeen = false;
+  const enrollmentOptions = "/remote/v1/passkey/enroll/options";
+  page.on("request", request => {
+    if (new URL(request.url()).pathname === enrollmentOptions) optionsRequestSeen = true;
+  });
   page.on("requestfailed", request => {
-    if (new URL(request.url()).pathname !== "/remote/v1/passkey/enroll/options") return;
+    if (new URL(request.url()).pathname !== enrollmentOptions) return;
     const error = request.failure()?.errorText ?? "";
     optionsNetworkFailure = /ERR_BLOCKED_BY_CSP/.test(error) ? "csp"
       : /ERR_CERT_/.test(error) ? "certificate"
@@ -60,6 +69,15 @@ try {
   await context.addCookies([{ name: "dc24h_remote", value: startup.sessionCookie.split("=")[1],
     domain: "localhost", path: "/remote/v1", httpOnly: true, secure: true, sameSite: "Strict" }]);
   await page.goto(startup.origin + "/remote.html");
+  // Exercise an actual browser fetch before creating a device. HTTP 401
+  // indicates a session/cookie issue; a rejected fetch indicates a browser
+  // transport issue. Neither is mistaken for a WebAuthn validation failure.
+  const sessionPreflight = await page.evaluate(async () => {
+    try { return (await fetch("/remote/v1/session")).status; }
+    catch { return -1; }
+  });
+  if (sessionPreflight === -1) throw Error("enroll_session_network");
+  if (sessionPreflight !== 200) throw Error(`enroll_session_${sessionPreflight}`);
   clientPhase = "authenticator";
   const cdp = await context.newCDPSession(page);
   await cdp.send("WebAuthn.enable");
@@ -123,7 +141,7 @@ try {
   if (enrolled === "enroll_options_fetch_exception") {
     // Deliver the matching requestfailed event before categorizing it.
     await page.waitForTimeout(100);
-    throw Error(`enroll_options_network_${optionsNetworkFailure}`);
+    throw Error(`enroll_options_network_${optionsRequestSeen ? optionsNetworkFailure : "no_request"}`);
   }
   if (enrolled !== "ok") throw Error(enrolled);
   process.stdout.write("enrolled\n");
@@ -192,7 +210,7 @@ await main().catch(async (error: unknown) => {
   // A runner may collect stdout. Emit only fixed failure categories and
   // integer HTTP statuses, never browser errors with echoed options/cookies.
   const message = error instanceof Error ? error.message : "";
-  const category = /^(?:enroll_(?:options|finish|session)_[0-9]{3}|enroll_(?:options_fetch|options_json|create|finish_build|finish_fetch|finish_json|session_fetch|evaluate)_exception|enroll_options_network_(?:unknown|csp|certificate|proxy|connection|tls|http2|aborted|client_blocked|failed|other)|enroll_no_credential|enroll_result_invalid|enroll_create_(?:not_allowed|security|unsupported|invalid_state|type|exception))$/.test(message)
+  const category = /^(?:enroll_(?:options|finish|session)_[0-9]{3}|enroll_session_network|enroll_(?:options_fetch|options_json|create|finish_build|finish_fetch|finish_json|session_fetch|evaluate)_exception|enroll_options_network_(?:unknown|no_request|csp|certificate|proxy|connection|tls|http2|aborted|client_blocked|failed|other)|enroll_no_credential|enroll_result_invalid|enroll_create_(?:not_allowed|security|unsupported|invalid_state|type|exception))$/.test(message)
     ? message : message === "Invalid isolated fixture parameters" ? "fixture_parameters"
     : message === "Missing harness instruction" ? "harness_protocol"
     : message === "Restored browser C++ password/passkey grant or revocation refused" ? "restored_flow"

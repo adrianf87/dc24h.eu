@@ -436,6 +436,34 @@ def run(binary, seeder, account_admin):
                     file.write("\n")
             print(f"Authenticated HTTPS: {len(success)}/{REQUESTS} success, p99={p99} ms (CI fixture)")
 
+            # A passkey enrollment is allowed only during the first 60 seconds
+            # of a freshly authenticated gateway session. The three timed
+            # windows above deliberately exercise a long-lived session, which
+            # must never be reused for a credential mutation. Get an entirely
+            # new C++ password+TOTP grant and CSRF challenge before the real
+            # browser enrollment; preserve the consumed OTP replay boundary.
+            original_otp_step = int(time.time() // 30)
+            until = time.monotonic() + 35
+            while int(time.time() // 30) <= original_otp_step:
+                if time.monotonic() > until:
+                    raise AssertionError("Fresh enrollment TOTP window did not arrive")
+                time.sleep(0.25)
+            time.sleep(1.1)  # C++ maintenance authority's global POST budget
+            status, payload, headers, _ = fetch("/remote/v1/challenge")
+            if status != 200:
+                raise AssertionError("Fresh passkey enrollment challenge unavailable")
+            fresh_cookie = next(value.split(";", 1)[0] for name, value in headers
+                                if name.lower() == "set-cookie")
+            fresh_login = json.dumps({"actor_id": actor, "password": "WebAdmin operator password!",
+                                      "otp": code_now()}).encode()
+            status, payload, headers, _ = fetch("/remote/v1/login", "POST", fresh_login, {
+                "Origin": origin, "Content-Type": "application/json", "Cookie": fresh_cookie,
+                "X-DC24H-Remote-CSRF": json.loads(payload)["csrf"]})
+            if status != 200 or json.loads(payload).get("authenticated") is not True:
+                raise AssertionError("Fresh C++ password+TOTP grant for browser enrollment refused")
+            cookie = next(value.split(";", 1)[0] for name, value in headers
+                          if name.lower() == "set-cookie")
+
             # Enroll a genuine Chromium virtual authenticator through the
             # live private HTTPS gateway with an actual C++ password+TOTP
             # grant. Keep Chromium and its credential across the MariaDB and
