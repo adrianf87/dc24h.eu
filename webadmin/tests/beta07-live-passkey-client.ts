@@ -39,6 +39,24 @@ try {
   clientPhase = "navigation";
   const context = await browser.newContext({ ignoreHTTPSErrors: true });
   const page = await context.newPage();
+  // Chrome's network error is distinct from an HTTP 401/403. Keep only the
+  // allowlisted error *kind* for this one disposable endpoint, never a full
+  // request URL, cookie, JavaScript exception or response body.
+  let optionsNetworkFailure = "unknown";
+  page.on("requestfailed", request => {
+    if (new URL(request.url()).pathname !== "/remote/v1/passkey/enroll/options") return;
+    const error = request.failure() ?? "";
+    optionsNetworkFailure = /ERR_BLOCKED_BY_CSP/.test(error) ? "csp"
+      : /ERR_CERT_/.test(error) ? "certificate"
+      : /ERR_PROXY_/.test(error) ? "proxy"
+      : /ERR_CONNECTION_/.test(error) ? "connection"
+      : /ERR_SSL_/.test(error) ? "tls"
+      : /ERR_HTTP2_/.test(error) ? "http2"
+      : /ERR_ABORTED/.test(error) ? "aborted"
+      : /ERR_BLOCKED_BY_CLIENT/.test(error) ? "client_blocked"
+      : /ERR_FAILED/.test(error) ? "failed"
+      : "other";
+  });
   await context.addCookies([{ name: "dc24h_remote", value: startup.sessionCookie.split("=")[1],
     domain: "localhost", path: "/remote/v1", httpOnly: true, secure: true, sameSite: "Strict" }]);
   await page.goto(startup.origin + "/remote.html");
@@ -102,6 +120,11 @@ try {
       return `enroll_${operation}_exception`;
     }
   }, startup.csrf).catch(() => "enroll_evaluate_exception");
+  if (enrolled === "enroll_options_fetch_exception") {
+    // Deliver the matching requestfailed event before categorizing it.
+    await page.waitForTimeout(100);
+    throw Error(`enroll_options_network_${optionsNetworkFailure}`);
+  }
   if (enrolled !== "ok") throw Error(enrolled);
   process.stdout.write("enrolled\n");
 
@@ -169,7 +192,7 @@ await main().catch(async (error: unknown) => {
   // A runner may collect stdout. Emit only fixed failure categories and
   // integer HTTP statuses, never browser errors with echoed options/cookies.
   const message = error instanceof Error ? error.message : "";
-  const category = /^(?:enroll_(?:options|finish|session)_[0-9]{3}|enroll_(?:options_fetch|options_json|create|finish_build|finish_fetch|finish_json|session_fetch|evaluate)_exception|enroll_no_credential|enroll_result_invalid|enroll_create_(?:not_allowed|security|unsupported|invalid_state|type|exception))$/.test(message)
+  const category = /^(?:enroll_(?:options|finish|session)_[0-9]{3}|enroll_(?:options_fetch|options_json|create|finish_build|finish_fetch|finish_json|session_fetch|evaluate)_exception|enroll_options_network_(?:unknown|csp|certificate|proxy|connection|tls|http2|aborted|client_blocked|failed|other)|enroll_no_credential|enroll_result_invalid|enroll_create_(?:not_allowed|security|unsupported|invalid_state|type|exception))$/.test(message)
     ? message : message === "Invalid isolated fixture parameters" ? "fixture_parameters"
     : message === "Missing harness instruction" ? "harness_protocol"
     : message === "Restored browser C++ password/passkey grant or revocation refused" ? "restored_flow"
