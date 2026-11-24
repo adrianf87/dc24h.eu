@@ -21,6 +21,70 @@ def openssl_cert(directory, name, *extra):
 
 
 class TlsSecurityProcessTests(unittest.TestCase):
+    def test_beta09_ca_chain_sni_and_hostname_trust_on_tls12_and_tls13(self):
+        """A CA-signed ADCS leaf is accepted only under the pinned trust/host.
+
+        This exercises real OpenSSL chain verification by the client. It does
+        not claim that the hub itself rejects arbitrary SNI names: the remote
+        client must independently authenticate the expected DNS identity.
+        """
+        with tempfile.TemporaryDirectory(prefix='dc24h-beta09-chain-') as directory:
+            root = pathlib.Path(directory)
+
+            def ca(name):
+                key, cert = root / (name + '.key'), root / (name + '.pem')
+                subprocess.run(['openssl', 'req', '-x509', '-newkey', 'rsa:2048',
+                                '-nodes', '-sha256', '-days', '2', '-subj', '/CN=Disposable Stage I CA',
+                                '-keyout', str(key), '-out', str(cert),
+                                '-addext', 'basicConstraints=critical,CA:TRUE',
+                                '-addext', 'keyUsage=critical,keyCertSign,cRLSign'],
+                               check=True, capture_output=True, timeout=20)
+                return key, cert
+
+            ca_key, ca_cert = ca('trusted')
+            _, stale_ca = ca('untrusted-same-name')
+            key, csr, cert = root / 'server.key', root / 'server.csr', root / 'server.pem'
+            subprocess.run(['openssl', 'req', '-new', '-newkey', 'rsa:2048', '-nodes',
+                            '-subj', '/CN=localhost', '-keyout', str(key), '-out', str(csr)],
+                           check=True, capture_output=True, timeout=20)
+            extensions = root / 'server.ext'
+            extensions.write_text('basicConstraints=critical,CA:FALSE\n'
+                                  'keyUsage=critical,digitalSignature,keyEncipherment\n'
+                                  'extendedKeyUsage=serverAuth\n'
+                                  'subjectAltName=DNS:localhost\n')
+            subprocess.run(['openssl', 'x509', '-req', '-in', str(csr),
+                            '-CA', str(ca_cert), '-CAkey', str(ca_key),
+                            '-CAcreateserial', '-out', str(cert), '-days', '2',
+                            '-sha256', '-extfile', str(extensions)],
+                           check=True, capture_output=True, timeout=20)
+            hub = Hub(self, '--adcs-listen', '127.0.0.1:0',
+                      '--tls-cert', str(cert), '--tls-key', str(key),
+                      ready_pattern=TLS_READY)
+            endpoint = tls_endpoint(hub)
+            for version in (ssl.TLSVersion.TLSv1_2, ssl.TLSVersion.TLSv1_3):
+                with self.subTest(version=version.name):
+                    trust = secure_client_context(str(ca_cert))
+                    trust.minimum_version = version
+                    trust.maximum_version = version
+                    with socket.create_connection(endpoint, timeout=3) as raw:
+                        with trust.wrap_socket(raw, server_hostname='localhost') as peer:
+                            self.assertEqual(peer.version(), 'TLSv1.2' if version == ssl.TLSVersion.TLSv1_2 else 'TLSv1.3')
+                            self.assertFalse(peer.session_reused)
+                            peer.sendall(b'HSUP ADBASE\n')
+                    for hostile_host in ('untrusted.invalid', '127.0.0.1'):
+                        with socket.create_connection(endpoint, timeout=3) as raw:
+                            with self.assertRaises(ssl.SSLCertVerificationError):
+                                trust.wrap_socket(raw, server_hostname=hostile_host)
+                    untrusted = secure_client_context(str(stale_ca))
+                    untrusted.minimum_version = version
+                    untrusted.maximum_version = version
+                    with socket.create_connection(endpoint, timeout=3) as raw:
+                        with self.assertRaises(ssl.SSLCertVerificationError):
+                            untrusted.wrap_socket(raw, server_hostname='localhost')
+            hub.stop()
+            for private in (ca_key.read_bytes(), key.read_bytes(), csr.read_bytes()):
+                self.assertNotIn(private, hub.log)
+
     def test_beta08_certificate_cutover_blocks_stale_trust_and_plaintext_on_both_versions(self):
         """Pin a new disposable ADCS leaf; never silently fall back to ADC."""
         with tempfile.TemporaryDirectory(prefix='dc24h-beta08-tls-') as directory:

@@ -83,6 +83,15 @@ jobs:
             --sha "$SOURCE_SHA" --os-image "${{ matrix.os }}" \
             --output "$RUNNER_TEMP/evidence/beta08-stage1-interoperability.json"
 
+      - name: Verify beta-0.9 Stage I revocation transfer TLS and client limits
+        run: |
+          python3 -m unittest discover -s tests -p 'beta09_stage1_gate_tests.py'
+          python3 scripts/beta09_stage1_gate.py \
+            --junit "$RUNNER_TEMP/ctest.xml" \
+            --ncdc-report "$RUNNER_TEMP/evidence/beta07-client-capabilities.json" \
+            --sha "$SOURCE_SHA" --os-image "${{ matrix.os }}" \
+            --output "$RUNNER_TEMP/evidence/beta09-stage1-interoperability.json"
+
       - name: Prepare redacted CTest evidence
         if: always()
         run: python3 scripts/ci_junit_summary.py --junit "$RUNNER_TEMP/ctest.xml" --output "$RUNNER_TEMP/evidence/summary.json" --suite "cpp-${{ matrix.os }}-${{ matrix.build_type }}" --sha "$SOURCE_SHA"
