@@ -1,5 +1,7 @@
 # Dokumentacja dc24h.eu High Starter
 
+**Aktualna wersja rozwojowa: beta-0.9.20.** To kandydat źródłowy w [Draft PR #243](https://github.com/adrianf87/dc24h.eu-high-starter/pull/243), a nie zatwierdzone wydanie ani wdrożenie. Odbiór wymaga kompletu testów CI dla ostatecznego SHA na GitHub-hosted Ubuntu, pięciu oddzielnych Fix Passów i wyraźnej zgody Ownera przed scaleniem. [Etap V i granice NO-GO](BETA_0.9_STAGE_V.md) · [EN/US](../us/BETA_0.9_STAGE_V.md).
+
 beta-0.8.x — sprawdzenie 5 etapów i 5 Fix Passów: wszystkie zmiany są na gałęzi roboczej, ale Ubuntu 26.04 zgłosił HTTP 429 w teście passkey po odtworzeniu prywatnego limitu logowań. Poprawka CI czeka na wygaśnięcie prawdziwego okna limitera bez wyłączania zabezpieczeń. Odbiór wymaga zielonego CI na nowym SHA i osobnej decyzji Ownera. [Raport PL](BETA_0.8_CI_REPAIR.md) · [EN/US](../us/BETA_0.8_CI_REPAIR.md).
 
 beta-0.8.x Fix Pass 1 (Etap I 0.8.1–0.8.4): naprawiono błąd testu cofnięcia dostępu w odizolowanej bazie MariaDB (nazwa konta kontra nick ADC), zaostrzono odmowę nieszyfrowanego połączenia z ADCS i kontrolę błędów CTest/JUnit. Ten sam draft PR #241 zawiera już Etapy II–V i metadane kandydata beta-0.8.20. [Raport PL](BETA_0.8_FIX_PASS_1.md) · [EN/US](../us/BETA_0.8_FIX_PASS_1.md). Brak zgody na merge, wydanie lub wdrożenie; nowy CI na dokładnym SHA wciąż wymagany.

@@ -4,13 +4,13 @@
 // second authority capable of minting password-free C++ admin grants.
 import { randomBytes } from "node:crypto";
 import {
-  closeSync, constants, fstatSync, fsyncSync, lstatSync, openSync,
-  readFileSync, renameSync, unlinkSync, writeSync,
+  closeSync, constants, fstatSync, fsyncSync, readFileSync, writeSync,
 } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import type { WebAuthnCredential } from "@simplewebauthn/server";
 import { fingerprint, fingerprintPrivateFile } from "./private-catalog-integrity.ts";
-import { assertPrivateParent } from "./remote-private-path.ts";
+import { assertPrivateParent, lstatPrivateLeaf, openPrivateLeaf, renamePrivateLeaf,
+  syncPrivateParent, unlinkPrivateLeaf } from "./remote-private-path.ts";
 
 export type PasskeyEntry = {
   id: string;
@@ -82,7 +82,7 @@ function privateParent(path: string): void {
   assertPrivateParent(path);
 }
 function safeStat(path: string) {
-  const s = lstatSync(path);
+  const s = lstatPrivateLeaf(path);
   if (!s.isFile() || s.uid !== process.geteuid?.() || s.nlink !== 1 || (s.mode & 0o077) ||
       s.size < 2 || s.size > maxBytes) throw Error("Unsafe passkey catalog");
   return s;
@@ -94,16 +94,15 @@ function persist(path: string, doc: Document): void {
   const tmp = join(dirname(path), "." + basename(path) + "." + randomBytes(12).toString("hex"));
   let fd: number | undefined;
   try {
-    fd = openSync(tmp, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+    fd = openPrivateLeaf(tmp, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL, 0o600);
     if (writeSync(fd, bytes) !== bytes.length) throw Error("Incomplete passkey write");
     fsyncSync(fd); closeSync(fd); fd = undefined;
     privateParent(path);
-    renameSync(tmp, path);
-    const dir = openSync(dirname(path), constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
-    try { fsyncSync(dir); } finally { closeSync(dir); }
+    renamePrivateLeaf(tmp, path);
+    syncPrivateParent(path);
   } catch (e) {
     if (fd !== undefined) closeSync(fd);
-    try { unlinkSync(tmp); } catch { /* Rename may have completed. */ }
+    try { unlinkPrivateLeaf(tmp); } catch { /* Rename may have completed. */ }
     throw e;
   } finally { bytes.fill(0); }
 }
@@ -113,14 +112,13 @@ export function initializePasskeyStore(path: string, rpID: string): void {
     throw Error("Invalid passkey RP ID");
   privateParent(path);
   const doc: Document = { schema: 1, rpID, users: [], credentials: [] };
-  const fd = openSync(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+  const fd = openPrivateLeaf(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL, 0o600);
   try {
     const bytes = Buffer.from(JSON.stringify(doc) + "\n");
     try { if (writeSync(fd, bytes) !== bytes.length) throw Error("Incomplete passkey init"); fsyncSync(fd); }
     finally { bytes.fill(0); }
   } finally { closeSync(fd); }
-  const dir = openSync(dirname(path), constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
-  try { fsyncSync(dir); } finally { closeSync(dir); }
+  syncPrivateParent(path);
 }
 
 export function openPasskeyStore(path: string, rpID: string) {
@@ -130,7 +128,7 @@ export function openPasskeyStore(path: string, rpID: string) {
   let doc: Document;
   let digest = "";
   const before = safeStat(path);
-  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+  const fd = openPrivateLeaf(path, constants.O_RDONLY);
   try {
     const opened = fstatSync(fd);
     if (opened.dev !== before.dev || opened.ino !== before.ino) throw Error("Passkey file changed");

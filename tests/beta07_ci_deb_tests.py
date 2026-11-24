@@ -68,6 +68,30 @@ class DebPrototypeTests(unittest.TestCase):
             self.assertFalse((root / "unsafe").exists())
 
     @unittest.skipUnless(shutil.which("dpkg-deb") and shutil.which("dpkg"), "requires Debian dpkg tools")
+    def test_historical_maintenance_binary_is_packaged_and_hashed_independently(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            hub, maintenance = root / "hub", root / "maintenance"
+            hub.write_bytes(b"#!/bin/sh\nexit 0\n")
+            maintenance.write_bytes(b"#!/bin/sh\nexit 1\n")
+            hub.chmod(0o700); maintenance.chmod(0o700)
+            if subprocess.check_output(["dpkg", "--print-architecture"]).strip() != b"amd64":
+                self.skipTest("CI fixture architecture is amd64")
+            package = deb.build(hub, root / "previous", deb.VERSIONS["previous"],
+                                "a" * 40, account_admin=maintenance)
+            extracted = root / "extracted"
+            subprocess.run(["dpkg-deb", "--extract", str(package), str(extracted)], check=True,
+                           stdout=subprocess.DEVNULL)
+            self.assertEqual((extracted / deb.ADMIN_BIN).read_bytes(), maintenance.read_bytes())
+            provenance = (extracted / deb.DOC_PATH).read_text(encoding="ascii")
+            self.assertIn("account-admin-sha256=" + hashlib.sha256(maintenance.read_bytes()).hexdigest(),
+                          provenance)
+            with self.assertRaises(ValueError):
+                deb.build(hub, root / "rejected", deb.VERSIONS["previous"],
+                          "a" * 40, account_admin=root / "missing")
+            self.assertFalse((root / "rejected").exists())
+
+    @unittest.skipUnless(shutil.which("dpkg-deb") and shutil.which("dpkg"), "requires Debian dpkg tools")
     def test_postunpack_failure_is_real_configuration_script_not_normal_package(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

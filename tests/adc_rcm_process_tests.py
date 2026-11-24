@@ -50,6 +50,12 @@ class RcmProcessTests(unittest.TestCase):
                     source.send(rcm());self.assertEqual(source.line(),denied);fence()
                     update(target,b'UDP'+suffix);source.send(rcm());self.assertEqual(source.line(),denied);fence()
                     update(target,b'TCP'+suffix)
+                    # beta-0.9.3: mismatched active/passive address families
+                    # cannot silently fall back to an unroutable NAT path.
+                    incompatible=b'6' if not ipv6 else b'4'
+                    update(target,b'TCP'+incompatible)
+                    source.send(rcm());self.assertEqual(source.line(),denied);fence()
+                    update(target,b'TCP'+suffix)
                     for kind,protocol in ((b'DRCM',b'ADC/1.0'),(b'ERCM',b'ADCS/1.0'),(b'DRCM',b'future/1.0')):
                         wire=rcm(kind,protocol)+b' XXopaque XXrepeat TOextension'
                         for byte in wire+b'\n':source.peer.sendall(bytes([byte]))
@@ -69,7 +75,7 @@ class RcmProcessTests(unittest.TestCase):
                     update(target,b'')
                     source.send(rcm());self.assertEqual(source.line(),denied);fence();update(target,b'TCP'+suffix)
                     after=fetch_status(endpoint,secret)
-                    self.assertEqual(after['search'],before['search']);self.assertEqual(after['chat'],before['chat']);assert_statistics(self, after, ctm_received=3, ctm_routed=3, ctm_queued=3, rcm_received=15, rcm_routed=4, rcm_rejected=11, rcm_queued=5)
+                    self.assertEqual(after['search'],before['search']);self.assertEqual(after['chat'],before['chat']);assert_statistics(self, after, ctm_received=3, ctm_routed=3, ctm_queued=3, rcm_received=16, rcm_routed=4, rcm_rejected=12, rcm_queued=5)
                     for private in ('RcmSecret','opaque',secret):self.assertNotIn(private,json.dumps(after))
                     old_sid=target.sid;target.peer.close();peers.remove(target)
                     for peer in peers:self.assertEqual(peer.line(),b'IQUI '+old_sid)

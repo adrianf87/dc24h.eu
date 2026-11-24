@@ -1,4 +1,4 @@
-"""Non-deploying beta-0.8.20 guardrails, retaining beta-0.3 release history.
+"""Non-deploying beta-0.9.20 guardrails, retaining beta-0.3 release history.
 
 This is a deterministic source review gate, NOT a replacement for hosted CI,
 real HTTPS/service integration, an operational penetration test or sign-off.
@@ -9,7 +9,7 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "beta-0.8.20"
+VERSION = "beta-0.9.20"
 
 
 def source(path):
@@ -54,8 +54,11 @@ class BetaReleaseGate(unittest.TestCase):
 
     def test_mfa_and_fixed_audit_security_controls_remain(self):
         mfa = source("webadmin/server/remote-mfa.ts")
-        for expected in ("O_NOFOLLOW", "0o600", "fsyncSync", "lastUsed", "timingSafeEqual"):
+        for expected in ("openPrivateLeaf", "0o600", "fsyncSync", "lastUsed", "timingSafeEqual"):
             self.assertIn(expected, mfa)
+        private_paths = source("webadmin/server/remote-private-path.ts")
+        self.assertIn("flags | constants.O_NOFOLLOW", private_paths)
+        self.assertIn("constants.O_DIRECTORY | constants.O_NOFOLLOW", private_paths)
         audit = source("webadmin/server/remote-audit.ts")
         for event in ("login_ok", "login_refused", "mfa_ok", "mfa_refused", "logout",
                       "session_revoked", "route_refused", "api_unavailable"):

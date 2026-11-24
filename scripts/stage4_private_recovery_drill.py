@@ -165,6 +165,28 @@ def private_directory_fd(path):
         os.close(fd)
 
 
+@contextmanager
+def read_private_stream(path):
+    """Stream a large private source through a pinned parent and same file FD.
+
+    Used for SQL preflight: never materialize an operator-sized dump in RAM,
+    and do not accept a pathname that was replaced while the FD was read.
+    """
+    file = Path(path)
+    with private_directory_fd(file.parent) as directory_fd:
+        fd = os.open(file.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
+                     dir_fd=directory_fd)
+        with os.fdopen(fd, "rb") as source:
+            before = os.fstat(source.fileno())
+            yield source
+            current = os.stat(file.name, dir_fd=directory_fd, follow_symlinks=False)
+            after = os.fstat(source.fileno())
+            if (not stat.S_ISREG(current.st_mode) or
+                    (before.st_dev, before.st_ino) != (current.st_dev, current.st_ino) or
+                    (before.st_dev, before.st_ino) != (after.st_dev, after.st_ino)):
+                raise ValueError("Private stream source replaced during read")
+
+
 def read_private(root, name, maximum, allow_empty=False):
     # A replaced FIFO must fail promptly; a blocking open would hang before
     # fstat could reject its type.

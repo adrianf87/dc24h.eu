@@ -599,8 +599,15 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
         const pending = enrollments.get(key);
         enrollments.delete(key); // one use, including invalid payloads
         let persisted = false;
+        let beforeIds: Set<string> | undefined;
+        let catalogReadAttempted = false;
         try {
           if (!pending || pending.session !== session || pending.expires <= clock()) throw Error();
+          // The ceremony may write the credential and *then* reject/throw
+          // (e.g. a verifier exception after a durable disk write). Compare
+          // the active catalog on failure, not just its returned boolean.
+          catalogReadAttempted = true;
+          beforeIds = new Set(p.store.forActor(session.actor).map(c => c.id));
           const fields = object(await readBody(req, maxCeremonyBody));
           if (Object.keys(fields).length !== 1 || !fields.response || typeof fields.response !== "object") throw Error();
           if (options.strictAudit && !log("passkey_enroll_intent")) throw Error("audit_unavailable");
@@ -619,7 +626,17 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
           const rotated = rotateSession(key, session, true);
           reply(res, 200, { schema: 1, enrolled: true, csrf: rotated.csrf }, [rotated.cookie]);
         } catch {
-          if (persisted) for (const [id, old] of sessions) if (old.actor === session.actor) sessions.delete(id);
+          let credentialChangedOrUnknown = persisted || (catalogReadAttempted && beforeIds === undefined);
+          try {
+            if (beforeIds && p.store.forActor(session.actor).some(c => !beforeIds!.has(c.id)))
+              credentialChangedOrUnknown = true;
+          } catch {
+            // Corrupt/unreadable state is an outage, never a reason to keep
+            // old authority. Other actors are conservatively revoked too.
+            sessions.clear(); credentialChangedOrUnknown = true;
+          }
+          if (credentialChangedOrUnknown)
+            for (const [id, old] of sessions) if (old.actor === session.actor) sessions.delete(id);
           log("passkey_enroll_refused"); reply(res, 403, { error: "enrollment_refused" });
         }
         return;

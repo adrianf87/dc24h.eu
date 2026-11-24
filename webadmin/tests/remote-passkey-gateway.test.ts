@@ -396,14 +396,16 @@ test("a passkey persisted before audit failure revokes every older actor session
     initializePasskeyStore(path, "localhost");
     const store = openPasskeyStore(path, "localhost");
     let rejectCompletionAudit = true;
+    let throwAfterWrite = false, nextDevice = 0;
     const ceremonies = {
       beginEnrollment: async () => ({ challenge: "enroll-audit-challenge" }),
       finishEnrollment: async (actor: string, challenge: string, _response: unknown, now: number,
         beforePersist: () => Promise<boolean>) => {
         if (challenge !== "enroll-audit-challenge" || !await beforePersist()) return false;
-        store.add({ actor, id: "x".repeat(32), userHandle: store.userHandle(actor),
+        store.add({ actor, id: (++nextDevice === 1 ? "x" : "y").repeat(32), userHandle: store.userHandle(actor),
           publicKey: "q".repeat(60), counter: 0, deviceType: "singleDevice", backedUp: false,
           transports: [], name: "Device", createdAt: now, lastUsedAt: null, revokedAt: null });
+        if (throwAfterWrite) throw new Error("completion failed after persistent credential write");
         return true;
       },
     } as unknown as PasskeyCeremonies;
@@ -481,5 +483,17 @@ test("a passkey persisted before audit failure revokes every older actor session
     assert.equal((await call("session", undefined, first.cookie)).status, 401);
     assert.equal((await call("session", undefined, second.cookie)).status, 401,
       "a second browser must not retain pre-enrollment authority after the audit failure");
+    // Now the ceremony itself throws after the durable write, before it can
+    // return true. The earlier 'persisted' boolean never becomes true; detect
+    // the changed catalog and revoke both session cookies nonetheless.
+    throwAfterWrite = true;
+    const third = await login(), fourth = await login();
+    assert.equal((await call("passkey/enroll/options", {}, third.cookie, third.csrf)).status, 200);
+    assert.equal((await call("passkey/enroll/finish", { response: { valid: true } },
+      third.cookie, third.csrf)).status, 403);
+    assert.equal(store.forActor("7").length, 2, "second durable add happened before the injected exception");
+    assert.equal((await call("session", undefined, third.cookie)).status, 401);
+    assert.equal((await call("session", undefined, fourth.cookie)).status, 401,
+      "a post-write verifier exception may not preserve a sibling's stale authority");
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

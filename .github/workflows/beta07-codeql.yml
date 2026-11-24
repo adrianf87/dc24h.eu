@@ -1,6 +1,8 @@
 name: Beta 0.7 exact-head CodeQL
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:

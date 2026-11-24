@@ -50,7 +50,7 @@ def run(current_binary, previous_binary, previous_checkout):
     if execute(previous_binary, "--version") != PREVIOUS_VERSION:
         raise AssertionError("Historical binary is not beta-0.5.16")
     current_version = execute(current_binary, "--version")
-    if current_version != "dc24h.eu beta-0.8.20":
+    if current_version != "dc24h.eu beta-0.9.20":
         raise AssertionError("A same-version package copy cannot prove historical rollback")
 
     with tempfile.TemporaryDirectory(prefix="dc24h-beta06-prior-version-") as directory:

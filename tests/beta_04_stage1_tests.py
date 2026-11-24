@@ -11,8 +11,8 @@ def read(path):
 
 class StageOneGate(unittest.TestCase):
     def test_release_and_hosted_ci(self):
-        self.assertIn('set(DC24H_VERSION "beta-0.8.20")', read("CMakeLists.txt"))
-        self.assertIn('WEBADMIN_VERSION = "beta-0.8.20"', read("webadmin/src/lib/status.ts"))
+        self.assertIn('set(DC24H_VERSION "beta-0.9.20")', read("CMakeLists.txt"))
+        self.assertIn('WEBADMIN_VERSION = "beta-0.9.20"', read("webadmin/src/lib/status.ts"))
         workflow = read(".github/workflows/build.yml")
         for expected in ("beta-0.4.1-0.4.4-stage1", "ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04",
                          "ctest --test-dir", "npm audit --omit=dev --audit-level=high",
@@ -22,10 +22,13 @@ class StageOneGate(unittest.TestCase):
 
     def test_mfa_rotation_is_private_and_replay_is_not_rewound(self):
         mfa = read("webadmin/server/remote-mfa.ts")
-        for expected in ("replaceTotpSecret", "compactTotpReplay", "renameSync(tmp, enrollmentPath)", "fsyncSync(dirFd)",
-                         "MFA enrollment changed; restart required", "visitReplayLedger", "oldCode",
-                         "offlineAcknowledged"):
+        for expected in ("replaceTotpSecret", "compactTotpReplay", "renamePrivateLeaf(tmp, enrollmentPath)",
+                         "syncPrivateParent(enrollmentPath)", "MFA enrollment changed; restart required",
+                         "visitReplayLedger", "oldCode", "offlineAcknowledged"):
             self.assertIn(expected, mfa)
+        paths = read("webadmin/server/remote-private-path.ts")
+        for expected in ("flags | constants.O_NOFOLLOW", "fsyncSync(dirFd)"):
+            self.assertIn(expected, paths)
         tool = read("webadmin/server/remote-mfa-tool.ts")
         for expected in ("--offline-ack", "--recovery", "--compact-replay", "Unsafe maintenance request", "replaceTotpSecret"):
             self.assertIn(expected, tool)
@@ -34,8 +37,8 @@ class StageOneGate(unittest.TestCase):
 
     def test_audit_is_durable_private_and_authentication_fails_closed(self):
         store = read("webadmin/server/remote-audit-store.ts")
-        for expected in ("O_NOFOLLOW", "0o600", "fsyncSync(fd)", "previous", "sequence",
-                         "sha256", "maxBytes", "dropped", "lstatSync"):
+        for expected in ("openPrivateLeaf", "0o600", "fsyncSync(fd)", "previous", "sequence",
+                         "sha256", "maxBytes", "dropped", "lstatPrivateLeaf"):
             self.assertIn(expected, store)
         main = read("webadmin/server/remote-main.ts")
         for expected in ("DC24H_REMOTE_AUDIT_FILE", "openRemoteAuditStore", "strictAudit: true",

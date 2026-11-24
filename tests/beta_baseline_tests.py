@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lock prior beta-0.3 safety limits and current beta-0.8.20 metadata."""
+"""Lock prior beta-0.3 safety limits and current beta-0.9.20 metadata."""
 
 from pathlib import Path
 import sys
@@ -56,8 +56,8 @@ def check_no_custom_workers(errors):
 def main():
     errors = []
     cmake = check(ROOT / "CMakeLists.txt", (
-        "project(dc24h VERSION 0.8.20 LANGUAGES CXX)",
-        'set(DC24H_VERSION "beta-0.8.20")',
+        "project(dc24h VERSION 0.9.20 LANGUAGES CXX)",
+        'set(DC24H_VERSION "beta-0.9.20")',
         'add_executable(dc24h-service-controller',
         'service.controller.process',
         "add_test(NAME beta.baseline ",
@@ -101,7 +101,7 @@ def main():
     require("ubuntu-latest" not in workflow, "build.yml: ubuntu-latest is selected", errors)
     check(ROOT / "README.md", (
         "# dc24h.eu High Starter",
-        "Current development version: beta-0.8.20",
+        "Current development version: beta-0.9.20",
         "beta-0.3.11–beta-0.3.12 Stage IV",
         "beta-0.3.8–beta-0.3.10 Stage III",
         "beta-0.3.4–beta-0.3.7 Stage II",
@@ -116,7 +116,7 @@ def main():
         "beta-0.1.8 Development baseline",
         "<summary>Alpha 0.9.x (17 releases)</summary>",
     ), errors)
-    check(ROOT / "doc/README.md", ("Current development version: beta-0.8.20",), errors)
+    check(ROOT / "doc/README.md", ("Current development version: beta-0.9.20",), errors)
     check(ROOT / "doc/us/BETA.md", (
         "# Combined hardening release — beta-0.2.7 to beta-0.2.12",
         "## beta-0.2.9 — private API response hardening",
@@ -274,7 +274,7 @@ def main():
         "Owner-only fixed hub status/action",
     ), errors)
     check(ROOT / "webadmin/src/lib/status.ts", (
-        'export const WEBADMIN_VERSION = "beta-0.8.20";',
+        'export const WEBADMIN_VERSION = "beta-0.9.20";',
         '!/^(?:alpha-\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|beta-\\d{1,3}\\.\\d{1,3}(?:\\.\\d{1,3})?)$/.test(server.version)',
     ), errors)
     check(ROOT / "src/security/roles.cpp", (
@@ -306,7 +306,8 @@ def main():
     check(ROOT / "config/apache2-webadmin-remote.conf.example", ("SSLHonorCipherOrder On", "SSLCipherSuite", "Listen 127.0.0.1:8443"), errors)
     check(ROOT / "CMakeLists.txt", ("remote.pilot.preflight",), errors)
     check(ROOT / "webadmin/server/remote-main.ts", ("loadTotpVerifier", "mfaVerify: mfa.verify", "127.0.0.1"), errors)
-    check(ROOT / "webadmin/server/remote-mfa.ts", ("timingSafeEqual", "fsyncSync", "O_NOFOLLOW", "lastUsed"), errors)
+    check(ROOT / "webadmin/server/remote-mfa.ts", ("timingSafeEqual", "fsyncSync", "openPrivateLeaf", "lastUsed"), errors)
+    check(ROOT / "webadmin/server/remote-private-path.ts", ("O_NOFOLLOW", "openPrivateLeaf"), errors)
     check(ROOT / "webadmin/src/remote/RemoteApp.tsx", ("s.mfa === true", 'name="otp"'), errors)
     check(ROOT / "tests/database_migrations_tests.cpp", (
         "require(migration_catalog().size() == 11 && entries[0].info.version == 1 && entries[1].info.version == 2);",
@@ -318,7 +319,7 @@ def main():
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1
-    print("Beta 0.3 safety baseline and beta 0.8.20 candidate metadata verified")
+    print("Beta 0.3 safety baseline and beta 0.9.20 candidate metadata verified")
     return 0
 
 

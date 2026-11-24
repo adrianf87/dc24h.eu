@@ -1,10 +1,10 @@
 // Local-only TOTP enrollment is deliberately out of band. Neither the seed
 // nor the replay ledger is ever returned by the browser gateway.
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
-import { constants, closeSync, fstatSync, fsyncSync, lstatSync, openSync, readFileSync, readSync, writeSync } from "node:fs";
+import { constants, closeSync, fstatSync, fsyncSync, readFileSync, readSync, writeSync } from "node:fs";
 import { dirname, basename, join } from "node:path";
-import { renameSync, unlinkSync } from "node:fs";
-import { assertPrivateParent } from "./remote-private-path.ts";
+import { assertPrivateParent, lstatPrivateLeaf, openPrivateLeaf, renamePrivateLeaf,
+  syncPrivateParent, unlinkPrivateLeaf } from "./remote-private-path.ts";
 import { fingerprint, fingerprintPrivateFile } from "./private-catalog-integrity.ts";
 
 type Secrets = Map<string, Buffer>;
@@ -51,7 +51,7 @@ function visitReplayLedger(fd: number, visit: (entry: ReplayEntry) => void): voi
 function privateFile(path: string, flags: number, create = false): number {
   assertPrivateParent(path);
   const uid = process.geteuid?.();
-  const fd = openSync(path, flags | constants.O_NOFOLLOW, create ? 0o600 : undefined);
+  const fd = openPrivateLeaf(path, flags, create ? 0o600 : undefined);
   try {
     const file = fstatSync(fd);
     if (!file.isFile() || file.uid !== uid || file.nlink !== 1 || (file.mode & 0o077))
@@ -67,9 +67,7 @@ export function initializeTotpReplay(replayPath: string): void {
   const fd = privateFile(replayPath, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL, true);
   try { fsyncSync(fd); }
   finally { closeSync(fd); }
-  const dirFd = openSync(dirname(replayPath), constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
-  try { fsyncSync(dirFd); }
-  finally { closeSync(dirFd); }
+  syncPrivateParent(replayPath);
 }
 
 function base32Decode(text: string): Buffer {
@@ -159,7 +157,7 @@ export function loadTotpVerifier(secretsPath: string, replayPath: string) {
     // bytes. An offline replacement revokes this process until it restarts.
     assertPrivateParent(secretsPath);
     assertPrivateParent(replayPath);
-    const currentFile = lstatSync(secretsPath);
+    const currentFile = lstatPrivateLeaf(secretsPath);
     if (!currentFile.isFile() || currentFile.uid !== process.geteuid?.() || currentFile.nlink !== 1 ||
       currentFile.dev !== enrollmentIdentity.dev ||
       currentFile.ino !== enrollmentIdentity.ino || currentFile.size !== enrollmentIdentity.size ||
@@ -167,7 +165,7 @@ export function loadTotpVerifier(secretsPath: string, replayPath: string) {
       currentFile.ctimeMs !== enrollmentIdentity.ctimeMs || (currentFile.mode & 0o077) ||
       fingerprintPrivateFile(secretsPath, enrollmentIdentity) !== enrollmentDigest)
       throw new Error("MFA enrollment changed; restart required");
-    const currentLedger = lstatSync(replayPath);
+    const currentLedger = lstatPrivateLeaf(replayPath);
     if (!currentLedger.isFile() || currentLedger.uid !== process.geteuid?.() || currentLedger.nlink !== 1 ||
         currentLedger.dev !== ledgerIdentity.dev || currentLedger.ino !== ledgerIdentity.ino ||
         (currentLedger.mode & 0o077)) throw new Error("MFA replay ledger changed; restart required");
@@ -308,18 +306,17 @@ export function replaceTotpSecret(options: TotpReplacement): void {
         fsyncSync(tmpFd);
       } finally { bytes.fill(0); }
     } finally { closeSync(tmpFd); }
-    const current = lstatSync(enrollmentPath);
+    const current = lstatPrivateLeaf(enrollmentPath);
     if (current.dev !== old.dev || current.ino !== old.ino || current.size !== old.size ||
         current.mtimeMs !== old.mtimeMs || current.ctimeMs !== old.ctimeMs ||
         current.uid !== process.geteuid?.() || current.nlink !== 1 ||
         !current.isFile() || (current.mode & 0o077))
       throw new Error("MFA enrollment changed during replacement");
     assertPrivateParent(enrollmentPath);
-    renameSync(tmp, enrollmentPath);
+    renamePrivateLeaf(tmp, enrollmentPath);
     created = false;
-    const dirFd = openSync(directory, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
-    try { fsyncSync(dirFd); } finally { closeSync(dirFd); }
-  } finally { if (created) unlinkSync(tmp); }
+    syncPrivateParent(enrollmentPath);
+  } finally { if (created) unlinkPrivateLeaf(tmp); }
 }
 
 // Offline compaction is safe only after stopping every gateway instance.
@@ -350,15 +347,14 @@ export function compactTotpReplay(replayPath: string, offlineAcknowledged: true)
         fsyncSync(tmpFd);
       } finally { bytes.fill(0); }
     } finally { closeSync(tmpFd); }
-    const current = lstatSync(replayPath);
+    const current = lstatPrivateLeaf(replayPath);
     if (!current.isFile() || current.dev !== old.dev || current.ino !== old.ino ||
         current.size !== old.size || current.mtimeMs !== old.mtimeMs ||
         current.uid !== process.geteuid?.() || current.nlink !== 1 || (current.mode & 0o077))
       throw new Error("MFA replay changed during compaction");
     assertPrivateParent(replayPath);
-    renameSync(tmp, replayPath);
+    renamePrivateLeaf(tmp, replayPath);
     created = false;
-    const dirFd = openSync(directory, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
-    try { fsyncSync(dirFd); } finally { closeSync(dirFd); }
-  } finally { if (created) unlinkSync(tmp); }
+    syncPrivateParent(replayPath);
+  } finally { if (created) unlinkPrivateLeaf(tmp); }
 }

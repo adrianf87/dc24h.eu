@@ -3,7 +3,7 @@ import { test, expect, type Route } from "@playwright/test";
 const sessionCsrf = "d".repeat(64);
 const snapshot = {
   schema: 1, mode: "read-only",
-  server: { version: "beta-0.8.20", running: true, uptime_seconds: 123 },
+  server: { version: "beta-0.9.20", running: true, uptime_seconds: 123 },
   network: { active_connections: 5, accepted_connections: 22 },
   users: { online: 4, peak_online: 7 },
   chat: { received: 10, rejected: 1 },
@@ -66,6 +66,47 @@ test("a new password plus TOTP login invalidates the prior sibling view in EN an
     await expect(sibling.getByText("Aktywne połączenia")).toHaveCount(0);
     await expect(sibling.locator("main")).not.toContainText("synthetic-proof");
   } finally { await sibling.close(); }
+});
+
+test("refused lost-device passkey flow keeps a keyboard-accessible EN/PL password plus TOTP fallback", async ({ page }) => {
+  let totpLoginAttempted = false;
+  await page.route("**/remote/v1/session", route => route.fulfill({ status: 401,
+    contentType: "application/json", body: '{"error":"unauthorized"}' }));
+  await page.route("**/remote/v1/challenge", route => route.fulfill({ status: 200,
+    contentType: "application/json", body: JSON.stringify({ schema: 1, csrf: "e".repeat(64) }) }));
+  await page.route("**/remote/v1/passkey/login/options", route => {
+    const form = route.request().postDataJSON() as { actor_id: string; password: string };
+    expect(form).toEqual({ actor_id: "7", password: "synthetic-device-proof" });
+    return route.fulfill({ status: 403, contentType: "application/json", body: '{"error":"login_refused"}' });
+  });
+  await page.route("**/remote/v1/login", route => {
+    const form = route.request().postDataJSON() as { actor_id: string; password: string; otp: string };
+    expect(form).toEqual({ actor_id: "7", password: "synthetic-fallback-proof", otp: "123456" });
+    totpLoginAttempted = true;
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
+      schema: 1, authenticated: true, mfa: true, mode: "read-only", csrf: sessionCsrf, expires_in: 600,
+    }) });
+  });
+  await page.route("**/remote/v1/summary", route => route.fulfill({ status: 200,
+    contentType: "application/json", body: JSON.stringify(snapshot) }));
+  await page.goto("/remote.html");
+  await page.getByLabel("Administrator account ID").fill("7");
+  await page.getByLabel("Account password").fill("synthetic-device-proof");
+  await page.getByRole("button", { name: "Sign in with passkey" }).click();
+  await expect(page.getByText("This account is not authorized for remote read-only access.")).toBeVisible();
+  await expect(page.getByLabel("Administrator account ID")).toBeFocused();
+  await expect(page.getByLabel("Account password")).toHaveValue("");
+  await expect(page.getByLabel("Authenticator code (6 digits)")).toBeVisible();
+  await page.getByRole("button", { name: "Polski" }).click();
+  await expect(page.getByLabel("Kod uwierzytelniający (6 cyfr)")).toBeVisible();
+  await page.getByLabel("Hasło konta").fill("synthetic-fallback-proof");
+  await page.getByLabel("Kod uwierzytelniający (6 cyfr)").fill("123456");
+  await page.getByRole("button", { name: "Zaloguj", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("Aktywne połączenia")).toBeVisible();
+  expect(totpLoginAttempted).toBe(true);
+  await expect(page.locator("main")).not.toContainText("synthetic-device-proof");
+  await expect(page.locator("main")).not.toContainText("synthetic-fallback-proof");
 });
 
 test("private bilingual incident timeline remains keyboard-readable on mobile without privileged writes", async ({ page }) => {
@@ -168,7 +209,7 @@ test("remote read-only screen needs a session, supports EN/PL and never offers h
   await page.getByLabel("Hasło konta").fill("example-proof");
   await page.getByLabel("Kod uwierzytelniający (6 cyfr)").fill("123456");
   await page.getByRole("button", { name: "Zaloguj", exact: true }).click();
-  await expect(page.getByText("beta-0.8.20")).toBeVisible();
+  await expect(page.getByText("beta-0.9.20")).toBeVisible();
   await expect(page.getByText(/Pozostały czas sesji \(orientacyjny\):/)).toBeVisible();
   await expect(page.getByText("Aktywne połączenia")).toBeVisible();
   await expect(page.getByText("Użytkownicy online")).toBeVisible();
@@ -492,14 +533,20 @@ test("source-age budget expires early even with a fresh browser receipt", async 
     if (++reads > 1) return;
     return route.fulfill({ status: 200, contentType: "application/json",
       body: JSON.stringify({ ...snapshot, observation: { schema: 1, source_age_ms: 10_000 },
-        incidents: { schema: 1, state: "unknown", events: [], alerts: [] } }) });
+        incidents: { schema: 1, state: "unknown", events: [], alerts: [],
+          retained: { state: "available", events: [{ kind: "hub_stopped", age_seconds: 3 }] } } }) });
   });
   await page.goto("/remote.html");
   await expect(page.getByText("Incident history is unavailable or not yet verified; this does not mean the service is healthy.")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Retained local incident history (not live)" })).toBeVisible();
   await expect(page.getByText("Active connections")).toBeVisible();
   await page.clock.runFor(36_000);
   await expect(page.getByText("Active connections")).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Retained local incident history (not live)" })).toHaveCount(0);
   await expect(page.getByText("Read expired; old counters are hidden until a verified refresh.")).toBeVisible();
+  await page.getByRole("button", { name: "Polski" }).click();
+  await expect(page.getByText("Odczyt nieaktualny; poprzednie liczniki ukryto do czasu weryfikacji.")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Zachowana lokalna historia incydentów (nie na żywo)" })).toHaveCount(0);
   expect(reads).toBeGreaterThan(1);
 });
 

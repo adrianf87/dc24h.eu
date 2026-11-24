@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Remote beta-0.8.20 gateway invariants, including HTTPS and systemd sandbox."""
+"""Remote beta-0.9.20 gateway invariants, including HTTPS and systemd sandbox."""
 from pathlib import Path
 import unittest
 
@@ -124,8 +124,15 @@ class RemoteConfiguration(unittest.TestCase):
         self.assertIn("auditStore.verify()", executable)
         self.assertIn("createRemoteSecurityMonitor", executable)
         verifier = self.text("webadmin/server/remote-mfa.ts")
-        for expected in ("timingSafeEqual", "O_NOFOLLOW", "fsyncSync", "lastUsed", "0o600", "ledgerLimit"):
+        for expected in ("timingSafeEqual", "fsyncSync", "lastUsed", "0o600", "ledgerLimit",
+                         "openPrivateLeaf"):
             self.assertIn(expected, verifier)
+        # The shared descriptor-relative helper owns O_NOFOLLOW after the
+        # private-store path-hardening refactor; check the actual implementation.
+        private_paths = self.text("webadmin/server/remote-private-path.ts")
+        for expected in ("withPinnedPrivateParent", "constants.O_DIRECTORY | constants.O_NOFOLLOW",
+                         "flags | constants.O_NOFOLLOW"):
+            self.assertIn(expected, private_paths)
 
     def test_no_new_migration_and_separate_ui(self):
         ui = self.text("webadmin/src/remote/RemoteApp.tsx")
@@ -138,8 +145,8 @@ class RemoteConfiguration(unittest.TestCase):
         self.assertNotIn("sessionStorage", ui)
         self.assertNotIn("Start/Stop/Restart", ui)
         self.assertIn('remote.html', self.text("webadmin/vite.config.ts"))
-        self.assertIn('set(DC24H_VERSION "beta-0.8.20")', self.text("CMakeLists.txt"))
-        self.assertIn('WEBADMIN_VERSION = "beta-0.8.20"', self.text("webadmin/src/lib/status.ts"))
+        self.assertIn('set(DC24H_VERSION "beta-0.9.20")', self.text("CMakeLists.txt"))
+        self.assertIn('WEBADMIN_VERSION = "beta-0.9.20"', self.text("webadmin/src/lib/status.ts"))
         self.assertIn("beta-0.2-code", self.text(".github/workflows/build.yml"))
         self.assertIn("beta-0.2.2-fix", self.text(".github/workflows/build.yml"))
         self.assertIn("beta-0.2.2-source", self.text(".github/workflows/build.yml"))

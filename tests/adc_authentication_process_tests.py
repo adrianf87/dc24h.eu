@@ -502,6 +502,35 @@ class AuthenticationTests(unittest.TestCase):
             authenticated.send(b'HPAS ' + response(first[5:]))
             self.finish(authenticated)
 
+            # beta-0.9.2: a partially applied/rolled-back owner transaction
+            # must never be mistaken for a committed revocation generation.
+            # The fixture uses its own disposable MariaDB socket and closes
+            # the SQL connection before any subsequent hub transition.
+            rollback_sql = (
+                "START TRANSACTION; "
+                "UPDATE dc24h.dc24h_accounts AS a "
+                "JOIN dc24h.dc24h_account_identities AS i ON i.account_id=a.id "
+                "SET a.status='disabled', a.revision=a.revision+1 "
+                "WHERE i.nickname='RegisteredADC' AND a.status='active'; "
+                "SELECT ROW_COUNT(); ROLLBACK; "
+                "SELECT a.status FROM dc24h.dc24h_accounts AS a "
+                "JOIN dc24h.dc24h_account_identities AS i ON i.account_id=a.id "
+                "WHERE i.nickname='RegisteredADC';")
+            rolled_back = subprocess.run(
+                ['mariadb', '--no-defaults', '--skip-ssl', '--protocol=socket',
+                 '--socket=' + db_socket, '--user=root', '--batch', '--skip-column-names'],
+                input=rollback_sql, text=True, capture_output=True, timeout=8)
+            self.assertEqual(rolled_back.returncode, 0, 'Disposable rollback failed')
+            self.assertEqual(rolled_back.stdout.splitlines(), ['1', 'active'],
+                             'Uncommitted revoke changed the durable snapshot')
+            # The first registered nickname is deliberately still online.
+            # A second login with the same nickname must be rejected by the
+            # duplicate-nickname rule, regardless of the SQL rollback. Prove
+            # that the original authenticated session itself still operates.
+            marker = b'BMSG ' + authenticated.sid + b' RollbackStillActive'
+            authenticated.send(marker)
+            self.assertEqual(authenticated.line(), marker)
+
             set_status('disabled')
             # The running reactor is explicitly NOT claimed to hot-reload SQL.
             # The operator must stop it, which disconnects existing sessions.
