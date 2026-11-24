@@ -20,7 +20,15 @@ import { createInterface } from "node:readline";
 // without exposing browser exceptions, credentials, URLs or HTTP bodies.
 let clientPhase = "startup";
 
-const lines = createInterface({ input: process.stdin, crlfDelay: Infinity })[Symbol.asyncIterator]();
+const input = createInterface({ input: process.stdin, crlfDelay: Infinity });
+const lines = input[Symbol.asyncIterator]();
+function closeCommandInput() {
+  // Returning the async iterator does not close readline's live stdin handle.
+  // The Python harness deliberately keeps its command pipe open while it
+  // waits for this child to exit. Release both handles on success and error.
+  input.close();
+  process.stdin.pause();
+}
 async function command() {
   const next = await lines.next();
   if (next.done) throw Error("Missing harness instruction");
@@ -202,11 +210,16 @@ try {
     return (await fetch("/remote/v1/session")).status === 401;
   }, startup.actor);
   if (!restored) throw Error("Restored browser C++ password/passkey grant or revocation refused");
-  process.stdout.write("authenticated_and_revoked\n");
 } finally {
-  await browser.close();
-  lines.return?.();
+  try {
+    await browser.close();
+  } finally {
+    closeCommandInput();
+  }
 }
+// The harness must never accept success before Chromium and the IPC channel
+// have been cleanly shut down; otherwise a hung child masquerades as success.
+process.stdout.write("authenticated_and_revoked\n");
 }
 
 await main().catch(async error => {
@@ -218,7 +231,7 @@ await main().catch(async error => {
     : message === "Missing harness instruction" ? "harness_protocol"
     : message === "Restored browser C++ password/passkey grant or revocation refused" ? "restored_flow"
     : `${clientPhase}_exception`;
+  closeCommandInput();
   process.stdout.write(`client_error:${category}\n`);
   process.exitCode = 1;
-  await lines.return?.();
 });

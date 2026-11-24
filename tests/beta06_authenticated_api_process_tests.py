@@ -652,7 +652,7 @@ def run(binary, seeder, account_admin):
         finally:
             if browser is not None and browser.poll() is None:
                 # Chromium children share the disposable helper's private
-                # process group. Reap them even if the TS driver failed.
+                # process group. Reap them even if the browser driver failed.
                 try:
                     os.killpg(browser.pid, signal.SIGTERM)
                 except ProcessLookupError:
