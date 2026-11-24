@@ -45,7 +45,7 @@ try {
   let optionsNetworkFailure = "unknown";
   page.on("requestfailed", request => {
     if (new URL(request.url()).pathname !== "/remote/v1/passkey/enroll/options") return;
-    const error = request.failure() ?? "";
+    const error = request.failure()?.errorText ?? "";
     optionsNetworkFailure = /ERR_BLOCKED_BY_CSP/.test(error) ? "csp"
       : /ERR_CERT_/.test(error) ? "certificate"
       : /ERR_PROXY_/.test(error) ? "proxy"
