@@ -618,6 +618,11 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
           const fields = object(await readBody(req));
           // The body may have been streamed while logout, role revocation or
           // another credential mutation invalidated the caller's session.
+          // In particular, a C++ grant may be revoked without a concurrent
+          // browser request to invalidate our local session map. Recheck the
+          // authoritative grant *after* receiving the body, immediately before
+          // touching the credential catalog.
+          if (await authorized(key, session, true) !== "ok") throw Error();
           if (sessions.get(key) !== session || session.pendingLogouts > 0 || expired(session, clock()) ||
               (options.passkeys && session.passkeyEpoch !== p.store.epoch(session.actor))) throw Error();
           if (limited("passkey:device:" + session.actor, 10, now)) throw Error();
