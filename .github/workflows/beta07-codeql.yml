@@ -46,8 +46,11 @@ jobs:
       - name: Build traced C++20 translation units
         run: |
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
-          cmake -S . -B build/CodeQL -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=OFF
-          cmake --build build/CodeQL --parallel 2
+          # CMake emits compiler_depend.ts files which are *not* TypeScript.
+          # Keep all generated files outside the checkout so the JavaScript/
+          # TypeScript analyzer measures source, not CMake internals.
+          cmake -S . -B "$RUNNER_TEMP/beta07-codeql-build" -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=OFF
+          cmake --build "$RUNNER_TEMP/beta07-codeql-build" --parallel 2
 
       - name: Analyze C++ and TypeScript at the exact source head
         uses: github/codeql-action/analyze@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4

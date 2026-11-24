@@ -38,6 +38,12 @@ class TestCodeQLGate(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Incomplete"):
             evaluate([self.sarif("cpp"), self.sarif("untrusted")])
 
+    def test_workflow_keeps_cmake_generated_ts_out_of_source_scan(self):
+        workflow = (Path(__file__).resolve().parents[1] /
+                    ".github/workflows/beta07-codeql.yml").read_text()
+        self.assertIn('cmake -S . -B "$RUNNER_TEMP/beta07-codeql-build"', workflow)
+        self.assertNotIn("-B build/CodeQL", workflow)
+
     def test_high_security_rejected(self):
         with self.assertRaisesRegex(ValueError, "high_security=1"):
             evaluate([self.sarif("cpp", security="8.1"), self.sarif("javascript-typescript")])
