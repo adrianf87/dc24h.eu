@@ -34,6 +34,40 @@ test("a successful logout in one tab clears a sibling's private metrics and acti
   } finally { await sibling.close(); }
 });
 
+test("private bilingual incident timeline remains keyboard-readable on mobile without privileged writes", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  const writes: string[] = [];
+  page.on("request", request => { if (request.method() !== "GET") writes.push(request.url()); });
+  await page.route("**/remote/v1/session", route => route.fulfill({ status: 200,
+    contentType: "application/json", body: JSON.stringify({ schema: 1, authenticated: true,
+      mfa: true, mode: "read-only", csrf: sessionCsrf, expires_in: 600 }) }));
+  await page.route("**/remote/v1/summary", route => route.fulfill({ status: 200,
+    contentType: "application/json", body: JSON.stringify({ ...snapshot,
+      observation: { schema: 1, source_age_ms: 500 }, incidents: {
+        schema: 1, state: "observed", events: [
+          { kind: "hub_stopped", age_seconds: 3 },
+          { kind: "transport_refusals", age_seconds: 1 },
+        ], alerts: [{ kind: "transport_refusals", age_seconds: 1 }],
+      },
+    }) }));
+  await page.goto("/remote.html");
+  const incidentRegion = page.getByRole("region", { name: "Private incident overview" });
+  await expect(incidentRegion.getByRole("heading", { name: "Recent aggregate service events" })).toBeVisible();
+  await expect(incidentRegion.getByText("Transport security refusal threshold reached")).toBeVisible();
+  await expect(incidentRegion.getByText("Aggregate security signals: 1")).toBeVisible();
+  await expect(incidentRegion.getByText(/\b\d+ s\b/).first()).toBeVisible();
+  await page.getByRole("button", { name: "Polski" }).click();
+  const plRegion = page.getByRole("region", { name: "Prywatny przegląd incydentów" });
+  await expect(plRegion.getByRole("heading", { name: "Ostatnie zbiorcze zdarzenia usługi" })).toBeVisible();
+  await page.getByRole("button", { name: "Potwierdź lokalnie" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("Potwierdzono tylko na tym ekranie; nie wysłano żadnej akcji do serwera.")).toBeVisible();
+  expect(writes).toEqual([], "local acknowledgment and language changes cannot send mutations");
+  for (const title of ["Start", "Stop", "Restart", "Grant"]) {
+    await expect(page.getByRole("button", { name: title, exact: true })).toHaveCount(0);
+  }
+});
+
 test("remote read-only screen needs a session, supports EN/PL and never offers hub-control mutations", async ({ page }) => {
   let loggedIn = false;
   await page.route("**/remote/v1/session", async (route) => {
