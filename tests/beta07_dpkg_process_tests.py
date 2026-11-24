@@ -75,10 +75,18 @@ def run(current, historical, checkout):
             gateway = root / "gateway"; gateway.mkdir(mode=0o700)
             matched.make_gateway_fixture(gateway)
             snapshot = root / "snapshot"
-            matched.private.snapshot(gateway, snapshot)
-            dump = root / "state.sql"; original.dump(dump)
+            dump = root / "state.sql"
             pair_dir = root / "pair"; pair_dir.mkdir(mode=0o700)
-            matched.bundle.create_pair(dump, snapshot, pair_dir, sha)
+            with original.locked_offline_capture():
+                before = {name: matched.bundle.private_hash(gateway / name, maximum)
+                          for name, maximum in matched.private.FILES.items()}
+                original.dump(dump)
+                matched.private.snapshot(gateway, snapshot)
+                matched.bundle.create_pair(dump, snapshot, pair_dir, sha)
+                after = {name: matched.bundle.private_hash(gateway / name, maximum)
+                         for name, maximum in matched.private.FILES.items()}
+                if before != after:
+                    raise AssertionError("Private state changed during package capture")
             original.stop()
 
             quiet(["sudo", "dpkg", "--install", str(old_pkg)]); installed = True
