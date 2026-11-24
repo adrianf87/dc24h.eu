@@ -77,6 +77,18 @@ class PerfAcceptanceTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             gate.evaluate(policy, evidence)
 
+    def test_disallow_invented_throughput_and_invalid_measurement_windows(self):
+        policy, evidence = synthetic()
+        for changes in ({"successful_requests_per_second": 1000},
+                        {"elapsed_seconds": 0},
+                        {"success": 0, "failure": 10, "error_rate": 1,
+                         "successful_requests_per_second": 0},
+                        {"success": -1, "failure": 11, "error_rate": 1.1}):
+            altered = copy.deepcopy(evidence)
+            altered["profiles"]["adc"].update(changes)
+            with self.subTest(changes=changes), self.assertRaises(ValueError):
+                gate.evaluate(policy, altered)
+
 
 if __name__ == "__main__":
     unittest.main()

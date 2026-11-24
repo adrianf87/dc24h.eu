@@ -52,7 +52,7 @@ def suite_summary(path, group_by_name):
                       "p99_test_ms": percentile(values, 0.99),
                       "total_test_seconds": round(sum(values), 3)}
               for group, values in sorted(durations.items())}
-    return {"state": "failed" if failures else "passed", "tests": len(cases),
+    return {"state": "failed" if failures or skips else "passed", "tests": len(cases),
             "failures": failures, "skipped": skips, "groups": groups}
 
 
@@ -82,7 +82,8 @@ def main():
         out.write("\n")
     print(f"Ubuntu CI timing summary saved: CTest {result['ctest']['state']}, "
           f"browser {result['browser']['state']}; no capacity claim")
+    return 0 if result["ctest"]["state"] == result["browser"]["state"] == "passed" else 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

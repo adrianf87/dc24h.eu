@@ -5,6 +5,8 @@ import tempfile
 import unittest
 
 import importlib.util
+import subprocess
+import sys
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts/ci_timing_summary.py"
@@ -49,6 +51,21 @@ class TimingSummaryTests(unittest.TestCase):
             for bad_os, bad_sha in (("debian-13", "a" * 40), ("ubuntu-24.04", "unknown")):
                 with self.assertRaises(ValueError):
                     timing.summarize(missing, missing, bad_os, bad_sha)
+
+    def test_skipped_ctest_or_browser_case_is_not_success(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            report = root / "skipped.xml"
+            report.write_text('<testsuite><testcase name="api.process" time="0.1">'
+                              '<skipped /></testcase></testsuite>', encoding="utf-8")
+            result = timing.suite_summary(report, True)
+            self.assertEqual(result["state"], "failed")
+            self.assertEqual(result["skipped"], 1)
+            out = subprocess.run([sys.executable, str(SCRIPT), "--ctest", str(report),
+                                  "--browser", str(report), "--os", "ubuntu-24.04",
+                                  "--sha", "a" * 40, "--output", str(root / "timings.json")],
+                                 capture_output=True, text=True, check=False)
+            self.assertEqual(out.returncode, 1)
 
 
 if __name__ == "__main__":

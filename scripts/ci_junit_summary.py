@@ -15,6 +15,8 @@ import xml.etree.ElementTree as ET
 def summary(path):
     if not path.is_file():
         return {"state": "not-run", "tests": 0, "failures": 0, "skipped": 0}
+    if path.stat().st_size > 10 * 1024 * 1024:
+        raise ValueError("JUnit evidence exceeds the safe size limit")
     root = ET.parse(path).getroot()
     if root.tag not in ("testsuite", "testsuites"):
         raise ValueError("Unexpected CTest JUnit root")
@@ -23,7 +25,9 @@ def summary(path):
         raise ValueError("CTest JUnit has no test cases")
     failed = sum(any(item.tag in ("failure", "error") for item in case) for case in cases)
     skipped = sum(any(item.tag == "skipped" for item in case) for case in cases)
-    return {"state": "failed" if failed else "passed", "tests": len(cases),
+    # CTest may return success for disabled/skipped tests. Do not report a
+    # partially exercised security suite as a successful CI gate.
+    return {"state": "failed" if failed or skipped else "passed", "tests": len(cases),
             "failures": failed, "skipped": skipped}
 
 
@@ -46,7 +50,10 @@ def main():
         output.write("\n")
     print(f"{args.suite}: {result['state']} ({result['tests']} tests, "
           f"{result['failures']} failures, {result['skipped']} skipped)")
+    # Artifact generation is not a substitute for enforcing the result. In
+    # particular, a missing report or skipped test must fail its CI job.
+    return 0 if result["state"] == "passed" else 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

@@ -63,3 +63,13 @@ Manifest zawiera wyłącznie hashe, rozmiary, znacznik czasu i SHA; nie jest pod
 | Debian 12/13, Xeon, niezależna akceptacja | **NIEWYMAGANE według Issue #234 — nie testowano** |
 
 Nie zaznaczaj jednostki 1 jako wykonanej do uzyskania zielonego CI dla ostatniego SHA. Nie rozpoczynaj etapu II na to samo polecenie, nie scalaj, nie zamykaj Issue #234 i nie wdrażaj automatycznie.
+
+## Fix Pass 1 — ponowny przegląd etapu I (24.11.2026)
+
+Jednostka pracy 5 objęła ponowną kontrolę raportowania CI, agregatów czasów testów na Ubuntu, walidatora progów pomiarowych oraz odtwarzania MariaDB z pięcioma prywatnymi plikami. Usunięto trzy konkretne usterki:
+
+1. Skrócony raport JUnit błędnie oznaczał zestaw z **pominiętymi testami** jako `passed`. Teraz taki zestaw ma stan `failed`, a polecenie zwraca kod błędu również przy `not-run`. Nadal tworzy zanonimizowany raport i odrzuca zbyt duże pliki XML.
+2. Raport czasu testów CTest/Chromium również traktował pominięte testy jako sukces i nie propagował błędnego/brakującego zestawu do kodu wyjścia. Teraz działa w trybie fail-closed, bez kopiowania nazw przypadków testowych ani treści błędów.
+3. Walidator czterech profili mógł zaakceptować **zawyżoną przepustowość**, niezgodną z liczbą udanych żądań i czasem próby, a także zerowy czas lub same nieudane żądania. Dodano kontrolę spójności z tolerancją zaokrąglenia sondy do trzech miejsc po przecinku. Narzędzie pozostaje historycznym walidatorem offline; nie oznacza odbioru infrastruktury ani zgody na wdrożenie.
+
+Nowe testy regresyjne obejmują pomijanie testów JUnit, kody wyjścia, sfałszowane wskaźniki oraz błędne okna pomiarów. Ponadto wykonywana jest ponowna walidacja integralności pary kopii oraz odtwarzania MariaDB v11 i stanu gatewaya na jednorazowych hostowanych Ubuntu. Dopiero pełne zielone CI bieżącego SHA pozwala zamknąć punkt 5 w Issue #234. Nie używano danych rzeczywistych ani usług produkcyjnych.

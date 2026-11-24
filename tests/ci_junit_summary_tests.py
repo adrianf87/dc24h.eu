@@ -2,6 +2,8 @@
 
 import importlib.util
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -36,6 +38,22 @@ class JUnitSummaryTests(unittest.TestCase):
                 report.write_text(value, encoding="utf-8")
                 with self.assertRaises(Exception):
                     module.summary(report)
+
+    def test_skipped_test_is_not_success_and_cli_fails_closed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            report = root / "ctest.xml"
+            report.write_text('<testsuite tests="2"><testcase name="ok" />'
+                              '<testcase name="disabled"><skipped /></testcase>'
+                              '</testsuite>', encoding="utf-8")
+            self.assertEqual(module.summary(report),
+                             {"state": "failed", "tests": 2, "failures": 0, "skipped": 1})
+            result = subprocess.run([sys.executable, str(SCRIPT), "--junit", str(report),
+                                     "--output", str(root / "status.json"),
+                                     "--suite", "cpp-ubuntu-24.04-Debug", "--sha", "a" * 40],
+                                    capture_output=True, text=True, check=False)
+            self.assertEqual(result.returncode, 1)
+            self.assertNotIn("disabled", result.stdout)
 
 
 if __name__ == "__main__":

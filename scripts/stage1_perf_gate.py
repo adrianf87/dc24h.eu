@@ -8,6 +8,7 @@ The threshold policy must be approved *before* the actual pilot measurements.
 import argparse
 from datetime import datetime, timezone
 import json
+import math
 from pathlib import Path
 import re
 
@@ -60,9 +61,16 @@ def evaluate(policy, evidence):
         if (report.get("schema") != 1 or report.get("profile") != profile or
             report.get("target") != "127.0.0.1 only" or report.get("capacity_claim") is not False or
             type(report["requests"]) is not int or not 1 <= report["requests"] <= 1000 or
-            type(report["success"]) is not int or type(report["failure"]) is not int or
+            type(report["success"]) is not int or not 1 <= report["success"] <= report["requests"] or
+            type(report["failure"]) is not int or report["failure"] < 0 or
             report["requests"] != report["success"] + report["failure"] or
+            report["elapsed_seconds"] <= 0 or
             abs(report["error_rate"] - report["failure"] / report["requests"]) > 0.000001 or
+            # The probe rounds elapsed time and successful RPS to 3 decimals.
+            # A caller cannot supply a fabricated throughput to satisfy policy.
+            not math.isclose(report["successful_requests_per_second"],
+                             report["success"] / report["elapsed_seconds"],
+                             rel_tol=0.01, abs_tol=0.005) or
             not report["p50_ms"] <= report["p95_ms"] <= report["p99_ms"]):
             raise ValueError(f"Inconsistent {profile} probe result")
         for key in ("max_p95_ms", "max_p99_ms", "max_error_rate", "min_success_rps"):

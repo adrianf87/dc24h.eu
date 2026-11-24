@@ -62,3 +62,13 @@ Replace `FULL40CHARSHa` with the real 40-character lowercase Git SHA. The pairin
 | Debian 12/13, Xeon and external assessment | **NOT REQUIRED by Issue #234; not tested** |
 
 Keep Stage I unchecked in Issue #234 until all mandatory latest-head CI jobs pass. Do not proceed to Stage II in the same request, merge, close the issue or deploy.
+
+## Fix Pass 1 — Stage I re-review (2026-11-24)
+
+Work unit 5 re-examined the original Stage I CI status collectors, Ubuntu timing artifacts, offline performance threshold validator and matched MariaDB/private-state recovery code. Three concrete fail-open reporting/measurement defects were corrected:
+
+1. The minimal JUnit CI summary treated a suite containing **skipped tests** as `passed`. It now marks such a suite `failed` and returns a failing command exit code for `failed` or `not-run`, while still creating the redacted artifact. Oversized XML is refused before parsing.
+2. The Ubuntu CTest/Chromium test-duration collector also previously labeled a partially skipped suite as `passed`, and did not propagate missing/failed suite status through its exit code. Both properties are now fail-closed without exporting case names or raw failure contents.
+3. The offline four-profile numeric validator accepted arbitrary `successful_requests_per_second` independent of `success` and `elapsed_seconds`, and zero-length/all-failure measurement windows. It now checks their consistency with a tolerance for three-decimal probe rounding. This remains an **offline historical target policy**, not an Ubuntu capacity or deployment approval.
+
+Regression tests cover skipped JUnit reports, failing CLI exits, fabricated throughput, invalid measurement windows and the unchanged private recovery-pair integrity checks. Existing Stage I MariaDB v11/five-file restore and fresh rollback is re-run on the required disposable Ubuntu CI images; evidence is to be recorded in Issue #234 only after the entire latest-head CI set finishes green. No real data, target hardware or deployment is involved.
