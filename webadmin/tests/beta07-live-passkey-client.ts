@@ -52,6 +52,10 @@ try {
 
   clientPhase = "enrollment";
   const enrolled = await page.evaluate(async csrf => {
+    // Report only the fixed operation category. A full Playwright exception
+    // could contain a URL, request options or private WebAuthn material.
+    let operation = "options_fetch";
+    try {
     const decode = (value: string) => Uint8Array.from(
       atob(value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=")),
       character => character.charCodeAt(0));
@@ -59,7 +63,9 @@ try {
       method: "POST", headers: { "Content-Type": "application/json", "X-DC24H-Remote-CSRF": csrf }, body: "{}",
     });
     if (optionsResponse.status !== 200) return `enroll_options_${optionsResponse.status}`;
+    operation = "options_json";
     const options = await optionsResponse.json();
+    operation = "create";
     let credential: Credential | null;
     try {
       credential = await navigator.credentials.create({ publicKey: {
@@ -78,16 +84,24 @@ try {
         : "enroll_create_exception";
     }
     if (!credential || !("toJSON" in credential)) return "enroll_no_credential";
+    operation = "finish_build";
+    const response = (credential as PublicKeyCredential & { toJSON(): unknown }).toJSON();
+    operation = "finish_fetch";
     const finish = await fetch("/remote/v1/passkey/enroll/finish", {
       method: "POST", headers: { "Content-Type": "application/json", "X-DC24H-Remote-CSRF": csrf },
-      body: JSON.stringify({ response: (credential as PublicKeyCredential & { toJSON(): unknown }).toJSON() }),
+      body: JSON.stringify({ response }),
     });
     if (finish.status !== 200) return `enroll_finish_${finish.status}`;
+    operation = "finish_json";
     if ((await finish.json()).enrolled !== true) return "enroll_result_invalid";
+    operation = "session_fetch";
     const session = await fetch("/remote/v1/session");
     if (session.status !== 200) return `enroll_session_${session.status}`;
     return "ok";
-  }, startup.csrf);
+    } catch {
+      return `enroll_${operation}_exception`;
+    }
+  }, startup.csrf).catch(() => "enroll_evaluate_exception");
   if (enrolled !== "ok") throw Error(enrolled);
   process.stdout.write("enrolled\n");
 
@@ -155,7 +169,7 @@ await main().catch(async (error: unknown) => {
   // A runner may collect stdout. Emit only fixed failure categories and
   // integer HTTP statuses, never browser errors with echoed options/cookies.
   const message = error instanceof Error ? error.message : "";
-  const category = /^(?:enroll_(?:options|finish|session)_[0-9]{3}|enroll_no_credential|enroll_result_invalid|enroll_create_(?:not_allowed|security|unsupported|invalid_state|type|exception))$/.test(message)
+  const category = /^(?:enroll_(?:options|finish|session)_[0-9]{3}|enroll_(?:options_fetch|options_json|create|finish_build|finish_fetch|finish_json|session_fetch|evaluate)_exception|enroll_no_credential|enroll_result_invalid|enroll_create_(?:not_allowed|security|unsupported|invalid_state|type|exception))$/.test(message)
     ? message : message === "Invalid isolated fixture parameters" ? "fixture_parameters"
     : message === "Missing harness instruction" ? "harness_protocol"
     : message === "Restored browser C++ password/passkey grant or revocation refused" ? "restored_flow"
