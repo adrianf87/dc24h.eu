@@ -237,7 +237,28 @@ def run(binary, seeder):
                 "Origin": origin, "Content-Type": "application/json", "Cookie": cookie,
                 "X-DC24H-Remote-CSRF": challenge})
             if status != 200 or json.loads(payload).get("authenticated") is not True:
-                raise AssertionError("Real C++ password + synthetic TOTP login failed")
+                # CI may report only fixed, non-personal categories. The audit
+                # format is allowlisted and contains no actors, token, cookie,
+                # grant, password or TOTP. Never serialize raw response bytes.
+                allowed = {"login_refused", "mfa_refused", "api_unavailable",
+                           "rate_limiter_unavailable", "session_revoked",
+                           "login_ok", "mfa_ok"}
+                events = []
+                try:
+                    for line in (gateway_dir / "audit.jsonl").read_text(encoding="utf-8").splitlines():
+                        event = json.loads(line).get("event")
+                        if event in allowed:
+                            events.append(event)
+                except (OSError, ValueError, TypeError):
+                    events = ["audit_unavailable"]
+                try:
+                    category = json.loads(payload).get("error")
+                except (ValueError, TypeError, AttributeError):
+                    category = None
+                if category not in {"login_refused", "unavailable", "rate_limited", "forbidden", "bad_request"}:
+                    category = "unrecognized_denial"
+                raise AssertionError(f"Real synthetic TOTP login refused: HTTP={status} "
+                                     f"category={category} audit_categories={events[-5:]}")
             cookie = next(value.split(";", 1)[0] for name, value in headers
                           if name.lower() == "set-cookie")
 
