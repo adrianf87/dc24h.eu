@@ -1,6 +1,6 @@
 # beta-0.6.1–beta-0.6.16 — instrukcja operatora i bezpieczne odtwarzanie
 
-Gałąź: `beta-0.6.x-stage-full` · [Issue #236](https://github.com/adrianf87/dc24h.eu-high-starter/issues/236) · [roboczy PR #237](https://github.com/adrianf87/dc24h.eu-high-starter/pull/237). **Bez wdrożenia produkcyjnego, bez automatycznego scalenia.** Etap I kończy się dopiero po zielonym CI dla najnowszego SHA. Etap II to osobne, późniejsze sprawdzenie i naprawa wszystkich 16 patchy.
+Gałąź: `beta-0.6.x-stage-full` · [Issue #236](https://github.com/adrianf87/dc24h.eu-high-starter/issues/236) · [roboczy PR #237](https://github.com/adrianf87/dc24h.eu-high-starter/pull/237). **Bez wdrożenia produkcyjnego, bez automatycznego scalenia.** Etap I zakończył się zielonym CI dla `ea3cd114`. [Etap II](BETA_0.6_STAGE_II.md) osobno sprawdza i naprawia wszystkie 16 patchy oraz wymaga nowego CI dla końcowego SHA.
 
 ## Przed jakąkolwiek operacją
 
@@ -27,6 +27,6 @@ WebAdmin udostępnia jedynie zweryfikowane liczniki zbiorcze, informację czy hu
 ## Kryterium NO-GO / GO dla prac programistycznych
 
 - **NO-GO:** choćby jeden wymagany job GitHub CI niepowodzenie/pominięty/w toku, niezgodny SHA, niepełna dokumentacja, brak dowodu pełnej reautoryzacji albo uszkodzona migawka. Nie oznaczaj Etapu I jako ukończonego, nie zmieniaj statusu PR na gotowy, nie scalaj i nie wdrażaj.
-- **Potencjalne GO wyłącznie do ukończenia Etapu I:** całe CI na **tym samym końcowym SHA** przechodzi na Ubuntu 22.04/24.04/26.04: C++ Debug/Release, React/Playwright, ASan/UBSan, CodeQL/audyt npm, faktyczny systemd, ADC/ADCS/TLS, uwierzytelniony HTTPS, MariaDB v11 + pięć plików, poprzednia binarka i testy awarii. Zapisz SHA, linki do workflow, numery próbek, p50/p95/p99, RPS, błędy, CPU/RSS i ograniczenia bez danych osobowych. Później, na osobne polecenie, wykonaj jeden pełny Etap II napraw. **Żaden z tych etapów nie uruchamia produkcji.**
+- **Etap I ukończono dla `ea3cd114`; Etap II wymaga własnego GO:** całe CI na **tym samym nowym końcowym SHA** musi przejść na Ubuntu 22.04/24.04/26.04: C++ Debug/Release, React/Playwright, ASan/UBSan, CodeQL/audyt npm, faktyczny systemd, ADC/ADCS/TLS, uwierzytelniony HTTPS, MariaDB v11 + pięć plików, poprzednia binarka i testy awarii. Zapisz SHA, linki do workflow, numery próbek, p50/p95/p99, RPS, błędy, CPU/RSS i ograniczenia bez danych osobowych. **Żaden z tych etapów nie uruchamia produkcji.**
 
 Źródło techniczne i lista ryzyk: [EN/US Stage I](../us/BETA_0.6_STAGE_I.md).

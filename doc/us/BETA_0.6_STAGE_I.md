@@ -1,6 +1,6 @@
 # beta-0.6.1–beta-0.6.16 — Stage I implementation, evidence and security risks
 
-Development branch: `beta-0.6.x-stage-full` · [Issue #236](https://github.com/adrianf87/dc24h.eu-high-starter/issues/236) · [draft PR #237](https://github.com/adrianf87/dc24h.eu-high-starter/pull/237). **Not a production release or an approval to merge.** Stage I must remain unchecked until the latest PR head passes every required hosted Ubuntu job; Stage II is a single *later* full-series review/fix pass.
+Development branch: `beta-0.6.x-stage-full` · [Issue #236](https://github.com/adrianf87/dc24h.eu-high-starter/issues/236) · [draft PR #237](https://github.com/adrianf87/dc24h.eu-high-starter/pull/237). **Not a production release or an approval to merge.** Stage I completed at head `ea3cd114` after its hosted checks passed; the [separate consolidated Stage II review/fix pass](BETA_0.6_STAGE_II.md) requires new latest-head CI before completion.
 
 ## Fixed trust boundaries
 
@@ -41,4 +41,4 @@ Development branch: `beta-0.6.x-stage-full` · [Issue #236](https://github.com/a
 
 Use the [Polish operator/recovery runbook](../pl/BETA_0.6_STAGE_I.md) for isolated preflight, offline capture, token rollback, certificate restart and stop/go checks. The `beta06_previous_version_rollback.py` fixture is intentionally source-pinned to immutable beta-0.5.16; update neither its old source SHA nor its expected old runtime version when updating current release metadata.
 
-**Go/no-go:** NO-GO for production. The draft PR stays draft until Stage I *and* the later consolidated Stage II pass their own exact-final-head CI. A normal protected `main` merge and issue close can follow only after both work units and final checks; no deployment follows automatically.
+**Go/no-go:** NO-GO for production. Stage I completed with exact-head hosted CI; the draft PR stays draft until the consolidated Stage II and final gate pass at the new head. A normal protected `main` merge and issue close can follow only after both work units and final checks; no deployment follows automatically.

@@ -159,7 +159,9 @@ export function RemoteApp() {
     return () => { canceled = true; };
   }, []);
   useEffect(() => {
-    const timer = window.setInterval(() => setClock(performance.now()), 30_000);
+    // Incident and metric reads expire after 45 seconds. Re-evaluate freshness
+    // every second so a hung refresh cannot extend the display by 30 seconds.
+    const timer = window.setInterval(() => setClock(performance.now()), 1_000);
     return () => window.clearInterval(timer);
   }, []);
   const load = async () => {

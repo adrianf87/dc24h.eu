@@ -194,9 +194,10 @@ def abandon_partial_destination(target):
             child.unlink()
         root.rmdir()
         sync_directory(root.parent)
-    except OSError:
+    except (OSError, ValueError):
         # Keep an uncertain partial archive rather than delete any unrelated
-        # file. It cannot pass manifest verification and must not be restored.
+        # file. Permission/ownership drift is also uncertain. Cleanup must not
+        # mask the original copy failure or turn it into a false success.
         pass
 
 

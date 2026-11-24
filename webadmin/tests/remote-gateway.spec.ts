@@ -335,6 +335,28 @@ test("remote view fails closed on unavailable API and does not render stale metr
   await expect(page.getByText("Active connections")).toHaveCount(0);
 });
 
+test("stale incident counters expire within 46 seconds when summary refresh hangs", async ({ page }) => {
+  await page.clock.install({ time: new Date("2026-11-24T12:00:00Z") });
+  await page.route("**/remote/v1/session", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({ schema: 1, authenticated: true, mfa: true, mode: "read-only",
+      csrf: sessionCsrf, expires_in: 600 }),
+  }));
+  let reads = 0;
+  await page.route("**/remote/v1/summary", route => {
+    if (++reads > 1) return; // Simulate an in-flight read that never completes.
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(snapshot) });
+  });
+  await page.goto("/remote.html");
+  await expect(page.getByRole("region", { name: "Private incident overview" })).toBeVisible();
+  await expect(page.getByText("Active connections")).toBeVisible();
+  await page.clock.runFor(46_000);
+  await expect(page.getByRole("region", { name: "Private incident overview" })).toHaveCount(0);
+  await expect(page.getByText("Active connections")).toHaveCount(0);
+  await expect(page.getByText("Read expired; old counters are hidden until a verified refresh.")).toBeVisible();
+  expect(reads).toBeGreaterThan(1);
+});
+
 test("remote view clears previously displayed metrics after session expiration", async ({ page }) => {
   let expired = false;
   await page.route("**/remote/v1/session", async (route) => route.fulfill({
