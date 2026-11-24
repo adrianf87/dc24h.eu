@@ -132,3 +132,23 @@ class TlsSecurityProcessTests(unittest.TestCase):
             modern.close()
             hub.stop()
             self.assertIn(b'handshakes=3', hub.log)
+
+    def test_beta07_version_specific_hostname_trust_refuses_both_tls_versions(self):
+        """An independent validating client cannot replace hostname trust with encryption."""
+        with tempfile.TemporaryDirectory(prefix='dc24h-tls-hostname-') as directory:
+            cert, key = credentials(directory)
+            hub = Hub(self, '--adcs-listen', '127.0.0.1:0', '--tls-cert', cert,
+                      '--tls-key', key, ready_pattern=TLS_READY)
+            endpoint = tls_endpoint(hub)
+            for version in (ssl.TLSVersion.TLSv1_2, ssl.TLSVersion.TLSv1_3):
+                with self.subTest(version=version.name):
+                    context = secure_client_context(cert)
+                    context.minimum_version = version
+                    context.maximum_version = version
+                    with socket.create_connection(endpoint, timeout=3) as raw:
+                        with self.assertRaises(ssl.SSLCertVerificationError):
+                            context.wrap_socket(raw, server_hostname='wrong.example')
+                    legitimate = connect_tls(self, hub, cert, version)
+                    self.assertEqual(legitimate.version(), 'TLSv1.2' if version == ssl.TLSVersion.TLSv1_2 else 'TLSv1.3')
+                    legitimate.close()
+            hub.stop()

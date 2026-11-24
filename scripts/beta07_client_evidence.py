@@ -34,6 +34,14 @@ CAPABILITIES = {
     "adcs_ctm": "adcs.ctm.ncdc",
     "adc_rcm": "adc.rcm.ncdc",
     "adcs_rcm": "adcs.rcm.ncdc",
+    "adc_search_permission_refusal": "adc.searchsecurity.ncdc",
+    "adcs_search_permission_refusal": "adcs.searchsecurity.ncdc",
+    "adc_transfer_token_scope": "adc.tokens.ncdc",
+    "adcs_transfer_token_scope": "adcs.tokens.ncdc",
+    "adc_transfer_limit_refusal": "adc.transferlimits.ncdc",
+    "adcs_transfer_limit_refusal": "adcs.transferlimits.ncdc",
+    "adc_transfer_error_recovery": "adc.transfererrors.ncdc",
+    "adcs_transfer_error_recovery": "adcs.transfererrors.ncdc",
 }
 SHA = re.compile(r"[0-9a-f]{64}\Z")
 COMMIT_SHA = re.compile(r"[0-9a-f]{40}\Z")
@@ -133,7 +141,7 @@ def main():
     with args.output.open("x", encoding="utf-8") as stream:
         json.dump(report, stream, indent=2, sort_keys=True)
         stream.write("\n")
-    print("Validated pinned ncdc package and ten real ADC/ADCS process cases")
+    print(f"Validated pinned ncdc package and {len(CAPABILITIES)} real ADC/ADCS process cases")
 
 
 if __name__ == "__main__":
