@@ -21,6 +21,9 @@ export type RemoteEvent = "login_ok" | "login_refused" | "mfa_ok" | "mfa_refused
 export interface RemoteOptions {
   origin: string;
   now?: () => number;
+  // Non-sensitive outcome correlation only. Never pass account, cookie,
+  // endpoint body, CSRF, upstream grant or token to this observer.
+  diagnostic?: (requestId: string, outcome: "ok" | "refused" | "unavailable") => void;
   audit?: (event: RemoteEvent) => void;
   // The local operator can require synchronous durable writes before login.
   // A promise-based best-effort sink never satisfies strict audit mode.
@@ -153,6 +156,7 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
   const passkeyLogins = new Map<string, PasskeyPending>();
   const enrollments = new Map<string, { challenge: string; expires: number; session: Session }>();
   const budgets = new Map<string, Budget>();
+  const requestIds = new WeakMap<ServerResponse, string>();
 
   const log = (event: RemoteEvent): boolean => {
     // Audit integrations are external observers; a failed sink must not crash
@@ -200,11 +204,20 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
     value.issued <= at && at < value.expires;
   const reply = (res: ServerResponse, status: number, data: unknown, cookies: string[] = []) => {
     if (res.writableEnded || res.destroyed) return;
+    // Server-generated identifiers correlate the private Apache HTTP reply
+    // with gateway outcome evidence. Untrusted client-supplied IDs are ignored.
+    const requestId = requestIds.get(res);
+    if (requestId && options.diagnostic) {
+      const outcome = status >= 500 ? "unavailable" : status >= 400 ? "refused" : "ok";
+      try { options.diagnostic(requestId, outcome); }
+      catch { /* Diagnostics are never an authentication authority. */ }
+    }
     res.writeHead(status, {
       "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store",
       "Pragma": "no-cache", "X-Content-Type-Options": "nosniff",
       "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
       "X-Frame-Options": "DENY", "Referrer-Policy": "no-referrer",
+      ...(requestId ? { "X-DC24H-Request-ID": requestId } : {}),
       ...(status === 429 ? { "Retry-After": "60" } : {}),
       ...(cookies.length ? { "Set-Cookie": cookies } : {}),
     });
@@ -306,6 +319,9 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
     return session;
   };
   return async (req: IncomingMessage, res: ServerResponse) => {
+    // Fresh for every HTTP attempt, even rejected methods and paths. Do not
+    // derive this value from Host, Origin, actor ID or a forwarded header.
+    requestIds.set(res, randomBytes(16).toString("hex"));
     const path = req.url ?? "";
     const method = req.method ?? "";
     const now = clock();

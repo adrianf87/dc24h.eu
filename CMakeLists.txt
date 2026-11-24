@@ -27,7 +27,7 @@ else()
 endif()
 
 # The VERSION tuple above is the package number; operators see the beta version.
-set(DC24H_VERSION "beta-0.5.16")
+set(DC24H_VERSION "beta-0.6.16")
 configure_file(cmake/version.hpp.in generated/dc24h/version.hpp @ONLY)
 find_package(Threads REQUIRED)
 find_package(OpenSSL 3 REQUIRED COMPONENTS SSL Crypto)
@@ -321,6 +321,15 @@ if(BUILD_TESTING)
     add_test(NAME ci.junit.summary COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/ci_junit_summary_tests.py")
     set_tests_properties(ci.junit.summary PROPERTIES TIMEOUT 15)
+    add_test(NAME beta.06.ci.provenance COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/beta06_ci_provenance_tests.py")
+    set_tests_properties(beta.06.ci.provenance PROPERTIES TIMEOUT 15)
+    add_test(NAME beta.06.auth.gate COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/beta06_auth_gate_tests.py")
+    set_tests_properties(beta.06.auth.gate PROPERTIES TIMEOUT 15)
+    add_test(NAME beta.06.token.rotation COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/beta06_gateway_token_rotation_tests.py")
+    set_tests_properties(beta.06.token.rotation PROPERTIES TIMEOUT 15)
     add_test(NAME ci.timing.summary COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/ci_timing_summary_tests.py")
     set_tests_properties(ci.timing.summary PROPERTIES TIMEOUT 15)

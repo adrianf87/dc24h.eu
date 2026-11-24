@@ -154,6 +154,7 @@ class StageFourPrivateRecovery(unittest.TestCase):
             with mock.patch.object(recovery, "read_private", side_effect=changed):
                 with self.assertRaises(ValueError):
                     recovery.snapshot(str(source), str(root / "inconsistent"))
+            self.assertFalse((root / "inconsistent").exists(), "Torn snapshot must be rolled back")
 
     def test_restore_rejects_backup_changed_after_manifest_check(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -176,6 +177,7 @@ class StageFourPrivateRecovery(unittest.TestCase):
             with mock.patch.object(recovery, "read_private", side_effect=changed):
                 with self.assertRaises(ValueError):
                     recovery.restore_to_fresh_directory(str(backup), str(root / "restored"))
+            self.assertFalse((root / "restored").exists(), "Torn restore must be rolled back")
 
     def test_restore_rechecks_bytes_written_to_fresh_directory(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -192,6 +194,68 @@ class StageFourPrivateRecovery(unittest.TestCase):
             with mock.patch.object(recovery, "write_private", side_effect=corrupt_written):
                 with self.assertRaises(ValueError):
                     recovery.restore_to_fresh_directory(str(backup), str(root / "restored"))
+            self.assertFalse((root / "restored").exists(), "Corrupt restore must not look complete")
+
+    def test_mid_copy_failure_removes_only_new_partial_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = fixture(root)
+            backup = root / "backup"
+            original = recovery.write_private
+
+            def interrupted(directory, name, data):
+                if directory == backup and name == "passkeys.json":
+                    raise OSError("simulated isolated disk outage")
+                return original(directory, name, data)
+
+            with mock.patch.object(recovery, "write_private", side_effect=interrupted):
+                with self.assertRaises(OSError):
+                    recovery.snapshot(str(source), str(backup))
+            self.assertFalse(backup.exists())
+            self.assertEqual(set(child.name for child in source.iterdir()), set(recovery.FILES))
+            self.assertEqual(recovery.snapshot(str(source), str(backup)), 5)
+
+    def test_untrusted_partial_directory_cannot_mask_original_copy_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = fixture(root)
+            backup = root / "backup"
+            original = recovery.write_private
+
+            def interrupted(directory, name, data):
+                if directory == backup and name == "passkeys.json":
+                    # The interrupted destination is no longer demonstrably
+                    # private. Preserve it and report the actual disk failure.
+                    backup.chmod(0o755)
+                    raise OSError("simulated interrupted storage")
+                return original(directory, name, data)
+
+            with mock.patch.object(recovery, "write_private", side_effect=interrupted):
+                with self.assertRaisesRegex(OSError, "simulated interrupted storage"):
+                    recovery.snapshot(str(source), str(backup))
+            self.assertTrue(backup.is_dir(), "Untrusted partial output must not be deleted")
+            backup.chmod(0o700)
+
+    def test_untrusted_partial_restore_cannot_mask_original_copy_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = fixture(root)
+            backup = root / "backup"
+            restored = root / "restored"
+            recovery.snapshot(str(source), str(backup))
+            original = recovery.write_private
+
+            def interrupted(directory, name, data):
+                if directory == restored and name == "passkeys.json":
+                    restored.chmod(0o755)
+                    raise OSError("simulated restore disk outage")
+                return original(directory, name, data)
+
+            with mock.patch.object(recovery, "write_private", side_effect=interrupted):
+                with self.assertRaisesRegex(OSError, "simulated restore disk outage"):
+                    recovery.restore_to_fresh_directory(str(backup), str(restored))
+            self.assertTrue(restored.is_dir(), "Untrusted partial restore must not be deleted")
+            restored.chmod(0o700)
 
     def test_invalid_gateway_state_is_rejected_before_snapshot(self):
         with tempfile.TemporaryDirectory() as directory:

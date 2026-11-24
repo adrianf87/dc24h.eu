@@ -1,4 +1,5 @@
 """Hub leaf policy and TLS 1.2/1.3 AEAD on a real listener. No session tickets."""
+import pathlib
 import socket
 import ssl
 import subprocess
@@ -6,7 +7,7 @@ import tempfile
 import unittest
 
 from network_process_tests import BINARY, Hub
-from tls_support import TLS_READY, connect_tls, credentials, tls_endpoint
+from tls_support import TLS_READY, connect_tls, credentials, secure_client_context, tls_endpoint
 
 
 def openssl_cert(directory, name, *extra):
@@ -19,6 +20,56 @@ def openssl_cert(directory, name, *extra):
 
 
 class TlsSecurityProcessTests(unittest.TestCase):
+    def test_client_context_never_allows_tls_10_or_11(self):
+        with tempfile.TemporaryDirectory(prefix='dc24h-tls-client-') as directory:
+            cert, _ = credentials(directory)
+            self.assertGreaterEqual(secure_client_context(cert).minimum_version, ssl.TLSVersion.TLSv1_2)
+
+    def test_beta06_certificate_replacement_requires_restart_and_rejects_stale_trust(self):
+        """Disposable ADCS certificate generation, cutover, and negative host/key checks."""
+        with tempfile.TemporaryDirectory(prefix='dc24h-tls-rotation-') as directory:
+            root = pathlib.Path(directory)
+            old_cert, key = credentials(directory)
+            old_ca = root / 'trusted-before.pem'
+            old_ca.write_bytes(pathlib.Path(old_cert).read_bytes())
+            old_key = root / 'private-before.pem'
+            old_key.write_bytes(pathlib.Path(key).read_bytes())
+            replacement = root / 'replacement'
+            replacement.mkdir()
+            newer_cert, newer_key = credentials(replacement)
+            hub = Hub(self, '--adcs-listen', '127.0.0.1:0', '--tls-cert', old_cert,
+                      '--tls-key', key, ready_pattern=TLS_READY)
+            first = connect_tls(self, hub, str(old_ca))
+            self.assertEqual(first.getpeercert(binary_form=True), ssl.PEM_cert_to_DER_cert(old_ca.read_text()))
+            first.close()
+
+            # Swapping the files alone does not reload a live SSL_CTX.
+            pathlib.Path(old_cert).write_bytes(pathlib.Path(newer_cert).read_bytes())
+            pathlib.Path(key).write_bytes(pathlib.Path(newer_key).read_bytes())
+            still_old = connect_tls(self, hub, str(old_ca))
+            still_old.close()
+            hub.stop()
+
+            next_hub = Hub(self, '--adcs-listen', '127.0.0.1:0', '--tls-cert', old_cert,
+                           '--tls-key', key, ready_pattern=TLS_READY)
+            endpoint = tls_endpoint(next_hub)
+            with socket.create_connection(endpoint, timeout=3) as raw:
+                with self.assertRaises(ssl.SSLError):
+                    secure_client_context(old_ca).wrap_socket(raw, server_hostname='localhost')
+            replacement_peer = connect_tls(self, next_hub, old_cert)
+            replacement_peer.close()
+            with socket.create_connection(endpoint, timeout=3) as raw:
+                with self.assertRaises(ssl.SSLCertVerificationError):
+                    secure_client_context(old_cert).wrap_socket(raw, server_hostname='wrong.example')
+            next_hub.stop()
+
+            # Mispaired replacement must fail config validation, not enter service.
+            checked = subprocess.run([BINARY, '--check-config', '--adcs-listen', '127.0.0.1:0',
+                                      '--tls-cert', old_cert, '--tls-key', str(old_key)],
+                                     capture_output=True, timeout=5, stdin=subprocess.DEVNULL)
+            self.assertNotEqual(checked.returncode, 0)
+            self.assertNotIn(b'BEGIN PRIVATE KEY', checked.stderr)
+
     def test_expired_leaf_fails_check_and_listen_without_opening_a_port(self):
         with tempfile.TemporaryDirectory(prefix='dc24h-tls-policy-') as directory:
             cert, key = openssl_cert(
@@ -68,7 +119,7 @@ class TlsSecurityProcessTests(unittest.TestCase):
             peer.sendall(b'HSUP ADBASE\n')
             session = peer.session
             peer.close()
-            resumed = ssl.create_default_context(cafile=cert)
+            resumed = secure_client_context(cert)
             raw = socket.create_connection(endpoint, timeout=3)
             self.addCleanup(raw.close)
             second = resumed.wrap_socket(raw, server_hostname='localhost', session=session)

@@ -1,16 +1,49 @@
 """Force a pending TCP/TLS write and verify the absolute terminal drain limit."""
 import socket
-import ssl
+import signal
 import tempfile
 import time
 import unittest
 
 from network_process_tests import Hub
 from adc_login_process_tests import Peer
-from tls_support import credentials, tls_endpoint
+from tls_support import credentials, secure_client_context, tls_endpoint
 
 
 class CloseDeadlineTest(unittest.TestCase):
+    def test_beta06_bounded_drain_and_reconnect_across_three_lifetimes(self):
+        """Three isolated SIGTERM lifetimes with queued ADC/ADCS and half-open TLS."""
+        with tempfile.TemporaryDirectory(prefix='dc24h-restart-') as directory:
+            cert, key = credentials(directory)
+            for lifetime in range(3):
+                with self.subTest(lifetime=lifetime):
+                    hub = Hub(self, cert, key)
+                    plain = Peer(self, hub.connect())
+                    plain.login(b'ReconnectPlain', 210)
+                    raw_tls = socket.create_connection(tls_endpoint(hub), timeout=3)
+                    self.addCleanup(raw_tls.close)
+                    tls = secure_client_context(cert).wrap_socket(raw_tls, server_hostname='localhost')
+                    self.addCleanup(tls.close)
+                    encrypted = Peer(self, tls)
+                    encrypted.login(b'ReconnectTls', 211)
+                    self.assertTrue(plain.line().startswith(b'BINF ' + encrypted.sid + b' '))
+                    # The third peer opens TCP but never sends a ClientHello.
+                    half_open = socket.create_connection(tls_endpoint(hub), timeout=3)
+                    self.addCleanup(half_open.close)
+                    for ordinal in range(3):
+                        command = b'BSTA ' + plain.sid + b' 000 ShutdownQueued' + str(ordinal).encode()
+                        plain.send(command)
+                        self.assertEqual(plain.line(), command)
+                        # Keep at least some outgoing replies unconsumed on TLS.
+                    start = time.monotonic()
+                    hub.stop(signal.SIGTERM)
+                    self.assertLess(time.monotonic() - start, 2.0)
+                    self.assertEqual(hub.log.count(b'Core stopped'), 1)
+                    self.assertEqual(hub.log.count(b'Network stopped; all TCP sockets closed'), 1)
+                    half_open.close()
+                    tls.close()
+                    plain.peer.close()
+
     def test_blocked_output_cannot_extend_terminal_deadline(self):
         with tempfile.TemporaryDirectory(prefix='dc24h-close-') as directory:
             cert,key=credentials(directory)
@@ -22,7 +55,7 @@ class CloseDeadlineTest(unittest.TestCase):
                 raw.setsockopt(socket.SOL_SOCKET,socket.SO_RCVBUF,1024)
                 raw.settimeout(5)
                 raw.connect(tls_endpoint(hub) if encrypted else hub.endpoints[0])
-                peer=ssl.create_default_context(cafile=cert).wrap_socket(raw,server_hostname='localhost') if encrypted else raw
+                peer=secure_client_context(cert).wrap_socket(raw,server_hostname='localhost') if encrypted else raw
                 self.addCleanup(peer.close)
                 client=Peer(self,peer);client.login(b'SlowTLS' if encrypted else b'SlowTCP',3 if encrypted else 2)
                 slow.append(client)

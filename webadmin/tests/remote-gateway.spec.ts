@@ -3,7 +3,7 @@ import { test, expect, type Route } from "@playwright/test";
 const sessionCsrf = "d".repeat(64);
 const snapshot = {
   schema: 1, mode: "read-only",
-  server: { version: "beta-0.5.16", running: true, uptime_seconds: 123 },
+  server: { version: "beta-0.6.16", running: true, uptime_seconds: 123 },
   network: { active_connections: 5, accepted_connections: 22 },
   users: { online: 4, peak_online: 7 },
   chat: { received: 10, rejected: 1 },
@@ -46,15 +46,31 @@ test("remote read-only screen needs a session, supports EN/PL and never offers h
   await page.getByLabel("Hasło konta").fill("example-proof");
   await page.getByLabel("Kod uwierzytelniający (6 cyfr)").fill("123456");
   await page.getByRole("button", { name: "Zaloguj", exact: true }).click();
-  await expect(page.getByText("beta-0.5.16")).toBeVisible();
+  await expect(page.getByText("beta-0.6.16")).toBeVisible();
   await expect(page.getByText(/Pozostały czas sesji \(orientacyjny\):/)).toBeVisible();
   await expect(page.getByText("Aktywne połączenia")).toBeVisible();
   await expect(page.getByText("Użytkownicy online")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Prywatny przegląd incydentów" })).toBeVisible();
+  await expect(page.getByText("Niedostępne w zatwierdzonym widoku tylko do odczytu")).toBeVisible();
+  const acknowledgedRequests: string[] = [];
+  page.on("request", request => {
+    if (request.method() !== "GET") acknowledgedRequests.push(request.url());
+  });
+  await page.getByRole("button", { name: "Potwierdź lokalnie" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("status").filter({ hasText: "Potwierdzono tylko na tym ekranie" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Potwierdź lokalnie" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Potwierdź lokalnie" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "English" }).click();
+  await expect(page.getByText("Acknowledged on this screen only; no server action was sent.")).toBeVisible();
+  await page.getByRole("button", { name: "Polski" }).click();
+  expect(acknowledgedRequests).toEqual([]);
   for (const title of ["Start", "Stop", "Restart", "Edit", "Restore", "Grant"]) {
     await expect(page.getByRole("button", { name: title, exact: true })).toHaveCount(0);
   }
   await page.getByRole("button", { name: "Wyloguj" }).click();
   await expect(page.getByText("Zaloguj się, aby odczytać zatwierdzone dane huba.")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Prywatny przegląd incydentów" })).toHaveCount(0);
 });
 
 test("local passkey inventory exposes only this account's device actions and revokes the browser session", async ({ page }) => {
@@ -317,6 +333,28 @@ test("remote view fails closed on unavailable API and does not render stale metr
   await page.goto("/remote.html");
   await expect(page.getByText(/The gateway or hub API is unavailable/)).toBeVisible();
   await expect(page.getByText("Active connections")).toHaveCount(0);
+});
+
+test("stale incident counters expire within 46 seconds when summary refresh hangs", async ({ page }) => {
+  await page.clock.install({ time: new Date("2026-11-24T12:00:00Z") });
+  await page.route("**/remote/v1/session", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({ schema: 1, authenticated: true, mfa: true, mode: "read-only",
+      csrf: sessionCsrf, expires_in: 600 }),
+  }));
+  let reads = 0;
+  await page.route("**/remote/v1/summary", route => {
+    if (++reads > 1) return; // Simulate an in-flight read that never completes.
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(snapshot) });
+  });
+  await page.goto("/remote.html");
+  await expect(page.getByRole("region", { name: "Private incident overview" })).toBeVisible();
+  await expect(page.getByText("Active connections")).toBeVisible();
+  await page.clock.runFor(46_000);
+  await expect(page.getByRole("region", { name: "Private incident overview" })).toHaveCount(0);
+  await expect(page.getByText("Active connections")).toHaveCount(0);
+  await expect(page.getByText("Read expired; old counters are hidden until a verified refresh.")).toBeVisible();
+  expect(reads).toBeGreaterThan(1);
 });
 
 test("remote view clears previously displayed metrics after session expiration", async ({ page }) => {

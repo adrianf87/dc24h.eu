@@ -59,6 +59,10 @@ jobs:
         if: always()
         run: python3 scripts/ci_junit_summary.py --junit "$RUNNER_TEMP/ctest.xml" --output "$RUNNER_TEMP/evidence/summary.json" --suite "cpp-${{ matrix.os }}-${{ matrix.build_type }}" --sha "$SOURCE_SHA"
 
+      - name: Enforce exact-head hosted Ubuntu evidence
+        if: always()
+        run: python3 scripts/beta06_ci_provenance.py --summary "$RUNNER_TEMP/evidence/summary.json" --output "$RUNNER_TEMP/evidence/provenance.json" --sha "$SOURCE_SHA" --suite "cpp-${{ matrix.os }}-${{ matrix.build_type }}" --os-image "${{ matrix.os }}"
+
       - name: Upload immutable status artifact
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -166,6 +170,10 @@ jobs:
       - name: Prepare redacted sanitizer evidence
         if: always()
         run: python3 scripts/ci_junit_summary.py --junit "$RUNNER_TEMP/ctest.xml" --output "$RUNNER_TEMP/evidence/summary.json" --suite "sanitizer-${{ matrix.sanitizer }}" --sha "$SOURCE_SHA"
+
+      - name: Enforce exact-head sanitizer evidence
+        if: always()
+        run: python3 scripts/beta06_ci_provenance.py --summary "$RUNNER_TEMP/evidence/summary.json" --output "$RUNNER_TEMP/evidence/provenance.json" --sha "$SOURCE_SHA" --suite "sanitizer-${{ matrix.sanitizer }}" --os-image ubuntu-24.04
 
       - name: Upload immutable sanitizer status
         if: always()

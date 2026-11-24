@@ -27,9 +27,18 @@ def tls_endpoint(hub):
     return host.decode().strip('[]'), int(port)
 
 
+def secure_client_context(cafile):
+    """Trust the disposable CA without ever negotiating legacy TLS 1.0/1.1."""
+    context = ssl.create_default_context(cafile=str(cafile))
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
+    return context
+
+
 def connect_tls(case, hub, cert, version=None):
-    context = ssl.create_default_context(cafile=cert)
+    context = secure_client_context(cert)
     if version is not None:
+        if version < ssl.TLSVersion.TLSv1_2:
+            raise ValueError('Legacy TLS versions are never permitted')
         context.minimum_version = version
         context.maximum_version = version
     raw = socket.create_connection(tls_endpoint(hub), timeout=3)
