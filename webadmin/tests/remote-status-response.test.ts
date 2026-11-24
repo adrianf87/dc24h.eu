@@ -59,7 +59,11 @@ test("browser redacted timeline accepts fixed bounded aggregates and refuses pri
   const fresh = { ...status, observation: { schema: 1, source_age_ms: 100 } };
   const incidents = { schema: 1, state: "observed", events: [
     { kind: "hub_stopped", age_seconds: 2 }, { kind: "transport_refusals", age_seconds: 1 },
-  ], alerts: [{ kind: "transport_refusals", age_seconds: 1 }] };
+    { kind: "login_refusals", age_seconds: 1 }, { kind: "rate_limit_refusals", age_seconds: 1 },
+  ], alerts: [
+    { kind: "transport_refusals", age_seconds: 1 }, { kind: "login_refusals", age_seconds: 1 },
+    { kind: "rate_limit_refusals", age_seconds: 1 },
+  ] };
   assert.deepEqual(parseRemoteSummaryResponse({ ...fresh, incidents })?.incidents, incidents);
   for (const invalid of [
     { ...incidents, events: [{ kind: "login_refused", age_seconds: 1, actor: "7" }] },

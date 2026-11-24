@@ -43,7 +43,8 @@ const labels = {
     sourceUnknown: "Unknown",
     timeline: "Recent aggregate service events", noEvents: "No verified transitions recorded in this process.",
     alertTitle: "Aggregate security signals", hubStarted: "Hub started", hubStopped: "Hub stopped",
-    transportRefused: "Transport security refusal threshold reached", secondsAgo: "seconds ago",
+    transportRefused: "Transport security refusal threshold reached", loginRefused: "Authentication refusal threshold reached",
+    rateLimitRefused: "Rate-limit refusal threshold reached", secondsAgo: "seconds ago",
     acknowledge: "Acknowledge locally", acknowledged: "Acknowledged on this screen only; no server action was sent.",
   },
   pl: {
@@ -79,7 +80,9 @@ const labels = {
     sourceUnknown: "Nieznane",
     timeline: "Ostatnie zbiorcze zdarzenia usługi", noEvents: "Brak zweryfikowanych zmian stanu w tym procesie.",
     alertTitle: "Zbiorcze sygnały bezpieczeństwa", hubStarted: "Hub uruchomiony", hubStopped: "Hub zatrzymany",
-    transportRefused: "Próg odmów bezpieczeństwa transportu został osiągnięty", secondsAgo: "sekund temu",
+    transportRefused: "Próg odmów bezpieczeństwa transportu został osiągnięty",
+    loginRefused: "Próg odmów uwierzytelniania został osiągnięty",
+    rateLimitRefused: "Próg odmów limitera został osiągnięty", secondsAgo: "sekund temu",
     acknowledge: "Potwierdź lokalnie", acknowledged: "Potwierdzono tylko na tym ekranie; nie wysłano żadnej akcji do serwera.",
   },
 } as const;
@@ -385,8 +388,9 @@ export function RemoteApp() {
     ...(freshSummary.search ? [[t.queries, freshSummary.search.queries], [t.results, freshSummary.search.results]] as [string, number][] : []),
     ...(freshSummary.transfers ? [[t.ctm, freshSummary.transfers.ctm], [t.rcm, freshSummary.transfers.rcm]] as [string, number][] : []),
   ] : [];
-  const eventName = (kind: "hub_started" | "hub_stopped" | "transport_refusals") =>
-    kind === "hub_started" ? t.hubStarted : kind === "hub_stopped" ? t.hubStopped : t.transportRefused;
+  const eventName = (kind: "hub_started" | "hub_stopped" | "transport_refusals" | "login_refusals" | "rate_limit_refusals") =>
+    kind === "hub_started" ? t.hubStarted : kind === "hub_stopped" ? t.hubStopped :
+      kind === "login_refusals" ? t.loginRefused : kind === "rate_limit_refusals" ? t.rateLimitRefused : t.transportRefused;
   return (
     <main className="remote-shell">
       <header className="remote-head">

@@ -19,7 +19,7 @@ export type RemoteEvent = "login_ok" | "login_refused" | "mfa_ok" | "mfa_refused
   "passkey_enrolled" | "passkey_enroll_refused" | "passkey_login_ok" | "passkey_login_refused" |
   "passkey_device_renamed" | "passkey_revoke_intent" | "passkey_revoked" |
   "passkey_enroll_intent" | "passkey_recovery_intent" | "passkey_recovered" |
-  "rate_limiter_unavailable";
+  "rate_limiter_unavailable" | "rate_limited";
 export interface RemoteOptions {
   origin: string;
   now?: () => number;
@@ -169,10 +169,14 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
       if (written && typeof written === "object" && "then" in written &&
           typeof written.then === "function") {
         void Promise.resolve(written).catch(() => {});
+        if (options.strictAudit) observability.auditLost();
         return !options.strictAudit;
       }
+      if (event === "login_refused" || event === "mfa_refused" ||
+          event === "passkey_login_refused" || event === "rate_limited")
+        observability.observeAudit(event);
       return true;
-    } catch { return false; }
+    } catch { observability.auditLost(); return false; }
   };
   const prune = (now: number) => {
     for (const [id, value] of sessions) {
@@ -207,6 +211,8 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
     value.issued <= at && at < value.expires;
   const reply = (res: ServerResponse, status: number, data: unknown, cookies: string[] = []) => {
     if (res.writableEnded || res.destroyed) return;
+    // Fixed audit enum only. Never record the triggering actor, cookie or IP.
+    if (status === 429) log("rate_limited");
     // Server-generated identifiers correlate the private Apache HTTP reply
     // with gateway outcome evidence. Untrusted client-supplied IDs are ignored.
     const requestId = requestIds.get(res);
@@ -354,6 +360,7 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
       catch { auditAvailable = false; }
     }
     if (!auditAvailable) {
+      observability.auditLost();
       sessions.clear(); challenges.clear(); passkeyLogins.clear(); enrollments.clear();
       reply(res, 503, { error: "unavailable" }, clearSession()); return;
     }
@@ -715,7 +722,12 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
       // The dedicated parser has already validated and constructed only the
       // reviewed aggregate fields; never serialize a raw private API object.
       if (data.observation) observability.observe(data);
+      // This counter is a gateway-only signal for thresholded incidents. Do
+      // not expose the raw per-process transport refusal total to browsers.
+      const publicNetwork = { active_connections: data.network.active_connections,
+        accepted_connections: data.network.accepted_connections };
       reply(res, 200, { schema: 1, mode: "read-only", ...data,
+        network: publicNetwork,
         ...(data.observation ? { incidents: observability.read() } : {}) });
     } catch {
       log("api_unavailable"); reply(res, 503, { error: "unavailable" });

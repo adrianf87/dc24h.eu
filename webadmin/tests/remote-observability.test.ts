@@ -38,9 +38,32 @@ test("transport failure alerts are thresholded, cooldown-limited, and reset on c
   assert.equal(monitor.read().alerts.length, 1);
   at += 1000; monitor.observe(sample(true, 100));
   assert.equal(monitor.read().alerts.length, 1, "cooldown prevents an alert storm");
-  at += 61_000; monitor.observe(sample(true, 110));
+  at += 60_000; monitor.observe(sample(true, 110));
   assert.equal(monitor.read().alerts.length, 2);
   at -= 80_000;
   assert.equal(monitor.read().state, "unknown");
   assert.deepEqual(monitor.read().alerts, []);
+});
+
+test("authentication and rate-limit aggregates stay de-identified, thresholded and independent", () => {
+  let at = 10_000;
+  const monitor = aggregateObservability(() => at);
+  for (let i = 0; i < 10; i++) monitor.observeAudit("login_refused");
+  assert.deepEqual(monitor.read().alerts, [], "unverified status never exposes an incident");
+  monitor.observe(sample(true, 0));
+  for (let i = 0; i < 4; i++) monitor.observeAudit("login_refused");
+  assert.deepEqual(monitor.read().alerts, []);
+  monitor.observeAudit("mfa_refused");
+  assert.deepEqual(monitor.read().alerts, [{ kind: "login_refusals", age_seconds: 0 }]);
+  for (let i = 0; i < 20; i++) monitor.observeAudit("passkey_login_refused");
+  assert.equal(monitor.read().alerts.length, 1, "one alert per cooldown");
+  for (let i = 0; i < 5; i++) monitor.observeAudit("rate_limited");
+  assert.deepEqual(monitor.read().alerts.map(a => a.kind), ["login_refusals", "rate_limit_refusals"]);
+  assert.deepEqual(Object.keys(monitor.read().events.at(-1)!).sort(), ["age_seconds", "kind"]);
+  assert.ok(!JSON.stringify(monitor.read()).includes("actor"));
+  at += 61_000; monitor.observe(sample(true, 0));
+  for (let i = 0; i < 5; i++) monitor.observeAudit("rate_limited");
+  assert.equal(monitor.read().alerts.filter(a => a.kind === "rate_limit_refusals").length, 2);
+  monitor.auditLost();
+  assert.deepEqual(monitor.read(), { schema: 1, state: "unknown", events: [], alerts: [] });
 });
