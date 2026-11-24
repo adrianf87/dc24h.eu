@@ -98,7 +98,17 @@ def sql_migration_row_count(dump):
             prefix = MIGRATION_INSERT.match(stripped)
             if not prefix:
                 continue
-            values = stripped[prefix.end():].rstrip(b"\r\n")
+            # A real mariadb-dump may put VALUES and its first tuple on
+            # separate lines. Read only this one migration INSERT statement,
+            # with a strict small bound: no other table data is interpreted.
+            values = stripped[prefix.end():].strip()
+            while not values.endswith(b";"):
+                continuation = source.readline(64 * 1024 + 1)
+                if not continuation or len(continuation) > 64 * 1024:
+                    raise ValueError("Incomplete or oversized migration export")
+                values += b" " + continuation.strip()
+                if len(values) > 64 * 1024:
+                    raise ValueError("Oversized migration export")
             matches = list(MIGRATION_ROW.finditer(values))
             if not matches:
                 raise ValueError("Malformed migration export (row shape: " +

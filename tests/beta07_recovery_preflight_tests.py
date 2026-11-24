@@ -119,6 +119,22 @@ class StageOnePreflightTests(unittest.TestCase):
                                                 root / "fresh-db", root / "fresh-private")
                              ["sql_export_applied_migration_rows"], 11)
 
+    def test_mariadb_dump_multiline_values_are_read_within_strict_bounds(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dump, _snapshot, _pair_dir = self.create(root)
+            original = dump.read_bytes()
+            self.assertIn(b" VALUES (", original)
+            dump.write_bytes(original.replace(b" VALUES (", b" VALUES\n(")
+                                  .replace(b"),(2,", b"),\n(2,"))
+            self.assertEqual(preflight.sql_migration_row_count(dump), 11)
+
+            # Do not read an unbounded continuation and never treat a
+            # missing terminator as a valid migration-history export.
+            dump.write_bytes(original.replace(b" VALUES (", b" VALUES\n(")[:-2])
+            with self.assertRaisesRegex(ValueError, "Incomplete or oversized"):
+                preflight.sql_migration_row_count(dump)
+
     def test_parser_never_ignores_extra_sql_between_valid_migration_rows(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
