@@ -27,6 +27,53 @@ MIGRATION_ROW = re.compile(
 )
 
 
+def _redacted_row_shape(values):
+    """Report only the *types/count* of first-row fields, never SQL values.
+
+    This fixed vocabulary is safe for hosted CI. A malformed export must not
+    print a tuple, identifier, account, checksum, timestamp, or SQL fragment.
+    """
+    sample = values[:2048].lstrip()
+    if not sample.startswith(b"("):
+        return "missing_tuple"
+    fields, start, quoted, escaped = [], 1, False, False
+    for index in range(1, len(sample)):
+        character = sample[index]
+        if quoted:
+            if escaped:
+                escaped = False
+            elif character == 92:
+                escaped = True
+            elif character == 39:
+                quoted = False
+            continue
+        if character == 39:
+            quoted = True
+        elif character == 44:
+            fields.append(sample[start:index].strip())
+            start = index + 1
+        elif character == 41:
+            fields.append(sample[start:index].strip())
+            break
+    else:
+        return "incomplete_tuple"
+    if len(fields) > 8:
+        return "too_many_fields"
+    kinds = []
+    for value in fields:
+        if re.fullmatch(rb"[0-9]+", value):
+            kinds.append("n")
+        elif len(value) >= 2 and value.startswith(b"'") and value.endswith(b"'"):
+            kinds.append("q")
+        elif re.fullmatch(rb"0[xX][0-9a-fA-F]+", value):
+            kinds.append("h")
+        elif value.upper() == b"NULL":
+            kinds.append("z")
+        else:
+            kinds.append("x")
+    return f"fields{len(fields)}_{''.join(kinds)}"
+
+
 def sql_migration_row_count(dump):
     """Fail closed unless a standard offline export contains all 11 applied rows.
 
@@ -54,7 +101,8 @@ def sql_migration_row_count(dump):
             values = stripped[prefix.end():].rstrip(b"\r\n")
             matches = list(MIGRATION_ROW.finditer(values))
             if not matches:
-                raise ValueError("Malformed migration export (row shape)")
+                raise ValueError("Malformed migration export (row shape: " +
+                                 _redacted_row_shape(values) + ")")
             # MariaDB versions can format separators and timestamp fractions
             # differently. Accept only whitespace around complete tuples and
             # commas, never arbitrary unparsed SQL between valid rows.

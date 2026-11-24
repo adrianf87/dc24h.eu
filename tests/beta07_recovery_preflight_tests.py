@@ -127,6 +127,13 @@ class StageOnePreflightTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Malformed migration export"):
                 preflight.sql_migration_row_count(dump)
 
+    def test_structural_diagnostic_does_not_echo_private_values(self):
+        secret = b"PersonallyIdentifyingAccountName"
+        shape = preflight._redacted_row_shape(b"(1,'" + secret + b"','abc',NULL,'applied');")
+        self.assertEqual(shape, "fields5_nqqzq")
+        self.assertNotIn(secret.decode(), shape)
+        self.assertEqual(preflight._redacted_row_shape(b"garbage" + secret), "missing_tuple")
+
     def test_cli_refusals_do_not_output_secret_paths_or_sql(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
