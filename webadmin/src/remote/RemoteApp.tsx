@@ -122,6 +122,10 @@ export function RemoteApp() {
   // A prior refresh must also not replace the latest result within a session.
   const summaryRequest = useRef(0);
   const deviceRequest = useRef(0);
+  // Same-origin tabs can hold an already-rendered snapshot when a sibling
+  // signs out. Broadcast only a fixed invalidation signal, never session or
+  // CSRF material. The server still independently authorizes every request.
+  const sessionChannel = useRef<BroadcastChannel | null>(null);
   const t = labels[language];
   const displayTime = (time: number | null) => time === null ? t.neverUsed :
     new Date(time).toLocaleString(language === "pl" ? "pl-PL" : "en-US");
@@ -146,6 +150,15 @@ export function RemoteApp() {
     setCsrf("");
     setState(next);
   };
+  useEffect(() => {
+    if (typeof BroadcastChannel === "undefined") return;
+    const channel = new BroadcastChannel("dc24h-remote-session");
+    sessionChannel.current = channel;
+    channel.onmessage = event => {
+      if (event.data === "session-revoked") invalidate("expired");
+    };
+    return () => { sessionChannel.current = null; channel.close(); };
+  }, []);
   useEffect(() => {
     let canceled = false;
     call("session").then(({ status, data }) => {
@@ -255,6 +268,7 @@ export function RemoteApp() {
       });
       if (epoch !== sessionEpoch.current) return;
       if (result.status !== 200) { invalidate(failure(result.status)); return; }
+      sessionChannel.current?.postMessage("session-revoked");
       invalidate("unauthorized"); setActor("");
     } catch { if (epoch === sessionEpoch.current) invalidate("unavailable"); }
   };
@@ -335,7 +349,10 @@ export function RemoteApp() {
         revoke ? { id } : { id, name: deviceLabels[id] ?? "" }, csrf);
       if (epoch !== sessionEpoch.current) return;
       if (result.status !== 200) throw Error();
-      if (revoke) { invalidate("unauthorized"); setActionMessage(t.revoked); }
+      if (revoke) {
+        sessionChannel.current?.postMessage("session-revoked");
+        invalidate("unauthorized"); setActionMessage(t.revoked);
+      }
       else {
         if (!result.data || typeof result.data !== "object" || !("csrf" in result.data) ||
             typeof result.data.csrf !== "string" || !/^[0-9a-f]{64}$/.test(result.data.csrf)) throw Error();

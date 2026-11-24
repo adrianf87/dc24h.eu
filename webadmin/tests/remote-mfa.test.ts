@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { chmodSync, mkdtempSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
+import { appendFileSync, chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { compactTotpReplay, initializeTotpReplay, loadTotpVerifier, replaceTotpSecret, totpCodeForTest } from "../server/remote-mfa.ts";
@@ -167,5 +167,44 @@ test("offline replay compaction preserves maximum consumed steps and rejects sta
       assert.equal(fresh.verify("7", totpCodeForTest(secret, 59_000), 59_000), false);
       assert.equal(fresh.verify("7", totpCodeForTest(secret, 90_000), 90_000), true);
     } finally { fresh.close(); }
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("stopped-writer TOTP restore keeps consumed steps across clock rollback, rotation and partial append", () => {
+  const dir = mkdtempSync(join(tmpdir(), "beta07-mfa-recover-"));
+  const enrollment = join(dir, "mfa.json"), replay = join(dir, "replay.jsonl");
+  const recoveredDir = join(dir, "recovered"), recoveredEnrollment = join(recoveredDir, "mfa.json");
+  const recoveredReplay = join(recoveredDir, "replay.jsonl");
+  try {
+    writeFileSync(enrollment, JSON.stringify({ schema: 1, accounts: { "7": secret } }), { mode: 0o600 });
+    initializeTotpReplay(replay);
+    const original = loadTotpVerifier(enrollment, replay);
+    assert.equal(original.verify("7", totpCodeForTest(secret, 150_000), 150_000), true);
+    assert.equal(original.verify("7", totpCodeForTest(secret, 60_000), 60_000), false,
+      "clock rollback must not revive any earlier time step");
+    original.close();
+    const savedLedger = readFileSync(replay, "utf8");
+    appendFileSync(replay, '{"actor":"7","step":'); // Simulated interrupted append.
+    assert.throws(() => loadTotpVerifier(enrollment, replay), /Incomplete MFA replay ledger/);
+    assert.throws(() => replaceTotpSecret({ enrollmentPath: enrollment, replayPath: replay,
+      actor: "7", newSeed: replacement, newCode: totpCodeForTest(replacement, 180_000),
+      oldCode: totpCodeForTest(secret, 180_000), now: 180_000, offlineAcknowledged: true }),
+    /Incomplete MFA replay ledger/, "rotation must reject a damaged replay store");
+    // A byte-exact offline backup, not a newly initialized blank ledger, restores the state.
+    writeFileSync(replay, savedLedger, { mode: 0o600 });
+    replaceTotpSecret({ enrollmentPath: enrollment, replayPath: replay,
+      actor: "7", newSeed: replacement, newCode: totpCodeForTest(replacement, 180_000),
+      oldCode: totpCodeForTest(secret, 180_000), now: 180_000, offlineAcknowledged: true });
+    mkdirSync(recoveredDir, { mode: 0o700 });
+    copyFileSync(enrollment, recoveredEnrollment); copyFileSync(replay, recoveredReplay);
+    chmodSync(recoveredEnrollment, 0o600); chmodSync(recoveredReplay, 0o600);
+    const reopened = loadTotpVerifier(recoveredEnrollment, recoveredReplay);
+    try {
+      assert.equal(reopened.verify("7", totpCodeForTest(replacement, 180_000), 180_000), false,
+        "rotation consumed this step in the matching replay ledger");
+      assert.equal(reopened.verify("7", totpCodeForTest(secret, 210_000), 210_000), false,
+        "old authenticator must fail after cutover");
+      assert.equal(reopened.verify("7", totpCodeForTest(replacement, 210_000), 210_000), true);
+    } finally { reopened.close(); }
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

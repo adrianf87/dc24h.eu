@@ -77,6 +77,38 @@ test("revocation invalidates the actor epoch and permanently rejects revoked key
   assert.equal(store.revokeAll("7", 3002), 0);
 }));
 
+test("two passkeys preserve counter and backup policy, account isolation, rename and actor-wide revoke across restart", () => withStore(path => {
+  const store = openPasskeyStore(path, "localhost");
+  const first = "a".repeat(32), second = "b".repeat(32), foreign = "c".repeat(32);
+  const owner = store.userHandle("7"), outsider = store.userHandle("8");
+  store.add({ ...sample(first), userHandle: owner });
+  store.add({ ...sample(second), userHandle: owner, deviceType: "multiDevice", backedUp: true });
+  store.add({ ...sample(foreign, "8"), userHandle: outsider });
+  assert.deepEqual(store.forActor("7").map(c => c.id), [first, second]);
+  assert.equal(store.get("8", first), undefined, "another actor never owns the first key");
+  assert.equal(store.markUsed("7", first, 0, 1, "singleDevice", false, 1000), true);
+  assert.equal(store.markUsed("7", first, 0, 2, "singleDevice", false, 1001), false, "counter rollback");
+  assert.equal(store.markUsed("7", first, 1, 2, "multiDevice", true, 1001), false, "unexpected backup downgrade");
+  assert.equal(store.markUsed("7", second, 0, 0, "multiDevice", true, 1002), true,
+    "synced multi-device keys may have a zero hardware counter");
+  assert.equal(store.rename("8", second, "Interloper"), false);
+  assert.equal(store.rename("7", second, "Travel key"), true);
+  assert.equal(store.revoke("7", first, 2000), true);
+  assert.equal(store.get("7", first), undefined);
+  assert.equal(store.markUsed("7", second, 0, 0, "multiDevice", true, 2001), true,
+    "the remaining key is usable after one-key revoke");
+  assert.equal(store.epoch("7"), 1, "all existing actor sessions must invalidate");
+  assert.equal(store.epoch("8"), 0);
+  assert.equal(store.revokeAll("7", 3000), 1);
+  assert.equal(store.forActor("7").length, 0);
+  assert.equal(store.forActor("8").length, 1, "foreign actor's credential survives");
+  const recovered = openPasskeyStore(path, "localhost");
+  assert.equal(recovered.epoch("7"), 2);
+  assert.equal(recovered.get("7", second), undefined);
+  assert.equal(recovered.markUsed("7", second, 0, 1, "multiDevice", true, 3001), false);
+  assert.equal(recovered.get("8", foreign)?.id, foreign);
+}));
+
 test("external rewrite, unsafe permissions, corrupt data or another writer fail closed", () => withStore(path => {
   const store = openPasskeyStore(path, "localhost");
   store.userHandle("7");

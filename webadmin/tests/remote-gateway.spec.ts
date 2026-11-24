@@ -9,6 +9,31 @@ const snapshot = {
   chat: { received: 10, rejected: 1 },
 };
 
+test("a successful logout in one tab clears a sibling's private metrics and actions", async ({ page, context }) => {
+  await context.route("**/remote/v1/session", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify({
+      schema: 1, authenticated: true, mfa: true, mode: "read-only", csrf: sessionCsrf, expires_in: 600,
+    }),
+  }));
+  await context.route("**/remote/v1/summary", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify(snapshot),
+  }));
+  await context.route("**/remote/v1/logout", route => route.fulfill({
+    status: 200, contentType: "application/json", body: '{"schema":1,"authenticated":false}',
+  }));
+  const sibling = await context.newPage();
+  try {
+    await Promise.all([page.goto("/remote.html"), sibling.goto("/remote.html")]);
+    await expect(page.getByText("Active connections")).toBeVisible();
+    await expect(sibling.getByText("Active connections")).toBeVisible();
+    await page.getByRole("button", { name: "Sign out" }).click();
+    await expect(page.getByText("Sign in to read approved hub metrics.")).toBeVisible();
+    await expect(sibling.getByText("Your session expired or was revoked. Sign in again.")).toBeVisible();
+    await expect(sibling.getByText("Active connections")).toHaveCount(0);
+    await expect(sibling.getByRole("button", { name: "Sign out" })).toHaveCount(0);
+  } finally { await sibling.close(); }
+});
+
 test("remote read-only screen needs a session, supports EN/PL and never offers hub-control mutations", async ({ page }) => {
   let loggedIn = false;
   await page.route("**/remote/v1/session", async (route) => {
