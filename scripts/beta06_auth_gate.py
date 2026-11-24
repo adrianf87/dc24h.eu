@@ -11,7 +11,8 @@ from pathlib import Path
 
 from beta06_ci_provenance import IMAGES, SHA
 
-WORKLOAD = {"requests": 24, "concurrency": 2, "max_ci_p99_ms": 2000}
+WORKLOAD = {"requests": 24, "concurrency": 2, "max_ci_p99_ms": 2000,
+            "request_spacing_ms": 1100}
 PROCESSES = {"account_admin", "gateway", "apache"}
 
 

@@ -38,6 +38,7 @@ from stage4_perf_probe import process_cpu_seconds, rss_kib
 REQUESTS = 24
 CONCURRENCY = 2
 MAX_P99_MS = 2000
+REQUEST_SPACING_SECONDS = 1.1
 SEED = "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP"  # Synthetic fixture only.
 
 
@@ -315,7 +316,15 @@ def run(binary, seeder, account_admin):
             cookie = next(value.split(";", 1)[0] for name, value in headers
                           if name.lower() == "set-cookie")
 
-            def measure(_):
+            def measure(index):
+                # Each remote summary performs TWO C++ grant rechecks, plus
+                # the login's initial recheck. The authority permits only 24
+                # checks per 10 seconds; a burst of 24 summaries would be a
+                # rate-limit test, not an authenticated success workload.
+                due = started + index * REQUEST_SPACING_SECONDS
+                remaining = due - time.monotonic()
+                if remaining > 0:
+                    time.sleep(remaining)
                 status, payload, _headers, elapsed = fetch("/remote/v1/summary", headers={"Cookie": cookie})
                 try:
                     value = json.loads(payload)
@@ -352,6 +361,7 @@ def run(binary, seeder, account_admin):
                 "maintenance_mode": True, "hub_readonly_boundary_verified": True,
                 "requests": REQUESTS, "success": len(success), "failure": 0,
                 "concurrency": CONCURRENCY, "elapsed_seconds": round(elapsed, 3),
+                "request_spacing_ms": int(REQUEST_SPACING_SECONDS * 1000),
                 "successful_requests_per_second": round(len(success) / elapsed, 3),
                 "p50_ms": percentile(success, 50), "p95_ms": percentile(success, 95),
                 "p99_ms": p99, "max_ci_p99_ms": MAX_P99_MS,

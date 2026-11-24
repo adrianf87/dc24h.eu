@@ -16,6 +16,7 @@ def report():
             "evidence": "real-account-admin-node-apache-authenticated-totp",
             "maintenance_mode": True, "hub_readonly_boundary_verified": True,
             "requests": 24, "success": 24, "failure": 0, "concurrency": 2,
+            "request_spacing_ms": 1100,
             "elapsed_seconds": 3.2, "successful_requests_per_second": 7.5,
             "p50_ms": 10, "p95_ms": 25, "p99_ms": 35, "max_ms": 35,
             "max_ci_p99_ms": 2000,
@@ -42,7 +43,7 @@ class RealAuthGateTests(unittest.TestCase):
                 gate.validate(item, sha=SHA, image="ubuntu-24.04")
 
     def test_refuses_missing_faked_or_mismatched_measurements(self):
-        cases = ({"requests": 12}, {"concurrency": 4}, {"success": 23},
+        cases = ({"requests": 12}, {"concurrency": 4}, {"request_spacing_ms": 0}, {"success": 23},
                  {"failure": 1}, {"successful_requests_per_second": 700},
                  {"p50_ms": 90}, {"p99_ms": 2100}, {"p99_ms": float("nan")},
                  {"cpu_mean_percent_one_core": None},

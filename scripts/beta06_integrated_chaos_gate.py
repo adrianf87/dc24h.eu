@@ -48,6 +48,7 @@ def assess(directory, junit, sha, os_image):
     require(type(auth.get("requests")) is int and type(auth.get("success")) is int and
             type(auth.get("failure")) is int and
             auth.get("requests") == 24 and auth.get("success") == 24 and auth.get("failure") == 0 and
+            auth.get("request_spacing_ms") == 1100 and
             auth.get("evidence") == "real-account-admin-node-apache-authenticated-totp" and
             auth.get("maintenance_mode") is True and
             auth.get("hub_readonly_boundary_verified") is True and
