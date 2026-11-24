@@ -76,3 +76,17 @@ test("browser redacted timeline accepts fixed bounded aggregates and refuses pri
   assert.equal(parseRemoteSummaryResponse({ ...status, incidents }), null,
     "legacy unverified source data cannot assert a verified incident stream");
 });
+
+test("retained events are explicitly historical and cannot smuggle private actor fields", () => {
+  const fresh = { ...status, observation: { schema: 1, source_age_ms: 100 } };
+  const incidents = { schema: 1, state: "unknown", events: [], alerts: [],
+    retained: { state: "available", events: [{ kind: "hub_stopped", age_seconds: 3 }] } };
+  assert.deepEqual(parseRemoteSummaryResponse({ ...fresh, incidents })?.incidents?.retained, incidents.retained);
+  for (const retained of [
+    { state: "available", events: [{ kind: "hub_stopped", age_seconds: 0, actor: "private" }] },
+    { state: "unknown", events: [{ kind: "hub_stopped", age_seconds: 0 }] },
+    { state: "available", events: [{ kind: "login_refused", age_seconds: 1 }] },
+    { state: "available", events: Array(13).fill({ kind: "hub_stopped", age_seconds: 1 }) },
+    { state: "available", events: [{ kind: "hub_stopped", age_seconds: -1 }] },
+  ]) assert.equal(parseRemoteSummaryResponse({ ...fresh, incidents: { ...incidents, retained } }), null);
+});

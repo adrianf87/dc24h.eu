@@ -3,10 +3,11 @@
 import type { RemoteEvent } from "./remote-gateway.ts";
 
 export type SecurityAlert = "authentication_denials" | "upstream_outage" |
-  "audit_loss" | "audit_corruption" | "rate_limiter_loss";
+  "audit_loss" | "audit_corruption" | "audit_near_capacity" | "rate_limiter_loss";
 const windowMs = 60_000;
 const alertNames = new Set<SecurityAlert>([
-  "authentication_denials", "upstream_outage", "audit_loss", "audit_corruption", "rate_limiter_loss",
+  "authentication_denials", "upstream_outage", "audit_loss", "audit_corruption",
+  "audit_near_capacity", "rate_limiter_loss",
 ]);
 
 // Periodic audit integrity checks must not be postponed indefinitely by a

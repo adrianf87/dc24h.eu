@@ -105,6 +105,32 @@ test("private bilingual incident timeline remains keyboard-readable on mobile wi
   }
 });
 
+test("retained incidents after restart are labeled historical in EN/PL and allow only local acknowledgment", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  const writes: string[] = [];
+  page.on("request", req => { if (req.method() !== "GET") writes.push(req.url()); });
+  await page.route("**/remote/v1/session", route => route.fulfill({ status: 200,
+    contentType: "application/json", body: JSON.stringify({ schema: 1, authenticated: true,
+      mfa: true, mode: "read-only", csrf: sessionCsrf, expires_in: 600 }) }));
+  await page.route("**/remote/v1/summary", route => route.fulfill({ status: 200,
+    contentType: "application/json", body: JSON.stringify({ ...snapshot,
+      observation: { schema: 1, source_age_ms: 100 },
+      incidents: { schema: 1, state: "unknown", events: [], alerts: [],
+        retained: { state: "available", events: [{ kind: "hub_stopped", age_seconds: 3 }] } },
+    }) }));
+  await page.goto("/remote.html");
+  await expect(page.getByText("Incident history is unavailable or not yet verified; this does not mean the service is healthy.")).toBeVisible();
+  const history = page.getByRole("region", { name: "Retained local incident history (not live)" });
+  await expect(history.getByText(/Hub stopped/)).toBeVisible();
+  await page.getByRole("button", { name: "Polski" }).click();
+  const polish = page.getByRole("region", { name: "Zachowana lokalna historia incydentów (nie na żywo)" });
+  await expect(polish.getByText(/Hub zatrzymany/)).toBeVisible();
+  await page.getByRole("button", { name: "Potwierdź lokalnie" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("status").filter({ hasText: "Potwierdzono tylko na tym ekranie" })).toBeVisible();
+  expect(writes).toEqual([]);
+});
+
 test("remote read-only screen needs a session, supports EN/PL and never offers hub-control mutations", async ({ page }) => {
   let loggedIn = false;
   await page.route("**/remote/v1/session", async (route) => {

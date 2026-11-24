@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { remoteAuditEvents, remoteAuditRecord } from "../server/remote-audit.ts";
 import type { RemoteEvent } from "../server/remote-gateway.ts";
 import { initializeRemoteAuditStore, openRemoteAuditStore } from "../server/remote-audit-store.ts";
+import { archiveStoppedRemoteAudit } from "../server/remote-audit-archive.ts";
 import { chmodSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -117,5 +118,69 @@ test("missing audit chain never silently resets on restart", () => {
     assert.equal(readFileSync(path, "utf8"), retained);
     rmSync(path);
     assert.throws(() => openRemoteAuditStore(path), /ENOENT/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("pre-capacity warning precedes exact write refusal and never resets the audit chain", () => {
+  const dir = mkdtempSync(join(tmpdir(), "dc24h-audit-limit-"));
+  const path = join(dir, "audit.jsonl");
+  try {
+    initializeRemoteAuditStore(path);
+    const store = openRemoteAuditStore(path, 1024);
+    let count = 0;
+    while (!store.capacity().near_limit && count < 10) {
+      store.append("login_refused", 1_700_000_000_000 + count++);
+    }
+    assert.equal(store.capacity().limit_bytes, 1024);
+    assert.equal(store.capacity().near_limit, true, "alert is due before hard cap");
+    assert.equal(store.health().healthy, true);
+    let before = readFileSync(path);
+    assert.ok(before.length < 1024);
+    let refused = false;
+    for (let n = 0; n < 10; n++) {
+      try {
+        store.append("login_refused", 1_700_000_001_000 + count);
+        count++;
+        before = readFileSync(path);
+      } catch (error) {
+        assert.match(String(error), /rotated, corrupted or full/);
+        refused = true;
+        break;
+      }
+    }
+    assert.equal(refused, true);
+    assert.equal(store.health().healthy, false, "write failure locks the audit writer");
+    assert.deepEqual(readFileSync(path), before, "a refused write cannot truncate the original chain");
+    store.close();
+    const recovery = openRemoteAuditStore(path, 1024);
+    assert.equal(recovery.verify(), true);
+    assert.equal(recovery.health().sequence, count);
+    recovery.close();
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("Owner-approved stopped-writer archive preserves every original byte and refuses reuse", () => {
+  const dir = mkdtempSync(join(tmpdir(), "dc24h-audit-archive-"));
+  const path = join(dir, "audit.jsonl"), destination = join(dir, "audit-preserved.jsonl");
+  try {
+    initializeRemoteAuditStore(path);
+    const writer = openRemoteAuditStore(path);
+    writer.append("login_refused", 1_700_000_000_000);
+    writer.append("rate_limited", 1_700_000_000_001);
+    writer.close(); // The real operator must stop systemd before calling the archive CLI.
+    const original = readFileSync(path);
+    assert.throws(() => archiveStoppedRemoteAudit(path, destination, ""), /acknowledgment/);
+    const receipt = archiveStoppedRemoteAudit(path, destination, "OWNER_STOPPED_WRITER_ACK");
+    assert.deepEqual(receipt, { schema: 1, bytes_preserved: original.length, source_retained: true });
+    assert.deepEqual(readFileSync(path), original);
+    assert.deepEqual(readFileSync(destination), original);
+    assert.throws(() => archiveStoppedRemoteAudit(path, destination, "OWNER_STOPPED_WRITER_ACK"), /already exists/);
+    const restarted = openRemoteAuditStore(path);
+    assert.equal(restarted.verify(), true);
+    assert.equal(restarted.health().sequence, 2);
+    restarted.close();
+    writeFileSync(path, readFileSync(path, "utf8").replace('"rate_limited"', '"route_refused"'));
+    assert.throws(() => archiveStoppedRemoteAudit(path, join(dir, "bad.jsonl"), "OWNER_STOPPED_WRITER_ACK"));
+    assert.deepEqual(readFileSync(destination), original, "a bad source must not alter a prior archive");
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

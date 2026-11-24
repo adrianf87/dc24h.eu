@@ -43,6 +43,10 @@ const labels = {
     sourceUnknown: "Unknown",
     timeline: "Recent aggregate service events", noEvents: "No verified transitions recorded in this process.",
     incidentUnknown: "Incident history is unavailable or not yet verified; this does not mean the service is healthy.",
+    retainedTitle: "Retained local incident history (not live)",
+    retainedUnknown: "Retained incident history is unavailable or untrusted.",
+    retainedEmpty: "No retained aggregate events. This is not a complete forensic record.",
+    retainedLimit: "Owner-only, capped local history. A gateway restart or lost audit does not verify service health.",
     alertTitle: "Aggregate security signals", hubStarted: "Hub started", hubStopped: "Hub stopped",
     transportRefused: "Transport security refusal threshold reached", loginRefused: "Authentication refusal threshold reached",
     rateLimitRefused: "Rate-limit refusal threshold reached", secondsAgo: "seconds ago",
@@ -81,6 +85,10 @@ const labels = {
     sourceUnknown: "Nieznane",
     timeline: "Ostatnie zbiorcze zdarzenia usługi", noEvents: "Brak zweryfikowanych zmian stanu w tym procesie.",
     incidentUnknown: "Historia incydentów jest niedostępna albo jeszcze niezweryfikowana; nie oznacza to poprawnego działania usługi.",
+    retainedTitle: "Zachowana lokalna historia incydentów (nie na żywo)",
+    retainedUnknown: "Zachowana historia incydentów jest niedostępna lub niewiarygodna.",
+    retainedEmpty: "Brak zachowanych zdarzeń zbiorczych. To nie jest kompletny dziennik śledczy.",
+    retainedLimit: "Prywatna, ograniczona historia. Restart bramki lub utrata audytu nie potwierdzają poprawnej pracy usługi.",
     alertTitle: "Zbiorcze sygnały bezpieczeństwa", hubStarted: "Hub uruchomiony", hubStopped: "Hub zatrzymany",
     transportRefused: "Próg odmów bezpieczeństwa transportu został osiągnięty",
     loginRefused: "Próg odmów uwierzytelniania został osiągnięty",
@@ -461,6 +469,18 @@ export function RemoteApp() {
                 <p className="remote-hint">{t.noEvents}</p>}
               {freshSummary.incidents.alerts.length > 0 && <p role="status">{t.alertTitle}: {freshSummary.incidents.alerts.length}</p>}
             </div>}
+            {freshSummary.incidents?.retained && <section className="remote-retained"
+              aria-labelledby="retained-incident-title">
+              <h3 id="retained-incident-title">{t.retainedTitle}</h3>
+              <p className="remote-hint">{t.retainedLimit}</p>
+              {freshSummary.incidents.retained.state === "unknown" ?
+                <p role="status" className="remote-unknown">{t.retainedUnknown}</p> :
+                freshSummary.incidents.retained.events.length ?
+                  <ul>{freshSummary.incidents.retained.events.map((event, i) =>
+                    <li key={`${i}-${event.kind}`}>{eventName(event.kind)} · {event.age_seconds +
+                      Math.floor((clock - summaryFetchedAt!) / 1000)} {t.secondsAgo}</li>)}</ul> :
+                  <p className="remote-hint">{t.retainedEmpty}</p>}
+            </section>}
           </section>}
           {freshSummary ? <dl className="remote-grid">{rows.map(([key, value]) =>
             <div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}</dl> : <p>{t.loading}</p>}

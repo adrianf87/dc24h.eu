@@ -12,6 +12,7 @@ import type { PasskeyCeremonies } from "./remote-webauthn.ts";
 import type { PasskeyStore } from "./remote-passkeys.ts";
 import type { RemoteRateLimitStore } from "./remote-rate-limit-store.ts";
 import { aggregateObservability } from "./remote-observability.ts";
+import type { IncidentJournalSink } from "./remote-observability.ts";
 export { isJsonContentType } from "./json-content-type.ts";
 
 type Credentials = { socket: string; token: string };
@@ -31,6 +32,8 @@ export interface RemoteOptions {
   // A promise-based best-effort sink never satisfies strict audit mode.
   strictAudit?: boolean;
   auditHealthy?: () => boolean;
+  // Optional disposable redacted timeline; never grants access to raw audit.
+  incidentJournal?: IncidentJournalSink;
   // No login session can be created without an explicitly configured second factor.
   mfaVerify?: (actor: string, code: string, at: number) => boolean;
   // Only the isolated local gateway passes this pair, never Vite or the public API.
@@ -159,7 +162,7 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
   const enrollments = new Map<string, { challenge: string; expires: number; session: Session }>();
   const budgets = new Map<string, Budget>();
   const requestIds = new WeakMap<ServerResponse, string>();
-  const observability = aggregateObservability(() => performance.now());
+  const observability = aggregateObservability(() => performance.now(), options.incidentJournal);
 
   const log = (event: RemoteEvent): boolean => {
     // Audit integrations are external observers; a failed sink must not crash

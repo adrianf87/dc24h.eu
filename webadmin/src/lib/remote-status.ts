@@ -6,7 +6,9 @@ export type Summary = {
   observation?: { schema: 1; source_age_ms: number };
   incidents?: { schema: 1; state: "observed" | "unknown";
     events: { kind: "hub_started" | "hub_stopped" | "transport_refusals" | "login_refusals" | "rate_limit_refusals"; age_seconds: number }[];
-    alerts: { kind: "transport_refusals" | "login_refusals" | "rate_limit_refusals"; age_seconds: number }[] };
+    alerts: { kind: "transport_refusals" | "login_refusals" | "rate_limit_refusals"; age_seconds: number }[];
+    retained?: { state: "available" | "unknown";
+      events: { kind: "hub_started" | "hub_stopped" | "transport_refusals" | "login_refusals" | "rate_limit_refusals"; age_seconds: number }[] } };
   server: { version: string; running: boolean; uptime_seconds: number };
   network: { active_connections: number; accepted_connections: number };
   users: { online: number; peak_online: number };
@@ -56,7 +58,8 @@ export function parseRemoteSummaryResponse(value: unknown): Summary | null {
   }
   if (root.incidents !== undefined) {
     const incident = record(root.incidents);
-    if (!result.observation || !incident || Object.keys(incident).sort().join(",") !== "alerts,events,schema,state" ||
+    if (!result.observation || !incident ||
+        !["alerts,events,schema,state", "alerts,events,retained,schema,state"].includes(Object.keys(incident).sort().join(",")) ||
         incident.schema !== 1 || !["observed", "unknown"].includes(incident.state as string) ||
         !Array.isArray(incident.events) || incident.events.length > 12 ||
         !Array.isArray(incident.alerts) || incident.alerts.length > 12) return null;
@@ -70,11 +73,26 @@ export function parseRemoteSummaryResponse(value: unknown): Summary | null {
     if (!incident.events.every((e: unknown) => parseEvent(e, false)) ||
         !incident.alerts.every((e: unknown) => parseEvent(e, true)) ||
         (incident.state === "unknown" && (incident.events.length || incident.alerts.length))) return null;
+    let retained: NonNullable<Summary["incidents"]>["retained"];
+    // Retained aggregate events are historical only. They are valid even when
+    // the live C++ source state is unknown, but never imply a healthy hub.
+    if (incident.retained !== undefined) {
+      const historical = record(incident.retained);
+      if (!historical || Object.keys(historical).sort().join(",") !== "events,state" ||
+          !["available", "unknown"].includes(historical.state as string) ||
+          !Array.isArray(historical.events) || historical.events.length > 12 ||
+          !historical.events.every((e: unknown) => parseEvent(e, false)) ||
+          (historical.state === "unknown" && historical.events.length)) return null;
+      retained = { state: historical.state as "available" | "unknown",
+        events: historical.events.map((e: { kind: "hub_started" | "hub_stopped" | "transport_refusals" | "login_refusals" | "rate_limit_refusals"; age_seconds: number }) =>
+          ({ kind: e.kind, age_seconds: e.age_seconds })) };
+    }
     result.incidents = { schema: 1, state: incident.state as "observed" | "unknown",
       events: incident.events.map((e: { kind: "hub_started" | "hub_stopped" | "transport_refusals" | "login_refusals" | "rate_limit_refusals"; age_seconds: number }) =>
         ({ kind: e.kind, age_seconds: e.age_seconds })),
       alerts: incident.alerts.map((e: { kind: "transport_refusals" | "login_refusals" | "rate_limit_refusals"; age_seconds: number }) =>
-        ({ kind: e.kind, age_seconds: e.age_seconds })) };
+        ({ kind: e.kind, age_seconds: e.age_seconds })),
+      ...(retained ? { retained } : {}) };
   }
   if (root.search !== undefined) {
     const search = record(root.search);

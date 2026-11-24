@@ -4,6 +4,7 @@ import { remoteGateway } from "./remote-gateway.ts";
 import { loadTotpVerifier } from "./remote-mfa.ts";
 import { remoteAuditRecord } from "./remote-audit.ts";
 import { openRemoteAuditStore } from "./remote-audit-store.ts";
+import { openIncidentJournal } from "./remote-incident-journal.ts";
 import { openPasskeyStore } from "./remote-passkeys.ts";
 import { passkeyCeremonies, relyingParty } from "./remote-webauthn.ts";
 import { openRemoteRateLimitStore } from "./remote-rate-limit-store.ts";
@@ -34,6 +35,10 @@ relyingParty(origin, rpID);
 // Both files are checked for ownership, mode and symlinks before listening.
 const mfa = loadTotpVerifier(mfaFile, replayFile);
 const auditStore = openRemoteAuditStore(auditFile);
+// Opt-in disposable operator history, separate from the five authoritative
+// private stores. It must be provisioned offline with owner-only permissions.
+const incidentJournal = process.env.DC24H_REMOTE_INCIDENT_FILE ?
+  openIncidentJournal(process.env.DC24H_REMOTE_INCIDENT_FILE) : undefined;
 const passkeyStore = openPasskeyStore(passkeyFile, rpID);
 const rateLimits = openRemoteRateLimitStore(rateLimitFile, config.token);
 const monitor = createRemoteSecurityMonitor(line => { process.stderr.write(line); });
@@ -41,6 +46,7 @@ const verifyAudit = createPeriodicAuditVerifier(() => auditStore.verify());
 let nextDiagnosticLogAt = 0;
 const app = createServer(remoteGateway(config, {
   origin,
+  incidentJournal,
   diagnostic: (requestId, outcome) => {
     // Bounded, nonidentifying outage-only breadcrumbs. Normal activity and
     // authentication failures never create high-volume per-user logs.
@@ -60,6 +66,7 @@ const app = createServer(remoteGateway(config, {
     // Rehash the complete (8 MiB maximum) chain periodically, including
     // periods without authentication writes. A detected gap fails closed.
     if (!verifyAudit(now)) { monitor.signal("audit_corruption", now); return false; }
+    if (auditStore.capacity().near_limit) monitor.signal("audit_near_capacity", now);
     return true;
   },
   // Durable fsync-checked file first. journald mirrors fixed, privacy-limited
@@ -72,6 +79,7 @@ const app = createServer(remoteGateway(config, {
       process.stderr.write("[remote-gateway] AUDIT_LOSS: sink unavailable; authenticated access refused\n");
       throw new Error("Gateway audit unavailable");
     }
+    if (auditStore.capacity().near_limit) monitor.signal("audit_near_capacity", now);
     monitor.observe(event, now);
     try { process.stdout.write(remoteAuditRecord(event, Date.now())); }
     catch { /* Journald mirror is secondary to the durable audit store. */ }

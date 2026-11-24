@@ -2,6 +2,7 @@
 // The gateway receives only the C++-validated aggregate projection. No data
 // persists across restart: absence of memory is unknown, never healthy.
 import type { RemoteStatusProjection } from "../src/lib/status.ts";
+import type { RetainedIncidents } from "./remote-incident-journal.ts";
 
 export type RedactedAlertKind = "transport_refusals" | "login_refusals" | "rate_limit_refusals";
 export type RedactedEventKind = "hub_started" | "hub_stopped" | RedactedAlertKind;
@@ -16,7 +17,13 @@ const sampleValidityMs = 45_000;
 const threshold = 5;
 const alertCooldownMs = 60_000;
 
-export function aggregateObservability(monotonic: () => number) {
+export type IncidentJournalSink = {
+  append: (kind: RedactedEventKind) => void;
+  read: () => RetainedIncidents;
+  unavailable: () => void;
+};
+
+export function aggregateObservability(monotonic: () => number, journal?: IncidentJournalSink) {
   const events: { kind: RedactedEventKind; at: number }[] = [];
   let last: { running: boolean; rejects: number; uptime: number; at: number } | undefined;
   let lastClockAt: number | undefined;
@@ -40,6 +47,10 @@ export function aggregateObservability(monotonic: () => number) {
   const emit = (kind: RedactedEventKind, at: number) => {
     events.push({ kind, at });
     if (events.length > maximumEvents) events.shift();
+    // A journal is optional and never becomes an authentication authority.
+    // If it fails, report unknown retained history without crashing C++ auth.
+    try { journal?.append(kind); }
+    catch { journal?.unavailable(); }
   };
   const validClock = (at: number) => {
     if (!Number.isFinite(at) || at < 0 ||
@@ -96,20 +107,22 @@ export function aggregateObservability(monotonic: () => number) {
       lastAuditAlert[kind] = at;
     }
   };
-  const auditLost = () => { reset(); };
+  const auditLost = () => { reset(); journal?.unavailable(); };
   const sourceUnavailable = () => { reset(); };
   const read = () => {
     const at = monotonic();
     if (!validClock(at) || (last && at - last.at > sampleValidityMs)) {
       reset();
-      return { schema: 1 as const, state: "unknown" as const, events: [] as RedactedEvent[], alerts: [] as RedactedAlert[] };
+      return { schema: 1 as const, state: "unknown" as const, events: [] as RedactedEvent[], alerts: [] as RedactedAlert[],
+        ...(journal ? { retained: journal.read() } : {}) };
     }
     prune(at);
     const visible: RedactedEvent[] = events.map(e => ({ kind: e.kind,
       age_seconds: Math.floor((at - e.at) / 1000) }));
     return { schema: 1 as const, state: last ? "observed" as const : "unknown" as const,
       events: visible, alerts: visible.filter((e): e is RedactedAlert =>
-        e.kind === "transport_refusals" || e.kind === "login_refusals" || e.kind === "rate_limit_refusals") };
+        e.kind === "transport_refusals" || e.kind === "login_refusals" || e.kind === "rate_limit_refusals"),
+      ...(journal ? { retained: journal.read() } : {}) };
   };
   return { observe, observeAudit, auditLost, sourceUnavailable, read };
 }
