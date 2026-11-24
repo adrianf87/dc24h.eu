@@ -209,7 +209,8 @@ export function RemoteApp() {
     const timer = window.setInterval(() => { void load(); }, 15000);
     return () => {
       window.clearInterval(timer);
-      sessionEpoch.current++;
+      // invalidate() and session rotation already advance the epoch. Advancing
+      // it here races a pending logout when authorized -> loading rerenders.
     };
     // Session changes drive polling; no retry is scheduled on auth failure.
   }, [state]);
