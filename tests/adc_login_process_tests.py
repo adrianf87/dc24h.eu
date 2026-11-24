@@ -2,6 +2,7 @@
 import base64
 import ctypes
 import pathlib
+import sys
 import socket
 import tempfile
 import time
@@ -9,6 +10,9 @@ import unittest
 
 from network_process_tests import Hub
 from tls_support import credentials, connect_tls
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / 'scripts'))
+from stage4_perf_probe import process_cpu_seconds, rss_kib
 
 HUB_WELCOME = b'IMSG Welcome\\sto\\sdc24h.eu.\\sGuest\\saccess\\sis\\senabled.'
 
@@ -194,6 +198,43 @@ class LoginProcessTests(unittest.TestCase):
                 healthy.login(b'Healthy', 8)
                 hub.stop()
                 self.assertIn(b'event=login_ready', hub.log)
+
+    def test_beta06_slow_reader_releases_budget_and_healthy_peers_remain_fair(self):
+        for encrypted in (False, True):
+            with self.subTest(encrypted=encrypted):
+                hub, cert = self.hub(output_timeout=1)
+                pid = hub.process.pid
+                cpu_before = process_cpu_seconds(pid)
+                slow = self.peer(hub, cert, encrypted)
+                slow.peer.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1024)
+                slow.login(b'BudgetSlow', 160)
+                slow.peer.settimeout(0.25)
+                frame = b'BSTA ' + slow.sid + b' 199 ' + b'Z' * 2048 + b'\n'
+                try:
+                    slow.peer.sendall(frame * 2000)
+                except (OSError, socket.timeout):
+                    pass
+                hub.wait_for(lambda: b'event=output_limit' in hub.log or b'event=output_timeout' in hub.log)
+                fast = self.peer(hub, cert, encrypted)
+                fast.login(b'BudgetFast', 161)
+                second = self.peer(hub, cert, encrypted)
+                second.login(b'BudgetSecond', 162)
+                self.assertTrue(fast.line().startswith(b'BINF ' + second.sid + b' '))
+                begin = time.monotonic()
+                for i in range(8):
+                    wire = b'BSTA ' + fast.sid + b' 000 FairProbe' + str(i).encode()
+                    fast.send(wire)
+                    self.assertEqual(fast.line(), wire)
+                    self.assertEqual(second.line(), wire)
+                self.assertLess(time.monotonic() - begin, 5.0)
+                memory = rss_kib(pid)
+                cpu_after = process_cpu_seconds(pid)
+                self.assertIsNotNone(memory)
+                self.assertLess(memory, 256 * 1024, 'Synthetic 3-peer RSS safety limit in KiB')
+                self.assertIsNotNone(cpu_before)
+                self.assertIsNotNone(cpu_after)
+                self.assertLessEqual(cpu_after - cpu_before, 12.0, 'Synthetic overload CPU budget in seconds')
+                hub.stop()
 
 
 
