@@ -120,8 +120,11 @@ test("real virtual authenticator authenticates after fresh private-file restore 
     expect(enrolled).toBe(200);
     expect(store.forActor("7")).toHaveLength(1);
 
-    // Stop all writes to the synthetic source before the same recovery tool
-    // used in isolated Ubuntu VM tests copies and verifies all five stores.
+    // Close the actual HTTPS writer before asserting --ack-stopped. The
+    // authenticator retains its key in Chromium while we snapshot offline.
+    await new Promise<void>(resolve => server.close(() => resolve()));
+    // The same recovery tool as the Ubuntu VM tests copies and verifies all
+    // five stores, creating fresh directories with owner-only permissions.
     const recovery = (action: "snapshot" | "restore", from: string, to: string) =>
       spawnSync("python3", [recoveryScript, action, "--source", from,
         "--destination", to, "--ack-stopped", "--ack-isolated"],
@@ -135,6 +138,10 @@ test("real virtual authenticator authenticates after fresh private-file restore 
     }
     store = openPasskeyStore(restoredFile, "localhost");
     ceremonies = passkeyCeremonies(store, origin, "localhost");
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(Number(new URL(origin).port), "localhost", resolve);
+    });
     const assertion = await page.evaluate(async () => {
       const bytes = (s: string) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(s.length / 4) * 4, "=")), c => c.charCodeAt(0));
       const optionsResponse = await fetch("/login/options", { method: "POST", body: JSON.stringify({ actor: "7", password: "synthetic-password" }) });

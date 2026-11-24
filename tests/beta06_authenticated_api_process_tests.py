@@ -419,8 +419,11 @@ def run(binary, seeder, account_admin):
             # did not reauthenticate through a *restored* C++/Node instance.
             # Stop all application writers and checkpoint the actual synthetic
             # gateway session, MFA replay, audit, limiter and passkey files.
-            terminate(node); node = None
-            terminate(cpp); cpp = None
+            previous_node, previous_cpp = node, cpp
+            terminate(previous_node); node = None
+            terminate(previous_cpp); cpp = None
+            if previous_node.poll() is None or previous_cpp.poll() is None:
+                raise AssertionError("Application writers were not stopped before capture")
             with tempfile.TemporaryDirectory(prefix="dc24h-beta06-revoked-") as revoked_temp:
                 revoked_root = Path(revoked_temp) / "private"
                 revoked_root.mkdir(mode=0o700)
@@ -433,13 +436,20 @@ def run(binary, seeder, account_admin):
             # so keep SQL, manifest and restore staging under this separate
             # owner-only 0700 directory instead of weakening its checks.
             snapshot = recovery_root / "snapshot"
-            matched.private.snapshot(gateway_dir, snapshot)
             dump = recovery_root / "checkpoint.sql"
-            db.dump(dump)
             pair = recovery_root / "pair"
             pair.mkdir(mode=0o700)
-            matched.bundle.create_pair(dump, snapshot, pair, sha)
-            matched.bundle.verified_pair(dump, snapshot, pair / matched.bundle.NAME, sha)
+            with db.locked_offline_capture():
+                before = {name: matched.bundle.private_hash(gateway_dir / name, maximum)
+                          for name, maximum in matched.private.FILES.items()}
+                db.dump(dump)
+                matched.private.snapshot(gateway_dir, snapshot)
+                matched.bundle.create_pair(dump, snapshot, pair, sha)
+                matched.bundle.verified_pair(dump, snapshot, pair / matched.bundle.NAME, sha)
+                after = {name: matched.bundle.private_hash(gateway_dir / name, maximum)
+                         for name, maximum in matched.private.FILES.items()}
+                if before != after:
+                    raise AssertionError("Private gateway changed while application writers were stopped")
             db.stop()
 
             recovered_db = matched.IsolatedDatabase(base / "recovered-sql")
