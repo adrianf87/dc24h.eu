@@ -29,10 +29,14 @@ def inventory(root: Path, source_sha: str, os_image: str, checked_out_sha: str):
     lockbytes = lockfile.read_bytes()
     lock = json.loads(lockbytes)
     package = json.loads(packagefile.read_bytes())
-    if lock.get("lockfileVersion") != 3 or lock.get("name") != package.get("name") or (
+    if (lock.get("lockfileVersion") != 3 or lock.get("name") != package.get("name") or
+            lock.get("version") != package.get("version") or
             not isinstance(lock.get("packages"), dict) or "" not in lock["packages"]):
         raise ValueError("Missing immutable npm lock inventory")
     root_package = lock["packages"][""]
+    if (root_package.get("name") != package.get("name") or
+            root_package.get("version") != package.get("version")):
+        raise ValueError("Inconsistent npm package/lock candidate identity")
     for kind in ("dependencies", "devDependencies"):
         if root_package.get(kind) != package.get(kind):
             raise ValueError("Unreviewed direct package dependency drift")
@@ -61,7 +65,10 @@ def inventory(root: Path, source_sha: str, os_image: str, checked_out_sha: str):
                            "version": entry["version"],
                            "integrity_sha256": hashlib.sha256(entry["integrity"].encode("ascii")).hexdigest()})
     actions = set()
-    workflows = sorted((root / ".github/workflows").glob("*.yml"))
+    # Both GitHub-supported workflow extensions must be scanned. Otherwise an
+    # unpinned action in a newly added .yaml workflow would evade the gate.
+    workflow_dir = root / ".github/workflows"
+    workflows = sorted(list(workflow_dir.glob("*.yml")) + list(workflow_dir.glob("*.yaml")))
     if not workflows:
         raise ValueError("No reviewable workflows")
     for workflow in workflows:

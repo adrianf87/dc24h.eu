@@ -60,6 +60,26 @@ class SupplyChainTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Missing authenticated npm"):
                 supply.inventory(new, HEAD, "ubuntu-24.04", HEAD)
 
+    def test_yaml_extension_and_root_lock_version_drift_are_not_invisible(self):
+        with tempfile.TemporaryDirectory() as directory:
+            new = Path(directory)
+            (new / "webadmin").mkdir()
+            (new / ".github/workflows").mkdir(parents=True)
+            original = json.loads((ROOT / "webadmin/package-lock.json").read_text())
+            (new / "webadmin/package.json").write_bytes((ROOT / "webadmin/package.json").read_bytes())
+            (new / "webadmin/package-lock.json").write_text(json.dumps(original))
+            (new / ".github/workflows/pinned.yml").write_text(
+                "steps:\n  - uses: actions/checkout@" + "a" * 40 + "\n")
+            (new / ".github/workflows/unpinned.yaml").write_text(
+                "steps:\n  - uses: actions/cache@v4\n")
+            with self.assertRaisesRegex(ValueError, "Unpinned"):
+                supply.inventory(new, HEAD, "ubuntu-24.04", HEAD)
+            (new / ".github/workflows/unpinned.yaml").unlink()
+            original["packages"][""]["version"] = "0.6.20"
+            (new / "webadmin/package-lock.json").write_text(json.dumps(original))
+            with self.assertRaisesRegex(ValueError, "Inconsistent npm"):
+                supply.inventory(new, HEAD, "ubuntu-24.04", HEAD)
+
 
 if __name__ == "__main__":
     unittest.main()

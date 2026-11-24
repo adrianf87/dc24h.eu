@@ -31,6 +31,10 @@ def nonnegative(value):
     return type(value) in (int, float) and math.isfinite(value) and value >= 0
 
 
+def measured_percentile(samples, fraction):
+    return round(samples[math.ceil(len(samples) * fraction) - 1], 3)
+
+
 def evaluate(sha, os_image, adc_data, https_data):
     if (not SHA.fullmatch(sha) or os_image not in ("ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04") or
             adc_data.get("schema") != 1 or adc_data.get("source_sha") != sha or
@@ -64,8 +68,18 @@ def evaluate(sha, os_image, adc_data, https_data):
                         "successful_requests_per_second"):
                 if not nonnegative(row.get(key)):
                     raise ValueError("Invalid numeric latency/throughput")
+            samples = row.get("latency_samples_ms")
+            if (not isinstance(samples, list) or len(samples) != policy["requests"] or
+                    any(not nonnegative(value) for value in samples) or
+                    samples != sorted(samples) or
+                    any(not math.isclose(row[key], measured_percentile(samples, fraction),
+                                         rel_tol=0, abs_tol=0.005)
+                        for key, fraction in (("p50_ms", 0.50), ("p95_ms", 0.95),
+                                              ("p99_ms", 0.99)))):
+                raise ValueError("Percentiles are not backed by matching measured latencies")
             if (not 0 < row["elapsed_seconds"] or not 0 < row["successful_requests_per_second"] or
                     not row["p50_ms"] <= row["p95_ms"] <= row["p99_ms"] or
+                    row["elapsed_seconds"] * 1000 < max(samples) or
                     not math.isclose(row["successful_requests_per_second"],
                                      policy["requests"] / row["elapsed_seconds"],
                                      rel_tol=0.02, abs_tol=0.005)):
@@ -80,10 +94,21 @@ def evaluate(sha, os_image, adc_data, https_data):
                 rss_start.append(sum(before.values()))
                 rss_end.append(sum(after.values()))
                 cpu = row.get("cpu_mean_percent_one_core")
+                by_process = row.get("cpu_mean_percent_one_core_by_process")
+                if (not isinstance(by_process, dict) or set(by_process) != set(before) or
+                        any(not nonnegative(value) for value in by_process.values()) or
+                        not nonnegative(cpu) or
+                        not math.isclose(cpu, sum(by_process.values()),
+                                         rel_tol=0, abs_tol=0.005)):
+                    raise ValueError("Missing or contradictory C++/Node/Apache CPU measurements")
             else:
                 if not all(nonnegative(row.get(k)) for k in (
                         "target_rss_before_kib", "target_rss_after_kib", "target_cpu_mean_percent_one_core")):
                     raise ValueError("Missing native C++ CPU/RSS observation")
+                if (row.get("target") != "127.0.0.1 only" or
+                        row["target_rss_before_kib"] <= 0 or row["target_rss_after_kib"] <= 0 or
+                        row.get("failure") != 0 or row.get("error_kinds", {}) != {}):
+                    raise ValueError("Unsafe or incomplete native transport observation")
                 rss_start.append(row["target_rss_before_kib"])
                 rss_end.append(row["target_rss_after_kib"])
                 cpu = row["target_cpu_mean_percent_one_core"]

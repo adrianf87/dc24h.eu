@@ -6,6 +6,8 @@
 
 Wyłącznie GitHub-hosted Ubuntu 22.04/24.04/26.04. Trzy okna w każdym profilu: ADC i ADCS — po **32 żądania**, współbieżność 4, tempo docelowe 8/s; uwierzytelniony HTTPS C++→Node→Apache — po **8 żądań** hasło+TOTP, współbieżność 2 i odstępy zgodne z limiterem. Raporty muszą podawać p50/p95/p99, RPS poprawnych żądań, błędy, czas oraz obserwacje CPU/RSS. Obowiązują wcześniej ustalone szerokie limity regresji CI. **Nie porównuj bezpośrednio RPS różnych protokołów**, ich koszt uwierzytelnienia i obciążenie się różnią. Żaden wynik nie jest pomiarem wydajności produkcyjnego serwera Debian/Xeon ani gwarancją SLA.
 
+**Fix Pass 5:** walidator ponownie wylicza percentyle z posortowanych czasów syntetycznych żądań, sprawdza oddzielne CPU C++/Node/Apache, liczbę próbek i limity, a końcowa bramka sprawdza czasy przypadków przeciążeniowych i zgodność rzeczywistego lockfile. Szczegóły: [raport Fix Pass 5](BETA_0.7_FIX_PASS_5.md). Nadal wymagana jest niezależna weryfikacja pochodzenia wyników GitHub CI.
+
 ## 0.7.18 — przeciążenie i zakończenie pracy
 
 Izolowane testy procesu sprawdzają półotwarte TLS, powolne czytanie ADC/ADCS, zaległy bufor, odmowy i limity kolejek, równoległego zdrowego klienta, reconnect oraz SIGTERM/drain. Dodatkowa bramka `beta07_bounded_fault_gate.py` wymaga przejścia pięciu zestawów CTest w limicie **240 sekund na przypadek**. Wewnętrzne testy mają własne ostrzejsze granice kolejek, pamięci i zamknięcia. ASan/UBSan nadal są obowiązkowe. Raport zawiera tylko stałe nazwy przypadków i czas — nigdy surowe logi ani dane klientów.

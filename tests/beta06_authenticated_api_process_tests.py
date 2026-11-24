@@ -389,8 +389,13 @@ def run(binary, seeder, account_admin):
                                 "p50_ms": percentile(successes, 50) if successes else None,
                                 "p95_ms": percentile(successes, 95) if successes else None,
                                 "p99_ms": percentile(successes, 99) if successes else None,
+                                "latency_samples_ms": sorted(round(value, 3) for value in successes),
                                 "rss_before_kib": window_rss_before,
                                 "rss_after_kib": window_rss_after,
+                                "cpu_mean_percent_one_core_by_process": {
+                                    name: round(100 * (window_cpu_after[name] - window_cpu_before[name]) /
+                                                window_elapsed, 3) for name in processes
+                                },
                                 "cpu_mean_percent_one_core": round(100 * sum(
                                     window_cpu_after[name] - window_cpu_before[name] for name in processes
                                 ) / window_elapsed, 3), "production_sla_claim": False})

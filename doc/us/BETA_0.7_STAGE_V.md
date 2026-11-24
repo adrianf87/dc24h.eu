@@ -8,6 +8,8 @@ The existing `scripts/beta07_ubuntu_perf_matrix.py` accepts **exactly three** wi
 
 The workload sizes and authentication costs **differ**, therefore comparing the resulting ADC, ADCS and HTTPS RPS numerically as if they were interchangeable is prohibited. A GitHub-hosted VM is not the Owner's Debian/Xeon deployment. No capacity, availability or latency SLA is implied. Required file: redacted `beta07-transport-performance.json` bound to source SHA and Ubuntu image.
 
+**Fix Pass 5 hardening:** numeric-only loopback probe reports include sorted successful-request latency samples, allowing the gate to recompute p50/p95/p99 instead of trusting aggregate claims. Authenticated HTTPS separately records C++/Node/Apache CPU observations. The final release gate verifies numeric envelopes, fault-suite durations and the actual checked-out npm lock digest. See [Fix Pass 5 review](BETA_0.7_FIX_PASS_5.md); remote GitHub artifact authenticity still requires separate verification.
+
 ## 0.7.18 — bounded exhaustion and graceful drain
 
 The disposable CTest suite exercises real half-open TLS, slow-read TCP/ADCS peers, pending output, connection bursts, rejection budgets, healthy concurrent peers, reconnect and repeated SIGTERM/drain. `scripts/beta07_bounded_fault_gate.py` rejects skipped, failed, duplicate or missing fault suites and observations over the predeclared **240-second per-case CI terminal envelope**. This is a coarse outer CI timeout **in addition** to the stricter socket/queue/heap bounds asserted by the real process tests. It records only fixed testcase names and execution seconds; no raw peer data, logs or credentials enter `beta07-bounded-faults.json`.

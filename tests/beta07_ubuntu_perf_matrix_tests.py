@@ -21,9 +21,10 @@ def data():
             "requests": 32, "success": 32, "failure": 0, "capacity_claim": False,
             "concurrency": 4, "configured_rate_per_second": 8,
             "p50_ms": 4.0, "p95_ms": 10.0, "p99_ms": 12.0,
+            "latency_samples_ms": [4.0] * 16 + [10.0] * 15 + [12.0],
             "elapsed_seconds": 4.0, "successful_requests_per_second": 8.0,
             "target_rss_before_kib": 1000, "target_rss_after_kib": 1050,
-            "target_cpu_mean_percent_one_core": 15.0,
+            "target_cpu_mean_percent_one_core": 15.0, "error_kinds": {},
         } for _ in range(3)]
     https = {"schema": 1, "source_sha": SHA, "os_image": OS,
              "beta07_three_windows": []}
@@ -31,11 +32,14 @@ def data():
         https["beta07_three_windows"].append({
             "schema": 1, "window": i + 1, "requests": 8, "success": 8, "failure": 0,
             "concurrency": 2, "rate_limit_safe_batch_spacing_ms": 2200,
-            "p50_ms": 20.0, "p95_ms": 30.0, "p99_ms": 40.0,
+            "p50_ms": 20.0, "p95_ms": 40.0, "p99_ms": 40.0,
+            "latency_samples_ms": [20.0] * 4 + [30.0] * 3 + [40.0],
             "elapsed_seconds": 8.0, "successful_requests_per_second": 1.0,
             "rss_before_kib": {"account_admin": 1000, "gateway": 2000, "apache": 3000},
             "rss_after_kib": {"account_admin": 1100, "gateway": 2100, "apache": 3100},
             "cpu_mean_percent_one_core": 20.0, "production_sla_claim": False,
+            "cpu_mean_percent_one_core_by_process": {
+                "account_admin": 8.0, "gateway": 7.0, "apache": 5.0},
         })
     return adc, https
 
@@ -60,6 +64,11 @@ class MatrixTests(unittest.TestCase):
             lambda a, h: h["beta07_three_windows"][0].update(failure=1),
             lambda a, h: h["beta07_three_windows"][0]["rss_before_kib"].update(apache=None),
             lambda a, h: h["beta07_three_windows"][0].update(rate_limit_safe_batch_spacing_ms=0),
+            lambda a, h: a["windows"]["adc"][0].update(p99_ms=1),
+            lambda a, h: a["windows"]["adc"][0].update(latency_samples_ms=[1] * 32),
+            lambda a, h: h["beta07_three_windows"][0].update(p50_ms=0),
+            lambda a, h: h["beta07_three_windows"][0].update(latency_samples_ms=[20] * 7),
+            lambda a, h: h["beta07_three_windows"][0]["cpu_mean_percent_one_core_by_process"].update(gateway=0),
         ):
             with self.subTest(damage=damage):
                 adc, https = copy.deepcopy(base_adc), copy.deepcopy(base_https)
