@@ -272,5 +272,18 @@ test("passkey gateway binds login and enrollment to one-use challenges, password
     resumeEnrollment();
     assert.equal((await lateOptions).status, 403,
       "logout during ceremony generation must not expose enrollment options");
+
+    // A wall-clock reversal must invalidate a password-authorized pending
+    // WebAuthn assertion instead of prolonging the challenge lifetime.
+    const clockStart = await call("challenge");
+    const clockCsrf = JSON.parse(clockStart.body).csrf as string;
+    const clockOptions = await call("passkey/login/options", "POST", { actor_id: "7", password: "correct" },
+      csrfHeader(clockCsrf, clockStart.cookies[0]!.split(";")[0]!));
+    assert.equal(clockOptions.status, 200);
+    now -= 2_000;
+    const clockFinish = await call("passkey/login/finish", "POST", { response: { valid: true } },
+      csrfHeader(clockCsrf, clockOptions.cookies[0]!.split(";")[0]!));
+    assert.equal(clockFinish.status, 403, "old WebAuthn challenge must be rejected after clock rollback");
+    assert.ok(!clockFinish.cookies.some(value => value.startsWith("dc24h_remote=")));
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

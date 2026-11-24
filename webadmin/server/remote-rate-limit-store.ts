@@ -16,10 +16,13 @@ const hashPattern = /^[0-9a-f]{64}$/;
 function validate(value: unknown): value is State {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const v = value as Partial<State>;
-  if (v.schema !== 1 || !Array.isArray(v.buckets) || v.buckets.length > maxBuckets) return false;
+  if (Object.keys(v).sort().join(",") !== "buckets,schema" || v.schema !== 1 ||
+      !Array.isArray(v.buckets) || v.buckets.length > maxBuckets) return false;
   const keys = new Set<string>();
   for (const b of v.buckets) {
-    if (!b || typeof b.key !== "string" || !hashPattern.test(b.key) || keys.has(b.key) ||
+    if (!b || typeof b !== "object" || Array.isArray(b) ||
+        Object.keys(b).sort().join(",") !== "count,key,starts" ||
+        typeof b.key !== "string" || !hashPattern.test(b.key) || keys.has(b.key) ||
         !Number.isSafeInteger(b.count) || b.count < 1 || b.count > 1_000_000 || !validTime(b.starts)) return false;
     keys.add(b.key);
   }

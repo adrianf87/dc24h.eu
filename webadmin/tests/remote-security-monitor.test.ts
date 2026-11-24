@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createRemoteSecurityMonitor } from "../server/remote-security-monitor.ts";
+import { createPeriodicAuditVerifier, createRemoteSecurityMonitor } from "../server/remote-security-monitor.ts";
 
 test("security monitor emits bounded reason-only alerts with cooldown", () => {
   const lines: string[] = [];
@@ -38,4 +38,18 @@ test("clock reversal renews one privacy-only alert and throttles the next burst"
   assert.equal(messages.length, 2);
   assert.deepEqual(messages.map(message => JSON.parse(message).reason), ["audit_loss", "audit_loss"]);
   assert.ok(messages.every(message => !/actor|password|cookie|token|credential|source_ip/.test(message)));
+});
+
+test("audit integrity rechecks immediately after a backwards clock adjustment", () => {
+  let scans = 0;
+  let valid = true;
+  const check = createPeriodicAuditVerifier(() => { scans++; return valid; });
+  assert.equal(check(200_000), true);
+  assert.equal(check(205_000), true);
+  assert.equal(scans, 1, "normal 15-second window avoids unnecessary rescanning");
+  valid = false;
+  assert.equal(check(100_000), false, "a rollback must not postpone corruption detection");
+  assert.equal(scans, 2);
+  assert.equal(check(100_001), false, "a failed audit integrity check permanently revokes availability");
+  assert.equal(check(-1), false, "invalid clock values fail closed");
 });

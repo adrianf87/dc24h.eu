@@ -578,7 +578,9 @@ test("a session created after delayed login authorization gets a fresh lifetime"
   });
   const pendingLogin = h.login();
   await pendingAuth;
-  h.advance(600_001);
+  // The lifetime starts after authorization, but the one-use challenge must
+  // still be within its two-minute acceptance window.
+  h.advance(60_001);
   h.state.managementGate = async () => {};
   release();
   const loggedIn = await pendingLogin;
@@ -587,6 +589,21 @@ test("a session created after delayed login authorization gets a fresh lifetime"
   assert.equal((await h.call("/remote/v1/session", "GET", "", { cookie })).status, 200);
   h.advance(120_001);
   assert.equal((await h.call("/remote/v1/session", "GET", "", { cookie })).status, 401);
+});
+
+test("authentication cannot mint a session after its challenge expires during C++ grant verification", async () => {
+  const h = harness();
+  let release!: () => void;
+  let entered!: () => void;
+  const started = new Promise<void>(resolve => { entered = resolve; });
+  h.state.managementGate = () => new Promise<void>(resolve => { release = resolve; entered(); });
+  const pending = h.login();
+  await started;
+  h.advance(120_001);
+  release();
+  const refused = await pending;
+  assert.equal(refused.status, 403);
+  assert.ok(!refused.cookies.some(value => value.startsWith("dc24h_remote=")));
 });
 
 test("browser sessions have independent CSRF tokens and logout revokes only its own cookie", async () => {
@@ -667,6 +684,27 @@ test("absolute session lifetime expires at ten minutes despite regular activity"
   h.advance(60_000);
   assert.equal((await h.call("/remote/v1/summary", "GET", "", { cookie })).status, 401);
   assert.equal(h.calls.includes("GET /api/v1/status"), false);
+});
+
+test("backwards clock jumps revoke sessions and previously issued login challenges", async () => {
+  const h = harness();
+  const authenticated = await h.login();
+  assert.equal(authenticated.status, 200);
+  const session = authenticated.cookies[0]!.split(";")[0]!;
+  h.advance(-30_000);
+  assert.equal((await h.call("/remote/v1/session", "GET", "", { cookie: session })).status, 401,
+    "a wall-clock rollback cannot extend an already authenticated browser session");
+  const issued = await h.call("/remote/v1/challenge");
+  assert.equal(issued.status, 200);
+  const challenge = JSON.parse(issued.body).csrf as string;
+  const accessBefore = h.calls.filter(c => c === "POST /api/v1/admin/access").length;
+  h.advance(-5_000);
+  const result = await h.call("/remote/v1/login", "POST",
+    JSON.stringify({ actor_id: "7", password: "correct", otp: "000000" }), {
+      cookie: issued.cookies[0]!.split(";")[0]!, "x-dc24h-remote-csrf": challenge,
+    });
+  assert.equal(result.status, 403, "old challenge cannot become valid for a longer period");
+  assert.equal(h.calls.filter(c => c === "POST /api/v1/admin/access").length, accessBefore);
 });
 
 test("concurrent reuse of a login challenge authenticates at most once", async () => {

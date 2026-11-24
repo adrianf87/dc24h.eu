@@ -43,6 +43,14 @@ test("unsafe files, concurrent writers, corruption and outside replacement fail 
     rmSync(path);
     writeFileSync(path, '{"schema":1,"buckets":[{"key":"bad"}]}', { mode: 0o600 });
     assert.throws(() => openRemoteRateLimitStore(path, secret), /Invalid rate-limit catalog/);
+    writeFileSync(path, '{"schema":1,"buckets":[],"ignore_quota":true}', { mode: 0o600 });
+    assert.throws(() => openRemoteRateLimitStore(path, secret), /Invalid rate-limit catalog/,
+      "an unexpected top-level field is evidence of unreviewed or corrupt private state");
+    writeFileSync(path, JSON.stringify({ schema: 1, buckets: [
+      { key: "0".repeat(64), count: 2, starts: 10, ignore_quota: true },
+    ] }), { mode: 0o600 });
+    assert.throws(() => openRemoteRateLimitStore(path, secret), /Invalid rate-limit catalog/,
+      "unexpected per-actor bucket fields must also fail closed");
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 

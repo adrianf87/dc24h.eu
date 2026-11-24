@@ -7,7 +7,7 @@ import { openRemoteAuditStore } from "./remote-audit-store.ts";
 import { openPasskeyStore } from "./remote-passkeys.ts";
 import { passkeyCeremonies, relyingParty } from "./remote-webauthn.ts";
 import { openRemoteRateLimitStore } from "./remote-rate-limit-store.ts";
-import { createRemoteSecurityMonitor } from "./remote-security-monitor.ts";
+import { createPeriodicAuditVerifier, createRemoteSecurityMonitor } from "./remote-security-monitor.ts";
 
 // Explicitly local-only. A public listener or MFA-free deployment is not
 // supported by this development release.
@@ -37,7 +37,7 @@ const auditStore = openRemoteAuditStore(auditFile);
 const passkeyStore = openPasskeyStore(passkeyFile, rpID);
 const rateLimits = openRemoteRateLimitStore(rateLimitFile, config.token);
 const monitor = createRemoteSecurityMonitor(line => { process.stderr.write(line); });
-let nextAuditVerification = 0;
+const verifyAudit = createPeriodicAuditVerifier(() => auditStore.verify());
 const app = createServer(remoteGateway(config, {
   origin,
   passkeys: { store: passkeyStore, ceremonies: passkeyCeremonies(passkeyStore, origin, rpID) },
@@ -49,10 +49,7 @@ const app = createServer(remoteGateway(config, {
     if (!auditStore.health().healthy) { monitor.signal("audit_loss", now); return false; }
     // Rehash the complete (8 MiB maximum) chain periodically, including
     // periods without authentication writes. A detected gap fails closed.
-    if (now >= nextAuditVerification) {
-      nextAuditVerification = now + 15_000;
-      if (!auditStore.verify()) { monitor.signal("audit_corruption", now); return false; }
-    }
+    if (!verifyAudit(now)) { monitor.signal("audit_corruption", now); return false; }
     return true;
   },
   // Durable fsync-checked file first. journald mirrors fixed, privacy-limited

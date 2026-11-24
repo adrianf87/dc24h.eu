@@ -40,3 +40,13 @@ Podmień `YOUR_FIXED_RP_ID` na rzeczywisty RP ID. Narzędzie tworzy wyłącznie 
 Po czterech patchach wykonujemy pełne CI na **GitHub-hosted Ubuntu 22.04/24.04/26.04**: C++ Debug/Release, WebAdmin, ASan/UBSan, negatywne WebAuthn/CSRF/sesje, browser E2E, testy audytu, systemd oraz odzyskiwanie. Dokumentujemy wynik i SHA w issue #234. Brak wymogu niezależnej akceptacji ani uruchomienia produkcji. Etap III rozpocznie się dopiero przy następnym poleceniu.
 
 **Stan:** Etap II zakończony na `0010814682a84c24b1ddcb6205af207028263dab`; [CI Check status](https://github.com/adrianf87/dc24h.eu-high-starter/actions/runs/45288419207) zakończyło się 12/12, a [izolowane Ubuntu VM](https://github.com/adrianf87/dc24h.eu-high-starter/actions/runs/45288419166) — 3/3. Work unit 2 jest zaznaczone w Issue #234; dalsze etapy pozostają osobnymi zadaniami.
+
+## Fix Pass 2 — ponowny przegląd etapu II (24.11.2026)
+
+Jednostka pracy 6 ponownie analizuje uwierzytelnianie, sesje, audyt i limity logowania z patchy 0.5.5–0.5.8. Wykryto i naprawiono trzy dodatkowe usterki:
+
+1. **Cofnięcie zegara wydłużało ważność sesji i wyzwań logowania.** Sesja pozostawała aktywna mimo czasu wcześniejszego niż jej utworzenie, a wyzwania hasło/TOTP i passkey mogły działać znacznie dłużej od limitu. Dodano dolną granicę czasu dla sesji i wyzwań, sprawdzaną ponownie po asynchronicznej kontroli C++ i WebAuthn. Nowa sesja po długiej autoryzacji powstaje tylko wtedy, gdy wyzwanie nie wygasło.
+2. **Weryfikację integralności audytu można było odsunąć w czasie.** Dotychczasowy termin ponownego skanowania łańcucha audytu opierał się tylko na zegarze ściennym. Po cofnięciu zegara kontrola jest wykonywana natychmiast i po wykryciu uszkodzenia nie dopuszcza kolejnych sesji.
+3. **Katalog budżetów logowania akceptował nieznane pola.** Warstwa Node była mniej rygorystyczna niż walidator prywatnych kopii. Teraz zarówno nieoczekiwane pola główne, jak i pola pojedynczego limitu powodują odmowę wczytania danych.
+
+Testy regresyjne obejmują cofnięcie zegara w działającej sesji, wyzwanie podczas długiej weryfikacji C++, oczekujące potwierdzenie passkey, ponowny skan audytu oraz uszkodzone pliki limitów. Zachowano wcześniejsze kontrole grantów C++, TOTP replay, powiązania passkey z kontem i odzyskiwania offline. Nie wykonano migracji schematu, operacji na produkcji ani wdrożenia. Pełne wyniki CI dla ostatniego SHA zostaną zapisane w Issue #234 dopiero po pomyślnym zakończeniu wszystkich testów Ubuntu.
