@@ -21,13 +21,13 @@ BIN = f"usr/lib/{PACKAGE}/dc24h"
 ADMIN_BIN = f"usr/lib/{PACKAGE}/dc24h-account-admin"
 UNIT_PATH = f"lib/systemd/system/{UNIT}"
 DOC_PATH = f"usr/share/doc/{PACKAGE}/ci-provenance"
-VERSIONS = {"previous": "0.5.16+ci1", "current": "0.8.20+ci1"}
+VERSIONS = {"previous": "0.5.16+ci1", "current": "0.9.20+ci1"}
 # A real dpkg pre-unpack failure, not merely a malformed .deb rejected by the
 # archive reader. This higher version is never a deployable package.
-FAILED_UPGRADE_VERSION = "0.8.20+ci2"
+FAILED_UPGRADE_VERSION = "0.9.20+ci2"
 # A separate, valid package that fails *after* unpack during configuration.
 # The hosted test must explicitly reinstall the known-good previous package.
-FAILED_POSTINST_VERSION = "0.8.20+ci3"
+FAILED_POSTINST_VERSION = "0.9.20+ci3"
 
 
 def build(binary: Path, destination: Path, version: str, sha: str, *,

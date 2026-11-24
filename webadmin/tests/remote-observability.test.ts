@@ -5,7 +5,7 @@ import type { RemoteStatusProjection } from "../src/lib/status.ts";
 
 const sample = (running: boolean, rejects: number, verified = true): RemoteStatusProjection => ({
   ...(verified ? { observation: { schema: 1, source_age_ms: 20 } } : {}),
-  server: { version: "beta-0.8.20", running, uptime_seconds: 30 },
+  server: { version: "beta-0.9.20", running, uptime_seconds: 30 },
   network: { active_connections: 3, accepted_connections: 7, security_rejected: rejects },
   users: { online: 2, peak_online: 3 }, chat: { received: 4, rejected: 0 },
 });

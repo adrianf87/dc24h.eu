@@ -23,7 +23,7 @@ Przed włączeniem rozwiązania OWNER musi osobno ustalić: przechowywanie klucz
 
 ## 0.9.15 — bezpieczne testy błędów dysku
 
-Dodany workflow dla **GitHub-hosted Ubuntu 22.04, 24.04, 26.04**, bez Debiana i self-hosted Xeon:
+Dodany workflow dla **GitHub-hosted Ubuntu 22.04, 24.04, 26.04**, bez Debiana i prywatnych serwerów Xeon:
 
 - Tworzy tymczasowy `tmpfs` o wielkości **4 MiB** i napełnia go aż do rzeczywistego błędu jądra **ENOSPC**. Test wymaga odmowy zapisu audytu i blokady kolejnych prób.
 - Z wykorzystaniem kompilowanej tylko do testów biblioteki `LD_PRELOAD` zwraca **EIO** przy `fsync` dokładnego testowego pliku; wynik nie może być uznany za trwały sukces.

@@ -66,6 +66,14 @@ jobs:
             --os-image "${{ matrix.os }}" \
             --output "$RUNNER_TEMP/evidence/beta07-supply-chain.json"
 
+      - name: Bind GitHub-hosted Ubuntu APT, compiler, Node and Action provenance
+        run: |
+          python3 -m unittest discover -s tests -p beta09_os_provenance_tests.py
+          python3 scripts/beta09_os_provenance.py \
+            --root "$GITHUB_WORKSPACE" --sha "$SOURCE_SHA" \
+            --os-image "${{ matrix.os }}" \
+            --output "$RUNNER_TEMP/evidence/beta09-os-provenance.json"
+
       - name: Verify pinned independent ADC client and redact capability evidence
         run: |
           python3 -m unittest discover -s tests -p 'beta07_client_evidence_tests.py'
@@ -249,7 +257,7 @@ jobs:
         run: cmake --build "build/sanitizer-${{ matrix.sanitizer }}" --parallel 2
 
       - name: Run sanitizer and security regression subset
-        run: ctest --test-dir "build/sanitizer-${{ matrix.sanitizer }}" --output-on-failure --output-junit "$RUNNER_TEMP/ctest.xml" -R '^(memory\.safety|adc\.security|security\.unit|api\.unit|beta\.baseline)$'
+        run: ctest --test-dir "build/sanitizer-${{ matrix.sanitizer }}" --output-on-failure --output-junit "$RUNNER_TEMP/ctest.xml" -R '^(memory\.safety|adc\.(parser|security|syntax|sch|rcm|ctm)|network\.unit|transfers\.(protocol|tokens)|security\.unit|api\.unit|beta\.baseline)$'
 
       - name: Prepare redacted sanitizer evidence
         if: always()

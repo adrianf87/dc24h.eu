@@ -69,27 +69,29 @@ def _time(value):
     return parsed
 
 
-def _current_branch(get, sha):
-    ref = get(f"/branches/{BRANCH}")
-    if (not isinstance(ref, dict) or ref.get("name") != BRANCH or
+def _current_branch(get, sha, branch=BRANCH):
+    ref = get(f"/branches/{branch}")
+    if (not isinstance(ref, dict) or ref.get("name") != branch or
             not isinstance(ref.get("commit"), dict) or ref["commit"].get("sha") != sha):
         raise ValueError("Source SHA is no longer the current development branch HEAD")
 
 
-def evaluate(get, sha, branch=BRANCH):
+def evaluate(get, sha, branch=BRANCH, event="pull_request", artifact_callback=None):
     if (not isinstance(sha, str) or not SHA.fullmatch(sha) or
-            sha == "0" * 40 or branch != BRANCH):
+            sha == "0" * 40 or branch not in (BRANCH, "beta-0.9.x-stage-full", "main") or
+            event not in ("pull_request", "push") or
+            (event == "push") != (branch == "main")):
         raise ValueError("Invalid exact source head or development branch")
     # An old, entirely green run is not final-head evidence after a new push.
     # Re-read the authoritative branch at the end to catch concurrent updates.
-    _current_branch(get, sha)
+    _current_branch(get, sha, branch)
     runs = _collection(get(f"/actions/runs?head_sha={sha}&per_page=100"), "workflow_runs")
     selected = {}
     for workflow in WORKFLOWS:
         matching = [r for r in runs if isinstance(r, dict) and
                     r.get("path", "").split("@", 1)[0] == f".github/workflows/{workflow}" and
                     r.get("head_sha") == sha and r.get("head_branch") == branch and
-                    r.get("event") == "pull_request"]
+                    r.get("event") == event]
         if not matching:
             raise ValueError("Required exact-head workflow run absent")
         # The latest triggered run is authoritative, including when it failed;
@@ -146,11 +148,13 @@ def evaluate(get, sha, branch=BRANCH):
                 raise ValueError("Unverified artifact digest, origin or attempt")
             observed[name] = artifact["digest"]
             artifact_ids.add(artifact_id)
+            if artifact_callback is not None:
+                artifact_callback(artifact, workflow)
         if set(observed) != expected:
             raise ValueError("Missing exact-attempt redacted artifact with digest")
         selected[workflow] = {"run_id": run_id, "attempt": attempt,
                               "jobs": len(identities), "artifact_digests": observed}
-    _current_branch(get, sha)
+    _current_branch(get, sha, branch)
     return {"schema": 1, "source_sha": sha, "branch": branch,
             "github_api_authenticated": True, "verified_workflows": selected,
             "all_required_hosted_checks_successful": True,

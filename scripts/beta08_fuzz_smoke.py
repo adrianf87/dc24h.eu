@@ -72,6 +72,8 @@ def main(argv=None):
     parser.add_argument("--binary", type=Path, required=True)
     parser.add_argument("--corpus", type=Path, required=True)
     parser.add_argument("--sha", required=True)
+    parser.add_argument("--profile", choices=("adc_parser", "adc_fragments"),
+                        default="adc_parser")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
@@ -87,6 +89,7 @@ def main(argv=None):
             raise ValueError("Missing exact-head fuzzer executable or seed corpus")
         observed, elapsed = run_bounded(args.binary, args.corpus)
         report = {"schema": 1, "source_sha": args.sha, "os_image": "ubuntu-24.04",
+                  "fuzzer_profile": args.profile,
                   "compiler": "clang-libfuzzer", "seed": SEED, "requested_runs": RUNS,
                   "observed_runs": observed, "input_max_bytes": 4096,
                   "rss_limit_mib": 512, "timeout_per_input_seconds": 5,

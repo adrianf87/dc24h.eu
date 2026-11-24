@@ -2,7 +2,7 @@ name: Stage IV isolated Ubuntu VM validation
 
 on:
   push:
-    branches: [test/stage4-ubuntu-vm-validation]
+    branches: [main, test/stage4-ubuntu-vm-validation]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -182,6 +182,27 @@ jobs:
             --https vm-evidence/beta06-authenticated-https.json \
             --summary vm-evidence/beta07-transport-performance.json \
             --output vm-evidence/beta08-transport-evidence.json
+
+      - name: Bind beta-0.9 hosted Ubuntu APT and build provenance
+        run: |
+          python3 -m unittest discover -s tests -p beta09_os_provenance_tests.py
+          python3 scripts/beta09_os_provenance.py \
+            --root "$GITHUB_WORKSPACE" --sha "$SOURCE_SHA" \
+            --os-image "${{ matrix.os }}" \
+            --output vm-evidence/beta09-os-provenance.json
+
+      - name: Recompute beta-0.9 three-window transport and bounded resource envelope
+        run: |
+          python3 -m unittest discover -s tests -p beta09_security_envelope_tests.py
+          python3 scripts/beta09_security_envelope.py \
+            --root "$GITHUB_WORKSPACE" --sha "$SOURCE_SHA" \
+            --os-image "${{ matrix.os }}" \
+            --adc vm-evidence/beta07-adc-adcs-windows.json \
+            --https vm-evidence/beta06-authenticated-https.json \
+            --transport vm-evidence/beta08-transport-evidence.json \
+            --fault vm-evidence/beta07-bounded-faults.json \
+            --provenance vm-evidence/beta09-os-provenance.json \
+            --output vm-evidence/beta09-security-envelope.json
 
       - name: Rehearse actual previous-version binary rollback on disposable state
         run: |

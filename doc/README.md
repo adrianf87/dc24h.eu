@@ -1,6 +1,8 @@
 # dc24h.eu High Starter technical documentation
 
-Current development version: beta-0.8.20 (draft, awaiting exact-head CI, all stage/fix gates and Owner decision).
+Current development version: beta-0.9.20 (draft, awaiting exact-head CI, all stage/fix gates and Owner decision).
+
+[Beta-0.9.17–beta-0.9.20 Stage V: independent ZIP verification, hosted OS provenance, dual fuzzing and Owner NO-GO](us/BETA_0.9_STAGE_V.md) · [PL rollback and operator instructions](pl/BETA_0.9_STAGE_V.md). Source candidate only; no CI acceptance, merge or deployment.
 
 [Beta-0.8 Fix Pass 5: stale CI head, artifact attempt, full npm audit and fuzz containment review](us/BETA_0.8_FIX_PASS_5.md) · [PL Owner notes](pl/BETA_0.8_FIX_PASS_5.md). Source disposition only; hosted CI remains unverified.
 

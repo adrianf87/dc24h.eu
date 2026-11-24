@@ -1,5 +1,12 @@
 # Changelog
 
+## beta-0.9.17–beta-0.9.20 Stage V — 2026-11-24 (draft PR #243; exact-head CI pending)
+
+- **0.9.17 — Authenticated artifact bytes:** Independently download bounded GitHub Actions ZIP artifacts for the exact source/head/run/attempt; check SHA-256 against API metadata and allowlisted redacted JSON members without extracting files. Reject wrong attempts, stale heads, corrupt/unsafe ZIPs, secrets and missing reports. A separate post-merge `main` scan is supported but not pre-approved.
+- **0.9.18 — Hosted toolchain provenance:** Record bounded Ubuntu installed-APT inventory digest, critical compiler/library packages, compiler/CMake/Node/npm versions, pinned Action SHAs and lockfile hash across 22.04/24.04/26.04. Enforce runtime **and dev** npm audit; OS package listings are not immutable APT repository snapshots or fully reproducible builds.
+- **0.9.19 — Broadened safety envelopes:** Add second isolated ADC fragment libFuzzer profile (each profile at least 1024 bounded runs), expand TSAN to eight suites and ASan/UBSan coverage, retain CodeQL and verify distinct ADC, ADCS, private HTTPS three-window and slow-peer/fault/drain evidence. No Debian/Xeon or SLA claim; missing checks cannot be treated as green.
+- **0.9.20 — Candidate and Owner handoff:** Align active C++/Node/React/npm/test version identifiers, add independent fail-closed evidence and candidate gates, EN/US residual risk and PL rollback guidance. Candidate gate remains **NO-GO**; all five separate Fix Passes, final-head GitHub-hosted CI, and explicit Owner approval are still required. No merge to protected main, tag, publication, schema change or production deployment. [EN/US Stage V](doc/us/BETA_0.9_STAGE_V.md) · [PL runbook](doc/pl/BETA_0.9_STAGE_V.md). Stop after push/CI trigger without polling.
+
 ## beta-0.9.9–beta-0.9.12 Stage III — 2026-11-24 (draft PR #243; hosted CI pending)
 
 - **0.9.9 — Installed old C++ password authority:** Extend disposable dpkg to package both previous-version binaries, hash and execute the installed beta-0.5.16 account-maintenance program after a real downgrade, and demand full Node/Apache/Chromium password+TOTP and passkey authentication on a separately matched MariaDB v11/five-store restoration. Incompatibility is a failed gate, never a simulated pass.

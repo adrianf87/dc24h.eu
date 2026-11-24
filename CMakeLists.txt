@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.8.20 LANGUAGES CXX)
+project(dc24h VERSION 0.9.20 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -38,7 +38,7 @@ else()
 endif()
 
 # The VERSION tuple above is the package number; operators see the beta version.
-set(DC24H_VERSION "beta-0.8.20")
+set(DC24H_VERSION "beta-0.9.20")
 configure_file(cmake/version.hpp.in generated/dc24h/version.hpp @ONLY)
 find_package(Threads REQUIRED)
 find_package(OpenSSL 3 REQUIRED COMPONENTS SSL Crypto)
@@ -141,6 +141,10 @@ if(DC24H_ENABLE_LIBFUZZER)
     target_link_libraries(adc_parser_fuzzer PRIVATE dc24h_adc)
     target_link_options(adc_parser_fuzzer PRIVATE -fsanitize=fuzzer,address)
     set_target_properties(adc_parser_fuzzer PROPERTIES CXX_EXTENSIONS OFF)
+    add_executable(adc_fragment_fuzzer tests/adc_fragment_fuzzer.cpp)
+    target_link_libraries(adc_fragment_fuzzer PRIVATE dc24h_adc)
+    target_link_options(adc_fragment_fuzzer PRIVATE -fsanitize=fuzzer,address)
+    set_target_properties(adc_fragment_fuzzer PROPERTIES CXX_EXTENSIONS OFF)
 endif()
 set_source_files_properties(src/adc/protocol_control.cpp src/adc/presence_flood.cpp PROPERTIES
     COMPILE_OPTIONS "-Wall;-Wextra;-Wpedantic;-Wconversion;-Wshadow")
