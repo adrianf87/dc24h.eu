@@ -12,7 +12,9 @@ import argparse
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
+import platform
 import re
 import subprocess
 import tempfile
@@ -55,6 +57,7 @@ CAPABILITIES = {
 }
 SHA = re.compile(r"[0-9a-f]{64}\Z")
 COMMIT_SHA = re.compile(r"[0-9a-f]{40}\Z")
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def run(*args, cwd=None):
@@ -126,9 +129,20 @@ def collect_tests(junit):
     return states
 
 
-def produce(os_image, source_sha, client, states):
-    if not COMMIT_SHA.fullmatch(source_sha):
-        raise ValueError("Invalid source SHA")
+def require_hosted_runner(os_image, environment, version):
+    """Reject local/self-hosted/image-mismatched collection before reading evidence."""
+    if (environment.get("GITHUB_ACTIONS") != "true" or
+            environment.get("RUNNER_ENVIRONMENT") != "github-hosted" or
+            environment.get("RUNNER_OS") != "Linux" or
+            os_image not in PINS or version != os_image.removeprefix("ubuntu-")):
+        raise ValueError("External client evidence requires matching GitHub-hosted Ubuntu")
+
+
+def produce(os_image, source_sha, checked_out_sha, client, states):
+    if (not isinstance(source_sha, str) or not COMMIT_SHA.fullmatch(source_sha) or
+            not isinstance(checked_out_sha, str) or not COMMIT_SHA.fullmatch(checked_out_sha) or
+            source_sha != checked_out_sha):
+        raise ValueError("Wrong-head or invalid source SHA")
     if client.get("package") != "ncdc" or client.get("version") != PINS.get(os_image):
         raise ValueError("Unverified client package/version identity")
     if not all(isinstance(client.get(key), str) and SHA.fullmatch(client[key])
@@ -142,6 +156,7 @@ def produce(os_image, source_sha, client, states):
     if any(row["state"] != "passed" for row in matrix["ncdc"].values()):
         raise ValueError("Required real ncdc process evidence is incomplete")
     return {"schema": 1, "source_sha": source_sha, "os_image": os_image,
+            "git_checkout_head_verified": True,
             "client": client, "capabilities": matrix, "result": "passed",
             "scope": "synthetic hosted Ubuntu; not third-party interoperability certification"}
 
@@ -153,8 +168,12 @@ def main():
     parser.add_argument("--os-image", required=True, choices=tuple(PINS))
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    report = produce(args.os_image, args.sha, verify_ncdc(args.os_image),
-                     collect_tests(args.junit))
+    require_hosted_runner(args.os_image, os.environ, platform.freedesktop_os_release().get("VERSION_ID"))
+    checked_out_sha = run("git", "-C", str(ROOT), "rev-parse", "HEAD")
+    if args.sha != checked_out_sha:
+        raise ValueError("Wrong-head or invalid source SHA")
+    report = produce(args.os_image, args.sha, checked_out_sha,
+                     verify_ncdc(args.os_image), collect_tests(args.junit))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("x", encoding="utf-8") as stream:
         json.dump(report, stream, indent=2, sort_keys=True)

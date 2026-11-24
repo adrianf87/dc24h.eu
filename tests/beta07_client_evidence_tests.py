@@ -15,8 +15,9 @@ class EvidenceTests(unittest.TestCase):
                        "package_sha256": "a" * 64, "executable_sha256": "b" * 64}
 
     def test_real_process_matrix_keeps_other_clients_untested(self):
-        report = evidence.produce("ubuntu-24.04", "1" * 40, self.client, self.states)
+        report = evidence.produce("ubuntu-24.04", "1" * 40, "1" * 40, self.client, self.states)
         self.assertEqual(report["result"], "passed")
+        self.assertIs(report["git_checkout_head_verified"], True)
         self.assertEqual(report["capabilities"]["ncdc"]["adcs_ctm"]["state"], "passed")
         self.assertEqual(report["capabilities"]["ncdc"]["adc_adcs_registered_password"]["state"], "passed")
         for capability in ("adc_capability_negotiation", "adcs_capability_negotiation",
@@ -35,20 +36,39 @@ class EvidenceTests(unittest.TestCase):
                 else:
                     states["adc.ncdc"] = condition
                 with self.assertRaisesRegex(ValueError, "incomplete"):
-                    evidence.produce("ubuntu-24.04", "1" * 40, self.client, states)
+                    evidence.produce("ubuntu-24.04", "1" * 40, "1" * 40, self.client, states)
 
     def test_invalid_sha_or_unverified_digest_refused(self):
         with self.assertRaisesRegex(ValueError, "source SHA"):
-            evidence.produce("ubuntu-24.04", "foo", self.client, self.states)
+            evidence.produce("ubuntu-24.04", "foo", "1" * 40, self.client, self.states)
+        for wrong_checkout in ("2" * 40, "", "not-a-sha"):
+            with self.subTest(wrong_checkout=wrong_checkout):
+                with self.assertRaisesRegex(ValueError, "source SHA"):
+                    evidence.produce("ubuntu-24.04", "1" * 40, wrong_checkout,
+                                     self.client, self.states)
         altered = dict(self.client, package_sha256="unverified")
         with self.assertRaisesRegex(ValueError, "digest"):
-            evidence.produce("ubuntu-24.04", "1" * 40, altered, self.states)
+            evidence.produce("ubuntu-24.04", "1" * 40, "1" * 40, altered, self.states)
         altered = dict(self.client, executable_sha256="")
         with self.assertRaisesRegex(ValueError, "digest"):
-            evidence.produce("ubuntu-24.04", "1" * 40, altered, self.states)
+            evidence.produce("ubuntu-24.04", "1" * 40, "1" * 40, altered, self.states)
         altered = dict(self.client, version="0.0.0")
         with self.assertRaisesRegex(ValueError, "identity"):
-            evidence.produce("ubuntu-24.04", "1" * 40, altered, self.states)
+            evidence.produce("ubuntu-24.04", "1" * 40, "1" * 40, altered, self.states)
+
+    def test_only_matching_hosted_ubuntu_runner_can_issue_client_evidence(self):
+        hosted = {"GITHUB_ACTIONS": "true", "RUNNER_ENVIRONMENT": "github-hosted", "RUNNER_OS": "Linux"}
+        evidence.require_hosted_runner("ubuntu-24.04", hosted, "24.04")
+        for image, env, version in (
+            ("ubuntu-24.04", dict(hosted, RUNNER_ENVIRONMENT="self-hosted"), "24.04"),
+            ("ubuntu-24.04", dict(hosted, GITHUB_ACTIONS="false"), "24.04"),
+            ("ubuntu-24.04", dict(hosted, RUNNER_OS="Windows"), "24.04"),
+            ("ubuntu-24.04", hosted, "22.04"),
+            ("ubuntu-20.04", hosted, "20.04"),
+        ):
+            with self.subTest(image=image, env=env, version=version):
+                with self.assertRaisesRegex(ValueError, "GitHub-hosted Ubuntu"):
+                    evidence.require_hosted_runner(image, env, version)
 
     def test_junit_skips_fail_and_duplicates_refused(self):
         with tempfile.TemporaryDirectory() as temp:

@@ -1,5 +1,11 @@
 # Changelog
 
+## beta-0.7.1–beta-0.7.4 Fix Pass 1 — 2026-11-24 (draft PR #239; exact-head CI pending)
+
+- **Client evidence provenance defect:** Bind the pinned ncdc capability report to the actual `git rev-parse HEAD`, require a matching GitHub-hosted Ubuntu 22.04/24.04/26.04 environment, and reject wrong-head/incorrect-runner evidence before writing a report. Add negative unit tests for SHA and runner drift.
+- **Stage I interoperability review:** Recheck real ncdc ADC/ADCS identity/negotiation, SCH/RES/TTH, CTM/RCM and rate/port scope, and TLS 1.2/1.3 host trust/downgrade/rotation regressions. DC++/AirDC++ remain unexecuted and explicitly untested. [Fix Pass 1 evidence and residual limits](doc/us/BETA_0.7_FIX_PASS_1.md).
+- **Handoff boundary:** The previous head's hosted CI passed, but this new exact-head matrix must finish independently before Fix Pass 1 acceptance. No merge, deployment, production performance claim or subsequent fix pass is implied.
+
 ## beta-0.7.17–beta-0.7.20 Stage V — 2026-11-24 (draft PR #239; exact-head CI pending)
 
 - **0.7.17 — Comparable hosted transport windows:** Require three rate/concurrency-pinned ADC, ADCS and password+TOTP private HTTPS windows on GitHub-hosted Ubuntu 22.04/24.04/26.04, including p50/p95/p99, successful RPS, errors and actual process CPU/RSS. Do not compare protocols as equivalent workloads or assert a production SLA.
