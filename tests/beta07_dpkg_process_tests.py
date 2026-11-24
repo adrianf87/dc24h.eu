@@ -53,12 +53,16 @@ def run(current, historical, checkout):
         raise AssertionError("Current test fixture version mismatch")
     if quiet(["dpkg-query", "-W", "-f=${Status}", deb.PACKAGE], success=False).returncode == 0:
         raise AssertionError("CI-only package name is already installed; refuse interference")
+    if Path("/__dc24h_ci_fixture_never_start__").exists():
+        raise AssertionError("The inert fixture unit guard must remain absent")
 
     installed_binary = Path("/usr/lib") / deb.PACKAGE / "dc24h"
     with tempfile.TemporaryDirectory(prefix="beta07-hosted-dpkg-") as directory:
         root = Path(directory)
         old_pkg = deb.build(historical, root / "old-stage", deb.VERSIONS["previous"], previous.PREVIOUS_SHA)
         new_pkg = deb.build(current, root / "new-stage", deb.VERSIONS["current"], sha)
+        failed_pkg = deb.build(current, root / "failed-stage", deb.FAILED_UPGRADE_VERSION,
+                               sha, fail_preinst=True)
         original, recovered = matched.IsolatedDatabase(root / "source"), matched.IsolatedDatabase(root / "recovered")
         installed = False
         try:
@@ -99,13 +103,23 @@ def run(current, historical, checkout):
                 raise AssertionError("Installed current binary failed to execute")
             if exact_file_sha(installed_binary) != exact_file_sha(current):
                 raise AssertionError("Installed current executable hash mismatch")
-            # An invalid package cannot replace the installed current binary.
+            if quiet(["dpkg-query", "-W", "-f=${Status}", deb.PACKAGE]).stdout.decode() != "install ok installed":
+                raise AssertionError("Current version is not configured in dpkg")
+            # Distinguish an archive-reader refusal from a real dpkg upgrade
+            # attempt. Both must leave the earlier executable byte-identical.
             rejected = root / "broken-upgrade.deb"
             rejected.write_bytes(b"invalid test-only dpkg archive\n")
             if quiet(["sudo", "dpkg", "--install", str(rejected)], success=False).returncode == 0:
                 raise AssertionError("Corrupt upgrade unexpectedly accepted")
             if exact_file_sha(installed_binary) != exact_file_sha(current):
                 raise AssertionError("Failed upgrade changed live test binary")
+            if quiet(["sudo", "dpkg", "--install", str(failed_pkg)], success=False).returncode == 0:
+                raise AssertionError("Injected dpkg preinst failure unexpectedly succeeded")
+            if exact_file_sha(installed_binary) != exact_file_sha(current):
+                raise AssertionError("Failed pre-unpack upgrade replaced the installed executable")
+            if quiet(["dpkg-query", "-W", "-f=${Status}|${Version}", deb.PACKAGE]).stdout.decode() != (
+                    "install ok installed|" + deb.VERSIONS["current"]):
+                raise AssertionError("Failed pre-unpack upgrade altered dpkg installed state")
 
             quiet(["sudo", "dpkg", "--install", str(old_pkg)])  # Real package downgrade.
             if exact_file_sha(installed_binary) != exact_file_sha(historical) or (
@@ -117,12 +131,18 @@ def run(current, historical, checkout):
                 raise AssertionError("Package lacks exact binary/unit/provenance ownership")
             if quiet(["dpkg-query", "-W", "-f=${Version}", deb.PACKAGE]).stdout.decode() != deb.VERSIONS["previous"]:
                 raise AssertionError("dpkg database did not record previous version")
+            if quiet(["dpkg-query", "-W", "-f=${Status}", deb.PACKAGE]).stdout.decode() != "install ok installed":
+                raise AssertionError("Previous version was not configured after downgrade")
             pair_result = matched.bundle.verified_pair(dump, snapshot, pair_dir / matched.bundle.NAME, sha)
             if pair_result["verified_files"] != 6:
                 raise AssertionError("Incomplete matched rollback pair")
+            restored = root / "restored-gateway"
+            preflight = matched.offline_preflight.preflight(
+                dump, snapshot, pair_dir, sha, recovered.datadir, restored)
+            if preflight["verified_components"] != 6 or preflight["sql_export_applied_migration_rows"] != 11:
+                raise AssertionError("Matched rollback preflight refused the v11 source")
             recovered.initialize(); recovered.start(); recovered.setup_schema()
             recovered.restore_sql(dump)
-            restored = root / "restored-gateway"
             matched.private.restore_to_fresh_directory(snapshot, restored)
             matched.verify_recovered(recovered, restored, installed_binary)
             recovered.stop(); recovered.start()
@@ -136,8 +156,10 @@ def run(current, historical, checkout):
                           "candidate_package": deb.VERSIONS["current"],
                           "actual_dpkg_installed_upgrade_downgrade": True,
                           "failed_upgrade_refused_without_binary_replacement": True,
+                          "valid_preinst_failure_kept_previous_installed_state": True,
                           "installed_binary_and_unit_owned": True,
                           "previous_executable_hash_and_version_matched": True,
+                          "fresh_sql_and_five_store_preflight_succeeded": True,
                           "schema_v11_and_private_five_file_restore_verified": True,
                           "restart_of_fresh_database_accepted": True,
                           "production_package_or_rollback_claim": False}

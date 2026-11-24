@@ -7,6 +7,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import beta07_recovery_preflight as preflight
@@ -99,6 +100,37 @@ class StageOnePreflightTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         preflight.preflight(dump, snapshot, fresh_pair, "a" * 40, sql, private_target)
             self.assertFalse(sql.exists() or private_target.exists())
+
+    def test_sql_scan_refuses_symlink_fifo_and_world_readable_input(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dump, _snapshot, _pair_dir = self.create(root)
+            link = root / "linked.sql"
+            link.symlink_to(dump)
+            with self.assertRaises(OSError):
+                preflight.sql_migration_row_count(link)
+            fifo = root / "waiting.sql"
+            os.mkfifo(fifo, 0o600)
+            with self.assertRaises(ValueError):
+                preflight.sql_migration_row_count(fifo)
+            dump.chmod(0o644)
+            with self.assertRaises(ValueError):
+                preflight.sql_migration_row_count(dump)
+
+    def test_source_changed_after_valid_pair_refuses_without_creating_targets(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dump, snapshot, pair_dir = self.create(root)
+            sql, gateway = root / "new-sql", root / "new-gateway"
+
+            def replaced_sql(_path):
+                dump.write_bytes(dump.read_bytes() + b"-- tampered after pair validation\n")
+                return 11
+
+            with mock.patch.object(preflight, "sql_migration_row_count", side_effect=replaced_sql):
+                with self.assertRaisesRegex(ValueError, "recovery pair mismatch"):
+                    preflight.preflight(dump, snapshot, pair_dir, "a" * 40, sql, gateway)
+            self.assertFalse(sql.exists() or gateway.exists())
 
     def test_mariadb_dump_whitespace_and_fractional_timestamp_are_accepted(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -20,10 +20,14 @@ BIN = f"usr/lib/{PACKAGE}/dc24h"
 UNIT_PATH = f"lib/systemd/system/{UNIT}"
 DOC_PATH = f"usr/share/doc/{PACKAGE}/ci-provenance"
 VERSIONS = {"previous": "0.5.16+ci1", "current": "0.6.16+ci1"}
+# A real dpkg pre-unpack failure, not merely a malformed .deb rejected by the
+# archive reader. This higher version is never a deployable package.
+FAILED_UPGRADE_VERSION = "0.6.16+ci2"
 
 
-def build(binary: Path, destination: Path, version: str, sha: str):
-    if version not in VERSIONS.values() or not re.fullmatch(r"[0-9a-f]{40}", sha):
+def build(binary: Path, destination: Path, version: str, sha: str, *, fail_preinst=False):
+    allowed = version == FAILED_UPGRADE_VERSION if fail_preinst else version in VERSIONS.values()
+    if not allowed or not re.fullmatch(r"[0-9a-f]{40}", sha):
         raise ValueError("Unreviewed package version or source identity")
     binary = Path(binary).resolve(strict=True)
     destination = Path(destination)
@@ -44,10 +48,17 @@ def build(binary: Path, destination: Path, version: str, sha: str):
         "Section: admin\nPriority: optional\n"
         "Maintainer: Isolated CI Fixture <ci@example.invalid>\n"
         "Depends: libc6, libstdc++6\n"
-        "Description: Ephemeral dc24h package-manager regression fixture\n"
-        " Not a deployable service, cannot be enabled, has no maintainer scripts.\n",
+        "Description: Ephemeral dc24h package-manager regression fixture\n" +
+        (" Injected pre-unpack failure; never deploy or start.\n" if fail_preinst else
+         " Not a deployable service, cannot be enabled, has no maintainer scripts.\n"),
         encoding="ascii")
     (control / "control").chmod(0o644)
+    if fail_preinst:
+        # Deliberately abort before dpkg can unpack or replace an installed
+        # executable. Never put a maintainer script in the normal fixture.
+        preinst = control / "preinst"
+        preinst.write_text("#!/bin/sh\nexit 41\n", encoding="ascii")
+        preinst.chmod(0o755)
     executable = destination / BIN
     executable.parent.mkdir(parents=True, mode=0o755)
     shutil.copy2(binary, executable)

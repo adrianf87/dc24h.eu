@@ -8,8 +8,10 @@ schema-v11 authenticity; hash matching alone cannot prove either property.
 
 import argparse
 import json
+import os
 from pathlib import Path
 import re
+import stat
 import sys
 
 import stage1_recovery_bundle as pair
@@ -81,7 +83,18 @@ def sql_migration_row_count(dump):
     Caller already verified this owner's SQL file and matched its paired hash.
     """
     table_count, versions = 0, {}
-    with Path(dump).open("rb") as source:
+    path = Path(dump)
+    private.private_directory(path.parent)
+    # Read precisely the same kind of owner-only, single-link regular file
+    # accepted by the pair manifest. A replaced symlink/FIFO must fail rather
+    # than redirect the second (SQL-shape) pass or block it indefinitely.
+    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(descriptor, "rb") as source:
+        before = os.fstat(source.fileno())
+        if (not stat.S_ISREG(before.st_mode) or before.st_uid != os.geteuid() or
+                before.st_nlink != 1 or before.st_mode & 0o077 or
+                not 0 < before.st_size <= pair.MAX_DUMP):
+            raise ValueError("Unsafe SQL recovery source")
         while line := source.readline(1024 * 1024 + 1):
             stripped = line.lstrip()
             if len(line) > 1024 * 1024 or not line.endswith(b"\n"):
@@ -133,6 +146,10 @@ def sql_migration_row_count(dump):
                 if version in versions or version > 11:
                     raise ValueError("Unexpected/duplicate migration version")
                 versions[version] = True
+        after = os.fstat(source.fileno())
+        if (before.st_size != after.st_size or before.st_mtime_ns != after.st_mtime_ns or
+                before.st_ctime_ns != after.st_ctime_ns):
+            raise ValueError("SQL recovery source changed during preflight")
     if table_count != 1:
         raise ValueError(f"Migration table declaration count invalid ({min(table_count, 2)})")
     if set(versions) != set(range(1, 12)):
@@ -170,6 +187,10 @@ def preflight(dump, snapshot, pair_directory, commit_sha, sql_destination, priva
             raise ValueError("Recovery target already exists")
     evidence = pair.verified_pair(sources[0], sources[1], sources[2] / pair.NAME, commit_sha)
     migration_rows = sql_migration_row_count(sources[0])
+    # Checking the migration shape is a separate read from hashing the pair.
+    # Reverify the complete SQL + private snapshot to reject replacements
+    # between those passes; do not return a success based on stale hashes.
+    pair.verified_pair(sources[0], sources[1], sources[2] / pair.NAME, commit_sha)
     # Report only an exact commit, counts and booleans. The SQL dump, private
     # material, local paths and even account/host labels are not emitted.
     return {"schema": 1, "source_sha": evidence["commit_sha"],

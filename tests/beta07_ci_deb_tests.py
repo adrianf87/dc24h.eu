@@ -28,6 +28,8 @@ class DebPrototypeTests(unittest.TestCase):
             self.assertIn(deb.PACKAGE, subprocess.check_output(["dpkg-deb", "--field", str(archive), "Package"]).decode())
             self.assertIn("Depends: libc6, libstdc++6", subprocess.check_output([
                 "dpkg-deb", "--field", str(archive)]).decode())
+            self.assertEqual(subprocess.check_output([
+                "dpkg-deb", "--ctrl-tarfile", str(archive)]).count(b"#!/bin/sh"), 0)
             extracted = root / "extracted"
             subprocess.run(["dpkg-deb", "--extract", str(archive), str(extracted)], check=True,
                            stdout=subprocess.DEVNULL)
@@ -40,6 +42,30 @@ class DebPrototypeTests(unittest.TestCase):
             self.assertIn(f"binary-sha256={hashlib.sha256(binary.read_bytes()).hexdigest()}", provenance)
             with self.assertRaises(ValueError):
                 deb.build(binary, root / "stage", deb.VERSIONS["current"], sha)
+
+    @unittest.skipUnless(shutil.which("dpkg-deb") and shutil.which("dpkg"), "requires Debian dpkg tools")
+    def test_valid_failed_upgrade_injects_only_preunpack_abort(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            binary = root / "fake-binary"
+            binary.write_bytes(b"#!/bin/sh\necho test-only\n")
+            binary.chmod(0o700)
+            if subprocess.check_output(["dpkg", "--print-architecture"]).strip() != b"amd64":
+                self.skipTest("CI fixture architecture is amd64")
+            package = deb.build(binary, root / "failed-stage", deb.FAILED_UPGRADE_VERSION,
+                                "b" * 40, fail_preinst=True)
+            listing = subprocess.check_output(["dpkg-deb", "--ctrl-tarfile", str(package)])
+            self.assertIn(b"preinst", listing)
+            self.assertIn(b"#!/bin/sh\nexit 41\n", listing)
+            self.assertEqual(subprocess.check_output([
+                "dpkg-deb", "--field", str(package), "Version"]).decode().strip(),
+                deb.FAILED_UPGRADE_VERSION)
+            with self.assertRaises(ValueError):
+                deb.build(binary, root / "unsafe", deb.FAILED_UPGRADE_VERSION, "b" * 40)
+            with self.assertRaises(ValueError):
+                deb.build(binary, root / "unsafe", deb.VERSIONS["current"], "b" * 40,
+                          fail_preinst=True)
+            self.assertFalse((root / "unsafe").exists())
 
     def test_refuses_unknown_version_sha_and_missing_binary_without_writes(self):
         with tempfile.TemporaryDirectory() as directory:

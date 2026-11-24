@@ -302,11 +302,15 @@ class MatchedRecoveryTests(unittest.TestCase):
                 outage_at = time.monotonic()
                 source.stop()
 
+                restored_dir = root / "restored-state"
+                first_preflight = offline_preflight.preflight(
+                    dump, snapshot, pair_dir, sha, recovered.datadir, restored_dir)
+                self.assertEqual(first_preflight["verified_components"], 6)
+                self.assertEqual(first_preflight["sql_export_applied_migration_rows"], 11)
                 recovered.initialize()
                 recovered.start()
                 recovered.setup_schema()
                 recovered.restore_sql(dump)
-                restored_dir = root / "restored-state"
                 private.restore_to_fresh_directory(snapshot, restored_dir)
                 verify_recovered(recovered, restored_dir, binary)
                 rto = time.monotonic() - outage_at
@@ -321,11 +325,14 @@ class MatchedRecoveryTests(unittest.TestCase):
                                                   "WHERE id=7;"), "owner")
                 rollback_at = time.monotonic()
                 recovered.stop()
+                rolled_back_state = root / "rollback-state"
+                rollback_preflight = offline_preflight.preflight(
+                    dump, snapshot, pair_dir, sha, rollback.datadir, rolled_back_state)
+                self.assertEqual(rollback_preflight["verified_components"], 6)
                 rollback.initialize()
                 rollback.start()
                 rollback.setup_schema()
                 rollback.restore_sql(dump)
-                rolled_back_state = root / "rollback-state"
                 private.restore_to_fresh_directory(snapshot, rolled_back_state)
                 verify_recovered(rollback, rolled_back_state, binary)
                 rollback_seconds = time.monotonic() - rollback_at
@@ -341,6 +348,7 @@ class MatchedRecoveryTests(unittest.TestCase):
                               "credential_bytes_revalidated": True,
                               "grants_and_revocation_state_checked": True,
                               "audit_and_replay_integrity_checked": True,
+                              "fresh_destination_preflight_before_each_restore": True,
                               "matched_restore_completed": True, "fresh_rollback_completed": True,
                               "rpo_lost_acknowledged_writes": 0,
                               "rpo_seconds": 0, "rto_seconds": round(rto, 3),
