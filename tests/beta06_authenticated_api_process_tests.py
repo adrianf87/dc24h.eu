@@ -18,6 +18,7 @@ import platform
 import pwd
 import re
 import secrets
+import select
 import shutil
 import signal
 import socket
@@ -71,6 +72,22 @@ def terminate(process):
     except subprocess.TimeoutExpired:
         os.killpg(process.pid, signal.SIGKILL)
         process.communicate(timeout=5)
+
+
+def browser_phase(process, expected, timeout=60):
+    """Wait for a fixed success word, never serialize browser credentials."""
+    if process.stdout is None:
+        raise AssertionError("Browser client protocol unavailable")
+    ready, _, _ = select.select([process.stdout], [], [], timeout)
+    if not ready or process.stdout.readline().strip() != expected:
+        raise AssertionError("Real Chromium passkey " + expected + " phase failed")
+
+
+def browser_command(process, instruction):
+    if process.poll() is not None or process.stdin is None:
+        raise AssertionError("Real Chromium helper stopped")
+    process.stdin.write(json.dumps(instruction, separators=(",", ":")) + "\n")
+    process.stdin.flush()
 
 
 def code_now():
@@ -130,7 +147,7 @@ def run(binary, seeder, account_admin):
         public.mkdir()
         (public / "remote.html").write_text("<title>Disposable remote fixture</title>")
         (apache_dir / "mime.types").write_text("text/html html\napplication/json json\n")
-        cpp = node = apache = None
+        cpp = node = apache = browser = None
         recovered_db = None
         try:
             db.initialize()
@@ -403,6 +420,8 @@ def run(binary, seeder, account_admin):
                 "cpu_mean_percent_one_core": round(
                     100 * sum(cpu_after[name] - cpu_before[name] for name in processes) / elapsed, 3),
                 "synthetic_credentials_only": True,
+                # This report measures password+TOTP only. The real browser
+                # passkey recovery appears in the separate restore report.
                 "passkey_browser_flow_exercised": False,
                 "capacity_claim": False, "production_sla_claim": False,
             }
@@ -415,6 +434,19 @@ def run(binary, seeder, account_admin):
                     file.write("\n")
             print(f"Authenticated HTTPS: {len(success)}/{REQUESTS} success, p99={p99} ms (CI fixture)")
 
+            # Enroll a genuine Chromium virtual authenticator through the
+            # live private HTTPS gateway with an actual C++ password+TOTP
+            # grant. Keep Chromium and its credential across the MariaDB and
+            # five-store offline checkpoint; do not export the private key.
+            browser = subprocess.Popen([
+                "node", "--import", "tsx", "tests/beta07-live-passkey-client.ts",
+            ], cwd=ROOT / "webadmin", stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+                bufsize=1, start_new_session=True)
+            browser_command(browser, {"origin": origin, "actor": actor,
+                                      "sessionCookie": cookie, "csrf": json.loads(payload)["csrf"]})
+            browser_phase(browser, "enrolled")
+
             # The prior beta-0.5 recovery test checked SQL and file bytes but
             # did not reauthenticate through a *restored* C++/Node instance.
             # Stop all application writers and checkpoint the actual synthetic
@@ -424,13 +456,6 @@ def run(binary, seeder, account_admin):
             terminate(previous_cpp); cpp = None
             if previous_node.poll() is None or previous_cpp.poll() is None:
                 raise AssertionError("Application writers were not stopped before capture")
-            with tempfile.TemporaryDirectory(prefix="dc24h-beta06-revoked-") as revoked_temp:
-                revoked_root = Path(revoked_temp) / "private"
-                revoked_root.mkdir(mode=0o700)
-                matched.make_gateway_fixture(revoked_root)
-                # A previously revoked, synthetic credential must remain
-                # unusable after restore; this is never a real private key.
-                shutil.copy2(revoked_root / "passkeys.json", gateway_dir / "passkeys.json")
             # The recovery library refuses even synthetic backups under a
             # traversable parent. Apache needs the outer fixture root at 0755,
             # so keep SQL, manifest and restore staging under this separate
@@ -535,8 +560,28 @@ def run(binary, seeder, account_admin):
                                    if name.lower() == "set-cookie")
             if fetch("/remote/v1/summary", headers={"Cookie": restored_cookie})[0] != 200:
                 raise AssertionError("Fresh restored read-only grant not usable")
-            # An independent, valid password proof is required for this passkey
-            # refusal, rather than an incidental C++ one-second POST throttle.
+
+            # A restored WebAuthn signature must now pass the actual password
+            # maintenance authority, checked grant and read-only gateway.
+            # The same device subsequently revokes itself via the authorized
+            # CSRF-protected route, invalidating its live session.
+            time.sleep(1.1)
+            browser_command(browser, {"action": "restore"})
+            browser_phase(browser, "authenticated_and_revoked")
+            if browser.wait(timeout=10) != 0:
+                raise AssertionError("Chromium restored credential helper failed")
+            browser = None
+
+            # Restart Node to verify the *real* revoked key persists across a
+            # second cold opening of the restored private catalog.
+            terminate(node); node = None
+            node = subprocess.Popen(["node", "--import", "tsx", "server/remote-main.ts"],
+                                    cwd=ROOT / "webadmin", env=restored_env,
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                    start_new_session=True)
+            wait_tcp(node_port, node)
+            # A valid independent password proof is required for this refusal;
+            # a C++ maintenance POST rate limit is not a passkey negative test.
             time.sleep(1.1)
             # A revoked device in the restored catalog must never yield a
             # passkey challenge, even with the correct C++ password.
@@ -562,10 +607,16 @@ def run(binary, seeder, account_admin):
                                "replay_ledger_preserved": True,
                                "revoked_passkey_catalog_restored": True,
                                "revoked_passkey_login_options_refused": True,
+                               "restored_browser_password_passkey_accepted": True,
+                               "restored_browser_summary_accepted": True,
+                               "restored_browser_assertion_replay_refused": True,
+                               "restored_browser_revoke_invalidated_session": True,
+                               "revoked_passkey_persisted_after_restart": True,
                                "production_recovery_claim": False,
-                               "real_browser_webauthn_exercised": False}, file, indent=2, sort_keys=True)
+                               "real_browser_webauthn_exercised": True}, file, indent=2, sort_keys=True)
                     file.write("\n")
         finally:
+            terminate(browser)
             terminate(apache)
             terminate(node)
             terminate(cpp)

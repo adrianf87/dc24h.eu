@@ -69,6 +69,12 @@ def assess(directory, junit, sha, os_image):
     require(restore.get("fresh_password_totp_login_accepted") is True and
             restore.get("old_browser_cookie_refused") is True and
             restore.get("revoked_passkey_login_options_refused") is True and
+            restore.get("real_browser_webauthn_exercised") is True and
+            restore.get("restored_browser_password_passkey_accepted") is True and
+            restore.get("restored_browser_summary_accepted") is True and
+            restore.get("restored_browser_assertion_replay_refused") is True and
+            restore.get("restored_browser_revoke_invalidated_session") is True and
+            restore.get("revoked_passkey_persisted_after_restart") is True and
             restore.get("production_recovery_claim") is False,
             "Failed post-restore private authentication")
     require(rollback.get("historical_binary_distinct") is True and
@@ -104,7 +110,7 @@ def assess(directory, junit, sha, os_image):
             "authenticated_requests": 24, "adc_adcs_smoke_each": 12,
             "ci_regression_gate_passed": True, "production_claim": False,
             "limitations": ["Separate synthetic fault windows; no atomic cross-process chaos transaction",
-                            "No production capacity/RPO/RTO or actual browser passkey ceremony",
+                            "No production capacity/RPO/RTO; browser ceremony is disposable only",
                             "No DC++/AirDC++ interoperability guarantee"]}
 
 

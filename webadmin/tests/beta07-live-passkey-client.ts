@@ -1,0 +1,123 @@
+/**
+ * Disposable Chromium client for the hosted C++ -> Node -> Apache recovery test.
+ *
+ * The Python harness owns every service and the stopped-writer SQL/five-store
+ * checkpoint. Keep this Chromium process (and its virtual authenticator) alive
+ * across that checkpoint, so the restored verifier must accept the *same*
+ * independently held private credential through the real HTTP gateway.
+ *
+ * Stdin carries only synthetic ephemeral fixture credentials. Stdout is a
+ * fixed-word protocol; never print a cookie, password, WebAuthn JSON or body.
+ */
+import { chromium } from "@playwright/test";
+import { createInterface } from "node:readline";
+
+type Start = { origin: string; actor: string; sessionCookie: string; csrf: string };
+
+const lines = createInterface({ input: process.stdin, crlfDelay: Infinity })[Symbol.asyncIterator]();
+async function command(): Promise<Record<string, unknown>> {
+  const next = await lines.next();
+  if (next.done) throw Error("Missing harness instruction");
+  const decoded: unknown = JSON.parse(next.value);
+  if (!decoded || typeof decoded !== "object" || Array.isArray(decoded)) throw Error("Invalid instruction");
+  return decoded as Record<string, unknown>;
+}
+
+const startup = await command() as Start;
+if (!/^https:\/\/localhost:\d{2,5}$/.test(startup.origin) ||
+    !/^[1-9]\d{0,18}$/.test(startup.actor) ||
+    !/^dc24h_remote=[0-9a-f]{64}$/.test(startup.sessionCookie) ||
+    !/^[0-9a-f]{64}$/.test(startup.csrf)) throw Error("Invalid isolated fixture parameters");
+
+const browser = await chromium.launch({ headless: true });
+try {
+  const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  const page = await context.newPage();
+  await context.addCookies([{ name: "dc24h_remote", value: startup.sessionCookie.split("=")[1],
+    url: startup.origin, httpOnly: true, secure: true, sameSite: "Lax" }]);
+  await page.goto(startup.origin + "/remote.html");
+  const cdp = await context.newCDPSession(page);
+  await cdp.send("WebAuthn.enable");
+  await cdp.send("WebAuthn.addVirtualAuthenticator", { options: {
+    protocol: "ctap2", transport: "internal", hasResidentKey: true,
+    hasUserVerification: true, isUserVerified: true,
+  } });
+
+  const enrolled = await page.evaluate(async csrf => {
+    const decode = (value: string) => Uint8Array.from(
+      atob(value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=")),
+      character => character.charCodeAt(0));
+    const optionsResponse = await fetch("/remote/v1/passkey/enroll/options", {
+      method: "POST", headers: { "Content-Type": "application/json", "X-DC24H-Remote-CSRF": csrf }, body: "{}",
+    });
+    if (optionsResponse.status !== 200) return false;
+    const options = await optionsResponse.json();
+    const credential = await navigator.credentials.create({ publicKey: {
+      ...options, challenge: decode(options.challenge),
+      user: { ...options.user, id: decode(options.user.id) },
+      excludeCredentials: (options.excludeCredentials ?? []).map((entry: { id: string }) =>
+        ({ ...entry, id: decode(entry.id) })),
+    } });
+    if (!credential || !("toJSON" in credential)) return false;
+    const finish = await fetch("/remote/v1/passkey/enroll/finish", {
+      method: "POST", headers: { "Content-Type": "application/json", "X-DC24H-Remote-CSRF": csrf },
+      body: JSON.stringify({ response: (credential as PublicKeyCredential & { toJSON(): unknown }).toJSON() }),
+    });
+    return finish.status === 200 && (await finish.json()).enrolled === true;
+  }, startup.csrf);
+  if (!enrolled) throw Error("Browser enrollment against C++ grant refused");
+  process.stdout.write("enrolled\n");
+
+  const next = await command();
+  if (next.action !== "restore") throw Error("Restored database handoff missing");
+  // The original authenticated cookie has no authority in the new Node
+  // process. A new C++ password grant and a fresh challenge are mandatory.
+  const restored = await page.evaluate(async actor => {
+    const decode = (value: string) => Uint8Array.from(
+      atob(value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=")),
+      character => character.charCodeAt(0));
+    const challengeResponse = await fetch("/remote/v1/challenge");
+    if (challengeResponse.status !== 200) return false;
+    const { csrf } = await challengeResponse.json();
+    const optionsResponse = await fetch("/remote/v1/passkey/login/options", {
+      method: "POST", headers: { "Content-Type": "application/json", "X-DC24H-Remote-CSRF": csrf },
+      body: JSON.stringify({ actor_id: actor,
+        password: "WebAdmin operator password!" }),
+    });
+    if (optionsResponse.status !== 200) return false;
+    const options = await optionsResponse.json();
+    const credential = await navigator.credentials.get({ publicKey: {
+      ...options, challenge: decode(options.challenge),
+      allowCredentials: (options.allowCredentials ?? []).map((entry: { id: string }) =>
+        ({ ...entry, id: decode(entry.id) })),
+    } });
+    if (!credential || !("toJSON" in credential)) return false;
+    const response = (credential as PublicKeyCredential & { toJSON(): unknown }).toJSON();
+    const finish = () => fetch("/remote/v1/passkey/login/finish", {
+      method: "POST", headers: { "Content-Type": "application/json", "X-DC24H-Remote-CSRF": csrf },
+      body: JSON.stringify({ response }),
+    });
+    const success = await finish();
+    if (success.status !== 200) return false;
+    const authenticated = await success.json();
+    if (!authenticated.authenticated || !authenticated.mfa || authenticated.mode !== "read-only") return false;
+    if ((await finish()).status !== 403) return false; // challenge is consumed
+    if ((await fetch("/remote/v1/summary")).status !== 200) return false;
+    const devices = await fetch("/remote/v1/passkey/devices");
+    if (devices.status !== 200) return false;
+    const list = (await devices.json()).devices;
+    if (!Array.isArray(list) || list.length !== 1 || typeof list[0].id !== "string") return false;
+    const revoked = await fetch("/remote/v1/passkey/device/revoke", {
+      method: "POST", headers: { "Content-Type": "application/json",
+        "X-DC24H-Remote-CSRF": authenticated.csrf },
+      body: JSON.stringify({ id: list[0].id }),
+    });
+    if (revoked.status !== 200 || !(await revoked.json()).revoked) return false;
+    return (await fetch("/remote/v1/session")).status === 401;
+  }, startup.actor);
+  if (!restored) throw Error("Restored browser C++ password/passkey grant or revocation refused");
+  process.stdout.write("authenticated_and_revoked\n");
+} finally {
+  await browser.close();
+  lines.return?.();
+}
