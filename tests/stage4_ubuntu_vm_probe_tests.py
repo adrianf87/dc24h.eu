@@ -6,6 +6,7 @@ This is an Ubuntu CI smoke measurement, not a production load or security audit.
 import json
 import os
 from pathlib import Path
+import platform
 import re
 import selectors
 import signal
@@ -14,6 +15,9 @@ import sys
 import tempfile
 import time
 import unittest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+import stage4_endurance_gate
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -88,6 +92,35 @@ class UbuntuVmHubProbe(unittest.TestCase):
                     self.assertIsNotNone(report["p95_ms"])
                     samples[profile] = report
 
+                # Stage IV endurance is mandatory on hosted Ubuntu CI only.
+                # Do not run this sustained test on an operator's local hub.
+                endurance = None
+                if os.environ.get("GITHUB_ACTIONS") == "true":
+                    self.assertEqual(os.environ.get("RUNNER_ENVIRONMENT"), "github-hosted")
+                    self.assertEqual(os.environ.get("RUNNER_OS"), "Linux")
+                    os_image = "ubuntu-" + platform.freedesktop_os_release()["VERSION_ID"]
+                    windows = {}
+                    for profile, port in ports.items():
+                        windows[profile] = []
+                        for _ in range(stage4_endurance_gate.WINDOWS):
+                            command = [
+                                sys.executable, str(ROOT / "scripts/stage4_perf_probe.py"),
+                                "--profile", profile, "--port", str(port),
+                                "--requests", str(stage4_endurance_gate.REQUESTS_PER_WINDOW),
+                                "--rate", "8", "--concurrency", "4", "--timeout", "3",
+                                "--target-pid", str(hub.pid), "--ack-isolated",
+                            ]
+                            if profile == "adcs":
+                                command.extend(["--ca-file", str(certificate)])
+                            result = subprocess.run(command, capture_output=True, text=True, timeout=35)
+                            self.assertEqual(result.returncode, 0,
+                                             f"{profile} endurance failed (stderr suppressed)")
+                            windows[profile].append(json.loads(result.stdout))
+                    endurance = stage4_endurance_gate.compare(os_image, windows)
+                    self.assertTrue(endurance["ci_regression_gate_passed"],
+                                    "Hosted Ubuntu Stage IV endurance exceeded bounded regression limits")
+                    endurance["source_sha"] = os.environ.get("SOURCE_SHA")
+
                 destination = os.environ.get("DC24H_VM_REPORT_DIR")
                 if destination:
                     report_dir = Path(destination)
@@ -97,6 +130,10 @@ class UbuntuVmHubProbe(unittest.TestCase):
                         json.dump({"schema": 1, "evidence": "isolated-ubuntu-vm-only", "profiles": samples},
                                   report_file, indent=2, sort_keys=True)
                         report_file.write("\n")
+                    if endurance is not None:
+                        with (report_dir / "stage4-endurance.json").open("x", encoding="utf-8") as file:
+                            json.dump(endurance, file, indent=2, sort_keys=True)
+                            file.write("\n")
                 for profile, report in samples.items():
                     print(f"{profile}: {report['success']}/{report['requests']} successful, "
                           f"p95={report['p95_ms']} ms (isolated VM; no capacity claim)")
