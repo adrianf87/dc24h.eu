@@ -1,5 +1,12 @@
 # Changelog
 
+## beta-0.8.x exact-head CI repair — 2026-11-24 (draft PR #241; next hosted matrix unverified)
+
+- **Ten work units present:** Source commits for Stages I–V and Fix Passes 1–5 are on `beta-0.8.x-stage-full`; none has been automatically accepted or merged.
+- **Ubuntu 26.04 VM-only failure:** Previous head `c3c939d` passed 22.04/24.04 VM, C++/WebAdmin, CodeQL and TSAN/fuzz, but the faster 26.04 real Chromium restoration flow received `restored_options_429` after its intentionally persisted four-per-minute private login budget was exhausted by TOTP/replay/restore checks.
+- **CI fixture correction:** Read the actual synthetic recovered HMAC login buckets and wait for the genuine window expiration before the next separately authenticated passkey attempt. Fail on missing/malformed preserved state; never reset private quotas or alter production security behavior. Run five focused tests on every hosted VM image. [EN/US assessment](doc/us/BETA_0.8_CI_REPAIR.md) · [PL operator notes](doc/pl/BETA_0.8_CI_REPAIR.md).
+- **Boundary:** Require full green checks on the *new exact head*. Stop after push/CI trigger without waiting; no release, tag, deployment, Owner approval or merge into protected main.
+
 ## beta-0.8 Fix Pass 5 — 2026-11-24 (Stage V review; exact-head hosted CI still NO-GO)
 
 - **Verified defects:** Prevent old green CI from qualifying after the branch HEAD advances; reject out-of-attempt artifact timestamps/foreign branch metadata. The GitHub-provided digest is metadata, not an independently downloaded/hashed ZIP; preserve that explicit limitation.

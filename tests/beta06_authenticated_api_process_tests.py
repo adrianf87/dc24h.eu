@@ -114,6 +114,43 @@ def synthetic_password_proof_status(endpoint, token, actor):
         return int(peer.recv(64).split(b" ", 2)[1])
 
 
+def restored_login_budget_delay(catalog, service_token, actor, now_ms):
+    """Wait for the *preserved* private limiter, without deleting a bucket.
+
+    The recovery test can perform an additional deliberately refused TOTP
+    replay before its fresh TOTP and Chromium passkey proofs. Those independent
+    password attempts share the gateway's four-per-minute actor bucket. A
+    fast hosted runner can reach the valid passkey proof while that bucket is
+    full, producing HTTP 429 rather than testing the restored credential.
+    Read only the synthetic recovered catalog; never reset its state or raise
+    the production rate limits to make the test pass.
+    """
+    if (not isinstance(catalog, dict) or catalog.get("schema") != 1 or
+            not isinstance(catalog.get("buckets"), list) or
+            not re.fullmatch(r"[0-9a-f]{64}", service_token) or
+            not re.fullmatch(r"[1-9][0-9]{0,18}", actor) or
+            type(now_ms) is not int or now_ms < 0):
+        raise AssertionError("Invalid disposable restored limiter state")
+    secret = bytes.fromhex(service_token)
+    deadlines = []
+    for name, limit in (("login:global", 12), ("login:" + actor, 4)):
+        key = hmac.new(secret, name.encode("ascii"), hashlib.sha256).hexdigest()
+        matching = [entry for entry in catalog["buckets"]
+                    if isinstance(entry, dict) and entry.get("key") == key]
+        if len(matching) != 1:
+            raise AssertionError("Restored private login-budget continuity missing")
+        entry = matching[0]
+        count, started = entry.get("count"), entry.get("starts")
+        if (type(count) is not int or count < 1 or type(started) is not int or
+                started < 0 or started > now_ms):
+            raise AssertionError("Invalid restored login-budget window")
+        if count >= limit and started + 60_000 > now_ms:
+            deadlines.append(started + 60_000)
+    # A 1.5-second safety margin allows different event-loop scheduling on
+    # Ubuntu 22.04/24.04/26.04; never bypasses a 60-second bucket window.
+    return max(0.0, (max(deadlines, default=now_ms) - now_ms + 1500) / 1000) if deadlines else 0.0
+
+
 def percentile(samples, percentile_value):
     at = max(0, (len(samples) * percentile_value + 99) // 100 - 1)
     return round(sorted(samples)[at], 3)
@@ -604,10 +641,19 @@ def run(binary, seeder, account_admin):
             # maintenance authority, checked grant and read-only gateway.
             # The same device subsequently revokes itself via the authorized
             # CSRF-protected route, invalidating its live session.
-            # Allow a full extra second beyond the maintenance authority's
-            # one-second global POST budget before asking Chromium to make
-            # a second independent password proof after restored TOTP login.
-            time.sleep(2.2)
+            # The restored limiter deliberately retains previous TOTP logins
+            # and the optional denied replay. A faster image (Ubuntu 26.04)
+            # can reach the next legitimate passkey password proof after four
+            # actor hits in the same 60-second window, yielding HTTP 429.
+            # Let that actual persisted budget expire before the browser's
+            # independent proof; never clear the bucket or relax the gateway.
+            budget = json.loads((restored_private / "rate-limits.json").read_text(encoding="utf-8"))
+            cooldown = restored_login_budget_delay(budget, api_token, actor, int(time.time() * 1000))
+            if cooldown > 61.5:
+                raise AssertionError("Unexpected recovered login-budget duration")
+            # The C++ maintenance authority additionally has a 1-second
+            # global POST budget, independent of Node's persisted limiter.
+            time.sleep(max(2.2, cooldown))
             browser_command(browser, {"action": "restore"})
             browser_phase(browser, "authenticated_and_revoked")
             if browser.wait(timeout=10) != 0:

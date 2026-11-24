@@ -139,6 +139,9 @@ jobs:
           # The Playwright browser callback must remain native ESM. Running
           # this fixture via tsx injects __name helpers unavailable in Chromium.
           node --check webadmin/tests/beta07-live-passkey-client.mjs
+          # A restored limiter must retain the real actor/global budgets;
+          # only schedule the browser proof after its original window ends.
+          python3 -m unittest discover -s tests -p beta08_restored_login_budget_tests.py
           DC24H_VM_REPORT_DIR="$PWD/vm-evidence" python3 \
             tests/beta06_authenticated_api_process_tests.py \
             build/Stage4VM/dc24h build/Stage4VM/account_webadmin_tests \
