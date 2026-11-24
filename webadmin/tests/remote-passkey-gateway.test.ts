@@ -184,13 +184,35 @@ test("passkey gateway binds login and enrollment to one-use challenges, password
     assert.equal((await call("passkey/device/revoke", "POST", { id: anotherId },
       csrfHeader(renamedCsrf, renamedCookie))).status, 403, "cross-account revocation refused");
     assert.equal(store.get("8", anotherId)?.name, "Other Owner");
+
+    // A second independently signed-in browser session for the same actor
+    // must also lose authority when either device is revoked. Store epochs
+    // protect every session, not only the cookie that performed the mutation.
+    const peerStart = await call("challenge");
+    const peerCsrf = JSON.parse(peerStart.body).csrf as string;
+    const peerOptions = await call("passkey/login/options", "POST",
+      { actor_id: "7", password: "correct" },
+      csrfHeader(peerCsrf, peerStart.cookies[0]!.split(";")[0]!));
+    assert.equal(peerOptions.status, 200);
+    const peerLogin = await call("passkey/login/finish", "POST", { response: { valid: true } },
+      csrfHeader(peerCsrf, peerOptions.cookies[0]!.split(";")[0]!));
+    assert.equal(peerLogin.status, 200);
+    const peerCookie = peerLogin.cookies[0]!.split(";")[0]!;
+    assert.notEqual(peerCookie, renamedCookie);
+    assert.equal((await call("session", "GET", {}, { cookie: peerCookie })).status, 200);
     assert.equal((await call("passkey/device/revoke", "POST", { id },
       csrfHeader(renamedCsrf, renamedCookie))).status, 200);
     assert.equal(store.epoch("7"), 1);
     assert.equal((await call("session", "GET", {}, { cookie: renamedCookie })).status, 401);
+    assert.equal((await call("session", "GET", {}, { cookie: peerCookie })).status, 401,
+      "passkey revocation must terminate every session for the actor");
     assert.equal(store.forActor("7").length, 1);
     assert.ok(called.includes("POST /api/v1/admin/access"));
     assert.ok(events.includes("passkey_revoke_intent") && events.includes("passkey_revoked"));
+    // The peer-session regression legitimately spends another password-proof
+    // budget slot. Move to a new rate window only after both old sessions
+    // have been proven revoked, before the independent expiry scenarios.
+    now += 60_001;
 
     // A cryptographic verification may finish after its one-time challenge
     // expires. The successful proof must not become a new browser session.

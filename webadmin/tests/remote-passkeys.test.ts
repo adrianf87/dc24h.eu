@@ -91,6 +91,9 @@ test("two passkeys preserve counter and backup policy, account isolation, rename
   assert.equal(store.markUsed("7", first, 1, 2, "multiDevice", true, 1001), false, "unexpected backup downgrade");
   assert.equal(store.markUsed("7", second, 0, 0, "multiDevice", true, 1002), true,
     "synced multi-device keys may have a zero hardware counter");
+  assert.equal(store.markUsed("7", second, 0, 0, "singleDevice", false, 1003), false,
+    "backup eligibility must not downgrade after a multi-device credential was enrolled");
+  assert.equal(store.get("7", second)?.deviceType, "multiDevice");
   assert.equal(store.rename("8", second, "Interloper"), false);
   assert.equal(store.rename("7", second, "Travel key"), true);
   assert.equal(store.revoke("7", first, 2000), true);

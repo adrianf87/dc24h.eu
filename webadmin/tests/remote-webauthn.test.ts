@@ -86,6 +86,13 @@ test("genuine ES256 WebAuthn registration and assertion reject wrong Origin, cha
     }
     assert.equal(await service.finishLogin("7", login!.challenge, device.assertion(login!.challenge, handle), 2000), true);
     await assert.rejects(() => service.finishLogin("7", login!.challenge, device.assertion(login!.challenge, handle), 2001));
+    const otherHandle = store.userHandle("8");
+    assert.equal(await service.finishLogin("7", login!.challenge,
+      device.assertion(login!.challenge, otherHandle, 2), 2002), false,
+      "a genuine signature with another account's user handle cannot cross the actor boundary");
+    assert.equal(store.get("7", store.forActor("7")[0]!.id)?.counter, 1);
+    assert.equal(await service.beginLogin("8"), null,
+      "an account without enrolled credentials cannot start passkey-only login");
     assert.equal(await service.finishLogin("8", login!.challenge, device.assertion(login!.challenge, handle, 2), 2002), false);
     await assert.rejects(() => service.finishLogin("7", "wrong-challenge", device.assertion(login!.challenge, handle, 2), 2002));
     store.revoke("7", store.forActor("7")[0]!.id, 3000);
