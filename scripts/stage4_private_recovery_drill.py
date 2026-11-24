@@ -173,6 +173,33 @@ def make_private_destination(path):
     return private_directory(target)
 
 
+def abandon_partial_destination(target):
+    """Remove only our freshly-created private output after an interrupted copy.
+
+    Unexpected entries or replaced inodes are preserved for investigation;
+    never recursively delete an operator-selected path. The caller created
+    this directory with exclusive mkdir, so there was no prior user content.
+    """
+    try:
+        root = private_directory(target)
+        children = list(root.iterdir())
+        if any(child.name not in set(FILES) | {MANIFEST} for child in children):
+            return
+        for child in children:
+            metadata = child.lstat()
+            if (not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != os.geteuid() or
+                    metadata.st_nlink != 1 or metadata.st_mode & 0o077):
+                return
+        for child in children:
+            child.unlink()
+        root.rmdir()
+        sync_directory(root.parent)
+    except OSError:
+        # Keep an uncertain partial archive rather than delete any unrelated
+        # file. It cannot pass manifest verification and must not be restored.
+        pass
+
+
 def separate_destination(source, destination):
     target = Path(destination)
     if not target.is_absolute():
@@ -279,24 +306,28 @@ def snapshot(source, destination):
         finally:
             data[:] = b"\0" * len(data)
     target = make_private_destination(destination)
-    entries = {}
-    for name, maximum in FILES.items():
-        data = read_private(original, name, maximum, name in ("audit.jsonl", "replay.jsonl"))
-        try:
-            validate_format(name, data)
-            entry = {"bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}
-            if (entry["bytes"], entry["sha256"]) != fingerprints[name]:
-                raise ValueError("Private source changed after snapshot preflight")
-            entries[name] = entry
-            write_private(target, name, data)
-        finally:
-            data[:] = b"\0" * len(data)
-    manifest = {"schema": 1, "files": entries,
-                "created_utc": datetime.now(timezone.utc).isoformat(timespec="seconds")}
-    write_private(target, MANIFEST, json.dumps(manifest, sort_keys=True).encode("utf8") + b"\n")
-    sync_directory(target)
-    verify(target)
-    return len(entries)
+    try:
+        entries = {}
+        for name, maximum in FILES.items():
+            data = read_private(original, name, maximum, name in ("audit.jsonl", "replay.jsonl"))
+            try:
+                validate_format(name, data)
+                entry = {"bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+                if (entry["bytes"], entry["sha256"]) != fingerprints[name]:
+                    raise ValueError("Private source changed after snapshot preflight")
+                entries[name] = entry
+                write_private(target, name, data)
+            finally:
+                data[:] = b"\0" * len(data)
+        manifest = {"schema": 1, "files": entries,
+                    "created_utc": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+        write_private(target, MANIFEST, json.dumps(manifest, sort_keys=True).encode("utf8") + b"\n")
+        sync_directory(target)
+        verify(target)
+        return len(entries)
+    except BaseException:
+        abandon_partial_destination(target)
+        raise
 
 
 def check_payloads(root, manifest, include_manifest):
@@ -346,21 +377,25 @@ def restore_to_fresh_directory(source, destination):
     separate_destination(backup, destination)
     manifest = verified_manifest(backup)
     target = make_private_destination(destination)
-    for name, maximum in FILES.items():
-        data = read_private(backup, name, maximum, name in ("audit.jsonl", "replay.jsonl"))
-        try:
-            meta = manifest["files"][name]
-            if len(data) != meta["bytes"] or hashlib.sha256(data).hexdigest() != meta["sha256"]:
-                raise ValueError("Backup changed since verification")
-            validate_format(name, data)
-            write_private(target, name, data)
-        finally:
-            data[:] = b"\0" * len(data)
-    sync_directory(target)
-    # Validate the written five-file bundle against the original manifest;
-    # the gateway data directory must not acquire an extra manifest file.
-    check_payloads(target, manifest, include_manifest=False)
-    return len(FILES)
+    try:
+        for name, maximum in FILES.items():
+            data = read_private(backup, name, maximum, name in ("audit.jsonl", "replay.jsonl"))
+            try:
+                meta = manifest["files"][name]
+                if len(data) != meta["bytes"] or hashlib.sha256(data).hexdigest() != meta["sha256"]:
+                    raise ValueError("Backup changed since verification")
+                validate_format(name, data)
+                write_private(target, name, data)
+            finally:
+                data[:] = b"\0" * len(data)
+        sync_directory(target)
+        # Validate the written five-file bundle against the original manifest;
+        # the gateway data directory must not acquire an extra manifest file.
+        check_payloads(target, manifest, include_manifest=False)
+        return len(FILES)
+    except BaseException:
+        abandon_partial_destination(target)
+        raise
 
 
 def main(argv=None):
