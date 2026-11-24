@@ -182,7 +182,10 @@ export function openPasskeyStore(path: string, rpID: string) {
     const entry = get(actor, id);
     if (!entry || entry.counter !== prior || !safeTime(next) || !safeTime(now) ||
         (entry.counter !== 0 && next <= entry.counter) || (type === "singleDevice" && backup) ||
-        (entry.deviceType === "singleDevice" && type !== "singleDevice")) return false;
+        // WebAuthn's backup-eligibility bit is fixed per credential. A signed
+        // assertion may change backup *state*, never switch a registered
+        // authenticator between single- and multi-device eligibility.
+        entry.deviceType !== type) return false;
     write({ ...doc, credentials: doc.credentials.map(c => c.id === id ?
       { ...c, counter: next, deviceType: type, backedUp: backup, lastUsedAt: now } : c) });
     return true;

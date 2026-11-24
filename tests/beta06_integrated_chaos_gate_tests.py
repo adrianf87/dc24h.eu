@@ -31,12 +31,18 @@ class IntegratedGateTests(unittest.TestCase):
                 "schema": 1, "source_sha": SHA, "os_image": OS,
                 "fresh_password_totp_login_accepted": True, "old_browser_cookie_refused": True,
                 "revoked_passkey_login_options_refused": True, "production_recovery_claim": False,
+                "real_browser_webauthn_exercised": True,
+                "restored_browser_password_passkey_accepted": True,
+                "restored_browser_summary_accepted": True,
+                "restored_browser_assertion_replay_refused": True,
+                "restored_browser_revoke_invalidated_session": True,
+                "revoked_passkey_persisted_after_restart": True,
             },
             "beta06-previous-version-rollback.json": {
                 "schema": 1, "source_sha": SHA, "os_image": OS,
                 "historical_binary_distinct": True, "previous_binary_database_status_accepted": True,
                 "fresh_mariadb_v11_and_five_private_files_restored": True,
-                "previous_version": "beta-0.5.16", "current_version": "beta-0.6.16",
+                "previous_version": "beta-0.5.16", "current_version": "beta-0.7.20",
                 "production_rollback_claim": False,
             },
             "stage4-endurance.json": {
@@ -69,12 +75,16 @@ class IntegratedGateTests(unittest.TestCase):
             self.assertFalse(result["production_claim"])
 
     def test_missing_stale_forged_skipped_and_failed_fail_closed(self):
-        for mutate in ("missing", "sha", "os", "fake_success", "rss", "no_fault", "skipped", "failed", "duplicate"):
+        for mutate in ("missing", "sha", "os", "fake_success", "rss", "no_browser", "no_fault", "skipped", "failed", "duplicate"):
             with self.subTest(mutate=mutate), tempfile.TemporaryDirectory() as path:
                 root = Path(path)
                 data, junit = self.fixtures(root)
                 if mutate == "missing":
                     (root / "beta06-restored-login.json").unlink()
+                elif mutate == "no_browser":
+                    key = "beta06-restored-login.json"
+                    data[key]["restored_browser_password_passkey_accepted"] = False
+                    (root / key).write_text(json.dumps(data[key]))
                 elif mutate in ("sha", "os", "fake_success", "rss"):
                     key = "beta06-authenticated-https.json"
                     if mutate == "sha": data[key]["source_sha"] = "b" * 40

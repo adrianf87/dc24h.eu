@@ -1,0 +1,66 @@
+name: Beta 0.7 exact-head CodeQL
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: beta07-codeql-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  analyze:
+    name: CodeQL C++ and TypeScript - ${{ matrix.os }}
+    if: github.repository == 'adrianf87/dc24h.eu-high-starter'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
+    env:
+      CXX: g++
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Initialize pinned CodeQL analyzers
+        uses: github/codeql-action/init@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4
+        with:
+          languages: cpp,javascript-typescript
+
+      - name: Install isolated C++ dependencies
+        run: |
+          bash .github/scripts/install-ci-deps.sh \
+            build-essential cmake python3 libutf8proc-dev libgcrypt20-dev \
+            libssl-dev libmariadb-dev
+
+      - name: Build traced C++20 translation units
+        run: |
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          # CMake emits compiler_depend.ts files which are *not* TypeScript.
+          # Keep all generated files outside the checkout so the JavaScript/
+          # TypeScript analyzer measures source, not CMake internals.
+          cmake -S . -B "$RUNNER_TEMP/beta07-codeql-build" -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=OFF
+          cmake --build "$RUNNER_TEMP/beta07-codeql-build" --parallel 2
+
+      - name: Analyze C++ and TypeScript at the exact source head
+        uses: github/codeql-action/analyze@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4
+        with:
+          # The repository already enables CodeQL default setup. Advanced SARIF
+          # uploads are rejected by GitHub; retain the full hosted scan locally.
+          upload: never
+          output: ${{ runner.temp }}/beta07-codeql-sarif
+
+      - name: Qualify local CodeQL SARIF without competing with default setup
+        run: |
+          python3 scripts/beta07_codeql_sarif_gate.py \
+            --input "${{ runner.temp }}/beta07-codeql-sarif"

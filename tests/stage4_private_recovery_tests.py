@@ -119,6 +119,43 @@ class StageFourPrivateRecovery(unittest.TestCase):
             with self.assertRaises(ValueError):
                 recovery.snapshot(str(source), str(root / "invalid-fifo"))
 
+    def test_private_source_refuses_symlinked_ancestor_even_if_leaf_is_private(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = fixture(root)
+            link = root / "indirect"
+            link.symlink_to(root, target_is_directory=True)
+            with self.assertRaisesRegex(ValueError, "Symlink"):
+                recovery.verify(str(link / source.name))
+            with self.assertRaisesRegex(ValueError, "Symlink"):
+                recovery.snapshot(str(link / source.name), str(root / "backup"))
+            self.assertFalse((root / "backup").exists())
+
+    def test_private_read_refuses_same_size_in_place_rewrite_even_without_timestamp_change(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = fixture(root)
+            original = recovery.os.read
+            # A runner filesystem may report the same nanosecond timestamps
+            # for both writes. Freeze fstat metadata to prove byte comparison
+            # catches a rewrite independently of timestamp resolution.
+            frozen_metadata = (source / "mfa.json").stat()
+            changed = False
+
+            def mutate_during_read(fd, count):
+                nonlocal changed
+                data = original(fd, count)
+                if not changed:
+                    changed = True
+                    path = source / "mfa.json"
+                    path.write_bytes(path.read_bytes().replace(b"A" * 32, b"B" * 32))
+                return data
+
+            with mock.patch.object(recovery.os, "fstat", return_value=frozen_metadata):
+                with mock.patch.object(recovery.os, "read", side_effect=mutate_during_read):
+                    with self.assertRaisesRegex(ValueError, "changed while reading"):
+                        recovery.read_private(source, "mfa.json", recovery.FILES["mfa.json"])
+
     def test_cli_needs_offline_acknowledgments_and_does_not_claim_rto(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -6,12 +6,14 @@ Only aggregate, non-sensitive evidence may leave this test.
 """
 
 import hashlib
+from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
 import platform
 import pwd
 import re
+import selectors
 import subprocess
 import sys
 import tempfile
@@ -23,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 import stage1_recovery_bundle as bundle
 import stage4_private_recovery_drill as private
+import beta07_recovery_preflight as offline_preflight
 
 SOURCE_SHA = os.environ.get("SOURCE_SHA", "")
 EXPECTED_ROW = "00FF61\towner\tactive\t2"
@@ -133,6 +136,54 @@ class IsolatedDatabase:
             destination.unlink(missing_ok=True)
             raise
 
+    @contextmanager
+    def locked_offline_capture(self):
+        """Hold MariaDB's global read lock for the SQL + private-file capture.
+
+        This protects a disposable database against writes between its dump
+        and the five-file snapshot. All application/gateway writers must also
+        be stopped independently; a database lock does not stop file writers.
+        """
+        if self.proc is None or self.proc.poll() is not None:
+            raise AssertionError("Isolated MariaDB is not available for capture")
+        client = subprocess.Popen(self.client("--batch", "--skip-column-names", "--unbuffered"),
+                                  stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                  stderr=subprocess.DEVNULL, bufsize=0)
+        locked = False
+        try:
+            assert client.stdin is not None and client.stdout is not None
+            client.stdin.write(b"FLUSH TABLES WITH READ LOCK;\nSELECT 'CI_LOCKED';\n")
+            client.stdin.flush()
+            with selectors.DefaultSelector() as ready:
+                ready.register(client.stdout, selectors.EVENT_READ)
+                if not ready.select(timeout=10):
+                    raise AssertionError("Timed out waiting for isolated MariaDB read lock")
+            if client.stdout.readline().strip() != b"CI_LOCKED" or client.poll() is not None:
+                raise AssertionError("Isolated MariaDB read lock was not acquired")
+            locked = True
+            yield
+        finally:
+            if client.poll() is None:
+                if locked:
+                    try:
+                        client.stdin.write(b"UNLOCK TABLES;\nquit\n")
+                        client.stdin.flush()
+                    except OSError:
+                        pass
+                try:
+                    client.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    client.terminate()
+                    try:
+                        client.wait(timeout=3)
+                    except subprocess.TimeoutExpired:
+                        client.kill()
+                        client.wait(timeout=3)
+            if client.stdin:
+                client.stdin.close()
+            if client.stdout:
+                client.stdout.close()
+
     def restore_sql(self, source):
         with source.open("rb") as file:
             result = subprocess.run(self.client("dc24h"), stdin=file,
@@ -225,14 +276,25 @@ class MatchedRecoveryTests(unittest.TestCase):
                 gateway = root / "gateway"
                 gateway.mkdir(mode=0o700)
                 make_gateway_fixture(gateway)
-                snapshot = root / "snapshot"
-                private.snapshot(gateway, snapshot)
                 dump = root / "checkpoint.sql"
-                source.dump(dump)
+                snapshot = root / "snapshot"
                 pair_dir = root / "pair"
                 pair_dir.mkdir(mode=0o700)
                 sha = SOURCE_SHA if re.fullmatch(r"[0-9a-f]{40}", SOURCE_SHA) else "0" * 40
-                bundle.create_pair(dump, snapshot, pair_dir, sha)
+                # The fixture has no running gateway process. Keep MariaDB
+                # read-locked until both components are copied and hash-paired.
+                with source.locked_offline_capture():
+                    before = {name: bundle.private_hash(gateway / name, maximum)
+                              for name, maximum in private.FILES.items()}
+                    source.dump(dump)
+                    if offline_preflight.sql_migration_row_count(dump) != 11:
+                        raise AssertionError("Isolated SQL export lacks migration v11 evidence")
+                    private.snapshot(gateway, snapshot)
+                    bundle.create_pair(dump, snapshot, pair_dir, sha)
+                    after = {name: bundle.private_hash(gateway / name, maximum)
+                             for name, maximum in private.FILES.items()}
+                    if before != after:
+                        raise AssertionError("Private gateway changed during locked capture")
                 self.assertEqual(bundle.verified_pair(dump, snapshot, pair_dir / bundle.NAME)
                                  ["verified_files"], 6)
                 # No new acknowledged writes after the stopped consistency point:
@@ -240,11 +302,15 @@ class MatchedRecoveryTests(unittest.TestCase):
                 outage_at = time.monotonic()
                 source.stop()
 
+                restored_dir = root / "restored-state"
+                first_preflight = offline_preflight.preflight(
+                    dump, snapshot, pair_dir, sha, recovered.datadir, restored_dir)
+                self.assertEqual(first_preflight["verified_components"], 6)
+                self.assertEqual(first_preflight["sql_export_applied_migration_rows"], 11)
                 recovered.initialize()
                 recovered.start()
                 recovered.setup_schema()
                 recovered.restore_sql(dump)
-                restored_dir = root / "restored-state"
                 private.restore_to_fresh_directory(snapshot, restored_dir)
                 verify_recovered(recovered, restored_dir, binary)
                 rto = time.monotonic() - outage_at
@@ -259,11 +325,14 @@ class MatchedRecoveryTests(unittest.TestCase):
                                                   "WHERE id=7;"), "owner")
                 rollback_at = time.monotonic()
                 recovered.stop()
+                rolled_back_state = root / "rollback-state"
+                rollback_preflight = offline_preflight.preflight(
+                    dump, snapshot, pair_dir, sha, rollback.datadir, rolled_back_state)
+                self.assertEqual(rollback_preflight["verified_components"], 6)
                 rollback.initialize()
                 rollback.start()
                 rollback.setup_schema()
                 rollback.restore_sql(dump)
-                rolled_back_state = root / "rollback-state"
                 private.restore_to_fresh_directory(snapshot, rolled_back_state)
                 verify_recovered(rollback, rolled_back_state, binary)
                 rollback_seconds = time.monotonic() - rollback_at
@@ -279,6 +348,7 @@ class MatchedRecoveryTests(unittest.TestCase):
                               "credential_bytes_revalidated": True,
                               "grants_and_revocation_state_checked": True,
                               "audit_and_replay_integrity_checked": True,
+                              "fresh_destination_preflight_before_each_restore": True,
                               "matched_restore_completed": True, "fresh_rollback_completed": True,
                               "rpo_lost_acknowledged_writes": 0,
                               "rpo_seconds": 0, "rto_seconds": round(rto, 3),

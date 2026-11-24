@@ -45,6 +45,9 @@ def summarize(profile, samples, seconds, rate, concurrency, rss_before=None, rss
         "successful_requests_per_second": round(len(latency) / seconds, 3) if seconds > 0 else None,
         "p50_ms": percentile(latency, 0.50), "p95_ms": percentile(latency, 0.95),
         "p99_ms": percentile(latency, 0.99), "max_ms": max(latency, default=None),
+        # Synthetic loopback latency numbers only (no peer, request or actor data).
+        # The Stage V gate recomputes percentiles from these observations.
+        "latency_samples_ms": latency,
         "configured_rate_per_second": rate, "concurrency": concurrency,
         "target_rss_before_kib": rss_before, "target_rss_after_kib": rss_after,
         # Process CPU time / elapsed wall time, in units of one logical CPU;

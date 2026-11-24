@@ -18,6 +18,7 @@ import platform
 import pwd
 import re
 import secrets
+import select
 import shutil
 import signal
 import socket
@@ -71,6 +72,24 @@ def terminate(process):
     except subprocess.TimeoutExpired:
         os.killpg(process.pid, signal.SIGKILL)
         process.communicate(timeout=5)
+
+
+def browser_phase(process, expected, timeout=60):
+    """Wait for a fixed success word, never serialize browser credentials."""
+    if process.stdout is None:
+        raise AssertionError("Browser client protocol unavailable")
+    ready, _, _ = select.select([process.stdout], [], [], timeout)
+    result = process.stdout.readline().strip() if ready else ""
+    if result != expected:
+        diagnostic = result if re.fullmatch(r"client_error:[a-z_0-9]{1,48}", result) else "no_verified_result"
+        raise AssertionError("Real Chromium passkey " + expected + " phase failed: " + diagnostic)
+
+
+def browser_command(process, instruction):
+    if process.poll() is not None or process.stdin is None:
+        raise AssertionError("Real Chromium helper stopped")
+    process.stdin.write(json.dumps(instruction, separators=(",", ":")) + "\n")
+    process.stdin.flush()
 
 
 def code_now():
@@ -130,7 +149,7 @@ def run(binary, seeder, account_admin):
         public.mkdir()
         (public / "remote.html").write_text("<title>Disposable remote fixture</title>")
         (apache_dir / "mime.types").write_text("text/html html\napplication/json json\n")
-        cpp = node = apache = None
+        cpp = node = apache = browser = None
         recovered_db = None
         try:
             db.initialize()
@@ -339,20 +358,52 @@ def run(binary, seeder, account_admin):
                 return valid, elapsed
 
             processes = {"account_admin": cpp.pid, "gateway": node.pid, "apache": apache.pid}
-            cpu_before = {name: process_cpu_seconds(pid) for name, pid in processes.items()}
-            rss_before = {name: rss_kib(pid) for name, pid in processes.items()}
-            if any(value is None or value <= 0 for value in rss_before.values()) or (
-                any(value is None for value in cpu_before.values())):
-                raise AssertionError("Missing process CPU/RSS baseline")
-            started = time.monotonic()
-            with ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
-                readings = list(pool.map(measure, range(REQUESTS)))
-            elapsed = time.monotonic() - started
-            cpu_after = {name: process_cpu_seconds(pid) for name, pid in processes.items()}
-            rss_after = {name: rss_kib(pid) for name, pid in processes.items()}
-            if any(value is None or value <= 0 for value in rss_after.values()) or (
-                any(value is None or value < cpu_before[name] for name, value in cpu_after.items())):
-                raise AssertionError("Missing or regressed process CPU/RSS observation")
+            windows = []
+            readings = []
+            all_started = time.monotonic()
+            for window in range(3):
+                if window:
+                    # Preserve the C++ grant recheck budget between windows.
+                    time.sleep(BATCH_SPACING_SECONDS)
+                window_cpu_before = {name: process_cpu_seconds(pid) for name, pid in processes.items()}
+                window_rss_before = {name: rss_kib(pid) for name, pid in processes.items()}
+                if any(value is None or value <= 0 for value in window_rss_before.values()) or (
+                        any(value is None for value in window_cpu_before.values())):
+                    raise AssertionError("Missing process CPU/RSS baseline")
+                started = time.monotonic()
+                with ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
+                    observed = list(pool.map(measure, range(REQUESTS // 3)))
+                window_elapsed = time.monotonic() - started
+                window_cpu_after = {name: process_cpu_seconds(pid) for name, pid in processes.items()}
+                window_rss_after = {name: rss_kib(pid) for name, pid in processes.items()}
+                if any(value is None or value <= 0 for value in window_rss_after.values()) or (
+                        any(value is None or value < window_cpu_before[name] for name, value in window_cpu_after.items())):
+                    raise AssertionError("Missing or regressed process CPU/RSS observation")
+                successes = [duration for valid, duration in observed if valid]
+                windows.append({"schema": 1, "window": window + 1,
+                                "requests": len(observed), "success": len(successes),
+                                "failure": len(observed) - len(successes),
+                                "rate_limit_safe_batch_spacing_ms": int(BATCH_SPACING_SECONDS * 1000),
+                                "concurrency": CONCURRENCY, "elapsed_seconds": round(window_elapsed, 3),
+                                "successful_requests_per_second": round(len(successes) / window_elapsed, 3),
+                                "p50_ms": percentile(successes, 50) if successes else None,
+                                "p95_ms": percentile(successes, 95) if successes else None,
+                                "p99_ms": percentile(successes, 99) if successes else None,
+                                "latency_samples_ms": sorted(round(value, 3) for value in successes),
+                                "rss_before_kib": window_rss_before,
+                                "rss_after_kib": window_rss_after,
+                                "cpu_mean_percent_one_core_by_process": {
+                                    name: round(100 * (window_cpu_after[name] - window_cpu_before[name]) /
+                                                window_elapsed, 3) for name in processes
+                                },
+                                "cpu_mean_percent_one_core": round(100 * sum(
+                                    window_cpu_after[name] - window_cpu_before[name] for name in processes
+                                ) / window_elapsed, 3), "production_sla_claim": False})
+                readings.extend(observed)
+                if window == 0:
+                    cpu_before, rss_before = window_cpu_before, window_rss_before
+                cpu_after, rss_after = window_cpu_after, window_rss_after
+            elapsed = time.monotonic() - all_started
             success = [duration for valid, duration in readings if valid]
             if len(success) != REQUESTS or not elapsed > 0:
                 raise AssertionError("Real authenticated API workload had failed requests")
@@ -372,9 +423,12 @@ def run(binary, seeder, account_admin):
                 "p99_ms": p99, "max_ci_p99_ms": MAX_P99_MS,
                 "max_ms": round(max(success), 3),
                 "rss_before_kib": rss_before, "rss_after_kib": rss_after,
+                "beta07_three_windows": windows,
                 "cpu_mean_percent_one_core": round(
                     100 * sum(cpu_after[name] - cpu_before[name] for name in processes) / elapsed, 3),
                 "synthetic_credentials_only": True,
+                # This report measures password+TOTP only. The real browser
+                # passkey recovery appears in the separate restore report.
                 "passkey_browser_flow_exercised": False,
                 "capacity_claim": False, "production_sla_claim": False,
             }
@@ -387,31 +441,77 @@ def run(binary, seeder, account_admin):
                     file.write("\n")
             print(f"Authenticated HTTPS: {len(success)}/{REQUESTS} success, p99={p99} ms (CI fixture)")
 
+            # A passkey enrollment is allowed only during the first 60 seconds
+            # of a freshly authenticated gateway session. The three timed
+            # windows above deliberately exercise a long-lived session, which
+            # must never be reused for a credential mutation. Get an entirely
+            # new C++ password+TOTP grant and CSRF challenge before the real
+            # browser enrollment; preserve the consumed OTP replay boundary.
+            original_otp_step = int(time.time() // 30)
+            until = time.monotonic() + 35
+            while int(time.time() // 30) <= original_otp_step:
+                if time.monotonic() > until:
+                    raise AssertionError("Fresh enrollment TOTP window did not arrive")
+                time.sleep(0.25)
+            time.sleep(1.1)  # C++ maintenance authority's global POST budget
+            status, payload, headers, _ = fetch("/remote/v1/challenge")
+            if status != 200:
+                raise AssertionError("Fresh passkey enrollment challenge unavailable")
+            fresh_cookie = next(value.split(";", 1)[0] for name, value in headers
+                                if name.lower() == "set-cookie")
+            fresh_login = json.dumps({"actor_id": actor, "password": "WebAdmin operator password!",
+                                      "otp": code_now()}).encode()
+            status, payload, headers, _ = fetch("/remote/v1/login", "POST", fresh_login, {
+                "Origin": origin, "Content-Type": "application/json", "Cookie": fresh_cookie,
+                "X-DC24H-Remote-CSRF": json.loads(payload)["csrf"]})
+            if status != 200 or json.loads(payload).get("authenticated") is not True:
+                raise AssertionError("Fresh C++ password+TOTP grant for browser enrollment refused")
+            cookie = next(value.split(";", 1)[0] for name, value in headers
+                          if name.lower() == "set-cookie")
+
+            # Enroll a genuine Chromium virtual authenticator through the
+            # live private HTTPS gateway with an actual C++ password+TOTP
+            # grant. Keep Chromium and its credential across the MariaDB and
+            # five-store offline checkpoint; do not export the private key.
+            browser = subprocess.Popen([
+                "node", "tests/beta07-live-passkey-client.mjs",
+            ], cwd=ROOT / "webadmin", stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+                bufsize=1, start_new_session=True)
+            browser_command(browser, {"origin": origin, "actor": actor,
+                                      "sessionCookie": cookie, "csrf": json.loads(payload)["csrf"]})
+            browser_phase(browser, "enrolled")
+
             # The prior beta-0.5 recovery test checked SQL and file bytes but
             # did not reauthenticate through a *restored* C++/Node instance.
             # Stop all application writers and checkpoint the actual synthetic
             # gateway session, MFA replay, audit, limiter and passkey files.
-            terminate(node); node = None
-            terminate(cpp); cpp = None
-            with tempfile.TemporaryDirectory(prefix="dc24h-beta06-revoked-") as revoked_temp:
-                revoked_root = Path(revoked_temp) / "private"
-                revoked_root.mkdir(mode=0o700)
-                matched.make_gateway_fixture(revoked_root)
-                # A previously revoked, synthetic credential must remain
-                # unusable after restore; this is never a real private key.
-                shutil.copy2(revoked_root / "passkeys.json", gateway_dir / "passkeys.json")
+            previous_node, previous_cpp = node, cpp
+            terminate(previous_node); node = None
+            terminate(previous_cpp); cpp = None
+            if previous_node.poll() is None or previous_cpp.poll() is None:
+                raise AssertionError("Application writers were not stopped before capture")
             # The recovery library refuses even synthetic backups under a
             # traversable parent. Apache needs the outer fixture root at 0755,
             # so keep SQL, manifest and restore staging under this separate
             # owner-only 0700 directory instead of weakening its checks.
             snapshot = recovery_root / "snapshot"
-            matched.private.snapshot(gateway_dir, snapshot)
             dump = recovery_root / "checkpoint.sql"
-            db.dump(dump)
             pair = recovery_root / "pair"
             pair.mkdir(mode=0o700)
-            matched.bundle.create_pair(dump, snapshot, pair, sha)
-            matched.bundle.verified_pair(dump, snapshot, pair / matched.bundle.NAME, sha)
+            with db.locked_offline_capture():
+                before = {name: matched.bundle.private_hash(gateway_dir / name, maximum)
+                          for name, maximum in matched.private.FILES.items()}
+                db.dump(dump)
+                if matched.offline_preflight.sql_migration_row_count(dump) != 11:
+                    raise AssertionError("Stopped-writer SQL export lacks migration v11 proof")
+                matched.private.snapshot(gateway_dir, snapshot)
+                matched.bundle.create_pair(dump, snapshot, pair, sha)
+                matched.bundle.verified_pair(dump, snapshot, pair / matched.bundle.NAME, sha)
+                after = {name: matched.bundle.private_hash(gateway_dir / name, maximum)
+                         for name, maximum in matched.private.FILES.items()}
+                if before != after:
+                    raise AssertionError("Private gateway changed while application writers were stopped")
             db.stop()
 
             recovered_db = matched.IsolatedDatabase(base / "recovered-sql")
@@ -419,6 +519,8 @@ def run(binary, seeder, account_admin):
             recovered_db.start()
             recovered_config = recovered_db.setup_schema()
             recovered_db.restore_sql(dump)
+            if recovered_db.sql("SELECT MAX(version) FROM dc24h.dc24h_schema_migrations;") != "11":
+                raise AssertionError("Recovered MariaDB is not schema v11")
             if recovered_db.sql("SELECT role FROM dc24h.dc24h_accounts WHERE id=" + actor + ";") != "administrator":
                 raise AssertionError("Recovered C++ actor authority changed")
             restored_private = recovery_root / "restored-private"
@@ -497,8 +599,31 @@ def run(binary, seeder, account_admin):
                                    if name.lower() == "set-cookie")
             if fetch("/remote/v1/summary", headers={"Cookie": restored_cookie})[0] != 200:
                 raise AssertionError("Fresh restored read-only grant not usable")
-            # An independent, valid password proof is required for this passkey
-            # refusal, rather than an incidental C++ one-second POST throttle.
+
+            # A restored WebAuthn signature must now pass the actual password
+            # maintenance authority, checked grant and read-only gateway.
+            # The same device subsequently revokes itself via the authorized
+            # CSRF-protected route, invalidating its live session.
+            # Allow a full extra second beyond the maintenance authority's
+            # one-second global POST budget before asking Chromium to make
+            # a second independent password proof after restored TOTP login.
+            time.sleep(2.2)
+            browser_command(browser, {"action": "restore"})
+            browser_phase(browser, "authenticated_and_revoked")
+            if browser.wait(timeout=10) != 0:
+                raise AssertionError("Chromium restored credential helper failed")
+            browser = None
+
+            # Restart Node to verify the *real* revoked key persists across a
+            # second cold opening of the restored private catalog.
+            terminate(node); node = None
+            node = subprocess.Popen(["node", "--import", "tsx", "server/remote-main.ts"],
+                                    cwd=ROOT / "webadmin", env=restored_env,
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                    start_new_session=True)
+            wait_tcp(node_port, node)
+            # A valid independent password proof is required for this refusal;
+            # a C++ maintenance POST rate limit is not a passkey negative test.
             time.sleep(1.1)
             # A revoked device in the restored catalog must never yield a
             # passkey challenge, even with the correct C++ password.
@@ -524,10 +649,23 @@ def run(binary, seeder, account_admin):
                                "replay_ledger_preserved": True,
                                "revoked_passkey_catalog_restored": True,
                                "revoked_passkey_login_options_refused": True,
+                               "restored_browser_password_passkey_accepted": True,
+                               "restored_browser_summary_accepted": True,
+                               "restored_browser_assertion_replay_refused": True,
+                               "restored_browser_revoke_invalidated_session": True,
+                               "revoked_passkey_persisted_after_restart": True,
                                "production_recovery_claim": False,
-                               "real_browser_webauthn_exercised": False}, file, indent=2, sort_keys=True)
+                               "real_browser_webauthn_exercised": True}, file, indent=2, sort_keys=True)
                     file.write("\n")
         finally:
+            if browser is not None and browser.poll() is None:
+                # Chromium children share the disposable helper's private
+                # process group. Reap them even if the browser driver failed.
+                try:
+                    os.killpg(browser.pid, signal.SIGTERM)
+                except ProcessLookupError:
+                    pass
+            terminate(browser)
             terminate(apache)
             terminate(node)
             terminate(cpp)

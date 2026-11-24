@@ -44,8 +44,10 @@ test("passkey gateway binds login and enrollment to one-use challenges, password
     } as unknown as PasskeyCeremonies;
     const events: string[] = [], called: string[] = [];
     let now = 100_000;
+    let grantsAllowed = true;
     let pausedAuthorization: { entered: () => void; resume: Promise<void> } | null = null;
     let pausedEnrollment: { entered: () => void; resume: Promise<void> } | null = null;
+    let pausedBody: { name: string; entered: () => void; resume: Promise<void> } | null = null;
     const gateway = remoteGateway({ socket: "/private/test.sock", token: "a".repeat(64) }, {
       origin: "https://localhost:8443", now: () => now,
       passkeys: { store, ceremonies }, strictAudit: true, auditHealthy: () => true,
@@ -73,7 +75,7 @@ test("passkey gateway binds login and enrollment to one-use challenges, password
             areas: ["accounts", "roles", "bans", "configuration", "hub"].map(key => ({
               key, permission: key === "accounts" ? "accounts.manage" : key === "roles" ? "roles.manage" :
                 key === "bans" ? "users.ban+blocks.manage" : key === "hub" ? "hub.manage" : "configuration.manage",
-              implemented: key !== "configuration", allowed: true,
+              implemented: key !== "configuration", allowed: grantsAllowed,
             })),
           };
         }
@@ -89,7 +91,17 @@ test("passkey gateway binds login and enrollment to one-use challenges, password
       } : {}, ...extra };
       const req = { method, url: "/remote/v1/" + name, headers,
         socket: { remoteAddress: "127.0.0.1" },
-        async *[Symbol.asyncIterator]() { if (body) yield Buffer.from(body); },
+        async *[Symbol.asyncIterator]() {
+          if (body) {
+            const hold = pausedBody;
+            if (hold?.name === name) {
+              pausedBody = null;
+              hold.entered();
+              await hold.resume;
+            }
+            yield Buffer.from(body);
+          }
+        },
       } as unknown as IncomingMessage;
       const result = { status: 0, body: "", cookies: [] as string[] };
       const res = { writableEnded: false, destroyed: false,
@@ -184,13 +196,35 @@ test("passkey gateway binds login and enrollment to one-use challenges, password
     assert.equal((await call("passkey/device/revoke", "POST", { id: anotherId },
       csrfHeader(renamedCsrf, renamedCookie))).status, 403, "cross-account revocation refused");
     assert.equal(store.get("8", anotherId)?.name, "Other Owner");
+
+    // A second independently signed-in browser session for the same actor
+    // must also lose authority when either device is revoked. Store epochs
+    // protect every session, not only the cookie that performed the mutation.
+    const peerStart = await call("challenge");
+    const peerCsrf = JSON.parse(peerStart.body).csrf as string;
+    const peerOptions = await call("passkey/login/options", "POST",
+      { actor_id: "7", password: "correct" },
+      csrfHeader(peerCsrf, peerStart.cookies[0]!.split(";")[0]!));
+    assert.equal(peerOptions.status, 200);
+    const peerLogin = await call("passkey/login/finish", "POST", { response: { valid: true } },
+      csrfHeader(peerCsrf, peerOptions.cookies[0]!.split(";")[0]!));
+    assert.equal(peerLogin.status, 200);
+    const peerCookie = peerLogin.cookies[0]!.split(";")[0]!;
+    assert.notEqual(peerCookie, renamedCookie);
+    assert.equal((await call("session", "GET", {}, { cookie: peerCookie })).status, 200);
     assert.equal((await call("passkey/device/revoke", "POST", { id },
       csrfHeader(renamedCsrf, renamedCookie))).status, 200);
     assert.equal(store.epoch("7"), 1);
     assert.equal((await call("session", "GET", {}, { cookie: renamedCookie })).status, 401);
+    assert.equal((await call("session", "GET", {}, { cookie: peerCookie })).status, 401,
+      "passkey revocation must terminate every session for the actor");
     assert.equal(store.forActor("7").length, 1);
     assert.ok(called.includes("POST /api/v1/admin/access"));
     assert.ok(events.includes("passkey_revoke_intent") && events.includes("passkey_revoked"));
+    // The peer-session regression legitimately spends another password-proof
+    // budget slot. Move to a new rate window only after both old sessions
+    // have been proven revoked, before the independent expiry scenarios.
+    now += 60_001;
 
     // A cryptographic verification may finish after its one-time challenge
     // expires. The successful proof must not become a new browser session.
@@ -285,5 +319,41 @@ test("passkey gateway binds login and enrollment to one-use challenges, password
       csrfHeader(clockCsrf, clockOptions.cookies[0]!.split(";")[0]!));
     assert.equal(clockFinish.status, 403, "old WebAuthn challenge must be rejected after clock rollback");
     assert.ok(!clockFinish.cookies.some(value => value.startsWith("dc24h_remote=")));
+
+    // A grant revocation can occur while a request body trickles in. A
+    // previously authorized rename/revoke must not mutate passkeys after the
+    // C++ authority withdraws permissions, even without a second tab polling.
+    for (const mutation of ["passkey/device/rename", "passkey/device/revoke"]) {
+      now += 61_000; // independent rate-limit window for each browser login
+      const start = await call("challenge");
+      const csrf = JSON.parse(start.body).csrf as string;
+      const options = await call("passkey/login/options", "POST", { actor_id: "7", password: "correct" },
+        csrfHeader(csrf, start.cookies[0]!.split(";")[0]!));
+      assert.equal(options.status, 200);
+      const login = await call("passkey/login/finish", "POST", { response: { valid: true } },
+        csrfHeader(csrf, options.cookies[0]!.split(";")[0]!));
+      assert.equal(login.status, 200);
+      const sessionCookie = login.cookies[0]!.split(";")[0]!;
+      const sessionCsrf = JSON.parse(login.body).csrf as string;
+
+      let entered!: () => void, resume!: () => void;
+      const enteredBody = new Promise<void>(resolve => { entered = resolve; });
+      const releasedBody = new Promise<void>(resolve => { resume = resolve; });
+      pausedBody = { name: mutation, entered, resume: releasedBody };
+      const survivingId = "z".repeat(32);
+      const pending = call(mutation, "POST", mutation.endsWith("rename") ?
+        { id: survivingId, name: "Unauthorized rename" } : { id: survivingId },
+        csrfHeader(sessionCsrf, sessionCookie));
+      await enteredBody;
+      grantsAllowed = false;
+      resume();
+      assert.equal((await pending).status, 403,
+        "C++ grant revoked during the request body must prevent the credential mutation");
+      assert.equal(store.get("7", survivingId)?.name, "Passkey");
+      assert.equal(store.get("7", survivingId)?.revokedAt, null);
+      assert.equal((await call("session", "GET", {}, { cookie: sessionCookie })).status, 401,
+        "the denied mutation must invalidate its browser session");
+      grantsAllowed = true;
+    }
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

@@ -1,5 +1,19 @@
 # Changelog
 
+## beta-0.7.1–beta-0.7.4 Fix Pass 1 — 2026-11-24 (draft PR #239; exact-head CI pending)
+
+- **Client evidence provenance defect:** Bind the pinned ncdc capability report to the actual `git rev-parse HEAD`, require a matching GitHub-hosted Ubuntu 22.04/24.04/26.04 environment, and reject wrong-head/incorrect-runner evidence before writing a report. Add negative unit tests for SHA and runner drift.
+- **Stage I interoperability review:** Recheck real ncdc ADC/ADCS identity/negotiation, SCH/RES/TTH, CTM/RCM and rate/port scope, and TLS 1.2/1.3 host trust/downgrade/rotation regressions. DC++/AirDC++ remain unexecuted and explicitly untested. [Fix Pass 1 evidence and residual limits](doc/us/BETA_0.7_FIX_PASS_1.md).
+- **Handoff boundary:** The previous head's hosted CI passed, but this new exact-head matrix must finish independently before Fix Pass 1 acceptance. No merge, deployment, production performance claim or subsequent fix pass is implied.
+
+## beta-0.7.17–beta-0.7.20 Stage V — 2026-11-24 (draft PR #239; exact-head CI pending)
+
+- **0.7.17 — Comparable hosted transport windows:** Require three rate/concurrency-pinned ADC, ADCS and password+TOTP private HTTPS windows on GitHub-hosted Ubuntu 22.04/24.04/26.04, including p50/p95/p99, successful RPS, errors and actual process CPU/RSS. Do not compare protocols as equivalent workloads or assert a production SLA.
+- **0.7.18 — Bounded exhaustion and drain:** Qualify fixed CTest identities for slow ADC/ADCS readers, half-open TLS, bounded termination/restart and protected healthy peers with a 240-second external CI envelope; keep ASan/UBSan, queue and socket-level limits independently required.
+- **0.7.19 — Supply-chain evidence:** Enforce exact-head pinned Action and npm-lock provenance, export a limited public-package SBOM with hashed integrities, and fail closed on high/critical production dependency advisories. Raw npm audit JSON is never uploaded; CodeQL remains separate.
+- **0.7.20 — Release-candidate metadata and handoff:** Align C++ server/API/controller, Node/React, npm manifests and active tests to `beta-0.7.20`. Add a bilingual Owner risk/rollback handoff and a fail-closed 17-job/20-patch/21-report offline evidence consistency gate. This **does not** authenticate GitHub API records automatically; pending/skipped results, five later fix passes and Owner authorization still block merge/deployment.
+- **Boundary:** One branch `beta-0.7.x-stage-full`, draft PR #239, schema v11 unchanged, private gateway only, no passwordless login or production package/deployment. No green CI assertion until the exact final head completes all required checks. [EN/US risk register](doc/us/BETA_0.7_STAGE_V.md) | [PL operator runbook](doc/pl/BETA_0.7_STAGE_V.md).
+
 ## beta-0.6.1–beta-0.6.16 Stage II — 2026-11-24 (draft PR #237; new final-head CI pending)
 
 - **Consolidated review:** Recheck all 16 patches together, organized as provenance/performance, private recovery/security, ADC/ADCS/TLS, and WebAdmin/release. Retain Stage I limits: synthetic, private, exact-head hosted Ubuntu evidence only.

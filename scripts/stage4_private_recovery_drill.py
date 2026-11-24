@@ -41,7 +41,7 @@ AUDIT_EVENTS = {
     "passkey_enrolled", "passkey_enroll_refused", "passkey_login_ok", "passkey_login_refused",
     "passkey_device_renamed", "passkey_revoke_intent", "passkey_revoked",
     "passkey_enroll_intent", "passkey_recovery_intent", "passkey_recovered",
-    "rate_limiter_unavailable",
+    "rate_limiter_unavailable", "rate_limited",
 }
 
 
@@ -113,6 +113,15 @@ def private_directory(path):
     candidate = Path(path)
     if not candidate.is_absolute():
         raise ValueError("Absolute private directory required")
+    # lstat(candidate) alone follows symlinks in its ancestors. An operator
+    # supplied path must never escape through an intermediate symlink, even
+    # when the final directory itself has owner-only permissions.
+    ancestor = Path(candidate.anchor)
+    for component in candidate.parts[1:]:
+        ancestor = ancestor / component
+        metadata = ancestor.lstat()
+        if not stat.S_ISDIR(metadata.st_mode):
+            raise ValueError("Symlink or non-directory in private path")
     s = candidate.lstat()
     if not stat.S_ISDIR(s.st_mode) or s.st_uid != os.geteuid() or s.st_mode & 0o077:
         raise ValueError("Unsafe private directory")
@@ -134,7 +143,23 @@ def read_private(root, name, maximum, allow_empty=False):
             if not chunk:
                 raise ValueError("Truncated private source")
             data.extend(chunk)
-        if os.fstat(fd).st_size != s.st_size:
+        # Timestamp granularity differs across Ubuntu runner filesystems: a
+        # same-size in-place rewrite can leave mtime/ctime indistinguishable
+        # from the initial fstat. Compare the same inode's bytes a second time
+        # before checking metadata, without trusting timestamps alone.
+        os.lseek(fd, 0, os.SEEK_SET)
+        verified = 0
+        while verified < len(data):
+            chunk = os.read(fd, min(65536, len(data) - verified))
+            if not chunk or chunk != data[verified:verified + len(chunk)]:
+                raise ValueError("Private source changed while reading")
+            verified += len(chunk)
+        after = os.fstat(fd)
+        current = (root / name).lstat()
+        if (after.st_size != s.st_size or after.st_mtime_ns != s.st_mtime_ns or
+                after.st_ctime_ns != s.st_ctime_ns or
+                (current.st_dev, current.st_ino) != (s.st_dev, s.st_ino) or
+                not stat.S_ISREG(current.st_mode)):
             raise ValueError("Private source changed while reading")
         return data
     finally:

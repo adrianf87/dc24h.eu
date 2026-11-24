@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(dc24h VERSION 0.1.0 LANGUAGES CXX)
+project(dc24h VERSION 0.7.20 LANGUAGES CXX)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "dc24h currently targets Linux (Debian / Ubuntu).")
@@ -27,7 +27,7 @@ else()
 endif()
 
 # The VERSION tuple above is the package number; operators see the beta version.
-set(DC24H_VERSION "beta-0.6.16")
+set(DC24H_VERSION "beta-0.7.20")
 configure_file(cmake/version.hpp.in generated/dc24h/version.hpp @ONLY)
 find_package(Threads REQUIRED)
 find_package(OpenSSL 3 REQUIRED COMPONENTS SSL Crypto)
@@ -342,6 +342,24 @@ if(BUILD_TESTING)
     add_test(NAME beta.05.stage1.recovery.pair COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/stage1_recovery_bundle_tests.py")
     set_tests_properties(beta.05.stage1.recovery.pair PROPERTIES TIMEOUT 15)
+    add_test(NAME beta.07.recovery.preflight COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/beta07_recovery_preflight_tests.py")
+    set_tests_properties(beta.07.recovery.preflight PROPERTIES TIMEOUT 15)
+    add_test(NAME beta.07.recovery.offline.capture COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/beta07_offline_capture_tests.py")
+    set_tests_properties(beta.07.recovery.offline.capture PROPERTIES TIMEOUT 15)
+    add_test(NAME beta.07.ci.deb.prototype COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/beta07_ci_deb_tests.py")
+    set_tests_properties(beta.07.ci.deb.prototype PROPERTIES TIMEOUT 15)
+    add_test(NAME beta.07.supply.chain COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/beta07_supply_chain_tests.py")
+    set_tests_properties(beta.07.supply.chain PROPERTIES TIMEOUT 15)
+    add_test(NAME beta.07.ubuntu.perf.matrix COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/beta07_ubuntu_perf_matrix_tests.py")
+    set_tests_properties(beta.07.ubuntu.perf.matrix PROPERTIES TIMEOUT 15)
+    add_test(NAME beta.07.stage1.completion.gate COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/beta07_stage1_completion_gate_tests.py")
+    set_tests_properties(beta.07.stage1.completion.gate PROPERTIES TIMEOUT 15)
     add_test(NAME integration.ncdc_ports COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/ncdc_ports_tests.py")
     set_tests_properties(integration.ncdc_ports PROPERTIES TIMEOUT 15)

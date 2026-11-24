@@ -40,6 +40,12 @@ const labels = {
     serviceReady: "Hub reported running", lastUpdated: "Read age", chatDenied: "Rejected chat total",
     maintenance: "Recovery / maintenance", maintenanceUnknown: "Not exposed by approved read-only projection",
     incidentReady: "Verified", incidentDegraded: "Degraded", stale: "Read expired; old counters are hidden until a verified refresh.",
+    sourceUnknown: "Unknown",
+    timeline: "Recent aggregate service events", noEvents: "No verified transitions recorded in this process.",
+    incidentUnknown: "Incident history is unavailable or not yet verified; this does not mean the service is healthy.",
+    alertTitle: "Aggregate security signals", hubStarted: "Hub started", hubStopped: "Hub stopped",
+    transportRefused: "Transport security refusal threshold reached", loginRefused: "Authentication refusal threshold reached",
+    rateLimitRefused: "Rate-limit refusal threshold reached", secondsAgo: "seconds ago",
     acknowledge: "Acknowledge locally", acknowledged: "Acknowledged on this screen only; no server action was sent.",
   },
   pl: {
@@ -72,6 +78,13 @@ const labels = {
     serviceReady: "Hub zgłasza pracę", lastUpdated: "Wiek odczytu", chatDenied: "Łączna liczba odrzuconych wiadomości",
     maintenance: "Odtwarzanie / konserwacja", maintenanceUnknown: "Niedostępne w zatwierdzonym widoku tylko do odczytu",
     incidentReady: "Zweryfikowano", incidentDegraded: "Pogorszenie", stale: "Odczyt nieaktualny; poprzednie liczniki ukryto do czasu weryfikacji.",
+    sourceUnknown: "Nieznane",
+    timeline: "Ostatnie zbiorcze zdarzenia usługi", noEvents: "Brak zweryfikowanych zmian stanu w tym procesie.",
+    incidentUnknown: "Historia incydentów jest niedostępna albo jeszcze niezweryfikowana; nie oznacza to poprawnego działania usługi.",
+    alertTitle: "Zbiorcze sygnały bezpieczeństwa", hubStarted: "Hub uruchomiony", hubStopped: "Hub zatrzymany",
+    transportRefused: "Próg odmów bezpieczeństwa transportu został osiągnięty",
+    loginRefused: "Próg odmów uwierzytelniania został osiągnięty",
+    rateLimitRefused: "Próg odmów limitera został osiągnięty", secondsAgo: "sekund temu",
     acknowledge: "Potwierdź lokalnie", acknowledged: "Potwierdzono tylko na tym ekranie; nie wysłano żadnej akcji do serwera.",
   },
 } as const;
@@ -122,6 +135,10 @@ export function RemoteApp() {
   // A prior refresh must also not replace the latest result within a session.
   const summaryRequest = useRef(0);
   const deviceRequest = useRef(0);
+  // Same-origin tabs can hold an already-rendered snapshot when a sibling
+  // signs out. Broadcast only a fixed invalidation signal, never session or
+  // CSRF material. The server still independently authorizes every request.
+  const sessionChannel = useRef<BroadcastChannel | null>(null);
   const t = labels[language];
   const displayTime = (time: number | null) => time === null ? t.neverUsed :
     new Date(time).toLocaleString(language === "pl" ? "pl-PL" : "en-US");
@@ -146,6 +163,15 @@ export function RemoteApp() {
     setCsrf("");
     setState(next);
   };
+  useEffect(() => {
+    if (typeof BroadcastChannel === "undefined") return;
+    const channel = new BroadcastChannel("dc24h-remote-session");
+    sessionChannel.current = channel;
+    channel.onmessage = event => {
+      if (event.data === "session-revoked") invalidate("expired");
+    };
+    return () => { sessionChannel.current = null; channel.close(); };
+  }, []);
   useEffect(() => {
     let canceled = false;
     call("session").then(({ status, data }) => {
@@ -173,7 +199,11 @@ export function RemoteApp() {
       const parsed = status === 200 ? parseRemoteSummaryResponse(data) : null;
       if (parsed) {
         const fetchedAt = performance.now();
-        setClock(fetchedAt); setSummaryFetchedAt(fetchedAt); setSummary(parsed); return;
+        setClock(fetchedAt); setSummaryFetchedAt(fetchedAt); setSummary(parsed);
+        // An acknowledgment belongs to what was on screen, not to a future
+        // source refresh. Never persist it or send a mutation to the hub.
+        setIncidentAcknowledged(false);
+        return;
       }
       invalidate(status === 200 ? "unavailable" : failure(status));
     } catch {
@@ -255,6 +285,7 @@ export function RemoteApp() {
       });
       if (epoch !== sessionEpoch.current) return;
       if (result.status !== 200) { invalidate(failure(result.status)); return; }
+      sessionChannel.current?.postMessage("session-revoked");
       invalidate("unauthorized"); setActor("");
     } catch { if (epoch === sessionEpoch.current) invalidate("unavailable"); }
   };
@@ -335,7 +366,10 @@ export function RemoteApp() {
         revoke ? { id } : { id, name: deviceLabels[id] ?? "" }, csrf);
       if (epoch !== sessionEpoch.current) return;
       if (result.status !== 200) throw Error();
-      if (revoke) { invalidate("unauthorized"); setActionMessage(t.revoked); }
+      if (revoke) {
+        sessionChannel.current?.postMessage("session-revoked");
+        invalidate("unauthorized"); setActionMessage(t.revoked);
+      }
       else {
         if (!result.data || typeof result.data !== "object" || !("csrf" in result.data) ||
             typeof result.data.csrf !== "string" || !/^[0-9a-f]{64}$/.test(result.data.csrf)) throw Error();
@@ -347,10 +381,11 @@ export function RemoteApp() {
     } catch { if (epoch === sessionEpoch.current) setActionMessage(t.actionFailed); }
     finally { if (epoch === sessionEpoch.current) setDeviceMutationBusy(null); }
   };
-  // Monotonic client receipt age is the only timestamp the approved gateway
-  // supplies. Never invent a server-side recovery state or an audit timeline.
+  // Independently validated C++ source age is optional for legacy v1; advance
+  // it monotonically from receipt and never invent a recovery state.
   const freshSummary = summary && summaryFetchedAt !== null &&
-    clock >= summaryFetchedAt && clock - summaryFetchedAt <= 45_000 ? summary : null;
+    clock >= summaryFetchedAt &&
+    clock - summaryFetchedAt + (summary.observation?.source_age_ms ?? 0) <= 45_000 ? summary : null;
   const rows: [string, string | number][] = freshSummary ? [
     [t.version, freshSummary.server.version], [t.running, freshSummary.server.running ? t.yes : t.no],
     [t.uptime, freshSummary.server.uptime_seconds], [t.connections, freshSummary.network.active_connections],
@@ -360,8 +395,11 @@ export function RemoteApp() {
     ...(freshSummary.search ? [[t.queries, freshSummary.search.queries], [t.results, freshSummary.search.results]] as [string, number][] : []),
     ...(freshSummary.transfers ? [[t.ctm, freshSummary.transfers.ctm], [t.rcm, freshSummary.transfers.rcm]] as [string, number][] : []),
   ] : [];
+  const eventName = (kind: "hub_started" | "hub_stopped" | "transport_refusals" | "login_refusals" | "rate_limit_refusals") =>
+    kind === "hub_started" ? t.hubStarted : kind === "hub_stopped" ? t.hubStopped :
+      kind === "login_refusals" ? t.loginRefused : kind === "rate_limit_refusals" ? t.rateLimitRefused : t.transportRefused;
   return (
-    <main className="remote-shell">
+    <main className="remote-shell" lang={language === "pl" ? "pl" : "en"}>
       <header className="remote-head">
         <div><strong>dc24h.eu High Starter</strong><h1>{t.title}</h1><p>{t.mode}</p></div>
         <div className="remote-actions">
@@ -370,7 +408,9 @@ export function RemoteApp() {
           {state === "authorized" && <button type="button" onClick={() => void logout()}>{t.signOut}</button>}
         </div>
       </header>
-      <section className="remote-panel" aria-live="polite">
+      {/* Announce discrete status messages, not the entire metric dashboard:
+          its counters and incident ages re-render every second. */}
+      <section className="remote-panel">
         {state !== "authorized" && <p role="status">{state === "loading" ? t.loading : state === "unauthorized" ? t.unauthorized :
           state === "forbidden" ? t.forbidden : state === "expired" ? t.expired :
           state === "rate-limited" ? t.limited : t.unavailable}</p>}
@@ -395,14 +435,27 @@ export function RemoteApp() {
             <h2>{t.incidentTitle}</h2>
             <dl className="remote-grid">
               <div><dt>{t.gatewayReady}</dt><dd>{t.incidentReady}</dd></div>
-              <div><dt>{t.serviceReady}</dt><dd>{freshSummary.server.running ? t.incidentReady : t.incidentDegraded}</dd></div>
-              <div><dt>{t.lastUpdated}</dt><dd>{Math.max(0, Math.floor((clock - summaryFetchedAt!) / 1000))} s</dd></div>
+              <div><dt>{t.serviceReady}</dt><dd>{!freshSummary.observation ? t.sourceUnknown :
+                freshSummary.server.running ? t.incidentReady : t.incidentDegraded}</dd></div>
+              <div><dt>{t.lastUpdated}</dt><dd>{freshSummary.observation ?
+                `${Math.max(0, Math.floor((freshSummary.observation.source_age_ms + clock - summaryFetchedAt!) / 1000))} s` :
+                t.sourceUnknown}</dd></div>
               <div><dt>{t.chatDenied}</dt><dd>{freshSummary.chat.rejected}</dd></div>
               <div><dt>{t.maintenance}</dt><dd className="remote-unknown">{t.maintenanceUnknown}</dd></div>
             </dl>
             <button type="button" aria-pressed={incidentAcknowledged}
               onClick={() => setIncidentAcknowledged(true)} disabled={incidentAcknowledged}>{t.acknowledge}</button>
             {incidentAcknowledged && <p role="status">{t.acknowledged}</p>}
+            {freshSummary.incidents?.state !== "observed" &&
+              <p className="remote-unknown" role="status">{t.incidentUnknown}</p>}
+            {freshSummary.incidents?.state === "observed" && <div className="remote-timeline">
+              <h3>{t.timeline}</h3>
+              {freshSummary.incidents.events.length ? <ul>{freshSummary.incidents.events.map((event, i) =>
+                <li key={`${i}-${event.kind}`}>{eventName(event.kind)} · {event.age_seconds +
+                  Math.floor((clock - summaryFetchedAt!) / 1000)} {t.secondsAgo}</li>)}</ul> :
+                <p className="remote-hint">{t.noEvents}</p>}
+              {freshSummary.incidents.alerts.length > 0 && <p role="status">{t.alertTitle}: {freshSummary.incidents.alerts.length}</p>}
+            </div>}
           </section>}
           {freshSummary ? <dl className="remote-grid">{rows.map(([key, value]) =>
             <div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}</dl> : <p>{t.loading}</p>}

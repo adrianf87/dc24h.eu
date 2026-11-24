@@ -281,6 +281,12 @@ std::string monitoring_json(const Snapshot& value) {
     return json;
 }
 std::string status_json(const Snapshot& value) {
+    // Emitted by the C++ status owner at the point of taking/serializing its
+    // current snapshot. This UTC clock is not a monotonic time source: Node
+    // bounds skew, and the browser ages the already-validated receipt using
+    // performance.now() rather than trusting subsequent wall-clock changes.
+    const auto observed_unix_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
     std::string chat_json{"{"};
     // Names are a fixed allowlist; values contain aggregate counters only.
     for (std::size_t i = 0; i < chat::statistic_names.size(); ++i) {
@@ -301,7 +307,8 @@ std::string status_json(const Snapshot& value) {
         mute_json+=std::to_string(value.mute.values[i]);mute_json+='"';
     }
     mute_json+='}';
-    return "{\"api_version\":\"v1\",\"server\":{\"name\":\"dc24h.eu\",\"version\":\"" +
+    return "{\"api_version\":\"v1\",\"observation\":{\"schema\":1,\"observed_unix_ms\":" +
+        std::to_string(observed_unix_ms) + "},\"server\":{\"name\":\"dc24h.eu\",\"version\":\"" +
         std::string(dc24h::version) + "\",\"core_running\":" + (value.core_running ? "true" : "false") +
         ",\"uptime_seconds\":" + std::to_string(value.uptime_seconds) + "},\"network\":{\"active_connections\":" +
         std::to_string(value.active_connections) + ",\"accepted_connections\":" + std::to_string(value.accepted_connections) +

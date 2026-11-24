@@ -3,6 +3,7 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { request } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { performance } from "node:perf_hooks";
 import { parseAccess } from "../src/lib/access.ts";
 import { parseManagement } from "../src/lib/management.ts";
 import { parseRemoteSummary } from "../src/lib/status.ts";
@@ -10,6 +11,7 @@ import { isJsonContentType } from "./json-content-type.ts";
 import type { PasskeyCeremonies } from "./remote-webauthn.ts";
 import type { PasskeyStore } from "./remote-passkeys.ts";
 import type { RemoteRateLimitStore } from "./remote-rate-limit-store.ts";
+import { aggregateObservability } from "./remote-observability.ts";
 export { isJsonContentType } from "./json-content-type.ts";
 
 type Credentials = { socket: string; token: string };
@@ -17,7 +19,7 @@ export type RemoteEvent = "login_ok" | "login_refused" | "mfa_ok" | "mfa_refused
   "passkey_enrolled" | "passkey_enroll_refused" | "passkey_login_ok" | "passkey_login_refused" |
   "passkey_device_renamed" | "passkey_revoke_intent" | "passkey_revoked" |
   "passkey_enroll_intent" | "passkey_recovery_intent" | "passkey_recovered" |
-  "rate_limiter_unavailable";
+  "rate_limiter_unavailable" | "rate_limited";
 export interface RemoteOptions {
   origin: string;
   now?: () => number;
@@ -157,6 +159,7 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
   const enrollments = new Map<string, { challenge: string; expires: number; session: Session }>();
   const budgets = new Map<string, Budget>();
   const requestIds = new WeakMap<ServerResponse, string>();
+  const observability = aggregateObservability(() => performance.now());
 
   const log = (event: RemoteEvent): boolean => {
     // Audit integrations are external observers; a failed sink must not crash
@@ -166,10 +169,14 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
       if (written && typeof written === "object" && "then" in written &&
           typeof written.then === "function") {
         void Promise.resolve(written).catch(() => {});
+        if (options.strictAudit) observability.auditLost();
         return !options.strictAudit;
       }
+      if (event === "login_refused" || event === "mfa_refused" ||
+          event === "passkey_login_refused" || event === "rate_limited")
+        observability.observeAudit(event);
       return true;
-    } catch { return false; }
+    } catch { observability.auditLost(); return false; }
   };
   const prune = (now: number) => {
     for (const [id, value] of sessions) {
@@ -204,6 +211,8 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
     value.issued <= at && at < value.expires;
   const reply = (res: ServerResponse, status: number, data: unknown, cookies: string[] = []) => {
     if (res.writableEnded || res.destroyed) return;
+    // Fixed audit enum only. Never record the triggering actor, cookie or IP.
+    if (status === 429) log("rate_limited");
     // Server-generated identifiers correlate the private Apache HTTP reply
     // with gateway outcome evidence. Untrusted client-supplied IDs are ignored.
     const requestId = requestIds.get(res);
@@ -351,6 +360,7 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
       catch { auditAvailable = false; }
     }
     if (!auditAvailable) {
+      observability.auditLost();
       sessions.clear(); challenges.clear(); passkeyLogins.clear(); enrollments.clear();
       reply(res, 503, { error: "unavailable" }, clearSession()); return;
     }
@@ -608,6 +618,11 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
           const fields = object(await readBody(req));
           // The body may have been streamed while logout, role revocation or
           // another credential mutation invalidated the caller's session.
+          // In particular, a C++ grant may be revoked without a concurrent
+          // browser request to invalidate our local session map. Recheck the
+          // authoritative grant *after* receiving the body, immediately before
+          // touching the credential catalog.
+          if (await authorized(key, session, true) !== "ok") throw Error();
           if (sessions.get(key) !== session || session.pendingLogouts > 0 || expired(session, clock()) ||
               (options.passkeys && session.passkeyEpoch !== p.store.epoch(session.actor))) throw Error();
           if (limited("passkey:device:" + session.actor, 10, now)) throw Error();
@@ -679,6 +694,10 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
     try {
       if (!config) throw new Error("unavailable");
       const data = parseRemoteSummary(await callUpstream(config, "/api/v1/status", "GET"));
+      // The C++ sample may wait behind the final grant check. Account for
+      // that wait with a monotonic clock before handing its age to browsers;
+      // otherwise a delayed response can masquerade as a fresh observation.
+      const sourceReceipt = performance.now();
       if (sessions.get(key) !== session) {
         reply(res, 403, { error: "forbidden" }, clearSession());
         return;
@@ -709,10 +728,28 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
         reply(res, 401, { error: "unauthorized" }, clearSession());
         return;
       }
+      if (data.observation) {
+        const elapsed = performance.now() - sourceReceipt;
+        const age = data.observation.source_age_ms + Math.ceil(elapsed);
+        if (!Number.isFinite(elapsed) || elapsed < 0 ||
+            !Number.isSafeInteger(age) || age > 10_000)
+          throw new Error("source_observation_expired");
+        data.observation = { schema: 1, source_age_ms: age };
+      }
       // The dedicated parser has already validated and constructed only the
       // reviewed aggregate fields; never serialize a raw private API object.
-      reply(res, 200, { schema: 1, mode: "read-only", ...data });
+      // An older v1 hub downgrade is not evidence that the last verified
+      // sample remains current. Explicitly invalidate the prior timeline.
+      observability.observe(data);
+      // This counter is a gateway-only signal for thresholded incidents. Do
+      // not expose the raw per-process transport refusal total to browsers.
+      const publicNetwork = { active_connections: data.network.active_connections,
+        accepted_connections: data.network.accepted_connections };
+      reply(res, 200, { schema: 1, mode: "read-only", ...data,
+        network: publicNetwork,
+        ...(data.observation ? { incidents: observability.read() } : {}) });
     } catch {
+      observability.sourceUnavailable();
       log("api_unavailable"); reply(res, 503, { error: "unavailable" });
     }
   };

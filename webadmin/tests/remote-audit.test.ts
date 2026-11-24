@@ -8,7 +8,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 test("all fixed gateway audit events serialize as bounded, nonidentifying JSON lines", () => {
-  assert.equal(remoteAuditEvents.length, 19);
+  assert.equal(remoteAuditEvents.length, 20);
+  assert.equal(new Set(remoteAuditEvents).size, remoteAuditEvents.length);
+  assert.ok(remoteAuditEvents.includes("rate_limited"));
   for (const event of remoteAuditEvents) {
     const line = remoteAuditRecord(event, 1_700_000_000_000);
     assert.ok(line.endsWith("\n") && line.length < 150);

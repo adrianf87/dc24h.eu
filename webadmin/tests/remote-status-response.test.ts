@@ -4,7 +4,7 @@ import { parseRemoteSummaryResponse } from "../src/lib/remote-status.ts";
 
 const status = {
   schema: 1, mode: "read-only",
-  server: { version: "beta-0.6.16", running: true, uptime_seconds: 130 },
+  server: { version: "beta-0.7.20", running: true, uptime_seconds: 130 },
   network: { active_connections: 3, accepted_connections: 20 },
   users: { online: 2, peak_online: 7 },
   chat: { received: 12, rejected: 1 },
@@ -42,4 +42,37 @@ test("remote browser refuses malformed nested metrics instead of rendering or ca
     assert.equal(parseRemoteSummaryResponse(candidate), null, JSON.stringify(candidate));
   }
   assert.deepEqual(parseRemoteSummaryResponse(status), status);
+});
+
+test("browser never fabricates source freshness for old v1 and rejects malformed source age", () => {
+  assert.equal(parseRemoteSummaryResponse(status)?.observation, undefined);
+  const valid = { ...status, observation: { schema: 1, source_age_ms: 250 } };
+  assert.deepEqual(parseRemoteSummaryResponse(valid), valid);
+  for (const invalid of [
+    null, { schema: 2, source_age_ms: 250 }, { schema: 1, source_age_ms: -1 },
+    { schema: 1, source_age_ms: 10_001 }, { schema: 1, source_age_ms: 10.5 },
+    { schema: 1, source_age_ms: 50, actor: "private" },
+  ]) assert.equal(parseRemoteSummaryResponse({ ...status, observation: invalid }), null);
+});
+
+test("browser redacted timeline accepts fixed bounded aggregates and refuses private identities", () => {
+  const fresh = { ...status, observation: { schema: 1, source_age_ms: 100 } };
+  const incidents = { schema: 1, state: "observed", events: [
+    { kind: "hub_stopped", age_seconds: 2 }, { kind: "transport_refusals", age_seconds: 1 },
+    { kind: "login_refusals", age_seconds: 1 }, { kind: "rate_limit_refusals", age_seconds: 1 },
+  ], alerts: [
+    { kind: "transport_refusals", age_seconds: 1 }, { kind: "login_refusals", age_seconds: 1 },
+    { kind: "rate_limit_refusals", age_seconds: 1 },
+  ] };
+  assert.deepEqual(parseRemoteSummaryResponse({ ...fresh, incidents })?.incidents, incidents);
+  for (const invalid of [
+    { ...incidents, events: [{ kind: "login_refused", age_seconds: 1, actor: "7" }] },
+    { ...incidents, events: [{ kind: "transport_refusals", age_seconds: -1 }] },
+    { ...incidents, events: [{ kind: "hub_started", age_seconds: 601 }] },
+    { ...incidents, alerts: [{ kind: "account_7", age_seconds: 0 }] },
+    { ...incidents, events: Array(13).fill({ kind: "hub_started", age_seconds: 0 }) },
+    { ...incidents, state: "unknown" },
+  ]) assert.equal(parseRemoteSummaryResponse({ ...fresh, incidents: invalid }), null);
+  assert.equal(parseRemoteSummaryResponse({ ...status, incidents }), null,
+    "legacy unverified source data cannot assert a verified incident stream");
 });

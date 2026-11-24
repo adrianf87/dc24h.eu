@@ -157,6 +157,36 @@ class LoginProcessTests(unittest.TestCase):
         hub.stop()
         self.assertEqual(hub.log.count(b'event=login_ready'), 1)
 
+    def test_beta07_negotiation_refuses_duplicate_sup_and_preauth_frames(self):
+        """Full TCP/OpenSSL reactor rejects invalid state without an identity leak.
+
+        Existing ncdc cases prove the independent client's successful SUP,
+        SID and INF. These adversarial peers share the same transport fixture;
+        none may become NORMAL or change the next valid Unicode login.
+        """
+        for encrypted in (False, True):
+            with self.subTest(encrypted=encrypted):
+                hub, cert = self.hub()
+                for command in (b'HSUP ADBASE ADTIGR', b'BMSG PLACEHOLDER preauth'):
+                    bad = self.peer(hub, cert, encrypted)
+                    bad.handshake()
+                    wire = command.replace(b'PLACEHOLDER', bad.sid)
+                    bad.send(wire)
+                    self.assertTrue(bad.line().startswith(b'ISTA 244 '), wire)
+                    self.assertTrue(bad.line().startswith(b'IQUI ' + bad.sid + b' '),
+                        "protocol quit can include a non-sensitive ADC status message")
+                    self.assertEqual(bad.peer.recv(1), b'')
+                no_hash = self.peer(hub, cert, encrypted)
+                no_hash.send(b'HSUP ADBASE')
+                self.assertTrue(no_hash.line().startswith(b'ISTA 247 '))
+                self.assertEqual(no_hash.peer.recv(1), b'')
+                healthy = self.peer(hub, cert, encrypted)
+                healthy.login('ŻółwBezpieczny'.encode('utf-8'), 172)
+                hub.stop()
+                self.assertEqual(hub.log.count(b'event=login_ready'), 1)
+                self.assertNotIn('ŻółwBezpieczny'.encode('utf-8'), hub.log)
+                self.assertNotIn(pair(172)[0], hub.log)
+
     def test_absolute_login_deadline_ignores_keepalives(self):
         hub, cert = self.hub(login_timeout=1, output_timeout=1)
         for identify in (False, True):

@@ -10,7 +10,7 @@ import { parseSearch } from "./search-status.ts";
 import type { SearchSnapshot } from "./search-status.ts";
 import { parseConfiguration } from "./configuration.ts";
 import type { StartupConfiguration } from "./configuration.ts";
-export const WEBADMIN_VERSION = "beta-0.6.16";
+export const WEBADMIN_VERSION = "beta-0.7.20";
 export interface HubSnapshot {
   api_version: "v1";
   server: {
@@ -57,8 +57,9 @@ export interface HubSnapshot {
 // Never validate/forward unrelated local-admin sections (configuration,
 // monitoring, audit or user identities) through this interface.
 export interface RemoteStatusProjection {
+  observation?: { schema: 1; source_age_ms: number };
   server: { version: string; running: boolean; uptime_seconds: number };
-  network: { active_connections: number; accepted_connections: number };
+  network: { active_connections: number; accepted_connections: number; security_rejected?: number };
   users: { online: number; peak_online: number };
   chat: { received: number; rejected: number };
   search?: { queries: number; results: number };
@@ -96,7 +97,7 @@ const counter = (value: unknown): number => {
     throw new Error("Invalid API counter");
   return value;
 };
-export function parseRemoteSummary(value: unknown): RemoteStatusProjection {
+export function parseRemoteSummary(value: unknown, receiptUnixMs = Date.now()): RemoteStatusProjection {
   const root = record(value);
   const server = record(root.server);
   const network = record(root.network);
@@ -117,6 +118,22 @@ export function parseRemoteSummary(value: unknown): RemoteStatusProjection {
     users: { online: counter(users.online), peak_online: counter(users.peak_online) },
     chat: { received: counter(chat.received), rejected: counter(chat.rejected) },
   };
+  if (network.security_rejected !== undefined)
+    result.network.security_rejected = counter(network.security_rejected);
+  // Old v1 servers predate source observations. Retain their metrics, but do
+  // not invent source freshness. A malformed observation is not an old API:
+  // it is evidence of a broken/forged status response and must be refused.
+  if (root.observation !== undefined) {
+    const observed = record(root.observation);
+    if (Object.keys(observed).sort().join(",") !== "observed_unix_ms,schema" ||
+        observed.schema !== 1 || !Number.isSafeInteger(receiptUnixMs) ||
+        receiptUnixMs < 0 || !Number.isSafeInteger(observed.observed_unix_ms) ||
+        (observed.observed_unix_ms as number) < 0) throw new Error("Invalid C++ observation");
+    const age = receiptUnixMs - (observed.observed_unix_ms as number);
+    if (!Number.isSafeInteger(age) || age < 0 || age > 10_000)
+      throw new Error("C++ observation outside bounded source age");
+    result.observation = { schema: 1, source_age_ms: age };
+  }
   if (root.search !== undefined) {
     const statistics = record(record(root.search).statistics);
     result.search = { queries: counter(statistics.queries_received),
