@@ -51,6 +51,7 @@ jobs:
         run: |
           node --import tsx --test \
             tests/beta09-audit-continuity.test.ts \
+            tests/beta09-private-dirfd.test.ts \
             tests/remote-audit.test.ts \
             tests/remote-incident-journal.test.ts \
             tests/remote-observability.test.ts \

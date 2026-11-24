@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { execFileSync } from "node:child_process";
 import { remoteAuditEvents, remoteAuditRecord } from "../server/remote-audit.ts";
 import type { RemoteEvent } from "../server/remote-gateway.ts";
 import { initializeRemoteAuditStore, openRemoteAuditStore } from "../server/remote-audit-store.ts";
 import { archiveStoppedRemoteAudit, openPinnedAuditSource } from "../server/remote-audit-archive.ts";
-import { chmodSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -206,4 +207,30 @@ test("offline archival source stays pinned across identical-content path swaps",
     symlinkSync(path, alias);
     assert.throws(() => openPinnedAuditSource(alias), /ELOOP/);
   } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("offline audit archiving rejects symlink ancestors and a FIFO source without blocking", () => {
+  const root = mkdtempSync(join(tmpdir(), "dc24h-audit-private-path-"));
+  try {
+    const owner = join(root, "owner"), nested = join(owner, "audits");
+    mkdirSync(owner, { mode: 0o700 }); mkdirSync(nested, { mode: 0o700 });
+    const source = join(nested, "audit.jsonl"), archive = join(nested, "archive.jsonl");
+    initializeRemoteAuditStore(source);
+    const writer = openRemoteAuditStore(source);
+    writer.append("login_refused", 1_700_000_000_000); writer.close();
+    const original = readFileSync(source);
+    symlinkSync(owner, join(root, "alias"));
+    const aliasedSource = join(root, "alias", "audits", "audit.jsonl");
+    assert.throws(() => openPinnedAuditSource(aliasedSource), /Symlink/);
+    assert.throws(() => archiveStoppedRemoteAudit(aliasedSource, archive, "OWNER_STOPPED_WRITER_ACK"), /Symlink/);
+    assert.throws(() => archiveStoppedRemoteAudit(source,
+      join(root, "alias", "audits", "archive.jsonl"), "OWNER_STOPPED_WRITER_ACK"), /Symlink/);
+    assert.deepEqual(readFileSync(source), original);
+    assert.throws(() => readFileSync(archive), /ENOENT/);
+
+    const fifo = join(nested, "fifo.jsonl");
+    execFileSync("mkfifo", [fifo]);
+    assert.throws(() => openPinnedAuditSource(fifo), /unsafe/,
+      "a nonblocking open must reject special files without hanging recovery");
+  } finally { rmSync(root, { recursive: true, force: true }); }
 });

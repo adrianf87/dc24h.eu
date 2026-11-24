@@ -100,6 +100,28 @@ test("journal fails closed on an identical-content inode replacement, including 
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
+test("journal refuses a renamed ancestor symlink without overwriting a decoy", () => {
+  const root = mkdtempSync(join(tmpdir(), "dc24h-incident-ancestor-"));
+  try {
+    const real = join(root, "real"), nested = join(real, "state"), moved = join(root, "moved");
+    const decoy = join(root, "decoy");
+    mkdirSync(real, { mode: 0o700 }); mkdirSync(nested, { mode: 0o700 });
+    mkdirSync(decoy, { mode: 0o700 }); mkdirSync(join(decoy, "state"), { mode: 0o700 });
+    const path = join(nested, "incidents.json"), forged = join(decoy, "state", "incidents.json");
+    initializeIncidentJournal(path);
+    const store = openIncidentJournal(path, () => 1_700_000_000_000);
+    const original = readFileSync(path);
+    writeFileSync(forged, original, { mode: 0o600 });
+    renameSync(real, moved);
+    symlinkSync(decoy, real);
+    assert.deepEqual(store.read(), { state: "unknown", events: [] });
+    assert.throws(() => store.append("hub_started"), /unavailable/);
+    assert.deepEqual(readFileSync(forged), original, "incident alias must not overwrite the decoy");
+    assert.deepEqual(readFileSync(join(moved, "state", "incidents.json")), original);
+    assert.throws(() => openIncidentJournal(path), /Symlink/);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
 test("failed optional incident telemetry cannot break a fresh status read or audit-loss handling", () => {
   let mono = 1_000, unavailableCalls = 0;
   const observed = aggregateObservability(() => mono, {

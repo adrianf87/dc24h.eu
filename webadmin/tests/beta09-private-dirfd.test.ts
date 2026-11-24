@@ -4,7 +4,7 @@ import { chmodSync, closeSync, constants, mkdirSync, mkdtempSync, openSync, read
   renameSync, rmSync, symlinkSync, writeFileSync, writeSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { openPrivateLeaf, renamePrivateLeaf, syncPrivateParent,
+import { openPrivateLeaf, publishPrivateLeafNoReplace, renamePrivateLeaf, syncPrivateParent,
   withPinnedPrivateParent } from "../server/remote-private-path.ts";
 
 test("Linux private files open through a directory FD, not an ancestor alias", () => {
@@ -46,5 +46,22 @@ test("descriptor-relative create, rename and parent fsync preserve private state
     assert.equal(readFileSync(original, "utf8"), "new\n");
     assert.throws(() => renamePrivateLeaf(root + "/../invalid", original), /Noncanonical/);
     assert.throws(() => openPrivateLeaf(original + "/", constants.O_RDONLY), /Noncanonical/);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("offline archive publication cannot replace a concurrently created destination", () => {
+  const root = mkdtempSync(join(tmpdir(), "beta09-dirfd-publish-")); chmodSync(root, 0o700);
+  try {
+    const partial = join(root, "archive.partial"), destination = join(root, "archive.jsonl");
+    writeFileSync(partial, "immutable audit\n", { mode: 0o600 });
+    writeFileSync(destination, "existing user data\n", { mode: 0o600 });
+    assert.throws(() => publishPrivateLeafNoReplace(partial, destination), /EEXIST/);
+    assert.equal(readFileSync(destination, "utf8"), "existing user data\n");
+    assert.equal(readFileSync(partial, "utf8"), "immutable audit\n");
+    rmSync(destination);
+    publishPrivateLeafNoReplace(partial, destination);
+    syncPrivateParent(destination);
+    assert.equal(readFileSync(destination, "utf8"), "immutable audit\n");
+    assert.throws(() => readFileSync(partial), /ENOENT/);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
