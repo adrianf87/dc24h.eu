@@ -452,6 +452,68 @@ class AuthenticationTests(unittest.TestCase):
         for value in (PASSWORD, b'HPAS', b'IGPA', b'FreshSession'):
             self.assertNotIn(value, hub.log)
 
+    def test_beta08_revocation_is_enforced_after_controlled_hub_restart(self):
+        """The account directory is a startup snapshot, not live-revocation authority.
+
+        This test's BASE points exclusively at the parent process's disposable
+        MariaDB instance. Only its seeded RegisteredADC row is altered, and it
+        is restored before the parent runs its remaining integration tests.
+        """
+        source = configparser.ConfigParser(interpolation=None)
+        self.assertTrue(source.read(BASE))
+        db_socket = source['database']['socket']
+        self.assertTrue(Path(db_socket).is_socket())
+
+        def set_status(status):
+            self.assertIn(status, ('active', 'disabled'))
+            sql = ("UPDATE dc24h.dc24h_accounts SET status='" + status +
+                   "', revision=revision+1 WHERE name='RegisteredADC' AND status<> '" + status + "';")
+            changed = subprocess.run(
+                ['mariadb', '--no-defaults', '--skip-ssl', '--protocol=socket',
+                 '--socket=' + db_socket, '--user=root', '--batch', '--skip-column-names'],
+                input=sql, text=True, capture_output=True, timeout=8)
+            self.assertEqual(changed.returncode, 0, 'Disposable account update failed')
+
+        _, ini, cert = self.config(False)
+        try:
+            hub = Hub(self, '--config', str(ini), '--log-connections', 'on')
+            authenticated = self.peer(hub, cert, True)
+            first = self.identify(authenticated)
+            self.assertTrue(first.startswith(b'IGPA '))
+            authenticated.send(b'HPAS ' + response(first[5:]))
+            self.finish(authenticated)
+
+            set_status('disabled')
+            # The running reactor is explicitly NOT claimed to hot-reload SQL.
+            # The operator must stop it, which disconnects existing sessions.
+            hub.stop()
+            try:
+                self.assertEqual(authenticated.peer.recv(1), b'')
+            except ssl.SSLEOFError:
+                pass  # A TLS endpoint may omit close_notify on termination.
+
+            revoked_hub = Hub(self, '--config', str(ini), '--log-connections', 'on')
+            for tls in (False, True):
+                revoked = self.peer(revoked_hub, cert, tls)
+                self.failed(revoked, self.identify(revoked))
+            revoked_hub.stop()
+
+            # The next controlled restart loads the newly enabled snapshot.
+            set_status('active')
+            recovered_hub = Hub(self, '--config', str(ini), '--log-connections', 'on')
+            recovered = self.peer(recovered_hub, cert, True)
+            fresh = self.identify(recovered)
+            self.assertTrue(fresh.startswith(b'IGPA '))
+            self.assertNotEqual(fresh, first)
+            recovered.send(b'HPAS ' + response(fresh[5:]))
+            self.finish(recovered)
+            recovered_hub.stop()
+            for server in (hub, revoked_hub, recovered_hub):
+                for secret in (PASSWORD, b'HPAS', b'IGPA'):
+                    self.assertNotIn(secret, server.log)
+        finally:
+            set_status('active')
+
     def test_wrong_key_refuses_startup_and_config_aliases(self):
         root, ini, _ = self.config(key=Path(str(KEY) + '.wrong'))
         result = subprocess.run([BINARY, '--config', str(ini)], capture_output=True, timeout=5)
