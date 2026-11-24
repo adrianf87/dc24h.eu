@@ -1,9 +1,10 @@
 import { test, expect } from "@playwright/test";
 import { createServer } from "node:https";
 import { spawnSync } from "node:child_process";
-import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { AddressInfo } from "node:net";
 import { initializePasskeyStore, openPasskeyStore } from "../server/remote-passkeys.ts";
 import { passkeyCeremonies } from "../server/remote-webauthn.ts";
@@ -16,15 +17,23 @@ test.use({ ignoreHTTPSErrors: true });
 test("real virtual authenticator authenticates after fresh private-file restore and refuses replay", async ({ page }) => {
   test.setTimeout(60_000);
   const base = mkdtempSync(join(tmpdir(), "beta07-webauthn-")); chmodSync(base, 0o700);
-  const source = join(base, "source"), restored = join(base, "restored");
+  const source = join(base, "source"), snapshot = join(base, "snapshot"), restored = join(base, "restored");
   const cert = join(base, "leaf.pem"), key = join(base, "leaf.key");
+  const recoveryScript = fileURLToPath(new URL("../../scripts/stage4_private_recovery_drill.py", import.meta.url));
   const generated = spawnSync("openssl", ["req", "-x509", "-newkey", "rsa:2048", "-nodes",
     "-days", "1", "-subj", "/CN=localhost", "-addext", "subjectAltName=DNS:localhost",
     "-keyout", key, "-out", cert], { stdio: "pipe", timeout: 15000 });
   if (generated.status !== 0) { rmSync(base, { recursive: true, force: true }); throw Error("Isolated TLS fixture setup refused"); }
-  mkdirSync(source, { mode: 0o700 }); mkdirSync(restored, { mode: 0o700 });
+  mkdirSync(source, { mode: 0o700 });
   const sourceFile = join(source, "passkeys.json"), restoredFile = join(restored, "passkeys.json");
   initializePasskeyStore(sourceFile, "localhost");
+  // The restored passkey must be part of a verified, matched five-file
+  // private snapshot, not an unverified individual passkeys.json copy.
+  for (const [name, value] of Object.entries({
+    "mfa.json": JSON.stringify({ schema: 1, accounts: { "7": "A".repeat(32) } }) + "\n",
+    "rate-limits.json": JSON.stringify({ schema: 1, buckets: [] }) + "\n",
+    "replay.jsonl": "", "audit.jsonl": "",
+  })) writeFileSync(join(source, name), value, { mode: 0o600, flag: "wx" });
   let store = openPasskeyStore(sourceFile, "localhost");
   let origin = "";
   let ceremonies!: ReturnType<typeof passkeyCeremonies>;
@@ -111,10 +120,19 @@ test("real virtual authenticator authenticates after fresh private-file restore 
     expect(enrolled).toBe(200);
     expect(store.forActor("7")).toHaveLength(1);
 
-    // The original passkey material remains only on the virtual authenticator;
-    // the verifier is reopened from a byte-exact owner-only offline copy.
-    copyFileSync(sourceFile, restoredFile, 0);
-    chmodSync(restoredFile, 0o600);
+    // Stop all writes to the synthetic source before the same recovery tool
+    // used in isolated Ubuntu VM tests copies and verifies all five stores.
+    const recovery = (action: "snapshot" | "restore", from: string, to: string) =>
+      spawnSync("python3", [recoveryScript, action, "--source", from,
+        "--destination", to, "--ack-stopped", "--ack-isolated"],
+      { stdio: "pipe", timeout: 15000 });
+    if (recovery("snapshot", source, snapshot).status !== 0 ||
+        recovery("restore", snapshot, restored).status !== 0)
+      throw Error("Matched private-state browser recovery refused");
+    for (const name of ["mfa.json", "replay.jsonl", "audit.jsonl", "passkeys.json", "rate-limits.json"]) {
+      expect(readFileSync(join(restored, name))).toEqual(readFileSync(join(source, name)));
+      expect(statSync(join(restored, name)).mode & 0o077).toBe(0);
+    }
     store = openPasskeyStore(restoredFile, "localhost");
     ceremonies = passkeyCeremonies(store, origin, "localhost");
     const assertion = await page.evaluate(async () => {
