@@ -34,6 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
       - name: Install build and integration dependencies
@@ -54,6 +55,13 @@ jobs:
         run: |
           mkdir -p "$DC24H_VM_REPORT_DIR"
           ctest --test-dir "build/$BUILD_TYPE" --parallel 2 --output-on-failure --output-junit "$RUNNER_TEMP/ctest.xml"
+
+      - name: Verify exact checked-out head and pinned action/npm inventory
+        run: |
+          python3 scripts/beta07_supply_chain.py \
+            --root "$GITHUB_WORKSPACE" --sha "$SOURCE_SHA" \
+            --os-image "${{ matrix.os }}" \
+            --output "$RUNNER_TEMP/evidence/beta07-supply-chain.json"
 
       - name: Verify pinned independent ADC client and redact capability evidence
         run: |
@@ -92,9 +100,11 @@ jobs:
     env:
       CXX: g++
       CI: 'true'
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
       - name: Install C++ API build dependencies
@@ -158,6 +168,7 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
       - name: Install C++ dependencies

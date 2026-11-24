@@ -30,7 +30,7 @@ Issue [#238](https://github.com/adrianf87/dc24h.eu-high-starter/issues/238), sin
 | 0.7.16 | Accessible EN/PL workflow | Mobile/keyboard read-only timeline regression added; hosted proof pending | `remote-gateway.spec.ts` 375px browser test checks labeled incident region, bilingual headings/alerts, keyboard-only local acknowledgment, zero HTTP mutations and absence of hub-control/grant buttons; full WCAG audit still pending |
 | 0.7.17 | Comparable multi-transport benchmarks | Pending | 3 windows, SHA and p50/p95/p99/RPS/CPU/RSS |
 | 0.7.18 | Exhaustion and drain | Pending | Bounded TLS/queue/timeout/fault + ASan/UBSan |
-| 0.7.19 | Supply chain and provenance | Pending | Reviewable pins/SBOM/advisories/exact-head checks |
+| 0.7.19 | Supply chain and provenance | Exact-head checkout, locked npm/action inventory and pinned CodeQL workflow added; hosted proof and advisory disposition pending | `beta07_supply_chain.py` refuses wrong SHA/OS, missing npm integrity or floating actions, emits redacted inventory; build/VM now checkout **actual PR head**, code scanning uses pinned CodeQL C++/TS on all three Ubuntu images; npm audit already rejects high production advisories |
 | 0.7.20 | Release qualification | Pending | Consistent versions, changelog, risk and final hosted CI |
 
 ## Patch 0.7.1 evidence semantics

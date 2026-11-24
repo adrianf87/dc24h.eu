@@ -32,6 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
       - name: Install isolated C++ and service-test dependencies
@@ -67,6 +68,13 @@ jobs:
             --output-junit "$RUNNER_TEMP/ctest-vm.xml" \
             --parallel 2 \
             -R '^(database\.(process|resilience\.process|migrations\.process)|apache2\.(https|https\.proxy|remote\.gateway)|api\.(unit|process)|adcs\.tls_security\.process|beta\.04\.stage4\.(perf\.command|recovery|release|vm\.probe)|beta\.05\.stage1\.(perf\.gate|recovery\.pair|matched\.recovery)|beta\.05\.stage4\.(endurance\.gate|rollback)|systemd\.sandbox|ci\.timing\.summary|remote\.(gateway\.config|pilot\.preflight))$'
+
+      - name: Record exact checked-out head and pinned action/npm inventory
+        run: |
+          python3 scripts/beta07_supply_chain.py \
+            --root "$GITHUB_WORKSPACE" --sha "$SOURCE_SHA" \
+            --os-image "${{ matrix.os }}" \
+            --output "$PWD/vm-evidence/beta07-supply-chain.json"
 
       - name: Inject bounded ADC/ADCS slow peers, TLS cutover, restarts and recovery faults
         run: |

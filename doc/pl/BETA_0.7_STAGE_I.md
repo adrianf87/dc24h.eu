@@ -12,6 +12,7 @@ Zadanie [#238](https://github.com/adrianf87/dc24h.eu-high-starter/issues/238), g
 6. Dane z wcześniejszego kontraktu API v1 bez pola `observation` mają **nieznany czas obserwacji źródłowej**, nawet gdy przeglądarka właśnie je odebrała. Nie interpretuj ich wieku odpowiedzi jako potwierdzonego czasu pomiaru C++. Nowy kontrakt odrzuca znaczniki z przyszłości lub starsze niż 10 sekund; licznik wieku w przeglądarce używa zegara monotonicznego.
 7. Oś zdarzeń pokazuje wyłącznie zbiorcze zmiany stanu usługi oraz osiągnięcie progu odmów transportu. To pamięć procesu (do 12 zdarzeń / 10 minut), bez identyfikatorów kont, adresów, haseł ani surowego audytu. Po restarcie brak wpisów oznacza **stan nieznany**, a nie potwierdzenie braku incydentów. Próg testowy: 5 odmów / minutę, z 60-sekundowym wyciszeniem.
 8. Widok ma podpisany obszar incydentów, polskie i angielskie nazwy sygnałów, obsługę klawiatury oraz wyłącznie lokalne potwierdzenie. Test przy szerokości 375 pikseli sprawdza brak żądań modyfikujących hub i brak przycisków uprawnionych operacji. Sam test nie jest jeszcze pełnym audytem WCAG.
+9. Każdy raport CI musi pochodzić z faktycznie pobranego SHA gałęzi PR, nie z automatycznego commita scaleniowego. Kontrola `.deb`, npm i akcji GitHub obejmuje przypięte wersje, SHA i metadane bez sekretów; CodeQL i audyt podatności muszą być zielone na tym samym head. Brak pełnego wyniku nie jest akceptacją wydania.
 
 ## Aktualna realizacja
 
