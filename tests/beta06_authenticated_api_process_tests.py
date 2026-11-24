@@ -257,8 +257,27 @@ def run(binary, seeder):
                     category = None
                 if category not in {"login_refused", "unavailable", "rate_limited", "forbidden", "bad_request"}:
                     category = "unrecognized_denial"
+                # Probe the actual C++ password authority *after* the failed
+                # browser login, separated from the 1-second POST budget. Only
+                # retain the HTTP status; the grant body is never logged.
+                upstream_status = "unavailable"
+                try:
+                    time.sleep(1.1)
+                    form = ("actor_id=" + actor + "&proof=WebAdmin+operator+password!").encode("ascii")
+                    wire = ("POST /api/v1/admin/access HTTP/1.1\r\nHost: localhost\r\n"
+                            "Authorization: Bearer " + api_token + "\r\n"
+                            "Content-Type: application/x-www-form-urlencoded\r\n"
+                            "Content-Length: " + str(len(form)) + "\r\nConnection: close\r\n\r\n").encode("ascii")
+                    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as probe:
+                        probe.settimeout(4)
+                        probe.connect(str(api_socket))
+                        probe.sendall(wire + form)
+                        upstream_status = str(int(probe.recv(64).split(b" ", 2)[1]))
+                except (OSError, ValueError, IndexError):
+                    upstream_status = "unavailable"
                 raise AssertionError(f"Real synthetic TOTP login refused: HTTP={status} "
-                                     f"category={category} audit_categories={events[-5:]}")
+                                     f"category={category} audit_categories={events[-5:]} "
+                                     f"cpp_password_http={upstream_status}")
             cookie = next(value.split(";", 1)[0] for name, value in headers
                           if name.lower() == "set-cookie")
 
