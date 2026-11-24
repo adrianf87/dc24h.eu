@@ -523,11 +523,13 @@ class AuthenticationTests(unittest.TestCase):
             self.assertEqual(rolled_back.returncode, 0, 'Disposable rollback failed')
             self.assertEqual(rolled_back.stdout.splitlines(), ['1', 'active'],
                              'Uncommitted revoke changed the durable snapshot')
-            still_active = self.peer(hub, cert, False)
-            uncommitted = self.identify(still_active)
-            self.assertTrue(uncommitted.startswith(b'IGPA '))
-            still_active.send(b'HPAS ' + response(uncommitted[5:]))
-            self.finish(still_active)
+            # The first registered nickname is deliberately still online.
+            # A second login with the same nickname must be rejected by the
+            # duplicate-nickname rule, regardless of the SQL rollback. Prove
+            # that the original authenticated session itself still operates.
+            marker = b'BMSG ' + authenticated.sid + b' RollbackStillActive'
+            authenticated.send(marker)
+            self.assertEqual(authenticated.line(), marker)
 
             set_status('disabled')
             # The running reactor is explicitly NOT claimed to hot-reload SQL.
@@ -537,8 +539,6 @@ class AuthenticationTests(unittest.TestCase):
                 self.assertEqual(authenticated.peer.recv(1), b'')
             except ssl.SSLEOFError:
                 pass  # A TLS endpoint may omit close_notify on termination.
-            self.assertEqual(still_active.peer.recv(1), b'',
-                             'Controlled cutover retained a pre-revoke ADC session')
 
             revoked_hub = Hub(self, '--config', str(ini), '--log-connections', 'on')
             for tls in (False, True):

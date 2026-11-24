@@ -1,5 +1,7 @@
 # dc24h.eu High Starter documentation
 
+**Current development version: beta-0.9.20.** This is a draft source candidate in [PR #243](https://github.com/adrianf87/dc24h.eu-high-starter/pull/243), not an approved release or deployment. Exact-head GitHub-hosted CI and the five separate Fix Passes still require qualification and an explicit Owner merge decision. [Stage V evidence and NO-GO boundaries](BETA_0.9_STAGE_V.md) · [PL operator notes](../pl/BETA_0.9_STAGE_V.md).
+
 beta-0.8.x ten-work-unit branch review and hosted CI correction: all five stages and five Fix Passes are present, but the prior exact-head Ubuntu 26.04 real Chromium restore attempt hit the preserved login budget. The fixture now waits for the original private 60-second quota window rather than clearing state. Final-head green CI and separate Owner merge approval are still required. [CI repair review](BETA_0.8_CI_REPAIR.md) · [PL operator notes](../pl/BETA_0.8_CI_REPAIR.md).
 
 beta-0.8.x Fix Pass 1 (Stage I 0.8.1–0.8.4): Correct the confirmed disposable MariaDB account-nickname revocation test failure, strengthen the ADCS plaintext-rejection assertion and CTest/JUnit negative verification. Current shared draft PR #241 also contains Stages II–V and beta-0.8.20 candidate metadata; no CI acceptance, merge or deployment is implied. [Fix Pass 1 evidence](BETA_0.8_FIX_PASS_1.md) · [PL operator notes](../pl/BETA_0.8_FIX_PASS_1.md).

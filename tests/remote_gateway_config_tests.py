@@ -124,8 +124,15 @@ class RemoteConfiguration(unittest.TestCase):
         self.assertIn("auditStore.verify()", executable)
         self.assertIn("createRemoteSecurityMonitor", executable)
         verifier = self.text("webadmin/server/remote-mfa.ts")
-        for expected in ("timingSafeEqual", "O_NOFOLLOW", "fsyncSync", "lastUsed", "0o600", "ledgerLimit"):
+        for expected in ("timingSafeEqual", "fsyncSync", "lastUsed", "0o600", "ledgerLimit",
+                         "openPrivateLeaf"):
             self.assertIn(expected, verifier)
+        # The shared descriptor-relative helper owns O_NOFOLLOW after the
+        # private-store path-hardening refactor; check the actual implementation.
+        private_paths = self.text("webadmin/server/remote-private-path.ts")
+        for expected in ("withPinnedPrivateParent", "constants.O_DIRECTORY | constants.O_NOFOLLOW",
+                         "flags | constants.O_NOFOLLOW"):
+            self.assertIn(expected, private_paths)
 
     def test_no_new_migration_and_separate_ui(self):
         ui = self.text("webadmin/src/remote/RemoteApp.tsx")
