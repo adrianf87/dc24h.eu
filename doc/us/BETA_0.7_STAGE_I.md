@@ -6,7 +6,7 @@ Issue [#238](https://github.com/adrianf87/dc24h.eu-high-starter/issues/238), sin
 
 - Branch base: protected `main` at `620026216f2f7e19cb55d832b0c91aa26f94d8b2` (merged beta-0.6.x PR #237).
 - C++20 remains the password/grant authority. WebAdmin is an authenticated, loopback-only, read-only projection behind private Apache TLS; never passwordless. MariaDB schema v11 and `mfa.json`, `replay.jsonl`, `audit.jsonl`, `passkeys.json` and `rate-limits.json` remain coupled for stopped-writer recovery.
-- Only disposable, synthetic GitHub-hosted Ubuntu 22.04/24.04/26.04 evidence counts. No Debian, self-hosted runner, Xeon or production access. Preserve owner-only private state and redacted diagnostics.
+- Only disposable, synthetic GitHub-hosted Ubuntu 22.04/24.04/26.04 evidence counts. No Debian, privately managed runner, Xeon or production access. Preserve owner-only private state and redacted diagnostics.
 
 ## Ordered implementation ledger
 
