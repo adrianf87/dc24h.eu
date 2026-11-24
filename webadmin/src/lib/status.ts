@@ -59,7 +59,7 @@ export interface HubSnapshot {
 export interface RemoteStatusProjection {
   observation?: { schema: 1; source_age_ms: number };
   server: { version: string; running: boolean; uptime_seconds: number };
-  network: { active_connections: number; accepted_connections: number };
+  network: { active_connections: number; accepted_connections: number; security_rejected?: number };
   users: { online: number; peak_online: number };
   chat: { received: number; rejected: number };
   search?: { queries: number; results: number };
@@ -118,6 +118,8 @@ export function parseRemoteSummary(value: unknown, receiptUnixMs = Date.now()): 
     users: { online: counter(users.online), peak_online: counter(users.peak_online) },
     chat: { received: counter(chat.received), rejected: counter(chat.rejected) },
   };
+  if (network.security_rejected !== undefined)
+    result.network.security_rejected = counter(network.security_rejected);
   // Old v1 servers predate source observations. Retain their metrics, but do
   // not invent source freshness. A malformed observation is not an old API:
   // it is evidence of a broken/forged status response and must be refused.

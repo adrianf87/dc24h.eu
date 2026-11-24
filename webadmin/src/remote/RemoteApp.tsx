@@ -40,6 +40,9 @@ const labels = {
     serviceReady: "Hub reported running", lastUpdated: "Read age", chatDenied: "Rejected chat total",
     maintenance: "Recovery / maintenance", maintenanceUnknown: "Not exposed by approved read-only projection",
     incidentReady: "Verified", incidentDegraded: "Degraded", stale: "Read expired; old counters are hidden until a verified refresh.",
+    timeline: "Recent aggregate service events", noEvents: "No verified transitions recorded in this process.",
+    alertTitle: "Aggregate security signals", hubStarted: "Hub started", hubStopped: "Hub stopped",
+    transportRefused: "Transport security refusal threshold reached", secondsAgo: "seconds ago",
     acknowledge: "Acknowledge locally", acknowledged: "Acknowledged on this screen only; no server action was sent.",
   },
   pl: {
@@ -72,6 +75,9 @@ const labels = {
     serviceReady: "Hub zgłasza pracę", lastUpdated: "Wiek odczytu", chatDenied: "Łączna liczba odrzuconych wiadomości",
     maintenance: "Odtwarzanie / konserwacja", maintenanceUnknown: "Niedostępne w zatwierdzonym widoku tylko do odczytu",
     incidentReady: "Zweryfikowano", incidentDegraded: "Pogorszenie", stale: "Odczyt nieaktualny; poprzednie liczniki ukryto do czasu weryfikacji.",
+    timeline: "Ostatnie zbiorcze zdarzenia usługi", noEvents: "Brak zweryfikowanych zmian stanu w tym procesie.",
+    alertTitle: "Zbiorcze sygnały bezpieczeństwa", hubStarted: "Hub uruchomiony", hubStopped: "Hub zatrzymany",
+    transportRefused: "Próg odmów bezpieczeństwa transportu został osiągnięty", secondsAgo: "sekund temu",
     acknowledge: "Potwierdź lokalnie", acknowledged: "Potwierdzono tylko na tym ekranie; nie wysłano żadnej akcji do serwera.",
   },
 } as const;
@@ -364,8 +370,8 @@ export function RemoteApp() {
     } catch { if (epoch === sessionEpoch.current) setActionMessage(t.actionFailed); }
     finally { if (epoch === sessionEpoch.current) setDeviceMutationBusy(null); }
   };
-  // Monotonic client receipt age is the only timestamp the approved gateway
-  // supplies. Never invent a server-side recovery state or an audit timeline.
+  // Independently validated C++ source age is optional for legacy v1; advance
+  // it monotonically from receipt and never invent a recovery state.
   const freshSummary = summary && summaryFetchedAt !== null &&
     clock >= summaryFetchedAt && clock - summaryFetchedAt <= 45_000 ? summary : null;
   const rows: [string, string | number][] = freshSummary ? [
@@ -377,6 +383,8 @@ export function RemoteApp() {
     ...(freshSummary.search ? [[t.queries, freshSummary.search.queries], [t.results, freshSummary.search.results]] as [string, number][] : []),
     ...(freshSummary.transfers ? [[t.ctm, freshSummary.transfers.ctm], [t.rcm, freshSummary.transfers.rcm]] as [string, number][] : []),
   ] : [];
+  const eventName = (kind: "hub_started" | "hub_stopped" | "transport_refusals") =>
+    kind === "hub_started" ? t.hubStarted : kind === "hub_stopped" ? t.hubStopped : t.transportRefused;
   return (
     <main className="remote-shell">
       <header className="remote-head">
@@ -423,6 +431,13 @@ export function RemoteApp() {
             <button type="button" aria-pressed={incidentAcknowledged}
               onClick={() => setIncidentAcknowledged(true)} disabled={incidentAcknowledged}>{t.acknowledge}</button>
             {incidentAcknowledged && <p role="status">{t.acknowledged}</p>}
+            {freshSummary.incidents?.state === "observed" && <div className="remote-timeline">
+              <h3>{t.timeline}</h3>
+              {freshSummary.incidents.events.length ? <ul>{freshSummary.incidents.events.map((event, i) =>
+                <li key={`${i}-${event.kind}`}>{eventName(event.kind)} · {event.age_seconds} {t.secondsAgo}</li>)}</ul> :
+                <p className="remote-hint">{t.noEvents}</p>}
+              {freshSummary.incidents.alerts.length > 0 && <p role="status">{t.alertTitle}: {freshSummary.incidents.alerts.length}</p>}
+            </div>}
           </section>}
           {freshSummary ? <dl className="remote-grid">{rows.map(([key, value]) =>
             <div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}</dl> : <p>{t.loading}</p>}

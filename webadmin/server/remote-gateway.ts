@@ -3,6 +3,7 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { request } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { performance } from "node:perf_hooks";
 import { parseAccess } from "../src/lib/access.ts";
 import { parseManagement } from "../src/lib/management.ts";
 import { parseRemoteSummary } from "../src/lib/status.ts";
@@ -10,6 +11,7 @@ import { isJsonContentType } from "./json-content-type.ts";
 import type { PasskeyCeremonies } from "./remote-webauthn.ts";
 import type { PasskeyStore } from "./remote-passkeys.ts";
 import type { RemoteRateLimitStore } from "./remote-rate-limit-store.ts";
+import { aggregateObservability } from "./remote-observability.ts";
 export { isJsonContentType } from "./json-content-type.ts";
 
 type Credentials = { socket: string; token: string };
@@ -157,6 +159,7 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
   const enrollments = new Map<string, { challenge: string; expires: number; session: Session }>();
   const budgets = new Map<string, Budget>();
   const requestIds = new WeakMap<ServerResponse, string>();
+  const observability = aggregateObservability(() => performance.now());
 
   const log = (event: RemoteEvent): boolean => {
     // Audit integrations are external observers; a failed sink must not crash
@@ -711,7 +714,9 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
       }
       // The dedicated parser has already validated and constructed only the
       // reviewed aggregate fields; never serialize a raw private API object.
-      reply(res, 200, { schema: 1, mode: "read-only", ...data });
+      if (data.observation) observability.observe(data);
+      reply(res, 200, { schema: 1, mode: "read-only", ...data,
+        ...(data.observation ? { incidents: observability.read() } : {}) });
     } catch {
       log("api_unavailable"); reply(res, 503, { error: "unavailable" });
     }

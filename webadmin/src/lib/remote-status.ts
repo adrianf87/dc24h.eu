@@ -4,6 +4,9 @@ export type Summary = {
   schema: 1;
   mode: "read-only";
   observation?: { schema: 1; source_age_ms: number };
+  incidents?: { schema: 1; state: "observed" | "unknown";
+    events: { kind: "hub_started" | "hub_stopped" | "transport_refusals"; age_seconds: number }[];
+    alerts: { kind: "transport_refusals"; age_seconds: number }[] };
   server: { version: string; running: boolean; uptime_seconds: number };
   network: { active_connections: number; accepted_connections: number };
   users: { online: number; peak_online: number };
@@ -50,6 +53,28 @@ export function parseRemoteSummaryResponse(value: unknown): Summary | null {
         observed.schema !== 1 || !counter(observed.source_age_ms) || observed.source_age_ms > 10_000)
       return null;
     result.observation = { schema: 1, source_age_ms: observed.source_age_ms };
+  }
+  if (root.incidents !== undefined) {
+    const incident = record(root.incidents);
+    if (!result.observation || !incident || Object.keys(incident).sort().join(",") !== "alerts,events,schema,state" ||
+        incident.schema !== 1 || !["observed", "unknown"].includes(incident.state as string) ||
+        !Array.isArray(incident.events) || incident.events.length > 12 ||
+        !Array.isArray(incident.alerts) || incident.alerts.length > 12) return null;
+    const parseEvent = (value: unknown, alert: boolean) => {
+      const item = record(value);
+      return item && Object.keys(item).sort().join(",") === "age_seconds,kind" &&
+        (alert ? item.kind === "transport_refusals" :
+          ["hub_started", "hub_stopped", "transport_refusals"].includes(item.kind as string)) &&
+        counter(item.age_seconds) && item.age_seconds <= 600;
+    };
+    if (!incident.events.every((e: unknown) => parseEvent(e, false)) ||
+        !incident.alerts.every((e: unknown) => parseEvent(e, true)) ||
+        (incident.state === "unknown" && (incident.events.length || incident.alerts.length))) return null;
+    result.incidents = { schema: 1, state: incident.state as "observed" | "unknown",
+      events: incident.events.map((e: { kind: "hub_started" | "hub_stopped" | "transport_refusals"; age_seconds: number }) =>
+        ({ kind: e.kind, age_seconds: e.age_seconds })),
+      alerts: incident.alerts.map((e: { kind: "transport_refusals"; age_seconds: number }) =>
+        ({ kind: e.kind, age_seconds: e.age_seconds })) };
   }
   if (root.search !== undefined) {
     const search = record(root.search);
