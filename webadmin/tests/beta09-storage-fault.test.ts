@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawnSync, type SpawnSyncReturns } from "node:child_process";
 import { constants, closeSync, existsSync, fsyncSync, mkdtempSync, openSync,
   readFileSync, rmSync, statfsSync, writeSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -100,7 +100,7 @@ test("fsync EIO during archive and incident partial writes never commits a false
           writer.close();
         } else initializeIncidentJournal(path);
         const prefix = mode === "archive-eio" ? path + ".archive.partial-" : path + ".partial-";
-        const child = spawnSync(process.execPath,
+        const child: SpawnSyncReturns<string> = spawnSync(process.execPath,
           [...childLoader, "tests/beta09-private-fault-child.ts", mode, path],
           { cwd: resolve("."), timeout: 10_000, encoding: "utf8", env: { ...process.env,
             LD_PRELOAD: shim, DC24H_BETA09_FSYNC_TARGET_PREFIX: prefix } });
