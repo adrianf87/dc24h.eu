@@ -332,6 +332,34 @@ test("authenticated summary exposes only thresholded login/rate alerts after ver
   assert.equal((await h.call("/remote/v1/summary", "GET", "", { cookie: browserCookie })).status, 503);
 });
 
+test("legacy hub downgrade and failed source read invalidate aggregate timeline", async () => {
+  const h = harness(true, true);
+  const login = await h.login();
+  assert.equal(login.status, 200);
+  const cookie = login.cookies[0]!.split(";")[0]!;
+  const observed = { ...snapshot, observation: { schema: 1, observed_unix_ms: Date.now() },
+    network: { ...snapshot.network, security_rejected: 0 } };
+  h.state.statusResponse = async () => observed;
+  assert.equal((await h.call("/remote/v1/summary", "GET", "", { cookie })).status, 200);
+  for (let n = 0; n < 5; n++) await h.login("7", "wrong");
+  const withAlert = await h.call("/remote/v1/summary", "GET", "", { cookie });
+  assert.equal(JSON.parse(withAlert.body).incidents.alerts.length, 1);
+
+  h.state.statusResponse = async () => snapshot; // Older v1 has no trusted observation.
+  const legacy = await h.call("/remote/v1/summary", "GET", "", { cookie });
+  assert.equal(legacy.status, 200);
+  assert.equal("incidents" in JSON.parse(legacy.body), false);
+
+  h.state.statusResponse = async () => observed;
+  const firstFresh = await h.call("/remote/v1/summary", "GET", "", { cookie });
+  assert.deepEqual(JSON.parse(firstFresh.body).incidents.alerts, []);
+  h.state.statusResponse = async () => { throw new Error("private upstream no longer reachable"); };
+  assert.equal((await h.call("/remote/v1/summary", "GET", "", { cookie })).status, 503);
+  h.state.statusResponse = async () => observed;
+  const recovered = await h.call("/remote/v1/summary", "GET", "", { cookie });
+  assert.deepEqual(JSON.parse(recovered.body).incidents.alerts, []);
+});
+
 test("a revoked session cannot finish an earlier in-flight status read", async () => {
   const h = harness();
   const login = await h.login();

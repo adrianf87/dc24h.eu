@@ -42,6 +42,7 @@ const labels = {
     incidentReady: "Verified", incidentDegraded: "Degraded", stale: "Read expired; old counters are hidden until a verified refresh.",
     sourceUnknown: "Unknown",
     timeline: "Recent aggregate service events", noEvents: "No verified transitions recorded in this process.",
+    incidentUnknown: "Incident history is unavailable or not yet verified; this does not mean the service is healthy.",
     alertTitle: "Aggregate security signals", hubStarted: "Hub started", hubStopped: "Hub stopped",
     transportRefused: "Transport security refusal threshold reached", loginRefused: "Authentication refusal threshold reached",
     rateLimitRefused: "Rate-limit refusal threshold reached", secondsAgo: "seconds ago",
@@ -79,6 +80,7 @@ const labels = {
     incidentReady: "Zweryfikowano", incidentDegraded: "Pogorszenie", stale: "Odczyt nieaktualny; poprzednie liczniki ukryto do czasu weryfikacji.",
     sourceUnknown: "Nieznane",
     timeline: "Ostatnie zbiorcze zdarzenia usługi", noEvents: "Brak zweryfikowanych zmian stanu w tym procesie.",
+    incidentUnknown: "Historia incydentów jest niedostępna albo jeszcze niezweryfikowana; nie oznacza to poprawnego działania usługi.",
     alertTitle: "Zbiorcze sygnały bezpieczeństwa", hubStarted: "Hub uruchomiony", hubStopped: "Hub zatrzymany",
     transportRefused: "Próg odmów bezpieczeństwa transportu został osiągnięty",
     loginRefused: "Próg odmów uwierzytelniania został osiągnięty",
@@ -197,7 +199,11 @@ export function RemoteApp() {
       const parsed = status === 200 ? parseRemoteSummaryResponse(data) : null;
       if (parsed) {
         const fetchedAt = performance.now();
-        setClock(fetchedAt); setSummaryFetchedAt(fetchedAt); setSummary(parsed); return;
+        setClock(fetchedAt); setSummaryFetchedAt(fetchedAt); setSummary(parsed);
+        // An acknowledgment belongs to what was on screen, not to a future
+        // source refresh. Never persist it or send a mutation to the hub.
+        setIncidentAcknowledged(false);
+        return;
       }
       invalidate(status === 200 ? "unavailable" : failure(status));
     } catch {
@@ -378,7 +384,8 @@ export function RemoteApp() {
   // Independently validated C++ source age is optional for legacy v1; advance
   // it monotonically from receipt and never invent a recovery state.
   const freshSummary = summary && summaryFetchedAt !== null &&
-    clock >= summaryFetchedAt && clock - summaryFetchedAt <= 45_000 ? summary : null;
+    clock >= summaryFetchedAt &&
+    clock - summaryFetchedAt + (summary.observation?.source_age_ms ?? 0) <= 45_000 ? summary : null;
   const rows: [string, string | number][] = freshSummary ? [
     [t.version, freshSummary.server.version], [t.running, freshSummary.server.running ? t.yes : t.no],
     [t.uptime, freshSummary.server.uptime_seconds], [t.connections, freshSummary.network.active_connections],
@@ -392,7 +399,7 @@ export function RemoteApp() {
     kind === "hub_started" ? t.hubStarted : kind === "hub_stopped" ? t.hubStopped :
       kind === "login_refusals" ? t.loginRefused : kind === "rate_limit_refusals" ? t.rateLimitRefused : t.transportRefused;
   return (
-    <main className="remote-shell">
+    <main className="remote-shell" lang={language === "pl" ? "pl" : "en"}>
       <header className="remote-head">
         <div><strong>dc24h.eu High Starter</strong><h1>{t.title}</h1><p>{t.mode}</p></div>
         <div className="remote-actions">
@@ -437,10 +444,13 @@ export function RemoteApp() {
             <button type="button" aria-pressed={incidentAcknowledged}
               onClick={() => setIncidentAcknowledged(true)} disabled={incidentAcknowledged}>{t.acknowledge}</button>
             {incidentAcknowledged && <p role="status">{t.acknowledged}</p>}
+            {freshSummary.incidents?.state !== "observed" &&
+              <p className="remote-unknown" role="status">{t.incidentUnknown}</p>}
             {freshSummary.incidents?.state === "observed" && <div className="remote-timeline">
               <h3>{t.timeline}</h3>
               {freshSummary.incidents.events.length ? <ul>{freshSummary.incidents.events.map((event, i) =>
-                <li key={`${i}-${event.kind}`}>{eventName(event.kind)} · {event.age_seconds} {t.secondsAgo}</li>)}</ul> :
+                <li key={`${i}-${event.kind}`}>{eventName(event.kind)} · {event.age_seconds +
+                  Math.floor((clock - summaryFetchedAt!) / 1000)} {t.secondsAgo}</li>)}</ul> :
                 <p className="remote-hint">{t.noEvents}</p>}
               {freshSummary.incidents.alerts.length > 0 && <p role="status">{t.alertTitle}: {freshSummary.incidents.alerts.length}</p>}
             </div>}

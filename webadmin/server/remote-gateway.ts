@@ -721,7 +721,9 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
       }
       // The dedicated parser has already validated and constructed only the
       // reviewed aggregate fields; never serialize a raw private API object.
-      if (data.observation) observability.observe(data);
+      // An older v1 hub downgrade is not evidence that the last verified
+      // sample remains current. Explicitly invalidate the prior timeline.
+      observability.observe(data);
       // This counter is a gateway-only signal for thresholded incidents. Do
       // not expose the raw per-process transport refusal total to browsers.
       const publicNetwork = { active_connections: data.network.active_connections,
@@ -730,6 +732,7 @@ export function remoteGateway(config: Credentials | null, options: RemoteOptions
         network: publicNetwork,
         ...(data.observation ? { incidents: observability.read() } : {}) });
     } catch {
+      observability.sourceUnavailable();
       log("api_unavailable"); reply(res, 503, { error: "unavailable" });
     }
   };
