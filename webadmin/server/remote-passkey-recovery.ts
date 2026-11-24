@@ -1,34 +1,20 @@
 // Offline-only controlled revocation; this tool has no HTTP endpoint.
 // The two operator names are acknowledgments, not cryptographic approvals.
 // The operator must verify identity and authorization independently.
-import { closeSync, constants, fstatSync, lstatSync, openSync, readFileSync } from "node:fs";
-import { dirname, isAbsolute } from "node:path";
 import { openPasskeyStore } from "./remote-passkeys.ts";
 import { openRemoteAuditStore } from "./remote-audit-store.ts";
+import { readPrivateJsonRequest } from "./remote-private-request.ts";
 
 function request(path: string): { actor: string; approvers: [string, string] } {
-  if (!isAbsolute(path)) throw Error("Absolute private recovery request required");
-  const parent = lstatSync(dirname(path));
-  if (!parent.isDirectory() || parent.uid !== process.geteuid?.() || (parent.mode & 0o077))
-    throw Error("Unsafe recovery request directory");
-  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
-  try {
-    const s = fstatSync(fd);
-    if (!s.isFile() || s.uid !== process.geteuid?.() || s.nlink !== 1 || (s.mode & 0o077) ||
-        s.size < 2 || s.size > 2048) throw Error("Unsafe recovery request");
-    const bytes = readFileSync(fd);
-    let obj: unknown;
-    try { obj = JSON.parse(bytes.toString("utf8")) as unknown; }
-    finally { bytes.fill(0); }
-    if (!obj || typeof obj !== "object" || Array.isArray(obj)) throw Error("Unsafe recovery request");
-    const v = obj as Record<string, unknown>;
-    if (Object.keys(v).sort().join(",") !== "actor,approvers,schema" || v.schema !== 1 ||
-        typeof v.actor !== "string" || !/^[1-9]\d{0,18}$/.test(v.actor) ||
-        BigInt(v.actor) > 9223372036854775807n || !Array.isArray(v.approvers) || v.approvers.length !== 2 ||
-        !v.approvers.every(x => typeof x === "string" && /^[A-Za-z0-9._-]{3,64}$/.test(x)) ||
-        v.approvers[0] === v.approvers[1]) throw Error("Unsafe recovery request");
-    return { actor: v.actor, approvers: v.approvers as [string, string] };
-  } finally { closeSync(fd); }
+  const obj = readPrivateJsonRequest(path, 2048);
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) throw Error("Unsafe recovery request");
+  const v = obj as Record<string, unknown>;
+  if (Object.keys(v).sort().join(",") !== "actor,approvers,schema" || v.schema !== 1 ||
+      typeof v.actor !== "string" || !/^[1-9]\d{0,18}$/.test(v.actor) ||
+      BigInt(v.actor) > 9223372036854775807n || !Array.isArray(v.approvers) || v.approvers.length !== 2 ||
+      !v.approvers.every(x => typeof x === "string" && /^[A-Za-z0-9._-]{3,64}$/.test(x)) ||
+      v.approvers[0] === v.approvers[1]) throw Error("Unsafe recovery request");
+  return { actor: v.actor, approvers: v.approvers as [string, string] };
 }
 
 function main(args: string[]) {

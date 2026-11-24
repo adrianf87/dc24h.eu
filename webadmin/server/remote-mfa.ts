@@ -9,6 +9,7 @@ import { fingerprint, fingerprintPrivateFile } from "./private-catalog-integrity
 
 type Secrets = Map<string, Buffer>;
 const actorPattern = /^[1-9][0-9]{0,18}$/;
+const safeActor = (actor: string): boolean => actorPattern.test(actor) && BigInt(actor) <= 9223372036854775807n;
 const seedPattern = /^[A-Z2-7]{32}(?:[A-Z2-7]{8}){0,4}$/;
 const ledgerLimit = 1024 * 1024;
 const noncePattern = /^[0-9a-f]{32}$/;
@@ -38,7 +39,7 @@ function visitReplayLedger(fd: number, visit: (entry: ReplayEntry) => void): voi
       const record: unknown = JSON.parse(line);
       if (!record || typeof record !== "object" || Array.isArray(record)) throw new Error("Invalid MFA replay ledger");
       const row = record as Record<string, unknown>;
-      if (typeof row.actor !== "string" || !actorPattern.test(row.actor) || !Number.isSafeInteger(row.step) ||
+      if (typeof row.actor !== "string" || !safeActor(row.actor) || !Number.isSafeInteger(row.step) ||
         (row.step as number) < 0 || ("nonce" in row &&
         (typeof row.nonce !== "string" || !noncePattern.test(row.nonce))) ||
         Object.keys(row).length !== ("nonce" in row ? 3 : 2)) throw new Error("Invalid MFA replay entry");
@@ -123,7 +124,7 @@ export function loadTotpVerifier(secretsPath: string, replayPath: string) {
     if (Object.keys(accounts).length < 1 || Object.keys(accounts).length > 64) throw new Error("Invalid MFA accounts");
     const distinct = new Set<string>();
     for (const [actor, value] of Object.entries(accounts)) {
-      if (!actorPattern.test(actor) || typeof value !== "string") throw new Error("Invalid MFA actor");
+      if (!safeActor(actor) || typeof value !== "string") throw new Error("Invalid MFA actor");
       if (distinct.has(value)) throw new Error("MFA secrets must differ by account");
       distinct.add(value);
       secrets.set(actor, base32Decode(value));
@@ -243,7 +244,7 @@ export interface TotpReplacement {
 // until the next 30-second step when the old step has already been consumed.
 export function replaceTotpSecret(options: TotpReplacement): void {
   const { enrollmentPath, replayPath, actor, newSeed, newCode, now } = options;
-  if (options.offlineAcknowledged !== true || !actorPattern.test(actor) ||
+  if (options.offlineAcknowledged !== true || !safeActor(actor) ||
       !seedPattern.test(newSeed) || !/^\d{6}$/.test(newCode) ||
       !Number.isSafeInteger(now) || now < 0)
     throw new Error("Invalid offline MFA replacement request");
@@ -267,7 +268,7 @@ export function replaceTotpSecret(options: TotpReplacement): void {
       throw new Error("Invalid MFA enrollment");
     const accounts = data.accounts as Record<string, unknown>;
     if (!Object.hasOwn(accounts, actor) || Object.keys(accounts).length < 1 || Object.keys(accounts).length > 64 ||
-        Object.entries(accounts).some(([id, v]) => !actorPattern.test(id) || typeof v !== "string" || !seedPattern.test(v)) ||
+        Object.entries(accounts).some(([id, v]) => !safeActor(id) || typeof v !== "string" || !seedPattern.test(v)) ||
         new Set(Object.values(accounts)).size !== Object.keys(accounts).length)
       throw new Error("Invalid MFA accounts");
     if (Object.entries(accounts).some(([id, seed]) => id !== actor && seed === newSeed))

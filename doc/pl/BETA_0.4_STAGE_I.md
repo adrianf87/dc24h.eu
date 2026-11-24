@@ -75,9 +75,12 @@ Procedura operatora (bezwzględne ścieżki, katalog 0700, pliki 0600):
    ```
 
 4. **Odzyskiwanie zgubionego urządzenia:** wymagane są niezależna
-   weryfikacja tożsamości i zgoda dwóch osób. W pliku pomiń `old_code`
-   i dodaj `--recovery`; nie ma odzyskiwania przez WWW ani obejścia OTP.
-   Udokumentuj incydent poza systemem i przejrzyj hasła/granty konta.
+   weryfikacja tożsamości i zgoda dwóch osób. W pliku pomiń `old_code`,
+   dodaj `"approvers":["operator-one","operator-two"]` i uruchom z
+   `--recovery`. Obie nazwy muszą być różne, ale są jedynie oświadczeniem
+   operatora, **nie kryptograficznym dowodem zatwierdzenia**. Nie ma
+   odzyskiwania przez WWW ani obejścia OTP. Udokumentuj incydent poza
+   systemem i przejrzyj hasła/granty konta.
 5. Uruchom ponownie bramę, sprawdź odmowę starego kodu, działanie nowego
    po ewentualnym odczekaniu 30 sekund, prywatny dostęp i cofnięcie sesji.
    Usuń plik żądania zgodnie z polityką usuwania danych.
@@ -96,6 +99,10 @@ uwierzytelniania do restartu. Nie uruchamiaj go na działającej usłudze.
 
 Nie rotuj plików podczas pracy usługi. Ten kod nie zastępuje rzeczywistej
 weryfikacji osoby przez operatorów ani nie udostępnia publicznego resetu.
+Ścieżka pliku żądania musi być kanoniczna i bezwzględna, a wszystkie jej
+składowe muszą być rzeczywistymi katalogami (bez symlinków). Narzędzie
+odmawia otwarcia podmienionego, dowiązanego na twardo lub zbyt szeroko
+dostępnego pliku żądania.
 
 ## beta-0.4.4 — Audit Foundation
 

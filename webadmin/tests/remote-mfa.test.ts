@@ -107,6 +107,23 @@ test("MFA enrollment and replay ledger reject loose permissions and symlink atta
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
+test("TOTP catalogs refuse account identifiers outside the C++ signed 64-bit range", () => {
+  const dir = mkdtempSync(join(tmpdir(), "dc24h-mfa-actor-range-"));
+  const enrollment = join(dir, "mfa.json"), replay = join(dir, "replay.jsonl");
+  const impossible = "9223372036854775808";
+  try {
+    writeFileSync(enrollment, JSON.stringify({ schema: 1, accounts: { [impossible]: secret } }), { mode: 0o600 });
+    initializeTotpReplay(replay);
+    assert.throws(() => loadTotpVerifier(enrollment, replay), /Invalid MFA actor/);
+    writeFileSync(enrollment, JSON.stringify({ schema: 1, accounts: { "7": secret } }), { mode: 0o600 });
+    writeFileSync(replay, JSON.stringify({ actor: impossible, step: 1 }) + "\n");
+    assert.throws(() => loadTotpVerifier(enrollment, replay), /Invalid MFA replay entry/);
+    assert.throws(() => replaceTotpSecret({ enrollmentPath: enrollment, replayPath: replay,
+      actor: impossible, newSeed: replacement, newCode: totpCodeForTest(replacement, 59_000),
+      now: 59_000, recovery: true, offlineAcknowledged: true }), /Invalid offline MFA replacement/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
 test("offline TOTP rotation replaces the enrollment atomically, rejects cached old seeds and preserves replay", () => {
   const dir = mkdtempSync(join(tmpdir(), "dc24h-mfa-rotate-"));
   const enrollment = join(dir, "mfa.json"), replay = join(dir, "replay.jsonl");
