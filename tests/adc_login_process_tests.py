@@ -173,7 +173,8 @@ class LoginProcessTests(unittest.TestCase):
                     wire = command.replace(b'PLACEHOLDER', bad.sid)
                     bad.send(wire)
                     self.assertTrue(bad.line().startswith(b'ISTA 244 '), wire)
-                    self.assertEqual(bad.line(), b'IQUI ' + bad.sid)
+                    self.assertTrue(bad.line().startswith(b'IQUI ' + bad.sid + b' '),
+                        "protocol quit can include a non-sensitive ADC status message")
                     self.assertEqual(bad.peer.recv(1), b'')
                 no_hash = self.peer(hub, cert, encrypted)
                 no_hash.send(b'HSUP ADBASE')
