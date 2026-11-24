@@ -1,0 +1,79 @@
+name: Beta 0.9 Stage IV offline audit and fault validation
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: beta09-stage4-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  offline-audit:
+    if: github.repository == 'adrianf87/dc24h.eu-high-starter'
+    name: Stage IV private storage - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: webadmin/package-lock.json
+      - name: Verify immutable checkout and install test dependencies
+        run: |
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          npm ci --prefix webadmin --no-audit --no-fund
+      - name: Build read-only operator UI and private Node gateway
+        working-directory: webadmin
+        run: |
+          npm run build
+          npm run build:remote:ci
+      - name: Run bounded cryptographic design, freshness and existing audit regressions
+        working-directory: webadmin
+        run: |
+          node --import tsx --test \
+            tests/beta09-audit-continuity.test.ts \
+            tests/remote-audit.test.ts \
+            tests/remote-incident-journal.test.ts \
+            tests/remote-observability.test.ts \
+            tests/remote-security-monitor.test.ts \
+            tests/remote-status-response.test.ts \
+            tests/remote-gateway-auth.test.ts
+      - name: Inject actual temporary tmpfs ENOSPC, fsync EIO and post-fsync crash
+        working-directory: webadmin
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C .. rev-parse HEAD)" = "$SOURCE_SHA"
+          fault_mount="$(mktemp -d "$RUNNER_TEMP/beta09-stage4.XXXXXXXX")"
+          cleanup() {
+            sudo umount "$fault_mount" || true
+            rmdir "$fault_mount" || true
+          }
+          trap cleanup EXIT
+          sudo mount -t tmpfs -o size=4m,nosuid,nodev,noexec,mode=0700 tmpfs "$fault_mount"
+          sudo chown "$(id -u):$(id -g)" "$fault_mount"
+          printf 'dc24h-beta09-disposable\n' > "$fault_mount/.dc24h-beta09-disposable"
+          cc -shared -fPIC -O2 -Wall -Wextra ../scripts/beta09_fail_fsync.c \
+            -ldl -o "$RUNNER_TEMP/beta09-fsync-fault.so"
+          export DC24H_BETA09_DISPOSABLE_TMPFS="$fault_mount"
+          export DC24H_BETA09_FSYNC_SHIM="$RUNNER_TEMP/beta09-fsync-fault.so"
+          node --import tsx --test tests/beta09-storage-fault.test.ts
+
+      # Deliberately no uploaded raw audit, archive, fault volume or key.

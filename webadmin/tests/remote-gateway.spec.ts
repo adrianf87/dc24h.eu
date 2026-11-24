@@ -492,14 +492,20 @@ test("source-age budget expires early even with a fresh browser receipt", async 
     if (++reads > 1) return;
     return route.fulfill({ status: 200, contentType: "application/json",
       body: JSON.stringify({ ...snapshot, observation: { schema: 1, source_age_ms: 10_000 },
-        incidents: { schema: 1, state: "unknown", events: [], alerts: [] } }) });
+        incidents: { schema: 1, state: "unknown", events: [], alerts: [],
+          retained: { state: "available", events: [{ kind: "hub_stopped", age_seconds: 3 }] } } }) });
   });
   await page.goto("/remote.html");
   await expect(page.getByText("Incident history is unavailable or not yet verified; this does not mean the service is healthy.")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Retained local incident history (not live)" })).toBeVisible();
   await expect(page.getByText("Active connections")).toBeVisible();
   await page.clock.runFor(36_000);
   await expect(page.getByText("Active connections")).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Retained local incident history (not live)" })).toHaveCount(0);
   await expect(page.getByText("Read expired; old counters are hidden until a verified refresh.")).toBeVisible();
+  await page.getByRole("button", { name: "Polski" }).click();
+  await expect(page.getByText("Odczyt nieaktualny; poprzednie liczniki ukryto do czasu weryfikacji.")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Zachowana lokalna historia incydentów (nie na żywo)" })).toHaveCount(0);
   expect(reads).toBeGreaterThan(1);
 });
 
