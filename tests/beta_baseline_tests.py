@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lock prior beta-0.3 safety limits and current beta-0.5.16 metadata."""
+"""Lock prior beta-0.3 safety limits and current beta-0.6.16 metadata."""
 
 from pathlib import Path
 import sys
@@ -57,7 +57,7 @@ def main():
     errors = []
     cmake = check(ROOT / "CMakeLists.txt", (
         "project(dc24h VERSION 0.1.0 LANGUAGES CXX)",
-        'set(DC24H_VERSION "beta-0.5.16")',
+        'set(DC24H_VERSION "beta-0.6.16")',
         'add_executable(dc24h-service-controller',
         'service.controller.process',
         "add_test(NAME beta.baseline ",
@@ -101,7 +101,7 @@ def main():
     require("ubuntu-latest" not in workflow, "build.yml: ubuntu-latest is selected", errors)
     check(ROOT / "README.md", (
         "# dc24h.eu High Starter",
-        "Current development version: beta-0.5.16",
+        "Current development version: beta-0.6.16",
         "beta-0.3.11–beta-0.3.12 Stage IV",
         "beta-0.3.8–beta-0.3.10 Stage III",
         "beta-0.3.4–beta-0.3.7 Stage II",
@@ -116,7 +116,7 @@ def main():
         "beta-0.1.8 Development baseline",
         "<summary>Alpha 0.9.x (17 releases)</summary>",
     ), errors)
-    check(ROOT / "doc/README.md", ("Current development version: beta-0.5.16",), errors)
+    check(ROOT / "doc/README.md", ("Current development version: beta-0.6.16",), errors)
     check(ROOT / "doc/us/BETA.md", (
         "# Combined hardening release — beta-0.2.7 to beta-0.2.12",
         "## beta-0.2.9 — private API response hardening",
@@ -274,7 +274,7 @@ def main():
         "Owner-only fixed hub status/action",
     ), errors)
     check(ROOT / "webadmin/src/lib/status.ts", (
-        'export const WEBADMIN_VERSION = "beta-0.5.16";',
+        'export const WEBADMIN_VERSION = "beta-0.6.16";',
         '!/^(?:alpha-\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|beta-\\d{1,3}\\.\\d{1,3}(?:\\.\\d{1,3})?)$/.test(server.version)',
     ), errors)
     check(ROOT / "src/security/roles.cpp", (
@@ -318,7 +318,7 @@ def main():
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1
-    print("Beta 0.3 safety baseline and beta 0.5.16 runtime metadata verified")
+    print("Beta 0.3 safety baseline and beta 0.6.16 runtime metadata verified")
     return 0
 
 

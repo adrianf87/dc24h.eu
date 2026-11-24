@@ -1,5 +1,25 @@
 # Changelog
 
+## beta-0.6.1–beta-0.6.16 Stage I — 2026-11-24 (draft PR #237; hosted final-head CI pending)
+
+- **0.6.1 — CI Provenance:** Reject wrong-head, missing, skipped, duplicate and fabricated GitHub-hosted Ubuntu evidence; add negative checks and SHA lineage.
+- **0.6.2 — Real Private API:** Drive a disposable password+TOTP C++ → Node → Apache HTTPS loopback fixture; record 24 actual authenticated requests, latency/RPS/errors; no public/write route.
+- **0.6.3 — Safe Correlation:** Generate bounded request IDs and allowlisted failure outcomes without private headers, grants, cookies or actor IDs.
+- **0.6.4 — Reproducible Baseline:** Pin 24-request performance, CPU/RSS and tail-latency gates to exact source SHA and OS image; never extrapolate CI performance to production.
+- **0.6.5 — Matched Recovery:** Add failure-atomic cleanup and tamper/non-overwrite tests for stopped MariaDB v11 plus five private gateway files.
+- **0.6.6 — Post-Restore Authentication:** Test newly restored password+TOTP login, expired cookie and replay refusal and revoked synthetic passkey options on fresh disposable state. Actual browser WebAuthn ceremony not yet covered by this fixture.
+- **0.6.7 — Historical Rollback:** Build immutable prior 0.5.16 source separately and exercise the prior binary against freshly restored synthetic MariaDB/private state. Not a distribution-package-manager rollback or production test.
+- **0.6.8 — Offline Token Rotation:** Add owner-only staged token cutover, bounded login-budget continuity and old-token rollback; require services stopped and isolated state.
+- **0.6.9 — ADC/ADCS Corpus:** Version valid and rejected on-wire fragmented Unicode/CID/SID and pre-handshake cases on the actual loopback binary; no third-party client interop claim.
+- **0.6.10 — Backpressure/Fairness:** Exercise slow readers plus healthy concurrent clients on ADC and ADCS with bounded synthetic CPU/RSS and reconnect checks.
+- **0.6.11 — TLS Lifecycle:** Verify startup validation, certificate trust cutover after server restart, stale trust and wrong hostname/key refusals. Apache negative TLS remains covered by the existing isolated VM tests.
+- **0.6.12 — Drain/Restart:** Exercise three SIGTERM server lifetimes with active ADC/ADCS clients, pending output, half-open TLS and fresh reconnect.
+- **0.6.13 — Redacted Incident View:** Render approved aggregate read-only hub readiness, receipt age and rejected-chat count; explicitly mark maintenance data unavailable.
+- **0.6.14 — Accessible Operator Feedback:** Add EN/PL keyboard-accessible local-only incident acknowledgment, no privileged route, and invalidate stale login/CSRF responses by session epoch.
+- **0.6.15 — Hosted Chaos Gate:** Combine authenticated HTTPS, real ADC/ADCS endurance, synthetic fault cases, MariaDB/private restore and historical rollback only when all exact-head reports are complete.
+- **0.6.16 — Development Release Candidate:** Align active C++/Node/React metadata, EN/US security/risk disposition and PL operator/rollback instructions. **Not deployed or approved for production.**
+- **Boundary:** One branch `beta-0.6.x-stage-full`, one draft PR #237, one Stage I implementation and one later full-series Stage II fix pass. No automatic merge, schema migration, public listener, remote hub-control writes or production release. Stage I requires latest-head full GitHub-hosted Ubuntu 22.04/24.04/26.04 C++/WebAdmin/Playwright/ASan/UBSan/CodeQL/systemd/auth/recovery/rollback green before its checklist may be checked.
+
 ## beta-0.5.13–beta-0.5.16 Stage IV — 2026-11-24 (one development branch; release candidate pending latest-head CI)
 
 - **0.5.13 — Advanced Security Testing:** Add bounded ADC parser mutation/fragmentation corpus, Node exact-route alias negatives and Apache encoded/traversal proxy blocking; retain WebAuthn/CSRF/grant, browser, ASan/UBSan, CodeQL and npm dependency audit checks.

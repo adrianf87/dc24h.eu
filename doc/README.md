@@ -1,6 +1,8 @@
 # dc24h.eu High Starter technical documentation
 
-Current development version: beta-0.5.16.
+Current development version: beta-0.6.16.
+
+[Beta-0.6.1–beta-0.6.16 Stage I: implementation evidence, boundaries and risks](us/BETA_0.6_STAGE_I.md) · [PL recovery/operator runbook](pl/BETA_0.6_STAGE_I.md). Final-head CI is not assumed green; Stage II remains a separate full-series fix pass.
 
 [Beta-0.5.13–beta-0.5.16 Stage IV: adversarial tests, Ubuntu endurance, recovery and release-candidate review](us/BETA_0.5_STAGE_IV.md) · [PL](pl/BETA_0.5_STAGE_IV.md)
 

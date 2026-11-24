@@ -1,11 +1,11 @@
-"""Offline, non-deploying beta-0.5.16 release-candidate invariants."""
+"""Offline, non-deploying beta-0.6.16 release-candidate invariants."""
 
 from pathlib import Path
 import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "beta-0.5.16"
+VERSION = "beta-0.6.16"
 BRANCH = "beta-0.4.13-0.4.16-stage4"
 
 

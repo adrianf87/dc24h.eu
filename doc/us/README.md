@@ -1,6 +1,8 @@
 # dc24h.eu High Starter documentation
 
-beta-0.5.16: Stage IV adds bounded parser/proxy/WebAuthn adversarial coverage, three-window real ADC/ADCS Ubuntu endurance referenced to Stage I, fixture-based HTTPS/API and MariaDB measurements, disposable binary/config/SQL/five-file failure recovery and a bilingual residual-risk runbook. Stage I–III security, fail-closed storage, WebAdmin sessions and actual systemd checks remain active. Only GitHub-hosted Ubuntu 22.04/24.04/26.04 measures this work unit; no target-host capacity claim. Password + passkey is **not passwordless**. No Internet-facing WebAdmin, remote hub-control writes, SQL migration or production deployment. Hub, API, controller and WebAdmin report beta-0.5.16; ADC/ADCS identity `dc24h.eu` and public proxy remain unchanged. Four later fix passes and final PR merge gate remain outstanding. Default language: EN/US UTF-8.
+beta-0.6.16: Stage I introduces authenticated private API measurements, provenance checks, historical fresh-state rollback, offline credential rotation, ADC/ADCS/TLS client regressions, a redacted incident screen and aggregate chaos evidence. All measurements and recovery attempts are synthetic on GitHub-hosted Ubuntu 22.04/24.04/26.04 only, not a target-host capacity/SLA or production recovery claim. Browser login remains password + TOTP or password + passkey. No public WebAdmin, grant-changing remote write, SQL migration or production deployment. Hub, API, controller and WebAdmin report beta-0.6.16; identity `dc24h.eu` unchanged. Full latest-head CI and one later consolidated full-series fix stage remain outstanding. Default language: EN/US UTF-8.
+
+- [Beta-0.6.1–beta-0.6.16 Stage I evidence, security disposition and residual risks](BETA_0.6_STAGE_I.md) · [PL operator guide](../pl/BETA_0.6_STAGE_I.md)
 
 - [Beta-0.5.13–beta-0.5.16 Stage IV advanced testing and release readiness](BETA_0.5_STAGE_IV.md) · [PL](../pl/BETA_0.5_STAGE_IV.md)
 

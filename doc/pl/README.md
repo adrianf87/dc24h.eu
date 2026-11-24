@@ -1,6 +1,8 @@
 # Dokumentacja dc24h.eu High Starter
 
-beta-0.5.16: Etap IV dodaje ograniczone atakujące testy ADC/Node/Apache/WebAuthn, dłuższe pomiary Ubuntu ADC/ADCS z referencją Etapu I, osobne pomiary fikcyjnego backendu HTTPS i testowej MariaDB oraz ćwiczenie zatrzymania/odtwarzania binarki, konfiguracji, SQL i pięciu prywatnych plików. Ujawniono ryzyka resztkowe i ograniczenia (brak bezpośredniej bazy HTTP, brak produkcyjnego SLA). Tylko GitHub-hosted Ubuntu 22.04/24.04/26.04; bez testu docelowego sprzętu. Logowanie nadal **hasło + passkey** lub **hasło + TOTP**. Hub, API, kontroler i WebAdmin raportują beta-0.5.16, schemat MariaDB v11 bez zmian. Brak publicznego WebAdmin, zdalnego zapisu lub wdrożenia; późniejsze cztery poprawki i bramka scalenia nie są jeszcze ukończone.
+beta-0.6.16: Etap I obejmuje rzeczywiste testowe logowanie przez prywatny HTTPS, sprawdzanie pochodzenia wyników CI, odtwarzanie MariaDB v11 i pięciu plików bramy, cofanie do binarki 0.5.16, rotację lokalnego tokenu, testy ADC/ADCS/TLS i prywatny ekran incydentów. Pomiary wyłącznie na GitHub-hosted Ubuntu 22.04/24.04/26.04, bez deklaracji wydajności produkcyjnej. Logowanie to nadal **hasło + passkey** albo **hasło + TOTP**; bez zmiany schematu SQL i bez publicznego WebAdmin. Hub, API, kontroler i WebAdmin raportują beta-0.6.16. CI końcowego SHA i jeden późniejszy, wspólny etap napraw są nadal wymagane. Wdrożenie nie następuje automatycznie.
+
+- [Etap I beta-0.6.1–beta-0.6.16 — procedura operatora i odtwarzania](BETA_0.6_STAGE_I.md) · [EN/US](../us/BETA_0.6_STAGE_I.md)
 
 - [Etap IV beta-0.5.13–beta-0.5.16 — bezpieczeństwo i instrukcja odtwarzania](BETA_0.5_STAGE_IV.md) · [EN/US](../us/BETA_0.5_STAGE_IV.md)
 
