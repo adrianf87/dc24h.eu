@@ -1,5 +1,7 @@
 # dc24h.eu High Starter documentation
 
+beta-0.8.1–beta-0.8.4: Stage I work on `beta-0.8.x-stage-full`, from protected-main commit `20eae07`. Exact-head hosted CI pending; ncdc-only executable client evidence, explicit account-revocation restart boundary, combined TTH/CTM process cases and TLS certificate cutover. Stage II–V, five fix passes and Owner acceptance remain independent. No native DC++/AirDC++ claim, public service, production deployment or package. Product metadata remains `beta-0.7.20` until beta-0.8.20. [Stage I ledger](BETA_0.8_STAGE_I.md) · [PL operator notes](../pl/BETA_0.8_STAGE_I.md).
+
 beta-0.7.20: Stage V development candidate on `beta-0.7.x-stage-full` (draft PR #239), with independent client evidence, private passkey/MFA, paired MariaDB v11/five-file recovery, test-only dpkg rollback, incident freshness, hosted three-window performance and exact-head supply-chain/release gates. Hub, API, controller and WebAdmin report beta-0.7.20; identity `dc24h.eu` unchanged. All performance and recovery tests are synthetic on GitHub-hosted Ubuntu 22.04/24.04/26.04 only, not a target-host SLA or production recovery claim. Browser login remains password + TOTP or password + passkey. No public gateway, grant-changing remote write, SQL migration or production deployment. Final-head CI, five subsequent fix passes and separate Owner acceptance remain outstanding. Default language: EN/US UTF-8.
 
 - [Beta-0.7.17–beta-0.7.20 Stage V release candidate, evidence and residual risks](BETA_0.7_STAGE_V.md) · [PL operator runbook](../pl/BETA_0.7_STAGE_V.md)

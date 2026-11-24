@@ -1,5 +1,13 @@
 # Changelog
 
+## beta-0.8.1–beta-0.8.4 Stage I — 2026-11-24 (single draft PR planned; exact-head CI pending)
+
+- **0.8.1 — Verifiable multi-client inventory:** Add a strictly bounded Stage I CTest/JUnit provenance gate which composes the existing pinned ncdc package/executable hashes with ADC/ADCS and TLS process cases. Missing, skipped, nonfinite, duplicate, wrong-head and fabricated client evidence fail. DC++ and AirDC++ remain **not executed**, not silently certified.
+- **0.8.2 — Negotiation and account-revocation boundary:** Extend the disposable real MariaDB/C++ process tests to disable a registered account, stop the hub, prove all old sessions are disconnected and reject fresh ADC/ADCS login until explicit re-enable/restart. Live SQL status edits are **not** a hot-reload guarantee.
+- **0.8.3 — Search-to-transfer continuity:** Add real TCP and TLS directed TTH search/RES/CTM tests across denied passive requests, a permitted INF active update and unknown-recipient refusal. Existing IPv4/IPv6, NAT scope, token and transfer limits remain mandatory.
+- **0.8.4 — TLS trust renewal:** Add independent TLS 1.2/1.3 certificate cutover, old-CA rejection, new-CA acceptance and no-plaintext-fallback on the ADCS listener. Retain expired-leaf, weak-cipher, hostname, wrong-key and downgrade negatives.
+- **Stage I gate and boundary:** `scripts/beta08_stage1_gate.py`, negative unit tests, hosted Ubuntu 22.04/24.04/26.04 C++ matrix and [EN/US ledger](doc/us/BETA_0.8_STAGE_I.md) / [PL operator notes](doc/pl/BETA_0.8_STAGE_I.md). Only four planned patches; Stage II–V and Fix Pass 1 remain separate requests. Stop after push/CI trigger **without waiting**. Product identifiers remain `beta-0.7.20` until the planned beta-0.8.20 synchronization; no release, deployment or merge is implied.
+
 ## beta-0.7.1–beta-0.7.4 Fix Pass 1 — 2026-11-24 (draft PR #239; exact-head CI pending)
 
 - **Client evidence provenance defect:** Bind the pinned ncdc capability report to the actual `git rev-parse HEAD`, require a matching GitHub-hosted Ubuntu 22.04/24.04/26.04 environment, and reject wrong-head/incorrect-runner evidence before writing a report. Add negative unit tests for SHA and runner drift.

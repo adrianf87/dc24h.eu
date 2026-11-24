@@ -1,5 +1,7 @@
 # Dokumentacja dc24h.eu High Starter
 
+beta-0.8.1–beta-0.8.4: Etap I na `beta-0.8.x-stage-full` — testy interoperacyjności ADC/ADCS, odmowa dla odebranego konta po kontrolowanym restarcie huba, TTH/CTM i wymiana certyfikatów TLS. Wersja uruchomieniowa pozostaje `beta-0.7.20` do synchronizacji w `beta-0.8.20`. Dowody CI na dokładnym SHA pozostają wymagane; po push i uruchomieniu CI **nie czekamy na wyniki**. Brak poświadczenia fizycznych klientów DC++/AirDC++, automatycznego merge i wdrożenia. [Etap I PL](BETA_0.8_STAGE_I.md) · [EN/US](../us/BETA_0.8_STAGE_I.md).
+
 beta-0.7.20: Etap V — roboczy kandydat w PR #239, obejmujący kompatybilność ADC/ADCS, passkeys/MFA, spójne odtwarzanie MariaDB v11 i pięciu plików, testowe aktualizacje dpkg, historię incydentów, porównywalne pomiary i zabezpieczoną kwalifikację. Hub, API, kontroler i WebAdmin raportują beta-0.7.20. Pomiary wyłącznie na GitHub-hosted Ubuntu 22.04/24.04/26.04, bez gwarancji produkcyjnego RPO/RTO lub wydajności. Logowanie nadal wymaga **hasła + passkey** albo **hasła + TOTP**. CI końcowego SHA, pięć późniejszych etapów poprawek i osobna zgoda Ownera pozostają wymagane. Brak automatycznego merge, wdrożenia, publicznego WebAdmin i zmiany schematu SQL.
 
 - [Etap V beta-0.7.17–beta-0.7.20 — instrukcja operatora i rollback](BETA_0.7_STAGE_V.md) · [EN/US](../us/BETA_0.7_STAGE_V.md)
