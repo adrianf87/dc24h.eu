@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import re
+import stat
 import tempfile
 import unittest
 from unittest import mock
@@ -140,7 +141,12 @@ class StageFourPrivateRecovery(unittest.TestCase):
             # for both writes. Freeze fstat metadata to prove byte comparison
             # catches a rewrite independently of timestamp resolution.
             frozen_metadata = (source / "mfa.json").stat()
+            original_fstat = recovery.os.fstat
             changed = False
+
+            def fstat_with_frozen_file(fd):
+                metadata = original_fstat(fd)
+                return frozen_metadata if stat.S_ISREG(metadata.st_mode) else metadata
 
             def mutate_during_read(fd, count):
                 nonlocal changed
@@ -151,7 +157,7 @@ class StageFourPrivateRecovery(unittest.TestCase):
                     path.write_bytes(path.read_bytes().replace(b"A" * 32, b"B" * 32))
                 return data
 
-            with mock.patch.object(recovery.os, "fstat", return_value=frozen_metadata):
+            with mock.patch.object(recovery.os, "fstat", side_effect=fstat_with_frozen_file):
                 with mock.patch.object(recovery.os, "read", side_effect=mutate_during_read):
                     with self.assertRaisesRegex(ValueError, "changed while reading"):
                         recovery.read_private(source, "mfa.json", recovery.FILES["mfa.json"])

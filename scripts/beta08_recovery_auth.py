@@ -73,31 +73,40 @@ def initialize_ledger(path):
 
 
 def _check_and_optionally_consume(ledger_path, fingerprint, consume):
-    private.private_directory(Path(ledger_path).parent)
-    fd = os.open(ledger_path, os.O_RDWR | os.O_APPEND | os.O_NOFOLLOW | os.O_NONBLOCK)
-    try:
-        fcntl.flock(fd, fcntl.LOCK_EX)
-        s = os.fstat(fd)
-        if (not stat.S_ISREG(s.st_mode) or s.st_uid != os.geteuid() or
-                s.st_nlink != 1 or s.st_mode & 0o077 or s.st_size > MAX_LEDGER):
-            raise ValueError("Unsafe authenticity anti-reuse ledger")
-        os.lseek(fd, 0, os.SEEK_SET)
-        raw = os.read(fd, MAX_LEDGER + 1)
-        if len(raw) != s.st_size or not re.fullmatch(rb"(?:[0-9a-f]{64}\n)*", raw):
-            raise ValueError("Invalid authenticity anti-reuse ledger")
-        entries = raw.splitlines()
-        if len(set(entries)) != len(entries):
-            raise ValueError("Duplicate authenticity anti-reuse records")
-        if fingerprint.encode("ascii") in entries:
-            raise ValueError("Recovery pair already accepted; replay refused")
-        if consume:
-            line = (fingerprint + "\n").encode("ascii")
-            if s.st_size + len(line) > MAX_LEDGER or os.write(fd, line) != len(line):
-                raise ValueError("Authenticity anti-reuse ledger exhausted")
-            os.fsync(fd)
-        return consume
-    finally:
-        os.close(fd)
+    with private.private_directory_fd(Path(ledger_path).parent) as directory_fd:
+        fd = os.open(Path(ledger_path).name,
+                     os.O_RDWR | os.O_APPEND | os.O_NOFOLLOW | os.O_NONBLOCK,
+                     dir_fd=directory_fd)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX)
+            s = os.fstat(fd)
+            if (not stat.S_ISREG(s.st_mode) or s.st_uid != os.geteuid() or
+                    s.st_nlink != 1 or s.st_mode & 0o077 or s.st_size > MAX_LEDGER):
+                raise ValueError("Unsafe authenticity anti-reuse ledger")
+            os.lseek(fd, 0, os.SEEK_SET)
+            raw = os.read(fd, MAX_LEDGER + 1)
+            if len(raw) != s.st_size or not re.fullmatch(rb"(?:[0-9a-f]{64}\n)*", raw):
+                raise ValueError("Invalid authenticity anti-reuse ledger")
+            entries = raw.splitlines()
+            if len(set(entries)) != len(entries):
+                raise ValueError("Duplicate authenticity anti-reuse records")
+            if fingerprint.encode("ascii") in entries:
+                raise ValueError("Recovery pair already accepted; replay refused")
+            current = os.stat(Path(ledger_path).name, dir_fd=directory_fd, follow_symlinks=False)
+            if (current.st_dev, current.st_ino) != (s.st_dev, s.st_ino):
+                raise ValueError("Anti-reuse ledger replaced during verification")
+            if consume:
+                line = (fingerprint + "\n").encode("ascii")
+                if s.st_size + len(line) > MAX_LEDGER or os.write(fd, line) != len(line):
+                    raise ValueError("Authenticity anti-reuse ledger exhausted")
+                os.fsync(fd)
+                current = os.stat(Path(ledger_path).name, dir_fd=directory_fd,
+                                  follow_symlinks=False)
+                if (current.st_dev, current.st_ino) != (s.st_dev, s.st_ino):
+                    raise ValueError("Anti-reuse ledger replaced during append")
+            return consume
+        finally:
+            os.close(fd)
 
 
 def verify(dump, snapshot, pair_directory, expected_sha, auth_dir, key_path,

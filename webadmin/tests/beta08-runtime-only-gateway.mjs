@@ -9,6 +9,15 @@ import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join } from "node:path";
 import { once } from "node:events";
 
+async function bounded(promise, milliseconds, message) {
+  let timer;
+  try {
+    return await Promise.race([promise, new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(message)), milliseconds);
+    })]);
+  } finally { clearTimeout(timer); }
+}
+
 async function smoke(bundle) {
   assert.ok(isAbsolute(bundle) && bundle.endsWith("/dist/remote-main.mjs"));
   const install = dirname(dirname(bundle));
@@ -62,19 +71,24 @@ async function smoke(bundle) {
       const child = spawn(process.execPath, [bundle], { cwd: install, env, stdio: ["ignore", "pipe", "pipe"] });
       let stderr = "";
       child.stderr.on("data", chunk => { stderr = (stderr + chunk.toString()).slice(-2000); });
+      // Register before readiness: a fast exit after SIGTERM must never be
+      // missed by attaching an 'exit' listener after kill() returns.
+      const stopped = new Promise(resolve => {
+        child.once("exit", (code, signal) => resolve({ code, signal }));
+        child.once("error", () => resolve({ code: -1, signal: null }));
+      });
       try {
-        await new Promise((resolve, reject) => {
-          const timer = setTimeout(() => reject(new Error("Compiled gateway startup timeout")), 8000);
+        await bounded(new Promise((resolve, reject) => {
+          let output = "";
           child.stdout.on("data", chunk => {
-            if (chunk.toString().includes("local-only listener ready")) {
-              clearTimeout(timer); resolve();
-            }
+            output = (output + chunk.toString()).slice(-256);
+            if (output.includes("local-only listener ready")) resolve();
           });
-          child.once("exit", () => { clearTimeout(timer); reject(new Error("Compiled gateway exited before readiness: " +
+          child.once("exit", () => { reject(new Error("Compiled gateway exited before readiness: " +
             (/ERR_MODULE_NOT_FOUND|Cannot find package/.test(stderr) ? "missing_runtime_dependency" :
               /Invalid local API adapter/.test(stderr) ? "invalid_synthetic_api_fixture" : "startup_refusal"))); });
-          child.once("error", error => { clearTimeout(timer); reject(error); });
-        });
+          child.once("error", reject);
+        }), 8000, "Compiled gateway startup timeout");
         const status = await new Promise((resolve, reject) => {
           const req = request({ hostname: "127.0.0.1", port, path: "/__synthetic_probe__", method: "GET" }, res => {
             res.resume(); res.on("end", () => resolve(res.statusCode));
@@ -84,8 +98,7 @@ async function smoke(bundle) {
         assert.ok(Number.isInteger(status) && status >= 400 && status < 600);
       } finally {
         child.kill("SIGTERM");
-        if (child.exitCode === null) await Promise.race([once(child, "exit"), new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Gateway shutdown timeout")), 4000))]);
+        await bounded(stopped, 4000, "Gateway shutdown timeout");
       }
     }
   } finally {

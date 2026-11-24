@@ -1,5 +1,13 @@
 # Changelog
 
+## beta-0.8.9–beta-0.8.12 Fix Pass 3 — 2026-11-24 (draft PR #241, exact-head CI pending)
+
+- **Confirmed path-swap risk in offline recovery:** Pin a second-checked owner-only directory descriptor and open private source/output files, streamed SQL/hash inputs and the independent HMAC anti-reuse ledger relative to that descriptor. Reject noncanonical `..` directory traversal, final-component links, source inode replacement mid-hash and ledger replacement before consumption. Add deterministic synthetic tests; stopped writers and isolated offline recovery remain required.
+- **Node private path aliases:** Refuse redundant separators, dot components and trailing directory slashes in the shared five-store validator, with a direct negative test, without changing private-state formats or broadening grants.
+- **Runtime-only gateway harness:** Register gateway exit before readiness/shutdown and cancel completed timeouts, so a fast post-SIGTERM exit cannot be falsely reported as a failed restart. Keep the production-dependency-only hosted startup requirement; no local Unix-socket or systemd success is fabricated.
+- **Packaging and traceability:** Retain genuine injected `preinst`/`postinst` failures, explicit prior-version `dpkg` downgrade, and correct the failure-package version in Stage III documentation to `0.8.20+ci3` after Stage V metadata alignment.
+- **Open evidence limits:** Full password+TOTP and password+passkey authentication against the actually downgraded beta-0.5.16 binary remains **unproven** by the existing separate SQL/Node checks. Likewise, this does not establish an installed systemd gateway rehearsal, a live atomic backup, kernel-atomic resolution of hostile path swaps, or production RPO/RTO. These are blockers to the stronger Stage III acceptance claim, not silently marked green. [EN/US review](doc/us/BETA_0.8_FIX_PASS_III.md) | [PL disposition](doc/pl/BETA_0.8_FIX_PASS_III.md).
+
 ## beta-0.8.5–beta-0.8.8 Fix Pass 2 — 2026-11-24 (draft PR #241; exact-head CI unverified)
 
 - **MFA same-length rewrite:** Hash the bounded TOTP enrollment at startup and compare the pinned bytes on every verification, including `ctime`. A valid-length, same-mtime in-place seed replacement now invalidates the live verifier before any consumed step can be written. This is runtime tamper detection, not cold-start authenticity.
@@ -12,7 +20,6 @@
 - **0.8.2 — Account revocation test defect:** Correct the disposable MariaDB integration fixture's zero-row `UPDATE`: `RegisteredADC` is an ADC nickname on `dc24h_account_identities`, whereas its account is named `AuthAccountOne`. Join nickname to account ID, require exactly one changed row and verify the persisted state before testing controlled restart and ADC/ADCS refusal. This fixes test evidence, **not** a live-revocation behavior claim.
 - **0.8.1/0.8.4 — Negative evidence:** Reject CTest failure/error/skipped child nodes even when marked `status="run"`; reject arbitrary plaintext on the ADCS listener, allowing only EOF/reset or a fatal TLS alert. The 0.8.3 search/transfer boundary was reviewed without a separate confirmed defect. Native DC++/AirDC++ clients remain untested.
 - **Fix Pass 1 handoff:** [EN/US review](doc/us/BETA_0.8_FIX_PASS_1.md) · [PL operator notes](doc/pl/BETA_0.8_FIX_PASS_1.md). Preserve already-committed Stages II–V on `beta-0.8.x-stage-full`. Hosted Ubuntu 22.04/24.04/26.04 exact-new-head CI is required but not yet verified; stop after push/CI trigger without polling, no automatic main merge or release.
-
 ## beta-0.8.17–beta-0.8.20 Stage V — 2026-11-24 (draft PR #241, exact-head CI unverified)
 
 - **0.8.17 — GitHub API provenance:** Add read-only exact-head/attempt workflow, hosted-job and redacted artifact SHA-256 digest verification against GitHub REST API. Refuse stale, pending, failed, skipped and wrong-attempt records; locally generated JSON remains untrusted. Owner approval is still separate.

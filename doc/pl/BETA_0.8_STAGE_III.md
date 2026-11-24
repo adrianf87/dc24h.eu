@@ -2,6 +2,8 @@
 
 Dotyczy wyłącznie Etapu III z [Issue #240](https://github.com/adrianf87/dc24h.eu-high-starter/issues/240), tej samej gałęzi `beta-0.8.x-stage-full` i szkicu PR #241. **Nie jest to procedura wdrożenia produkcyjnego ani gwarancja RPO/RTO.** MariaDB pozostaje w schemacie v11, a C++ zachowuje wyłączną władzę nad hasłami, kontami i uprawnieniami.
 
+Późniejszy przegląd: [Fix Pass 3 — ustalenia i ograniczenia](BETA_0.8_FIX_PASS_III.md). Poniższy opis Etapu III pozostaje do śledzenia historii zmian.
+
 ## 0.8.9 — kopia sześciu elementów bez symlinków
 
 1. Zatrzymaj wszystkie procesy zapisujące do C++/MariaDB i Node gateway. Blokada SQL nie zatrzymuje zapisów do pięciu prywatnych plików.

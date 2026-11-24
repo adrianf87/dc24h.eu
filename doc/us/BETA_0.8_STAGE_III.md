@@ -2,6 +2,8 @@
 
 Scope: **only work unit 3** in [Issue #240](https://github.com/adrianf87/dc24h.eu-high-starter/issues/240), on `beta-0.8.x-stage-full` and draft PR #241. This is an isolated CI/recovery prototype, not a production package, online backup, RPO/RTO claim, or merge authorization. MariaDB remains schema v11; the five private stores and C++ grant/password authority remain unchanged.
 
+Later review: [Fix Pass 3 EN/US evidence and residuals](BETA_0.8_FIX_PASS_III.md). The original stage description below is retained for traceability.
+
 ## 0.8.9 — six-component consistency and full private-path traversal
 
 - Maintain the already-required stopped-writer coordinator: stop C++/Node writers, take the MariaDB read lock, export schema-v11 SQL while holding the lock over a separately verified snapshot of `mfa.json`, `replay.jsonl`, `audit.jsonl`, `passkeys.json`, and `rate-limits.json`, and create the SHA-pinned pair manifest before re-enabling writers. A read lock alone does **not** stop Node file writers. No online atomicity is claimed.
@@ -28,7 +30,7 @@ The `verify` operation never imports SQL or mutates the backup or ledger. `accep
 
 ## 0.8.11 — package failures and production-dependency-only runtime dry-run
 
-- `beta07_ci_deb.py` remains an inert **test-only** dpkg fixture. A new `0.7.20+ci3` variant deliberately fails during `postinst`, after unpack, in addition to the existing corrupt archive and `preinst` failure. The hosted Ubuntu test records a non-configured dpkg state and explicitly reinstalls the original `0.5.16+ci1` package, checking the exact executable/version and unchanged private data. No service is enabled or a deployable package published.
+- `beta07_ci_deb.py` remains an inert **test-only** dpkg fixture. A new `0.8.20+ci3` variant deliberately fails during `postinst`, after unpack, in addition to the existing corrupt archive and `preinst` failure. The hosted Ubuntu test records a non-configured dpkg state and explicitly reinstalls the original `0.5.16+ci1` package, checking the exact executable/version and unchanged private data. No service is enabled or a deployable package published.
 - The example gateway unit no longer depends on the development-only `tsx` loader. A separate build (`npm run build:remote:ci`) bundles TypeScript to `dist/remote-main.mjs` with a pinned direct `esbuild` development dependency. The GitHub-hosted Ubuntu job copies only this JS artifact and the npm lock to an isolated directory, runs `npm ci --omit=dev`, verifies absence of `tsx`, TypeScript and esbuild, then attempts local-only synthetic gateway start/restart with private files and a Unix C++ API socket fixture. The example is not installed/enabled by CI, and production installation/ownership/systemd deployment must be separately reviewed.
 
 ## 0.8.12 — restored credential/grant state after real downgrade

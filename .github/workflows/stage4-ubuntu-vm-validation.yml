@@ -188,6 +188,7 @@ jobs:
         run: |
           python3 -m unittest discover -s tests -p beta07_ci_deb_tests.py
           python3 -m unittest discover -s tests -p beta08_recovery_auth_tests.py
+          python3 -m unittest discover -s tests -p beta08_fix_pass3_tests.py
           python3 -m unittest discover -s tests -p beta08_postrollback_state_tests.py
           DC24H_VM_REPORT_DIR="$PWD/vm-evidence" python3 \
             tests/beta07_dpkg_process_tests.py \

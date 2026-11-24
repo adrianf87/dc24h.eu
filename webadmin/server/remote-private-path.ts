@@ -1,10 +1,14 @@
 // Shared, Linux-only validation for the owner-private remote gateway catalogs.
 // O_NOFOLLOW on a leaf does not protect intermediate path components.
 import { lstatSync } from "node:fs";
-import { dirname, isAbsolute, sep } from "node:path";
+import { dirname, isAbsolute, normalize, sep } from "node:path";
 
 export function assertPrivateDirectory(directory: string): void {
   if (!isAbsolute(directory)) throw Error("Absolute private state path required");
+  // Different spellings of the same state directory conceal path aliases.
+  // Reject redundant separators and trailing slashes before inode traversal.
+  if (normalize(directory) !== directory || (directory !== sep && directory.endsWith(sep)))
+    throw Error("Noncanonical private state path");
   const components = directory.split(sep).filter(Boolean);
   if (components.some(part => part === "." || part === ".."))
     throw Error("Noncanonical private state path");

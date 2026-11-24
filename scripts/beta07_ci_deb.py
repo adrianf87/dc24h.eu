@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Build an inert, disposable dpkg fixture; NEVER publish it as a release.
 
-The exact binary under test is copied into an otherwise private .deb. No
-maintainer scripts, postinst, network listeners, enable/start, or credentials.
-This is deliberately not an installable production service package.
+The exact binary under test is copied into an otherwise private .deb. Normal
+fixtures have no maintainer scripts. Separate failure-only fixtures contain
+an inert failing preinst or postinst, never start/enable listeners or services,
+and contain no credentials. Not an installable production service package.
 """
 
 import hashlib

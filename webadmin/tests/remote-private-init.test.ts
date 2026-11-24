@@ -4,6 +4,7 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, sy
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initializeRemotePrivateState } from "../server/remote-private-init.ts";
+import { assertPrivateDirectory } from "../server/remote-private-path.ts";
 import { initializeTotpReplay, loadTotpVerifier, totpCodeForTest } from "../server/remote-mfa.ts";
 import { initializeRemoteAuditStore, openRemoteAuditStore } from "../server/remote-audit-store.ts";
 import { initializePasskeyStore, openPasskeyStore } from "../server/remote-passkeys.ts";
@@ -12,6 +13,16 @@ import { initializeRemoteRateLimitStore, openRemoteRateLimitStore } from "../ser
 const secret = "A".repeat(32);
 const token = "a".repeat(64);
 const file = (dir: string, name: string) => join(dir, name);
+
+test("noncanonical private paths cannot alias an otherwise valid store", () => {
+  const dir = mkdtempSync(join(tmpdir(), "dc24h-private-canonical-")); chmodSync(dir, 0o700);
+  try {
+    assertPrivateDirectory(dir);
+    for (const alias of [dir + "/", dir + "//", dir + "/./", dir + "/../" + dir.split("/").at(-1)])
+      assert.throws(() => assertPrivateDirectory(alias), /Noncanonical/);
+    assert.throws(() => initializeRemotePrivateState(dir + "/./", "localhost"), /Noncanonical/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
 
 test("first-installation bootstrap creates only four non-secret files and refuses a reset", () => {
   const dir = mkdtempSync(join(tmpdir(), "dc24h-private-init-")); chmodSync(dir, 0o700);
