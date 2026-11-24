@@ -1,6 +1,8 @@
-# Beta 0.7.x — Stage 1 implementation and acceptance ledger
+# Beta 0.7.x — Stage I external-client interoperability acceptance ledger
 
-Issue [#238](https://github.com/adrianf87/dc24h.eu-high-starter/issues/238), single development branch `beta-0.7.x-stage-full`. This is work in progress, **not** an approved release, completed Stage 1, or permission to merge or deploy. Stage 2 is one later consolidated 20-patch review/fix pass. The release version stays `beta-0.6.16` until the explicit `beta-0.7.20` metadata patch.
+Issue [#238](https://github.com/adrianf87/dc24h.eu-high-starter/issues/238), single development branch `beta-0.7.x-stage-full` and draft [PR #239](https://github.com/adrianf87/dc24h.eu-high-starter/pull/239). Under the revised **five implementation stages + five later fix passes** plan, **Stage I comprises only `beta-0.7.1`–`beta-0.7.4`**. This is not an approved release, a completed stage, or permission to merge/deploy. The product version stays `beta-0.6.16` until the separately qualified Stage V metadata patch.
+
+**Transition from the former plan:** this branch already contains preliminary commits for `0.7.5`–`0.7.20` from the old all-at-once Stage 1 scope. Preserve them without treating them as Stage I acceptance. Future stages and Fix Passes 1–5 remain separate work units and must independently satisfy Issue #238 gates. The inventory below records existing code and limits; only the first four rows determine Stage I patch coverage.
 
 ## Baseline and boundaries
 
@@ -8,7 +10,7 @@ Issue [#238](https://github.com/adrianf87/dc24h.eu-high-starter/issues/238), sin
 - C++20 remains the password/grant authority. WebAdmin is an authenticated, loopback-only, read-only projection behind private Apache TLS; never passwordless. MariaDB schema v11 and `mfa.json`, `replay.jsonl`, `audit.jsonl`, `passkeys.json` and `rate-limits.json` remain coupled for stopped-writer recovery.
 - Only disposable, synthetic GitHub-hosted Ubuntu 22.04/24.04/26.04 evidence counts. No Debian, privately managed runner, Xeon or production access. Preserve owner-only private state and redacted diagnostics.
 
-## Ordered implementation ledger
+## Existing branch implementation inventory (Stage I: first four rows only)
 
 | Patch | Scope | State | Acceptance/evidence |
 | --- | --- | --- | --- |
@@ -35,15 +37,15 @@ Issue [#238](https://github.com/adrianf87/dc24h.eu-high-starter/issues/238), sin
 
 ## Patch 0.7.1 evidence semantics
 
-The independent ncdc binary is executed by existing ADC/ADCS CTest process cases. The added gate requires **all eighteen named cases to appear and pass in the actual CTest JUnit result**; absent, skipped, duplicated or failed tests invalidate the proof. The expanded matrix includes token scope, search/transfer authorization refusals, transfer rate limits and error recovery, not just guest login. It also checks an exact upstream Ubuntu package version per hosted OS, `dpkg --verify` for installed files, SHA-256 of the downloaded exact-version `.deb` against the authenticated apt package index, and records the installed executable's SHA-256. This is a bounded reproducibility check, not certification of an external product.
+The independent ncdc binary is executed by existing ADC/ADCS CTest process cases. The added gate requires **all 24 named cases to appear and pass in the actual CTest JUnit result**; absent, not-run, skipped, duplicated, non-finite-duration or failed tests invalidate the proof. The matrix includes capability negotiation and secure peer CTM/RCM variants alongside token scope, search/transfer authorization refusals, transfer rate limits and error recovery, not just guest login. It also checks the exact upstream Ubuntu package version per hosted OS, `dpkg --verify` for installed files, SHA-256 of the downloaded exact-version `.deb` against the authenticated apt package index, and the installed executable's SHA-256. Both digests and the package identity are mandatory. This is a bounded reproducibility check, not certification of an external product.
 
 Pinned `ncdc` Ubuntu packages (amd64): jammy 22.04 `1.22.1-3`, noble 24.04 `1.23.1-1build2`, resolute 26.04 `1.23.1-1.1`. Changes in Ubuntu metadata must be reviewed rather than accepted as compatible by default. The report never copies raw client traffic, login names, passwords, addresses or complete log text. DC++ and AirDC++ rows remain `untested`, because their native binaries are not executed in the permitted hosted fixtures.
 
-## Stage 1 stop/go
+## Stage I stop/go
 
-**NO-GO** while any ledger row, required synthetic real-process test, numeric performance/recovery evidence or same-head hosted CI is missing. Do not check Issue #238 Stage 1, mark the draft PR ready, merge, close the issue or deploy. Record the final exact head SHA and all Ubuntu/CodeQL/browser/sanitizer/systemd/ADC/ADCS/recovery/dpkg evidence before declaring this work unit complete.
+**NO-GO** until Stage I patches `0.7.1`–`0.7.4` have executable positive/negative ADC/ADCS/ncdc/TLS evidence and **all currently applicable exact-final-head GitHub-hosted Ubuntu 22.04/24.04/26.04 CI checks pass**. The shared PR currently includes incomplete later-stage integration and therefore cannot use a failed/skipped required VM job as Stage I success. Record the final SHA, client capability manifest, CTest and TLS results plus CI run links. Do not mark Stage I complete, advance to Stage II, mark PR ready, merge, close the issue or deploy while a required check fails.
 
-## Explicit beta-0.7.20 risk and unresolved gates
+## Existing later-stage risks (not Stage I acceptance)
 
 - **R1: Full browser restore and authorization.** Integrated Chromium registration, matched MariaDB/five-private-store recovery, restored C++ password+passkey grant, replay refusal and actual gateway revocation are now scripted in the hosted VM path. This remains **unaccepted until it passes on all three GitHub-hosted Ubuntu images on the exact final SHA**. The separate wrong-origin and two-device ceremony regressions are still required.
 - **R2: Writer quiescence.** The full synthetic C++→Node→Apache fixture verifies both C++ and Node process exit and holds the disposable MariaDB read lock across six-component capture, with private-source hashes before/after. The offline preflight also checks v11 migration-export shape but refuses to call it full SQL validation. These are meaningful CI controls, not a general-purpose operator coordinator for all possible **live** writers or production-consistent generation certification.

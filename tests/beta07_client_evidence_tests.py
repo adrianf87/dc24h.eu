@@ -18,6 +18,10 @@ class EvidenceTests(unittest.TestCase):
         report = evidence.produce("ubuntu-24.04", "1" * 40, self.client, self.states)
         self.assertEqual(report["result"], "passed")
         self.assertEqual(report["capabilities"]["ncdc"]["adcs_ctm"]["state"], "passed")
+        for capability in ("adc_capability_negotiation", "adcs_capability_negotiation",
+                           "adc_ctm_tls_peer", "adcs_ctm_tls_peer",
+                           "adc_rcm_tls_peer", "adcs_rcm_tls_peer"):
+            self.assertEqual(report["capabilities"]["ncdc"][capability]["state"], "passed")
         for unsupported in ("DC++", "AirDC++"):
             self.assertEqual(report["capabilities"][unsupported]["state"], "untested")
 
@@ -38,6 +42,12 @@ class EvidenceTests(unittest.TestCase):
         altered = dict(self.client, package_sha256="unverified")
         with self.assertRaisesRegex(ValueError, "digest"):
             evidence.produce("ubuntu-24.04", "1" * 40, altered, self.states)
+        altered = dict(self.client, executable_sha256="")
+        with self.assertRaisesRegex(ValueError, "digest"):
+            evidence.produce("ubuntu-24.04", "1" * 40, altered, self.states)
+        altered = dict(self.client, version="0.0.0")
+        with self.assertRaisesRegex(ValueError, "identity"):
+            evidence.produce("ubuntu-24.04", "1" * 40, altered, self.states)
 
     def test_junit_skips_fail_and_duplicates_refused(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -52,6 +62,16 @@ class EvidenceTests(unittest.TestCase):
                             '<testcase name="adc.ncdc"/></testsuite>', encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "Duplicate"):
                 evidence.collect_tests(path)
+
+    def test_unrun_nonfinite_and_invalid_junit_evidence_fail_closed(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "junit.xml"
+            for attrs in ('status="notrun" time="0"', 'time="nan"',
+                          'time="inf"', 'time="-1"', 'time="invalid"'):
+                with self.subTest(attrs=attrs):
+                    path.write_text(f'<testsuite><testcase name="adc.ncdc" {attrs}/></testsuite>',
+                                    encoding="utf-8")
+                    self.assertEqual(evidence.collect_tests(path)["adc.ncdc"], "failed")
 
 
 if __name__ == "__main__":

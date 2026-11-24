@@ -11,6 +11,7 @@ executed, successful CTest case can be advertised as validated.
 import argparse
 import hashlib
 import json
+import math
 from pathlib import Path
 import re
 import subprocess
@@ -30,10 +31,16 @@ CAPABILITIES = {
     "adcs_tth_search": "adcs.tth.ncdc",
     "adc_active_passive": "adc.activepassive.ncdc",
     "adcs_active_passive": "adcs.activepassive.ncdc",
+    "adc_capability_negotiation": "adc.capabilities.ncdc",
+    "adcs_capability_negotiation": "adcs.capabilities.ncdc",
     "adc_ctm": "adc.ctm.ncdc",
     "adcs_ctm": "adcs.ctm.ncdc",
     "adc_rcm": "adc.rcm.ncdc",
     "adcs_rcm": "adcs.rcm.ncdc",
+    "adc_ctm_tls_peer": "adc.ctm.adcs.ncdc",
+    "adcs_ctm_tls_peer": "adcs.ctm.adcs.ncdc",
+    "adc_rcm_tls_peer": "adc.rcm.adcs.ncdc",
+    "adcs_rcm_tls_peer": "adcs.rcm.adcs.ncdc",
     "adc_search_permission_refusal": "adc.searchsecurity.ncdc",
     "adcs_search_permission_refusal": "adcs.searchsecurity.ncdc",
     "adc_transfer_token_scope": "adc.tokens.ncdc",
@@ -105,17 +112,25 @@ def collect_tests(junit):
     for item in cases:
         name = item.attrib.get("name", "")
         if name in CAPABILITIES.values():
-            states[name] = ("passed" if not any(item.find(tag) is not None for tag in
-                                                 ("failure", "error", "skipped")) and
-                            float(item.attrib.get("time", "0")) >= 0 else "failed")
+            try:
+                duration = float(item.attrib.get("time", "nan"))
+            except ValueError:
+                duration = float("nan")
+            states[name] = ("passed" if item.attrib.get("status", "run") in ("run", "passed")
+                            and math.isfinite(duration) and duration >= 0
+                            and not any(item.find(tag) is not None for tag in
+                                        ("failure", "error", "skipped")) else "failed")
     return states
 
 
 def produce(os_image, source_sha, client, states):
     if not COMMIT_SHA.fullmatch(source_sha):
         raise ValueError("Invalid source SHA")
-    if not client.get("package_sha256") or not SHA.fullmatch(client["package_sha256"]):
-        raise ValueError("No verified client package digest")
+    if client.get("package") != "ncdc" or client.get("version") != PINS.get(os_image):
+        raise ValueError("Unverified client package/version identity")
+    if not all(isinstance(client.get(key), str) and SHA.fullmatch(client[key])
+               for key in ("package_sha256", "executable_sha256")):
+        raise ValueError("No verified client package/executable digest")
     matrix = {"ncdc": {capability: {"state": states.get(test, "not_executed"),
                                  "test": test}
                        for capability, test in CAPABILITIES.items()},
