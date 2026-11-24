@@ -100,6 +100,33 @@ class StageOnePreflightTests(unittest.TestCase):
                         preflight.preflight(dump, snapshot, fresh_pair, "a" * 40, sql, private_target)
             self.assertFalse(sql.exists() or private_target.exists())
 
+    def test_mariadb_dump_whitespace_and_fractional_timestamp_are_accepted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dump, snapshot, _pair_dir = self.create(root)
+            original = dump.read_bytes()
+            # Some hosted MariaDB versions separate tuples with spaces and
+            # preserve subsecond precision; both are valid SQL-v11 exports.
+            changed = original.replace(b"),(2,", b"), (2,")
+            changed = changed.replace(b"'2026-11-24 00:00:00'", b"'2026-11-24 00:00:00.123456'")
+            changed = changed.replace(b"VALUES (", b"VALUES  ( ")
+            dump.write_bytes(changed)
+            pair_dir = root / "fractional-pair"
+            pair_dir.mkdir(mode=0o700)
+            preflight.pair.create_pair(dump, snapshot, pair_dir, "a" * 40)
+            self.assertEqual(preflight.sql_migration_row_count(dump), 11)
+            self.assertEqual(preflight.preflight(dump, snapshot, pair_dir, "a" * 40,
+                                                root / "fresh-db", root / "fresh-private")
+                             ["sql_export_applied_migration_rows"], 11)
+
+    def test_parser_never_ignores_extra_sql_between_valid_migration_rows(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dump, _snapshot, _pair_dir = self.create(root)
+            dump.write_bytes(dump.read_bytes().replace(b"),(2,", b"),SELECT 1,(2,"))
+            with self.assertRaisesRegex(ValueError, "Malformed migration export"):
+                preflight.sql_migration_row_count(dump)
+
     def test_cli_refusals_do_not_output_secret_paths_or_sql(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

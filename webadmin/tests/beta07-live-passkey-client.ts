@@ -13,6 +13,9 @@ import { chromium } from "@playwright/test";
 import { createInterface } from "node:readline";
 
 type Start = { origin: string; actor: string; sessionCookie: string; csrf: string };
+// Public output stays fixed-word only. This phase identifies the failed step
+// without exposing browser exceptions, credentials, URLs or HTTP bodies.
+let clientPhase = "startup";
 
 const lines = createInterface({ input: process.stdin, crlfDelay: Infinity })[Symbol.asyncIterator]();
 async function command(): Promise<Record<string, unknown>> {
@@ -30,13 +33,16 @@ if (!/^https:\/\/localhost:\d{2,5}$/.test(startup.origin) ||
     !/^dc24h_remote=[0-9a-f]{64}$/.test(startup.sessionCookie) ||
     !/^[0-9a-f]{64}$/.test(startup.csrf)) throw Error("Invalid isolated fixture parameters");
 
+clientPhase = "launch";
 const browser = await chromium.launch({ headless: true });
 try {
+  clientPhase = "navigation";
   const context = await browser.newContext({ ignoreHTTPSErrors: true });
   const page = await context.newPage();
   await context.addCookies([{ name: "dc24h_remote", value: startup.sessionCookie.split("=")[1],
     domain: "localhost", path: "/remote/v1", httpOnly: true, secure: true, sameSite: "Strict" }]);
   await page.goto(startup.origin + "/remote.html");
+  clientPhase = "authenticator";
   const cdp = await context.newCDPSession(page);
   await cdp.send("WebAuthn.enable");
   await cdp.send("WebAuthn.addVirtualAuthenticator", { options: {
@@ -44,6 +50,7 @@ try {
     hasUserVerification: true, isUserVerified: true,
   } });
 
+  clientPhase = "enrollment";
   const enrolled = await page.evaluate(async csrf => {
     const decode = (value: string) => Uint8Array.from(
       atob(value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=")),
@@ -53,12 +60,23 @@ try {
     });
     if (optionsResponse.status !== 200) return `enroll_options_${optionsResponse.status}`;
     const options = await optionsResponse.json();
-    const credential = await navigator.credentials.create({ publicKey: {
-      ...options, challenge: decode(options.challenge),
-      user: { ...options.user, id: decode(options.user.id) },
-      excludeCredentials: (options.excludeCredentials ?? []).map((entry: { id: string }) =>
-        ({ ...entry, id: decode(entry.id) })),
-    } });
+    let credential: Credential | null;
+    try {
+      credential = await navigator.credentials.create({ publicKey: {
+        ...options, challenge: decode(options.challenge),
+        user: { ...options.user, id: decode(options.user.id) },
+        excludeCredentials: (options.excludeCredentials ?? []).map((entry: { id: string }) =>
+          ({ ...entry, id: decode(entry.id) })),
+      } });
+    } catch (error) {
+      const name = error instanceof DOMException ? error.name : "";
+      return name === "NotAllowedError" ? "enroll_create_not_allowed"
+        : name === "SecurityError" ? "enroll_create_security"
+        : name === "NotSupportedError" ? "enroll_create_unsupported"
+        : name === "InvalidStateError" ? "enroll_create_invalid_state"
+        : name === "TypeError" ? "enroll_create_type"
+        : "enroll_create_exception";
+    }
     if (!credential || !("toJSON" in credential)) return "enroll_no_credential";
     const finish = await fetch("/remote/v1/passkey/enroll/finish", {
       method: "POST", headers: { "Content-Type": "application/json", "X-DC24H-Remote-CSRF": csrf },
@@ -73,10 +91,12 @@ try {
   if (enrolled !== "ok") throw Error(enrolled);
   process.stdout.write("enrolled\n");
 
+  clientPhase = "restore_handoff";
   const next = await command();
   if (next.action !== "restore") throw Error("Restored database handoff missing");
   // The original authenticated cookie has no authority in the new Node
   // process. A new C++ password grant and a fresh challenge are mandatory.
+  clientPhase = "restored_login";
   const restored = await page.evaluate(async actor => {
     // This is the *rotated* live browser cookie from enrollment, not an
     // already-invalid pre-enrollment cookie retained by the Python harness.
@@ -135,11 +155,11 @@ await main().catch(async (error: unknown) => {
   // A runner may collect stdout. Emit only fixed failure categories and
   // integer HTTP statuses, never browser errors with echoed options/cookies.
   const message = error instanceof Error ? error.message : "";
-  const category = /^(?:enroll_(?:options|finish|session)_[0-9]{3}|enroll_no_credential|enroll_result_invalid)$/.test(message)
+  const category = /^(?:enroll_(?:options|finish|session)_[0-9]{3}|enroll_no_credential|enroll_result_invalid|enroll_create_(?:not_allowed|security|unsupported|invalid_state|type|exception))$/.test(message)
     ? message : message === "Invalid isolated fixture parameters" ? "fixture_parameters"
     : message === "Missing harness instruction" ? "harness_protocol"
     : message === "Restored browser C++ password/passkey grant or revocation refused" ? "restored_flow"
-    : "browser_exception";
+    : `${clientPhase}_exception`;
   process.stdout.write(`client_error:${category}\n`);
   process.exitCode = 1;
   await lines.return?.();

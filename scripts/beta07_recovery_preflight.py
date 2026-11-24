@@ -22,7 +22,8 @@ MIGRATION_INSERT = re.compile(rb"^INSERT INTO\s+`?dc24h_schema_migrations`?\s+VA
 # schema migration, statement sanitizer or substitute for C++ inspection after
 # an import on a disposable fresh MariaDB instance.
 MIGRATION_ROW = re.compile(
-    rb"\(([1-9][0-9]*),'([a-z0-9_]+)','([0-9a-f]{64})','([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2})','applied'\)"
+    rb"\(\s*([1-9][0-9]*)\s*,\s*'([a-z0-9_]+)'\s*,\s*'([0-9a-f]{64})'\s*,\s*"
+    rb"'([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,6})?)'\s*,\s*'applied'\s*\)"
 )
 
 
@@ -52,8 +53,23 @@ def sql_migration_row_count(dump):
                 continue
             values = stripped[prefix.end():].rstrip(b"\r\n")
             matches = list(MIGRATION_ROW.finditer(values))
-            if not matches or b",".join(match.group(0) for match in matches) + b";" != values:
-                raise ValueError("Malformed migration export")
+            if not matches:
+                raise ValueError("Malformed migration export (row shape)")
+            # MariaDB versions can format separators and timestamp fractions
+            # differently. Accept only whitespace around complete tuples and
+            # commas, never arbitrary unparsed SQL between valid rows.
+            cursor = 0
+            valid = bool(matches)
+            for match in matches:
+                separator = values[cursor:match.start()].strip()
+                if separator != (b"" if cursor == 0 else b","):
+                    valid = False
+                    break
+                cursor = match.end()
+            if not valid:
+                raise ValueError("Malformed migration export (row separator)")
+            if values[cursor:].strip() != b";":
+                raise ValueError("Malformed migration export (row terminator)")
             for match in matches:
                 version = int(match.group(1))
                 if version in versions or version > 11:
