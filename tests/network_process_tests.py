@@ -195,6 +195,26 @@ class NetworkProcessTests(unittest.TestCase):
         hub.stop()
         self.assert_closed(healthy)
 
+    def test_fragmented_malformed_clients_do_not_poison_restart(self):
+        # Two actual hub lifetimes: incomplete frames must not leak a peer
+        # slot or carry parser data into the restarted process. No host state.
+        for generation in range(2):
+            with self.subTest(generation=generation):
+                hub = self.hub('--max-connections', '24')
+                peers = [hub.connect() for _ in range(16)]
+                with ThreadPoolExecutor(max_workers=8) as pool:
+                    list(pool.map(lambda p: p.sendall(b'HSUP ADBASE\nBINF AAAA NIpart'), peers))
+                for peer in peers:
+                    peer.shutdown(socket.SHUT_WR)
+                    self.assert_closed(peer)
+                healthy = hub.connect()
+                healthy.sendall(b'HSUP ADBASE\n')
+                healthy.shutdown(socket.SHUT_WR)
+                self.assert_closed(healthy)
+                self.assertIsNone(hub.process.poll())
+                hub.stop()
+                self.assertNotIn(b'event=output_limit', hub.log)
+
     def test_flood_does_not_delay_shutdown(self):
         hub = self.hub()
         peer = hub.connect()
