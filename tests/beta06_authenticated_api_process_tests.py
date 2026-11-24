@@ -38,7 +38,7 @@ from stage4_perf_probe import process_cpu_seconds, rss_kib
 REQUESTS = 24
 CONCURRENCY = 2
 MAX_P99_MS = 2000
-REQUEST_SPACING_SECONDS = 1.1
+BATCH_SPACING_SECONDS = 2.2
 SEED = "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP"  # Synthetic fixture only.
 
 
@@ -321,7 +321,9 @@ def run(binary, seeder, account_admin):
                 # the login's initial recheck. The authority permits only 24
                 # checks per 10 seconds; a burst of 24 summaries would be a
                 # rate-limit test, not an authenticated success workload.
-                due = started + index * REQUEST_SPACING_SECONDS
+                # Start exactly two workers together every 2.2 seconds: the
+                # fixture retains real concurrency=2 without grant flooding.
+                due = started + (index // CONCURRENCY) * BATCH_SPACING_SECONDS
                 remaining = due - time.monotonic()
                 if remaining > 0:
                     time.sleep(remaining)
@@ -361,7 +363,8 @@ def run(binary, seeder, account_admin):
                 "maintenance_mode": True, "hub_readonly_boundary_verified": True,
                 "requests": REQUESTS, "success": len(success), "failure": 0,
                 "concurrency": CONCURRENCY, "elapsed_seconds": round(elapsed, 3),
-                "request_spacing_ms": int(REQUEST_SPACING_SECONDS * 1000),
+                "request_spacing_ms": int(BATCH_SPACING_SECONDS * 1000 / CONCURRENCY),
+                "batch_spacing_ms": int(BATCH_SPACING_SECONDS * 1000),
                 "successful_requests_per_second": round(len(success) / elapsed, 3),
                 "p50_ms": percentile(success, 50), "p95_ms": percentile(success, 95),
                 "p99_ms": p99, "max_ci_p99_ms": MAX_P99_MS,

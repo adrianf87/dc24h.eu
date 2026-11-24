@@ -21,6 +21,7 @@ class IntegratedGateTests(unittest.TestCase):
                 "maintenance_mode": True, "hub_readonly_boundary_verified": True,
                 "requests": 24, "success": 24, "failure": 0,
                 "request_spacing_ms": 1100,
+                "batch_spacing_ms": 2200,
                 "capacity_claim": False, "synthetic_credentials_only": True,
                 "p99_ms": 45, "max_ci_p99_ms": 2500,
                 "successful_requests_per_second": 17.6, "cpu_mean_percent_one_core": 45,
