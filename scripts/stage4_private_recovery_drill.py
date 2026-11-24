@@ -113,6 +113,15 @@ def private_directory(path):
     candidate = Path(path)
     if not candidate.is_absolute():
         raise ValueError("Absolute private directory required")
+    # lstat(candidate) alone follows symlinks in its ancestors. An operator
+    # supplied path must never escape through an intermediate symlink, even
+    # when the final directory itself has owner-only permissions.
+    ancestor = Path(candidate.anchor)
+    for component in candidate.parts[1:]:
+        ancestor = ancestor / component
+        metadata = ancestor.lstat()
+        if not stat.S_ISDIR(metadata.st_mode):
+            raise ValueError("Symlink or non-directory in private path")
     s = candidate.lstat()
     if not stat.S_ISDIR(s.st_mode) or s.st_uid != os.geteuid() or s.st_mode & 0o077:
         raise ValueError("Unsafe private directory")
@@ -134,7 +143,12 @@ def read_private(root, name, maximum, allow_empty=False):
             if not chunk:
                 raise ValueError("Truncated private source")
             data.extend(chunk)
-        if os.fstat(fd).st_size != s.st_size:
+        after = os.fstat(fd)
+        current = (root / name).lstat()
+        if (after.st_size != s.st_size or after.st_mtime_ns != s.st_mtime_ns or
+                after.st_ctime_ns != s.st_ctime_ns or
+                (current.st_dev, current.st_ino) != (s.st_dev, s.st_ino) or
+                not stat.S_ISREG(current.st_mode)):
             raise ValueError("Private source changed while reading")
         return data
     finally:

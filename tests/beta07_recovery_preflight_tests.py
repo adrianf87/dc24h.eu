@@ -67,6 +67,22 @@ class StageOnePreflightTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 preflight.preflight(dump, snapshot, pair_dir, "a" * 40, gateway, gateway / "inside")
 
+    def test_target_with_symlinked_ancestor_refuses_without_writing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dump, snapshot, pair_dir = self.create(root)
+            destination_parent = root / "owned-parent"
+            destination_parent.mkdir(mode=0o700)
+            child = destination_parent / "private-child"
+            child.mkdir(mode=0o700)
+            indirect = root / "indirect"
+            indirect.symlink_to(destination_parent, target_is_directory=True)
+            with self.assertRaisesRegex(ValueError, "Symlink"):
+                preflight.preflight(dump, snapshot, pair_dir, "a" * 40,
+                                    root / "new-sql", indirect / "private-child" / "new-state")
+            self.assertFalse((child / "new-state").exists())
+            self.assertFalse((root / "new-sql").exists())
+
     def test_cross_generation_sha_corrupt_dump_and_partial_private_bundle_refuse(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
