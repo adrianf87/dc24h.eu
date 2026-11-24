@@ -95,15 +95,22 @@ class IsolatedDatabase:
         return command(self.client("--batch", "--skip-column-names"),
                        stdin=query.encode()).decode().strip()
 
-    def setup_schema(self, secret, *, new_database=True):
-        digest = "*" + hashlib.sha1(hashlib.sha1(secret.encode()).digest()).hexdigest().upper()
+    def setup_schema(self):
+        # Each disposable instance has a fresh, test-only credential. Let
+        # MariaDB hash it with its configured authentication plugin; never
+        # implement the legacy mysql_native_password SHA-1 hash in the test.
+        fixture_value = os.urandom(24).hex()
         self.sql("CREATE DATABASE dc24h CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-                 f"CREATE USER 'dc24h'@'localhost' IDENTIFIED BY PASSWORD '{digest}';"
+                 f"CREATE USER 'dc24h'@'localhost' IDENTIFIED BY '{fixture_value}';"
                  "GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,ALTER,DROP ON dc24h.* "
                  "TO 'dc24h'@'localhost';")
         password = self.root / "password"
-        password.write_text(secret + "\n", encoding="ascii")
-        password.chmod(0o600)
+        # Create owner-only from the outset; never expose credentials through
+        # an intermediate world-readable file or truncate an existing path.
+        fd = os.open(password, os.O_WRONLY | os.O_CREAT | os.O_EXCL |
+                     os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+        with os.fdopen(fd, "w", encoding="ascii") as file:
+            file.write(fixture_value + "\n")
         config = self.root / "hub.ini"
         config.write_text("[network]\nlisten=127.0.0.1:0\n[database]\nenabled=on\n"
                           f"socket={self.socket}\nuser=dc24h\npassword_file=password\n"
@@ -205,11 +212,10 @@ class MatchedRecoveryTests(unittest.TestCase):
             root = Path(directory)
             source, recovered, rollback = (IsolatedDatabase(root / name)
                                            for name in ("primary", "recovered", "rollback"))
-            secret = "ci-isolated-only-42"
             try:
                 source.initialize()
                 source.start()
-                config = source.setup_schema(secret)
+                config = source.setup_schema()
                 command([str(binary), "--config", str(config), "--migrate-database"])
                 source.sql("INSERT INTO dc24h.dc24h_accounts "
                            "(id,name,role,status,created_at,updated_at,revision) "
@@ -236,7 +242,7 @@ class MatchedRecoveryTests(unittest.TestCase):
 
                 recovered.initialize()
                 recovered.start()
-                recovered.setup_schema(secret)
+                recovered.setup_schema()
                 recovered.restore_sql(dump)
                 restored_dir = root / "restored-state"
                 private.restore_to_fresh_directory(snapshot, restored_dir)
@@ -255,7 +261,7 @@ class MatchedRecoveryTests(unittest.TestCase):
                 recovered.stop()
                 rollback.initialize()
                 rollback.start()
-                rollback.setup_schema(secret)
+                rollback.setup_schema()
                 rollback.restore_sql(dump)
                 rolled_back_state = root / "rollback-state"
                 private.restore_to_fresh_directory(snapshot, rolled_back_state)
