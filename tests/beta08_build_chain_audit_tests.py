@@ -13,14 +13,20 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import beta08_build_chain_audit as gate
 from beta07_npm_audit_gate_tests import example, SHA, OS
 
-LOCK = json.dumps({"packages": {
-    "node_modules/runtime": {"version": "1.0.0"},
-    "node_modules/ci-build-tool": {"version": "2.0.0", "dev": True}}}).encode()
+MANIFEST = {"name": "test-package", "version": "0.9.20", "engines": {"node": ">=22"},
+            "dependencies": {"runtime": "1.0.0"},
+            "devDependencies": {"ci-build-tool": "2.0.0"}}
+PACKAGE = json.dumps(MANIFEST).encode()
+LOCK = json.dumps({"name": MANIFEST["name"], "version": MANIFEST["version"],
+                   "lockfileVersion": 3, "requires": True, "packages": {
+    "": MANIFEST,
+    "node_modules/runtime": {"version": "1.0.0", "resolved": "https://registry.npmjs.org/runtime/-/runtime-1.0.0.tgz", "integrity": "sha512-" + "a" * 44},
+    "node_modules/ci-build-tool": {"version": "2.0.0", "dev": True, "resolved": "https://registry.npmjs.org/ci-build-tool/-/ci-build-tool-2.0.0.tgz", "integrity": "sha512-" + "a" * 44}}}).encode()
 
 
 class BuildChainAuditTests(unittest.TestCase):
     def test_full_runtime_and_dev_lock_audit_is_redacted(self):
-        report = gate.evaluate(example(), SHA, SHA, OS, 0, LOCK)
+        report = gate.evaluate(example(), SHA, SHA, OS, 0, LOCK, PACKAGE)
         self.assertTrue(report["runtime_and_build_chain_audited"])
         self.assertTrue(report["scope_enforced_by_invoking_npm"])
         self.assertEqual(report["dependency_exceptions"], [])
@@ -38,7 +44,22 @@ class BuildChainAuditTests(unittest.TestCase):
                                            (example(), SHA, 0, json.dumps({"packages": {
                                                "node_modules/runtime": {}}}).encode())):
             with self.subTest(head=head, exit_code=exit_code), self.assertRaises(ValueError):
-                gate.evaluate(raw, SHA, head, OS, exit_code, lock)
+                gate.evaluate(raw, SHA, head, OS, exit_code, lock, PACKAGE)
+
+    def test_direct_lock_pins_manifest_drift_and_transitive_integrity(self):
+        self.assertEqual(len(gate.locked_manifest(PACKAGE, LOCK)), 64)
+        tampered = copy.deepcopy(MANIFEST)
+        tampered["dependencies"]["runtime"] = "^1.0.0"
+        with self.assertRaises(ValueError):
+            gate.locked_manifest(json.dumps(tampered).encode(), LOCK)
+        tampered = json.loads(LOCK)
+        tampered["packages"]["node_modules/runtime"]["resolved"] = "http://outside.example/pkg.tgz"
+        with self.assertRaises(ValueError):
+            gate.locked_manifest(PACKAGE, json.dumps(tampered).encode())
+        tampered = json.loads(LOCK)
+        tampered["packages"]["node_modules/ci-build-tool"]["integrity"] = ""
+        with self.assertRaises(ValueError):
+            gate.locked_manifest(PACKAGE, json.dumps(tampered).encode())
 
     def test_invocation_pins_production_and_dev_flags_and_never_prints_raw_report(self):
         with tempfile.TemporaryDirectory() as directory:

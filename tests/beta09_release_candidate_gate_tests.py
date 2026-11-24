@@ -31,14 +31,20 @@ def fixture(root):
         path = source / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content)
-    package = {"name": "dc24h-webadmin", "version": "0.9.20"}
+    package = {"name": "dc24h-webadmin", "version": "0.9.20",
+               "dependencies": {"runtime": "1.0.0"},
+               "devDependencies": {"build": "2.0.0"}}
     (source / "webadmin/package.json").write_text(json.dumps(package))
     (source / "webadmin/package-lock.json").write_text(json.dumps({
-        **package, "packages": {"": package}}))
+        **{k: package[k] for k in ("name", "version")}, "lockfileVersion": 3,
+        "requires": True, "packages": {"": package,
+        "node_modules/runtime": {"version": "1.0.0", "resolved": "https://registry.npmjs.org/runtime/-/runtime-1.0.0.tgz", "integrity": "sha512-" + "a" * 44},
+        "node_modules/build": {"version": "2.0.0", "dev": True, "resolved": "https://registry.npmjs.org/build/-/build-2.0.0.tgz", "integrity": "sha512-" + "a" * 44}}}))
     locksha = hashlib.sha256((source / "webadmin/package-lock.json").read_bytes()).hexdigest()
     profiles = {name: {"windows": 3, "samples": 3 * policy["requests"],
                        "failed_requests": 0, "ci_regression_envelope_passed": True,
-                       "max_observed_p99_ms": 10}
+                       "max_observed_p99_ms": 10, "min_success_rps": 8.0,
+                       "max_cpu_percent_one_core": 10, "rss_growth_kib": 1024}
                 for name, policy in gate.matrix.POLICY.items()}
     for image in gate.IMAGES:
         folder = reports / image
@@ -95,6 +101,21 @@ def fixture(root):
     return source, reports, hardening
 
 
+def github_fixture(mode="pr"):
+    return {"source_sha": SHA, "mode": mode,
+            "branch": ("beta-0.9.x-stage-full" if mode == "pr" else
+                       "beta-0.9.x-stage-full-fix-pass"),
+            "github_api_metadata_verified": True,
+            "artifact_sha256_independently_verified": True,
+            "downloaded_artifact_count": 19,
+            "raw_credentials_exported": False,
+            "production_deployment_authorized": False,
+            "workflow_run_ids": {name: {"id": index, "attempt": 1} for index, name in enumerate((
+                "build.yml", "stage4-ubuntu-vm-validation.yml", "beta07-codeql.yml",
+                "beta08-hardening.yml", "beta09-stage4-storage.yml"), start=1)},
+            "owner_release_approval": False, "merge_authorized": False}
+
+
 class CandidateTests(unittest.TestCase):
     def test_offline_records_always_remain_no_go(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -123,17 +144,44 @@ class CandidateTests(unittest.TestCase):
     def test_github_zip_digest_and_owner_decision_stay_separate(self):
         with tempfile.TemporaryDirectory() as directory:
             checkout, reports, hardening = fixture(Path(directory))
-            metadata = {"source_sha": SHA, "mode": "pr", "branch": "beta-0.9.x-stage-full",
-                        "github_api_metadata_verified": True,
-                        "artifact_sha256_independently_verified": True,
-                        "downloaded_artifact_count": 15,
-                        "owner_release_approval": False, "merge_authorized": False}
+            metadata = github_fixture()
             result = gate.evaluate(checkout, SHA, reports, hardening, metadata)
             self.assertTrue(result["independently_hashed_artifact_evidence_present"])
             self.assertFalse(result["owner_release_approval"])
             metadata["artifact_sha256_independently_verified"] = False
             with self.assertRaises(ValueError):
                 gate.evaluate(checkout, SHA, reports, hardening, metadata)
+
+    def test_fix_pass_evidence_can_be_inspected_but_never_approves_rc(self):
+        with tempfile.TemporaryDirectory() as directory:
+            checkout, reports, hardening = fixture(Path(directory))
+            github = github_fixture("fix-pass")
+            result = gate.evaluate(checkout, SHA, reports, hardening, github)
+            self.assertEqual(result["status"], "NO-GO")
+            self.assertFalse(result["merge_authorized"])
+            github["workflow_run_ids"].pop("beta09-stage4-storage.yml")
+            with self.assertRaises(ValueError):
+                gate.evaluate(checkout, SHA, reports, hardening, github)
+
+    def test_malicious_perf_resource_summary_and_unpinned_dependency_are_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            checkout, reports, hardening = fixture(Path(directory))
+            envelope = reports / "ubuntu-22.04/beta09-security-envelope.json"
+            original = json.loads(envelope.read_text())
+            for key, bad in (("min_success_rps", 0), ("max_cpu_percent_one_core", 500),
+                             ("rss_growth_kib", 9999999), ("max_observed_p99_ms", float("nan"))):
+                changed = json.loads(envelope.read_text())
+                changed["profiles"]["adc"][key] = bad
+                envelope.write_text(json.dumps(changed))
+                with self.subTest(key=key), self.assertRaises(ValueError):
+                    gate.evaluate(checkout, SHA, reports, hardening)
+                envelope.write_text(json.dumps(original))
+            package_path = checkout / "webadmin/package.json"
+            package = json.loads(package_path.read_text())
+            package["dependencies"]["runtime"] = "^1.0.0"
+            package_path.write_text(json.dumps(package))
+            with self.assertRaises(ValueError):
+                gate.evaluate(checkout, SHA, reports, hardening)
 
 
 if __name__ == "__main__":

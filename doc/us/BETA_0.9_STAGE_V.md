@@ -2,6 +2,8 @@
 
 **Status: NO-GO. Source delivery is not CI acceptance, release approval, protected-main merge authorization or deployment.** This is work unit 5 under [Issue #242](https://github.com/adrianf87/dc24h.eu-high-starter/issues/242) on the sole `beta-0.9.x-stage-full` branch, shared [draft PR #243](https://github.com/adrianf87/dc24h.eu-high-starter/pull/243). This stage adds a candidate and reproducible *CI* proof machinery, not a fully production-ready installation. Fix Passes 1–5 and a later explicit Owner decision are separate work units.
 
+The subsequent isolated `beta-0.9.x-stage-full-fix-pass` changes, including exact-head CI, performance, dependency and RC hardening, are documented in [CI/RC Fix Pass](BETA_0.9_CI_RC_FIX_PASS.md).
+
 ## 0.9.17 — independently checked GitHub artifact bytes
 
 After all workflows finish, `scripts/beta09_artifact_evidence.py` checks the live PR #243 head or, **only after a separately approved merge**, the resulting protected `main` head. It requires the exact SHA, latest successful attempts, complete non-skipped GitHub-hosted job matrix, matching Ubuntu 22.04/24.04/26.04 labels, distinct artifact IDs, job time windows and the correct branch/event.

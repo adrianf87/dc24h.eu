@@ -2,7 +2,7 @@ name: Beta 0.9 Stage IV offline audit and fault validation
 
 on:
   push:
-    branches: [beta-0.9.x-stage-full-fix-pass]
+    branches: [main, beta-0.9.x-stage-full-fix-pass]
   pull_request:
     branches: [main]
   workflow_dispatch:

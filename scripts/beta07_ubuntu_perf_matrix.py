@@ -31,6 +31,28 @@ def nonnegative(value):
     return type(value) in (int, float) and math.isfinite(value) and value >= 0
 
 
+def validate_profile_summary(profile, result):
+    """Fail closed on the complete, bounded aggregate (including resource use)."""
+    if profile not in POLICY or not isinstance(result, dict):
+        raise ValueError("Unknown or missing performance profile")
+    policy = POLICY[profile]
+    if (type(result.get("windows")) is not int or result["windows"] != WINDOWS or
+            type(result.get("samples")) is not int or
+            result["samples"] != WINDOWS * policy["requests"] or
+            type(result.get("failed_requests")) is not int or
+            result["failed_requests"] != 0 or
+            result.get("ci_regression_envelope_passed") is not True):
+        raise ValueError("Missing successful performance samples")
+    for key, ceiling in (("max_observed_p99_ms", policy["p99_ceiling_ms"]),
+                         ("max_cpu_percent_one_core", policy["max_cpu_percent_one_core"]),
+                         ("rss_growth_kib", policy["max_rss_growth_kib"])):
+        if not nonnegative(result.get(key)) or result[key] > ceiling:
+            raise ValueError("Nonfinite or exceeded performance/resource budget")
+    if (not nonnegative(result.get("min_success_rps")) or
+            result["min_success_rps"] < policy["min_rps"]):
+        raise ValueError("Unacceptable or nonfinite successful throughput")
+
+
 def measured_percentile(samples, fraction):
     return round(samples[math.ceil(len(samples) * fraction) - 1], 3)
 

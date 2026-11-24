@@ -6,14 +6,13 @@ no fabricated local JSON can authorize merge, publication or deployment.
 """
 
 import argparse
-import hashlib
 import json
-import math
 from pathlib import Path
 import re
 import subprocess
 
 import beta07_ubuntu_perf_matrix as matrix
+import beta08_build_chain_audit as build_audit
 import beta09_os_provenance as host
 
 
@@ -52,7 +51,8 @@ def _metadata(root):
         text = (root / filename).read_text(encoding="utf8")
         if any(phrase not in text for phrase in phrases):
             raise ValueError("Incomplete beta-0.9.20 candidate metadata or risk register")
-    package = json.loads((root / "webadmin/package.json").read_text())
+    packagebytes = (root / "webadmin/package.json").read_bytes()
+    package = json.loads(packagebytes)
     lockbytes = (root / "webadmin/package-lock.json").read_bytes()
     lock = json.loads(lockbytes)
     if (package.get("version") != "0.9.20" or lock.get("version") != "0.9.20" or
@@ -60,7 +60,7 @@ def _metadata(root):
             lock.get("name") != package.get("name") or
             lock.get("packages", {}).get("", {}).get("name") != package.get("name")):
         raise ValueError("C++/Node/npm candidate identity is not aligned")
-    return hashlib.sha256(lockbytes).hexdigest()
+    return build_audit.locked_manifest(packagebytes, lockbytes)
 
 
 def evaluate(root, sha, reports, hardening, github=None):
@@ -116,15 +116,7 @@ def evaluate(root, sha, reports, hardening, github=None):
                 envelope.get("production_sla_or_capacity_approved") is not False):
             raise ValueError("Unpinned or fabricated three-profile performance/drain evidence")
         for profile, policy in matrix.POLICY.items():
-            result = envelope["profiles"].get(profile, {})
-            if (result.get("windows") != 3 or
-                    result.get("samples") != 3 * policy["requests"] or
-                    result.get("failed_requests") != 0 or
-                    result.get("ci_regression_envelope_passed") is not True or
-                    type(result.get("max_observed_p99_ms")) not in (int, float) or
-                    not math.isfinite(result["max_observed_p99_ms"]) or
-                    result["max_observed_p99_ms"] > policy["p99_ceiling_ms"]):
-                raise ValueError("Incomplete or nonfinite numeric windows")
+            matrix.validate_profile_summary(profile, envelope["profiles"].get(profile))
     tsan = _read(hardening / "ubuntu-24.04", "tsan-provenance.json", sha, "ubuntu-24.04")
     fuzz = _read(hardening / "ubuntu-24.04", "beta09-fuzz-envelope.json", sha, "ubuntu-24.04")
     if (tsan.get("result") != "passed" or tsan.get("suite") != "beta08-tsan" or
@@ -138,12 +130,26 @@ def evaluate(root, sha, reports, hardening, github=None):
         raise ValueError("TSAN, two independent fuzz targets or sanitizer evidence missing")
     independently_hashed = False
     if github is not None:
+        expected_workflows = set(("build.yml", "stage4-ubuntu-vm-validation.yml",
+                                  "beta07-codeql.yml", "beta08-hardening.yml",
+                                  "beta09-stage4-storage.yml"))
+        runs = github.get("workflow_run_ids") if isinstance(github, dict) else None
         if (not isinstance(github, dict) or github.get("source_sha") != sha or
-                github.get("mode") != "pr" or github.get("branch") != "beta-0.9.x-stage-full" or
+                (github.get("mode"), github.get("branch")) not in (
+                    ("pr", "beta-0.9.x-stage-full"),
+                    ("fix-pass", "beta-0.9.x-stage-full-fix-pass")) or
                 github.get("github_api_metadata_verified") is not True or
                 github.get("artifact_sha256_independently_verified") is not True or
                 type(github.get("downloaded_artifact_count")) is not int or
                 github["downloaded_artifact_count"] < 12 or
+                github.get("raw_credentials_exported") is not False or
+                github.get("production_deployment_authorized") is not False or
+                not isinstance(runs, dict) or set(runs) != expected_workflows or
+                any(not isinstance(value, dict) or
+                    type(value.get("id")) is not int or value["id"] <= 0 or
+                    type(value.get("attempt")) is not int or value["attempt"] <= 0
+                    for value in runs.values()) or
+                len({value["id"] for value in runs.values()}) != len(expected_workflows) or
                 github.get("owner_release_approval") is not False or
                 github.get("merge_authorized") is not False):
             raise ValueError("Unverified final-head GitHub ZIP-byte/PR evidence")
