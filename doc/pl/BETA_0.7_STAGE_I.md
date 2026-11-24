@@ -9,6 +9,7 @@ Zadanie [#238](https://github.com/adrianf87/dc24h.eu-high-starter/issues/238), g
 3. Przeprowadź wyłącznie dry-run przywracania do **nowego, pustego katalogu** o uprawnieniach właściciela. Nie nadpisuj działającej bazy lub prywatnego stanu. Zapisz tylko oczyszczone wyniki weryfikacji i skróty SHA-256, nigdy treść sekretów.
 4. Przełączenie pakietu przez `dpkg` oraz rollback wymagają osobnego testu na izolowanej maszynie. Przykładowy pakiet CI „`dc24h-high-starter-ci-fixture`” **nie jest pakietem wdrożeniowym**, nie ma skryptów instalacyjnych, a jego jednostka systemd nie jest uruchamiana. Przy błędzie przerwij, zatrzymaj usługę, odtwórz pasujący zestaw SQL + pięć plików i potwierdź autoryzację przez C++ przed ponownym startem.
 5. Utrzymaj logowanie **hasło + TOTP albo hasło + passkey**. Nie ujawniaj tokenów, kodów, identyfikatorów kont/IP, surowego audytu ani stanu prywatnego w PR, issue, logach i artefaktach. Brak dowodu oznacza *niezaliczone*, nie „prawdopodobnie działa”.
+6. Dane z wcześniejszego kontraktu API v1 bez pola `observation` mają **nieznany czas obserwacji źródłowej**, nawet gdy przeglądarka właśnie je odebrała. Nie interpretuj ich wieku odpowiedzi jako potwierdzonego czasu pomiaru C++. Nowy kontrakt odrzuca znaczniki z przyszłości lub starsze niż 10 sekund; licznik wieku w przeglądarce używa zegara monotonicznego.
 
 ## Aktualna realizacja
 

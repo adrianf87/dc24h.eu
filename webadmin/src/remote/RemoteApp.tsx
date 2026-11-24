@@ -412,8 +412,11 @@ export function RemoteApp() {
             <h2>{t.incidentTitle}</h2>
             <dl className="remote-grid">
               <div><dt>{t.gatewayReady}</dt><dd>{t.incidentReady}</dd></div>
-              <div><dt>{t.serviceReady}</dt><dd>{freshSummary.server.running ? t.incidentReady : t.incidentDegraded}</dd></div>
-              <div><dt>{t.lastUpdated}</dt><dd>{Math.max(0, Math.floor((clock - summaryFetchedAt!) / 1000))} s</dd></div>
+              <div><dt>{t.serviceReady}</dt><dd>{!freshSummary.observation ? t.maintenanceUnknown :
+                freshSummary.server.running ? t.incidentReady : t.incidentDegraded}</dd></div>
+              <div><dt>{t.lastUpdated}</dt><dd>{freshSummary.observation ?
+                `${Math.max(0, Math.floor((freshSummary.observation.source_age_ms + clock - summaryFetchedAt!) / 1000))} s` :
+                t.maintenanceUnknown}</dd></div>
               <div><dt>{t.chatDenied}</dt><dd>{freshSummary.chat.rejected}</dd></div>
               <div><dt>{t.maintenance}</dt><dd className="remote-unknown">{t.maintenanceUnknown}</dd></div>
             </dl>

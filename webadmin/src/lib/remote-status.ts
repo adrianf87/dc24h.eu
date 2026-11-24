@@ -3,6 +3,7 @@
 export type Summary = {
   schema: 1;
   mode: "read-only";
+  observation?: { schema: 1; source_age_ms: number };
   server: { version: string; running: boolean; uptime_seconds: number };
   network: { active_connections: number; accepted_connections: number };
   users: { online: number; peak_online: number };
@@ -43,6 +44,13 @@ export function parseRemoteSummaryResponse(value: unknown): Summary | null {
     users: { online: users.online, peak_online: users.peak_online },
     chat: { received: chat.received, rejected: chat.rejected },
   };
+  if (root.observation !== undefined) {
+    const observed = record(root.observation);
+    if (!observed || Object.keys(observed).sort().join(",") !== "schema,source_age_ms" ||
+        observed.schema !== 1 || !counter(observed.source_age_ms) || observed.source_age_ms > 10_000)
+      return null;
+    result.observation = { schema: 1, source_age_ms: observed.source_age_ms };
+  }
   if (root.search !== undefined) {
     const search = record(root.search);
     if (!search || !counter(search.queries) || !counter(search.results)) return null;

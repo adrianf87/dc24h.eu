@@ -145,6 +145,24 @@ test("remote status projection includes only reviewed aggregate counters", () =>
   }
 });
 
+test("C++ observation schema verifies bounded source age and degrades old v1 to unknown", () => {
+  const sample = { api_version: "v1", server: snapshot.server,
+    network: { active_connections: 1, accepted_connections: 2 },
+    users: { online: 1, peak_online: 2 }, chat: { received: 1, rejected: 0 } };
+  assert.equal(parseRemoteSummary(sample, 1_800_000).observation, undefined,
+    "unversioned v1 must not receive a fabricated source timestamp");
+  assert.deepEqual(parseRemoteSummary({ ...sample, observation: {
+    schema: 1, observed_unix_ms: 1_799_200,
+  } }, 1_800_000).observation, { schema: 1, source_age_ms: 800 });
+  for (const invalid of [
+    null, { schema: 2, observed_unix_ms: 1_799_200 },
+    { schema: 1, observed_unix_ms: 1_800_001 },
+    { schema: 1, observed_unix_ms: 1_789_999 },
+    { schema: 1, observed_unix_ms: 1_799_200.5 },
+    { schema: 1, observed_unix_ms: 1_799_200, secret: "do-not-echo" },
+  ]) assert.throws(() => parseRemoteSummary({ ...sample, observation: invalid }, 1_800_000));
+});
+
 test("remote status rejects malformed mandatory aggregates and optional public counters", () => {
   const good = { ...snapshot, server: { ...snapshot.server, version: "beta-0.6.16" } };
   for (const corrupt of [
