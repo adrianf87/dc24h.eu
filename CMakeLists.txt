@@ -324,6 +324,9 @@ if(BUILD_TESTING)
     add_test(NAME beta.06.ci.provenance COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/beta06_ci_provenance_tests.py")
     set_tests_properties(beta.06.ci.provenance PROPERTIES TIMEOUT 15)
+    add_test(NAME beta.06.auth.gate COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/beta06_auth_gate_tests.py")
+    set_tests_properties(beta.06.auth.gate PROPERTIES TIMEOUT 15)
     add_test(NAME ci.timing.summary COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/ci_timing_summary_tests.py")
     set_tests_properties(ci.timing.summary PROPERTIES TIMEOUT 15)
