@@ -143,6 +143,17 @@ def read_private(root, name, maximum, allow_empty=False):
             if not chunk:
                 raise ValueError("Truncated private source")
             data.extend(chunk)
+        # Timestamp granularity differs across Ubuntu runner filesystems: a
+        # same-size in-place rewrite can leave mtime/ctime indistinguishable
+        # from the initial fstat. Compare the same inode's bytes a second time
+        # before checking metadata, without trusting timestamps alone.
+        os.lseek(fd, 0, os.SEEK_SET)
+        verified = 0
+        while verified < len(data):
+            chunk = os.read(fd, min(65536, len(data) - verified))
+            if not chunk or chunk != data[verified:verified + len(chunk)]:
+                raise ValueError("Private source changed while reading")
+            verified += len(chunk)
         after = os.fstat(fd)
         current = (root / name).lstat()
         if (after.st_size != s.st_size or after.st_mtime_ns != s.st_mtime_ns or
