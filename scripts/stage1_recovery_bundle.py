@@ -52,7 +52,7 @@ def private_hash(path, maximum):
         os.close(fd)
 
 
-def verified_pair(dump, snapshot, pair_file):
+def verified_pair(dump, snapshot, pair_file, expected_commit_sha=None):
     pair_path = Path(pair_file)
     raw = private.read_private(private.private_directory(pair_path.parent), pair_path.name, 4096)
     data = json.loads(raw)
@@ -61,6 +61,8 @@ def verified_pair(dump, snapshot, pair_file):
         not isinstance(data["commit_sha"], str) or not SHA.fullmatch(data["commit_sha"]) or
         not private.canonical_utc_timestamp(data["created_utc"])):
         raise ValueError("Malformed paired recovery manifest")
+    if expected_commit_sha is not None and data["commit_sha"] != expected_commit_sha:
+        raise ValueError("Recovery pair belongs to a different source commit")
     for key in ("mariadb_dump", "private_manifest"):
         record = data[key]
         if (not isinstance(record, dict) or set(record) != {"size", "sha256"} or
@@ -114,7 +116,7 @@ def main(argv=None):
                              args.pair_directory, args.commit_sha)
     else:
         result = verified_pair(args.mariadb_dump, args.private_snapshot,
-                               args.pair_directory / NAME)
+                               args.pair_directory / NAME, args.commit_sha)
     print(json.dumps(result, sort_keys=True))
     return 0
 

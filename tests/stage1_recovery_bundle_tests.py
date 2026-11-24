@@ -52,6 +52,9 @@ class RecoveryBundleTests(unittest.TestCase):
             self.assertFalse(result["mariadb_restored"])
             self.assertFalse(result["rpo_rto_measured"])
             self.assertEqual(result, bundle.verified_pair(dump, snapshot, pair_dir / bundle.NAME))
+            self.assertEqual(result, bundle.verified_pair(dump, snapshot, pair_dir / bundle.NAME, "a" * 40))
+            with self.assertRaisesRegex(ValueError, "different source commit"):
+                bundle.verified_pair(dump, snapshot, pair_dir / bundle.NAME, "b" * 40)
             metadata = (pair_dir / bundle.NAME).read_text(encoding="utf-8")
             self.assertNotIn(str(dump), metadata)
             self.assertNotIn("CREATE TABLE", metadata)

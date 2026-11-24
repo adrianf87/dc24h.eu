@@ -6,6 +6,8 @@ is a separate operator-approved step. This tool never touches a live service.
 """
 
 import argparse
+import base64
+import binascii
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -52,6 +54,18 @@ def safe_actor(value, enforce_int64=False):
             (not enforce_int64 or int(value) <= MAX_ACCOUNT_ID))
 
 
+def canonical_identifier(value):
+    # Match the running Node passkey verifier: unpadded base64url has exactly
+    # one encoding per byte string, including its otherwise ignored tail bits.
+    if not isinstance(value, str) or not ID.fullmatch(value):
+        return False
+    try:
+        decoded = base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+        return base64.urlsafe_b64encode(decoded).decode("ascii").rstrip("=") == value
+    except (ValueError, binascii.Error):
+        return False
+
+
 def valid_passkeys(doc):
     if set(doc) != {"schema", "rpID", "users", "credentials"} or not isinstance(doc.get("rpID"), str) or (
         not 1 <= len(doc["rpID"]) <= 253 or
@@ -63,8 +77,8 @@ def valid_passkeys(doc):
     actors, handles, ids = {}, set(), set()
     for user in doc["users"]:
         if not isinstance(user, dict) or set(user) != {"actor", "handle", "epoch"} or (
-            not safe_actor(user["actor"], True) or not isinstance(user["handle"], str) or
-            not ID.fullmatch(user["handle"]) or not safe_time(user["epoch"]) or
+            not safe_actor(user["actor"], True) or not canonical_identifier(user["handle"]) or
+            not safe_time(user["epoch"]) or
             user["actor"] in actors or user["handle"] in handles
         ):
             return False
@@ -75,14 +89,15 @@ def valid_passkeys(doc):
     for item in doc["credentials"]:
         if not isinstance(item, dict) or set(item) != fields or (
             not safe_actor(item["actor"], True) or item["actor"] not in actors or
-            not isinstance(item["id"], str) or not ID.fullmatch(item["id"]) or item["id"] in ids or
+            not canonical_identifier(item["id"]) or item["id"] in ids or
             item["userHandle"] != actors[item["actor"]] or
-            not isinstance(item["publicKey"], str) or not ID.fullmatch(item["publicKey"]) or
+            not canonical_identifier(item["publicKey"]) or
             not safe_time(item["counter"]) or item["deviceType"] not in ("singleDevice", "multiDevice") or
             type(item["backedUp"]) is not bool or
             (item["deviceType"] == "singleDevice" and item["backedUp"]) or
             not isinstance(item["transports"], list) or len(item["transports"]) > 7 or
             any(not isinstance(t, str) or t not in TRANSPORTS for t in item["transports"]) or
+            len(set(item["transports"])) != len(item["transports"]) or
             not isinstance(item["name"], str) or len(item["name"]) > 64 or
             re.search(r"[\x00-\x1f\x7f<>]", item["name"]) or
             not safe_time(item["createdAt"]) or
