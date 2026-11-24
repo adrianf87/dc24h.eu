@@ -114,6 +114,20 @@ class StageOnePreflightTests(unittest.TestCase):
             self.assertNotIn(str(root), err.getvalue())
             self.assertNotIn("CREATE TABLE", err.getvalue())
 
+    def test_oversized_migration_line_is_rejected_without_reading_unbounded_input(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dump, snapshot, _ = self.create(root)
+            dump.write_bytes(b"INSERT INTO `dc24h_schema_migrations` VALUES " +
+                             b"X" * (1024 * 1024 + 1) + b"\n")
+            pair_dir = root / "large-pair"
+            pair_dir.mkdir(mode=0o700)
+            preflight.pair.create_pair(dump, snapshot, pair_dir, "a" * 40)
+            with self.assertRaisesRegex(ValueError, "Oversized migration export line"):
+                preflight.preflight(dump, snapshot, pair_dir, "a" * 40,
+                                    root / "fresh-sql", root / "fresh-private")
+            self.assertFalse((root / "fresh-sql").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

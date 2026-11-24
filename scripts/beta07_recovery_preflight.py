@@ -16,8 +16,8 @@ import stage1_recovery_bundle as pair
 import stage4_private_recovery_drill as private
 
 
-MIGRATION_CREATE = b"CREATE TABLE `dc24h_schema_migrations` ("
-MIGRATION_INSERT = b"INSERT INTO `dc24h_schema_migrations` VALUES "
+MIGRATION_CREATE = re.compile(rb"^CREATE TABLE(?: IF NOT EXISTS)?\s+`?dc24h_schema_migrations`?\s*\($", re.I)
+MIGRATION_INSERT = re.compile(rb"^INSERT INTO\s+`?dc24h_schema_migrations`?\s+VALUES\s+", re.I)
 # A *necessary* check of a standard mariadb-dump export, never a SQL parser,
 # schema migration, statement sanitizer or substitute for C++ inspection after
 # an import on a disposable fresh MariaDB instance.
@@ -34,14 +34,23 @@ def sql_migration_row_count(dump):
     """
     table_count, versions = 0, {}
     with Path(dump).open("rb") as source:
-        for line in source:
-            if len(line) > 1024 * 1024:
-                raise ValueError("Oversized SQL export line")
-            if line.rstrip(b"\r\n") == MIGRATION_CREATE:
-                table_count += 1
-            if not line.startswith(MIGRATION_INSERT):
+        while line := source.readline(1024 * 1024 + 1):
+            stripped = line.lstrip()
+            if len(line) > 1024 * 1024 or not line.endswith(b"\n"):
+                if b"dc24h_schema_migrations" in stripped[:128]:
+                    raise ValueError("Oversized migration export line")
+                # Other tables may legitimately contain huge extended
+                # INSERTs. Skip their remainder in bounded chunks, without
+                # interpreting or copying their possibly private values.
+                while line and not line.endswith(b"\n"):
+                    line = source.readline(1024 * 1024 + 1)
                 continue
-            values = line[len(MIGRATION_INSERT):].rstrip(b"\r\n")
+            if MIGRATION_CREATE.fullmatch(stripped.rstrip(b"\r\n")):
+                table_count += 1
+            prefix = MIGRATION_INSERT.match(stripped)
+            if not prefix:
+                continue
+            values = stripped[prefix.end():].rstrip(b"\r\n")
             matches = list(MIGRATION_ROW.finditer(values))
             if not matches or b",".join(match.group(0) for match in matches) + b";" != values:
                 raise ValueError("Malformed migration export")
@@ -50,8 +59,10 @@ def sql_migration_row_count(dump):
                 if version in versions or version > 11:
                     raise ValueError("Unexpected/duplicate migration version")
                 versions[version] = True
-    if table_count != 1 or set(versions) != set(range(1, 12)):
-        raise ValueError("Missing applied schema-v11 migration export")
+    if table_count != 1:
+        raise ValueError(f"Migration table declaration count invalid ({min(table_count, 2)})")
+    if set(versions) != set(range(1, 12)):
+        raise ValueError(f"Applied schema-v11 migration row count invalid ({min(len(versions), 12)})")
     return len(versions)
 
 
