@@ -50,6 +50,20 @@ class TwilightStageThreeBrandingTests(unittest.TestCase):
         self.assertIn("expectedRPID: rpID", passkeys)
         self.assertNotIn('expectedRPID: "dc24h.eu-twilight"', passkeys)
 
+    def test_shared_adc_welcome_fixtures_match_runtime_brand(self):
+        # These fixtures feed real C++/Node/VM jobs; one stale literal causes
+        # widespread failures even when unrelated protocol logic is correct.
+        for path in (
+            "tests/adc_login_process_tests.py",
+            "tests/private_chat_process_tests.py",
+            "tests/message_routing_process_tests.py",
+            "tests/user_session_process_tests.py",
+            "tests/user_list_process_tests.py",
+        ):
+            text = source(path)
+            self.assertIn("dc24h.eu-twilight.", text, path)
+            self.assertNotIn(r"dc24h.eu.\\sGuest", text, path)
+
 
 if __name__ == "__main__":
     unittest.main()
