@@ -7,6 +7,9 @@ Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 > Twilight is an independent development repository derived from dc24h.eu High Starter. Historical issue/PR links below refer to the original project.
 
 <details>
+<summary>Beta</summary>
+
+<details>
 <summary>Beta 0.9.x</summary>
 
 - **beta-0.9.17–beta-0.9.20 — Stage V release qualification** ([Issue #242](https://github.com/adrianf87/dc24h.eu-high-starter/issues/242), single draft [PR #243](https://github.com/adrianf87/dc24h.eu-high-starter/pull/243), `beta-0.9.x-stage-full`): independently download and SHA-256-check exact-attempt GitHub ZIP artifacts with strict redacted JSON policy; record bounded GitHub-hosted Ubuntu APT/compiler/Node provenance, explicit runtime+dev npm audit, broader TSAN/sanitizer and dual-fuzz gates, three-window security measurements and fail-closed candidate metadata/Owner NO-GO gate. Final-head hosted Ubuntu 22.04/24.04/26.04 evidence is **not yet accepted**; Stage V source changes do not authorize merge, tag, release, migration or deployment. [EN/US review and risk](doc/us/BETA_0.9_STAGE_V.md) | [PL runbook](doc/pl/BETA_0.9_STAGE_V.md).
@@ -112,6 +115,11 @@ Development increments (older bullets describe their original delivery scope; ve
 - **beta-0.1 Beta baseline**: the hub reports `beta-0.1` and keeps the alpha-0.9.17 behavior. Schema v9 is unchanged. This is not a production release. See [Beta baseline](doc/us/BETA.md).
 
 </details>
+
+</details>
+
+<details>
+<summary>Alpha</summary>
 
 <details>
 <summary>Alpha 0.9.x (17 releases)</summary>
@@ -343,6 +351,8 @@ Development increments (older bullets describe their original delivery scope; ve
 - **alpha-0.1.2 Network**: multiple nonblocking IPv4/IPv6 TCP listeners/clients.
 
 - **alpha-0.1.1 Core**: lifecycle, signal handling, graceful shutdown.
+
+</details>
 
 </details>
 
