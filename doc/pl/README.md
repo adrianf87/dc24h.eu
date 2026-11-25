@@ -1,6 +1,6 @@
 # Dokumentacja dc24h.eu-twilight
 
-**Aktualna wersja rozwojowa: beta-0.9.20.** To kandydat źródłowy w [Draft PR #243](https://github.com/adrianf87/dc24h.eu-high-starter/pull/243), a nie zatwierdzone wydanie ani wdrożenie. Odbiór wymaga kompletu testów CI dla ostatecznego SHA na GitHub-hosted Ubuntu, pięciu oddzielnych Fix Passów i wyraźnej zgody Ownera przed scaleniem. [Etap V i granice NO-GO](BETA_0.9_STAGE_V.md) · [EN/US](../us/BETA_0.9_STAGE_V.md).
+**Aktualny kod Twilight: beta-0.9.20.** Repozytorium powstało na podstawie historycznego [High Starter v0.9.20-rc.1](https://github.com/adrianf87/dc24h.eu-high-starter/releases/tag/v0.9.20-rc.1). Pięć Fix Passów, źródłowe PR #243–245 i zgoda OWNER RC dotyczyły **pierwotnego projektu**, a nie nowej kwalifikacji Twilight. [Etap V — aktualne dokumenty i pochodzenie](TWILIGHT_STAGE_V.md) · [Etap VI — bramka wydania](TWILIGHT_STAGE_VI.md) · [Issue #1](https://github.com/adrianf87/dc24h.eu-twilight/issues/1) · [Draft PR #9](https://github.com/adrianf87/dc24h.eu-twilight/pull/9). Historyczne sekcje poniżej zachowują stan z czasu powstania. **Brak zgody na nowe wydanie i produkcję.**
 
 beta-0.8.x — sprawdzenie 5 etapów i 5 Fix Passów: wszystkie zmiany są na gałęzi roboczej, ale Ubuntu 26.04 zgłosił HTTP 429 w teście passkey po odtworzeniu prywatnego limitu logowań. Poprawka CI czeka na wygaśnięcie prawdziwego okna limitera bez wyłączania zabezpieczeń. Odbiór wymaga zielonego CI na nowym SHA i osobnej decyzji Ownera. [Raport PL](BETA_0.8_CI_REPAIR.md) · [EN/US](../us/BETA_0.8_CI_REPAIR.md).
 

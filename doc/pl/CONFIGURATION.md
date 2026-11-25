@@ -60,8 +60,8 @@ Kolejność ustawień: wartości domyślne, jeden jawny `--config PLIK`, następ
 
 ```sh
 cp config/dc24h.ini.example config/dc24h.ini
-./build/dc24h --config config/dc24h.ini --check-config
-./build/dc24h --config config/dc24h.ini --max-connections 512 --language pl
+./build/dc24h-twilight --config config/dc24h.ini --check-config
+./build/dc24h-twilight --config config/dc24h.ini --max-connections 512 --language pl
 ```
 
 ## Format INI

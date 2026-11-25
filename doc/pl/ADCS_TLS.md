@@ -17,7 +17,7 @@ ADCS szyfruje strumień ADC przez TLS, bez zmiany składni i bez STARTTLS. Źró
 Minimum to TLS 1.2. Kompresja, renegocjacja, cache sesji i bilety sesyjne (również TLS 1.3) są wyłączone. Nasłuch używa wyłącznie wybranych szyfrów AEAD. Certyfikat końcowy nie może mieć `CA:TRUE`; jawne użycie klucza musi dopuszczać `digitalSignature`. Klient nadal weryfikuje łańcuch zaufania i nazwę serwera. TLS nie nadaje uprawnień kontom ADC.
 
 ```sh
-./build/dc24h --adcs-listen 127.0.0.1:1512 \
+./build/dc24h-twilight --adcs-listen 127.0.0.1:1512 \
   --tls-cert /etc/dc24h/tls/fullchain.pem \
   --tls-key /etc/dc24h/tls/privkey.pem
 ```

@@ -39,9 +39,9 @@ Based on main `4f204b9f8901a5201c56abad957543344c177256`, including Database Cor
 ## Operator commands
 
 ```sh
-./build/dc24h --config config/dc24h.ini --check-database
-./build/dc24h --config config/dc24h.ini --database-status
-./build/dc24h --config config/dc24h.ini --migrate-database
+./build/dc24h-twilight --config config/dc24h.ini --check-database
+./build/dc24h-twilight --config config/dc24h.ini --database-status
+./build/dc24h-twilight --config config/dc24h.ini --migrate-database
 ```
 
 Use enabled `[database]` settings and a pre-provisioned local MariaDB database/account as described in [Database](DATABASE.md). These commands connect synchronously through its Unix socket and exit without binding hub listeners, starting Core or opening the configured log. They are mutually exclusive with each other and `--check-config`, help and version. US is the default; `--language pl` translates messages. No database passwords belong in arguments or SQL source.

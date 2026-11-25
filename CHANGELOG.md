@@ -1,5 +1,15 @@
 # Changelog
 
+## dc24h.eu-twilight rebranding, Stages I–V — 2026-11-25 (documentation review in Draft PR #9)
+
+- **Origin:** Independent development repository copied from [dc24h.eu High Starter](https://github.com/adrianf87/dc24h.eu-high-starter) at `e4fcb8b5849d4afa4671f97a2ee9c3e63b085a18` / [v0.9.20-rc.1](https://github.com/adrianf87/dc24h.eu-high-starter/releases/tag/v0.9.20-rc.1). Original [PR #243](https://github.com/adrianf87/dc24h.eu-high-starter/pull/243) (Stages I–V), [PR #244](https://github.com/adrianf87/dc24h.eu-high-starter/pull/244) (five Fix Passes) and [PR #245](https://github.com/adrianf87/dc24h.eu-high-starter/pull/245) (exact-main gate) were merged before its controlled-evaluation pre-release; this is not a Twilight release approval.
+- **Twilight CI and user identity:** New repository guards, visible `dc24h.eu-twilight` branding, README/WebAdmin/help, WebAuthn display `rpName`, strict C++/WebAdmin API v1 `server.name`; old status-name clients require a coordinated update. No change to public WebAuthn `rpID`, Origin, DNS or TLS.
+- **Technical names:** Output binaries and new service examples use `dc24h-twilight`; the npm package name is `dc24h-twilight-webadmin`. Stable C++ `dc24h` namespace/targets, configuration/API identifiers, MariaDB schema, service accounts, private storage paths and DNS remain unchanged. The new unit refuses silent dual activation with the legacy unit and requires an explicit operator marker.
+- **Migration boundary:** [Twilight PR #7](https://github.com/adrianf87/dc24h.eu-twilight/pull/7) verified old→new→old *synthetic* package and systemd rollback on GitHub-hosted Ubuntu 22.04/24.04/26.04. Real existing-host migration, credential/private-state rollback, production capacity and activation remain unapproved.
+- **Documentation:** Updated present-day clone/build/CI/README instructions; historical original-project PRs, CI links, changelog entries and `LICENSE` remain intact. [Stage V EN](doc/us/TWILIGHT_STAGE_V.md) · [PL](doc/pl/TWILIGHT_STAGE_V.md). Stage VI's exact-SHA evidence and independent OWNER release decision are still pending in [Draft PR #9](https://github.com/adrianf87/dc24h.eu-twilight/pull/9). No tag, production GO or data migration.
+
+**Provenance note:** Older entries below are retained as historical records of their original source branches and then-current CI/PR states. They must not be read as Twilight's current release status.
+
 ## beta-0.9.17–beta-0.9.20 Stage V — 2026-11-24 (draft PR #243; exact-head CI pending)
 
 - **0.9.17 — Authenticated artifact bytes:** Independently download bounded GitHub Actions ZIP artifacts for the exact source/head/run/attempt; check SHA-256 against API metadata and allowlisted redacted JSON members without extracting files. Reject wrong attempts, stale heads, corrupt/unsafe ZIPs, secrets and missing reports. A separate post-merge `main` scan is supported but not pre-approved.

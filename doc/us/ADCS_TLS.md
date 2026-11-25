@@ -18,7 +18,7 @@ The transport requires TLS 1.2 or newer, disables compression and renegotiation,
 
 ```sh
 # TLS only; no plaintext listener is implicitly retained.
-./build/dc24h --adcs-listen 127.0.0.1:1512 \
+./build/dc24h-twilight --adcs-listen 127.0.0.1:1512 \
   --tls-cert /etc/dc24h/tls/fullchain.pem \
   --tls-key /etc/dc24h/tls/privkey.pem
 ```

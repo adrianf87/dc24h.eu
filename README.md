@@ -2,9 +2,13 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
-**Current development version: beta-0.9.20 (Stage V source candidate; exact-head hosted CI, five fix passes and Owner approval remain pending; not a production release).**
+**Current code version: beta-0.9.20.** This independent Twilight development repository starts from the [High Starter v0.9.20-rc.1 pre-release](https://github.com/adrianf87/dc24h.eu-high-starter/releases/tag/v0.9.20-rc.1). Its five beta-0.9.x Fix Passes and original RC1 OWNER acceptance were completed **in High Starter**, not as a new Twilight release. Twilight rebranding Stages I–IV are merged; [Stage V documentation and Stage VI qualification are under review in Draft PR #9](https://github.com/adrianf87/dc24h.eu-twilight/pull/9). No Twilight release or production GO has been approved.
 
-> Twilight is an independent development repository derived from dc24h.eu High Starter. Historical issue/PR links below refer to the original project.
+> Twilight is an independent development repository derived from dc24h.eu High Starter. Historical issue/PR links below refer to the original project. They are preserved as source provenance, **not** as current Twilight PR/CI status. [Rebranding Issue #1](https://github.com/adrianf87/dc24h.eu-twilight/issues/1) · [Stage V/EN](doc/us/TWILIGHT_STAGE_V.md) · [Stage V/PL](doc/pl/TWILIGHT_STAGE_V.md).
+
+[![Twilight Check status on main](https://github.com/adrianf87/dc24h.eu-twilight/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/adrianf87/dc24h.eu-twilight/actions/workflows/build.yml)
+
+**Current Twilight CI:** [All GitHub Actions](https://github.com/adrianf87/dc24h.eu-twilight/actions) · [C++/WebAdmin](https://github.com/adrianf87/dc24h.eu-twilight/actions/workflows/build.yml) · [CodeQL](https://github.com/adrianf87/dc24h.eu-twilight/actions/workflows/beta07-codeql.yml) · [TSAN/fuzz](https://github.com/adrianf87/dc24h.eu-twilight/actions/workflows/beta08-hardening.yml) · [storage/fault](https://github.com/adrianf87/dc24h.eu-twilight/actions/workflows/beta09-stage4-storage.yml) · [Ubuntu VM/systemd](https://github.com/adrianf87/dc24h.eu-twilight/actions/workflows/stage4-ubuntu-vm-validation.yml). A `main` badge does not qualify a Draft PR's final SHA.
 
 <details>
 <summary>Beta</summary>
@@ -12,7 +16,7 @@ Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 <details>
 <summary>Beta 0.9.x</summary>
 
-- **beta-0.9.17–beta-0.9.20 — Stage V release qualification** ([Issue #242](https://github.com/adrianf87/dc24h.eu-high-starter/issues/242), single draft [PR #243](https://github.com/adrianf87/dc24h.eu-high-starter/pull/243), `beta-0.9.x-stage-full`): independently download and SHA-256-check exact-attempt GitHub ZIP artifacts with strict redacted JSON policy; record bounded GitHub-hosted Ubuntu APT/compiler/Node provenance, explicit runtime+dev npm audit, broader TSAN/sanitizer and dual-fuzz gates, three-window security measurements and fail-closed candidate metadata/Owner NO-GO gate. Final-head hosted Ubuntu 22.04/24.04/26.04 evidence is **not yet accepted**; Stage V source changes do not authorize merge, tag, release, migration or deployment. [EN/US review and risk](doc/us/BETA_0.9_STAGE_V.md) | [PL runbook](doc/pl/BETA_0.9_STAGE_V.md).
+- **beta-0.9.17–beta-0.9.20 — historical High Starter Stage V / RC1 baseline** ([Issue #242](https://github.com/adrianf87/dc24h.eu-high-starter/issues/242), merged [PR #243](https://github.com/adrianf87/dc24h.eu-high-starter/pull/243), [Fix Pass PR #244](https://github.com/adrianf87/dc24h.eu-high-starter/pull/244), [RC gate PR #245](https://github.com/adrianf87/dc24h.eu-high-starter/pull/245)): independent exact-attempt ZIP verification, GitHub-hosted toolchain provenance, dependency audit, sanitizer/fuzz/TSAN and bounded security evidence. The original Owner RC acceptance resulted in the [v0.9.20-rc.1 pre-release](https://github.com/adrianf87/dc24h.eu-high-starter/releases/tag/v0.9.20-rc.1), **for controlled, non-production evaluation only**. This historical acceptance does not transfer to a Twilight release or authorize installation, migration, or production. [Historical EN/US review](doc/us/BETA_0.9_STAGE_V.md) | [PL](doc/pl/BETA_0.9_STAGE_V.md).
 
 </details>
 
@@ -73,9 +77,9 @@ Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
 </details>
 
-CI on `main`: [public GitHub-hosted Ubuntu 22.04, 24.04 and 26.04](doc/us/GITHUB_CI.md) runs C++ Debug, C++ Release and WebAdmin on each image · [PL](doc/pl/GITHUB_CI.md).
+CI on `main`: [Twilight GitHub-hosted Ubuntu 22.04, 24.04 and 26.04](https://github.com/adrianf87/dc24h.eu-twilight/actions) runs C++ Debug, C++ Release and WebAdmin, plus separate security/VM workflows. [EN/US guide](doc/us/GITHUB_CI.md) · [PL](doc/pl/GITHUB_CI.md). Historical High Starter runs cannot certify a new Twilight SHA.
 
-Development increments (older bullets describe their original delivery scope; verify CI and merge status separately):
+Historical High Starter development increments (the old bullets describe their then-current delivery scope; older draft/CI notices are **not** Twilight's current status):
 
 <details>
 <summary>Beta 0.3.x</summary>
@@ -365,17 +369,17 @@ sudo apt-get install build-essential cmake libutf8proc-dev libgcrypt20-dev libss
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel 2
 ctest --test-dir build --output-on-failure
-./build/dc24h --version
+./build/dc24h-twilight --version
 ```
 
 ## Run
 
 ```sh
 # Guest ADC hub on loopback:
-./build/dc24h --listen 127.0.0.1:1511
+./build/dc24h-twilight --listen 127.0.0.1:1511
 
 # TLS only (replace credentials with your own):
-./build/dc24h --adcs-listen 127.0.0.1:1512 \
+./build/dc24h-twilight --adcs-listen 127.0.0.1:1512 \
   --tls-cert /etc/dc24h/tls/fullchain.pem \
   --tls-key /etc/dc24h/tls/privkey.pem
 ```
@@ -394,8 +398,8 @@ License: [GPL-3.0](LICENSE).
 
 ```sh
 cp config/dc24h.ini.example config/dc24h.ini
-./build/dc24h --config config/dc24h.ini --check-config
-./build/dc24h --config config/dc24h.ini --max-connections 512
+./build/dc24h-twilight --config config/dc24h.ini --check-config
+./build/dc24h-twilight --config config/dc24h.ini --max-connections 512
 ```
 
 Defaults, then explicit INI, then CLI. No file is loaded automatically. INI paths use its directory; CLI paths use the working directory. Use `--log-level info|warning|error|off` and `--log-file PATH` (or `-` for stderr). See [configuration](doc/us/CONFIGURATION.md) for complete precedence, format, limits and logging constraints.

@@ -178,7 +178,7 @@ max_connections = 16
 request_timeout = 2
 ```
 
-Uruchom `./build/dc24h --config config/dc24h.ini`. Przekaż nagłówek curl przez stdin, aby token nie trafił do argumentów procesu:
+Uruchom `./build/dc24h-twilight --config config/dc24h.ini`. Przekaż nagłówek curl przez stdin, aby token nie trafił do argumentów procesu:
 
 ```sh
 { printf 'Authorization: Bearer '; cat .runtime/admin.token; } |
