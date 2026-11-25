@@ -14,7 +14,7 @@ export const WEBADMIN_VERSION = "beta-0.9.20";
 export interface HubSnapshot {
   api_version: "v1";
   server: {
-    name: "dc24h.eu";
+    name: "dc24h.eu-twilight";
     version: string;
     core_running: boolean;
     uptime_seconds: number;
@@ -103,7 +103,7 @@ export function parseRemoteSummary(value: unknown, receiptUnixMs = Date.now()): 
   const network = record(root.network);
   const users = record(root.users);
   const chat = record(root.chat);
-  if (root.api_version !== "v1" || server.name !== "dc24h.eu" ||
+  if (root.api_version !== "v1" || server.name !== "dc24h.eu-twilight" ||
     typeof server.version !== "string" ||
     !/^(?:alpha-\d{1,3}\.\d{1,3}\.\d{1,3}|beta-\d{1,3}\.\d{1,3}(?:\.\d{1,3})?)$/.test(server.version) ||
     typeof server.core_running !== "boolean") throw new Error("Invalid remote status schema");
@@ -188,7 +188,7 @@ export function parseSnapshot(value: unknown): HubSnapshot {
     chat = record(root.chat);
   if (
     root.api_version !== "v1" ||
-    server.name !== "dc24h.eu" ||
+    server.name !== "dc24h.eu-twilight" ||
     typeof server.version !== "string" ||
     !/^(?:alpha-\d{1,3}\.\d{1,3}\.\d{1,3}|beta-\d{1,3}\.\d{1,3}(?:\.\d{1,3})?)$/.test(server.version) ||
     typeof server.core_running !== "boolean" ||
@@ -291,7 +291,7 @@ export function parseSnapshot(value: unknown): HubSnapshot {
     ...(mute === undefined ? {} : { mute }),
     ...(dashboard === undefined ? {} : { dashboard }),
     server: {
-      name: "dc24h.eu",
+      name: "dc24h.eu-twilight",
       version: server.version,
       core_running: server.core_running,
       uptime_seconds: uptime,

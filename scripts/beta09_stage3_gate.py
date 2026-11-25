@@ -20,6 +20,7 @@ DPKG_PROOFS = (
     "reopened_node_totp_revocation_audit_and_budget_state",
     "historical_maintenance_binary_installed_and_hashed",
     "historical_maintenance_actual_password_totp_and_browser_passkey",
+    "historical_maintenance_pinned_status_adapter_ci_only",
     "historical_maintenance_independent_matched_v11_five_store_recovery",
     "actual_systemd_old_cpp_maintenance_start_restart_stop",
 )

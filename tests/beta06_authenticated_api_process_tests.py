@@ -28,6 +28,7 @@ import tempfile
 import time
 
 import stage1_matched_recovery_tests as matched
+import beta06_previous_version_rollback as previous
 from api_support import enable_api, fetch_status
 from tls_support import secure_client_context
 
@@ -41,6 +42,42 @@ CONCURRENCY = 2
 MAX_P99_MS = 2000
 BATCH_SPACING_SECONDS = 2.2
 SEED = "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP"  # Synthetic fixture only.
+# Immutable historical status parser from the pinned beta-0.5.16 checkout.
+# This is used exclusively in a disposable rollback test copy of WebAdmin.
+HISTORICAL_STATUS_BLOB = "7bd1abc9c38d8f9f62f990fa0aec12c6f992bfab"
+
+
+def rollback_gateway_fixture(historical_checkout, directory):
+    """Pair the installed old C++ maintenance binary with its *old* status contract.
+
+    The production WebAdmin remains strict about dc24h.eu-twilight. Replacing
+    only the status parser in a disposable copy lets the historical C++ binary
+    exercise real authentication, browser passkeys and matched recovery without
+    claiming mixed-version deployment compatibility.
+    """
+    historical_checkout = Path(historical_checkout).resolve(strict=True)
+    head = subprocess.run(["git", "-C", str(historical_checkout), "rev-parse", "HEAD"],
+                          check=True, capture_output=True, text=True, timeout=10).stdout.strip()
+    if head != previous.PREVIOUS_SHA:
+        raise AssertionError("Unpinned historical gateway source refused")
+    old_status = historical_checkout / "webadmin/src/lib/status.ts"
+    if not old_status.is_file() or old_status.is_symlink():
+        raise AssertionError("Historical status parser source unavailable")
+    blob = subprocess.run(["git", "-C", str(historical_checkout), "hash-object", str(old_status)],
+                          check=True, capture_output=True, text=True, timeout=10).stdout.strip()
+    if blob != HISTORICAL_STATUS_BLOB:
+        raise AssertionError("Historical status parser differs from immutable source")
+    webadmin = ROOT / "webadmin"
+    node_modules = webadmin / "node_modules"
+    if not (node_modules / "tsx").is_dir():
+        raise AssertionError("Installed Node gateway dependencies required")
+    fixture = directory / "historical-identity-gateway"
+    shutil.copytree(webadmin, fixture,
+                    ignore=shutil.ignore_patterns("node_modules", "dist", "coverage", "test-results",
+                                                   "playwright-report"))
+    shutil.copyfile(old_status, fixture / "src/lib/status.ts")
+    (fixture / "node_modules").symlink_to(node_modules.resolve(strict=True), target_is_directory=True)
+    return fixture
 
 
 def free_port():
@@ -156,7 +193,7 @@ def percentile(samples, percentile_value):
     return round(sorted(samples)[at], 3)
 
 
-def run(binary, seeder, account_admin):
+def run(binary, seeder, account_admin, historical_checkout=None):
     if not (os.environ.get("GITHUB_ACTIONS") == "true" and
             os.environ.get("RUNNER_ENVIRONMENT") == "github-hosted" and
             os.environ.get("RUNNER_OS") == "Linux"):
@@ -172,6 +209,8 @@ def run(binary, seeder, account_admin):
 
     with tempfile.TemporaryDirectory(prefix="dc24h-beta06-auth-") as temporary:
         base = Path(temporary)
+        gateway_workdir = (rollback_gateway_fixture(historical_checkout, base)
+                           if historical_checkout is not None else ROOT / "webadmin")
         # Apache serves only a synthetic public directory; private files live
         # in owner-only subdirectories outside DocumentRoot.
         base.chmod(0o755)
@@ -249,7 +288,7 @@ def run(binary, seeder, account_admin):
                 "node", "--import", "tsx", "server/remote-private-init.ts",
                 "--directory", str(gateway_dir), "--rp-id", "localhost",
                 "--offline-ack", "--first-install-ack",
-            ], cwd=ROOT / "webadmin", capture_output=True, timeout=20)
+            ], cwd=gateway_workdir, capture_output=True, timeout=20)
             if initialized.returncode:
                 raise AssertionError("Synthetic private-state initialization failed")
 
@@ -267,7 +306,7 @@ def run(binary, seeder, account_admin):
                    "DC24H_REMOTE_RATE_LIMIT_FILE": str(gateway_dir / "rate-limits.json"),
                    "DC24H_REMOTE_RP_ID": "localhost"}
             node = subprocess.Popen(["node", "--import", "tsx", "server/remote-main.ts"],
-                                    cwd=ROOT / "webadmin", env=env,
+                                    cwd=gateway_workdir, env=env,
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                                     start_new_session=True)
             wait_tcp(node_port, node)
@@ -512,7 +551,7 @@ def run(binary, seeder, account_admin):
             # five-store offline checkpoint; do not export the private key.
             browser = subprocess.Popen([
                 "node", "tests/beta07-live-passkey-client.mjs",
-            ], cwd=ROOT / "webadmin", stdin=subprocess.PIPE,
+            ], cwd=gateway_workdir, stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
                 bufsize=1, start_new_session=True)
             browser_command(browser, {"origin": origin, "actor": actor,
@@ -585,7 +624,7 @@ def run(binary, seeder, account_admin):
                             "DC24H_REMOTE_PASSKEY_FILE": str(restored_private / "passkeys.json"),
                             "DC24H_REMOTE_RATE_LIMIT_FILE": str(restored_private / "rate-limits.json")}
             node = subprocess.Popen(["node", "--import", "tsx", "server/remote-main.ts"],
-                                    cwd=ROOT / "webadmin", env=restored_env,
+                                    cwd=gateway_workdir, env=restored_env,
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                                     start_new_session=True)
             wait_tcp(node_port, node)
@@ -664,7 +703,7 @@ def run(binary, seeder, account_admin):
             # second cold opening of the restored private catalog.
             terminate(node); node = None
             node = subprocess.Popen(["node", "--import", "tsx", "server/remote-main.ts"],
-                                    cwd=ROOT / "webadmin", env=restored_env,
+                                    cwd=gateway_workdir, env=restored_env,
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                                     start_new_session=True)
             wait_tcp(node_port, node)
@@ -721,6 +760,7 @@ def run(binary, seeder, account_admin):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 4:
-        raise SystemExit("Usage: beta06_authenticated_api_process_tests.py HUB ACCOUNT_WEBADMIN_SEED ACCOUNT_ADMIN")
+    if len(sys.argv) not in (4, 5):
+        raise SystemExit("Usage: beta06_authenticated_api_process_tests.py "
+                         "HUB ACCOUNT_WEBADMIN_SEED ACCOUNT_ADMIN [PINNED-HISTORICAL-CHECKOUT]")
     run(*(str(Path(value).resolve()) for value in sys.argv[1:]))

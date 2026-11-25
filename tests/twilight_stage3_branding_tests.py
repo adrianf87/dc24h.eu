@@ -29,13 +29,16 @@ class TwilightStageThreeBrandingTests(unittest.TestCase):
             unit = source(f"config/{name}.service.example")
             self.assertIn("Description=dc24h.eu-twilight", unit)
 
-    def test_status_api_still_rejects_foreign_names(self):
-        # A human-facing display label is not a reason to widen v1 parsing.
-        self.assertIn(r'\"name\":\"dc24h.eu\"', source("src/api/server.cpp"))
+    def test_status_api_and_webadmin_agree_on_exact_owner_approved_name(self):
+        # Explicit OWNER cutover: reject even the legacy name, without silently
+        # broadening the accepted status-schema identity.
+        self.assertIn(r'\"name\":\"dc24h.eu-twilight\"', source("src/api/server.cpp"))
         status = source("webadmin/src/lib/status.ts")
-        self.assertIn('name: "dc24h.eu";', status)
-        self.assertEqual(status.count('server.name !== "dc24h.eu"'), 2)
-        self.assertNotIn('server.name !== "dc24h.eu-twilight"', status)
+        self.assertIn('name: "dc24h.eu-twilight";', status)
+        self.assertEqual(status.count('server.name !== "dc24h.eu-twilight"'), 2)
+        self.assertNotIn('server.name !== "dc24h.eu"', status)
+        self.assertIn("assert.throws(() => parseSnapshot(candidate)",
+                      source("webadmin/tests/status.test.ts"))
 
     def test_dns_tls_origin_and_passkey_identity_unchanged(self):
         for name in ("apache2-webadmin-https.conf.example", "apache2-webadmin-https-proxy.conf.example"):
