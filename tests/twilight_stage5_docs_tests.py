@@ -132,6 +132,19 @@ class StageFiveDocsTests(unittest.TestCase):
             self.assertIn("/etc/dc24h", content)
             self.assertIn("/var/lib/dc24h", content)
 
+    def test_stage_v_reports_match_verified_github_settings(self):
+        for path in STAGE_V_DOCS:
+            with self.subTest(path=path):
+                content = read(ROOT, path)
+                for evidence in (
+                    "dc24h.eu-twilight — independent C++20 ADC/ADCS hub",
+                    "ChatGPT Codex Connector", "Cursor", "All repositories",
+                    "direct-connect", "cpp20", "webadmin", "12",
+                ):
+                    self.assertIn(evidence, content)
+                self.assertNotIn("Coded by ChatGPT (High reasoning level)", content)
+                self.assertNotIn("remain unverified", content)
+
 
 if __name__ == "__main__":
     unittest.main()

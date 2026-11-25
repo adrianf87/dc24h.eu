@@ -1,6 +1,6 @@
 # dc24h.eu-twilight — Etap V: dokumentacja, GitHub, pochodzenie i komunikacja
 
-**Stan: przygotowany w Draft PR #9 do kontroli CI i odrębnej akceptacji OWNER.** Jest to etap **P1 dokumentacyjny**; nie aktualizuje wersji wykonywalnej, API ani prywatnego stanu. [Zadanie #1](https://github.com/adrianf87/dc24h.eu-twilight/issues/1) · [PR #9](https://github.com/adrianf87/dc24h.eu-twilight/pull/9). W pełnym rebrandingu **Etap VI nadal pozostaje NO-GO**.
+**Stan: dokumentacja PL/EN i ustawienia GitHub zweryfikowane 2026-11-25; końcowy CI oraz formalny odbiór OWNER oczekują.** Jest to etap **P1 dokumentacyjny**; nie aktualizuje wersji wykonywalnej, API ani prywatnego stanu. [Zadanie #1](https://github.com/adrianf87/dc24h.eu-twilight/issues/1) · [Draft PR #9](https://github.com/adrianf87/dc24h.eu-twilight/pull/9). W pełnym rebrandingu **Etap VI nadal pozostaje NO-GO**.
 
 ## Co jest prawdziwym stanem projektu?
 
@@ -10,7 +10,7 @@
 | Kod / wersja | `beta-0.9.20`, źródło oparte na High Starter RC1 | [`v0.9.20-rc.1`](https://github.com/adrianf87/dc24h.eu-high-starter/releases/tag/v0.9.20-rc.1), commit źródłowy `e4fcb8b5849d4afa4671f97a2ee9c3e63b085a18`. |
 | Odbiór pierwotnego RC1 | Tak — **tylko High Starter, tylko nieprodukcyjna ocena** | [PR #243](https://github.com/adrianf87/dc24h.eu-high-starter/pull/243) + [#244](https://github.com/adrianf87/dc24h.eu-high-starter/pull/244) + [#245](https://github.com/adrianf87/dc24h.eu-high-starter/pull/245); zachowujemy oryginalne URL-e i dowody. |
 | Rebranding Twilight I–IV | Wdrożony w kodzie chronionego `main` | [PR #2–#7 w repo Twilight](https://github.com/adrianf87/dc24h.eu-twilight/pulls?q=is%3Apr+is%3Aclosed). Test pakietów/systemd był **syntetyczny**, nie dotyczył istniejącego serwera. |
-| Etap V i VI | Prace w tym samym [Draft PR #9](https://github.com/adrianf87/dc24h.eu-twilight/pull/9) | Testy CI, odbiór dokumentacji i końcowa decyzja OWNER pozostają odrębne. Nie jest to nowe wydanie. |
+| Etap V i VI | Prace w tym samym [Draft PR #9](https://github.com/adrianf87/dc24h.eu-twilight/pull/9) | Etap V: dokumentacja i ustawienia GitHub sprawdzone; końcowy CI i odbiór OWNER oczekują. Etap VI: wydanie NO-GO. |
 
 ## Aktualne punkty wejścia dla użytkownika i operatora
 
@@ -27,22 +27,22 @@
 3. **Infrastruktura:** `dc24h.eu` jako host, TLS/certyfikaty, WebAuthn `rpID`/`Origin`, konta `dc24h`, `/etc/dc24h` oraz `/var/lib/dc24h` pozostają bez zmian bez odrębnej zgody. Marketingowy `rpName` i `server.name` API v1 mają już nową nazwę, przy ścisłej odmowie starego `server.name`.
 4. **`LICENSE`, podpisy commitów i historia Gita:** bez zmian. Oryginalny tag `v0.9.20-rc.1` nie jest przesuwany ani przedstawiany jako nowe Twilight RC.
 
-## GitHub About i ustawienia — checklista ręcznej kontroli
+## GitHub About i ustawienia — wynik kontroli 2026-11-25
 
-Poniższe elementy **nie są częścią commita** i nie mogą zostać uznane za wykonane na podstawie samego PR. Potwierdzenie wymagane osobno na GitHub po zalogowaniu jako OWNER:
+Poniższe elementy **nie są częścią commita**. Zostały sprawdzone bezpośrednio w interfejsie GitHub, nie wywnioskowane z zawartości PR:
 
-- **Odczyt 2026-11-25 (bez zapisu ustawień):** aktualne GitHub About nadal wyświetla `Coded by ChatGPT (High reasoning level). A Direct Connect hub server supporting the ADC and ADCS network protocols.`; nie wyświetla przypisanych topics. To **otwarta poprawka konfiguracji**, której nie da się wykonać samym PR.
-- **Sprawdzone ustawienia:** `main` jest domyślny. Ruleset **Main Branch Protection** jest **Active**, dotyczy `main`, lista bypass jest pusta; wymaga PR, aktualnej gałęzi i 12 określonych status checks, blokuje force-push oraz usuwanie gałęzi. Na liście zainstalowanych aplikacji są **ChatGPT Codex Connector** i **Cursor**. Wejście w szczegółowe zakresy uprawnień aplikacji wymagało dodatkowego potwierdzenia konta GitHub (sudo mode) — **nie potwierdzono zakresów uprawnień** i nie obchodzono tego ograniczenia.
-- **Description (proponowana):** `dc24h.eu-twilight — independent C++20 ADC/ADCS hub and React WebAdmin development fork; non-production release qualification.`
-- **Topics (proponowane):** `dc24h`, `twilight`, `direct-connect`, `adc`, `adcs`, `cpp20`, `react`, `webadmin`, `linux`.
-- **Website URL:** nie wpisywać niezatwierdzonego publicznego hosta. Publiczna domena `dc24h.eu` i certyfikaty nie zmieniają właściciela przez rebranding.
-- **Default branch:** `main` (potwierdzona w metadanych GitHub); ochrona i wymagane kontrole mają pozostać aktywne, bez bypass. Uprawnienia GitHub App i ewentualne branch rulesets wymagają weryfikacji w Settings przed formalnym odbiorem.
+- **Description (zapisana i sprawdzona):** `dc24h.eu-twilight — independent C++20 ADC/ADCS hub and React WebAdmin development fork; non-production release qualification.`
+- **Topics (zapisane i sprawdzone):** `dc24h`, `twilight`, `direct-connect`, `adc`, `adcs`, `cpp20`, `react`, `webadmin`, `linux`.
+- **Website URL:** puste; nie dopisano domeny ani nie zmieniono DNS/TLS.
+- **Ochrona gałęzi:** `main` domyślny, ruleset **Main Branch Protection** **Active**, lista bypass pusta; wymagany PR, aktualna gałąź oraz 12 status checks; force-push i usunięcie gałęzi zablokowane.
+- **GitHub App ChatGPT Codex Connector:** wybrane trzy repozytoria (`dc24h.eu-high-starter`, `dc24h.eu`, `dc24h.eu-twilight`); odczyt checks, commit statuses i metadata oraz zapis Actions, code, issues, pull requests i workflows.
+- **GitHub App Cursor:** ma dostęp do **All repositories** (obecnych i przyszłych), odczyt administration, commit statuses, deployments, metadata, packages i pages oraz zapis Actions, checks, code, discussions, issues, merge queues, pull requests i workflows. **To szeroki zakres dostępu, wymagający świadomej decyzji OWNER o ewentualnym ograniczeniu**; nie zmieniano uprawnień.
 - **Kopiowanie repo:** Git mirror zachowuje commity/tagi, ale nie odtwarza automatycznie Issues, PR, Releases, sekretów, ustawień, rulesets ani uprawnień aplikacji. Własna historia Twilight jest w [Issue #1](https://github.com/adrianf87/dc24h.eu-twilight/issues/1) i PR #2–#9; oryginalna historia pozostała u źródła.
 
 ## Odbiór Etapu V — warunki do zaznaczenia w Issue #1
 
-1. Zielony CI i audyt aktywnych odnośników dla **ostatecznego SHA** PR #9; negatywne testy dokumentów odrzucają stare clone/binary i pomylenie RC1 ze stanem Twilight.
-2. Ręczne sprawdzenie GitHub About/topics/ruleset/permissions i zaprotokołowanie wyniku (także jeśli metadata wymaga poprawy). Sam opis repo nie dowodzi konfiguracji repo.
+1. Audyt **1498/1498 lokalnych odnośników Markdown** w aktywnej dokumentacji i negatywne testy dokumentów wykonano. Zestaw kontroli CI dla **ostatecznego SHA** PR #9 nadal wymaga zakończenia; audyt nie certyfikuje wszystkich zewnętrznych URL-i.
+2. GitHub About/topics/ruleset/uprawnienia aplikacji sprawdzono w GitHub. Ryzyko szerokich uprawnień Cursor przekazano do oceny OWNER; sam opis repo nie dowodzi ustawień.
 3. Ocena przez OWNER treści PL/EN, changelogu, mapy wyjątków oraz prawdziwości historycznych linków. **Odrębna zgoda na merge**, bez nowego tagu ani produkcji.
 
-**Decyzja obecna:** dokumentacja gotowa do review, odbiór formalny oczekuje. **NO-GO dla nowego RC i wdrożenia.**
+**Decyzja obecna:** prace dokumentacyjne i konfiguracja About wykonane; **odbiór formalny nadal oczekuje na końcowy CI i OWNER**. **NO-GO dla nowego RC i wdrożenia.**

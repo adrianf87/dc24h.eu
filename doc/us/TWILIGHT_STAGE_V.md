@@ -1,6 +1,6 @@
 # dc24h.eu-twilight — Stage V: documentation, GitHub, provenance and communications
 
-**Status: proposed in Draft PR #9, pending hosted CI and separate OWNER acceptance.** This is the **P1 documentation** stage; it does not change runtime version, API contracts or private state. [Issue #1](https://github.com/adrianf87/dc24h.eu-twilight/issues/1) · [PR #9](https://github.com/adrianf87/dc24h.eu-twilight/pull/9). Stage VI **remains a release NO-GO**.
+**Status: bilingual documentation and GitHub settings verified on 2026-11-25; final CI and formal OWNER acceptance pending.** This is the **P1 documentation** stage; it does not change runtime version, API contracts or private state. [Issue #1](https://github.com/adrianf87/dc24h.eu-twilight/issues/1) · [Draft PR #9](https://github.com/adrianf87/dc24h.eu-twilight/pull/9). Stage VI **remains a release NO-GO**.
 
 ## Current versus historical facts
 
@@ -10,7 +10,7 @@
 | Runtime source | `beta-0.9.20` forked from High Starter RC1 | Historic [`v0.9.20-rc.1`](https://github.com/adrianf87/dc24h.eu-high-starter/releases/tag/v0.9.20-rc.1), source commit `e4fcb8b5849d4afa4671f97a2ee9c3e63b085a18`. |
 | Original OWNER RC acceptance | Yes — **High Starter only, for non-production evaluation only** | Original merged [PR #243](https://github.com/adrianf87/dc24h.eu-high-starter/pull/243) + [#244](https://github.com/adrianf87/dc24h.eu-high-starter/pull/244) + [#245](https://github.com/adrianf87/dc24h.eu-high-starter/pull/245). Preserve authentic source references. |
 | Twilight Stages I–IV | Merged in protected Twilight `main` | [Twilight PRs #2–#7](https://github.com/adrianf87/dc24h.eu-twilight/pulls?q=is%3Apr+is%3Aclosed). Name-migration rollback CI was **synthetic**, not an existing-host migration. |
-| Twilight Stages V–VI | Under review together in [Draft PR #9](https://github.com/adrianf87/dc24h.eu-twilight/pull/9) | Independent exact-head CI, documentation acceptance and separate OWNER release decision remain pending. |
+| Twilight Stages V–VI | Under review together in [Draft PR #9](https://github.com/adrianf87/dc24h.eu-twilight/pull/9) | Stage V: documentation and GitHub settings verified; final CI and OWNER acceptance pending. Stage VI: release NO-GO. |
 
 ## Current documentation and operator entry points
 
@@ -27,22 +27,22 @@
 3. **Infrastructure:** the `dc24h.eu` example host, TLS, WebAuthn `rpID`/`Origin`, service user `dc24h`, `/etc/dc24h` and `/var/lib/dc24h` remain unchanged. The visible `rpName` and strict v1 `server.name` were separately approved, with no old-name fallback.
 4. **`LICENSE`, Git history and signed commits:** untouched. Historic `v0.9.20-rc.1` is neither moved nor claimed as a Twilight release.
 
-## GitHub About and settings — manual review gate
+## GitHub About and settings — verified 2026-11-25
 
-Settings **are not versioned in this PR**, and the PR's existence cannot certify them. OWNER or another authorized reviewer must confirm on GitHub:
+Settings **are not versioned in this PR**. They were inspected in the live GitHub UI, rather than inferred from the PR:
 
-- **Read-only audit 2026-11-25:** current GitHub About still reads `Coded by ChatGPT (High reasoning level). A Direct Connect hub server supporting the ADC and ADCS network protocols.`; no topics are displayed. Updating this **remains an external settings task**, not a branch commit.
-- **Verified live settings:** default branch `main`; **Main Branch Protection** ruleset **Active**, targeting `main`, no bypass entries, PR required, fresh branch required, 12 named status checks required, force pushes and branch deletion blocked. Installed apps listed as **ChatGPT Codex Connector** and **Cursor**. Checking each app's detailed permission scopes led to GitHub's additional account confirmation (sudo mode), so those scopes **remain unverified**; no access barrier was bypassed.
-- **Proposed description:** `dc24h.eu-twilight — independent C++20 ADC/ADCS hub and React WebAdmin development fork; non-production release qualification.`
-- **Proposed topics:** `dc24h`, `twilight`, `direct-connect`, `adc`, `adcs`, `cpp20`, `react`, `webadmin`, `linux`.
-- **Website URL:** leave empty unless a real publicly approved site exists; a display rebrand does not relocate `dc24h.eu` DNS/TLS.
-- **Default branch:** `main` (confirmed from GitHub repository metadata). Review its live rulesets and status checks, bypass policy, and GitHub App permissions in Settings before acceptance.
+- **Description (saved and verified):** `dc24h.eu-twilight — independent C++20 ADC/ADCS hub and React WebAdmin development fork; non-production release qualification.`
+- **Topics (saved and verified):** `dc24h`, `twilight`, `direct-connect`, `adc`, `adcs`, `cpp20`, `react`, `webadmin`, `linux`.
+- **Website URL:** empty; no unapproved DNS/TLS change.
+- **Branch protection:** default `main`, **Main Branch Protection** ruleset **Active**, empty bypass list; pull request, fresh branch and 12 named status checks required; force pushes and branch deletion blocked.
+- **GitHub App ChatGPT Codex Connector:** selected three repositories (`dc24h.eu-high-starter`, `dc24h.eu`, `dc24h.eu-twilight`); reads checks, commit statuses and metadata; writes Actions, code, issues, pull requests and workflows.
+- **GitHub App Cursor:** has access to **All repositories** (existing and future); reads administration, commit statuses, deployments, metadata, packages and pages; writes Actions, checks, code, discussions, issues, merge queues, pull requests and workflows. **This is broad access that deserves a conscious OWNER review of possible restriction**; no app permissions were changed.
 - **Repository copy boundaries:** Git mirrors do not transfer GitHub Issues, PRs, Releases, secrets, permissions or repository settings. Twilight's new issue/PR history starts with [Issue #1](https://github.com/adrianf87/dc24h.eu-twilight/issues/1) and PRs #2–#9; original evidence stays in High Starter.
 
 ## Stage V acceptance checklist
 
-1. All final-SHA PR #9 checks and a review of current links; documentation negatives must refuse old clone/binary instructions and stale current-status wording.
-2. Manually confirm GitHub About/topics/rulesets/permissions, recording any follow-up action needed. Repository prose cannot prove live Settings.
+1. **1,498/1,498 relative Markdown file links** in active documentation resolved; documentation negatives run. Final-head PR #9 CI must still complete; this audit does not certify every external HTTP URL.
+2. Live GitHub About/topics/ruleset/app scopes reviewed. Cursor's unusually broad access is recorded for OWNER assessment; repository prose cannot prove live Settings.
 3. OWNER reviews bilingual wording, unchanged historic links/changelog/license and the explicit compatibility/migration exceptions. **A separate merge authorization** is required; it does not authorize tagging or production.
 
-**Current decision:** documentation ready for review, no formal Stage V acceptance yet. **Release and production NO-GO.**
+**Current decision:** documentation and About configuration work done; **formal acceptance awaits final CI and OWNER**. **Release and production NO-GO.**
