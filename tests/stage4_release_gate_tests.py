@@ -19,7 +19,7 @@ class StageFourReleaseGate(unittest.TestCase):
             ("CMakeLists.txt", f'set(DC24H_VERSION "{VERSION}")'),
             ("webadmin/src/lib/status.ts", f'WEBADMIN_VERSION = "{VERSION}"'),
             ("webadmin/tests/fixtures.ts", f'version: "{VERSION}"'),
-            ("README.md", f"Current development version: {VERSION}"),
+            ("README.md", f"Current code version: {VERSION}"),
             ("webadmin/README.md", VERSION),
             ("doc/README.md", VERSION),
             ("doc/us/README.md", VERSION),

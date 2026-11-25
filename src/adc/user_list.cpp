@@ -32,7 +32,7 @@ UserListResult UserList::prepare(users::SessionId joining, const ClientSession& 
         return true;
     };
     if (!append({MessageType::info, "INF", Command::inf, {}, {}, {},
-            {"CT32", "NIdc24h.eu", "DEGuest login alpha"}, {}})) { return UserListError::output_limit; }
+            {"CT32", "NIdc24h.eu-twilight", "DEDirect Connect hub"}, {}})) { return UserListError::output_limit; }
     std::uint64_t after = 0;
     for (;;) {
         const auto page = sessions_.public_users(after, users::SessionManager::max_page_size);

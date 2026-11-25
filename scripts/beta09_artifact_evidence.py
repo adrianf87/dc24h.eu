@@ -59,6 +59,9 @@ COMMON = {
     # Optional for historical RC1 artifacts; required by the new Stage IV
     # hosted workflow's separate fail-closed migration gate.
     "twilight-stage4-name-migration.json", "twilight-stage4-migration-gate.json",
+    # Optional per-source-SHA Stage VI contract preflight on the C++ matrix;
+    # this explicit NO-GO report cannot authorize a release.
+    "twilight-stage6-preflight.json",
 }
 LEGACY_UNBOUND = {"loopback-probes.json", "disposable-db-cli-restore.json"}
 
@@ -111,6 +114,28 @@ def _no_sensitive_fields(value, depth=0):
 
 
 def _report_semantics(name, report):
+    if name == "twilight-stage6-preflight.json":
+        true_fields = (
+            "active_branding_and_api_name_strict", "passkey_origin_rpid_guards_present",
+            "legacy_systemd_conflict_and_marker_present",
+            "stable_dns_service_user_and_data_paths_preserved",
+            "npm_and_repository_identity_checked",
+            "historical_high_starter_provenance_retained",
+        )
+        false_fields = (
+            "complete_final_sha_github_ci_verified", "artifact_zips_independently_hashed",
+            "stage_v_documentation_accepted", "owner_release_acceptance_recorded",
+            "release_tag_or_production_deployment_authorized",
+        )
+        if (report.get("schema") != 1 or
+                report.get("stage") != "twilight-stage-vi-static-preflight" or
+                report.get("status") != "NO-GO" or
+                report.get("os_image") not in ("ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04") or
+                report.get("active_display_files_checked") != 12 or
+                report.get("github_workflows_checked") != 5 or
+                not all(report.get(key) is True for key in true_fields) or
+                not all(report.get(key) is False for key in false_fields)):
+            raise ValueError("Stage VI source preflight is not strict, bounded NO-GO evidence")
     if name == "twilight-stage4-name-migration.json":
         required = ("actual_two_distinct_package_names", "clean_old_name_install",
                     "new_name_refused_without_explicit_old_purge",

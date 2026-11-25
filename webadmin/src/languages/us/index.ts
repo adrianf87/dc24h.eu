@@ -700,7 +700,7 @@ export const us = {
   localNoteSub:
     "Live counters come from the hub API. Account maintenance uses a separate stopped-hub workflow.",
   buildLabel: "WebAdmin",
-  footer: "Built for dc24h.eu",
+  footer: "Built for dc24h.eu-twilight",
   noEdits: "Configuration changes and log browsing are planned.",
   acceptedConnections: "Accepted connections",
   acceptsHint: "Total since startup",

@@ -179,7 +179,7 @@ max_connections = 16
 request_timeout = 2
 ```
 
-Then start with `./build/dc24h --config config/dc24h.ini`. Use curl's header input from stdin to avoid putting the credential in its command-line arguments:
+Then start with `./build/dc24h-twilight --config config/dc24h.ini`. Use curl's header input from stdin to avoid putting the credential in its command-line arguments:
 
 ```sh
 { printf 'Authorization: Bearer '; cat .runtime/admin.token; } |

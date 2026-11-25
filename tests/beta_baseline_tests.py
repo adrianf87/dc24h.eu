@@ -124,7 +124,9 @@ def main():
     require("ubuntu-latest" not in workflow, "build.yml: ubuntu-latest is selected", errors)
     check(ROOT / "README.md", (
         "# dc24h.eu-twilight",
-        "Current development version: beta-0.9.20",
+        "Current code version: beta-0.9.20",
+        "High Starter v0.9.20-rc.1 pre-release",
+        "No Twilight release or production GO",
         "beta-0.3.11–beta-0.3.12 Stage IV",
         "beta-0.3.8–beta-0.3.10 Stage III",
         "beta-0.3.4–beta-0.3.7 Stage II",
@@ -139,7 +141,8 @@ def main():
         "beta-0.1.8 Development baseline",
         "<summary>Alpha 0.9.x (17 releases)</summary>",
     ), errors)
-    check(ROOT / "doc/README.md", ("Current development version: beta-0.9.20",), errors)
+    check(ROOT / "doc/README.md", ("Current Twilight code:", "beta-0.9.20",
+                                   "No Twilight release or production GO"), errors)
     check(ROOT / "doc/us/BETA.md", (
         "# Combined hardening release — beta-0.2.7 to beta-0.2.12",
         "## beta-0.2.9 — private API response hardening",

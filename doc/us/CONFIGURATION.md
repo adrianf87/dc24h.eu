@@ -60,8 +60,8 @@ Settings are composed in this order: built-in defaults, one explicit `--config F
 
 ```sh
 cp config/dc24h.ini.example config/dc24h.ini
-./build/dc24h --config config/dc24h.ini --check-config
-./build/dc24h --config config/dc24h.ini --max-connections 512
+./build/dc24h-twilight --config config/dc24h.ini --check-config
+./build/dc24h-twilight --config config/dc24h.ini --max-connections 512
 ```
 
 ## INI format

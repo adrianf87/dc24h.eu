@@ -1,8 +1,10 @@
 # dc24h.eu-twilight technical documentation
 
-Current development version: beta-0.9.20 (draft, awaiting exact-head CI, all stage/fix gates and Owner decision).
+**Current Twilight code:** beta-0.9.20, derived from the accepted *non-production* High Starter [v0.9.20-rc.1](https://github.com/adrianf87/dc24h.eu-high-starter/releases/tag/v0.9.20-rc.1). The source RC1 had its own Owner acceptance; Twilight is an independent repository with [rebranding Issue #1](https://github.com/adrianf87/dc24h.eu-twilight/issues/1) and an unaccepted [Draft PR #9](https://github.com/adrianf87/dc24h.eu-twilight/pull/9). The historical documents below describe their original PR/CI state, not current Twilight acceptance. **No Twilight release or production GO.**
 
-[Beta-0.9.17–beta-0.9.20 Stage V: independent ZIP verification, hosted OS provenance, dual fuzzing and Owner NO-GO](us/BETA_0.9_STAGE_V.md) · [PL rollback and operator instructions](pl/BETA_0.9_STAGE_V.md). Source candidate only; no CI acceptance, merge or deployment.
+**Current Twilight operations:** [Stage V documentation/provenance EN](us/TWILIGHT_STAGE_V.md) · [PL](pl/TWILIGHT_STAGE_V.md) · [Stage VI release qualification EN](us/TWILIGHT_STAGE_VI.md) · [PL](pl/TWILIGHT_STAGE_VI.md) · [GitHub Actions](https://github.com/adrianf87/dc24h.eu-twilight/actions) · [Installation EN](us/INSTALLATION.md) · [PL](pl/INSTALLATION.md).
+
+[Historical High Starter beta-0.9.17–beta-0.9.20 Stage V: independent ZIP verification and RC1 evidence](us/BETA_0.9_STAGE_V.md) · [PL historical runbook](pl/BETA_0.9_STAGE_V.md). Original pre-release approval applied only to the High Starter source and controlled evaluation.
 
 [Beta-0.8 Fix Pass 5: stale CI head, artifact attempt, full npm audit and fuzz containment review](us/BETA_0.8_FIX_PASS_5.md) · [PL Owner notes](pl/BETA_0.8_FIX_PASS_5.md). Source disposition only; hosted CI remains unverified.
 

@@ -1,5 +1,7 @@
 # Debian / Ubuntu installation
 
+**Current dc24h.eu-twilight local build guide, not a production deployment runbook.** The beta-0.9.20 source originates from the controlled-evaluation [High Starter RC1](https://github.com/adrianf87/dc24h.eu-high-starter/releases/tag/v0.9.20-rc.1). Twilight rebranding and release qualification are separate: [Stage V](TWILIGHT_STAGE_V.md) · [Stage VI](TWILIGHT_STAGE_VI.md). Use only loopback listeners for this example. Stable `/etc/dc24h` and `/var/lib/dc24h` paths are intentional. **Do not migrate/activate a live service without separate OWNER approval and a tested recovery plan.**
+
 **alpha-0.8.5 Ban Core:** [Persistent account/CID/IP admission blocks](BAN_CORE.md) add explicit schema v8, proven create/revoke, startup enforcement and expiry. Admin Core now has ten maintenance actions; users.ban/blocks.manage are implemented. This supersedes earlier schema-v7/ban-pending statements.
 
 **alpha-0.8.2 Operators:** [Staff directory and local ownership provisioning/transfer](OPERATORS.md) supersede earlier ownership-bootstrap/transfer limitations. Schema v7 and ordinary Owner protections remain.
@@ -23,19 +25,19 @@ Targets: Debian 12/13 and Ubuntu 22.04/24.04/26.04 LTS. Only the locally tested 
 ```sh
 sudo apt-get update
 sudo apt-get install build-essential cmake git python3 libutf8proc-dev libgcrypt20-dev libssl-dev openssl ncdc libmariadb-dev
-git clone --branch main https://github.com/adrianf87/dc24h.eu-high-starter.git
-cd dc24h.eu
+git clone --branch main https://github.com/adrianf87/dc24h.eu-twilight.git
+cd dc24h.eu-twilight
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel 2
 ctest --test-dir build --output-on-failure
-./build/dc24h --help
-./build/dc24h --listen 127.0.0.1:1511
+./build/dc24h-twilight --help
+./build/dc24h-twilight --listen 127.0.0.1:1511
 ```
 
 Run as an unprivileged account. The process stays in the foreground and stops with Ctrl+C or SIGTERM. It does not daemonize, create a PID file, edit firewall rules or install/start a system service automatically. [System security](SYSTEM_SECURITY.md) ships a Type=simple example with an absolute ExecStart path, a locked user and journal capture of stderr. The build does not enable that unit.
 
 For ADCS configure readable certificate/key paths with the correct service-user permissions; see [ADCS_TLS.md](ADCS_TLS.md). The executable does not obtain or renew certificates. Apache2 is optional for static WebAdmin assets and for the local allowlisted reverse proxy. A public authenticated gateway remains separate work. MariaDB connections are optional and disabled by default. See [DATABASE.md](DATABASE.md). See [CONFIGURATION.md](CONFIGURATION.md) for port and language options.
 
-For explicit file settings, copy the [example](../../config/dc24h.ini.example), adjust paths and run `./build/dc24h --config config/dc24h.ini --check-config` before normal startup with the same `--config`. Local INI files are ignored by Git.
+For explicit file settings, copy the [example](../../config/dc24h.ini.example), adjust paths and run `./build/dc24h-twilight --config config/dc24h.ini --check-config` before normal startup with the same `--config`. Local INI files are ignored by Git.
 
 For the installed static HTTPS template, certificate paths, local access policy and explicit Apache activation, see [APACHE2_HTTPS.md](APACHE2_HTTPS.md). The reverse-proxy example is installed beside it; see [APACHE2_PROXY.md](APACHE2_PROXY.md). Both are always installed under `etc/dc24h`; no certificate, site or service is activated by CMake.

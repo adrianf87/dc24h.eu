@@ -700,7 +700,7 @@ export const pl = {
   localNoteSub:
     "Liczniki pochodzą z API huba. Zarządzanie kontami wymaga osobnego trybu przy zatrzymanym hubie.",
   buildLabel: "WebAdmin",
-  footer: "Dla dc24h.eu",
+  footer: "Dla dc24h.eu-twilight",
   noEdits: "Zmiana konfiguracji i przeglądanie logów są planowane.",
   acceptedConnections: "Przyjęte połączenia",
   acceptsHint: "Łącznie od startu",
