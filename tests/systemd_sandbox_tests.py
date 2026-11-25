@@ -39,7 +39,7 @@ REQUIRED = {
     "Group": "dc24h",
     "UMask": "0077",
     "WorkingDirectory": "/var/lib/dc24h",
-    "ExecStart": "/usr/local/bin/dc24h --config /etc/dc24h/dc24h.ini",
+    "ExecStart": "/usr/local/bin/dc24h-twilight --config /etc/dc24h/dc24h.ini",
     "Restart": "on-failure",
     "RestartSec": "3",
     "TimeoutStopSec": "20",
@@ -119,6 +119,9 @@ def problems(text):
             errors.append(f"{key}={service.get(key)!r}")
     if unit.get("StartLimitIntervalSec") != "60" or unit.get("StartLimitBurst") != "5":
         errors.append("start limit")
+    if (unit.get("Conflicts") != "dc24h.service" or
+            unit.get("AssertPathExists") != "/etc/dc24h/twilight-unit-migration-approved"):
+        errors.append("old/new systemd migration guard")
     if parsed.get("Install", {}).get("WantedBy") != "multi-user.target":
         errors.append("install target")
     for phrase in FORBIDDEN:
@@ -171,6 +174,10 @@ class SystemdSandboxTests(unittest.TestCase):
         self.assertEqual(problems(self.text), [])
         weakened = self.text.replace("User=dc24h", "User=root", 1)
         self.assertTrue(problems(weakened))
+        self.assertIn("old/new systemd migration guard",
+                      problems(self.text.replace("Conflicts=dc24h.service", "", 1)))
+        self.assertIn("old/new systemd migration guard",
+                      problems(self.text.replace("AssertPathExists=/etc/dc24h/twilight-unit-migration-approved", "", 1)))
         self.assertFalse(any(line.startswith("dc24h:") for line in Path("/etc/passwd").read_text(encoding="utf-8").splitlines()))
         self.assertFalse(Path("/etc/systemd/system/dc24h.service").exists())
         self.assertFalse(Path("/etc/systemd/system/dc24h-twilight.service").exists())
