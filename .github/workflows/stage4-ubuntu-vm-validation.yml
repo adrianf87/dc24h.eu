@@ -17,7 +17,7 @@ concurrency:
 jobs:
   ubuntu-operational:
     name: Stage IV VM - ${{ matrix.os }}
-    if: github.repository == 'adrianf87/dc24h.eu-high-starter'
+    if: github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     strategy:
