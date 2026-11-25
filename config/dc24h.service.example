@@ -2,7 +2,7 @@
 # The build does not install this into the systemd unit directory and does not enable it.
 # Adjust ExecStart when the install prefix is not /usr/local.
 [Unit]
-Description=dc24h.eu Direct Connect hub
+Description=dc24h.eu-twilight Direct Connect hub
 After=network-online.target
 Wants=network-online.target
 StartLimitIntervalSec=60

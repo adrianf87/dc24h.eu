@@ -308,7 +308,7 @@ class NetworkProcessTests(unittest.TestCase):
                 result = subprocess.run([BINARY, *options], capture_output=True, timeout=3, check=False)
                 self.assertEqual(result.returncode, 2, result.stderr)
                 self.assertIn(b"Invalid arguments", result.stderr)
-                self.assertNotIn(b"Starting dc24h.eu", result.stderr)
+                self.assertNotIn(b"Starting dc24h.eu-twilight", result.stderr)
 
 
 if __name__ == "__main__":

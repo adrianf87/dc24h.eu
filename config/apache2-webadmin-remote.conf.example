@@ -1,4 +1,5 @@
-# beta-0.3.8: separate, hardened local-only HTTPS read-only WebAdmin gateway.
+# dc24h.eu-twilight: separate, hardened local-only HTTPS read-only WebAdmin gateway.
+# Keep localhost, DC24H_REMOTE_ORIGIN and the WebAuthn RP ID unchanged.
 # Example ONLY. TOTP is not phishing resistant and does not enable a public
 # listener or Internet-facing reverse proxy. An opt-in SSH port-forward pilot
 # still terminates at loopback and requires verified HTTPS on the client.

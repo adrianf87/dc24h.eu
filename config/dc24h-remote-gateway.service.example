@@ -3,7 +3,7 @@
 # The account must be allowed to read the dedicated local API token and socket.
 # Never set DC24H_REMOTE_PUBLIC or bind the service to a public interface.
 [Unit]
-Description=dc24h remote read-only gateway (local-only development)
+Description=dc24h.eu-twilight remote read-only gateway (local-only development)
 After=network.target
 StartLimitIntervalSec=60
 StartLimitBurst=5

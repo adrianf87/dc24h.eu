@@ -63,7 +63,7 @@ inline constexpr std::array<std::string_view, 189> messages{{
     "Niepoprawna wiadomość powitalna czatu",
     "Niepoprawne limity anti-flood czatu",
     "Użytkownicy zakończeni; online=",
-    "Uruchamianie dc24h.eu ",
+    "Uruchamianie dc24h.eu-twilight ",
     "Core działa",
     "Zatrzymywanie Core",
     "Core zatrzymany po błędzie sieci",
@@ -218,7 +218,7 @@ ADCS wymaga zgodnego łańcucha PEM i klucza; TLS >=1.2. Łącznie do 16 nasłuc
 --check-config sprawdza ustawienia/TLS bez zajmowania portów i tworzenia logu.
 Domyślnie: 127.0.0.1:1511, 1024 połączenia, 120 sekund bezczynności, info na stderr, us.
 Limity: 1..65535 połączeń; 1..86400 sekund bezczynności.
-Program działa na pierwszym planie; stop przez SIGINT (Ctrl+C) lub SIGTERM.
+Program dc24h.eu-twilight działa na pierwszym planie; stop przez SIGINT (Ctrl+C) lub SIGTERM.
 Limity użytkowników/sesji: 1..65535, domyślnie 65535; obowiązuje też limit połączeń.
 Domyślne limity: 128 klientów/IP, 256 przyjęć/IP/minutę, 1024 ramki/s/klienta,
 512 błędnych ramek/klienta, 10 sekund dla TLS i niedokończonej ramki.

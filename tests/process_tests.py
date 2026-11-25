@@ -19,19 +19,21 @@ class ProcessTests(unittest.TestCase):
     def test_version(self):
         result = self.cli("--version")
         self.assertEqual(result.returncode, 0)
-        self.assertEqual(result.stdout, "dc24h.eu beta-0.9.20\n")
+        self.assertEqual(result.stdout, "dc24h.eu-twilight beta-0.9.20\n")
         self.assertEqual(result.stderr, "")
 
     def test_help(self):
         result = self.cli("--help")
         self.assertEqual(result.returncode, 0)
         self.assertIn("SIGTERM", result.stdout)
+        self.assertIn("Run dc24h.eu-twilight in the foreground", result.stdout)
         self.assertEqual(result.stderr, "")
 
     def test_language_help_validation_and_lifecycle(self):
         result = self.cli('--language', 'pl', '--help')
         self.assertEqual(result.returncode, 0)
         self.assertIn('Użycie:', result.stdout)
+        self.assertIn('Program dc24h.eu-twilight działa', result.stdout)
         self.assertIn('Usage:', self.cli('--language', 'us', '--help').stdout)
         self.assertEqual(self.cli('--help', '--language', 'pl').stdout, result.stdout)
         for args in [('--language',), ('--language', 'de'), ('--language', 'pl', '--listen')]:
@@ -118,7 +120,7 @@ class ProcessTests(unittest.TestCase):
     def test_signal_during_startup(self):
         # The startup log is written after blocking signals, before creating the waiter.
         for _ in range(10):
-            self.run_and_stop([signal.SIGTERM], ready_marker=b"Starting dc24h.eu")
+            self.run_and_stop([signal.SIGTERM], ready_marker=b"Starting dc24h.eu-twilight")
 
     def test_repeated_signals(self):
         for _ in range(10):

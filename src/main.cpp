@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
         return EXIT_SUCCESS;
     }
     if (parsed.show_version) {
-        std::cout << "dc24h.eu " << dc24h::version << '\n';
+        std::cout << "dc24h.eu-twilight " << dc24h::version << '\n';
         return EXIT_SUCCESS;
     }
     if (parsed.show_configuration) {
@@ -119,7 +119,7 @@ int main(int argc, char* argv[]) {
         const dc24h::core::TerminationSignals signals;
         dc24h::logging::Logger logger(parsed.settings.logging);
         try {
-            logger.info(std::string("Starting dc24h.eu ") + std::string(dc24h::version));
+            logger.info(std::string("Starting dc24h.eu-twilight ") + std::string(dc24h::version));
             logger.info("Startup settings: adc_listeners=" + std::to_string(parsed.settings.network.listeners.size()) +
                     " adcs_listeners=" + std::to_string(parsed.settings.network.tls_listeners.size()) +
                     " max_connections=" + std::to_string(parsed.settings.network.max_connections) +
