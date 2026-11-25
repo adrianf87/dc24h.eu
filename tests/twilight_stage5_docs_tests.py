@@ -82,6 +82,23 @@ class StageFiveDocsTests(unittest.TestCase):
     def test_current_documentation_and_provenance(self):
         self.assertTrue(check_current_docs(ROOT))
 
+    def test_active_documentation_local_links_resolve(self):
+        # Historical URLs remain untouched; these are local file references in
+        # current operator/README and Stage V docs, without network access.
+        checked = 0
+        for name in dict.fromkeys(CURRENT_GUIDES + CURRENT_HEADINGS + STAGE_V_DOCS):
+            document = ROOT / name
+            for raw in re.findall(r"\]\(([^)]+)\)", document.read_text(encoding="utf-8")):
+                target = raw.strip().split(" ", 1)[0].split("#", 1)[0]
+                if not target or re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", target):
+                    continue
+                if target.startswith("//"):
+                    continue
+                with self.subTest(document=name, link=raw):
+                    self.assertTrue((document.parent / target).is_file())
+                checked += 1
+        self.assertGreaterEqual(checked, 100)
+
     def test_incorrect_clone_or_legacy_binary_refused(self):
         for path, old, new in (
                 ("doc/pl/INSTALLATION.md", "dc24h.eu-twilight.git", "dc24h.eu-high-starter.git"),
