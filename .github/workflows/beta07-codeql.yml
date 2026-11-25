@@ -2,7 +2,7 @@ name: Beta 0.7 exact-head CodeQL
 
 on:
   push:
-    branches: [main]
+    branches: [main, beta-0.9.x-stage-full-fix-pass]
   pull_request:
     branches: [main]
   workflow_dispatch:

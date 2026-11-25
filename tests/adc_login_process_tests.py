@@ -127,6 +127,35 @@ class LoginProcessTests(unittest.TestCase):
         for private in (b'PrivateUnknown', b'PendingChat', pair(1)[0], pair(2)[0]):
             self.assertNotIn(private, hub.log)
 
+    def test_dcpp_shaped_guest_wire_does_not_grant_operator_rights(self):
+        """Synthetic DC++-style INF fields over ADC and ADCS, not a DC++ binary certification."""
+        for encrypted in (False, True):
+            with self.subTest(encrypted=encrypted):
+                hub, cert = self.hub()
+                observer = self.peer(hub, cert, not encrypted)
+                observer.login(b'Observer', 31)
+                client = self.peer(hub, cert, encrypted)
+                client.handshake()
+                client.send(client.identity(b'DCPlusPlus', 32).replace(
+                    b' XXPrivateUnknown', b' APDC++ VE0.9.20 LOpl_PL CT1 SUADCS,TCP4 XXPrivateUnknown'))
+                self.assertTrue(client.line().startswith(b'IINF CT32'))
+                self.assertTrue(client.line().startswith(b'BINF ' + observer.sid))
+                own = client.line()
+                self.assertTrue(own.startswith(b'BINF ' + client.sid + b' '), own)
+                for field in (b' APDC++', b' VE0.9.20', b' LOpl_PL', b' CT1', b' SUADCS,TCP4'):
+                    self.assertIn(field, own)
+                self.assertNotIn(b' PD', own)
+                self.assertNotIn(b' XX', own)
+                self.assertEqual(client.line(), HUB_WELCOME)
+                self.assertEqual(observer.line(), own)
+                # Client application, hub transport and SU are public metadata;
+                # none authorize an operator privilege bit in a later INF.
+                client.send(b'BINF ' + client.sid + b' CT4 APDC++')
+                self.assertTrue(client.line().startswith(b'ISTA 243 '))
+                self.assertTrue(client.line().startswith(b'IQUI ' + client.sid))
+                self.assertEqual(observer.line(), b'IQUI ' + client.sid)
+                hub.stop()
+
     def test_failures_do_not_announce_or_steal_identity(self):
         hub, cert = self.hub()
         owner = self.peer(hub, cert)

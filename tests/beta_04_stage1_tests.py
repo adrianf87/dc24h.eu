@@ -30,7 +30,10 @@ class StageOneGate(unittest.TestCase):
         for expected in ("flags | constants.O_NOFOLLOW", "fsyncSync(dirFd)"):
             self.assertIn(expected, paths)
         tool = read("webadmin/server/remote-mfa-tool.ts")
-        for expected in ("--offline-ack", "--recovery", "--compact-replay", "Unsafe maintenance request", "replaceTotpSecret"):
+        for expected in ("--offline-ack", "--recovery", "--compact-replay", "replaceTotpSecret",
+                         "readPrivateJsonRequest(path, 1024)", "Object.keys(row).some(",
+                         'if (!process.argv.includes("--offline-ack"))',
+                         "Offline MFA maintenance refused"):
             self.assertIn(expected, tool)
         self.assertNotIn("child_process", read("webadmin/server/remote-gateway.ts"))
         self.assertEqual(len(list((ROOT / "database/migrations").glob("*.sql"))), 11)

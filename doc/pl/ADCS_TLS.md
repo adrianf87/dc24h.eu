@@ -14,7 +14,7 @@ ADCS szyfruje strumień ADC przez TLS, bez zmiany składni i bez STARTTLS. Źró
 
 `adcs::Context` wczytuje pełny łańcuch PEM i zgodny, nieszyfrowany klucz prywatny PEM przed otwarciem portów. Brak plików, błędne dane, niezgodny lub zaszyfrowany hasłem klucz powodują kod 1 bez ogłoszenia gotowości i bez pytania o hasło. Kontrola dotyczy wczytania i zgodności klucza; zaufanie, nazwę hosta i ważność certyfikatu sprawdza klient. Brak wzajemnego TLS i uwierzytelniania kont.
 
-Minimum to TLS 1.2. Kompresja i renegocjacja są wyłączone, podobnie jak pamięciowy cache sesji. Szyfry wynikają z polityki zainstalowanego OpenSSL; TLS 1.3 może stosować bezstanowe bilety sesji.
+Minimum to TLS 1.2. Kompresja, renegocjacja, cache sesji i bilety sesyjne (również TLS 1.3) są wyłączone. Nasłuch używa wyłącznie wybranych szyfrów AEAD. Certyfikat końcowy nie może mieć `CA:TRUE`; jawne użycie klucza musi dopuszczać `digitalSignature`. Klient nadal weryfikuje łańcuch zaufania i nazwę serwera. TLS nie nadaje uprawnień kontom ADC.
 
 ```sh
 ./build/dc24h --adcs-listen 127.0.0.1:1512 \

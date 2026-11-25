@@ -24,6 +24,22 @@ def command(args, *, success=True):
     return result
 
 
+def require_sandbox_properties(unit, runner, invoke=command):
+    """Attest *effective* protections, not merely systemd-run arguments."""
+    for name, expected in (("User", runner), ("PrivateNetwork", "yes"),
+                           ("NoNewPrivileges", "yes"), ("ProtectSystem", "strict"),
+                           ("ProtectHome", "yes"), ("ProtectKernelTunables", "yes"),
+                           ("ProtectControlGroups", "yes")):
+        value = invoke(["systemctl", "show", "--property=" + name,
+                        "--value", unit]).stdout.decode().strip()
+        if value != expected:
+            raise AssertionError("C++ systemd sandbox property not effective: " + name)
+    families = invoke(["systemctl", "show", "--property=RestrictAddressFamilies",
+                       "--value", unit]).stdout.decode().strip().split()
+    if families != ["AF_UNIX"]:
+        raise AssertionError("C++ systemd service permits non-Unix network sockets")
+
+
 def rehearse(installed_admin, config, database_directory):
     if (os.environ.get("GITHUB_ACTIONS") != "true" or
             os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted" or
@@ -68,12 +84,7 @@ def rehearse(installed_admin, config, database_directory):
                     time.sleep(0.1)
             else:
                 raise AssertionError("Old C++ systemd maintenance Unix API not ready")
-            for property_name, expected in (("User", runner), ("PrivateNetwork", "yes"),
-                                            ("NoNewPrivileges", "yes"), ("ProtectSystem", "strict")):
-                value = command(["systemctl", "show", "--property=" + property_name,
-                                 "--value", unit]).stdout.decode().strip()
-                if value != expected:
-                    raise AssertionError("C++ systemd sandbox property not effective: " + property_name)
+            require_sandbox_properties(unit, runner)
             if cycle == 0:
                 command(["sudo", "systemctl", "restart", unit])
         command(["sudo", "systemctl", "stop", unit])

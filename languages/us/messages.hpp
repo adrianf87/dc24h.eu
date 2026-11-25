@@ -94,6 +94,7 @@ inline constexpr std::array<std::string_view, 189> messages{{
     "Cannot load TLS private key",
     "TLS certificate and private key do not match",
     "TLS certificate is not valid at startup",
+    "TLS certificate is not a valid server leaf",
     "TLS certificate signature is too weak",
     "TLS certificate public key is too weak",
     "TLS certificate key usage does not allow a hub listener",

@@ -1,11 +1,12 @@
 // Offline, owner-acknowledged audit preservation rehearsal. This never rotates,
 // truncates or resets the live audit hash chain; archived bytes remain private.
 import { createHash, randomBytes } from "node:crypto";
-import { constants, closeSync, fstatSync, fsyncSync, lstatSync, openSync, readFileSync,
-  readSync, renameSync, unlinkSync, writeSync } from "node:fs";
-import { dirname, isAbsolute, resolve } from "node:path";
+import { constants, closeSync, fstatSync, fsyncSync, readFileSync,
+  readSync, writeSync } from "node:fs";
+import { isAbsolute, resolve } from "node:path";
 import { openRemoteAuditStore } from "./remote-audit-store.ts";
-import { assertPrivateParent } from "./remote-private-path.ts";
+import { assertPrivateParent, lstatPrivateLeaf, openPrivateLeaf, publishPrivateLeafNoReplace,
+  syncPrivateParent, unlinkPrivateLeaf } from "./remote-private-path.ts";
 
 const ack = "OWNER_STOPPED_WRITER_ACK";
 const maxAuditBytes = 8 * 1024 * 1024;
@@ -16,7 +17,7 @@ function secureParent(path: string): void {
 }
 
 function absent(path: string): void {
-  try { lstatSync(path); }
+  try { lstatPrivateLeaf(path); }
   catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return; throw error; }
   throw Error("Archive destination already exists");
 }
@@ -26,12 +27,20 @@ function absent(path: string): void {
 // the substitute had identical bytes at the time of the first comparison.
 export function openPinnedAuditSource(path: string) {
   secureParent(path);
-  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+  // Pin every ancestor as well as the leaf. O_NONBLOCK ensures a replaced
+  // FIFO cannot stall an offline archival command before fstat rejects it.
+  const fd = openPrivateLeaf(path, constants.O_RDONLY | constants.O_NONBLOCK);
+  try {
+    const opened = fstatSync(fd), disk = lstatPrivateLeaf(path);
+    if (!disk.isFile() || !opened.isFile() || disk.dev !== opened.dev || disk.ino !== opened.ino ||
+        opened.uid !== process.geteuid?.() || opened.nlink !== 1 || (opened.mode & 0o077) ||
+        opened.size > maxAuditBytes) throw Error("Audit source path replaced or unsafe");
+  } catch (error) { closeSync(fd); throw error; }
   let closed = false;
   const read = (): Buffer => {
     if (closed) throw Error("Pinned audit source closed");
     secureParent(path);
-    const disk = lstatSync(path), opened = fstatSync(fd);
+    const disk = lstatPrivateLeaf(path), opened = fstatSync(fd);
     if (!disk.isFile() || !opened.isFile() || disk.dev !== opened.dev || disk.ino !== opened.ino ||
         opened.uid !== process.geteuid?.() || opened.nlink !== 1 || (opened.mode & 0o077) ||
         disk.size !== opened.size || opened.size > maxAuditBytes)
@@ -44,7 +53,7 @@ export function openPinnedAuditSource(path: string) {
         if (!count) throw Error("Audit source truncated during read");
         offset += count;
       }
-      const after = fstatSync(fd), latest = lstatSync(path);
+      const after = fstatSync(fd), latest = lstatPrivateLeaf(path);
       if (after.dev !== opened.dev || after.ino !== opened.ino || after.size !== opened.size ||
           after.mtimeMs !== opened.mtimeMs || after.ctimeMs !== opened.ctimeMs ||
           latest.dev !== opened.dev || latest.ino !== opened.ino || latest.size !== opened.size)
@@ -80,7 +89,7 @@ export function archiveStoppedRemoteAudit(source: string, destination: string, o
       if (!audit.verify()) throw Error("Audit source verification failed");
       assertSourceUnchanged();
       partial = destination + ".partial-" + randomBytes(8).toString("hex");
-      const fd = openSync(partial, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+      const fd = openPrivateLeaf(partial, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL, 0o600);
       try {
         let offset = 0;
         while (offset < original.length) {
@@ -90,7 +99,22 @@ export function archiveStoppedRemoteAudit(source: string, destination: string, o
         }
         fsyncSync(fd);
       } finally { closeSync(fd); }
-      const copied = readFileSync(partial);
+      const copiedFd = openPrivateLeaf(partial, constants.O_RDONLY | constants.O_NONBLOCK);
+      let copied: Buffer;
+      try {
+        const opened = fstatSync(copiedFd), leaf = lstatPrivateLeaf(partial);
+        if (!opened.isFile() || opened.uid !== process.geteuid?.() || opened.nlink !== 1 ||
+            (opened.mode & 0o077) || opened.size !== original.length ||
+            opened.dev !== leaf.dev || opened.ino !== leaf.ino)
+          throw Error("Archive copy path changed");
+        copied = readFileSync(copiedFd);
+        const after = fstatSync(copiedFd), latest = lstatPrivateLeaf(partial);
+        if (copied.length !== opened.size || after.size !== opened.size ||
+            after.mtimeMs !== opened.mtimeMs || after.ctimeMs !== opened.ctimeMs ||
+            latest.dev !== opened.dev || latest.ino !== opened.ino)
+          throw Error("Archive copy changed during read");
+      }
+      finally { closeSync(copiedFd); }
       try {
         if (createHash("sha256").update(copied).digest("hex") !== digest)
           throw Error("Archive copy changed");
@@ -98,16 +122,15 @@ export function archiveStoppedRemoteAudit(source: string, destination: string, o
       if (!audit.verify()) throw Error("Audit source verification failed during archive");
       assertSourceUnchanged();
       absent(destination);
-      renameSync(partial, destination);
+      publishPrivateLeafNoReplace(partial, destination);
       partial = undefined;
-      const dir = openSync(dirname(destination), constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
-      try { fsyncSync(dir); } finally { closeSync(dir); }
+      syncPrivateParent(destination);
       return { schema: 1 as const, bytes_preserved: original.length, source_retained: true as const };
     } finally { audit.close(); }
   } finally {
     original?.fill(0);
     pinned.close();
-    if (partial) { try { unlinkSync(partial); } catch { /* Only our partial file. */ } }
+    if (partial) { try { unlinkPrivateLeaf(partial); } catch { /* Only our partial file. */ } }
   }
 }
 

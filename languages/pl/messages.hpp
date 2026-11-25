@@ -94,6 +94,7 @@ inline constexpr std::array<std::string_view, 189> messages{{
     "Nie można wczytać klucza prywatnego TLS",
     "Certyfikat TLS i klucz prywatny nie pasują do siebie",
     "Certyfikat TLS nie jest ważny w chwili uruchomienia",
+    "Certyfikat TLS nie jest poprawnym certyfikatem końcowym serwera",
     "Podpis certyfikatu TLS jest zbyt słaby",
     "Klucz publiczny certyfikatu TLS jest zbyt słaby",
     "Użycie klucza certyfikatu TLS nie pozwala na nasłuch huba",

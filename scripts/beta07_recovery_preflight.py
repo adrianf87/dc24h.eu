@@ -7,6 +7,7 @@ schema-v11 authenticity; hash matching alone cannot prove either property.
 """
 
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -27,6 +28,43 @@ MIGRATION_ROW = re.compile(
     rb"\(\s*([1-9][0-9]*)\s*,\s*'([a-z0-9_]+)'\s*,\s*'([0-9a-f]{64})'\s*,\s*"
     rb"'([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,6})?)'\s*,\s*'applied'\s*\)"
 )
+
+
+def expected_migration_identities():
+    """Rebuild CMake's embedded v11 name/checksum identities from trusted SQL.
+
+    This is an offline *source-consistency* check, not verification that a
+    restored MariaDB instance contains the required schema or constraints.
+    """
+    root = Path(__file__).resolve().parents[1] / "database" / "migrations"
+    catalog = json.loads((root / "manifest.json").read_text(encoding="utf8"))
+    if not isinstance(catalog, dict) or set(catalog) != {"migrations"} or (
+            not isinstance(catalog["migrations"], list) or len(catalog["migrations"]) != 11):
+        raise ValueError("Invalid trusted migration catalog")
+    expected = {}
+    for version, item in enumerate(catalog["migrations"], start=1):
+        if (not isinstance(item, dict) or set(item) != {"version", "name", "files"} or
+                type(item["version"]) is not int or item["version"] != version or
+                not isinstance(item["name"], str) or
+                not re.fullmatch(r"[a-z][a-z0-9_]{0,127}", item["name"]) or
+                not isinstance(item["files"], list) or not 1 <= len(item["files"]) <= 32):
+            raise ValueError("Invalid trusted migration identity")
+        statements = []
+        prefix = f"{version:04d}_{item['name']}"
+        for index, filename in enumerate(item["files"]):
+            if (not isinstance(filename, str) or
+                    not re.fullmatch(re.escape(prefix) + r"(?:_[0-9]{2})?\.sql", filename) or
+                    filename in item["files"][:index]):
+                raise ValueError("Invalid trusted migration filename")
+            statement = (root / filename).read_bytes()
+            if not 1 <= len(statement) <= 65536 or b"\0" in statement or b"\r" in statement:
+                raise ValueError("Invalid trusted migration source")
+            statements.append(statement)
+        payload = (statements[0] if len(statements) == 1 else
+                   b"".join(str(len(statement)).encode("ascii") + b":" + statement
+                            for statement in statements))
+        expected[version] = (item["name"].encode("ascii"), hashlib.sha256(payload).hexdigest().encode("ascii"))
+    return expected
 
 
 def _redacted_row_shape(values):
@@ -83,6 +121,7 @@ def sql_migration_row_count(dump):
     Caller already verified this owner's SQL file and matched its paired hash.
     """
     table_count, versions = 0, {}
+    identities = expected_migration_identities()
     path = Path(dump)
     # Pin the parent directory and the opened file across the separate SQL
     # shape pass; no ancestor/path swap may redirect a later restore decision.
@@ -140,8 +179,8 @@ def sql_migration_row_count(dump):
                 raise ValueError("Malformed migration export (row terminator)")
             for match in matches:
                 version = int(match.group(1))
-                if version in versions or version > 11:
-                    raise ValueError("Unexpected/duplicate migration version")
+                if version in versions or identities.get(version) != (match.group(2), match.group(3)):
+                    raise ValueError("Unexpected/duplicate migration identity")
                 versions[version] = True
         after = os.fstat(source.fileno())
         if (before.st_size != after.st_size or before.st_mtime_ns != after.st_mtime_ns or
@@ -195,6 +234,7 @@ def preflight(dump, snapshot, pair_directory, commit_sha, sql_destination, priva
             "pair_sha256": evidence["pair_hash"], "fresh_targets_checked": 2,
             "sql_export_applied_migration_rows": migration_rows,
             "sql_export_shape_checked": True,
+            "sql_export_migration_identity_checked": True,
             "schema_v11_verified_after_import": False,
             "writers_quiescent_verified": False,
             "restore_performed": False, "destructive_changes": False}

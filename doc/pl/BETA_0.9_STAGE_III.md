@@ -71,3 +71,22 @@ usług produkcyjnych ani nie włączamy nieaktywnej jednostki paczki CI.
 
 Na moment przekazania lokalne regresje przechodzą, natomiast wynik
 GitHub-hosted CI jest **oczekujący**, nie „zielony”.
+
+## Kolejny Fix Pass — MariaDB, odzyskiwanie danych i systemd
+
+- Wstępna kontrola eksportu SQL porównuje teraz **nazwy i SHA-256 wszystkich
+  11 migracji** z zaufanym katalogiem SQL projektu, a nie jedynie liczbę
+  wierszy i status `applied`. Niepoprawna para odtworzeniowa jest odrzucana
+  przed importem. Nadal wymagamy sprawdzenia schematu w prawdziwej MariaDB
+  i C++ po odtworzeniu.
+- Walidator pięciu plików prywatnych egzekwuje zgodny z C++ zakres 64-bitowych
+  identyfikatorów kont w pliku sekretów TOTP i dzienniku anty-replay.
+- Test systemd historycznego C++ odczytuje **rzeczywiste** właściwości
+  ochrony katalogów, kernela i dopuszczalnych rodzin gniazd Unix.
+  Tymczasowa jednostka Node dodatkowo sprawdza ograniczenia i odrzuca
+  każdy nasłuch IPv6 na badanym porcie, również przy prawidłowym IPv4.
+- Wszystkie nowe przypadki negatywne należą do macierzy GitHub-hosted
+  Ubuntu 22.04/24.04/26.04. Nie zmieniamy produkcyjnego schematu v11,
+  działającej bazy, zainstalowanych usług, kluczy ani manifestów. Kontrola
+  offline nie jest zgodą Ownera na produkcyjny restore lub migrację
+  uwierzytelniania integralności magazynów.

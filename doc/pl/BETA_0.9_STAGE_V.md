@@ -2,6 +2,8 @@
 
 **Status: NO-GO.** Zmiany znajdują się na `beta-0.9.x-stage-full` w jednym roboczym [PR #243](https://github.com/adrianf87/dc24h.eu-high-starter/pull/243) dla [Issue #242](https://github.com/adrianf87/dc24h.eu-high-starter/issues/242). Kod i testy syntetyczne nie są akceptacją wydania. Nie scalać do chronionego `main`, nie tagować, nie publikować paczek, nie włączać operatorów ani nie wdrażać produkcyjnie bez osobnej zgody Właściciela.
 
+Osobne poprawki na gałęzi `beta-0.9.x-stage-full-fix-pass`, w tym przegląd CI, wydajności, zależności i bramek RC, opisuje [Fix Pass CI/RC](BETA_0.9_CI_RC_FIX_PASS.md).
+
 ## Zakres
 
 1. **0.9.17 — rzeczywiste artefakty ZIP:** skrypt `beta09_artifact_evidence.py` czyta z API GitHuba numer próby, aktualny SHA gałęzi/PR, zlecenia GitHub-hosted oraz metadane artefaktów. **Pobiera bajty ZIP** bez przekazania tokenu do serwera plików i porównuje ich SHA-256 z digestem GitHuba. Bez rozpakowania na dysk sprawdza dozwolone nazwy JSON, strukturę, SHA źródła, limity rozmiaru, symlinki, zip-slip, duplikaty i podejrzane pola prywatne. Stare raporty bez własnego SHA są jawnie liczone, nie certyfikowane osobno. Sprawdzanie `main` dopiero po osobno zatwierdzonym merge i nowych workflow.

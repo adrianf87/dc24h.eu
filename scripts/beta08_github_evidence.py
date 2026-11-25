@@ -20,6 +20,7 @@ from pathlib import Path
 
 REPO = "adrianf87/dc24h.eu-high-starter"
 BRANCH = "beta-0.8.x-stage-full"
+FIX_BRANCH = "beta-0.9.x-stage-full-fix-pass"
 IMAGES = ("ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04")
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 DIGEST = re.compile(r"sha256:[0-9a-f]{64}\Z")
@@ -33,6 +34,9 @@ WORKFLOWS = {
     "stage4-ubuntu-vm-validation.yml": {f"Stage IV VM - {image}" for image in IMAGES},
     "beta07-codeql.yml": {f"CodeQL C++ and TypeScript - {image}" for image in IMAGES},
     "beta08-hardening.yml": {"TSAN - ubuntu-24.04", "ADC parser fuzz - ubuntu-24.04"},
+}
+RC_WORKFLOWS = {
+    "beta09-stage4-storage.yml": {f"Stage IV private storage - {image}" for image in IMAGES},
 }
 
 
@@ -78,16 +82,18 @@ def _current_branch(get, sha, branch=BRANCH):
 
 def evaluate(get, sha, branch=BRANCH, event="pull_request", artifact_callback=None):
     if (not isinstance(sha, str) or not SHA.fullmatch(sha) or
-            sha == "0" * 40 or branch not in (BRANCH, "beta-0.9.x-stage-full", "main") or
+            sha == "0" * 40 or branch not in (BRANCH, "beta-0.9.x-stage-full", FIX_BRANCH, "main") or
             event not in ("pull_request", "push") or
-            (event == "push") != (branch == "main")):
+            (event == "push") != (branch in ("main", FIX_BRANCH))):
         raise ValueError("Invalid exact source head or development branch")
     # An old, entirely green run is not final-head evidence after a new push.
     # Re-read the authoritative branch at the end to catch concurrent updates.
     _current_branch(get, sha, branch)
     runs = _collection(get(f"/actions/runs?head_sha={sha}&per_page=100"), "workflow_runs")
     selected = {}
-    for workflow in WORKFLOWS:
+    required = ({**WORKFLOWS, **RC_WORKFLOWS} if branch in
+                ("beta-0.9.x-stage-full", FIX_BRANCH, "main") else WORKFLOWS)
+    for workflow in required:
         matching = [r for r in runs if isinstance(r, dict) and
                     r.get("path", "").split("@", 1)[0] == f".github/workflows/{workflow}" and
                     r.get("head_sha") == sha and r.get("head_branch") == branch and
@@ -112,7 +118,7 @@ def evaluate(get, sha, branch=BRANCH, event="pull_request", artifact_callback=No
             name = job.get("name")
             image = next((image for image in IMAGES if name and name.endswith(image)),
                          "ubuntu-24.04" if name == "CI (C++ and WebAdmin)" else None)
-            if (name not in WORKFLOWS[workflow] or name in identities or image is None or
+            if (name not in required[workflow] or name in identities or image is None or
                     job.get("head_sha") != sha or job.get("run_id") != run_id or
                     job.get("status") != "completed" or job.get("conclusion") != "success" or
                     not isinstance(job.get("labels"), list) or image not in job["labels"]):
@@ -122,7 +128,7 @@ def evaluate(get, sha, branch=BRANCH, event="pull_request", artifact_callback=No
             if end < start:
                 raise ValueError("Invalid workflow attempt job time window")
             job_windows.append((start, end))
-        if identities != WORKFLOWS[workflow]:
+        if identities != required[workflow]:
             raise ValueError("Incomplete exact-attempt workflow job matrix")
         artifacts = _collection(get(f"/actions/runs/{run_id}/artifacts?per_page=100"), "artifacts")
         expected = _expected_artifacts(workflow, run_id, attempt)

@@ -41,3 +41,22 @@ Existing gateway, incident-journal, parser and security-monitor regressions are 
 ## Status and evidence limits
 
 Local Node, TypeScript and no-mount faults are runnable without credentials. **Actual ENOSPC and browser execution require GitHub-hosted runner evidence on an exact SHA**, plus integration with unfinished Stage II/III changes. Required full C++/WebAdmin/Chromium, VM/systemd, recovery/dpkg, sanitizers/security, and final-head workflow status cannot be inferred from this patch or a pending CI run. Do not mark accepted while checks are missing, skipped, failed or for the wrong commit. Per Owner: after committing and triggering CI, **stop without polling or waiting**.
+
+## Fix-pass follow-up — archive paths and disk-write refusal
+
+- The offline audit archival tool now pins every parent directory and source
+  inode, refuses FIFO/symlink aliases, and bounds and rechecks the copied file
+  before publication. A same-directory **no-replace hard-link publication**
+  fails with `EEXIST` if a concurrent actor creates the archive destination;
+  it cannot replace that preexisting content. The active audit chain is kept.
+- The optional redacted incident journal now uses the same Linux private
+  directory-FD operations for read, initialization, partial writes, rename,
+  cleanup and parent `fsync`. It refuses ancestor replacement and verifies
+  its descriptor/path identity after a read.
+- Disposable `LD_PRELOAD` tests additionally inject **real `fsync` EIO** into
+  an archive and an incident journal *partial file*, verify refusal, removal
+  of temporary output and preservation of the last verified source. The
+  original audit `ENOSPC`, `EIO` and post-`fsync` crash coverage remains.
+- This does **not** introduce a versioned audit rollover, signed checkpoint,
+  crash-atomic six-store transaction, live restore or change to the 8 MiB
+  limit. Owner approval and exact-head hosted Ubuntu evidence remain required.

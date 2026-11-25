@@ -44,7 +44,9 @@ def safe_report(name):
                       dependency_exceptions=[], raw_advisories_exported=False)
     if name == "beta09-security-envelope.json":
         profiles = {profile: {"windows": 3, "samples": 3 * policy["requests"],
-                              "failed_requests": 0, "ci_regression_envelope_passed": True}
+                              "failed_requests": 0, "ci_regression_envelope_passed": True,
+                              "max_observed_p99_ms": 12.0, "min_success_rps": 8.0,
+                              "max_cpu_percent_one_core": 10.0, "rss_growth_kib": 1024.0}
                     for profile, policy in gate.perf.POLICY.items()}
         report.update(profiles=profiles, within_profile_regression_envelope_passed=True,
                       all_required_faults_bounded=True,
@@ -72,10 +74,8 @@ def safe_report(name):
 
 
 def fixture(mode="pr"):
-    data = copy.deepcopy(previous_fixture())
-    branch = gate.BRANCH if mode == "pr" else "main"
-    data.pop("/branches/beta-0.8.x-stage-full")
-    data[f"/branches/{branch}"] = {"name": branch, "commit": {"sha": SHA}}
+    branch = gate.BRANCH if mode == "pr" else gate.FIX_BRANCH if mode == "fix-pass" else "main"
+    data = previous_fixture(branch, "pull_request" if mode == "pr" else "push")
     data[f"/pulls/{gate.PR}"] = {
         "state": "open", "head": {"ref": gate.BRANCH, "sha": SHA,
                                   "repo": {"full_name": gate.prior.REPO}},
@@ -98,6 +98,26 @@ def fixture(mode="pr"):
 
 
 class IndependentArtifactTests(unittest.TestCase):
+    def test_fix_pass_push_is_verified_without_fake_pr(self):
+        data, archives = fixture("fix-pass")
+        data.pop(f"/pulls/{gate.PR}")
+        result = gate.evaluate(lambda key: data[key], lambda i: archives[i], SHA, "fix-pass")
+        self.assertEqual(result["branch"], gate.FIX_BRANCH)
+        self.assertIn("beta09-stage4-storage.yml", result["workflow_run_ids"])
+        self.assertFalse(result["merge_authorized"])
+
+    def test_performance_envelope_rejects_low_rps_or_unbounded_rss(self):
+        name = "beta09-security-envelope.json"
+        report = safe_report(name)
+        for profile in ("adc", "adcs", "authenticated_https"):
+            changed = copy.deepcopy(report)
+            changed["profiles"][profile]["min_success_rps"] = 0.0
+            with self.subTest(profile=profile), self.assertRaises(ValueError):
+                gate._report_semantics(name, changed)
+        report["profiles"]["adcs"]["rss_growth_kib"] = 9999999
+        with self.assertRaises(ValueError):
+            gate._report_semantics(name, report)
+
     def test_all_synthetic_artifacts_are_checked_without_owner_authorization(self):
         data, archives = fixture()
         outcome = gate.evaluate(lambda key: data[key], lambda i: archives[i], SHA)

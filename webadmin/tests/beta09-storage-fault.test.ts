@@ -1,11 +1,15 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawnSync, type SpawnSyncReturns } from "node:child_process";
 import { constants, closeSync, existsSync, fsyncSync, mkdtempSync, openSync,
   readFileSync, rmSync, statfsSync, writeSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
 import { initializeRemoteAuditStore, openRemoteAuditStore } from "../server/remote-audit-store.ts";
+import { initializeIncidentJournal } from "../server/remote-incident-journal.ts";
+
+const childLoader = process.execArgv.includes("--experimental-strip-types") ?
+  ["--experimental-strip-types"] : ["--import", "tsx"];
 
 test("SIGKILL immediately after fsync preserves the exact audit chain on restart", () => {
   const dir = mkdtempSync(join(tmpdir(), "dc24h-beta09-crash-"));
@@ -13,7 +17,7 @@ test("SIGKILL immediately after fsync preserves the exact audit chain on restart
   try {
     initializeRemoteAuditStore(path);
     const child = spawnSync(process.execPath,
-      ["--import", "tsx", "tests/beta09-audit-fault-child.ts", "crash-after-fsync", path],
+      [...childLoader, "tests/beta09-audit-fault-child.ts", "crash-after-fsync", path],
       { cwd: resolve("."), timeout: 10_000, encoding: "utf8" });
     assert.equal(child.signal, "SIGKILL", child.stderr);
     const reopened = openRemoteAuditStore(path);
@@ -72,7 +76,7 @@ test("injected kernel-facing fsync EIO denies audit success without retries",
     try {
       initializeRemoteAuditStore(path);
       const child = spawnSync(process.execPath,
-        ["--import", "tsx", "tests/beta09-audit-fault-child.ts", "fsync-error", path],
+        [...childLoader, "tests/beta09-audit-fault-child.ts", "fsync-error", path],
         { cwd: resolve("."), timeout: 10_000, encoding: "utf8", env: { ...process.env,
           LD_PRELOAD: shim, DC24H_BETA09_FSYNC_TARGET: path } });
       assert.equal(child.status, 0, child.stderr);
@@ -80,4 +84,28 @@ test("injected kernel-facing fsync EIO denies audit success without retries",
       // The failed fsync may still leave bytes in cache. Treat that as an
       // uncertain audit generation, not proof of durable success.
     } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
+
+test("fsync EIO during archive and incident partial writes never commits a false success",
+  { skip: !shim }, () => {
+    assert.ok(shim && existsSync(shim));
+    for (const mode of ["archive-eio", "incident-eio"] as const) {
+      const dir = mkdtempSync(join(tmpdir(), "dc24h-beta09-private-eio-"));
+      const path = join(dir, mode === "archive-eio" ? "audit.jsonl" : "incidents.json");
+      try {
+        if (mode === "archive-eio") {
+          initializeRemoteAuditStore(path);
+          const writer = openRemoteAuditStore(path);
+          writer.append("login_refused", 1_700_000_000_000);
+          writer.close();
+        } else initializeIncidentJournal(path);
+        const prefix = mode === "archive-eio" ? path + ".archive.partial-" : path + ".partial-";
+        const child: SpawnSyncReturns<string> = spawnSync(process.execPath,
+          [...childLoader, "tests/beta09-private-fault-child.ts", mode, path],
+          { cwd: resolve("."), timeout: 10_000, encoding: "utf8", env: { ...process.env,
+            LD_PRELOAD: shim, DC24H_BETA09_FSYNC_TARGET_PREFIX: prefix } });
+        assert.equal(child.status, 0, child.stderr);
+        assert.match(child.stdout, /private partial fsync EIO refused/);
+      } finally { rmSync(dir, { recursive: true, force: true }); }
+    }
   });

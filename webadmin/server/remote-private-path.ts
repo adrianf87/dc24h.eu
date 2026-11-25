@@ -1,6 +1,6 @@
 // Shared, Linux-only validation for owner-private gateway catalogs. A leaf
 // O_NOFOLLOW alone does not protect an intermediate directory rename.
-import { closeSync, constants, fstatSync, fsyncSync, lstatSync, openSync, renameSync, unlinkSync } from "node:fs";
+import { closeSync, constants, fstatSync, fsyncSync, linkSync, lstatSync, openSync, renameSync, unlinkSync } from "node:fs";
 import type { Stats } from "node:fs";
 import { basename, dirname, isAbsolute, normalize, sep } from "node:path";
 
@@ -90,6 +90,20 @@ export function renamePrivateLeaf(from: string, to: string): void {
   if (dirname(from) !== dirname(to)) throw Error("Private rename must remain in one directory");
   withPinnedPrivateParent(from, (source, dirFd) => {
     renameSync(source, `/proc/self/fd/${dirFd}/${basename(to)}`);
+  });
+}
+
+// Immutable offline archives must never overwrite a destination created
+// between an earlier existence check and publication. A same-directory hard
+// link is atomic and returns EEXIST rather than replacing the existing leaf.
+// Remove the temporary name before syncing the containing directory.
+export function publishPrivateLeafNoReplace(from: string, to: string): void {
+  checkLeaf(from);
+  checkLeaf(to);
+  if (dirname(from) !== dirname(to)) throw Error("Private publication must remain in one directory");
+  withPinnedPrivateParent(from, (source, dirFd) => {
+    linkSync(source, `/proc/self/fd/${dirFd}/${basename(to)}`);
+    unlinkSync(source);
   });
 }
 

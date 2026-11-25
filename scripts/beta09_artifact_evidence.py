@@ -26,6 +26,7 @@ import beta09_os_provenance as host
 
 
 BRANCH = "beta-0.9.x-stage-full"
+FIX_BRANCH = "beta-0.9.x-stage-full-fix-pass"
 PR = 243
 MAX_ARCHIVE = 16 * 1024 * 1024
 MAX_ENTRY = 256 * 1024
@@ -132,12 +133,7 @@ def _report_semantics(name, report):
                 report.get("production_sla_or_capacity_approved") is not False):
             raise ValueError("Missing bounded three-transport CI envelope")
         for profile, policy in perf.POLICY.items():
-            values = profiles[profile]
-            if (not isinstance(values, dict) or values.get("windows") != 3 or
-                    values.get("samples") != 3 * policy["requests"] or
-                    values.get("failed_requests") != 0 or
-                    values.get("ci_regression_envelope_passed") is not True):
-                raise ValueError("Incomplete/nonfinite transport window evidence")
+            perf.validate_profile_summary(profile, profiles[profile])
     if name == "beta09-stage3-gate.json":
         if (not all(report.get(field) is True for field in (
                 "beta_0_9_9_old_installed_cpp_auth_browser_verified",
@@ -228,9 +224,10 @@ def _verify_pr(get, sha):
 
 
 def evaluate(get, download, sha, mode="pr"):
-    if not isinstance(sha, str) or not SHA.fullmatch(sha) or mode not in ("pr", "main"):
+    if not isinstance(sha, str) or not SHA.fullmatch(sha) or mode not in ("pr", "fix-pass", "main"):
         raise ValueError("Invalid final source SHA or review mode")
-    branch, event = (BRANCH, "pull_request") if mode == "pr" else ("main", "push")
+    branch, event = ((BRANCH, "pull_request") if mode == "pr" else
+                     (FIX_BRANCH if mode == "fix-pass" else "main", "push"))
     if mode == "pr":
         _verify_pr(get, sha)
     count, size, reports, unbound = 0, 0, 0, 0
@@ -267,7 +264,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--sha", required=True)
-    parser.add_argument("--mode", choices=("pr", "main"), default="pr")
+    parser.add_argument("--mode", choices=("pr", "fix-pass", "main"), default="pr")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
     token = os.environ.get("GITHUB_TOKEN", "")

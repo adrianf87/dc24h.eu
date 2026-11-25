@@ -14,7 +14,7 @@ ADCS wraps the ADC byte stream in TLS; it does not add a second ADC dialect or S
 
 `adcs::Context` owns an OpenSSL server context. It loads a PEM full certificate chain and matching unencrypted PEM private key before opening ports. Invalid, missing, mismatched or password-encrypted keys fail startup without readiness logs or interactive password prompts. This checks loadability and key correspondence; clients are responsible for certificate trust, hostname and validity verification. No mutual TLS is requested.
 
-The transport requires TLS 1.2 or newer, disables compression and renegotiation, and disables the server's in-memory session cache. Cipher selection follows the installed OpenSSL security policy. It does not provide application identity or password authentication. TLS 1.3 may use stateless session tickets.
+The transport requires TLS 1.2 or newer, disables compression and renegotiation, and disables the server's in-memory session cache **and TLS session tickets** (including TLS 1.3). The listener offers only the configured AEAD suites. A CA certificate cannot be used as the listener leaf; an explicit key-usage extension must permit digitalSignature for the configured ECDHE suites. Clients still independently verify the certificate chain, expected host and trust anchor. TLS alone does not provide ADC account authentication or permission grants.
 
 ```sh
 # TLS only; no plaintext listener is implicitly retained.
@@ -33,6 +33,7 @@ For a disposable local test certificate (never use the generated key as a produc
 umask 077
 openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
   -subj /CN=localhost -addext 'subjectAltName=DNS:localhost,IP:127.0.0.1' \
+  -addext 'basicConstraints=critical,CA:FALSE' \
   -addext 'keyUsage=digitalSignature,keyEncipherment' \
   -addext 'extendedKeyUsage=serverAuth' \
   -keyout /tmp/dc24h-test-key.pem -out /tmp/dc24h-test-cert.pem

@@ -2,11 +2,12 @@
 // store, an audit replacement, or proof that the hub is currently healthy.
 // Persist only fixed aggregate event names and timestamps, never raw audit.
 import { createHash, randomBytes } from "node:crypto";
-import { constants, closeSync, fstatSync, fsyncSync, lstatSync, openSync,
-  readFileSync, renameSync, unlinkSync, writeSync } from "node:fs";
-import { dirname, isAbsolute, resolve } from "node:path";
+import { constants, closeSync, fstatSync, fsyncSync,
+  readFileSync, writeSync } from "node:fs";
+import { isAbsolute, resolve } from "node:path";
 import type { RedactedEvent, RedactedEventKind } from "./remote-observability.ts";
-import { assertPrivateParent } from "./remote-private-path.ts";
+import { assertPrivateParent, lstatPrivateLeaf, openPrivateLeaf, renamePrivateLeaf,
+  syncPrivateParent, unlinkPrivateLeaf } from "./remote-private-path.ts";
 
 const kinds = new Set<RedactedEventKind>([
   "hub_started", "hub_stopped", "transport_refusals", "login_refusals", "rate_limit_refusals",
@@ -57,8 +58,8 @@ function sameGeneration(a: JournalSnapshot, b: JournalSnapshot): boolean {
 
 function readSnapshot(path: string): JournalSnapshot {
   assertParent(path);
-  const stat = lstatSync(path);
-  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+  const stat = lstatPrivateLeaf(path);
+  const fd = openPrivateLeaf(path, constants.O_RDONLY | constants.O_NONBLOCK);
   try {
     const opened = fstatSync(fd);
     if (!stat.isFile() || !opened.isFile() || stat.ino !== opened.ino ||
@@ -68,26 +69,27 @@ function readSnapshot(path: string): JournalSnapshot {
       throw Error("Unsafe incident journal");
     const bytes = readFileSync(fd);
     try {
-      if (bytes.length !== opened.size) throw Error("Incident journal changed during read");
+      const after = fstatSync(fd), latest = lstatPrivateLeaf(path);
+      if (bytes.length !== opened.size || after.dev !== opened.dev || after.ino !== opened.ino ||
+          after.size !== opened.size || after.mtimeMs !== opened.mtimeMs ||
+          after.ctimeMs !== opened.ctimeMs || latest.dev !== opened.dev ||
+          latest.ino !== opened.ino || latest.size !== opened.size)
+        throw Error("Incident journal changed during read");
       return { value: decode(bytes), fingerprint: createHash("sha256").update(bytes).digest("hex"),
         identity: { dev: opened.dev, ino: opened.ino } };
     } finally { bytes.fill(0); }
   } finally { closeSync(fd); }
 }
 
-function syncDirectory(path: string): void {
-  const fd = openSync(dirname(path), constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
-  try { fsyncSync(fd); } finally { closeSync(fd); }
-}
-
 export function initializeIncidentJournal(path: string): void {
   assertParent(path);
-  const fd = openSync(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+  const fd = openPrivateLeaf(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL, 0o600);
   try {
-    writeSync(fd, Buffer.from('{"schema":1,"events":[]}\n'));
+    const bytes = Buffer.from('{"schema":1,"events":[]}\n');
+    if (writeSync(fd, bytes) !== bytes.length) throw Error("Short incident initialization write");
     fsyncSync(fd);
   } finally { closeSync(fd); }
-  syncDirectory(path);
+  syncPrivateParent(path);
 }
 
 export function openIncidentJournal(path: string, now: () => number = Date.now) {
@@ -128,7 +130,7 @@ export function openIncidentJournal(path: string, now: () => number = Date.now) 
       try {
         if (bytes.length > maxBytes) throw Error("Incident journal full");
         temporary = path + ".partial-" + randomBytes(8).toString("hex");
-        const fd = openSync(temporary, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+        const fd = openPrivateLeaf(temporary, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL, 0o600);
         try {
           if (writeSync(fd, bytes) !== bytes.length) throw Error("Short incident write");
           fsyncSync(fd);
@@ -136,13 +138,13 @@ export function openIncidentJournal(path: string, now: () => number = Date.now) 
         // A changed/aliased destination must not be silently replaced.
         if (!sameGeneration(readSnapshot(path), current))
           throw Error("Incident destination changed");
-        renameSync(temporary, path);
+        renamePrivateLeaf(temporary, path);
         temporary = undefined;
-        syncDirectory(path);
+        syncPrivateParent(path);
         current = readSnapshot(path);
       } finally { bytes.fill(0); }
     } catch (error) { healthy = false; throw error; }
-    finally { if (temporary) { try { unlinkSync(temporary); } catch { /* Own partial only. */ } } }
+    finally { if (temporary) { try { unlinkPrivateLeaf(temporary); } catch { /* Own partial only. */ } } }
   };
   return { append, read, unavailable: () => { healthy = false; } };
 }

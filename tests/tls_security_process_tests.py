@@ -213,6 +213,27 @@ class TlsSecurityProcessTests(unittest.TestCase):
             self.assertIn(b'TLS certificate is not valid at startup', started.stderr)
             self.assertNotIn(b'listening on', started.stderr)
 
+    def test_ca_leaf_and_non_signing_usage_fail_before_adcs_listen(self):
+        """A CA private key or non-signing ECDHE leaf is never used as a hub server identity."""
+        with tempfile.TemporaryDirectory(prefix='dc24h-tls-leaf-role-') as directory:
+            for name, extensions in (
+                ('ca-leaf', ('basicConstraints=critical,CA:TRUE',
+                             'keyUsage=digitalSignature,keyEncipherment', 'extendedKeyUsage=serverAuth')),
+                ('encipher-only', ('basicConstraints=critical,CA:FALSE',
+                                   'keyUsage=keyEncipherment', 'extendedKeyUsage=serverAuth')),
+            ):
+                with self.subTest(name=name):
+                    cert, key = openssl_cert(directory, name, '-days', '1',
+                                             *(item for ext in extensions for item in ('-addext', ext)))
+                    checked = subprocess.run(
+                        [BINARY, '--check-config', '--adcs-listen', '127.0.0.1:0',
+                         '--tls-cert', cert, '--tls-key', key],
+                        capture_output=True, timeout=5, stdin=subprocess.DEVNULL)
+                    self.assertNotEqual(checked.returncode, 0)
+                    self.assertNotIn(b'listening on', checked.stderr)
+                    self.assertNotIn(b'BEGIN PRIVATE KEY', checked.stderr)
+                    self.assertNotIn(b'BEGIN CERTIFICATE', checked.stderr)
+
     def test_current_leaf_checks_and_aead_only_without_resumption(self):
         with tempfile.TemporaryDirectory(prefix='dc24h-tls-aead-') as directory:
             cert, key = credentials(directory)

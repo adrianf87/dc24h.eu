@@ -39,3 +39,22 @@ Powtórzone testy świeżości C++, restartu i prywatnej historii. Rozszerzony t
 ## Odbiór i dalsze kroki
 
 Nie uruchamiać produkcyjnej rotacji, zmiany formatu, migracji kluczy, release, merge ani wdrożenia. Wymagane są wyniki CI na **dokładnym SHA** dla GitHub Ubuntu 22/24/26 oraz pełna integracja z pozostałymi etapami (C++, Node, Chromium, VM/systemd, odtwarzanie, narzędzia bezpieczeństwa). Samo uruchomienie CI nie oznacza akceptacji. Zgodnie z OWNER po wypchnięciu zmian **zakończyć pracę bez oczekiwania i odpytywania o wyniki**.
+
+## Kolejny Fix Pass — audyt, pliki prywatne i awarie dysku
+
+- Archiwizacja audytu przypina wszystkie katalogi oraz plik źródłowy,
+  odrzuca symlinki i FIFO, sprawdza granice kopii i jej tożsamość przed
+  publikacją. Nowe **atomowe publikowanie bez nadpisywania** zwraca
+  `EEXIST`, jeśli w międzyczasie powstanie plik docelowy. Oryginalny
+  łańcuch pozostaje nietknięty.
+- Opcjonalny dziennik incydentów stosuje te same operacje na przypiętym
+  deskryptorze katalogu do odczytu, zapisu, zmiany nazwy i `fsync`.
+  Podmiana katalogu lub pliku kończy się odmową i nie może skierować zapisu
+  do obcego katalogu.
+- Dodatkowe izolowane testy wywołują **EIO podczas `fsync`** częściowego
+  archiwum i dziennika; wymagają braku fałszywego sukcesu, usunięcia
+  pozostałości po nieudanym zapisie i zachowania oryginalnych danych.
+  Istniejące próby `ENOSPC` i `SIGKILL` pozostają w CI.
+- Nadal nie włączamy rotacji audytu, nowego formatu, niezależnego klucza
+  checkpointu ani przywracania produkcyjnego. Wymagana jest osobna decyzja
+  Ownera i dowody CI z dokładnego SHA na GitHub-hosted Ubuntu.

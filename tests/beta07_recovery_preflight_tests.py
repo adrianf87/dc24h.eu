@@ -20,9 +20,10 @@ class StageOnePreflightTests(unittest.TestCase):
         # Textual unit fixture matches the fixed mariadb-dump migration row
         # shape; it does not claim to be an executable SQL schema. Hosted VM
         # tests separately check an actual MariaDB dump and imported C++ v11.
+        identities = preflight.expected_migration_identities()
         rows = ",".join(
-            f"({version},'migration_{version}','{'a' * 64}','2026-11-24 00:00:00','applied')"
-            for version in range(1, 12))
+            f"({version},'{name.decode()}','{checksum.decode()}','2026-11-24 00:00:00','applied')"
+            for version, (name, checksum) in identities.items())
         dump.write_text("CREATE TABLE `dc24h_schema_migrations` (\n"
                         "  `version` int unsigned NOT NULL\n);\n"
                         f"INSERT INTO `dc24h_schema_migrations` VALUES {rows};\n")
@@ -38,6 +39,7 @@ class StageOnePreflightTests(unittest.TestCase):
             self.assertEqual(result["verified_components"], 6)
             self.assertEqual(result["sql_export_applied_migration_rows"], 11)
             self.assertTrue(result["sql_export_shape_checked"])
+            self.assertTrue(result["sql_export_migration_identity_checked"])
             self.assertEqual(result["fresh_targets_checked"], 2)
             self.assertFalse(result["restore_performed"])
             self.assertFalse(result["schema_v11_verified_after_import"])
@@ -106,7 +108,7 @@ class StageOnePreflightTests(unittest.TestCase):
             # Every altered SQL generation gets its own valid *new* hash pair;
             # hash validity must not substitute for a schema-version check.
             for forged in (b"CREATE TABLE `fixture` (id INT);\n",
-                           dump.read_bytes().replace(b"(11,'migration_11'", b"(12,'migration_11'"),
+                           dump.read_bytes().replace(b"(11,'hub_service_audit'", b"(12,'hub_service_audit'"),
                            dump.read_bytes().replace(b"'applied')", b"'applying')", 1)):
                 with self.subTest(forged=forged[:16]):
                     dump.write_bytes(forged)
@@ -116,6 +118,26 @@ class StageOnePreflightTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         preflight.preflight(dump, snapshot, fresh_pair, "a" * 40, sql, private_target)
             self.assertFalse(sql.exists() or private_target.exists())
+
+    def test_matching_pair_with_wrong_migration_name_or_checksum_is_not_restorable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dump, snapshot, _pair_dir = self.create(root)
+            original = dump.read_bytes()
+            identities = preflight.expected_migration_identities()
+            name, checksum = identities[11]
+            for altered in (original.replace(name, b"unrelated_catalog", 1),
+                            original.replace(checksum, b"f" * 64, 1)):
+                self.assertNotEqual(altered, original)
+                dump.write_bytes(altered)
+                pair_dir = root / ("bad-pair-" + str(len(list(root.glob("bad-pair-*")))))
+                pair_dir.mkdir(mode=0o700)
+                preflight.pair.create_pair(dump, snapshot, pair_dir, "a" * 40)
+                with self.assertRaisesRegex(ValueError, "migration identity"):
+                    preflight.preflight(dump, snapshot, pair_dir, "a" * 40,
+                                        root / "fresh-db", root / "fresh-private")
+                self.assertFalse((root / "fresh-db").exists())
+                self.assertFalse((root / "fresh-private").exists())
 
     def test_sql_scan_refuses_symlink_fifo_and_world_readable_input(self):
         with tempfile.TemporaryDirectory() as directory:

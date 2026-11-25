@@ -24,8 +24,8 @@ class StageThreeRecoveryTests(unittest.TestCase):
     def fixture(self, root):
         dump, snapshot, pair_dir = offline_fixture(root)
         rows = ",".join(
-            f"({version},'migration_{version}','{'a' * 64}','2026-11-24 00:00:00','applied')"
-            for version in range(1, 12))
+            f"({version},'{name.decode()}','{checksum.decode()}','2026-11-24 00:00:00','applied')"
+            for version, (name, checksum) in preflight.expected_migration_identities().items())
         dump.write_text("CREATE TABLE `dc24h_schema_migrations` (\n"
                         "  `version` int unsigned NOT NULL\n);\n"
                         f"INSERT INTO `dc24h_schema_migrations` VALUES {rows};\n")

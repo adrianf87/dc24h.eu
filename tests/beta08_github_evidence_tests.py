@@ -12,15 +12,17 @@ import beta08_github_evidence as gate
 SHA = "a" * 40
 
 
-def fixture():
+def fixture(branch=gate.BRANCH, event="pull_request"):
     data = {}
-    data[f"/branches/{gate.BRANCH}"] = {"name": gate.BRANCH, "commit": {"sha": SHA}}
+    data[f"/branches/{branch}"] = {"name": branch, "commit": {"sha": SHA}}
     runs = []
-    for index, (workflow, names) in enumerate(gate.WORKFLOWS.items(), start=1):
+    required = ({**gate.WORKFLOWS, **gate.RC_WORKFLOWS} if branch in
+                ("beta-0.9.x-stage-full", gate.FIX_BRANCH, "main") else gate.WORKFLOWS)
+    for index, (workflow, names) in enumerate(required.items(), start=1):
         run_id, attempt = 700 + index, 2
         runs.append({"id": run_id, "run_attempt": attempt,
                      "path": f".github/workflows/{workflow}@refs/pull/241/merge",
-                     "head_sha": SHA, "head_branch": gate.BRANCH, "event": "pull_request",
+                     "head_sha": SHA, "head_branch": branch, "event": event,
                      "repository": {"full_name": gate.REPO},
                      "status": "completed", "conclusion": "success"})
         jobs = []
@@ -36,7 +38,7 @@ def fixture():
             {"id": run_id * 100 + artifact_index, "name": name,
              "digest": "sha256:" + "b" * 64, "expired": False,
              "size_in_bytes": 100, "created_at": "2026-11-24T20:04:00Z",
-             "workflow_run": {"id": run_id, "head_sha": SHA, "head_branch": gate.BRANCH}}
+             "workflow_run": {"id": run_id, "head_sha": SHA, "head_branch": branch}}
             for artifact_index, name in enumerate(
                 sorted(gate._expected_artifacts(workflow, run_id, attempt)), start=1)]
         data[f"/actions/runs/{run_id}/artifacts?per_page=100"] = {
@@ -47,6 +49,17 @@ def fixture():
 
 
 class AuthenticatedEvidenceTests(unittest.TestCase):
+    def test_fix_pass_requires_all_hosted_storage_jobs_and_rejects_wrong_event(self):
+        data = fixture(gate.FIX_BRANCH, "push")
+        result = gate.evaluate(lambda key: data[key], SHA, branch=gate.FIX_BRANCH, event="push")
+        self.assertIn("beta09-stage4-storage.yml", result["verified_workflows"])
+        data["/actions/runs/705/attempts/2/jobs?per_page=100"]["jobs"][0]["conclusion"] = "skipped"
+        with self.assertRaises(ValueError):
+            gate.evaluate(lambda key: data[key], SHA, branch=gate.FIX_BRANCH, event="push")
+        data = fixture(gate.FIX_BRANCH, "pull_request")
+        with self.assertRaises(ValueError):
+            gate.evaluate(lambda key: data[key], SHA, branch=gate.FIX_BRANCH, event="push")
+
     def test_complete_synthetic_records_describe_only_read_only_evidence(self):
         data = fixture()
         report = gate.evaluate(lambda key: data[key], SHA)

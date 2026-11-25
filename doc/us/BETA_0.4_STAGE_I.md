@@ -80,10 +80,13 @@ Operator procedure (all paths absolute and private, directory 0700/files 0600):
    ```
 
 4. For a genuinely lost factor, require a documented, independent identity
-   check and two-person operator approval. Place only `schema`, `actor`,
-   `new_seed`, `new_code` in the request and add `--recovery`. There is no
-   browser recovery or OTP bypass. Record the event in the operator's separate
-   incident log, review account passwords/grants, and restart the gateway.
+   check and two-person operator approval. Include `schema`, `actor`,
+   `new_seed`, `new_code` and `"approvers":["operator-one","operator-two"]`
+   in the private request (omit `old_code`) and add `--recovery`. Distinct
+   operator names are acknowledgments, **not cryptographic proof of approval**.
+   There is no browser recovery or OTP bypass. Record the event in the
+   operator's separate incident log, review account passwords/grants, and
+   restart the gateway.
 5. Verify that the old code fails, the new code works after any consumed step,
    local-only origin restrictions still apply, and no sessions survived the
    restart. Remove the request file under the operator's data-removal policy.
@@ -104,6 +107,9 @@ cached verifier until restart. Do not use it on a running service.
 Never rotate enrollment during service operation or share a recovery seed
 through untrusted chat. Neither this helper nor the local trust boundary can
 prove an operator actually followed the independent verification process.
+Request paths must be canonical and absolute; no intermediate path component
+may be a symlink. The helper refuses unsafe ownership/permissions, hard links
+and request-file replacement during reading.
 
 ## beta-0.4.4 — Audit Foundation
 

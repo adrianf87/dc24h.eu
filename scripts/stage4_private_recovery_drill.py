@@ -347,7 +347,7 @@ def validate_format(name, data):
         for line in data[:-1].split(b"\n") if data else []:
             row = json.loads(line)
             if not isinstance(row, dict) or set(row) not in ({"actor", "step"}, {"actor", "step", "nonce"}) or (
-                not safe_actor(row["actor"]) or not safe_time(row["step"]) or
+                not safe_actor(row["actor"], True) or not safe_time(row["step"]) or
                 ("nonce" in row and (not isinstance(row["nonce"], str) or
                     not re.fullmatch(r"[0-9a-f]{32}", row["nonce"])))):
                 raise ValueError("Invalid replay ledger")
@@ -361,7 +361,7 @@ def validate_format(name, data):
         if name == "mfa.json" and (set(obj) != {"schema", "accounts"} or
             not 1 <= len(obj["accounts"]) <= 64 or
             len({seed for seed in obj["accounts"].values() if isinstance(seed, str)}) != len(obj["accounts"]) or
-            any(not safe_actor(actor) or not isinstance(seed, str) or
+            any(not safe_actor(actor, True) or not isinstance(seed, str) or
                 not re.fullmatch(r"[A-Z2-7]{32}(?:[A-Z2-7]{8}){0,4}", seed)
                 for actor, seed in obj["accounts"].items())):
             raise ValueError("Invalid private MFA catalog")
