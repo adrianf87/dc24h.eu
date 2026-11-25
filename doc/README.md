@@ -1,4 +1,4 @@
-# dc24h.eu High Starter technical documentation
+# dc24h.eu-twilight technical documentation
 
 Current development version: beta-0.9.20 (draft, awaiting exact-head CI, all stage/fix gates and Owner decision).
 
