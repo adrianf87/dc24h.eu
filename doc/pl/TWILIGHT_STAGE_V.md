@@ -1,6 +1,6 @@
 # dc24h.eu-twilight — Etap V: dokumentacja, GitHub, pochodzenie i komunikacja
 
-**Stan: dokumentacja PL/EN i ustawienia GitHub zweryfikowane 2026-11-25; końcowy CI oraz formalny odbiór OWNER oczekują.** Jest to etap **P1 dokumentacyjny**; nie aktualizuje wersji wykonywalnej, API ani prywatnego stanu. [Zadanie #1](https://github.com/adrianf87/dc24h.eu-twilight/issues/1) · [Draft PR #9](https://github.com/adrianf87/dc24h.eu-twilight/pull/9). W pełnym rebrandingu **Etap VI nadal pozostaje NO-GO**.
+**Stan: formalna akceptacja OWNER zakresu Etapu V z 2026-11-25, zapisana w Issue #1.** Dokumentację PL/EN i ustawienia GitHub zweryfikowano, a CI dla SHA `9ba51d6` zakończyło się powodzeniem (23/23 zadań, 5/5 workflow). Nowe commity w PR wymagają własnego CI. Jest to etap **P1 dokumentacyjny**; nie aktualizuje wersji wykonywalnej, API ani prywatnego stanu. [Zadanie #1](https://github.com/adrianf87/dc24h.eu-twilight/issues/1) · [Draft PR #9](https://github.com/adrianf87/dc24h.eu-twilight/pull/9). Scalenie odroczono do zakończenia Etapu VI i odrębnej decyzji OWNER; **Etap VI nadal pozostaje NO-GO** dla wydania.
 
 ## Co jest prawdziwym stanem projektu?
 
@@ -45,4 +45,4 @@ Poniższe elementy **nie są częścią commita**. Zostały sprawdzone bezpośre
 2. GitHub About/topics/ruleset/uprawnienia aplikacji sprawdzono w GitHub. Ryzyko szerokich uprawnień Cursor przekazano do oceny OWNER; sam opis repo nie dowodzi ustawień.
 3. Ocena przez OWNER treści PL/EN, changelogu, mapy wyjątków oraz prawdziwości historycznych linków. **Odrębna zgoda na merge**, bez nowego tagu ani produkcji.
 
-**Decyzja obecna:** prace dokumentacyjne i konfiguracja About wykonane; **odbiór formalny nadal oczekuje na końcowy CI i OWNER**. **NO-GO dla nowego RC i wdrożenia.**
+**Decyzja obecna:** Etap V **zaakceptowany przez OWNER 2026-11-25**; jego zakres i ustawienia About są ukończone. Nowy HEAD PR #9 wymaga własnego CI przed merge. **NO-GO dla nowego RC i wdrożenia.**

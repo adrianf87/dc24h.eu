@@ -68,7 +68,12 @@ class TwilightStageSixPreflightTests(unittest.TestCase):
         for filename, marker, replacement in (
                 ("src/main.cpp", "dc24h.eu-twilight", "old-server"),
                 ("webadmin/index.html", "dc24h.eu-twilight", "old-name"),
-                ("webadmin/src/App.tsx", "dc24h.eu-twilight", "dc24h.eu High Starter")):
+                ("webadmin/src/App.tsx", "dc24h.eu-twilight", "dc24h.eu High Starter"),
+                ("src/adc/user_list.cpp", "NIdc24h.eu-twilight", "NIdc24h.eu"),
+                ("src/adc/user_list.cpp", "DEDirect Connect hub", "DEGuest login alpha"),
+                ("webadmin/src/languages/pl/index.ts", "Dla dc24h.eu-twilight", "Dla dc24h.eu"),
+                ("webadmin/src/languages/us/index.ts", "Built for dc24h.eu-twilight",
+                 "Built for dc24h.eu")):
             with self.subTest(filename=filename), tempfile.TemporaryDirectory() as directory:
                 root = fixture(Path(directory))
                 mutate(root, filename, marker, replacement)

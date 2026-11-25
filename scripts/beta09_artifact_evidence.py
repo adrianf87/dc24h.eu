@@ -131,7 +131,7 @@ def _report_semantics(name, report):
                 report.get("stage") != "twilight-stage-vi-static-preflight" or
                 report.get("status") != "NO-GO" or
                 report.get("os_image") not in ("ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04") or
-                report.get("active_display_files_checked") != 9 or
+                report.get("active_display_files_checked") != 12 or
                 report.get("github_workflows_checked") != 5 or
                 not all(report.get(key) is True for key in true_fields) or
                 not all(report.get(key) is False for key in false_fields)):

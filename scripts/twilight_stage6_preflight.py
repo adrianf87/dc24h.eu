@@ -21,6 +21,7 @@ IMAGES = ("ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04")
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 ACTIVE_DISPLAY = (
     "src/main.cpp",
+    "src/adc/user_list.cpp",
     "languages/pl/messages.hpp",
     "languages/us/messages.hpp",
     "include/dc24h/chat/settings.hpp",
@@ -29,6 +30,8 @@ ACTIVE_DISPLAY = (
     "webadmin/remote.html",
     "webadmin/src/App.tsx",
     "webadmin/src/remote/RemoteApp.tsx",
+    "webadmin/src/languages/pl/index.ts",
+    "webadmin/src/languages/us/index.ts",
 )
 WORKFLOWS = (
     "build.yml",
@@ -74,6 +77,13 @@ def evaluate(root, sha, os_image):
     if (read(root, "src/main.cpp").count(BRAND) != 2 or
             read(root, "webadmin/index.html").count(BRAND) != 2):
         raise ValueError("Incomplete C++ operator or WebAdmin page rebranding")
+    require(read(root, "src/adc/user_list.cpp"),
+            ('"NIdc24h.eu-twilight"', '"DEDirect Connect hub"'),
+            "ADC wire-visible hub identity")
+    require(read(root, "webadmin/src/languages/pl/index.ts"),
+            ('footer: "Dla dc24h.eu-twilight"',), "PL WebAdmin footer")
+    require(read(root, "webadmin/src/languages/us/index.ts"),
+            ('footer: "Built for dc24h.eu-twilight"',), "EN WebAdmin footer")
 
     api = read(root, "src/api/server.cpp")
     status = read(root, "webadmin/src/lib/status.ts")

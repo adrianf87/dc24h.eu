@@ -1,6 +1,6 @@
 # dc24h.eu-twilight — Stage V: documentation, GitHub, provenance and communications
 
-**Status: bilingual documentation and GitHub settings verified on 2026-11-25; final CI and formal OWNER acceptance pending.** This is the **P1 documentation** stage; it does not change runtime version, API contracts or private state. [Issue #1](https://github.com/adrianf87/dc24h.eu-twilight/issues/1) · [Draft PR #9](https://github.com/adrianf87/dc24h.eu-twilight/pull/9). Stage VI **remains a release NO-GO**.
+**Status: formal OWNER acceptance of Stage V scope recorded in Issue #1 on 2026-11-25.** Bilingual docs and GitHub settings were reviewed; CI for SHA `9ba51d6` passed (23/23 jobs, 5/5 workflows). Any subsequent PR commit needs its own exact-head CI. This is the **P1 documentation** stage; it does not change runtime version, API contracts or private state. [Issue #1](https://github.com/adrianf87/dc24h.eu-twilight/issues/1) · [Draft PR #9](https://github.com/adrianf87/dc24h.eu-twilight/pull/9). The merge is deferred until Stage VI completion and a separate OWNER decision; Stage VI **remains a release NO-GO**.
 
 ## Current versus historical facts
 
@@ -45,4 +45,4 @@ Settings **are not versioned in this PR**. They were inspected in the live GitHu
 2. Live GitHub About/topics/ruleset/app scopes reviewed. Cursor's unusually broad access is recorded for OWNER assessment; repository prose cannot prove live Settings.
 3. OWNER reviews bilingual wording, unchanged historic links/changelog/license and the explicit compatibility/migration exceptions. **A separate merge authorization** is required; it does not authorize tagging or production.
 
-**Current decision:** documentation and About configuration work done; **formal acceptance awaits final CI and OWNER**. **Release and production NO-GO.**
+**Current decision:** Stage V scope **accepted by OWNER on 2026-11-25**; docs and About settings completed. The next PR head requires its own CI before merge. **Release and production NO-GO.**
