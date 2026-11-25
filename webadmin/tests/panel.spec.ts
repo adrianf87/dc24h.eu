@@ -32,9 +32,11 @@ test("unconfigured panel stays honest, readable and bilingual with working navig
   page,
 }) => {
   await page.goto("/");
+  await expect(page).toHaveTitle("dc24h.eu-twilight · WebAdmin");
+  await expect(page.getByText("dc24h.eu-twilight", { exact: true }).first()).toBeVisible();
   await expect(page.locator("a.documentation")).toHaveAttribute(
     "href",
-    "https://github.com/adrianf87/dc24h.eu-high-starter/blob/main/doc/us/WEBADMIN.md",
+    "https://github.com/adrianf87/dc24h.eu-twilight/blob/main/doc/us/WEBADMIN.md",
   );
   await expect(
     page.getByRole("heading", { name: "Your hub, in one place." }),
@@ -51,7 +53,7 @@ test("unconfigured panel stays honest, readable and bilingual with working navig
   await page.getByRole("combobox").selectOption("pl");
   await expect(page.locator("a.documentation")).toHaveAttribute(
     "href",
-    "https://github.com/adrianf87/dc24h.eu-high-starter/blob/main/doc/pl/WEBADMIN.md",
+    "https://github.com/adrianf87/dc24h.eu-twilight/blob/main/doc/pl/WEBADMIN.md",
   );
   await expect(
     page.getByRole("heading", { name: "Przegląd huba" }),

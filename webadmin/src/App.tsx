@@ -167,7 +167,7 @@ function Details({ snapshot, t }: { snapshot: HubSnapshot | null; t: Copy }) {
           <dt>{t.project}</dt>
           <dd>
             <span className="project-mark" />
-            dc24h.eu High Starter
+            dc24h.eu-twilight
           </dd>
         </div>
         <div>
@@ -309,7 +309,7 @@ export default function App() {
   );
   const number = (value: number | undefined) =>
     value === undefined ? "—" : formatter.format(value);
-  const documentation = `https://github.com/adrianf87/dc24h.eu-high-starter/blob/main/doc/${language}/WEBADMIN.md`;
+  const documentation = `https://github.com/adrianf87/dc24h.eu-twilight/blob/main/doc/${language}/WEBADMIN.md`;
   useEffect(() => {
     document.documentElement.lang = language === "pl" ? "pl" : "en-US";
     try {
@@ -423,7 +423,7 @@ export default function App() {
           </span>
           <span>
             <strong>
-              dc24h<span>.eu High Starter</span>
+              dc24h.eu-twilight
             </strong>
             <small>{t.brandCaption}</small>
           </span>
@@ -434,7 +434,7 @@ export default function App() {
           </span>
           <span>
             <small>{t.workspace}</small>
-            <strong>dc24h.eu High Starter</strong>
+            <strong>dc24h.eu-twilight</strong>
           </span>
           <span className="workspace-lock">
             <LockKeyhole size={14} />
@@ -534,7 +534,7 @@ export default function App() {
           <div className="page-heading">
             <div>
               <div className="eyebrow">
-                DC24H.EU <span>/</span> {t.monitoring}
+                dc24h.eu-twilight <span>/</span> {t.monitoring}
               </div>
               <h1>{titles[page][0]}</h1>
               <p>{titles[page][1]}</p>

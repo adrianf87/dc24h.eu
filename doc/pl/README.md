@@ -1,4 +1,4 @@
-# Dokumentacja dc24h.eu High Starter
+# Dokumentacja dc24h.eu-twilight
 
 **Aktualna wersja rozwojowa: beta-0.9.20.** To kandydat źródłowy w [Draft PR #243](https://github.com/adrianf87/dc24h.eu-high-starter/pull/243), a nie zatwierdzone wydanie ani wdrożenie. Odbiór wymaga kompletu testów CI dla ostatecznego SHA na GitHub-hosted Ubuntu, pięciu oddzielnych Fix Passów i wyraźnej zgody Ownera przed scaleniem. [Etap V i granice NO-GO](BETA_0.9_STAGE_V.md) · [EN/US](../us/BETA_0.9_STAGE_V.md).
 

@@ -414,7 +414,7 @@ export function RemoteApp() {
   return (
     <main className="remote-shell" lang={language === "pl" ? "pl" : "en"}>
       <header className="remote-head">
-        <div><strong>dc24h.eu High Starter</strong><h1>{t.title}</h1><p>{t.mode}</p></div>
+        <div><strong>dc24h.eu-twilight</strong><h1>{t.title}</h1><p>{t.mode}</p></div>
         <div className="remote-actions">
           <button type="button" aria-label="English" onClick={() => setLanguage("us")}>EN</button>
           <button type="button" aria-label="Polski" onClick={() => setLanguage("pl")}>PL</button>

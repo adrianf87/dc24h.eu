@@ -1,6 +1,6 @@
-# dc24h.eu WebAdmin
+# dc24h.eu-twilight WebAdmin
 
-The current development UI is `beta-0.9.20` (dc24h.eu High Starter). The private incident overview derives only approved aggregate hub metrics, read age and explicitly unknown unavailable states; a local acknowledgment never sends a server action. Stale, unavailable or revoked sessions clear private metrics. Stage V review and risks: [EN/US](../doc/us/BETA_0.7_STAGE_V.md) · [PL](../doc/pl/BETA_0.7_STAGE_V.md). Authentication remains **password + passkey** or **password + TOTP**, not passwordless. C++ alone determines account grants. Remote gateway remains loopback-only and read-only; no public WebAdmin or production deployment. Latest-head hosted Ubuntu CI and five subsequent fix passes remain required before any merge decision.
+The current development UI is `beta-0.9.20` (dc24h.eu-twilight). The private incident overview derives only approved aggregate hub metrics, read age and explicitly unknown unavailable states; a local acknowledgment never sends a server action. Stale, unavailable or revoked sessions clear private metrics. Stage V review and risks: [EN/US](../doc/us/BETA_0.7_STAGE_V.md) · [PL](../doc/pl/BETA_0.7_STAGE_V.md). Authentication remains **password + passkey** or **password + TOTP**, not passwordless. C++ alone determines account grants. Remote gateway remains loopback-only and read-only; no public WebAdmin or production deployment. Latest-head hosted Ubuntu CI and five subsequent fix passes remain required before any merge decision.
 
 alpha-0.8.1: see [Permissions](../doc/us/PERMISSIONS.md) for the seven-role catalog, pending-action flags, safe VIP delegation and stopped-hub role changes.
 
