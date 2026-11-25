@@ -105,8 +105,8 @@ class NcdcLoginTest(unittest.TestCase):
             if ENCRYPTED:
                 network = ('[network]\nadcs_listen=127.0.0.1:0\n[tls]\n'
                            'certificate=certificate.pem\nprivate_key=private.pem\n')
-            welcome=b'IMSG Welcome\\sto\\sdc24h.eu.\\sConfigured\\sncdc\\schat.'
-            ini.write_text(network + '[chat]\nwelcome_message=Welcome to dc24h.eu. Configured ncdc chat.\n'
+            welcome=b'IMSG Welcome\\sto\\sdc24h.eu-twilight.\\sConfigured\\sncdc\\schat.'
+            ini.write_text(network + '[chat]\nwelcome_message=Welcome to dc24h.eu-twilight. Configured ncdc chat.\n'
                            '[users]\nmax_sessions=3\nmax_users=2\n'
                            '[security]\nmax_connections_per_ip=8\n')
             if SEARCH_SECURITY:
@@ -293,7 +293,7 @@ class NcdcLoginTest(unittest.TestCase):
                 # list. The observer and own echo now prove client-side NORMAL
                 # and public delivery.
                 wait_screen(b'2 users')
-                wait_screen(b'Welcome to dc24h.eu.')
+                wait_screen(b'Welcome to dc24h.eu-twilight.')
                 wait_screen(b'Configured ncdc chat.')
                 observer.send(b'BMSG '+observer.sid+b' dc24hIncomingChat')
                 self.assertEqual(observer_line(), b'BMSG '+observer.sid+b' dc24hIncomingChat')

@@ -1,4 +1,5 @@
-# dc24h.eu alpha-0.1.10: static local preview only, no authenticated gateway.
+# dc24h.eu-twilight: static local preview only, no authenticated gateway.
+# Keep the local preview host and installed asset paths unchanged in this stage.
 # Enable mod_headers. Never proxy the private API or expose its token to JavaScript.
 Listen 127.0.0.1:8080
 <VirtualHost 127.0.0.1:8080>

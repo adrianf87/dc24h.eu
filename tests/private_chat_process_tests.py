@@ -60,7 +60,7 @@ class PrivateChatProcessTests(unittest.TestCase):
             while True:
                 line = pending.line();self.assertTrue(line.startswith(b'BINF '), 'Private backlog leaked into welcome')
                 if line.startswith(b'BINF '+pending.sid+b' '):break
-            self.assertTrue(pending.line().startswith(b'IMSG Welcome\\sto\\sdc24h.eu.'))
+            self.assertTrue(pending.line().startswith(b'IMSG Welcome\\sto\\sdc24h.eu-twilight.'))
             for peer in (first, second, observer):
                 self.assertTrue(peer.line().startswith(b'BINF '+pending.sid))
             exact = b'DMSG '+first.sid+b' '+second.sid+b' '+b'x'*(16384-15-7)+b' PM'+first.sid

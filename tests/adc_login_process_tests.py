@@ -14,7 +14,7 @@ from tls_support import credentials, connect_tls
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / 'scripts'))
 from stage4_perf_probe import process_cpu_seconds, rss_kib
 
-HUB_WELCOME = b'IMSG Welcome\\sto\\sdc24h.eu.\\sGuest\\saccess\\sis\\senabled.'
+HUB_WELCOME = b'IMSG Welcome\\sto\\sdc24h.eu-twilight.\\sGuest\\saccess\\sis\\senabled.'
 
 
 def pair(seed):

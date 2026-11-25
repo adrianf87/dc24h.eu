@@ -1,4 +1,4 @@
-# dc24h.eu alpha-0.7.5 configuration (UTF-8, no secrets committed)
+# dc24h.eu-twilight configuration example (UTF-8, no secrets committed)
 # Section names and keys are case-sensitive; duplicate singular keys are errors.
 [general]
 language = us
@@ -26,7 +26,7 @@ private_enabled = on
 actions_enabled = on
 welcome_enabled = on
 # Literal single-line INI text, UTF-8/NFC, at most 4096 bytes; no escape expansion.
-welcome_message = Welcome to dc24h.eu. Guest access is enabled.
+welcome_message = Welcome to dc24h.eu-twilight. Guest access is enabled.
 # Per connection lifetime, shared by public/private messages and ME actions.
 # Burst credits refill continuously; bytes count decoded message text, not fanout.
 max_messages_per_second = 5
