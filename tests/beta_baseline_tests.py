@@ -123,7 +123,7 @@ def main():
             "systemd.sandbox: missing fail-closed manager enforcement", errors)
     require("ubuntu-latest" not in workflow, "build.yml: ubuntu-latest is selected", errors)
     check(ROOT / "README.md", (
-        "# dc24h.eu High Starter",
+        "# dc24h.eu-twilight",
         "Current development version: beta-0.9.20",
         "beta-0.3.11–beta-0.3.12 Stage IV",
         "beta-0.3.8–beta-0.3.10 Stage III",

@@ -1,10 +1,10 @@
 # dc24h.eu-twilight
 
-> Twilight is an independent development repository derived from dc24h.eu High Starter. Historical issue/PR links below refer to the original project.
-
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
 **Current development version: beta-0.9.20 (Stage V source candidate; exact-head hosted CI, five fix passes and Owner approval remain pending; not a production release).**
+
+> Twilight is an independent development repository derived from dc24h.eu High Starter. Historical issue/PR links below refer to the original project.
 
 - **beta-0.9.17–beta-0.9.20 — Stage V release qualification** ([Issue #242](https://github.com/adrianf87/dc24h.eu-high-starter/issues/242), single draft [PR #243](https://github.com/adrianf87/dc24h.eu-high-starter/pull/243), `beta-0.9.x-stage-full`): independently download and SHA-256-check exact-attempt GitHub ZIP artifacts with strict redacted JSON policy; record bounded GitHub-hosted Ubuntu APT/compiler/Node provenance, explicit runtime+dev npm audit, broader TSAN/sanitizer and dual-fuzz gates, three-window security measurements and fail-closed candidate metadata/Owner NO-GO gate. Final-head hosted Ubuntu 22.04/24.04/26.04 evidence is **not yet accepted**; Stage V source changes do not authorize merge, tag, release, migration or deployment. [EN/US review and risk](doc/us/BETA_0.9_STAGE_V.md) | [PL runbook](doc/pl/BETA_0.9_STAGE_V.md).
 
