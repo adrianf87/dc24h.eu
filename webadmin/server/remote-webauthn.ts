@@ -25,7 +25,7 @@ export function passkeyCeremonies(store: PasskeyStore, origin: string, rpID: str
     const existing = store.forActor(actor);
     if (existing.length >= 8) throw Error("Passkey limit reached");
     const options = await generateRegistrationOptions({
-      rpName: "dc24h.eu High Starter", rpID, userName: "administrator-" + actor,
+      rpName: "dc24h.eu-twilight", rpID, userName: "administrator-" + actor,
       userDisplayName: "Administrator " + actor,
       userID: new Uint8Array(Buffer.from(userHandle, "base64url")),
       timeout: 60_000, attestationType: "none",
