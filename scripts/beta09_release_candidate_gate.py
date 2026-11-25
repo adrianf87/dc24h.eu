@@ -137,7 +137,8 @@ def evaluate(root, sha, reports, hardening, github=None):
         if (not isinstance(github, dict) or github.get("source_sha") != sha or
                 (github.get("mode"), github.get("branch")) not in (
                     ("pr", "beta-0.9.x-stage-full"),
-                    ("fix-pass", "beta-0.9.x-stage-full-fix-pass")) or
+                    ("fix-pass", "beta-0.9.x-stage-full-fix-pass"),
+                    ("main", "main")) or
                 github.get("github_api_metadata_verified") is not True or
                 github.get("artifact_sha256_independently_verified") is not True or
                 type(github.get("downloaded_artifact_count")) is not int or
