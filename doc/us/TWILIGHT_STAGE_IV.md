@@ -1,6 +1,6 @@
 # dc24h.eu-twilight — Stage IV: technical identity inventory and OWNER decision
 
-Status: **OWNER approved the technical naming policy on 2026-11-25**. Implementation in Draft PR #6 is pending exact-head CI and separate merge acceptance; **no production migration or activation**. Existing names below reflect post-Stage III `main`. Service users, private-state paths, API/DB, DNS/TLS and WebAuthn trust identities remain unchanged.
+Status: **OWNER approved the technical naming policy on 2026-11-25; the code-only PR #6 was merged to `main`**. Separate branch `rebrand/stage-iv-migration-rollback-proof` adds isolated old/new *test-package and service-name* transition evidence, pending CI and separate OWNER acceptance. **No production migration or activation.** Service users, private-state paths, API/DB, DNS/TLS and WebAuthn trust identities remain unchanged.
 
 ## Former names → approved target names
 
@@ -32,3 +32,11 @@ Status: **OWNER approved the technical naming policy on 2026-11-25**. Implementa
 - The existing `.deb` fixture is explicitly CI-only and inert; its package-name change alone cannot validate production migration. Model a real old/new package transition separately and refuse concurrent service activation.
 - Preserve historical source/tag provenance including `v0.9.20-rc.1`.
 - Each migration/failure/rollback invariant needs negative tests, exact-head CI and separate OWNER acceptance before merging; CI is never production GO.
+
+## Dedicated name-transition rehearsal — GitHub-hosted CI only
+
+- `beta07_ci_deb.py` builds two distinct, inert `dc24h-high-starter-ci-fixture` and `dc24h-twilight-ci-fixture` packages with symmetric `Conflicts`, without `Replaces`, maintainer scripts on normal fixtures or auto-activation. Their payloads use exact historical and current built C++ binaries.
+- `twilight_stage4_migration_process_tests.py` requires a clean old-name install; rejects the new package until the old one is explicitly purged; rehearses injected pre-install failure and recovery of the old name; explicitly switches to the new name, rejects accidental legacy reinstall and actually rolls back to the old name. It checks dpkg ownership, installed SHA-256 and dormant non-enabled fixture units.
+- Unique synthetic, non-network `sleep` units validate systemd's operator marker, `Conflicts` stopping the old unit and old-unit restart after the new unit stops. They never touch the actual hub units, state, or `/etc/dc24h` approval marker.
+- `twilight_stage4_migration_gate.py` refuses wrong source/OS, missing positive or negative proofs, inconsistent executable hashes and any production authorization. Evidence is attached to the existing Ubuntu VM artifacts at the exact tested SHA.
+- **Limit:** proof applies only to synthetic package and service names on disposable Ubuntu runners. It is **not** proof of a live-host migration, downtime bounds, deployed installer or real private-state upgrade. Production engineering/acceptance remains separately gated.

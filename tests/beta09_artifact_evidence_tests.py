@@ -242,6 +242,48 @@ class IndependentArtifactTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     gate.inspect_archive(archive, artifact, SHA)
 
+    def test_optional_new_stage4_reports_are_validated_without_rewriting_rc1_history(self):
+        for name, extra in (
+                ("twilight-stage4-name-migration.json", {
+                    "legacy_package": "dc24h-high-starter-ci-fixture",
+                    "twilight_package": "dc24h-twilight-ci-fixture",
+                    "legacy_hub_sha256": "c" * 64,
+                    "twilight_hub_sha256": "d" * 64,
+                    "production_deployment_or_migration_claim": False,
+                    **{field: True for field in (
+                        "actual_two_distinct_package_names", "clean_old_name_install",
+                        "new_name_refused_without_explicit_old_purge",
+                        "failed_new_install_refused_and_old_name_restored",
+                        "explicit_old_to_new_migration", "legacy_install_refused_while_twilight_installed",
+                        "actual_new_to_old_name_rollback", "binary_and_account_admin_hashes_verified",
+                        "inert_package_units_not_enabled_or_active", "systemd_owner_marker_required",
+                        "systemd_conflict_stopped_old_without_parallel_activation",
+                        "synthetic_systemd_rollback_restored_old")}}),
+                ("twilight-stage4-migration-gate.json", {
+                    "two_distinct_package_names_transition_verified": True,
+                    "negative_and_failed_transition_refused_without_silent_replacement": True,
+                    "actual_old_new_old_package_and_unit_rehearsal_verified": True,
+                    "github_hosted_ci_only": True,
+                    "production_upgrade_or_migration_authorized": False})):
+            with self.subTest(name=name):
+                report = {"schema": 1, "source_sha": SHA, **extra}
+                for altered in (False, True):
+                    candidate = copy.deepcopy(report)
+                    if altered:
+                        candidate[next(key for key in extra if type(extra[key]) is bool and extra[key] is True)] = False
+                    mandatory = gate._file_policy("stage4-ubuntu-vm-ubuntu-24.04-901-1")[1]
+                    reports = {file: safe_report(file) for file in mandatory}
+                    reports[name] = candidate
+                    archive = zipped(reports)
+                    metadata = {"name": "stage4-ubuntu-vm-ubuntu-24.04-901-1",
+                                "size_in_bytes": len(archive),
+                                "digest": "sha256:" + hashlib.sha256(archive).hexdigest()}
+                    if altered:
+                        with self.assertRaises(ValueError):
+                            gate.inspect_archive(archive, metadata, SHA)
+                    else:
+                        self.assertEqual(gate.inspect_archive(archive, metadata, SHA)["reports"], len(reports))
+
 
 if __name__ == "__main__":
     unittest.main()
