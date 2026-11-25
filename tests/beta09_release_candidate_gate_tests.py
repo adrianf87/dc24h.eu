@@ -103,8 +103,9 @@ def fixture(root):
 
 def github_fixture(mode="pr"):
     return {"source_sha": SHA, "mode": mode,
-            "branch": ("beta-0.9.x-stage-full" if mode == "pr" else
-                       "beta-0.9.x-stage-full-fix-pass"),
+            "branch": {"pr": "beta-0.9.x-stage-full",
+                       "fix-pass": "beta-0.9.x-stage-full-fix-pass",
+                       "main": "main"}[mode],
             "github_api_metadata_verified": True,
             "artifact_sha256_independently_verified": True,
             "downloaded_artifact_count": 19,
@@ -162,6 +163,43 @@ class CandidateTests(unittest.TestCase):
             github["workflow_run_ids"].pop("beta09-stage4-storage.yml")
             with self.assertRaises(ValueError):
                 gate.evaluate(checkout, SHA, reports, hardening, github)
+
+    def test_post_merge_main_evidence_is_checked_without_release_approval(self):
+        with tempfile.TemporaryDirectory() as directory:
+            checkout, reports, hardening = fixture(Path(directory))
+            verified_main = github_fixture("main")
+            result = gate.evaluate(checkout, SHA, reports, hardening, verified_main)
+            self.assertEqual(result["status"], "NO-GO")
+            self.assertTrue(result["independently_hashed_artifact_evidence_present"])
+            self.assertFalse(result["final_github_authenticity_required"])
+            self.assertFalse(result["owner_release_approval"])
+            self.assertFalse(result["merge_authorized"])
+            self.assertFalse(result["production_deployment_authorized"])
+
+            for field, wrong_value in (
+                ("branch", "beta-0.9.x-stage-full-fix-pass"),
+                ("mode", "fix-pass"),
+                ("source_sha", "b" * 40),
+                ("github_api_metadata_verified", False),
+                ("artifact_sha256_independently_verified", False),
+                ("owner_release_approval", True),
+                ("merge_authorized", True),
+                ("production_deployment_authorized", True),
+            ):
+                forged = github_fixture("main")
+                forged[field] = wrong_value
+                with self.subTest(field=field), self.assertRaises(ValueError):
+                    gate.evaluate(checkout, SHA, reports, hardening, forged)
+
+            incomplete = github_fixture("main")
+            incomplete["workflow_run_ids"].pop("beta09-stage4-storage.yml")
+            with self.assertRaises(ValueError):
+                gate.evaluate(checkout, SHA, reports, hardening, incomplete)
+
+            wrong_attempt = github_fixture("main")
+            wrong_attempt["workflow_run_ids"]["build.yml"]["attempt"] = 0
+            with self.assertRaises(ValueError):
+                gate.evaluate(checkout, SHA, reports, hardening, wrong_attempt)
 
     def test_malicious_perf_resource_summary_and_unpinned_dependency_are_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
