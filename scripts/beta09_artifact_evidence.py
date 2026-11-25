@@ -56,6 +56,9 @@ COMMON = {
     "beta08-transport-evidence.json", "beta08-stage2-authentication.json",
     "timing-summary.json", "beta09-security-envelope.json",
     "beta09-systemd-node.json", "beta09-stage3-gate.json",
+    # Optional for historical RC1 artifacts; required by the new Stage IV
+    # hosted workflow's separate fail-closed migration gate.
+    "twilight-stage4-name-migration.json", "twilight-stage4-migration-gate.json",
 }
 LEGACY_UNBOUND = {"loopback-probes.json", "disposable-db-cli-restore.json"}
 
@@ -108,6 +111,31 @@ def _no_sensitive_fields(value, depth=0):
 
 
 def _report_semantics(name, report):
+    if name == "twilight-stage4-name-migration.json":
+        required = ("actual_two_distinct_package_names", "clean_old_name_install",
+                    "new_name_refused_without_explicit_old_purge",
+                    "failed_new_install_refused_and_old_name_restored",
+                    "explicit_old_to_new_migration", "legacy_install_refused_while_twilight_installed",
+                    "actual_new_to_old_name_rollback", "binary_and_account_admin_hashes_verified",
+                    "inert_package_units_not_enabled_or_active", "systemd_owner_marker_required",
+                    "systemd_conflict_stopped_old_without_parallel_activation",
+                    "synthetic_systemd_rollback_restored_old")
+        if (not all(report.get(key) is True for key in required) or
+                report.get("legacy_package") != "dc24h-high-starter-ci-fixture" or
+                report.get("twilight_package") != "dc24h-twilight-ci-fixture" or
+                report.get("production_deployment_or_migration_claim") is not False or
+                not all(re.fullmatch(r"[0-9a-f]{64}", report.get(key, "")) for key in
+                        ("legacy_hub_sha256", "twilight_hub_sha256")) or
+                report.get("legacy_hub_sha256") == report.get("twilight_hub_sha256")):
+            raise ValueError("Unreviewed Stage IV name transition evidence")
+    if name == "twilight-stage4-migration-gate.json":
+        if (not all(report.get(key) is True for key in (
+                "two_distinct_package_names_transition_verified",
+                "negative_and_failed_transition_refused_without_silent_replacement",
+                "actual_old_new_old_package_and_unit_rehearsal_verified",
+                "github_hosted_ci_only")) or
+                report.get("production_upgrade_or_migration_authorized") is not False):
+            raise ValueError("Unreviewed Stage IV transition acceptance")
     if name == "beta09-os-provenance.json":
         if (report.get("runner_environment") != "github-hosted" or
                 report.get("fully_reproducible_os_build") is not False or

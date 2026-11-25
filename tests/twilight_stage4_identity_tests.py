@@ -76,13 +76,16 @@ class StageIVTechnicalIdentityTests(unittest.TestCase):
         fixture = source("scripts/beta07_ci_deb.py")
         self.assertIn('LEGACY_PACKAGE = "dc24h-high-starter-ci-fixture"', fixture)
         self.assertIn('PACKAGE = "dc24h-twilight-ci-fixture"', fixture)
-        self.assertIn("Conflicts: {LEGACY_PACKAGE}", fixture)
-        self.assertNotIn("Replaces: {LEGACY_PACKAGE}", fixture)
+        self.assertIn("opposite_name = PACKAGE if legacy else LEGACY_PACKAGE", fixture)
+        self.assertIn("Conflicts: {opposite_name}", fixture)
+        self.assertNotIn("Replaces: {opposite_name}", fixture)
+        self.assertIn("LEGACY_UNIT", fixture)
         self.assertIn("ConditionPathExists=/__dc24h_ci_fixture_never_start__", fixture)
         workflow = source(".github/workflows/stage4-ubuntu-vm-validation.yml")
         self.assertIn("build/Stage4VM/dc24h-twilight", workflow)
         self.assertIn("build/Beta05/dc24h beta05-reference", workflow)
         self.assertIn("build/Beta05/dc24h-account-admin", workflow)
+        self.assertIn("twilight_stage4_migration_process_tests.py", workflow)
 
     def test_status_api_dns_origin_passkey_and_sysusers_are_stable(self):
         self.assertIn(r'\"name\":\"dc24h.eu-twilight\"', source("src/api/server.cpp"))

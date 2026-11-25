@@ -235,6 +235,18 @@ jobs:
             --sha "$SOURCE_SHA" --os-image "${{ matrix.os }}" \
             --output vm-evidence/beta09-stage3-gate.json
 
+      - name: Rehearse named-package migration refusal, explicit rollback and synthetic systemd conflict
+        run: |
+          python3 -m unittest discover -s tests -p twilight_stage4_migration_gate_tests.py
+          DC24H_VM_REPORT_DIR="$PWD/vm-evidence" python3 \
+            tests/twilight_stage4_migration_process_tests.py \
+            build/Stage4VM/dc24h-twilight build/Beta05/dc24h beta05-reference \
+            build/Stage4VM/dc24h-twilight-account-admin build/Beta05/dc24h-account-admin
+          python3 scripts/twilight_stage4_migration_gate.py \
+            --report vm-evidence/twilight-stage4-name-migration.json \
+            --sha "$SOURCE_SHA" --os-image "${{ matrix.os }}" \
+            --output vm-evidence/twilight-stage4-migration-gate.json
+
       - name: Require complete integrated chaos evidence on this exact Ubuntu head
         run: |
           python3 scripts/beta06_integrated_chaos_gate.py \

@@ -1,6 +1,6 @@
 # dc24h.eu-twilight — Etap IV: inwentaryzacja tożsamości technicznej i decyzja OWNER
 
-Stan: **OWNER zatwierdził wariant nazw technicznych 2026-11-25**. Implementacja w osobnym Draft PR #6 pozostaje do pełnego CI i osobnej decyzji o merge; **bez migracji ani aktywacji produkcyjnej**. Dawne nazwy poniżej opisują stan `main` po Etapie III, a nowe nazwy są zatwierdzonym celem. Konta usługowe, prywatny stan, ścieżki danych, API/DB, DNS/TLS oraz WebAuthn pozostają bez zmian.
+Stan: **OWNER zatwierdził wariant nazw technicznych 2026-11-25; zakres kodowy PR #6 scalono do `main`**. Osobna gałąź `rebrand/stage-iv-migration-rollback-proof` dodaje dowód kontrolowanej migracji **nazw testowych pakietów i jednostek**, do weryfikacji w CI i osobnej decyzji OWNER. **Nie wykonano migracji ani aktywacji produkcyjnej.** Konta usługowe, prywatny stan, ścieżki danych, API/DB, DNS/TLS oraz WebAuthn pozostają bez zmian.
 
 ## Mapa dawnych nazw → zatwierdzonych nazw docelowych
 
@@ -33,6 +33,14 @@ Stan: **OWNER zatwierdził wariant nazw technicznych 2026-11-25**. Implementacja
 - Zgoda na rozpoczęcie Etapu IV **nie** uprawnia do nadpisania realnej instalacji, przenoszenia `/var/lib/dc24h`, zmiany właścicieli/UID/GID, certyfikatów TLS, sekretów, `rpID`, Origin, schematu MariaDB ani publicznego listenera.
 - `scripts/beta07_ci_deb.py` wytwarza wyłącznie inertny pakiet testowy; przejście na inny `Package:` w `.deb` nie jest automatycznym `dpkg` upgrade. Przed przyjęciem migracji należy udowodnić, że stara i nowa jednostka **nie** mogą działać równolegle.
 - Historyczne wersje i `v0.9.20-rc.1` pozostają niezmienione. Każdy nowy kontrakt wymaga testów negatywnych, CI na końcowym SHA i osobnego odbioru OWNER przed merge.
+
+## Osobny test migracji nazw — tylko GitHub-hosted CI
+
+- `scripts/beta07_ci_deb.py` buduje **dwa odrębne** testowe pakiety `dc24h-high-starter-ci-fixture` i `dc24h-twilight-ci-fixture`, z symetrycznym `Conflicts`, bez `Replaces`, skryptów instalacyjnych i automatycznego uruchamiania. Stary pakiet zawiera rzeczywistą, przypiętą binarkę historyczną; nowy — binarkę z testowanego HEAD.
+- `tests/twilight_stage4_migration_process_tests.py` sprawdza: czystą instalację starej nazwy, odmowę instalacji nowej bez jawnego usunięcia starej, awarię `preinst` z odtworzeniem poprzedniej nazwy, jawne przejście na nową nazwę, odmowę niejawnego cofnięcia oraz rzeczywisty powrót do starej nazwy. Porównuje SHA-256 obu binarek i narzędzi kont, własność plików `dpkg`, brak aktywnych i włączonych usług.
+- Wyłącznie na jednorazowych runnerach GitHub-hosted Ubuntu 22.04/24.04/26.04 test tworzy **unikalne, syntetyczne** jednostki `sleep` bez listenerów: wymaga znacznika zgody, sprawdza konflikt starej i nowej jednostki, zatrzymanie starej przed aktywacją nowej oraz rollback do starej. Nigdy nie startuje realnego `dc24h.service` ani `dc24h-twilight.service` i nie tworzy znacznika w `/etc/dc24h`.
+- `scripts/twilight_stage4_migration_gate.py` odrzuca niepełne dowody, błędny SHA/Ubuntu, brak odmowy w negatywnych scenariuszach i wszelką deklarację produkcyjnej gotowości. Raporty `twilight-stage4-name-migration.json` i `twilight-stage4-migration-gate.json` podlegają zwykłemu uploadowi dowodów VM.
+- **Granica akceptacji:** pozytywny test w CI oznacza tylko przejście syntetycznych nazw pakietów i jednostek. **Nie jest** testem upgrade istniejącej instalacji, rzeczywistych danych, zamiany usług pod obciążeniem ani instalatora produkcyjnego. Te obszary wymagają dalszego planu operatora i osobnej zgody przed wdrożeniem.
 
 ## Wykonanie i odbiór
 

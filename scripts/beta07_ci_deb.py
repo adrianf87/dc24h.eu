@@ -18,10 +18,15 @@ import subprocess
 LEGACY_PACKAGE = "dc24h-high-starter-ci-fixture"
 PACKAGE = "dc24h-twilight-ci-fixture"
 UNIT = "dc24h-twilight-ci-fixture.service"
+LEGACY_UNIT = "dc24h-high-starter-ci-fixture.service"
 BIN = f"usr/lib/{PACKAGE}/dc24h-twilight"
 ADMIN_BIN = f"usr/lib/{PACKAGE}/dc24h-twilight-account-admin"
 UNIT_PATH = f"lib/systemd/system/{UNIT}"
 DOC_PATH = f"usr/share/doc/{PACKAGE}/ci-provenance"
+LEGACY_BIN = f"usr/lib/{LEGACY_PACKAGE}/dc24h"
+LEGACY_ADMIN_BIN = f"usr/lib/{LEGACY_PACKAGE}/dc24h-account-admin"
+LEGACY_UNIT_PATH = f"lib/systemd/system/{LEGACY_UNIT}"
+LEGACY_DOC_PATH = f"usr/share/doc/{LEGACY_PACKAGE}/ci-provenance"
 VERSIONS = {"previous": "0.5.16+ci1", "current": "0.9.20+ci1"}
 # A real dpkg pre-unpack failure, not merely a malformed .deb rejected by the
 # archive reader. This higher version is never a deployable package.
@@ -32,9 +37,11 @@ FAILED_POSTINST_VERSION = "0.9.20+ci3"
 
 
 def build(binary: Path, destination: Path, version: str, sha: str, *,
-          account_admin=None, fail_preinst=False, fail_postinst=False):
+          account_admin=None, fail_preinst=False, fail_postinst=False, legacy=False):
     if fail_preinst and fail_postinst:
         raise ValueError("Only one controlled package failure is allowed")
+    if legacy and (version != VERSIONS["previous"] or fail_preinst or fail_postinst):
+        raise ValueError("Legacy named fixture only accepts the pinned previous release")
     allowed = (version == FAILED_UPGRADE_VERSION if fail_preinst else
                version == FAILED_POSTINST_VERSION if fail_postinst else version in VERSIONS.values())
     if not allowed or not re.fullmatch(r"[0-9a-f]{40}", sha):
@@ -52,7 +59,13 @@ def build(binary: Path, destination: Path, version: str, sha: str, *,
         raise ValueError("Exact account-maintenance executable required")
     if destination.exists() or destination.is_symlink():
         raise ValueError("CI staging directory must not exist")
-    package = destination.parent / f"{PACKAGE}_{version}_amd64.deb"
+    package_name = LEGACY_PACKAGE if legacy else PACKAGE
+    opposite_name = PACKAGE if legacy else LEGACY_PACKAGE
+    binary_path = LEGACY_BIN if legacy else BIN
+    admin_path = LEGACY_ADMIN_BIN if legacy else ADMIN_BIN
+    unit_path = LEGACY_UNIT_PATH if legacy else UNIT_PATH
+    record_path = LEGACY_DOC_PATH if legacy else DOC_PATH
+    package = destination.parent / f"{package_name}_{version}_amd64.deb"
     if package.exists() or package.is_symlink():
         raise ValueError("Cannot overwrite existing package")
     if subprocess.run(["dpkg", "--print-architecture"], capture_output=True, check=True).stdout.strip() != b"amd64":
@@ -61,11 +74,11 @@ def build(binary: Path, destination: Path, version: str, sha: str, *,
     control = destination / "DEBIAN"
     control.mkdir(mode=0o755)
     (control / "control").write_text(
-        f"Package: {PACKAGE}\nVersion: {version}\nArchitecture: amd64\n"
+        f"Package: {package_name}\nVersion: {version}\nArchitecture: amd64\n"
         "Section: admin\nPriority: optional\n"
         "Maintainer: Isolated CI Fixture <ci@example.invalid>\n"
         "Depends: libc6, libstdc++6\n"
-        f"Conflicts: {LEGACY_PACKAGE}\n"
+        f"Conflicts: {opposite_name}\n"
         "Description: Ephemeral dc24h package-manager regression fixture\n" +
         (" Injected pre-unpack failure; never deploy or start.\n" if fail_preinst else
          " Injected post-unpack failure; never deploy or start.\n" if fail_postinst else
@@ -82,24 +95,25 @@ def build(binary: Path, destination: Path, version: str, sha: str, *,
         postinst = control / "postinst"
         postinst.write_text("#!/bin/sh\nexit 42\n", encoding="ascii")
         postinst.chmod(0o755)
-    executable = destination / BIN
+    executable = destination / binary_path
     executable.parent.mkdir(parents=True, mode=0o755)
     shutil.copy2(binary, executable)
     executable.chmod(0o755)
     if account_admin is not None:
-        maintenance = destination / ADMIN_BIN
+        maintenance = destination / admin_path
+        maintenance.parent.mkdir(parents=True, exist_ok=True, mode=0o755)
         shutil.copy2(account_admin, maintenance)
         maintenance.chmod(0o755)
-    unit = destination / UNIT_PATH
+    unit = destination / unit_path
     unit.parent.mkdir(parents=True, mode=0o755)
     unit.write_text(
         "[Unit]\nDescription=Disposable dc24h CI fixture; MUST NOT START\n"
         "ConditionPathExists=/__dc24h_ci_fixture_never_start__\n"
-        "[Service]\nType=oneshot\nExecStart=/usr/lib/" + PACKAGE + "/dc24h-twilight --version\n"
+        "[Service]\nType=oneshot\nExecStart=/" + binary_path + " --version\n"
         "NoNewPrivileges=yes\nPrivateNetwork=yes\n",
         encoding="ascii")
     unit.chmod(0o644)
-    record = destination / DOC_PATH
+    record = destination / record_path
     record.parent.mkdir(parents=True, mode=0o755)
     record.write_text(f"synthetic-test-only\nsource-sha={sha}\n"
                       f"binary-sha256={hashlib.sha256(binary.read_bytes()).hexdigest()}\n" +
