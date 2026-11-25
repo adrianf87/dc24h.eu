@@ -13,6 +13,7 @@ import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import beta09_artifact_evidence as gate
+import twilight_stage6_preflight as stage6
 from beta08_github_evidence_tests import fixture as previous_fixture, SHA
 
 
@@ -102,6 +103,21 @@ def fixture(mode="pr"):
 
 
 class IndependentArtifactTests(unittest.TestCase):
+    def test_twilight_stage_vi_preflight_artifact_cannot_claim_release_go(self):
+        name = "twilight-stage6-preflight.json"
+        self.assertIn(name, gate.COMMON)
+        report = stage6.evaluate(Path(__file__).resolve().parents[1], SHA, "ubuntu-24.04")
+        gate._report_semantics(name, report)
+        for field, forged_value in (
+                ("status", "GO"), ("owner_release_acceptance_recorded", True),
+                ("complete_final_sha_github_ci_verified", True),
+                ("passkey_origin_rpid_guards_present", False),
+                ("github_workflows_checked", 4)):
+            with self.subTest(field=field):
+                tampered = {**report, field: forged_value}
+                with self.assertRaises(ValueError):
+                    gate._report_semantics(name, tampered)
+
     def test_twilight_pr_zip_evidence_is_bound_to_pr_branch_and_repository(self):
         data, archives = fixture("twilight-pr")
         check = lambda records: gate.evaluate(lambda key: records[key],

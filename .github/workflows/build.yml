@@ -66,6 +66,14 @@ jobs:
             --os-image "${{ matrix.os }}" \
             --output "$RUNNER_TEMP/evidence/beta07-supply-chain.json"
 
+      - name: Stage VI Twilight source and contract preflight (NOT release GO)
+        run: |
+          python3 -m unittest discover -s tests -p twilight_stage6_preflight_tests.py
+          python3 scripts/twilight_stage6_preflight.py \
+            --root "$GITHUB_WORKSPACE" --sha "$SOURCE_SHA" \
+            --os-image "${{ matrix.os }}" \
+            --output "$RUNNER_TEMP/evidence/twilight-stage6-preflight.json"
+
       - name: Bind GitHub-hosted Ubuntu APT, compiler, Node and Action provenance
         run: |
           python3 -m unittest discover -s tests -p beta09_os_provenance_tests.py
