@@ -216,7 +216,8 @@ def run(current, historical, checkout, *, current_admin=None, historical_admin=N
                 auth_environment.pop("DC24H_VM_REPORT_DIR", None)
                 fixture = Path(__file__).with_name("beta06_authenticated_api_process_tests.py")
                 result = subprocess.run(
-                    [sys.executable, str(fixture), str(current), str(seeder), str(installed_admin)],
+                    [sys.executable, str(fixture), str(current), str(seeder), str(installed_admin),
+                     str(checkout)],
                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                     cwd=Path(__file__).resolve().parents[1], env=auth_environment, timeout=600)
                 if result.returncode:
@@ -243,6 +244,7 @@ def run(current, historical, checkout, *, current_admin=None, historical_admin=N
                           "restart_of_fresh_database_accepted": True,
                           "historical_maintenance_binary_installed_and_hashed": historical_admin is not None,
                           "historical_maintenance_actual_password_totp_and_browser_passkey": historical_admin is not None,
+                          "historical_maintenance_pinned_status_adapter_ci_only": historical_admin is not None,
                           "historical_maintenance_independent_matched_v11_five_store_recovery": historical_admin is not None,
                           "actual_systemd_old_cpp_maintenance_start_restart_stop": historical_admin is not None,
                           "production_package_or_rollback_claim": False}

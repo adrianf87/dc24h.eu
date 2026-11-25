@@ -45,6 +45,12 @@ class StageThreeEvidenceTests(unittest.TestCase):
                 "production_service_changed": False})
             with self.assertRaisesRegex(ValueError, "required executed proof"):
                 gate.evaluate(dpkg, node, self.SHA, self.IMAGE)
+            adapter_missing = self.report(root, "adapter-missing.json", {
+                **dict.fromkeys(gate.DPKG_PROOFS, True),
+                "historical_maintenance_pinned_status_adapter_ci_only": False,
+                "production_package_or_rollback_claim": False})
+            with self.assertRaisesRegex(ValueError, "required executed proof"):
+                gate.evaluate(adapter_missing, node, self.SHA, self.IMAGE)
             dpkg = self.report(root, "dpkg2.json", {**dict.fromkeys(gate.DPKG_PROOFS, True),
                 "production_package_or_rollback_claim": False})
             node = self.report(root, "node2.json", {**dict.fromkeys(gate.NODE_PROOFS, True),

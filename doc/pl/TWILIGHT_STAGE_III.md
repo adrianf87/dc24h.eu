@@ -16,6 +16,7 @@ Pierwszy merge Etapu III zmieniał wyłącznie *teksty wyświetlane*. Po osobnej
 - Stara wartość `dc24h.eu`, nazwy obce, puste i brakujące są odrzucane. Nie dodano niejawnej zgodności akceptującej obie nazwy ani domyślania się tożsamości z nagłówka HTTP Host.
 - To **świadome zerwanie kompatybilności** konsumentów statusu: przy ewentualnym, osobno zatwierdzonym wdrożeniu należy aktualizować C++ i WebAdmin razem. Stary WebAdmin nie obsłuży nowego serwera, a nowy WebAdmin odrzuci status starego źródła. Przed wdrożeniem trzeba zinwentaryzować i zaktualizować zewnętrznych klientów statusu.
 - Testy sprawdzają nazwę zwracaną przez C++ oraz ścisłe przyjmowanie/odrzucanie w obu parserach WebAdmin. Ten PR wymaga osobnego GitHub-hosted CI na finalnym SHA i zgody OWNER przed merge.
+- W izolowanym teście VM po rzeczywistym downgrade historyczne C++ `beta-0.5.16` działa wyłącznie z **testową, tymczasową kopią** bramy Node, w której parser statusu jest pobrany z niezmiennego historycznego commita. Dzięki temu test nadal sprawdza rzeczywiste logowanie, TOTP, Passkey i odzyskiwanie stanu, ale **nie** twierdzi, że nowy produkcyjny WebAdmin obsługuje stary serwer. Bieżące parsery nadal odrzucają `dc24h.eu`.
 
 ## Bez zmian do kolejnej osobnej decyzji OWNER
 

@@ -16,6 +16,7 @@ The initial Stage III merge changed *display text* only. After a separate OWNER 
 - The legacy value `dc24h.eu`, foreign values, empty values and missing names are refused. The update does **not** add a permissive dual-name fallback or infer identity from HTTP Host.
 - This is a deliberate *breaking compatibility cutover* for status consumers: a new server and new WebAdmin must be deployed together in any separately authorized rollout. Old WebAdmin cannot read the new server, and new WebAdmin rejects old status sources. Inventory/update external status clients before rollout; no silent migration is provided.
 - Tests verify the C++ status name and strict acceptance/refusal in both WebAdmin parsers. This PR needs its own exact-head GitHub-hosted CI and OWNER merge acceptance.
+- In the disposable VM test, an actual downgrade to historical C++ `beta-0.5.16` uses a **temporary test-only copy** of the Node gateway with the status parser sourced from the immutable historical commit. This retains real password/TOTP, passkey-browser and matched-recovery coverage. It does **not** establish mixed-version production compatibility: the current WebAdmin still rejects `dc24h.eu`.
 
 ## Explicitly unchanged until another separate OWNER decision
 
