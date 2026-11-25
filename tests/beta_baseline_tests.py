@@ -259,7 +259,7 @@ def main():
         "beta-0.1.4", "configuration.manage", "409 stale", "503 outcome_unknown", "Require local",
     ), errors)
     check(ROOT / "src/service_control/controller.cpp", (
-        "SO_PEERCRED", "STATUS\\n", "systemctl", "dc24h.service", "execve", "O_NOFOLLOW",
+        "SO_PEERCRED", "STATUS\\n", "systemctl", "dc24h-twilight.service", "execve", "O_NOFOLLOW",
         '"START\\n"', '"STOP\\n"', '"RESTART\\n"', 'dc24h-maintenance',
     ), errors)
     check(ROOT / "src/api/accounts.cpp", (
@@ -307,7 +307,7 @@ def main():
         "hubServiceConfirm", "hubServiceUnknown", "hubServiceVerifying", "serviceConfirmation", "adminHeaders()",
     ), errors)
     check(ROOT / "webadmin/src/lib/hub-service.ts", (
-        "parseHubServiceStatus", "parseHubServiceResult", '"dc24h.service"',
+        "parseHubServiceStatus", "parseHubServiceResult", '"dc24h-twilight.service"',
     ), errors)
     check(ROOT / "webadmin/server/json-content-type.ts", (
         "isJsonContentType", "application\\/json", "charset", "utf-8",

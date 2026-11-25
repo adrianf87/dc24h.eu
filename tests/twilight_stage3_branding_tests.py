@@ -13,19 +13,19 @@ def source(relative):
 
 
 class TwilightStageThreeBrandingTests(unittest.TestCase):
-    def test_operator_text_uses_twilight_without_renaming_executable(self):
+    def test_operator_text_uses_twilight_with_approved_stage_iv_executable(self):
         main = source("src/main.cpp")
         self.assertIn('std::cout << "dc24h.eu-twilight "', main)
         self.assertIn('std::string("Starting dc24h.eu-twilight ")', main)
         for language in ("us", "pl"):
             help_text = source(f"languages/{language}/messages.hpp")
             self.assertIn("dc24h.eu-twilight", help_text)
-            self.assertIn("dc24h [--language us|pl] --help | --version", help_text)
+            self.assertIn("dc24h-twilight [--language us|pl] --help | --version", help_text)
 
         welcome = "Welcome to dc24h.eu-twilight. Guest access is enabled."
         self.assertIn(welcome, source("include/dc24h/chat/settings.hpp"))
         self.assertIn(f"welcome_message = {welcome}", source("config/dc24h.ini.example"))
-        for name in ("dc24h", "dc24h-control", "dc24h-remote-gateway"):
+        for name in ("dc24h-twilight", "dc24h-twilight-control", "dc24h-twilight-remote-gateway"):
             unit = source(f"config/{name}.service.example")
             self.assertIn("Description=dc24h.eu-twilight", unit)
 

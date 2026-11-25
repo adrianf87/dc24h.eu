@@ -134,7 +134,7 @@ jobs:
         working-directory: webadmin
         run: |
           node --import tsx --test --test-concurrency=2 tests/*.test.ts
-          npm run test:integration -- ../build/Stage4VM/dc24h
+          npm run test:integration -- ../build/Stage4VM/dc24h-twilight
 
       - name: Measure authenticated real C++ to Node to Apache HTTPS
         run: |
@@ -146,8 +146,8 @@ jobs:
           python3 -m unittest discover -s tests -p beta08_restored_login_budget_tests.py
           DC24H_VM_REPORT_DIR="$PWD/vm-evidence" python3 \
             tests/beta06_authenticated_api_process_tests.py \
-            build/Stage4VM/dc24h build/Stage4VM/account_webadmin_tests \
-            build/Stage4VM/dc24h-account-admin
+            build/Stage4VM/dc24h-twilight build/Stage4VM/account_webadmin_tests \
+            build/Stage4VM/dc24h-twilight-account-admin
           python3 scripts/beta06_auth_gate.py \
             --report vm-evidence/beta06-authenticated-https.json \
             --sha "$SOURCE_SHA" --os-image "${{ matrix.os }}" \
@@ -208,7 +208,7 @@ jobs:
         run: |
           DC24H_VM_REPORT_DIR="$PWD/vm-evidence" python3 \
             tests/beta06_previous_version_rollback.py \
-            build/Stage4VM/dc24h build/Beta05/dc24h beta05-reference
+            build/Stage4VM/dc24h-twilight build/Beta05/dc24h beta05-reference
 
       - name: Install and downgrade dpkg, authenticate with old C++ and restart hardened systemd services
         run: |
@@ -222,8 +222,8 @@ jobs:
           python3 -m unittest discover -s tests -p beta08_postrollback_state_tests.py
           DC24H_VM_REPORT_DIR="$PWD/vm-evidence" python3 \
             tests/beta07_dpkg_process_tests.py \
-            build/Stage4VM/dc24h build/Beta05/dc24h beta05-reference \
-            build/Stage4VM/dc24h-account-admin build/Beta05/dc24h-account-admin \
+            build/Stage4VM/dc24h-twilight build/Beta05/dc24h beta05-reference \
+            build/Stage4VM/dc24h-twilight-account-admin build/Beta05/dc24h-account-admin \
             build/Stage4VM/account_webadmin_tests
 
       - name: Require exact-head beta-0.9 Stage III old-login, recovery, descriptor and systemd proofs

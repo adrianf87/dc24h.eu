@@ -15,10 +15,11 @@ import shutil
 import subprocess
 
 
-PACKAGE = "dc24h-high-starter-ci-fixture"
-UNIT = "dc24h-high-starter-ci-fixture.service"
-BIN = f"usr/lib/{PACKAGE}/dc24h"
-ADMIN_BIN = f"usr/lib/{PACKAGE}/dc24h-account-admin"
+LEGACY_PACKAGE = "dc24h-high-starter-ci-fixture"
+PACKAGE = "dc24h-twilight-ci-fixture"
+UNIT = "dc24h-twilight-ci-fixture.service"
+BIN = f"usr/lib/{PACKAGE}/dc24h-twilight"
+ADMIN_BIN = f"usr/lib/{PACKAGE}/dc24h-twilight-account-admin"
 UNIT_PATH = f"lib/systemd/system/{UNIT}"
 DOC_PATH = f"usr/share/doc/{PACKAGE}/ci-provenance"
 VERSIONS = {"previous": "0.5.16+ci1", "current": "0.9.20+ci1"}
@@ -64,6 +65,7 @@ def build(binary: Path, destination: Path, version: str, sha: str, *,
         "Section: admin\nPriority: optional\n"
         "Maintainer: Isolated CI Fixture <ci@example.invalid>\n"
         "Depends: libc6, libstdc++6\n"
+        f"Conflicts: {LEGACY_PACKAGE}\n"
         "Description: Ephemeral dc24h package-manager regression fixture\n" +
         (" Injected pre-unpack failure; never deploy or start.\n" if fail_preinst else
          " Injected post-unpack failure; never deploy or start.\n" if fail_postinst else
@@ -93,7 +95,7 @@ def build(binary: Path, destination: Path, version: str, sha: str, *,
     unit.write_text(
         "[Unit]\nDescription=Disposable dc24h CI fixture; MUST NOT START\n"
         "ConditionPathExists=/__dc24h_ci_fixture_never_start__\n"
-        "[Service]\nType=oneshot\nExecStart=/usr/lib/" + PACKAGE + "/dc24h --version\n"
+        "[Service]\nType=oneshot\nExecStart=/usr/lib/" + PACKAGE + "/dc24h-twilight --version\n"
         "NoNewPrivileges=yes\nPrivateNetwork=yes\n",
         encoding="ascii")
     unit.chmod(0o644)

@@ -287,7 +287,7 @@ std::string hub_status_request(const Request& request) {
     // The fixed, peer-verified controller is the only source of service state.
     // Reject unexpected wire output rather than reflecting it to a browser.
     if(!result.starts_with("{\"schema\":1,\"available\":") ||
-       (result.find("\"unit\":\"dc24h.service\"")==std::string::npos &&
+       (result.find("\"unit\":\"dc24h-twilight.service\"")==std::string::npos &&
         result.find("\"available\":false")==std::string::npos) ||
        result.find('\r')!=std::string::npos)
         throw HttpError{503,"service_unavailable"};

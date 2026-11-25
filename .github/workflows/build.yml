@@ -223,7 +223,7 @@ jobs:
 
       - name: Real C++ API integration
         working-directory: webadmin
-        run: npm run test:integration -- ../build/Release/dc24h
+        run: npm run test:integration -- ../build/Release/dc24h-twilight
 
   sanitizers:
     name: C++ ${{ matrix.sanitizer }} - ubuntu-24.04

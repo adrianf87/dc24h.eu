@@ -1,9 +1,10 @@
 # Example only. Never enabled or started by the build.
 # Create a dedicated dc24h-control user, dc24h-maintenance peer account and
 # tightly restricted dc24h-admin group before deploying. Review membership.
-# Install the independently reviewed Polkit rule for only dc24h.service.
+# Install the independently reviewed Polkit rule for only dc24h-twilight.service.
 [Unit]
 Description=dc24h.eu-twilight restricted systemd service controller
+Conflicts=dc24h-control.service
 After=systemd-user-sessions.service
 
 [Service]
@@ -13,7 +14,7 @@ Group=dc24h-admin
 UMask=0077
 RuntimeDirectory=dc24h-control
 RuntimeDirectoryMode=0750
-ExecStart=/usr/local/bin/dc24h-service-controller --socket /run/dc24h-control/status.sock
+ExecStart=/usr/local/bin/dc24h-twilight-service-controller --socket /run/dc24h-control/status.sock
 Restart=on-failure
 RestartSec=3
 NoNewPrivileges=yes
