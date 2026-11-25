@@ -17,7 +17,7 @@ concurrency:
 jobs:
   cpp:
     name: C++ ${{ matrix.build_type }} - ${{ matrix.os }}
-    if: github.repository == 'adrianf87/dc24h.eu' || github.repository == 'adrianf87/dc24h.eu-high-starter'
+    if: github.repository == 'adrianf87/dc24h.eu' || github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:
@@ -124,7 +124,7 @@ jobs:
 
   webadmin:
     name: WebAdmin - ${{ matrix.os }}
-    if: github.repository == 'adrianf87/dc24h.eu' || github.repository == 'adrianf87/dc24h.eu-high-starter'
+    if: github.repository == 'adrianf87/dc24h.eu' || github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     strategy:
@@ -227,7 +227,7 @@ jobs:
 
   sanitizers:
     name: C++ ${{ matrix.sanitizer }} - ubuntu-24.04
-    if: github.repository == 'adrianf87/dc24h.eu' || github.repository == 'adrianf87/dc24h.eu-high-starter'
+    if: github.repository == 'adrianf87/dc24h.eu' || github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     strategy:

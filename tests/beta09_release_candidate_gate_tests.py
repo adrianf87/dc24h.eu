@@ -103,6 +103,7 @@ def fixture(root):
 
 def github_fixture(mode="pr"):
     return {"source_sha": SHA, "mode": mode,
+            "repository": "adrianf87/dc24h.eu-high-starter",
             "branch": {"pr": "beta-0.9.x-stage-full",
                        "fix-pass": "beta-0.9.x-stage-full-fix-pass",
                        "main": "main"}[mode],
@@ -180,6 +181,7 @@ class CandidateTests(unittest.TestCase):
                 ("branch", "beta-0.9.x-stage-full-fix-pass"),
                 ("mode", "fix-pass"),
                 ("source_sha", "b" * 40),
+                ("repository", "adrianf87/dc24h.eu-twilight"),
                 ("github_api_metadata_verified", False),
                 ("artifact_sha256_independently_verified", False),
                 ("owner_release_approval", True),

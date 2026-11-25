@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   offline-audit:
-    if: github.repository == 'adrianf87/dc24h.eu-high-starter'
+    if: github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
     name: Stage IV private storage - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25

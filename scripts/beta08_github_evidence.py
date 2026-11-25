@@ -18,9 +18,13 @@ import urllib.request
 from pathlib import Path
 
 
+# Historical RC1 evidence stays bound to the source repository. Twilight is a
+# separate trust root and must be selected explicitly by the caller.
 REPO = "adrianf87/dc24h.eu-high-starter"
+TWILIGHT_REPO = "adrianf87/dc24h.eu-twilight"
 BRANCH = "beta-0.8.x-stage-full"
 FIX_BRANCH = "beta-0.9.x-stage-full-fix-pass"
+TWILIGHT_BRANCH = "fix/twilight-ci-repository-identity"
 IMAGES = ("ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04")
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 DIGEST = re.compile(r"sha256:[0-9a-f]{64}\Z")
@@ -80,18 +84,35 @@ def _current_branch(get, sha, branch=BRANCH):
         raise ValueError("Source SHA is no longer the current development branch HEAD")
 
 
-def evaluate(get, sha, branch=BRANCH, event="pull_request", artifact_callback=None):
+def _allowed_source(repository, branch, event):
+    if event not in ("pull_request", "push"):
+        return False
+    if repository == REPO:
+        return (branch in (BRANCH, "beta-0.9.x-stage-full", FIX_BRANCH, "main") and
+                (event == "push") == (branch in ("main", FIX_BRANCH)))
+    if repository == TWILIGHT_REPO:
+        if branch == "main":
+            return event == "push"
+        # Only named, reviewable fix/rebrand PR branches; do not silently accept
+        # arbitrary forks or the historical source repository as Twilight.
+        return (event == "pull_request" and isinstance(branch, str) and
+                re.fullmatch(r"(?:fix|rebrand)/[a-z0-9][a-z0-9._/-]{0,94}", branch) is not None and
+                ".." not in branch and "//" not in branch and
+                not branch.endswith(("/", ".")))
+    return False
+
+
+def evaluate(get, sha, branch=BRANCH, event="pull_request", artifact_callback=None,
+             repository=REPO):
     if (not isinstance(sha, str) or not SHA.fullmatch(sha) or
-            sha == "0" * 40 or branch not in (BRANCH, "beta-0.9.x-stage-full", FIX_BRANCH, "main") or
-            event not in ("pull_request", "push") or
-            (event == "push") != (branch in ("main", FIX_BRANCH))):
-        raise ValueError("Invalid exact source head or development branch")
+            sha == "0" * 40 or not _allowed_source(repository, branch, event)):
+        raise ValueError("Invalid repository, exact source head or development branch")
     # An old, entirely green run is not final-head evidence after a new push.
     # Re-read the authoritative branch at the end to catch concurrent updates.
     _current_branch(get, sha, branch)
     runs = _collection(get(f"/actions/runs?head_sha={sha}&per_page=100"), "workflow_runs")
     selected = {}
-    required = ({**WORKFLOWS, **RC_WORKFLOWS} if branch in
+    required = ({**WORKFLOWS, **RC_WORKFLOWS} if repository == TWILIGHT_REPO or branch in
                 ("beta-0.9.x-stage-full", FIX_BRANCH, "main") else WORKFLOWS)
     for workflow in required:
         matching = [r for r in runs if isinstance(r, dict) and
@@ -106,7 +127,7 @@ def evaluate(get, sha, branch=BRANCH, event="pull_request", artifact_callback=No
         if (type(run.get("id")) is not int or run["id"] < 1 or
                 type(run.get("run_attempt")) is not int or run["run_attempt"] < 1 or
                 run.get("status") != "completed" or run.get("conclusion") != "success" or
-                run.get("repository", {}).get("full_name") != REPO):
+                run.get("repository", {}).get("full_name") != repository):
             raise ValueError("Pending/failed/wrong-repository workflow run")
         run_id, attempt = run["id"], run["run_attempt"]
         jobs = _collection(get(f"/actions/runs/{run_id}/attempts/{attempt}/jobs?per_page=100"), "jobs")
@@ -162,6 +183,7 @@ def evaluate(get, sha, branch=BRANCH, event="pull_request", artifact_callback=No
                               "jobs": len(identities), "artifact_digests": observed}
     _current_branch(get, sha, branch)
     return {"schema": 1, "source_sha": sha, "branch": branch,
+            "repository": repository,
             "github_api_authenticated": True, "verified_workflows": selected,
             "all_required_hosted_checks_successful": True,
             "artifact_digests_verified_from_github_metadata_only": True,
@@ -174,6 +196,9 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--sha", required=True)
+    parser.add_argument("--repository", choices=(REPO, TWILIGHT_REPO), default=REPO)
+    parser.add_argument("--branch", default=BRANCH)
+    parser.add_argument("--event", choices=("pull_request", "push"), default="pull_request")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
     token = os.environ.get("GITHUB_TOKEN", "")
@@ -186,7 +211,7 @@ def main(argv=None):
             raise ValueError("Wrong checkout")
 
         def github_get(path):
-            url = "https://api.github.com/repos/" + REPO + path
+            url = "https://api.github.com/repos/" + args.repository + path
             request = urllib.request.Request(url, headers={
                 "Authorization": "Bearer " + token,
                 "Accept": "application/vnd.github+json",
@@ -197,7 +222,8 @@ def main(argv=None):
                     raise ValueError("Unbounded or unavailable API data")
                 return json.loads(payload)
 
-        report = evaluate(github_get, args.sha)
+        report = evaluate(github_get, args.sha, branch=args.branch,
+                          event=args.event, repository=args.repository)
         with args.output.open("x", encoding="utf8") as output:
             json.dump(report, output, sort_keys=True)
             output.write("\n")

@@ -12,18 +12,18 @@ import beta08_github_evidence as gate
 SHA = "a" * 40
 
 
-def fixture(branch=gate.BRANCH, event="pull_request"):
+def fixture(branch=gate.BRANCH, event="pull_request", repository=gate.REPO):
     data = {}
     data[f"/branches/{branch}"] = {"name": branch, "commit": {"sha": SHA}}
     runs = []
-    required = ({**gate.WORKFLOWS, **gate.RC_WORKFLOWS} if branch in
+    required = ({**gate.WORKFLOWS, **gate.RC_WORKFLOWS} if repository == gate.TWILIGHT_REPO or branch in
                 ("beta-0.9.x-stage-full", gate.FIX_BRANCH, "main") else gate.WORKFLOWS)
     for index, (workflow, names) in enumerate(required.items(), start=1):
         run_id, attempt = 700 + index, 2
         runs.append({"id": run_id, "run_attempt": attempt,
                      "path": f".github/workflows/{workflow}@refs/pull/241/merge",
                      "head_sha": SHA, "head_branch": branch, "event": event,
-                     "repository": {"full_name": gate.REPO},
+                     "repository": {"full_name": repository},
                      "status": "completed", "conclusion": "success"})
         jobs = []
         for name in sorted(names):
@@ -49,6 +49,47 @@ def fixture(branch=gate.BRANCH, event="pull_request"):
 
 
 class AuthenticatedEvidenceTests(unittest.TestCase):
+    def test_twilight_pr_requires_exact_repository_branch_sha_and_five_workflows(self):
+        data = fixture(gate.TWILIGHT_BRANCH, repository=gate.TWILIGHT_REPO)
+        check = lambda records: gate.evaluate(lambda path: records[path], SHA,
+                                               branch=gate.TWILIGHT_BRANCH,
+                                               repository=gate.TWILIGHT_REPO)
+        report = check(data)
+        self.assertEqual(report["repository"], gate.TWILIGHT_REPO)
+        self.assertEqual(set(report["verified_workflows"]),
+                         set(gate.WORKFLOWS) | set(gate.RC_WORKFLOWS))
+        self.assertFalse(report["merge_authorized"])
+        for key, value in (("repository", "someone/unreviewed-repo"),
+                           ("branch", "main"), ("branch", "fix/../wrong")):
+            with self.subTest(key=key, value=value), self.assertRaises(ValueError):
+                gate.evaluate(lambda path: data[path], SHA,
+                              branch=value if key == "branch" else gate.TWILIGHT_BRANCH,
+                              repository=value if key == "repository" else gate.TWILIGHT_REPO)
+        with self.assertRaises(ValueError):
+            gate.evaluate(lambda path: data[path], "b" * 40,
+                          branch=gate.TWILIGHT_BRANCH, repository=gate.TWILIGHT_REPO)
+        foreign = copy.deepcopy(data)
+        foreign["/actions/runs?head_sha=" + SHA + "&per_page=100"]["workflow_runs"][0][
+            "repository"]["full_name"] = gate.REPO
+        with self.assertRaisesRegex(ValueError, "wrong-repository"):
+            check(foreign)
+        stale = copy.deepcopy(data)
+        stale[f"/branches/{gate.TWILIGHT_BRANCH}"]["commit"]["sha"] = "c" * 40
+        with self.assertRaises(ValueError):
+            check(stale)
+        old = fixture(gate.TWILIGHT_BRANCH, repository=gate.REPO)
+        with self.assertRaisesRegex(ValueError, "wrong-repository"):
+            check(old)
+
+    def test_twilight_main_requires_push_not_historical_fix_pass(self):
+        data = fixture("main", "push", repository=gate.TWILIGHT_REPO)
+        result = gate.evaluate(lambda path: data[path], SHA,
+                               branch="main", event="push", repository=gate.TWILIGHT_REPO)
+        self.assertIn("beta09-stage4-storage.yml", result["verified_workflows"])
+        with self.assertRaises(ValueError):
+            gate.evaluate(lambda path: data[path], SHA,
+                          branch="main", event="pull_request", repository=gate.TWILIGHT_REPO)
+
     def test_fix_pass_requires_all_hosted_storage_jobs_and_rejects_wrong_event(self):
         data = fixture(gate.FIX_BRANCH, "push")
         result = gate.evaluate(lambda key: data[key], SHA, branch=gate.FIX_BRANCH, event="push")
