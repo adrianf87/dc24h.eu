@@ -31,6 +31,8 @@
 
 Poniższe elementy **nie są częścią commita** i nie mogą zostać uznane za wykonane na podstawie samego PR. Potwierdzenie wymagane osobno na GitHub po zalogowaniu jako OWNER:
 
+- **Odczyt 2026-11-25 (bez zapisu ustawień):** aktualne GitHub About nadal wyświetla `Coded by ChatGPT (High reasoning level). A Direct Connect hub server supporting the ADC and ADCS network protocols.`; nie wyświetla przypisanych topics. To **otwarta poprawka konfiguracji**, której nie da się wykonać samym PR.
+- **Sprawdzone ustawienia:** `main` jest domyślny. Ruleset **Main Branch Protection** jest **Active**, dotyczy `main`, lista bypass jest pusta; wymaga PR, aktualnej gałęzi i 12 określonych status checks, blokuje force-push oraz usuwanie gałęzi. Na liście zainstalowanych aplikacji są **ChatGPT Codex Connector** i **Cursor**. Wejście w szczegółowe zakresy uprawnień aplikacji wymagało dodatkowego potwierdzenia konta GitHub (sudo mode) — **nie potwierdzono zakresów uprawnień** i nie obchodzono tego ograniczenia.
 - **Description (proponowana):** `dc24h.eu-twilight — independent C++20 ADC/ADCS hub and React WebAdmin development fork; non-production release qualification.`
 - **Topics (proponowane):** `dc24h`, `twilight`, `direct-connect`, `adc`, `adcs`, `cpp20`, `react`, `webadmin`, `linux`.
 - **Website URL:** nie wpisywać niezatwierdzonego publicznego hosta. Publiczna domena `dc24h.eu` i certyfikaty nie zmieniają właściciela przez rebranding.

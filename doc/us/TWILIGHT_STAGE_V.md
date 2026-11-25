@@ -31,6 +31,8 @@
 
 Settings **are not versioned in this PR**, and the PR's existence cannot certify them. OWNER or another authorized reviewer must confirm on GitHub:
 
+- **Read-only audit 2026-11-25:** current GitHub About still reads `Coded by ChatGPT (High reasoning level). A Direct Connect hub server supporting the ADC and ADCS network protocols.`; no topics are displayed. Updating this **remains an external settings task**, not a branch commit.
+- **Verified live settings:** default branch `main`; **Main Branch Protection** ruleset **Active**, targeting `main`, no bypass entries, PR required, fresh branch required, 12 named status checks required, force pushes and branch deletion blocked. Installed apps listed as **ChatGPT Codex Connector** and **Cursor**. Checking each app's detailed permission scopes led to GitHub's additional account confirmation (sudo mode), so those scopes **remain unverified**; no access barrier was bypassed.
 - **Proposed description:** `dc24h.eu-twilight — independent C++20 ADC/ADCS hub and React WebAdmin development fork; non-production release qualification.`
 - **Proposed topics:** `dc24h`, `twilight`, `direct-connect`, `adc`, `adcs`, `cpp20`, `react`, `webadmin`, `linux`.
 - **Website URL:** leave empty unless a real publicly approved site exists; a display rebrand does not relocate `dc24h.eu` DNS/TLS.
