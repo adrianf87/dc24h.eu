@@ -74,17 +74,21 @@ def safe_report(name):
 
 
 def fixture(mode="pr"):
-    branch = gate.BRANCH if mode == "pr" else gate.FIX_BRANCH if mode == "fix-pass" else "main"
-    data = previous_fixture(branch, "pull_request" if mode == "pr" else "push")
-    data[f"/pulls/{gate.PR}"] = {
-        "state": "open", "head": {"ref": gate.BRANCH, "sha": SHA,
-                                  "repo": {"full_name": gate.prior.REPO}},
-        "base": {"ref": "main", "repo": {"full_name": gate.prior.REPO}}}
+    branch = (gate.BRANCH if mode == "pr" else gate.FIX_BRANCH if mode == "fix-pass"
+              else gate.TWILIGHT_BRANCH if mode == "twilight-pr" else "main")
+    repository = gate.prior.TWILIGHT_REPO if mode == "twilight-pr" else gate.prior.REPO
+    event = "pull_request" if mode in ("pr", "twilight-pr") else "push"
+    data = previous_fixture(branch, event, repository=repository)
+    pr_number = 17 if mode == "twilight-pr" else gate.PR
+    data[f"/pulls/{pr_number}"] = {
+        "state": "open", "head": {"ref": branch, "sha": SHA,
+                                  "repo": {"full_name": repository}},
+        "base": {"ref": "main", "repo": {"full_name": repository}}}
     runs = data[f"/actions/runs?head_sha={SHA}&per_page=100"]["workflow_runs"]
     archives = {}
     for run in runs:
         run["head_branch"] = branch
-        run["event"] = "pull_request" if mode == "pr" else "push"
+        run["event"] = event
         artifacts = data[f"/actions/runs/{run['id']}/artifacts?per_page=100"]["artifacts"]
         for artifact in artifacts:
             artifact["workflow_run"]["head_branch"] = branch
@@ -98,6 +102,43 @@ def fixture(mode="pr"):
 
 
 class IndependentArtifactTests(unittest.TestCase):
+    def test_twilight_pr_zip_evidence_is_bound_to_pr_branch_and_repository(self):
+        data, archives = fixture("twilight-pr")
+        check = lambda records: gate.evaluate(lambda key: records[key],
+                                               lambda i: archives[i], SHA,
+                                               "twilight-pr", repository=gate.prior.TWILIGHT_REPO,
+                                               branch=gate.TWILIGHT_BRANCH, pr_number=17)
+        result = check(data)
+        self.assertEqual(result["repository"], gate.prior.TWILIGHT_REPO)
+        self.assertEqual(result["branch"], gate.TWILIGHT_BRANCH)
+        self.assertGreaterEqual(result["downloaded_artifact_count"], 12)
+        self.assertFalse(result["owner_release_approval"])
+        for field, value in (("sha", "b" * 40), ("ref", "rebrand/unreviewed"),
+                             ("repo", {"full_name": gate.prior.REPO})):
+            forged = copy.deepcopy(data)
+            forged["/pulls/17"]["head"][field] = value
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, "Pull request"):
+                check(forged)
+        forged = copy.deepcopy(data)
+        forged["/pulls/17"]["base"]["repo"]["full_name"] = gate.prior.REPO
+        with self.assertRaisesRegex(ValueError, "Pull request"):
+            check(forged)
+        foreign = copy.deepcopy(data)
+        foreign[f"/actions/runs?head_sha={SHA}&per_page=100"]["workflow_runs"][0][
+            "repository"]["full_name"] = gate.prior.REPO
+        with self.assertRaisesRegex(ValueError, "wrong-repository"):
+            check(foreign)
+        with self.assertRaises(ValueError):
+            gate.evaluate(lambda key: data[key], lambda i: archives[i], SHA,
+                          "twilight-pr", repository=gate.prior.REPO,
+                          branch=gate.TWILIGHT_BRANCH, pr_number=17)
+        wrong_number = copy.deepcopy(data)
+        wrong_number["/pulls/18"] = {**wrong_number["/pulls/17"], "state": "closed"}
+        with self.assertRaises(ValueError):
+            gate.evaluate(lambda key: wrong_number[key], lambda i: archives[i], SHA,
+                          "twilight-pr", repository=gate.prior.TWILIGHT_REPO,
+                          branch=gate.TWILIGHT_BRANCH, pr_number=18)
+
     def test_fix_pass_push_is_verified_without_fake_pr(self):
         data, archives = fixture("fix-pass")
         data.pop(f"/pulls/{gate.PR}")

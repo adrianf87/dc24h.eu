@@ -2,6 +2,7 @@
 """Lock prior beta-0.3 safety limits and current beta-0.9.20 metadata."""
 
 from pathlib import Path
+import re
 import sys
 
 
@@ -53,6 +54,29 @@ def check_no_custom_workers(errors):
             "actionlint.yaml: public ubuntu-26.04 label is missing", errors)
 
 
+def check_ci_repository_allowlists(errors):
+    old = "github.repository == 'adrianf87/dc24h.eu-high-starter'"
+    twilight = "github.repository == 'adrianf87/dc24h.eu-twilight'"
+    original = "github.repository == 'adrianf87/dc24h.eu'"
+    policies = {
+        "build.yml": (3, {old, twilight, original}),
+        "beta07-codeql.yml": (1, {old, twilight}),
+        "beta08-hardening.yml": (2, {old, twilight}),
+        "beta09-stage4-storage.yml": (1, {old, twilight}),
+        "stage4-ubuntu-vm-validation.yml": (1, {old, twilight}),
+    }
+    for name, (count, allowlist) in policies.items():
+        content = (ROOT / ".github/workflows" / name).read_text(encoding="utf-8")
+        guards = re.findall(r"(?m)^\s*if: (.*github\.repository.*)$", content)
+        require(len(guards) == count, f"{name}: expected {count} protected jobs", errors)
+        for guard in guards:
+            clauses = guard.strip().split(" || ")
+            require(len(clauses) == len(allowlist) and set(clauses) == allowlist,
+                    f"{name}: foreign repo or altered exact repository allowlist", errors)
+    require(sum(count for count, _ in policies.values()) == 8,
+            "Unexpected repository guard inventory", errors)
+
+
 def main():
     errors = []
     cmake = check(ROOT / "CMakeLists.txt", (
@@ -84,8 +108,7 @@ def main():
             "build.yml: both jobs must use the public image matrix", errors)
     require('test "$(nproc)" -eq 4' not in workflow,
             "build.yml: fixed runner CPU count is not portable", errors)
-    require(workflow.count("github.repository == 'adrianf87/dc24h.eu-high-starter'") == 3,
-            "build.yml: High Starter repository must run C++, WebAdmin and sanitizers", errors)
+    check_ci_repository_allowlists(errors)
     require("needs: [cpp, webadmin, sanitizers]" in workflow,
             "build.yml: sanitizer failures must block the required CI result", errors)
     require("debian_compat:" not in workflow and "container:" not in workflow,

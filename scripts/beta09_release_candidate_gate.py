@@ -135,6 +135,9 @@ def evaluate(root, sha, reports, hardening, github=None):
                                   "beta09-stage4-storage.yml"))
         runs = github.get("workflow_run_ids") if isinstance(github, dict) else None
         if (not isinstance(github, dict) or github.get("source_sha") != sha or
+                # This RC1 gate evaluates the historical High Starter lineage,
+                # never artifacts originating from a different GitHub repo.
+                github.get("repository") != "adrianf87/dc24h.eu-high-starter" or
                 (github.get("mode"), github.get("branch")) not in (
                     ("pr", "beta-0.9.x-stage-full"),
                     ("fix-pass", "beta-0.9.x-stage-full-fix-pass"),

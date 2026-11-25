@@ -28,6 +28,7 @@ import beta09_os_provenance as host
 BRANCH = "beta-0.9.x-stage-full"
 FIX_BRANCH = "beta-0.9.x-stage-full-fix-pass"
 PR = 243
+TWILIGHT_BRANCH = prior.TWILIGHT_BRANCH
 MAX_ARCHIVE = 16 * 1024 * 1024
 MAX_ENTRY = 256 * 1024
 MAX_UNCOMPRESSED = 4 * 1024 * 1024
@@ -211,25 +212,42 @@ def inspect_archive(zipped, artifact, sha):
                 "legacy_unbound_reports": unbound}
 
 
-def _verify_pr(get, sha):
-    pr = get(f"/pulls/{PR}")
+def _verify_pr(get, sha, repository, branch, pr_number):
+    if type(pr_number) is not int or pr_number <= 0:
+        raise ValueError("Exact pull request number is required")
+    pr = get(f"/pulls/{pr_number}")
     if (not isinstance(pr, dict) or pr.get("state") != "open" or
             not isinstance(pr.get("head"), dict) or
-            pr["head"].get("ref") != BRANCH or pr["head"].get("sha") != sha or
-            pr["head"].get("repo", {}).get("full_name") != prior.REPO or
+            pr["head"].get("ref") != branch or pr["head"].get("sha") != sha or
+            pr["head"].get("repo", {}).get("full_name") != repository or
             not isinstance(pr.get("base"), dict) or
             pr["base"].get("ref") != "main" or
-            pr["base"].get("repo", {}).get("full_name") != prior.REPO):
+            pr["base"].get("repo", {}).get("full_name") != repository):
         raise ValueError("Pull request does not point to exact current source HEAD")
 
 
-def evaluate(get, download, sha, mode="pr"):
-    if not isinstance(sha, str) or not SHA.fullmatch(sha) or mode not in ("pr", "fix-pass", "main"):
-        raise ValueError("Invalid final source SHA or review mode")
-    branch, event = ((BRANCH, "pull_request") if mode == "pr" else
-                     (FIX_BRANCH if mode == "fix-pass" else "main", "push"))
-    if mode == "pr":
-        _verify_pr(get, sha)
+def evaluate(get, download, sha, mode="pr", repository=prior.REPO,
+             branch=None, pr_number=None):
+    if (not isinstance(sha, str) or not SHA.fullmatch(sha) or sha == "0" * 40 or
+            mode not in ("pr", "fix-pass", "main", "twilight-pr") or
+            repository not in (prior.REPO, prior.TWILIGHT_REPO)):
+        raise ValueError("Invalid repository, final source SHA or review mode")
+    if mode == "twilight-pr":
+        if repository != prior.TWILIGHT_REPO or branch is None:
+            raise ValueError("Twilight PR requires explicit repository and branch")
+        event = "pull_request"
+    elif mode in ("pr", "fix-pass"):
+        if repository != prior.REPO or branch is not None or pr_number is not None:
+            raise ValueError("Historical PR/fix-pass evidence belongs to source repository")
+        branch, event = (BRANCH, "pull_request") if mode == "pr" else (FIX_BRANCH, "push")
+    else:
+        if branch is not None or pr_number is not None:
+            raise ValueError("Main mode must verify immutable main push")
+        branch, event = "main", "push"
+    if mode in ("pr", "twilight-pr"):
+        _verify_pr(get, sha, repository, branch, PR if mode == "pr" else pr_number)
+    elif pr_number is not None:
+        raise ValueError("Push evidence cannot claim a pull request")
     count, size, reports, unbound = 0, 0, 0, 0
 
     def check(artifact, _workflow):
@@ -241,10 +259,12 @@ def evaluate(get, download, sha, mode="pr"):
         reports += checked["reports"]
         unbound += checked["legacy_unbound_reports"]
 
-    metadata = prior.evaluate(get, sha, branch=branch, event=event, artifact_callback=check)
-    if mode == "pr":
-        _verify_pr(get, sha)
+    metadata = prior.evaluate(get, sha, branch=branch, event=event,
+                              artifact_callback=check, repository=repository)
+    if mode in ("pr", "twilight-pr"):
+        _verify_pr(get, sha, repository, branch, PR if mode == "pr" else pr_number)
     return {"schema": 1, "source_sha": sha, "mode": mode, "branch": branch,
+            "repository": repository,
             "github_api_metadata_verified": True,
             "downloaded_artifact_count": count, "verified_zip_bytes": size,
             "redacted_reports_parsed": reports, "legacy_reports_without_embedded_sha": unbound,
@@ -264,7 +284,11 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--sha", required=True)
-    parser.add_argument("--mode", choices=("pr", "fix-pass", "main"), default="pr")
+    parser.add_argument("--mode", choices=("pr", "fix-pass", "main", "twilight-pr"), default="pr")
+    parser.add_argument("--repository", choices=(prior.REPO, prior.TWILIGHT_REPO),
+                        default=prior.REPO)
+    parser.add_argument("--branch", help="Exact source branch for twilight-pr")
+    parser.add_argument("--pr-number", type=int, help="Open Twilight PR number")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
     token = os.environ.get("GITHUB_TOKEN", "")
@@ -275,7 +299,7 @@ def main(argv=None):
                                          timeout=10).decode("ascii").strip()
         if actual != args.sha:
             raise ValueError("Wrong checkout")
-        base = "https://api.github.com/repos/" + prior.REPO
+        base = "https://api.github.com/repos/" + args.repository
         headers = {"Authorization": "Bearer " + token,
                    "Accept": "application/vnd.github+json",
                    "X-GitHub-Api-Version": "2022-11-28",
@@ -317,7 +341,8 @@ def main(argv=None):
                     raise ValueError("Artifact archive is oversized")
                 return data
 
-        report = evaluate(get, download, args.sha, args.mode)
+        report = evaluate(get, download, args.sha, args.mode, repository=args.repository,
+                          branch=args.branch, pr_number=args.pr_number)
         with args.output.open("x", encoding="utf8") as stream:
             json.dump(report, stream, sort_keys=True)
             stream.write("\n")
