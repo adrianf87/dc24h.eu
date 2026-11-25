@@ -60,7 +60,7 @@ def run(current, historical, checkout, *, current_admin=None, historical_admin=N
     if Path("/__dc24h_ci_fixture_never_start__").exists():
         raise AssertionError("The inert fixture unit guard must remain absent")
 
-    installed_binary = Path("/usr/lib") / deb.PACKAGE / "dc24h"
+    installed_binary = Path("/") / deb.BIN
     installed_admin = Path("/") / deb.ADMIN_BIN
     with tempfile.TemporaryDirectory(prefix="beta07-hosted-dpkg-") as directory:
         root = Path(directory)

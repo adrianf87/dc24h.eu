@@ -173,14 +173,15 @@ class SystemdSandboxTests(unittest.TestCase):
         self.assertTrue(problems(weakened))
         self.assertFalse(any(line.startswith("dc24h:") for line in Path("/etc/passwd").read_text(encoding="utf-8").splitlines()))
         self.assertFalse(Path("/etc/systemd/system/dc24h.service").exists())
+        self.assertFalse(Path("/etc/systemd/system/dc24h-twilight.service").exists())
 
     def test_verify_and_private_sysusers(self):
         with tempfile.TemporaryDirectory(prefix="dc24h-systemd-") as folder:
             root = Path(folder)
-            unit = root / "dc24h.service"
+            unit = root / "dc24h-twilight.service"
             command = self.parsed["Service"]["ExecStart"].split(" ", 1)[1]
             unit.write_text(self.text.replace(
-                "ExecStart=/usr/local/bin/dc24h ", f"ExecStart={BINARY} ", 1), encoding="utf-8")
+                "ExecStart=/usr/local/bin/dc24h-twilight ", f"ExecStart={BINARY} ", 1), encoding="utf-8")
             self.assertIn(command, unit.read_text(encoding="utf-8"))
             verified = run(["systemd-analyze", "verify", str(unit)], check=False)
             self.assertEqual(verified.returncode, 0, verified.stderr)

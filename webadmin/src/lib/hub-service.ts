@@ -2,7 +2,7 @@ export type ServiceOperation = "start" | "stop" | "restart";
 
 export type HubServiceStatus =
   | {schema: 1; available: false; error: "systemd_unavailable" | "invalid_systemd_response"}
-  | {schema: 1; available: true; unit: "dc24h.service"; load_state: string; active_state: string; sub_state: string; result: string};
+  | {schema: 1; available: true; unit: "dc24h-twilight.service"; load_state: string; active_state: string; sub_state: string; result: string};
 
 export interface HubServiceResult {
   operation: ServiceOperation;
@@ -21,9 +21,9 @@ export function parseHubServiceStatus(value: unknown): HubServiceStatus {
   if (data.schema !== 1) throw new Error("Invalid service response");
   if (data.available === false && (data.error === "systemd_unavailable" || data.error === "invalid_systemd_response"))
     return {schema: 1, available: false, error: data.error};
-  if (data.available !== true || data.unit !== "dc24h.service" || !state(data.load_state) ||
+  if (data.available !== true || data.unit !== "dc24h-twilight.service" || !state(data.load_state) ||
       !state(data.active_state) || !state(data.sub_state) || !state(data.result)) throw new Error("Invalid service response");
-  return {schema: 1, available: true, unit: "dc24h.service", load_state: data.load_state,
+  return {schema: 1, available: true, unit: "dc24h-twilight.service", load_state: data.load_state,
     active_state: data.active_state, sub_state: data.sub_state, result: data.result};
 }
 

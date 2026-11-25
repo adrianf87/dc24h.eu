@@ -3,12 +3,13 @@ import {test} from "node:test";
 import {currentServiceUsers, parseHubServiceResult, parseHubServiceStatus, serviceConfirmation} from "../src/lib/hub-service.ts";
 
 test("fixed service status is parsed and untrusted fields are stripped", () => {
-  const status = {schema: 1, available: true, unit: "dc24h.service", load_state: "loaded",
+  const status = {schema: 1, available: true, unit: "dc24h-twilight.service", load_state: "loaded",
     active_state: "active", sub_state: "running", result: "success"};
   assert.deepEqual(parseHubServiceStatus({...status, token: "hidden"}), status);
   assert.deepEqual(parseHubServiceStatus({schema: 1, available: false, error: "systemd_unavailable", secret: "hidden"}),
     {schema: 1, available: false, error: "systemd_unavailable"});
-  for (const wrong of [{...status, unit: "ssh.service"}, {...status, active_state: "active\nscript"},
+  for (const wrong of [{...status, unit: "ssh.service"}, {...status, unit: "dc24h.service"},
+    {...status, active_state: "active\nscript"},
     {...status, available: "true"}, {...status, schema: 2},
     {schema: 1, available: false, error: "arbitrary"}]) assert.throws(() => parseHubServiceStatus(wrong));
 });

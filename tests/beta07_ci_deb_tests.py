@@ -28,6 +28,9 @@ class DebPrototypeTests(unittest.TestCase):
             self.assertIn(deb.PACKAGE, subprocess.check_output(["dpkg-deb", "--field", str(archive), "Package"]).decode())
             self.assertIn("Depends: libc6, libstdc++6", subprocess.check_output([
                 "dpkg-deb", "--field", str(archive)]).decode())
+            control = subprocess.check_output(["dpkg-deb", "--field", str(archive)]).decode()
+            self.assertIn("Conflicts: " + deb.LEGACY_PACKAGE, control)
+            self.assertNotIn("Replaces:", control, "CI fixture must not silently replace the legacy package")
             self.assertEqual(subprocess.check_output([
                 "dpkg-deb", "--ctrl-tarfile", str(archive)]).count(b"#!/bin/sh"), 0)
             extracted = root / "extracted"

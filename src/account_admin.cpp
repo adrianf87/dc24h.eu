@@ -10,9 +10,9 @@
 
 int main(int argc,char* argv[]) {
     try {
-        if(argc==2&&std::string_view(argv[1])=="--version"){std::cout<<"dc24h-account-admin "<<dc24h::version<<'\n';return 0;}
+        if(argc==2&&std::string_view(argv[1])=="--version"){std::cout<<"dc24h-twilight-account-admin "<<dc24h::version<<'\n';return 0;}
         if(argc!=3||std::string_view(argv[1])!="--config"){
-            std::cerr<<"Usage: dc24h-account-admin --config maintenance.ini\nStop the serving hub before account maintenance. No ADC/ADCS listeners are opened.\n";return 2;
+            std::cerr<<"Usage: dc24h-twilight-account-admin --config maintenance.ini\nStop the serving hub before account maintenance. No ADC/ADCS listeners are opened.\n";return 2;
         }
         if(std::signal(SIGPIPE,SIG_IGN)==SIG_ERR){throw std::runtime_error("Cannot configure SIGPIPE handling");}
         auto settings=dc24h::configuration::parse_arguments(argc,argv).settings;

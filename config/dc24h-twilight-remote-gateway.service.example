@@ -4,6 +4,7 @@
 # Never set DC24H_REMOTE_PUBLIC or bind the service to a public interface.
 [Unit]
 Description=dc24h.eu-twilight remote read-only gateway (local-only development)
+Conflicts=dc24h-remote-gateway.service
 After=network.target
 StartLimitIntervalSec=60
 StartLimitBurst=5

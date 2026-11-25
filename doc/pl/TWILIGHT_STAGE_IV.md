@@ -1,14 +1,14 @@
 # dc24h.eu-twilight — Etap IV: inwentaryzacja tożsamości technicznej i decyzja OWNER
 
-Stan: **propozycja do osobnej decyzji o mapie nazw; bez migracji i aktywacji**. OWNER zatwierdził rozpoczęcie Etapu IV 2026-11-25. Dokument opisuje rzeczywiste nazwy z `main` po Etapie III i proponowany wariant, ale **nie jest zgodą na zmianę użytkowników, katalogów ani systemowych usług**.
+Stan: **OWNER zatwierdził wariant nazw technicznych 2026-11-25**. Implementacja w osobnym Draft PR #6 pozostaje do pełnego CI i osobnej decyzji o merge; **bez migracji ani aktywacji produkcyjnej**. Dawne nazwy poniżej opisują stan `main` po Etapie III, a nowe nazwy są zatwierdzonym celem. Konta usługowe, prywatny stan, ścieżki danych, API/DB, DNS/TLS oraz WebAuthn pozostają bez zmian.
 
-## Mapa obecnych nazw → proponowanych nazw docelowych
+## Mapa dawnych nazw → zatwierdzonych nazw docelowych
 
 | Obszar | Stan obecny | Propozycja / decyzja |
 | --- | --- | --- |
 | Nazwa produktu w interfejsie oraz `server.name` API v1 | `dc24h.eu-twilight` | **Bez zmian** (zrealizowane w Etapach II–III). |
-| Wewnętrzny projekt/target CMake | `project(dc24h)`; `dc24h`, `dc24h-owner`, `dc24h-account-admin`, `dc24h-service-controller` | Zachować wewnętrzne targety, a **po decyzji OWNER** rozważyć wyjściowe nazwy plików `dc24h-twilight`, `dc24h-twilight-owner`, `dc24h-twilight-account-admin`, `dc24h-twilight-service-controller`. Wszystkie wywołania i testy muszą wtedy użyć nowych ścieżek. |
-| Pakiet WebAdmin w npm | `dc24h-webadmin` w `webadmin/package.json` i w dwóch miejscach lockfile | Proponowane `dc24h-twilight-webadmin` w **obu** plikach, bez aktualizacji zależności. |
+| Wewnętrzny projekt/target CMake | `project(dc24h)`; `dc24h`, `dc24h-owner`, `dc24h-account-admin`, `dc24h-service-controller` | Zachować wewnętrzne targety; zatwierdzone nazwy wyjściowe: `dc24h-twilight`, `dc24h-twilight-owner`, `dc24h-twilight-account-admin`, `dc24h-twilight-service-controller`. Wywołania i testy używają nowych ścieżek. |
+| Pakiet WebAdmin w npm | `dc24h-webadmin` w `webadmin/package.json` i w dwóch miejscach lockfile | Zatwierdzone `dc24h-twilight-webadmin` w **obu** plikach, bez aktualizacji zależności. |
 | Główna jednostka systemd | `dc24h.service`; przykład `config/dc24h.service.example` | Proponowane `dc24h-twilight.service` tylko po zdefiniowaniu procedury upgrade, wykluczenia równoległego startu i rollbacku. |
 | Kontroler jednostek | `dc24h-control.service`; `config/dc24h-control.service.example`; binarka `dc24h-service-controller` | Proponowane `dc24h-twilight-control.service` i nowa nazwa binarki; sprawdzić zamkniętą listę komend Polkit i socket. |
 | Zdalna brama Node | `dc24h-remote-gateway.service`; `config/dc24h-remote-gateway.service.example` | Proponowane `dc24h-twilight-remote-gateway.service` po testach izolacji, Origin, `rpID` i restartów. |
@@ -18,7 +18,7 @@ Stan: **propozycja do osobnej decyzji o mapie nazw; bez migracji i aktywacji**. 
 | CI-only pakiet `dpkg` | `dc24h-high-starter-ci-fixture` i inertna jednostka w `scripts/beta07_ci_deb.py` | Proponowane `dc24h-twilight-ci-fixture`, ale **nie** utożsamiać zmiany nazwy pakietu z testem aktualizacji starego pakietu: `dpkg` traktuje je jako odrębne pakiety. Wymaga osobnego testu migracji/nazw pakietów, konfliktu i downgrade. |
 | Publiczne nazwy sieciowe i uwierzytelnianie | `dc24h.eu` jako przykładowy host/Origin, WebAuthn `rpID`, TLS i certyfikaty | **Bez zmian**; wymagają odrębnej decyzji infrastrukturalnej. |
 
-## Proponowany wariant P1 do zatwierdzenia
+## Zatwierdzony wariant P1 — implementacja na gałęzi
 
 1. Przyjąć `dc24h-twilight` jako techniczny prefiks **nowych nazw plików wykonywalnych i usług**, bez zmiany stabilnych identyfikatorów danych, API, UID/GID, katalogów i domen.
 2. Zmienić nazwę npm na `dc24h-twilight-webadmin`, aktualizując równocześnie manifest i lockfile, bez bump zależności.
@@ -28,12 +28,13 @@ Stan: **propozycja do osobnej decyzji o mapie nazw; bez migracji i aktywacji**. 
 
 ## Granice wykonania
 
-- **Do decyzji OWNER:** czy wdrażać zaproponowany prefiks dla binarek i usług, czy zachować ich istniejące nazwy dla zgodności; czy aktualizować nazwę npm.
+- **Decyzja OWNER:** `dc24h-twilight` dla wyjściowych binarek i jednostek, `dc24h-twilight-webadmin` dla npm. Zmiana odbywa się wyłącznie w kodzie/fixture i przykładowych jednostkach; merge/instalacja/aktywacja wymagają osobnych zgód.
+- Nowy przykład `dc24h-twilight.service` deklaruje `Conflicts=dc24h.service` i `AssertPathExists=/etc/dc24h/twilight-unit-migration-approved`. Operator musi **najpierw** zatrzymać stary hub, sprawdzić migrację i świadomie zapewnić znacznik; build/CI go nie tworzy. Kontroler i zdalna brama deklarują konflikt z odpowiadającymi dawnymi jednostkami.
 - Zgoda na rozpoczęcie Etapu IV **nie** uprawnia do nadpisania realnej instalacji, przenoszenia `/var/lib/dc24h`, zmiany właścicieli/UID/GID, certyfikatów TLS, sekretów, `rpID`, Origin, schematu MariaDB ani publicznego listenera.
 - `scripts/beta07_ci_deb.py` wytwarza wyłącznie inertny pakiet testowy; przejście na inny `Package:` w `.deb` nie jest automatycznym `dpkg` upgrade. Przed przyjęciem migracji należy udowodnić, że stara i nowa jednostka **nie** mogą działać równolegle.
 - Historyczne wersje i `v0.9.20-rc.1` pozostają niezmienione. Każdy nowy kontrakt wymaga testów negatywnych, CI na końcowym SHA i osobnego odbioru OWNER przed merge.
 
-## Wykonanie po decyzji
+## Wykonanie i odbiór
 
 1. Wprowadzić tylko zatwierdzone zmiany tożsamości technicznej w CMake/npm/systemd i w przykładowych ścieżkach **bez** modyfikowania produkcyjnego stanu.
 2. Dodać testy konfliktu jednostek, odrzucenia niekompletnej migracji oraz rzeczywistego rollbacku w izolowanej maszynie; zachować historyczną wersję binarki i kontrolę autentycznego pakietu.
