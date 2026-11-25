@@ -6,7 +6,18 @@ Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
 > Twilight is an independent development repository derived from dc24h.eu High Starter. Historical issue/PR links below refer to the original project.
 
+<details>
+<summary>Beta</summary>
+
+<details>
+<summary>Beta 0.9.x</summary>
+
 - **beta-0.9.17–beta-0.9.20 — Stage V release qualification** ([Issue #242](https://github.com/adrianf87/dc24h.eu-high-starter/issues/242), single draft [PR #243](https://github.com/adrianf87/dc24h.eu-high-starter/pull/243), `beta-0.9.x-stage-full`): independently download and SHA-256-check exact-attempt GitHub ZIP artifacts with strict redacted JSON policy; record bounded GitHub-hosted Ubuntu APT/compiler/Node provenance, explicit runtime+dev npm audit, broader TSAN/sanitizer and dual-fuzz gates, three-window security measurements and fail-closed candidate metadata/Owner NO-GO gate. Final-head hosted Ubuntu 22.04/24.04/26.04 evidence is **not yet accepted**; Stage V source changes do not authorize merge, tag, release, migration or deployment. [EN/US review and risk](doc/us/BETA_0.9_STAGE_V.md) | [PL runbook](doc/pl/BETA_0.9_STAGE_V.md).
+
+</details>
+
+<details>
+<summary>Beta 0.8.x</summary>
 
 - **beta-0.8 Fix Pass 5 — Stage V source review, CI unverified** ([Issue #240](https://github.com/adrianf87/dc24h.eu-high-starter/issues/240), draft [PR #241](https://github.com/adrianf87/dc24h.eu-high-starter/pull/241)): reject stale-green branch evidence and wrong-attempt/foreign artifact metadata, pin full runtime+dev npm audit invocation, bound fuzz diagnostic output and seed/crash files, and catch outdated active candidate metadata. Negative fixtures protect the repair. **GitHub artifact digests are verified as API metadata, not independently downloaded ZIP bytes.** Exact-final-head hosted CI, all separate fix gates and Owner approval are mandatory; no merge, tag, publication or deployment. [EN/US disposition](doc/us/BETA_0.8_FIX_PASS_5.md) | [PL operator notes](doc/pl/BETA_0.8_FIX_PASS_5.md).
 
@@ -20,9 +31,24 @@ Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
 - **beta-0.8.1–beta-0.8.4 — Stage I interoperability delivered, CI acceptance separate** ([Issue #240](https://github.com/adrianf87/dc24h.eu-high-starter/issues/240), branch `beta-0.8.x-stage-full`): stricter exact-head independent-client evidence, real isolated account revocation with explicit hub restart, combined ADC/ADCS TTH-search-to-peer-transfer tests and TLS 1.2/1.3 certificate cutover. **DC++/AirDC++ are untested** until native binaries actually run. All hosted CI, one draft PR, later Stage II–V and Fix Pass 1–5 gates remain required. Stage V now aligns the candidate identifier to `beta-0.8.20`; this is no production release or merge authorization. [Stage I EN/US](doc/us/BETA_0.8_STAGE_I.md) | [PL](doc/pl/BETA_0.8_STAGE_I.md).
 
+</details>
+
+<details>
+<summary>Beta 0.7.x</summary>
+
 - **beta-0.7.1–beta-0.7.20 — five implementation stages merged on protected main** ([Issue #238](https://github.com/adrianf87/dc24h.eu-high-starter/issues/238), [PR #239](https://github.com/adrianf87/dc24h.eu-high-starter/pull/239), branch `beta-0.7.x-stage-full`): independent ADC/ADCS interoperability evidence; WebAuthn/MFA sessions; matched MariaDB-v11/five-store disaster recovery; disposable dpkg upgrade/failure/downgrade; private redacted status and incident freshness; three-window hosted performance, provenance and fail-closed release qualification. The beta-0.7 final-head gate and Owner merge decision were completed before its protected-main merge. No Debian/Xeon performance claim, public gateway, hub-control grant write, automatic merge or deployment. [Stage V release review](doc/us/BETA_0.7_STAGE_V.md) | [PL operator runbook](doc/pl/BETA_0.7_STAGE_V.md).
 
+</details>
+
+<details>
+<summary>Beta 0.6.x</summary>
+
 - **beta-0.6.1–beta-0.6.16 — Stage 1 completed; Stage 2 consolidated fix pass in progress** ([Issue #236](https://github.com/adrianf87/dc24h.eu-high-starter/issues/236), draft [PR #237](https://github.com/adrianf87/dc24h.eu-high-starter/pull/237), branch `beta-0.6.x-stage-full`): provenance-aware Ubuntu gates, authenticated real private HTTPS workload, diagnostic correlation, MariaDB v11/five-store recovery and historic 0.5.16 rollback, offline token rotation, ADC/ADCS/TLS/backpressure/drain regression corpus, redacted incident view and synthetic fault evidence. Stage 2 reviews all 16 patches together; its fixes cover interrupted private restore diagnostics and the incident view's stale-counter deadline. **Stage 2 and the final merge gate remain blocked until the new exact-head** Ubuntu 22.04/24.04/26.04 C++/WebAdmin/Playwright/ASan/UBSan/CodeQL/systemd/security/recovery CI checks pass. No production deployment, public WebAdmin, passwordless auth, hub-control writes or SQL schema migration. [EN/US Stage 2 review](doc/us/BETA_0.6_STAGE_II.md) | [PL Etap II](doc/pl/BETA_0.6_STAGE_II.md) | [EN/US Stage 1](doc/us/BETA_0.6_STAGE_I.md) | [PL runbook](doc/pl/BETA_0.6_STAGE_I.md).
+
+</details>
+
+<details>
+<summary>Beta 0.5.x</summary>
 
 - **beta-0.5.13–beta-0.5.16 Stage IV — advanced testing and CI release candidate** (single branch `beta-0.5.x-stage-full`, draft PR #235): extend bounded C++/Node/Apache adversarial probes; run hosted Ubuntu 22.04/24.04/26.04 ADC/ADCS endurance and separate fixture-backed HTTPS/MariaDB checks, with pinned Stage I references and explicit incomparable metrics; inject isolated database/package/config failure and restore full MariaDB v11 plus five private-state files; record residual risks. Full latest-head C++/WebAdmin/ASan/UBSan/CodeQL/actual-systemd CI required before Stage IV can be marked complete; four follow-up fix passes remain. No production rollout, public WebAdmin, remote hub-control write or schema migration. [EN/US Stage IV and release gate](doc/us/BETA_0.5_STAGE_IV.md) | [PL recovery runbook](doc/pl/BETA_0.5_STAGE_IV.md).
 
@@ -32,6 +58,11 @@ Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
 - **beta-0.5.1–beta-0.5.4 Stage I — compatibility and evidence foundations**: GitHub-hosted Ubuntu 22.04/24.04/26.04 C++/WebAdmin/sanitizer CI and actual systemd checks passed on commit `96c3f873`. Disposable MariaDB v11 plus five-file gateway-state recovery, rollback and synthetic RPO/RTO passed on all three OS images. Redacted ADC/ADCS and test-duration aggregates are CI evidence only, not real private-API latency or production capacity guarantees. Debian/Xeon tests and external assessment were explicitly excluded from Issue #234. No deployment. [Stage I evidence](doc/us/BETA_0.5_STAGE_I.md) | [PL](doc/pl/BETA_0.5_STAGE_I.md).
 
+</details>
+
+<details>
+<summary>Beta 0.4.x</summary>
+
 - **beta-0.4.13–beta-0.4.16 Stage IV — security tests and release preparation**: exercise denied WebAuthn, session and cross-account paths; supply bounded loopback-only ADC/ADCS, HTTPS and read-only API measurement tools; rehearse private-state backup and offline restore into a new directory; align release metadata and manual approval gates. **Performance, database recovery, RPO/RTO and independent review on Debian 13 remain pending.** No schema/protocol changes, public WebAdmin, hub-control writes or automatic deployment. [Stage IV release review](doc/us/BETA_0.4_STAGE_IV.md) | [PL](doc/pl/BETA_0.4_STAGE_IV.md).
 
 - **beta-0.4.9–beta-0.4.12 Stage III — sessions and infrastructure**: rotate the HttpOnly/Secure/SameSite session cookie and CSRF after passkey enrollment or device rename; refuse concurrent revoked-session mutations. Use private HMAC-keyed, fsynced login/rate budgets across gateway restarts; fail closed on storage loss. Strengthen the localhost-only Apache TLS/SNI/Origin edge and its negative integration tests. Re-verify the durable audit chain periodically and send nonidentifying, cooldown-limited security warnings to journald. No new MariaDB schema, ADC/ADCS change, public WebAdmin, hub-control route or automatic deployment. [Stage III technical/operator guide](doc/us/BETA_0.4_STAGE_III.md) | [PL](doc/pl/BETA_0.4_STAGE_III.md).
@@ -40,14 +71,25 @@ Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
 - **beta-0.4.1–beta-0.4.4 Stage I — security foundations** (branch `beta-0.4.1-0.4.4-stage1`): close beta-0.3 CI regressions; document local trust boundaries and future WebAuthn; implement offline TOTP replacement/recovery with preserved replay state, and a private fsynced audit chain with explicit loss detection and fail-closed logins. No public listener, WebAuthn ceremony, remote administrative write, migration, merge or deployment. [Stage plan](doc/us/BETA_0.4_STAGE_I.md) | [PL](doc/pl/BETA_0.4_STAGE_I.md).
 
+</details>
+
 CI on `main`: [public GitHub-hosted Ubuntu 22.04, 24.04 and 26.04](doc/us/GITHUB_CI.md) runs C++ Debug, C++ Release and WebAdmin on each image · [PL](doc/pl/GITHUB_CI.md).
 
 Development increments (older bullets describe their original delivery scope; verify CI and merge status separately):
+
+<details>
+<summary>Beta 0.3.x</summary>
 
 - **beta-0.3.11–beta-0.3.12 Stage IV — series finish** (same branch `beta-0.3.1-12-full`): add bounded concurrent login/anonymous request and 64-read API-fault/recovery regressions; move gateway audit to a tested fixed-event, nonsecret JSON format; align all active version/fixture expectations with `beta-0.3.12`; add CTest release-scope safeguards and a bilingual manual approval/rollback checklist. No load-capacity claim, automatic deployment, new branch, public endpoint, schema/protocol change or merge to `main`. See [Release review](doc/us/RELEASE_BETA_0.3.md) | [PL](doc/pl/RELEASE_BETA_0.3.md).
 - **beta-0.3.8–beta-0.3.10 Stage III** (same branch `beta-0.3.1-12-full`): strengthen localhost HTTPS with forward-secret TLS 1.2 AEAD suites and privacy headers; tighten optional systemd sandbox while preserving loopback and private API; document an operator-run SSH *local* forwarding pilot with verified server certificates and a credential-free, fixed-route preflight test. Final Stage III version `beta-0.3.10`. No Internet-facing listener, automatic deployment, public proxy, remote write, migration or new branch. See [Pilot](doc/us/REMOTE_PILOT.md) | [PL](doc/pl/REMOTE_PILOT.md).
 - **beta-0.3.4–beta-0.3.7 Stage II** (same branch `beta-0.3.1-12-full`): require six-digit TOTP as a second factor after password/role verification; store per-account secrets in owner-only files and persist consumed steps to prevent OTP replay after restart. Require MFA-marked browser sessions, clear entered credentials, and write fixed-schema audit events to the service journal. Keep HTTPS loopback, read-only routes, CSRF, limits and public-access prohibition. Runtime version `beta-0.3.7`; no new branch, MariaDB migration or deployment. See [Beta development plan](doc/us/BETA.md) | [PL](doc/pl/BETA.md).
 - **beta-0.3.1–beta-0.3.3 Stage I** (single branch `beta-0.3.1-12-full`): update release metadata and GitHub CI without assuming a fixed runner CPU count; apply one strict JSON media-type policy to all local C++ API adapters and scrub buffered private responses on success, denial, abort and oversize; extend negative tests; add ASan/UBSan security checks and a production-dependency advisory gate. The final Stage I runtime version is `beta-0.3.3`. No MFA, public WebAdmin, remote write, MariaDB migration, protocol change or deployment is introduced. See [Beta development plan](doc/us/BETA.md) | [PL](doc/pl/BETA.md).
+
+</details>
+
+<details>
+<summary>Beta 0.2.x</summary>
+
 - **beta-0.2.7–beta-0.2.12 Consolidated hardening** (single branch `beta-0.2.7-beta-0.2.12-finish`): update High Starter branding and release/CI documentation; extend session-eviction and concurrent-revocation tests; bound private API calls by an absolute deadline, enforce an exact JSON media type and scrub truncated/private response buffers; refuse cross-site Fetch Metadata at the Apache boundary; run failure/recovery regression tests and verify the final version on all build targets. The fixed five routes, local-only read-only behavior, schema v11, package tuple `0.1.0`, public vhost and ADC/ADCS are unchanged. See [Remote gateway](doc/us/REMOTE_GATEWAY.md) | [PL](doc/pl/REMOTE_GATEWAY.md).
 - **beta-0.2.6 Status projection privacy**: the local-only remote WebAdmin now uses a dedicated server-side parser of the approved aggregate counters, not the full administrative status parser. Unknown private fields and changed unrelated status sections are never serialized to the browser; missing/invalid public counters, changed schema, unsafe numbers and API outages fail closed with 503 and no stale metrics. New socket-free tests cover privacy, malformed upstream data and recovery. The five read-only routes, login security, schema v11 and existing public Apache remain unchanged. See [Remote gateway](doc/us/REMOTE_GATEWAY.md) | [PL](doc/pl/REMOTE_GATEWAY.md).
 - **beta-0.2.5 Apache2/HTTPS/loopback boundary**: the dedicated loopback TLS Apache example now refuses unknown Host, invalid route methods, query strings and unsafe Origin before proxying; blocks the regular admin `index.html` and `local-*` assets from the remote vhost; caps incoming request bodies. Disposable Apache regression tests cover negative requests, secrets and plaintext attempts. The existing public vhost is untouched. No Internet exposure without MFA, administrative write, schema migration or deployment. See [Remote gateway](doc/us/REMOTE_GATEWAY.md) | [PL](doc/pl/REMOTE_GATEWAY.md).
@@ -56,6 +98,12 @@ Development increments (older bullets describe their original delivery scope; ve
 - **beta-0.2.2 HTTP request hardening**: preserves the five exact remote gateway routes, rejects untrusted proxy headers by family and adds negative method/path/body tests. Work is on `beta-0.2-code`; no new permissions, Internet access or writes. See [Remote gateway](doc/us/REMOTE_GATEWAY.md) | [PL](doc/pl/REMOTE_GATEWAY.md).
 - **beta-0.2.1 Maintenance baseline**: reports `beta-0.2.1` across the hub, API, service controller and WebAdmin while retaining the beta-0.2 local-only, read-only gateway. No new remote permissions, public network listener, database migration or production deployment. See [Beta maintenance baseline](doc/us/BETA.md) | [PL](doc/pl/BETA.md).
 - **beta-0.2 Remote WebAdmin**: isolated loopback-only HTTPS portal, authenticated administrator/Owner password proof, bounded server-side sessions with CSRF and live role revalidation, and an explicit allowlist of aggregate status metrics. No public exposure without MFA, no administrative writes or service commands. See [Remote gateway](doc/us/REMOTE_GATEWAY.md) | [PL](doc/pl/REMOTE_GATEWAY.md).
+
+</details>
+
+<details>
+<summary>Beta 0.1.x</summary>
+
 - **beta-0.1.8 Development baseline**: the hub, API and WebAdmin report `beta-0.1.8`, carrying forward beta-0.1.7 service controls and the fixes already merged to `main`. No new functionality, migration or production deployment is included. See [Beta development baseline](doc/us/BETA.md) | [PL](doc/pl/BETA.md).
 - **beta-0.1.7 Hub WebAdmin**: local Owner-only service status and Start/Stop/Restart controls with explicit warnings, confirmation, progress, failure handling, recent online-user observations and access to the audited action history. The public Apache proxy does not expose these routes. See [Hub WebAdmin](doc/us/HUB_WEBADMIN.md) | [PL](doc/pl/HUB_WEBADMIN.md).
 - **beta-0.1.6 Service operations**: the separate maintenance API validates the live Owner grant, session, CSRF and an explicit confirmation, then instructs a dedicated systemd controller to Start, Stop or Restart only `dc24h.service`. Migration v11 records durable audit intentions and verified outcomes. No WebAdmin controls were added at this stage. See [Service operations](doc/us/SERVICE_OPERATIONS.md) | [PL](doc/pl/SERVICE_OPERATIONS.md).
@@ -65,6 +113,13 @@ Development increments (older bullets describe their original delivery scope; ve
 - **beta-0.1.2 Configuration review**: branch `beta-0.1.2` adds privileged local read-only saved/maintenance-active comparisons, allowlisted in-memory proposal validation and stale-file detection. No file writes, WebAdmin editor, hub control or migration. See [Configuration review](doc/us/CONFIGURATION_REVIEW.md).
 - **beta-0.1.1 Management foundation**: the hub reports `beta-0.1.1`. The management catalog is schema 2. `POST /api/v1/management/authorize` checks the grant and returns `not_implemented`. `configuration.manage` and `hub.manage` stay unimplemented. Schema v9 is unchanged. This is not a production release. See [Management foundation](doc/us/MANAGEMENT_FOUNDATION.md).
 - **beta-0.1 Beta baseline**: the hub reports `beta-0.1` and keeps the alpha-0.9.17 behavior. Schema v9 is unchanged. This is not a production release. See [Beta baseline](doc/us/BETA.md).
+
+</details>
+
+</details>
+
+<details>
+<summary>Alpha</summary>
 
 <details>
 <summary>Alpha 0.9.x (17 releases)</summary>
@@ -296,6 +351,8 @@ Development increments (older bullets describe their original delivery scope; ve
 - **alpha-0.1.2 Network**: multiple nonblocking IPv4/IPv6 TCP listeners/clients.
 
 - **alpha-0.1.1 Core**: lifecycle, signal handling, graceful shutdown.
+
+</details>
 
 </details>
 
