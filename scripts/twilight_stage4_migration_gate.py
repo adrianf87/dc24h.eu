@@ -8,8 +8,14 @@ import argparse
 import json
 from pathlib import Path
 import re
+import sys
 
 import beta07_ci_deb as deb
+# The pinned beta-0.5.16 identity lives in tests/, whereas this gate is also
+# executed as a standalone scripts/ CLI in the hosted VM workflow. Resolve the
+# repository-local test module explicitly; unit-test discovery adds it for us,
+# but `python3 scripts/twilight_stage4_migration_gate.py` does not.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tests"))
 import beta06_previous_version_rollback as previous
 
 

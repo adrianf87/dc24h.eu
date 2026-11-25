@@ -1,7 +1,9 @@
 """Negative and positive validation of Stage IV exact-head CI-only evidence."""
 
 import json
+import os
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -27,6 +29,22 @@ def valid_record():
 
 
 class TwilightMigrationGateTests(unittest.TestCase):
+    def test_standalone_cli_resolves_pinned_historical_source(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            report, output = root / "input.json", root / "result.json"
+            report.write_text(json.dumps(valid_record()), encoding="utf8")
+            project = Path(__file__).resolve().parents[1]
+            environment = dict(os.environ)
+            environment.pop("PYTHONPATH", None)
+            result = subprocess.run([
+                sys.executable, "scripts/twilight_stage4_migration_gate.py",
+                "--report", str(report), "--sha", SHA, "--os-image", IMAGE,
+                "--output", str(output)], cwd=project, env=environment,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+            self.assertEqual(result.returncode, 0, result.stderr.decode(errors="replace"))
+            self.assertEqual(json.loads(output.read_text(encoding="utf8"))["source_sha"], SHA)
+
     def test_complete_evidence_accepts_only_ci_scope(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "report.json"
