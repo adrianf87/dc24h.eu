@@ -18,6 +18,15 @@ test("accepts the C++ status contract and strips unrecognized fields", () => {
   assert.equal(duration(86400), "1d 0h");
   assert.equal(duration(0), "0s");
 });
+test("Twilight server identity is exact in local and remote status; old and foreign names fail closed", () => {
+  assert.equal(parseSnapshot(snapshot).server.name, "dc24h.eu-twilight");
+  assert.equal(parseRemoteSummary(snapshot).server.version, "beta-0.9.20");
+  for (const name of ["dc24h.eu", "dc24h.eu-high-starter", "foreign.example", "", null, undefined]) {
+    const candidate = { ...snapshot, server: { ...snapshot.server, name } };
+    assert.throws(() => parseSnapshot(candidate), `local accepted ${String(name)}`);
+    assert.throws(() => parseRemoteSummary(candidate), `remote accepted ${String(name)}`);
+  }
+});
 test("rejects incompatible schema, absent counters and imprecise or unsafe numbers", () => {
   for (const input of [
     null,
