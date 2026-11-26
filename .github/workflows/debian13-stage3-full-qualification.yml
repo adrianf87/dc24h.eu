@@ -1,0 +1,132 @@
+name: Debian 13 Stage III public ADCS full qualification (OWNER only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Exact RUN_STAGE3_PUBLIC_QUALIFICATION'
+        required: true
+        type: string
+      production_restarts_ack:
+        description: 'OWNER permits three brief public hub restarts and one same-pair TLS copy/restart'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Do not overlap active-hub qualification with activation or rollback.
+concurrency:
+  group: twilight-debian13-stage3-public-activation
+  cancel-in-progress: false
+
+jobs:
+  external-before:
+    name: Independent ncdc, two guests, protocol and exposure
+    if: github.repository == 'adrianf87/dc24h.eu-twilight' && github.actor == 'adrianf87' && github.ref == 'refs/heads/main' && inputs.confirmation == 'RUN_STAGE3_PUBLIC_QUALIFICATION' && inputs.production_restarts_ack == true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Install packaged real ncdc client from Ubuntu repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ncdc
+          ncdc --version
+      - name: Independent external Stage III protocol and public port checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/public_stage3_qualification_external.py
+          printf '{"source_sha":"%s","scope":"EXTERNAL_NCDC_TWO_CLIENTS_CHAT_SEARCH_CTM_RCM_PUBLIC_PORTS","result":"PASS"}\n' "$GITHUB_SHA" > "$RUNNER_TEMP/stage3-external-before.json"
+      - name: Upload sanitized external evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stage3-qualification-external-before
+          path: ${{ runner.temp }}/stage3-external-before.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  host:
+    name: Scoped Stage III systemd and same-pair TLS rehearsal
+    needs: external-before
+    runs-on: [self-hosted, linux, x64, twilight-debian13-stage2]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Require exact OWNER, SHA, dedicated runner and passwordless sudo
+        shell: bash
+        env:
+          OWNER_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          test "$OWNER_CONFIRMATION" = "RUN_STAGE3_PUBLIC_QUALIFICATION"
+          test "$GITHUB_ACTOR" = "adrianf87"
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$RUNNER_NAME" = "server-747585786"
+          test "$(id -un)" = "github-runner"
+          test "$(sudo -n id -u)" = "0"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Check policy regression tests without mutating host
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd scripts && python3 -m unittest -v test_public_stage3_qualification.py)
+      - name: Restart only Stage III unit three times, rehearse same TLS pair and verify recovery
+        shell: bash
+        env:
+          OWNER_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          sudo -n python3 scripts/public_stage3_qualification_host.py \
+            --confirmation "$OWNER_CONFIRMATION" \
+            --actor "$GITHUB_ACTOR" --ref "$GITHUB_REF" \
+            --runner "$RUNNER_NAME" --runner-user "$(id -un)" \
+            --expected-sha "$GITHUB_SHA"
+          printf '{"source_sha":"%s","scope":"ONLY_STAGE3_SYSTEMD_3_RESTARTS_AND_MANUAL_SAME_PAIR_TLS_REHEARSAL","result":"PASS"}\n' "$GITHUB_SHA" > "$RUNNER_TEMP/stage3-host-qualification.json"
+      - name: Upload sanitized host evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stage3-qualification-host
+          path: ${{ runner.temp }}/stage3-host-qualification.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  external-after:
+    name: Independent external TLS, guest and forbidden ports after systemd restarts
+    if: always() && needs.host.result == 'success'
+    needs: host
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Confirm public service survived restart from independent network
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 scripts/public_stage3_qualification_external.py --smoke-only
+          printf '{"source_sha":"%s","scope":"POST_RESTART_EXTERNAL_TLS_GUEST_PORTS","result":"PASS"}\n' "$GITHUB_SHA" > "$RUNNER_TEMP/stage3-external-after.json"
+      - name: Upload sanitized final evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stage3-qualification-external-after
+          path: ${{ runner.temp }}/stage3-external-after.json
+          if-no-files-found: ignore
+          retention-days: 14
