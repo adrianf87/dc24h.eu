@@ -1,8 +1,8 @@
 # Kwalifikacja Etapu I na Debianie 13
 
-**STAGE I: BLOCKED**
+**STAGE I: OWNER ACCEPTED (kwalifikacja inżynierska; PUBLIC / PRODUCTION NO-GO)**
 
-Kwalifikacja lokalna Debiana 13 zakończyła się wynikiem PASS. Końcowy odbiór pozostaje otwarty do uzyskania wyników GitHub Actions dla zakwalifikowanego SHA.
+Kwalifikacja lokalna Debiana 13 zakończyła się wynikiem PASS. **OWNER STAGE I ACCEPTANCE — decyzja pozytywna 2026-11-26**, wyłącznie dla inżynierskiego Etapu I. Niezależnie potwierdzono również GitHub Actions i archiwa artefaktów dla `756e173664ec73b4bf257314fdabc33b1bafa7db`. Aktualizacja tego raportu tworzy nowszy, wyłącznie dokumentacyjny commit: przed merge należy ponownie przeprowadzić CI dla jego dokładnego SHA. Nie wynika z tej akceptacji ani `OWNER MERGE GO`, ani zgoda na wydanie czy publiczne uruchomienie.
 
 Testy przeprowadzono 26 listopada 2026 r. na VPS-ie z Debianem 13.8. Gałąź `public/stage-i-debian13-ncdc-adcs` i PR #12 początkowo wskazywały `8af360efd03803e29e8fc2a733c7184ca31d576c`. Końcowa kwalifikacja objęła `068d77f35175b8f28dd326f5bc520a69c7d90661`. SHA-256 końcowej binarki `dc24h-twilight` to `f31795e77661fd03f68c8c6b51e7d6fd8a11ed776fe5319111101cb64b562082`. [Zakwalifikowane źródło](https://github.com/adrianf87/dc24h.eu-twilight/commit/068d77f35175b8f28dd326f5bc520a69c7d90661) · [PR #12](https://github.com/adrianf87/dc24h.eu-twilight/pull/12) · [Issue #10](https://github.com/adrianf87/dc24h.eu-twilight/issues/10)
 
@@ -77,19 +77,21 @@ Na pierwotnym SHA ncdc wysłał 18 pól `EX` przy `/search -t doc`. Wbudowany ty
 
 W ograniczonej czasowo próbie ADC przeprowadzono 20 cykli połączenia i rozłączenia oraz 10 powrotów po kontrolowanej odmowie duplikatu nicku. Hub odrzucił trzecią próbę przy limicie dwóch sesji. Po zatrzymaniu i ponownym starcie na tym samym porcie dwa klienty ncdc ponownie weszły w stan NORMAL. Oba pokolenia huba i oba klienty zamknęły się z kodem 0. Przed restartem 43 połączenia przyjęto i wszystkie 43 zamknięto. Zarejestrowano 1 odrzucenie na limicie, 12 ostrzeżeń, w tym jednokrotny błąd I/O zamkniętej sesji, i 0 wpisów ERROR. Hub zużył 0,030 s CPU w 3,879 s pomiaru. RSS wzrósł z 8204 do 8828 KiB, a liczba deskryptorów z 8 do 10 w trakcie pracy i wróciła do 8. Po restarcie zamknięto obie sesje i odnotowano 0 ostrzeżeń oraz 0 błędów. [Dane stabilności](stability-debian13.redacted.log)
 
-## GitHub Actions
+## GitHub Actions — niezależny odbiór dowodów (OWNER 2026-11-26)
 
-Stan dla `068d77f35175b8f28dd326f5bc520a69c7d90661` o 02:20:47 UTC. Na polecenie OWNER monitorowanie zakończono przy tym stanie.
+Dla commita dokumentującego wyniki `756e173664ec73b4bf257314fdabc33b1bafa7db`, będącego potomkiem zakwalifikowanego kodu `068d77f35175b8f28dd326f5bc520a69c7d90661`, wykonano niezależny odczyt GitHub Actions:
 
-| Workflow | Wynik w chwili odczytu |
-|---|---|
-| [Audyt Stage IV i walidacja błędów](https://github.com/adrianf87/dc24h.eu-twilight/actions/runs/45740911565) | PASS |
-| [TSAN i parser fuzz](https://github.com/adrianf87/dc24h.eu-twilight/actions/runs/45740911613) | PASS |
-| [CodeQL](https://github.com/adrianf87/dc24h.eu-twilight/actions/runs/45740922362) | W toku |
-| [Macierz kompilacji i testów](https://github.com/adrianf87/dc24h.eu-twilight/actions/runs/45740911498) | W toku |
-| [Stage IV na izolowanych Ubuntu VM](https://github.com/adrianf87/dc24h.eu-twilight/actions/runs/45740911552) | W toku |
+- **5/5 workflow PASS**, **23/23 zadań PASS**, 0 FAIL i 0 pominiętych zadań.
+- **19/19 artefaktów ZIP** pobrano niezależnie i zweryfikowano SHA-256 względem metadanych GitHub; zgodność wszystkich archiwów, 0 rozbieżności.
+- **178 raportów JSON** w ZIP-ach poprawnie odczytano; wszystkie **160 pól identyfikujących źródło** (`source_sha` lub `commit_sha`) wskazują dokładnie `756e173664ec73b4bf257314fdabc33b1bafa7db`.
+- Wykaz archiwów i raportów odnosi się do 5 przebiegów GitHub-hosted Ubuntu 22.04/24.04/26.04 dla tego SHA. Dowody VPS Debian 13.8 zostały wykonane na wcześniejszym SHA kodu `068d77f`, a późniejsze zmiany do `756e173` dotyczyły tylko zapisania materiałów dowodowych.
+- JUnit Debian 13: 260 CTest PASS / 0 FAIL / 0 SKIP na poziomie CTest, osobno systemd 1 PASS z czterema podtestami PASS. Osobny test negatywny IPv4-only + wymóg IPv6 zawiera **2 celowo oczekiwane odmowy**, nie awarie zestawu pozytywnego.
+- Wewnętrzne pominięcia dwóch prób zależnych od hosted Ubuntu zostały odnotowane wcześniej i nie są ukrywane.
 
-Po pomyślnym zakończeniu pozostałych kontroli CI przekazać ten pakiet OWNER do odbioru Etapu I.
+**Decyzja OWNER: STAGE I ACCEPTANCE — GO w zakresie kodu, lokalnej kwalifikacji Debian 13 i dowodów CI.** Odbiór nie certyfikuje dostępności publicznej ani produkcyjnej i nie upoważnia do migracji danych, zmiany zapory/DNS lub wystawienia WebAdmin.
+
+**Warunek przed scaleniem:** to uzupełnienie dokumentacji tworzy nowy head SHA. Jego własne GitHub CI musi przejść, po czym wymagane jest oddzielne `OWNER MERGE GO`. W przypadku regresji akceptacja nie upoważnia do jej pominięcia.
+
 
 ## Polecenia i dowody
 
@@ -130,4 +132,4 @@ Node 22 pobrano z katalogu `https://nodejs.org/dist/latest-v22.x` przez `curl -f
 
 Zachowano status i czas każdej pozycji CTest. Do opublikowanych logów i XML przeniesiono wyłącznie zweryfikowane podsumowania i komunikaty. Klucze, dane uwierzytelniające, zapisy terminali i surowe dane procesów z prób pozostają poza repozytorium.
 
-**STAGE I: BLOCKED**
+**STAGE I: OWNER ACCEPTED (kwalifikacja inżynierska; PUBLIC / PRODUCTION NO-GO)**
