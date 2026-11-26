@@ -28,6 +28,8 @@ class QualificationPolicyTests(unittest.TestCase):
                                       "msg"), b"BMSG ABCD first")
         self.assertEqual(reader.until(lambda frame: frame.startswith(b"BSCH"),
                                       "search"), b"BSCH ABCD ANsecond")
+        self.assertEqual(reader.message_frames, 1)
+        self.assertEqual(reader.search_frames, 1)
 
     def test_frame_reader_rejects_hub_denial(self):
         reader = external.Reader(FakePeer([b"ISTA 200 Permission\\sdenied FCBINF XXprivate-token\n"]))
@@ -74,6 +76,50 @@ class QualificationPolicyTests(unittest.TestCase):
         with mock.patch.object(external.os, "write") as write:
             external.select_ncdc_hub_tab(91)
         write.assert_called_once_with(91, b"\x1b2")
+
+    def test_ncdc_terminal_recognizes_split_synthetic_markers_only(self):
+        terminal = external.NcdcTerminal()
+        terminal.observe(b"private-should-never-appear #stage3q")
+        terminal.observe(b"ual \x1b[1;2Hstage3-ncdc-inb")
+        terminal.observe(b"ound-ready\r\nprivate-secret")
+        self.assertTrue(terminal.hub_tab_visible)
+        self.assertTrue(terminal.inbound_chat_visible)
+        self.assertIn("guest_to_ncdc_displayed=yes", terminal.flags())
+        self.assertNotIn("private", terminal.flags())
+        self.assertNotIn("secret", terminal.flags())
+        self.assertLess(len(terminal._tail), len(external.NCDC_INBOUND))
+
+    def test_ncdc_inbound_requires_actual_terminal_rendering(self):
+        terminal = external.NcdcTerminal()
+        process = mock.Mock()
+        process.poll.return_value = None
+        with mock.patch.object(external, "drain_ncdc_terminal",
+                               side_effect=lambda _fd, probe: probe.observe(external.NCDC_INBOUND)):
+            external.await_ncdc_screen(terminal, 91, process, timeout=1)
+        self.assertTrue(terminal.inbound_chat_visible)
+
+    def test_ncdc_inbound_timeout_reports_only_safe_flags(self):
+        terminal = external.NcdcTerminal()
+        terminal.observe(b"sensitive-other-user")
+        process = mock.Mock()
+        process.poll.return_value = None
+        with mock.patch.object(external, "drain_ncdc_terminal", return_value=0), mock.patch.object(
+                external.time, "monotonic", side_effect=[0, 0, 2]):
+            with self.assertRaises(RuntimeError) as caught:
+                external.await_ncdc_screen(terminal, 91, process, timeout=1)
+        self.assertIn("guest_to_ncdc_displayed=no", str(caught.exception))
+        self.assertNotIn("sensitive", str(caught.exception))
+
+    def test_ncdc_outbound_requires_independent_sender_sid(self):
+        sender = b"EFGH"
+        self.assertTrue(external.is_ncdc_chat_frame(
+            b"BMSG EFGH stage3-ncdc-qualified", sender))
+        self.assertFalse(external.is_ncdc_chat_frame(
+            b"BMSG ABCD stage3-ncdc-qualified", sender))
+        self.assertFalse(external.is_ncdc_chat_frame(
+            b"BMSG EFGH stage3-ncdc-qualified-tampered", sender))
+        self.assertFalse(external.is_ncdc_chat_frame(
+            b"BMSG EFGH other message", sender))
 
     def test_ncdc_observer_wait_drains_terminal_between_adc_checks(self):
         reader = mock.Mock()
