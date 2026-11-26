@@ -115,7 +115,7 @@ Use an authorized independent test network and pinned exact source SHA. Keep sca
 | Incorrect/stale KEYP, unapproved replacement | REJECT |
 | Plaintext ADC and unrelated TCP ports | NOT EXPOSED |
 | ncdc ADCS login, two clients, SCH/DRES, chat, CTM/RCM, limits/negative inputs | PASS with bounded sanitized evidence |
-| Certificate renewal/restart, pin rotation and failure rollback | PASS before operational approval |
+| Certificate renewal, pin rotation and rollback readiness | Document the OWNER-operated procedure and qualify synthetic/staged evidence; no intentional live VPS or ADCS service restart test (OWNER excluded) |
 | External bounded exposure scan | Only approved ports visible |
 | MariaDB, local API, Node/Vite, WebAdmin and maintenance endpoints | NOT publicly reachable |
 
@@ -132,9 +132,9 @@ Required report: exact commit SHA and binary version, independently verified map
 
 The current acceptance record and evidence matrix are in the
 [Stage III qualification report](PUBLIC_STAGE_III_QUALIFICATION.md).
-Use the [Debian 13 systemd runbook](PUBLIC_STAGE_III_SYSTEMD.md) and the
+Use the [optional Debian 13 service maintenance runbook](PUBLIC_STAGE_III_SYSTEMD.md) and the
 [certificate replacement and rollback runbook](PUBLIC_STAGE_III_CERTIFICATE.md)
-for separately authorized maintenance.
+only for separately authorized maintenance. Intentional live restarts and VPS reboots are excluded from Stage III qualification by OWNER decision (November 26, 2026).
 
 The prior `.github/workflows/debian13-stage3-adcs-activation.yml`
 proposal, its privileged host preflight and automated rollback jobs have been
