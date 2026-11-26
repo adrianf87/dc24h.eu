@@ -65,8 +65,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          result=FAIL
+          write_report() {
+            printf '{"source_sha":"%s","scope":"EXTERNAL_NCDC_TWO_CLIENTS_CHAT_SEARCH_CTM_RCM_PUBLIC_PORTS","result":"%s"}\n' \
+              "$GITHUB_SHA" "$result" > "$RUNNER_TEMP/stage3-external-before.json"
+          }
+          trap write_report EXIT
           python3 scripts/public_stage3_qualification_external.py
-          printf '{"source_sha":"%s","scope":"EXTERNAL_NCDC_TWO_CLIENTS_CHAT_SEARCH_CTM_RCM_PUBLIC_PORTS","result":"PASS"}\n' "$GITHUB_SHA" > "$RUNNER_TEMP/stage3-external-before.json"
+          result=PASS
       - name: Upload sanitized external evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -79,7 +85,6 @@ jobs:
   host:
     name: Scoped Stage III systemd and same-pair TLS rehearsal
     needs: external-before
-    if: github.repository == 'adrianf87/dc24h.eu-twilight' && github.actor == 'adrianf87' && github.ref == 'refs/heads/main' && inputs.confirmation == 'RUN_STAGE3_PUBLIC_QUALIFICATION' && inputs.production_restarts_ack == true
     runs-on: [self-hosted, linux, x64, twilight-debian13-stage2]
     timeout-minutes: 15
     steps:
