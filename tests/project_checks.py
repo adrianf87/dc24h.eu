@@ -14,6 +14,7 @@ US_ONLY_DOCUMENTS = frozenset({
     Path("PUBLIC_STAGE_II_DEBIAN13.md"),
     Path("PUBLIC_STAGE_III_ADCS.md"),
     Path("PUBLIC_STAGE_III_QUALIFICATION.md"),
+    Path("PUBLIC_STAGE_III_PREMERGE.md"),
 })
 
 

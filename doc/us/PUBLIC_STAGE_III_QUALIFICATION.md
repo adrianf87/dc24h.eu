@@ -1,34 +1,55 @@
-# Stage III — OWNER-only public ADCS acceptance qualification
+# Stage III public ADCS qualification — GitHub Ubuntu only
 
-## Scope and identity
+**Repository:** `adrianf87/dc24h.eu-twilight` · **Issue:** [#10](https://github.com/adrianf87/dc24h.eu-twilight/issues/10)
 
-- Repository: `adrianf87/dc24h.eu-twilight`; run the workflow from protected `main` only.
-- Public **ADCS/TLS** hub: `adcs://server-747585786.dc24h.eu:1512`, IPv4 `62.171.156.32`.
-- Dedicated Debian 13 runner: `server-747585786`, account `github-runner`, with existing passwordless `sudo`. The OWNER accepted the co-location risk.
-- No plaintext public ADC on 1511; no public WebAdmin; guest-only and no private/registered-user data.
-- The retired Stage III address and hostname must never be used.
+**Public guest hub:** `adcs://server-747585786.dc24h.eu:1512`, IPv4
+`62.171.156.32`. Plaintext ADC TCP 1511 is forbidden, as are public WebAdmin,
+database and maintenance ports.
 
-## Manual dispatch after a reviewed OWNER-approved merge
+## CI execution model
 
-Workflow: `.github/workflows/debian13-stage3-full-qualification.yml`.
+Only GitHub-hosted Ubuntu 22.04, 24.04 and 26.04 runners are supported.
+`server-747585786` is the **public ADCS service host**, not an Actions worker.
+The old Debian 13 runner inventory, stage-II sudo scripts, Stage III host
+activation/restart workflows and related runner tests were deleted in PR #23.
 
-1. Confirm the public guest hub is already active and management SSH remains available. Verify the OWNER has approved a brief interruption of the live guest service.
-2. From protected `main`, select **Run workflow**, set `confirmation=RUN_STAGE3_PUBLIC_QUALIFICATION`, and check `production_restarts_ack`.
-3. First, the GitHub-hosted Ubuntu 24.04 runner installs distro-packaged `ncdc` into its temporary environment. It opens a fresh ncdc profile and validates login, chat and search; an independent peer monitors its ADC frames. Two synthetic TLS clients validate two-way public and private chat, broadcast search, direct RES, and CTM/RCM signaling without actually exchanging files. A pre-login chat attempt must be rejected. Three bounded guest reconnections are checked.
-   - The [upstream ncdc manual](https://dev.yorhel.nl/ncdc/man) documents `/open <name> <address>`, `/say <message>` and `/search <query>`. A confirmed remote `BINF` proves guest login but **not** that ncurses is accepting input on the hub tab. The test explicitly selects the hub tab (Alt+2 in its fresh single-hub profile), clears stale input with Ctrl+U, sets a deterministic terminal size, and consumes bounded terminal output while independently observing the ADC chat/search frames. Terminal output is discarded, never printed to CI.
-   - Search may be broadcast (`BSCH`) or feature-routed (`FSCH`) depending on client mode. The synthetic observer advertises `TCP4` for search visibility without attempting any connection or file transfer. A timeout reports only the stage, whether ncdc is running and whether any PTY output occurred; it never discloses the terminal screen, user information or chat contents.
-   - The initial guest `I40.0.0.0` is normalized by the hub to the actual observed client IPv4. To test TCP-active signaling, the client sends only the incremental `BINF <SID> SUTCP4` update. Never announce the *hub's* public IPv4 as if it were the external client's address; the hub correctly rejects such a mismatch.
-   - On failure, the external runner reports the specific step and, for ADC denial, only the numeric `ISTA` status and validated four-letter `FC` command. Raw ADC responses, chat text, session IDs and private tokens must not be logged.
-4. The external job also checks DNS A matches the OWNER IPv4, default CA chain and SAN validation, and the bounded forbidden TCP list `1511, 3000, 3306, 5173, 5432, 6379, 8000, 8080, 9090`. This is an authorized *focused* probe, not a 65k-port Internet scan.
-5. Only after the external gate passes, the dedicated Debian host job verifies the exact source SHA, OWNER actor, runner/root identity, deployed Stage III manifest and unit, and `ss -H -ltn` listener inventory. Non-loopback TCP listeners must be limited to the documented allowance: SSH 22, existing Apache/ACME 80/443 and guest ADCS 1512. A different actual SSH/Apache port requires explicit policy adjustment before running.
-6. The host job runs three separate `systemctl restart dc24h-stage3-adcs.service` cycles, checking a new CA/SAN TLS and ADC handshake after each, then rehearses **same-pair** replacement of only the service-owned certificate/key *copies* and restarts only that service. Existing key/cert bytes are backed up before replacement and restored on error. The Let's Encrypt live/archive contents are never rewritten.
-7. A final independent GitHub-hosted job checks public TLS, guest handshake and forbidden ports again. Short, sanitized job summaries are retained as GitHub Actions artifacts for 14 days.
+The surviving workflow
+`.github/workflows/debian13-stage3-full-qualification.yml` performs:
 
-## Trust and limitations
+| Check | GitHub Ubuntu | Actual public Debian VPS |
+| --- | --- | --- |
+| Real `ncdc`, two synthetic guests and ADC login | Yes, external test | Receives bounded synthetic guest traffic |
+| Inbound/outbound chat, search, CTM/RCM and reconnect | Yes, external test | Must respond as expected |
+| CA/SAN/TLS identity, DNS and forbidden public TCP ports | Yes, bounded external probe | No host-local listener inventory |
+| `sudo` and systemd tooling sanity | Yes, on ephemeral Ubuntu VM | No sudo or systemd access |
+| Three real Stage III service restarts | **Not available through CI** | Requires manual OWNER procedure |
+| Same-pair certificate copy/restart, host backup/restore/rollback | **Not available through CI** | Requires manual OWNER procedure |
 
-- ncdc's explicitly supplied `?kp=SHA256/...` pin is calculated from a *separately CA/SAN-validated* TLS connection in this same run. Pin validation by ncdc **does not itself prove CA/SAN validation by ncdc**; CA/SAN is separately verified by Python/OpenSSL. Never obtain a pin solely from an unauthenticated URL.
-- The TLS rehearsal uses the **same existing certificate/key pair**. It verifies copy permissions and service reload/restart, **not** a Let's Encrypt ACME renewal, replacement with a genuinely new leaf, stale-keypin migration, or auto-renewal. OWNER remains responsible for monitoring expiry and manually updating both service copies before expiry.
-- Restart cycles briefly disconnect current guests. No public WebAdmin, DB, maintenance API, SSH or host firewall configuration is modified. The workflow never automatically rolls back the existing deployed service or uninstalls it.
-- Only the approved TCP allowlist and inventory are covered, not full upstream firewall/NAT proof; provider ingress rules need independent review. Shared runner root privileges remain an accepted risk.
-- The measured public test here is a bounded Stage III functional smoke/stability acceptance; full 20-cycle endurance, physical reboot/power failure, load/DoS, and 24-hour monitoring remain Stage VI.
-- Failure is **FIX REQUIRED**; do not mark Stage III accepted from PR CI or a partially completed workflow. Review all three successful jobs, logs, actual source SHA and artifacts before separate OWNER acceptance and Issue #10 update.
+The workflow runs regression checks on the PR branch and supports an OWNER
+`workflow_dispatch` from the exact SHA of the branch or protected `main`, with
+explicit confirmation `RUN_STAGE3_UBUNTU_EXTERNAL_ONLY`. That dispatch never
+claims host restart or TLS rotation evidence. See the
+[pre-merge procedure](PUBLIC_STAGE_III_PREMERGE.md).
+
+## Scope and diagnostics
+
+- The Ubuntu 24.04 external job installs `ncdc` with `sudo apt-get` **inside
+  the temporary GitHub VM**. It never executes downloaded PR code as root.
+- A separate safe `sudo` contract runs on Ubuntu 22.04, 24.04 and 26.04,
+  proving only that the disposable runner offers expected OS tools.
+- Tests use fixed synthetic guest markers and bounded timeouts. Published
+  diagnostic reports contain stable status flags and frame counts, not raw
+  private terminal contents, SIDs, keys or passwords.
+- The independent public TCP check probes only the bounded named port set;
+  passing it does not certify an exhaustive firewall configuration.
+
+## Acceptance boundary
+
+GitHub CI can qualify the **public external protocol behavior**. It cannot
+certify on-host systemd continuity, live private-key operations, actual Debian
+backup/restore or rollback once the VPS runner has been removed. Record those
+as **NOT TESTED**, not PASS. Keep the PR unmerged until the OWNER reviews all
+required evidence and explicitly approves the remaining operational risk.
+
+Do not reintroduce a VPS Actions runner, SSH-based deployment or remote root
+credentials in an attempt to bypass the removal decision.

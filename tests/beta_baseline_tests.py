@@ -24,183 +24,60 @@ def check(path, phrases, errors):
 
 
 def check_no_custom_workers(errors):
-    # The OWNER-approved Debian 13 runner is supplemental only. Keep the
-    # historical prohibition in every required CI workflow and all other docs.
-    # These exceptions permit disclosure and a tightly gated manual workflow,
-    # not selection of a private runner by required pull-request CI.
-    supplemental_mentions = {
-        Path("README.md"): {"747585786", "self-hosted"},
-        Path("doc/us/PUBLIC_STAGE_II_DEBIAN13.md"): {"self-hosted", "github-runner"},
-        Path(".github/workflows/debian13-supplemental.yml"):
-            {"747585786", "github-runner", "self-hosted"},
-        Path(".github/workflows/debian13-stage2-sudo.yml"):
-            {"747585786", "github-runner", "self-hosted"},
-        Path("doc/us/PUBLIC_STAGE_III_ADCS.md"):
-            {"747585786", "self-hosted"},
-        Path(".github/workflows/debian13-stage3-adcs-preflight.yml"):
-            {"747585786", "github-runner", "self-hosted"},
-        Path(".github/workflows/debian13-stage3-adcs-activation.yml"):
-            {"747585786", "github-runner", "self-hosted"},
-        Path("doc/us/PUBLIC_STAGE_III_QUALIFICATION.md"):
-            {"747585786", "github-runner", "self-hosted"},
-        Path(".github/workflows/debian13-stage3-full-qualification.yml"):
-            {"747585786", "github-runner", "self-hosted"},
-    }
-    needles = (
-        "contabo",
-        "hetzner",
-        "747585786",
-        "proxmox",
-        "github-runner",
-        "ci-controller",
-        "custom-runner",
-        "custom runner",
-        "self-hosted",
-        "własnego runnera",
-        "własny runner",
-        "własnym runner",
+    """The retired VPS runner must be absent from all executable CI paths."""
+    retired = (
+        "self-hosted-runner-debian13",
+        ".github/workflows/debian13-supplemental.yml",
+        ".github/workflows/debian13-stage2-sudo.yml",
+        ".github/workflows/debian13-stage3-adcs-preflight.yml",
+        ".github/workflows/debian13-stage3-adcs-activation.yml",
+        "scripts/public_stage3_adcs_preflight.py",
+        "scripts/public_stage3_adcs_activate.py",
+        "scripts/public_stage3_qualification_host.py",
+        "scripts/stage3_premerge_evidence.py",
     )
-    paths = [ROOT / "README.md", ROOT / "CHANGELOG.md"]
-    paths.extend((ROOT / "doc").rglob("*.md"))
-    paths.extend((ROOT / ".github" / "workflows").glob("*.yml"))
-    for path in paths:
-        folded = path.read_text(encoding="utf-8").casefold()
-        relative = path.relative_to(ROOT)
-        approved = supplemental_mentions.get(relative, set())
-        for needle in needles:
-            require(needle in approved or needle.casefold() not in folded,
-                    f"{relative}: custom worker term {needle!r}", errors)
-    supplemental = (ROOT / ".github/workflows/debian13-supplemental.yml").read_text(encoding="utf-8")
-    for required in (
-        "  workflow_dispatch:",
-        "github.actor == 'adrianf87'",
-        "github.ref == 'refs/heads/main'",
-        "runs-on: [self-hosted, linux, x64, twilight-debian13-stage2]",
-        "test \"$RUNNER_NAME\" = 'server-747585786'",
-        "test \"$(id -un)\" = 'github-runner'",
-        "persist-credentials: false",
-        "contents: read",
-    ):
-        require(required in supplemental,
-                f"debian13-supplemental.yml: missing manual runner safeguard {required!r}", errors)
-    for forbidden in ("  pull_request:", "  push:", "sudo "):
-        require(forbidden not in supplemental,
-                f"debian13-supplemental.yml: unexpected runner trigger or privilege {forbidden!r}", errors)
-    privileged = (ROOT / ".github/workflows/debian13-stage2-sudo.yml").read_text(encoding="utf-8")
-    for required in (
-        "  workflow_dispatch:",
-        "github.actor == 'adrianf87'",
-        "github.ref == 'refs/heads/main'",
-        "runs-on: [self-hosted, linux, x64, twilight-debian13-stage2]",
-        "test \"$RUNNER_NAME\" = 'server-747585786'",
-        "test \"$(id -un)\" = 'github-runner'",
-        "test \"$OWNER_CONFIRMATION\" = 'RUN_STAGE2_SUDO_HOST_TESTS'",
-        "persist-credentials: false",
-        "contents: read",
-        "sudo -n id -u",
-        "sudo -n python3 scripts/public_stage2_preflight.py",
-        "sudo -n python3 self-hosted-runner-debian13/tests/stage2_host_proof.py",
-        "DC24H_REQUIRE_SYSTEMD_HOST=1 ctest",
-    ):
-        require(required in privileged,
-                f"debian13-stage2-sudo.yml: missing OWNER/privilege safeguard {required!r}", errors)
-    for forbidden in ("  pull_request:", "  push:", "systemctl enable", "apt install", "dpkg -i"):
-        require(forbidden not in privileged,
-                f"debian13-stage2-sudo.yml: forbidden trigger or service change {forbidden!r}", errors)
-    require(privileged.count("sudo -n ") == 3 and
-            not re.search(r"(?m)^\s*sudo\s+(?!-n\s)", privileged),
-            "debian13-stage2-sudo.yml: sudo must be limited to three reviewed guarded commands", errors)
-    stage3 = (ROOT / ".github/workflows/debian13-stage3-adcs-preflight.yml").read_text(encoding="utf-8")
-    for required in (
-        "  workflow_dispatch:",
-        "github.repository == 'adrianf87/dc24h.eu-twilight'",
-        "github.actor == 'adrianf87'",
-        "github.ref == 'refs/heads/main'",
-        "runs-on: [self-hosted, linux, x64, twilight-debian13-stage2]",
-        "test \"$OWNER_CONFIRMATION\" = 'RUN_STAGE3_ADCS_READ_ONLY_PREFLIGHT'",
-        "test \"$RUNNER_NAME\" = 'server-747585786'",
-        "test \"$(id -un)\" = 'github-runner'",
-        "test \"$(sudo -n id -u)\" = '0'",
-        "test \"$(git rev-parse HEAD)\" = \"$EXPECTED_SHA\"",
-        "persist-credentials: false",
-        "contents: read",
-        "sudo -n python3 scripts/public_stage3_adcs_preflight.py",
-    ):
-        require(required in stage3,
-                f"debian13-stage3-adcs-preflight.yml: missing OWNER/read-only safeguard {required!r}", errors)
-    for forbidden in ("  pull_request:", "  push:", "systemctl enable", "apt install", "dpkg -i"):
-        require(forbidden not in stage3,
-                f"debian13-stage3-adcs-preflight.yml: forbidden trigger or service change {forbidden!r}", errors)
-    require(stage3.count("sudo -n ") == 2 and
-            not re.search(r"(?m)^\s*sudo\s+(?!-n\s)", stage3),
-            "debian13-stage3-adcs-preflight.yml: sudo must remain limited to two reviewed read-only calls",
-            errors)
-    activation = (ROOT / ".github/workflows/debian13-stage3-adcs-activation.yml").read_text(encoding="utf-8")
-    for required in (
-        "  workflow_dispatch:",
-        "github.repository == 'adrianf87/dc24h.eu-twilight'",
-        "github.actor == 'adrianf87'",
-        "github.ref == 'refs/heads/main'",
-        "runs-on: [self-hosted, linux, x64, twilight-debian13-stage2]",
-        "test \"$OWNER_CONFIRMATION\" = 'RUN_STAGE3_PUBLIC_ADCS_ACTIVATION'",
-        "test \"$OWNER_CONFIRMATION\" = 'RUN_STAGE3_PUBLIC_ADCS_ROLLBACK'",
-        "test \"$RUNNER_NAME\" = 'server-747585786'",
-        "test \"$(id -un)\" = 'github-runner'",
-        "test \"$(sudo -n id -u)\" = '0'",
-        "test \"$(git rev-parse HEAD)\" = \"$EXPECTED_SHA\"",
-        "provider_tcp_1512_confirmed:",
-        "tls_renewal_plan_confirmed:",
-        "persist-credentials: false",
-        "contents: read",
-        "runs-on: ubuntu-24.04",
-        "sudo -n python3 scripts/public_stage3_adcs_preflight.py",
-        "sudo -n python3 scripts/public_stage3_adcs_activate.py",
-        "needs.external.result != 'success'",
-        "test -n \"$DEPLOYED_SHA\"",
-    ):
-        require(required in activation,
-                f"debian13-stage3-adcs-activation.yml: missing public OWNER/rollback safeguard {required!r}", errors)
-    for forbidden in ("  pull_request:", "  push:", "apt install", "dpkg -i", "nft add", "ufw allow"):
-        require(forbidden not in activation,
-                f"debian13-stage3-adcs-activation.yml: forbidden trigger or firewall change {forbidden!r}", errors)
-    require(activation.count("sudo -n ") == 6 and
-            not re.search(r"(?m)^\s*sudo\s+(?!-n\s)", activation),
-            "debian13-stage3-adcs-activation.yml: sudo must be limited to six reviewed calls", errors)
-    qualification = (ROOT / ".github/workflows/debian13-stage3-full-qualification.yml").read_text(encoding="utf-8")
+    for path in retired:
+        require(not (ROOT / path).exists(), f"Retired runner code still exists: {path}", errors)
+
+    for path in (ROOT / ".github" / "workflows").glob("*.yml"):
+        content = path.read_text(encoding="utf-8")
+        require(not re.search(r"runs-on:\s*(?:\[self-hosted|self-hosted)", content),
+                f"{path.name}: self-hosted runner selected", errors)
+        for prohibited in ("twilight-debian13-stage2", "github-runner",
+                           "self-hosted-runner-debian13"):
+            require(prohibited not in content,
+                    f"{path.name}: retired worker reference {prohibited}", errors)
+
+    for path in (ROOT / "README.md", *(ROOT / "doc").rglob("*.md")):
+        content = path.read_text(encoding="utf-8")
+        require("self-hosted-runner-debian13" not in content and
+                "github-runner" not in content,
+                f"{path.relative_to(ROOT)}: retired worker documentation", errors)
+
+    qualification = (ROOT / ".github/workflows/debian13-stage3-full-qualification.yml").read_text(
+        encoding="utf-8")
     for required in (
         "  workflow_dispatch:",
         "  pull_request:",
-        "if: github.event_name == 'pull_request'",
         "runs-on: ubuntu-24.04",
-        "github.repository == 'adrianf87/dc24h.eu-twilight'",
-        "github.actor == 'adrianf87'",
-        "github.ref == 'refs/heads/main'",
-        "runs-on: [self-hosted, linux, x64, twilight-debian13-stage2]",
-        "inputs.confirmation == 'RUN_STAGE3_PUBLIC_QUALIFICATION'",
-        "inputs.production_restarts_ack == true",
-        "needs: external-before",
-        "test \"$RUNNER_NAME\" = \"server-747585786\"",
-        'test "$(id -un)" = "github-runner"',
-        'test "$(sudo -n id -u)" = "0"',
-        'test "$(git rev-parse HEAD)" = "$GITHUB_SHA"',
-        "persist-credentials: false",
-        "contents: read",
-        "sudo -n python3 scripts/public_stage3_qualification_host.py",
+        "os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]",
+        "runs-on: ${{ matrix.os }}",
+        "test \"$RUNNER_ENVIRONMENT\" = 'github-hosted'",
+        "sudo -n apt-get install -y --no-install-recommends ncdc",
+        "sudo -n id -u",
         "python3 scripts/public_stage3_qualification_external.py",
+        "inputs.production_restarts_ack == false",
+        "contents: read",
     ):
         require(required in qualification,
-                f"debian13-stage3-full-qualification.yml: missing guarded Stage III requirement {required!r}", errors)
-    for forbidden in ("  push:", "systemctl enable", "dpkg -i", "ufw allow", "nft add"):
-        require(forbidden not in qualification,
-                f"debian13-stage3-full-qualification.yml: forbidden event or service policy {forbidden!r}", errors)
-    require(qualification.count("sudo -n ") == 2 and
-            not re.search(r"(?m)^\s*sudo\s+(?!-n\s|apt-get\s)", qualification),
-            "debian13-stage3-full-qualification.yml: privileged sudo must remain narrowly scoped", errors)
-    actionlint = (ROOT / ".github" / "actionlint.yaml").read_text(encoding="utf-8")
-    require("server-747585786" not in actionlint,
-            "actionlint.yaml: custom runner label remains", errors)
-    require("ubuntu-26.04" in actionlint,
-            "actionlint.yaml: public ubuntu-26.04 label is missing", errors)
+                f"Stage III Ubuntu-only workflow missing {required!r}", errors)
+    for prohibited in ("systemctl restart", "sudo -n python3",
+                       "RUN_STAGE3_PUBLIC_QUALIFICATION", "premerge-host:",
+                       "self-hosted", "ssh "):
+        require(prohibited not in qualification,
+                f"Stage III workflow attempted retired host action {prohibited!r}", errors)
+    require(not (ROOT / ".github" / "actionlint.yaml").exists(),
+            "Retired custom-runner actionlint shim remains", errors)
 
 
 def check_ci_repository_allowlists(errors):

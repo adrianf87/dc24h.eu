@@ -1,11 +1,11 @@
 """Pure regression checks: neither network nor sudo/systemd is used."""
 
-import argparse
+from pathlib import Path
 import unittest
 from unittest import mock
 
 import public_stage3_qualification_external as external
-import public_stage3_qualification_host as host
+import stage3_premerge_gate as premerge
 
 
 class FakePeer:
@@ -28,6 +28,8 @@ class QualificationPolicyTests(unittest.TestCase):
                                       "msg"), b"BMSG ABCD first")
         self.assertEqual(reader.until(lambda frame: frame.startswith(b"BSCH"),
                                       "search"), b"BSCH ABCD ANsecond")
+        self.assertEqual(reader.message_frames, 1)
+        self.assertEqual(reader.search_frames, 1)
 
     def test_frame_reader_rejects_hub_denial(self):
         reader = external.Reader(FakePeer([b"ISTA 200 Permission\\sdenied FCBINF XXprivate-token\n"]))
@@ -74,6 +76,50 @@ class QualificationPolicyTests(unittest.TestCase):
         with mock.patch.object(external.os, "write") as write:
             external.select_ncdc_hub_tab(91)
         write.assert_called_once_with(91, b"\x1b2")
+
+    def test_ncdc_terminal_recognizes_split_synthetic_markers_only(self):
+        terminal = external.NcdcTerminal()
+        terminal.observe(b"private-should-never-appear #stage3q")
+        terminal.observe(b"ual \x1b[1;2Hstage3-ncdc-inb")
+        terminal.observe(b"ound-ready\r\nprivate-secret")
+        self.assertTrue(terminal.hub_tab_visible)
+        self.assertTrue(terminal.inbound_chat_visible)
+        self.assertIn("guest_to_ncdc_displayed=yes", terminal.flags())
+        self.assertNotIn("private", terminal.flags())
+        self.assertNotIn("secret", terminal.flags())
+        self.assertLess(len(terminal._tail), len(external.NCDC_INBOUND))
+
+    def test_ncdc_inbound_requires_actual_terminal_rendering(self):
+        terminal = external.NcdcTerminal()
+        process = mock.Mock()
+        process.poll.return_value = None
+        with mock.patch.object(external, "drain_ncdc_terminal",
+                               side_effect=lambda _fd, probe: probe.observe(external.NCDC_INBOUND)):
+            external.await_ncdc_screen(terminal, 91, process, timeout=1)
+        self.assertTrue(terminal.inbound_chat_visible)
+
+    def test_ncdc_inbound_timeout_reports_only_safe_flags(self):
+        terminal = external.NcdcTerminal()
+        terminal.observe(b"sensitive-other-user")
+        process = mock.Mock()
+        process.poll.return_value = None
+        with mock.patch.object(external, "drain_ncdc_terminal", return_value=0), mock.patch.object(
+                external.time, "monotonic", side_effect=[0, 0, 2]):
+            with self.assertRaises(RuntimeError) as caught:
+                external.await_ncdc_screen(terminal, 91, process, timeout=1)
+        self.assertIn("guest_to_ncdc_displayed=no", str(caught.exception))
+        self.assertNotIn("sensitive", str(caught.exception))
+
+    def test_ncdc_outbound_requires_independent_sender_sid(self):
+        sender = b"EFGH"
+        self.assertTrue(external.is_ncdc_chat_frame(
+            b"BMSG EFGH stage3-ncdc-qualified", sender))
+        self.assertFalse(external.is_ncdc_chat_frame(
+            b"BMSG ABCD stage3-ncdc-qualified", sender))
+        self.assertFalse(external.is_ncdc_chat_frame(
+            b"BMSG EFGH stage3-ncdc-qualified-tampered", sender))
+        self.assertFalse(external.is_ncdc_chat_frame(
+            b"BMSG EFGH other message", sender))
 
     def test_ncdc_observer_wait_drains_terminal_between_adc_checks(self):
         reader = mock.Mock()
@@ -131,36 +177,6 @@ class QualificationPolicyTests(unittest.TestCase):
                 external.check_forbidden_ports()
         peer.close.assert_called_once()
 
-    def test_public_listener_inventory_excludes_loopback(self):
-        sample = ("LISTEN 0 128 0.0.0.0:22 0.0.0.0:*\n"
-                  "LISTEN 0 128 62.171.156.32:1512 0.0.0.0:*\n"
-                  "LISTEN 0 128 127.0.0.1:3306 0.0.0.0:*\n"
-                  "LISTEN 0 128 [::]:443 [::]:*\n")
-        self.assertEqual(host.public_listener_ports(sample), {22, 1512, 443})
-
-    def test_public_listener_inventory_flags_unapproved(self):
-        fake = mock.Mock(stdout="LISTEN 0 128 0.0.0.0:1512 0.0.0.0:*\n"
-                        "LISTEN 0 128 0.0.0.0:3306 0.0.0.0:*\n")
-        with mock.patch.object(host, "run", return_value=fake):
-            with self.assertRaisesRegex(RuntimeError, "3306"):
-                host.check_host_exposure()
-
-    def test_missing_owner_consent_blocks_host(self):
-        args = argparse.Namespace(confirmation="WRONG", actor="adrianf87",
-                                  ref="refs/heads/main", runner="server-747585786",
-                                  runner_user="github-runner", expected_sha="a" * 40)
-        with mock.patch.object(host.os, "geteuid", return_value=0):
-            with self.assertRaisesRegex(RuntimeError, "guard failed"):
-                host.guard(args)
-
-    def test_no_actual_letsencrypt_renewal_is_invoked(self):
-        # Reviewable allowlist of subprocess calls to the unit only.
-        with mock.patch.object(host, "run") as execute, mock.patch.object(
-                host, "probe_until_ready"):
-            host.restart_and_probe("TEST")
-        self.assertEqual(execute.call_args_list[0].args[:3],
-                         ("systemctl", "restart", host.UNIT))
-
     def test_ncdc_url_pin_matches_sha256_der(self):
         fake = mock.MagicMock()
         fake.getpeercert.return_value = b"public DER sample"
@@ -170,6 +186,102 @@ class QualificationPolicyTests(unittest.TestCase):
             url = external.fingerprint_url(context)
         self.assertTrue(url.startswith("adcs://server-747585786.dc24h.eu:1512/?kp=SHA256/"))
         self.assertNotIn("51.255.80.233", url)
+
+
+class PremergeExternalGateTests(unittest.TestCase):
+    def setUp(self):
+        self.head_sha = "a" * 40
+        self.env = {
+            "GITHUB_EVENT_NAME": "workflow_dispatch",
+            "GITHUB_REPOSITORY": premerge.REPOSITORY,
+            "GITHUB_ACTOR": "adrianf87",
+            "GITHUB_REF": premerge.BRANCH,
+            "RUNNER_ENVIRONMENT": "github-hosted",
+            "OWNER_CONFIRMATION": premerge.CONFIRMATION,
+            "PRODUCTION_RESTARTS_ACK": "false",
+            "PREMERGE_PHASE": "before",
+            "PREMERGE_CANDIDATE_SHA": self.head_sha,
+            "GITHUB_SHA": self.head_sha,
+        }
+
+    def test_before_and_after_are_both_explicitly_allowed(self):
+        self.assertEqual(premerge.guard(self.env), "before")
+        self.env["PREMERGE_PHASE"] = "after"
+        self.assertEqual(premerge.guard(self.env), "after")
+        self.env["PREMERGE_PHASE"] = "none"
+        self.env["GITHUB_REF"] = "refs/heads/main"
+        self.assertEqual(premerge.guard(self.env), "none")
+
+    def test_candidate_sha_must_be_exact_commit(self):
+        for supplied in ("", "a" * 39, "g" * 40, "b" * 40):
+            with self.subTest(supplied=supplied):
+                with self.assertRaises(RuntimeError):
+                    premerge.guard(dict(self.env, PREMERGE_CANDIDATE_SHA=supplied))
+
+    def test_premerge_never_accepts_self_hosted_or_restart_ack(self):
+        for override in ({"RUNNER_ENVIRONMENT": "self-hosted"},
+                         {"PRODUCTION_RESTARTS_ACK": "true"}):
+            with self.subTest(override=override):
+                with self.assertRaises(RuntimeError):
+                    premerge.guard(dict(self.env, **override))
+
+    def test_no_host_restart_full_mode_can_be_authorized(self):
+        for override in ({"PREMERGE_PHASE": "full"},
+                         {"OWNER_CONFIRMATION": "RUN_STAGE3_PREMERGE_FULL_QUALIFICATION"},
+                         {"PRODUCTION_RESTARTS_ACK": "true"}):
+            with self.subTest(override=override):
+                with self.assertRaises(RuntimeError):
+                    premerge.guard(dict(self.env, **override))
+
+    def test_external_only_requires_owner_repo_ref_and_manual_dispatch(self):
+        for override in ({"GITHUB_ACTOR": "someone-else"},
+                         {"GITHUB_REPOSITORY": "fork/dc24h.eu-twilight"},
+                         {"GITHUB_REF": "refs/heads/unreviewed"},
+                         {"GITHUB_EVENT_NAME": "pull_request"},
+                         {"OWNER_CONFIRMATION": "RUN_STAGE3_PUBLIC_QUALIFICATION"},
+                         {"PREMERGE_PHASE": "full"}):
+            with self.subTest(override=override):
+                with self.assertRaises(RuntimeError):
+                    premerge.guard(dict(self.env, **override))
+
+
+class GitHubHostedWorkflowSafetyTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        workflow = (Path(__file__).resolve().parent.parent / ".github" / "workflows" /
+                    "debian13-stage3-full-qualification.yml")
+        cls.workflow = workflow.read_text(encoding="utf-8")
+
+    def job(self, name, next_name):
+        return self.workflow.split("\n  " + name + ":\n", 1)[1].split(
+            "\n  " + next_name + ":\n", 1)[0]
+
+    def test_no_custom_runner_or_public_vps_systemd_mutations(self):
+        self.assertNotIn("runs-on: [self-hosted", self.workflow)
+        self.assertNotIn("github-runner", self.workflow)
+        self.assertNotIn("$RUNNER_NAME", self.workflow)
+        self.assertNotIn("sudo -n python3", self.workflow)
+        self.assertNotIn("systemctl restart", self.workflow)
+        self.assertNotIn("ssh ", self.workflow)
+        self.assertNotIn("premerge-host:", self.workflow)
+
+    def test_local_sudo_is_only_on_ubuntu_github_vm(self):
+        sandbox = self.job("ubuntu-sudo-check", "external-pr")
+        self.assertIn("os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]", sandbox)
+        self.assertIn("runs-on: ${{ matrix.os }}", sandbox)
+        self.assertIn("test \"$RUNNER_ENVIRONMENT\" = 'github-hosted'", sandbox)
+        self.assertIn("test \"$(sudo -n id -u)\" = '0'", sandbox)
+
+    def test_full_ncdc_checks_available_on_pr_and_manual_branch_or_main(self):
+        external_pr = self.job("external-pr", "external-manual")
+        external_manual = self.workflow.split("\n  external-manual:\n", 1)[1]
+        for job in (external_pr, external_manual):
+            self.assertIn("runs-on: ubuntu-24.04", job)
+            self.assertIn("public_stage3_qualification_external.py", job)
+            self.assertIn("sudo -n apt-get install -y --no-install-recommends ncdc", job)
+        self.assertIn("github.ref == 'refs/heads/main'", external_manual)
+        self.assertIn("inputs.production_restarts_ack == false", external_manual)
+        self.assertNotIn("--smoke-only", self.workflow)
 
 
 if __name__ == "__main__":

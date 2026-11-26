@@ -1,18 +1,18 @@
 # Public deployment Stage III — ADCS exposure and identity preflight (P0)
 
 **Tracking:** [Issue #10](https://github.com/adrianf87/dc24h.eu-twilight/issues/10), Stage III.  
-**Status:** IN PROGRESS — OWNER has requested public ADCS activation on the named Debian 13 VPS; readiness and Internet reachability remain unverified, **not live yet**.  
+**Status:** Historic Stage III preflight plan. The OWNER later confirmed public guest ADCS access; live availability must be checked independently.
 **Starting source:** protected main commit 7e46787c8a0a901fa08b5af6bb3cac7c8eb77a2d, after the [Stage II OWNER acceptance](https://github.com/adrianf87/dc24h.eu-twilight/issues/10#issuecomment-7195123564).  
 **OWNER-selected public hub FQDN:** server-747585786.dc24h.eu (**DNS A record, zone control and live certificate still require independent verification**).  
 **OWNER-selected public IPv4:** 62.171.156.32 (the Debian 13 VPS's reported address; direct assignment/NAT and external reachability must still be verified).  
-**OWNER topology override:** The public hub is now requested **on the same Debian 13 VPS as the GitHub self-hosted runner**. The previous assumption of a dedicated, secret-free test-only VPS no longer covers this configuration. The self-hosted account has passwordless root sudo; the OWNER **explicitly accepted this co-location risk** on November 26, 2026. This does not make real private credentials safe: Stage III first uses guest access with database/authentication disabled and must keep private state outside the rollout.  
+**OWNER runner update:** The previous VPS-based GitHub Actions executor was removed. The public Debian 13 hub remains a separate service target. Only GitHub-hosted Ubuntu runners may run CI; they have no systemd or private-key access to the VPS.
 **Retired historical deployment target — never use:** 51.255.80.233 / server-759505093.dc24h.eu.
 
 The OWNER has requested actual public ADCS activation at the specified new target. This runbook is only the pre-deployment safety gate; it does not itself change a VPS firewall, provider ACL, DNS record, TLS private key, service unit, process, or listener. The existing systemd example requires a separate OWNER migration marker and approval; do not create the marker, enable a unit, or stop a legacy service as a side effect of Stage III planning.
 
 ## 1. OWNER decisions and blocking dependencies
 
-The OWNER has named the host, approved ADCS/TLS TCP 1512 with guest access and accepted the existing privileged-runner co-location risk. Record and verify the following before carrying out changes; a request is not proof that TLS, credentials, firewall or rollback prerequisites are met:
+The OWNER has named the host and approved ADCS/TLS TCP 1512 with guest access. Record and verify the following before carrying out changes; a request is not proof that TLS, credentials, firewall or rollback prerequisites are met:
 
 | Decision / evidence | Required value | Current disposition |
 | --- | --- | --- |
@@ -24,7 +24,7 @@ The OWNER has named the host, approved ADCS/TLS TCP 1512 with guest access and a
 | Plaintext ADC | No public TCP 1511 | **OWNER approved TLS-only ADCS**; guest users may connect over the verified TLS transport |
 | Certificates | Publicly trusted CA, correct DNS SAN, valid full chain, matching key, renewal/restart owner | **BLOCKED** |
 | External testing | OWNER-controlled independent network and authorized bounded scan scope | **BLOCKED** |
-| Public activation | Exact named service, host, port, source SHA, certificate, guest-login policy, fallback and rollback plan | OWNER requested activation and **accepted runner/sudo co-location risk**; execution still blocked by independent DNS/TLS/firewall/rollback readiness checks |
+| Public activation | Exact named service, host, port, source SHA, certificate, guest-login policy, fallback and rollback plan | Historical checklist; later live status must be independently revalidated, with host maintenance done outside CI |
 
 The internal WebAdmin/C++ value **server.name = dc24h.eu-twilight** is not a DNS hostname and must not be used as a certificate identity, Origin, or WebAuthn RP ID merely because its text resembles a domain. WebAdmin Internet exposure is a **different** OWNER decision and is not part of this gate.
 
@@ -38,7 +38,7 @@ The internal WebAdmin/C++ value **server.name = dc24h.eu-twilight** is not a DNS
 
 ## 3. Read-only host and provider inventory — before any modification
 
-Run these *manually* only on the OWNER-selected Debian 13 VPS **server-747585786**, which is also the self-hosted GitHub runner. The previous isolation assumption no longer holds for public service deployment. The commands are observations, not a deploy procedure. Keep unredacted network, process, host and firewall output private; publish only bounded summaries. Do not infer the target public IP from an outbound route.
+Run these *manually* only on the OWNER-selected Debian 13 VPS **server-747585786**. It is not an Actions runner. The commands are observations, not a deploy procedure. Keep unredacted network, process, host and firewall output private; publish only bounded summaries. Do not infer the target public IP from an outbound route.
 
 ~~~sh
 cat /etc/os-release
@@ -53,7 +53,7 @@ sudo -n nft list ruleset
 
 Document whether 62.171.156.32 appears on an actual host interface. If not, obtain a **provider-side, OWNER-verified NAT/forwarding mapping** before proceeding. Capture the provider's inbound policy separately; a Debian firewall listing alone cannot establish external reachability. Confirm no unknown dc24h process/service is active before any later rehearsal.
 
-Record a proposed least-privilege inbound policy for **one selected ADCS TCP port**, restricted SSH management from OWNER-approved sources, and deny-by-default for all other inbound ports. Specifically forbid Internet access to MariaDB (3306), internal API/admin sockets, Node/Vite development ports, remote.html, and the maintenance/service controller. Do not edit nftables/iptables/ufw, provider firewalls, router NAT, or SSH policy until an OWNER-reviewed change plan preserves SSH/runner access and the exact ADCS port is confirmed.
+Record a proposed least-privilege inbound policy for **one selected ADCS TCP port**, restricted SSH management from OWNER-approved sources, and deny-by-default for all other inbound ports. Specifically forbid Internet access to MariaDB (3306), internal API/admin sockets, Node/Vite development ports, remote.html, and the maintenance/service controller. Do not edit nftables/iptables/ufw, provider firewalls, router NAT, or SSH policy until an OWNER-reviewed change plan preserves SSH access and the exact ADCS port is confirmed.
 
 ## 4. DNS, TLS certificate and renewal gate
 
@@ -123,25 +123,27 @@ Never disable TLS validation, silently downgrade to adc://, or treat a trusted K
 
 ## 7. Evidence and separate OWNER gates
 
-Required report: exact commit SHA and binary version, independently verified mapping for server-747585786.dc24h.eu and 62.171.156.32 on the actual shared hub/runner VPS, OWNER-approved port, proof of DNS control and public-IP topology, TLS certificate SAN/issuer/expiry and **public** fingerprint (never private key), provider and local firewall decisions, pre/post network observations, external source/network, test matrix with negative results, redacted logs, rollback procedure, and artifact checksums. Document any unresolved failure as **FAIL / NO-GO**.
+Required report: exact commit SHA and binary version, independently verified mapping for server-747585786.dc24h.eu and 62.171.156.32 on the public hub VPS, OWNER-approved port, proof of DNS control and public-IP topology, TLS certificate SAN/issuer/expiry and **public** fingerprint (never private key), provider and local firewall decisions, pre/post network observations, external source/network, test matrix with negative results, redacted logs, rollback procedure, and artifact checksums. Document any unresolved failure as **FAIL / NO-GO**.
 
 **Stage III disposition: LOCAL PREFLIGHT PASS / PUBLIC ACTIVATION PENDING.** OWNER-only read-only [preflight #1](https://github.com/adrianf87/dc24h.eu-twilight/actions/runs/45852400469) passed on merged commit `ad4bec0` with `LOCAL_PREREQUISITES_CLEAR`. On November 26, 2026 OWNER reported that provider TCP 1512 is allowed and no local host firewall is configured, leaving all listening ports potentially Internet-accessible. That is an OWNER report, **not** an independent scan or proof that other internal services are inaccessible. A separately reviewed and merged, manually dispatched activation workflow and independent external verification are required; no WebAdmin or private-state migration is approved.
 
 
-## 8. Separate guarded Stage III activation proposal (review before merge)
+## 8. Public hub operations after retirement of the VPS runner
 
-The `.github/workflows/debian13-stage3-adcs-activation.yml` proposal is **not a deployment triggered by a PR or a push**. It can be dispatched only by `adrianf87` on protected `main` after a separate OWNER merge decision. Its activation mode requires the exact `RUN_STAGE3_PUBLIC_ADCS_ACTIVATION` token and two explicit attestations: provider TCP 1512/management access, and a named certificate renewal/restart operator. The current read-only preflight remains unchanged.
+The prior `.github/workflows/debian13-stage3-adcs-activation.yml`
+proposal, its privileged host preflight and automated rollback jobs have been
+removed. **GitHub-hosted Ubuntu cannot install, restart or roll back the
+public Debian 13 service.** It may only independently probe the public ADCS
+endpoint. See [Stage III GitHub Ubuntu qualification](PUBLIC_STAGE_III_QUALIFICATION.md).
 
-The host phase builds the exact checked-out C++ source without root, rechecks the ten read-only prerequisites, and uses passwordless `sudo` only for the separately guarded deployment script. It installs **only new owned Stage III paths**:
+The already-running public hub is not stopped or modified by removing source
+files and GitHub workflows. Before any future systemd, certificate renewal,
+restore or rollback operation, the OWNER must use a separately reviewed manual
+host procedure with verified SSH access and a known-good backup. Do not copy
+private TLS keys into GitHub Actions secrets or reintroduce remote `sudo`
+through an SSH tunnel merely to satisfy CI.
 
-- `/opt/dc24h-stage3/<12-character source SHA>/bin/dc24h-twilight` — exact-source hub binary (never replaces an existing `/usr/local/bin` target).
-- `/etc/dc24h-stage3/dc24h.ini` and a private copy of the already validated CA full chain and matching key under `/etc/dc24h-stage3/tls/`. No private data is uploaded to Actions.
-- `/etc/systemd/system/dc24h-stage3-adcs.service` — unique, unprivileged `dc24h-stage3` service with systemd sandboxing. It does not stop `dc24h.service` or `dc24h-twilight.service` and does not change SSH, provider ACL, nftables, iptables or ufw.
-
-The generated policy uses `listen = none`, binds ADCS to **62.171.156.32:1512** (never `0.0.0.0`), and disables MariaDB, registered-account authentication and internal HTTP API. There is no public WebAdmin activation. Guest connections are rate-limited. The code refuses any pre-existing Stage III installation target rather than overwriting or migrating it.
-
-After startup, a **GitHub-hosted Ubuntu 24.04** job independently verifies the exact DNS A mapping, CA/SAN/TLS hostname trust, **two bounded ADC guest logins over TLS**, and that TCP 1511 refuses incoming connections. A failed external gate triggers a separate self-hosted rollback job. Rollback stops/disables the unique unit and removes only manifest-owned files; it does not recursively delete other host data or revert unrelated services. If the self-hosted runner is offline or the workflow is canceled, the operator must use the manual rollback mode and verify the listener is gone; automation alone is not a physical recovery guarantee.
-
-**Manual rollback:** dispatch the same workflow on protected `main` with mode `rollback`, confirmation `RUN_STAGE3_PUBLIC_ADCS_ROLLBACK`, and the **full deployed source SHA** from the deployment record. The rollback job verifies the manifest's exact identity before deleting anything. Never re-run activation blindly when a deployment already exists.
-
-**Remaining acceptance limits:** This initial bounded check is not a full port inventory, provider ACL audit, actual ncdc/DC++ compatibility matrix, 24-hour stability test, certificate renewal rehearsal, or proof that all other listeners are private. With no firewall, inspect and restrict any unrelated public sockets before calling the VPS production-hardened. Configure and test certificate renewal/restart as a separate operational prerequisite; copied key material does not renew itself. Only after those tests, complete rollback evidence, and a distinct **OWNER PUBLIC HUB ACTIVATION GO** may Stage III be formally accepted.
+The original systemd service identity and installation paths in this document
+remain historical deployment evidence, not permission to reactivate the
+removed workflow. Keep the Stage III host-operation acceptance criteria marked
+**NOT TESTED** until independently verified on the VPS.
