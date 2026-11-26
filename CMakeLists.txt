@@ -397,6 +397,9 @@ if(BUILD_TESTING)
     add_test(NAME public.stage2.debian13_runner_contract COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/self-hosted-runner-debian13/tests/test_runner_contract.py")
     set_tests_properties(public.stage2.debian13_runner_contract PROPERTIES TIMEOUT 15)
+    add_test(NAME public.stage2.synthetic_recovery_contract COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/self-hosted-runner-debian13/tests/test_stage2_isolated_proof.py")
+    set_tests_properties(public.stage2.synthetic_recovery_contract PROPERTIES TIMEOUT 15)
     add_test(NAME twilight.stage3.branding COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/twilight_stage3_branding_tests.py")
     set_tests_properties(twilight.stage3.branding PROPERTIES TIMEOUT 15)

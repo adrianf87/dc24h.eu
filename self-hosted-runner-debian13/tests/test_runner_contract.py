@@ -10,6 +10,7 @@ from runner_preflight import evaluate
 
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = ROOT / ".github/workflows/debian13-supplemental.yml"
+SUDO_WORKFLOW = ROOT / ".github/workflows/debian13-stage2-sudo.yml"
 
 
 def good_report():
@@ -76,6 +77,24 @@ class RunnerContractTests(unittest.TestCase):
         self.assertIn("persist-credentials: false", body)
         self.assertIn("contents: read", body)
         self.assertNotRegex(body, re.compile(r"\bsudo\s+(?:-\S+\s+)*\w+"))
+
+    def test_sudo_workflow_is_manual_main_only_and_privilege_scoped(self):
+        body = SUDO_WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("  workflow_dispatch:", body)
+        self.assertNotIn("  pull_request:", body)
+        self.assertNotIn("  push:", body)
+        self.assertIn("github.actor == 'adrianf87'", body)
+        self.assertIn("github.ref == 'refs/heads/main'", body)
+        self.assertIn("twilight-debian13-stage2", body)
+        self.assertIn("RUN_STAGE2_SUDO_ISOLATED", body)
+        self.assertIn("persist-credentials: false", body)
+        self.assertIn("contents: read", body)
+        self.assertEqual(body.count("sudo -n "), 2)
+        self.assertIn("sudo -n id -u", body)
+        self.assertIn("sudo -n python3 scripts/public_stage2_preflight.py", body)
+        self.assertNotRegex(body, re.compile(r"(?m)^\s*sudo\s+(?!-n\s)"))
+        for forbidden in ("systemctl start", "systemctl stop", "systemctl enable", "apt install", "dpkg -i"):
+            self.assertNotIn(forbidden, body)
 
 
 if __name__ == "__main__":

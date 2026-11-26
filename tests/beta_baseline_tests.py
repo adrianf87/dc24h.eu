@@ -30,8 +30,10 @@ def check_no_custom_workers(errors):
     # not selection of a private runner by required pull-request CI.
     supplemental_mentions = {
         Path("README.md"): {"747585786", "self-hosted"},
-        Path("doc/us/PUBLIC_STAGE_II_DEBIAN13.md"): {"self-hosted"},
+        Path("doc/us/PUBLIC_STAGE_II_DEBIAN13.md"): {"self-hosted", "github-runner"},
         Path(".github/workflows/debian13-supplemental.yml"):
+            {"747585786", "github-runner", "self-hosted"},
+        Path(".github/workflows/debian13-stage2-sudo.yml"):
             {"747585786", "github-runner", "self-hosted"},
     }
     needles = (
@@ -74,6 +76,29 @@ def check_no_custom_workers(errors):
     for forbidden in ("  pull_request:", "  push:", "sudo "):
         require(forbidden not in supplemental,
                 f"debian13-supplemental.yml: unexpected runner trigger or privilege {forbidden!r}", errors)
+    privileged = (ROOT / ".github/workflows/debian13-stage2-sudo.yml").read_text(encoding="utf-8")
+    for required in (
+        "  workflow_dispatch:",
+        "github.actor == 'adrianf87'",
+        "github.ref == 'refs/heads/main'",
+        "runs-on: [self-hosted, linux, x64, twilight-debian13-stage2]",
+        "test \"$RUNNER_NAME\" = 'server-747585786'",
+        "test \"$(id -un)\" = 'github-runner'",
+        "test \"$OWNER_CONFIRMATION\" = 'RUN_STAGE2_SUDO_ISOLATED'",
+        "persist-credentials: false",
+        "contents: read",
+        "sudo -n id -u",
+        "sudo -n python3 scripts/public_stage2_preflight.py",
+    ):
+        require(required in privileged,
+                f"debian13-stage2-sudo.yml: missing OWNER/privilege safeguard {required!r}", errors)
+    for forbidden in ("  pull_request:", "  push:", "systemctl start", "systemctl stop",
+                      "systemctl enable", "apt install", "dpkg -i"):
+        require(forbidden not in privileged,
+                f"debian13-stage2-sudo.yml: forbidden trigger or service change {forbidden!r}", errors)
+    require(privileged.count("sudo -n ") == 2 and
+            not re.search(r"(?m)^\s*sudo\s+(?!-n\s)", privileged),
+            "debian13-stage2-sudo.yml: sudo must be limited to identity and read-only inventory", errors)
     actionlint = (ROOT / ".github" / "actionlint.yaml").read_text(encoding="utf-8")
     require("server-747585786" not in actionlint,
             "actionlint.yaml: custom runner label remains", errors)
