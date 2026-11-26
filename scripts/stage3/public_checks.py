@@ -14,9 +14,31 @@ from stage3.evidence import Blocked, Mismatch
 ENDPOINT = (base.IPV4, base.ADCS_PORT)
 
 
+def forward_confirmed_ptr():
+    """Verify the OWNER-provided IPv4/PTR pair using the runner's DNS resolver."""
+    try:
+        ptr, _, _ = socket.gethostbyaddr(base.IPV4)
+    except (socket.herror, socket.gaierror, TimeoutError, OSError):
+        raise Blocked("Independent PTR lookup is unavailable") from None
+    if ptr.rstrip(".").lower() != base.FQDN.lower():
+        raise Mismatch("Public PTR does not match the approved hostname")
+
+    try:
+        records = socket.getaddrinfo(base.FQDN, None, family=socket.AF_INET,
+                                     type=socket.SOCK_STREAM)
+    except (socket.gaierror, TimeoutError, OSError):
+        raise Blocked("Independent forward DNS lookup is unavailable") from None
+    addresses = {record[4][0] for record in records}
+    if addresses != {base.IPV4}:
+        raise Mismatch("The PTR hostname does not resolve exclusively to the approved IPv4")
+    return f"Forward-confirmed public DNS: {base.IPV4} PTR {base.FQDN}; A {base.IPV4}"
+
+
 def public_tls(suite):
     with suite.case("dns.a"):
         base.assert_dns()
+    with suite.case("dns.ptr.forward-confirmed") as result:
+        result.observed = forward_confirmed_ptr()
     context = public_context()
     with suite.case("tls.identity") as result:
         with base.open_tls(context) as peer:
