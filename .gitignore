@@ -29,3 +29,6 @@ __pycache__/
 # WebAdmin test artifacts
 /webadmin/test-results/
 /webadmin/playwright-report/
+# Only manually reviewed, sanitized test evidence may be tracked.
+# Keep the repository-wide *.log rule for raw logs.
+!/logs/tests/*.redacted.log
