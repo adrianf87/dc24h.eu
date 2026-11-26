@@ -8,6 +8,15 @@ import sys
 from urllib.parse import unquote, urlsplit
 
 
+# Stage II deployment guidance is maintained in US English only. Keep every
+# other existing localized document paired until explicitly reviewed.
+US_ONLY_DOCUMENTS = frozenset({Path("PUBLIC_STAGE_II_DEBIAN13.md")})
+
+
+def documentation_language_mismatches(us, pl):
+    return sorted((us - pl) - US_ONLY_DOCUMENTS), sorted(pl - us)
+
+
 def check_project(root):
     errors = []
     cmake = (root / "CMakeLists.txt").read_text(encoding="utf-8")
@@ -43,8 +52,9 @@ def check_project(root):
 
     us = {p.relative_to(root / "doc/us") for p in (root / "doc/us").rglob("*.md")}
     pl = {p.relative_to(root / "doc/pl") for p in (root / "doc/pl").rglob("*.md")}
-    if not us or us != pl:
-        errors.append(f"Documentation language file mismatch: US-only={sorted(us - pl)}, PL-only={sorted(pl - us)}")
+    unexpected_us, unexpected_pl = documentation_language_mismatches(us, pl)
+    if not us or unexpected_us or unexpected_pl:
+        errors.append(f"Documentation language file mismatch: US-only={unexpected_us}, PL-only={unexpected_pl}")
     current_documents = {root / "README.md", root / "webadmin/README.md", root / "doc/README.md",
                          root / "doc/us/README.md", root / "doc/pl/README.md"}
     documents = sorted(set((root / "doc").rglob("*.md")) |
@@ -82,4 +92,4 @@ if __name__ == "__main__":
     if problems:
         print("\n".join(problems), file=sys.stderr)
         sys.exit(1)
-    print("Release metadata, documentation UTF-8, language file parity and local Markdown targets passed")
+    print("Release metadata, documentation UTF-8, reviewed US-only exception and local Markdown targets passed")

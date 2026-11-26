@@ -391,12 +391,21 @@ if(BUILD_TESTING)
     add_test(NAME project.metadata COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/project_checks.py")
     set_tests_properties(project.metadata PROPERTIES TIMEOUT 15)
+    add_test(NAME project.metadata.language_policy COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/project_language_policy_tests.py")
+    set_tests_properties(project.metadata.language_policy PROPERTIES TIMEOUT 15)
+    add_test(NAME public.stage2.debian13_runner_contract COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/self-hosted-runner-debian13/tests/test_runner_contract.py")
+    set_tests_properties(public.stage2.debian13_runner_contract PROPERTIES TIMEOUT 15)
     add_test(NAME twilight.stage3.branding COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/twilight_stage3_branding_tests.py")
     set_tests_properties(twilight.stage3.branding PROPERTIES TIMEOUT 15)
     add_test(NAME twilight.stage4.technical_identity COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/twilight_stage4_identity_tests.py")
     set_tests_properties(twilight.stage4.technical_identity PROPERTIES TIMEOUT 15)
+    add_test(NAME public.stage2.debian13_preflight COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/public_stage2_preflight_tests.py")
+    set_tests_properties(public.stage2.debian13_preflight PROPERTIES TIMEOUT 15)
     add_test(NAME dependencies.audit COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/dependency_audit_tests.py"
         "${CMAKE_BINARY_DIR}"
