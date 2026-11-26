@@ -149,7 +149,7 @@ jobs:
   auto-rollback:
     name: Stop and remove only our Stage III service after external FAIL
     needs: [activate, external]
-    if: always() && github.repository == 'adrianf87/dc24h.eu-twilight' && github.actor == 'adrianf87' && github.ref == 'refs/heads/main' && inputs.mode == 'activate' && needs.activate.result == 'success' && needs.external.result != 'success'
+    if: always() && github.repository == 'adrianf87/dc24h.eu-twilight' && github.actor == 'adrianf87' && github.ref == 'refs/heads/main' && inputs.mode == 'activate' && needs.activate.result != 'skipped' && (needs.activate.result != 'success' || needs.external.result != 'success')
     runs-on: [self-hosted, linux, x64, twilight-debian13-stage2]
     timeout-minutes: 15
     steps:

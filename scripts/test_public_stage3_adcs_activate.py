@@ -5,7 +5,7 @@ from argparse import Namespace
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase, main
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import public_stage3_adcs_activate as deploy
 
@@ -97,6 +97,7 @@ class StageIIIActivationTests(TestCase):
                                 CONFIG_DIR=config_dir, TLS_DIR=tls_dir, CONFIG=config,
                                 CERT=cert, KEY=key, MARKER=marker), \
                     patch.object(deploy, "run"), \
+                    patch.object(deploy.readiness, "command", return_value=MagicMock(returncode=3)), \
                     patch.object(deploy.readiness, "port_available", return_value=True):
                 deploy.rollback(self.args("rollback", deploy.ROLLBACK_TOKEN))
             self.assertFalse(manifest.exists())

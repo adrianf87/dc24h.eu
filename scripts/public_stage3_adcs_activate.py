@@ -243,6 +243,9 @@ def cleanup(release, created_user):
         run("systemctl", "disable", "--now", UNIT)
     except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
         pass
+    unit_active = readiness.command("systemctl", "is-active", "--quiet", UNIT)
+    if unit_active is None or unit_active.returncode == 0:
+        raise RuntimeError("Stage III rollback blocked: systemd unit may still be active")
     if not readiness.port_available(readiness.EXPECTED_PORT):
         raise RuntimeError("Stage III rollback blocked: TCP 1512 is still listening")
     for file in (UNIT_PATH, MANIFEST, MARKER, CONFIG, CERT, KEY, release / "bin" / "dc24h-twilight"):
@@ -273,7 +276,10 @@ def cleanup(release, created_user):
 
 def rollback(args):
     if not MANIFEST.is_file() or MANIFEST.is_symlink():
-        raise RuntimeError("No owned Stage III deployment manifest")
+        if not any(path.exists() for path in (UNIT_PATH, PREFIX, CONFIG_DIR)):
+            print("STAGE3_ALREADY_NOT_DEPLOYED")
+            return
+        raise RuntimeError("Partial Stage III files exist without a trusted owned manifest")
     data = json.loads(MANIFEST.read_text(encoding="utf-8"))
     deployed_sha = args.deployed_sha or args.expected_sha
     if not re.fullmatch(r"[0-9a-f]{40}", deployed_sha):
