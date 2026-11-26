@@ -42,6 +42,29 @@ class AdcsProcessTests(unittest.TestCase):
         self.assertEqual(counters(self, hub), (2, 0, 0, 0))
         self.assertIn(b'ADCS stopped; handshakes=1', hub.log)
 
+    def test_reference_client_checks_dns_or_ip_san_by_requested_identity(self):
+        """CA/hostname verification differs from explicit ADC KEYP pinning.
+
+        A trusted leaf with DNS:localhost only is valid for a localhost URL,
+        never for a literal 127.0.0.1 URL in a strict reference TLS client.
+        ncdc's separately supplied ?kp=SHA256 pin is a different trust mode.
+        """
+        dns_only = pathlib.Path(self.directory.name) / 'dns-only'
+        dns_only.mkdir()
+        cert, key = credentials(dns_only, subject_alt_names='DNS:localhost')
+        hub = Hub(self, '--adcs-listen', '127.0.0.1:0', '--tls-cert', cert,
+                  '--tls-key', key, ready_pattern=TLS_READY)
+        context = ssl.create_default_context(cafile=cert)
+        endpoint = tls_endpoint(hub)
+        with socket.create_connection(endpoint, timeout=3) as raw:
+            with self.assertRaises(ssl.SSLCertVerificationError):
+                context.wrap_socket(raw, server_hostname='127.0.0.1')
+        with socket.create_connection(endpoint, timeout=3) as raw:
+            with context.wrap_socket(raw, server_hostname='localhost') as peer:
+                self.assertIn(peer.version(), ('TLSv1.2', 'TLSv1.3'))
+                peer.sendall(b'HSUP ADBASE\n')
+        hub.stop()
+
     def test_base_argument_syntax_recovers_inside_tls(self):
         hub = self.hub()
         peer = self.connect_tls(hub)

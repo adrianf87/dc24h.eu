@@ -592,6 +592,9 @@ if(BUILD_TESTING)
     add_test(NAME adc.rcm.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/adc_rcm_process_tests.py" "$<TARGET_FILE:dc24h>")
     set_tests_properties(adc.rcm adc.rcm.process PROPERTIES TIMEOUT 45)
+    add_test(NAME stage1.ipv6_loopback_policy COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/ipv6_loopback_support_tests.py")
+    set_tests_properties(stage1.ipv6_loopback_policy PROPERTIES TIMEOUT 15)
     add_executable(adc_ctm_tests tests/adc_ctm_tests.cpp)
     target_link_libraries(adc_ctm_tests PRIVATE dc24h_adc)
     target_compile_options(adc_ctm_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)

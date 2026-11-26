@@ -8,13 +8,13 @@ import subprocess
 TLS_READY = re.compile(rb"ADCS listening on (\[[^\]]+\]|[^ :]+):([0-9]+)")
 
 
-def credentials(directory):
+def credentials(directory, subject_alt_names='DNS:localhost,IP:127.0.0.1,IP:::1'):
     cert = str(pathlib.Path(directory) / 'certificate.pem')
     key = str(pathlib.Path(directory) / 'private.pem')
     subprocess.run(['openssl', 'req', '-x509', '-newkey', 'rsa:2048', '-nodes',
                     '-days', '1', '-subj', '/CN=localhost',
                     '-addext', 'basicConstraints=critical,CA:FALSE',
-                    '-addext', 'subjectAltName=DNS:localhost,IP:127.0.0.1,IP:::1',
+                    '-addext', 'subjectAltName=' + subject_alt_names,
                     '-addext', 'keyUsage=digitalSignature,keyEncipherment',
                     '-addext', 'extendedKeyUsage=serverAuth',
                     '-keyout', key, '-out', cert],

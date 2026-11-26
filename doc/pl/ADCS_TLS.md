@@ -2,6 +2,8 @@
 
 **alpha-0.9.5 Bezpieczeństwo TLS:** [Polityka certyfikatu i szyfrów ADCS](TLS_SECURITY.md) sprawdza certyfikat liścia huba przed nasłuchem i ogranicza nasłuch do TLS 1.2 i 1.3 AEAD. Klient nadal sprawdza nazwę i łańcuch zaufania. HTTP/2, OCSP i automatyczne odnawianie pozostają niezaimplementowane. Notatki historyczne poniżej zachowują pierwotny zakres.
 
+**Uściślenie Etapu I publicznego wdrożenia:** weryfikacja CA/nazwy hosta i jawne przypięcie odcisku SHA-256 certyfikatu w ADC KEYP są różnymi trybami zaufania klienta. W szczególności ncdc ze świadomie zaufanym `?kp=SHA256/...` może zaakceptować certyfikat bez SAN zgodnego z adresem URL; hub nie jest w stanie stwierdzić, czy klient sprawdził nazwę. Zobacz [macierz odbioru Debian 13/ncdc](PUBLIC_STAGE_I_NCDC.md). Publiczne użycie wymaga osobnego zatwierdzenia tożsamości certyfikatu i zasad wdrożenia.
+
 **Etap dostarczony w alpha-0.3.12:** [Limits](LIMITS.md) dodaje konfigurowalne limity sesji/użytkowników wspólne dla ADC/ADCS, ograniczone limitem połączeń. SessionManager transakcyjnie sprawdza pojemność; LoginHub odrzuca pełny rejestr przed przygotowaniem powitania/listy przez ISTA 211 i własne IQUI. Rezerwacje closing liczą się aż do sprzątania. Starsze opisy zachowują zakres historyczny.
 
 **Etap dostarczony w alpha-0.2.10:** [Bezpieczeństwo negocjacji](NEGOTIATION_SECURITY.md) dodaje limity oczekujących sesji, łączne budżety wejścia do gotowości i wspólne limity prób przed INF/Tiger. Opisy historyczne poniżej zachowują pierwotny zakres.
