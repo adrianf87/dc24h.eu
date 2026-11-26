@@ -194,7 +194,7 @@ def check_no_custom_workers(errors):
         require(forbidden not in qualification,
                 f"debian13-stage3-full-qualification.yml: forbidden event or service policy {forbidden!r}", errors)
     require(qualification.count("sudo -n ") == 2 and
-            not re.search(r"(?m)^\\s*sudo\\s+(?!-n\\s|apt-get\\s)", qualification),
+            not re.search(r"(?m)^\s*sudo\s+(?!-n\s|apt-get\s)", qualification),
             "debian13-stage3-full-qualification.yml: privileged sudo must remain narrowly scoped", errors)
     actionlint = (ROOT / ".github" / "actionlint.yaml").read_text(encoding="utf-8")
     require("server-747585786" not in actionlint,
