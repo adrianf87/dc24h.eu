@@ -50,7 +50,7 @@ jobs:
           test "$GITHUB_ACTOR" = adrianf87
           test "$GITHUB_TRIGGERING_ACTOR" = adrianf87
           test "$GITHUB_EVENT_NAME" = workflow_dispatch
-          test "$GITHUB_REF" = refs/heads/test/stage3-public-adcs-final-qualification || test "$GITHUB_REF" = refs/heads/main
+          [[ "$GITHUB_REF" == refs/heads/?* ]]
           [[ "$PREMERGE_CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$GITHUB_SHA" = "$PREMERGE_CANDIDATE_SHA"
           test "$PRODUCTION_RESTARTS_ACK" = false

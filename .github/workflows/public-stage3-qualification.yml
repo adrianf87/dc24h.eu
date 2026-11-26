@@ -3,13 +3,8 @@ name: Stage III public ADCS qualification
 on:
   pull_request:
     branches: [main]
-    paths:
-      - '.github/workflows/*stage3*qualification.yml'
-      - 'scripts/*stage3*.py'
-      - 'scripts/stage3/**'
-      - 'tests/systemd_sandbox_tests.py'
-      - 'doc/us/PUBLIC_STAGE_III*'
-      - 'config/dc24h-twilight.service.example'
+  push:
+    branches: [main]
 
 permissions:
   contents: read
@@ -17,7 +12,7 @@ permissions:
 env:
   PYTHONPATH: scripts
   PYTHONDONTWRITEBYTECODE: '1'
-  SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+  SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
 jobs:
   offline:
@@ -149,8 +144,9 @@ jobs:
     needs: [offline, sandbox]
     if: >-
       github.repository == 'adrianf87/dc24h.eu-twilight' &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      github.head_ref == 'test/stage3-public-adcs-final-qualification'
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      github.ref_protected
     strategy:
       fail-fast: false
       matrix:
@@ -237,8 +233,10 @@ jobs:
           path: ${{ runner.temp }}/bundles
       - name: Verify SHA-256 manifests, test outcomes and run provenance
         if: '!cancelled()'
+        env:
+          REPORT_MODE: ${{ github.event_name == 'push' && github.repository == 'adrianf87/dc24h.eu-twilight' && 'main' || 'pr' }}
         run: |
-          python3 -m stage3.run report --mode pr --sha "$SOURCE_SHA" --run-id "$GITHUB_RUN_ID" \
+          python3 -m stage3.run report --mode "$REPORT_MODE" --sha "$SOURCE_SHA" --run-id "$GITHUB_RUN_ID" \
             --attempt "$GITHUB_RUN_ATTEMPT" --input "$RUNNER_TEMP/bundles" --output "$RUNNER_TEMP/report"
       - name: Publish qualification report
         if: always()

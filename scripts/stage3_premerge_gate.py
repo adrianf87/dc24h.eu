@@ -10,9 +10,7 @@ import re
 
 
 REPOSITORY = "adrianf87/dc24h.eu-twilight"
-BRANCH = "refs/heads/test/stage3-public-adcs-final-qualification"
 CONFIRMATION = "RUN_STAGE3_UBUNTU_EXTERNAL_ONLY"
-REFS = frozenset({BRANCH, "refs/heads/main"})
 PHASES = frozenset({"none", "before", "after"})
 
 
@@ -23,7 +21,7 @@ def guard(env):
         env.get("GITHUB_EVENT_NAME") == "workflow_dispatch",
         env.get("GITHUB_REPOSITORY") == REPOSITORY,
         env.get("GITHUB_ACTOR") == env.get("GITHUB_TRIGGERING_ACTOR") == "adrianf87",
-        env.get("GITHUB_REF") in REFS,
+        re.fullmatch(r"refs/heads/.+", env.get("GITHUB_REF", "")) is not None,
         env.get("RUNNER_ENVIRONMENT") == "github-hosted",
         env.get("OWNER_CONFIRMATION") == CONFIRMATION,
         env.get("PRODUCTION_RESTARTS_ACK") == "false",

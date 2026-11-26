@@ -1,16 +1,18 @@
 """Offline Stage III protocol, PTY, workflow and evidence regressions."""
 
 import errno
+import json
 from pathlib import Path
 import ssl
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest import mock
 
 import public_stage3_external_probe as base
 import public_stage3_qualification_external as external
 from stage3 import evidence, fixtures, public_checks
-from stage3.run import BRANCH, public_guard
+from stage3.run import public_guard, report
 import stage3_premerge_gate as premerge
 
 
@@ -202,7 +204,7 @@ class PolicyTests(unittest.TestCase):
         self.owner_env = {
             "GITHUB_ACTIONS": "true", "GITHUB_EVENT_NAME": "workflow_dispatch",
             "GITHUB_REPOSITORY": premerge.REPOSITORY, "GITHUB_ACTOR": "adrianf87",
-            "GITHUB_TRIGGERING_ACTOR": "adrianf87", "GITHUB_REF": "refs/heads/" + BRANCH,
+            "GITHUB_TRIGGERING_ACTOR": "adrianf87", "GITHUB_REF": "refs/heads/a-future-candidate",
             "RUNNER_ENVIRONMENT": "github-hosted", "PRODUCTION_RESTARTS_ACK": "false",
             "GITHUB_SHA": self.sha, "PREMERGE_CANDIDATE_SHA": self.sha,
         }
@@ -213,7 +215,7 @@ class PolicyTests(unittest.TestCase):
         self.assertEqual(premerge.guard(dict(env, PREMERGE_PHASE="after")), "after")
         for changed in ({"RUNNER_ENVIRONMENT": "other"}, {"PREMERGE_PHASE": "full"},
                         {"PRODUCTION_RESTARTS_ACK": "true"}, {"GITHUB_TRIGGERING_ACTOR": "other"},
-                        {"GITHUB_REF": "refs/heads/unreviewed"}, {"PREMERGE_CANDIDATE_SHA": "b" * 40}):
+                        {"GITHUB_REF": "refs/tags/unreviewed"}, {"PREMERGE_CANDIDATE_SHA": "b" * 40}):
             with self.subTest(changed=changed), self.assertRaises(RuntimeError):
                 premerge.guard(dict(env, **changed))
 
@@ -226,10 +228,25 @@ class PolicyTests(unittest.TestCase):
             for changed in ({"GITHUB_ACTOR": "other"}, {"GITHUB_TRIGGERING_ACTOR": "other"},
                             {"PREMERGE_PHASE": "after"}, {"PREMERGE_CANDIDATE_SHA": "b" * 40},
                             {"OWNER_CONFIRMATION": premerge.CONFIRMATION}, {"PRODUCTION_RESTARTS_ACK": "true"},
-                            {"GITHUB_EVENT_NAME": "pull_request", "GITHUB_HEAD_REF": BRANCH}):
+                            {"GITHUB_EVENT_NAME": "pull_request"}, {"GITHUB_REF": "refs/tags/release"}):
                 with self.subTest(changed=changed), mock.patch.dict("os.environ", dict(env, **changed), clear=True):
                     with self.assertRaises(evidence.Blocked):
                         public_guard("extended")
+
+    def test_automatic_public_checks_require_protected_main_at_exact_commit(self):
+        env = dict(self.owner_env, GITHUB_EVENT_NAME="push", GITHUB_REF="refs/heads/main",
+                   GITHUB_REF_PROTECTED="true")
+        with mock.patch("stage3.run.checkout_sha", return_value=self.sha):
+            with mock.patch.dict("os.environ", env, clear=True):
+                public_guard("tls-public")
+                with self.assertRaises(evidence.Blocked):
+                    public_guard("extended")
+            for changed in ({"GITHUB_REF_PROTECTED": "false"}, {"GITHUB_EVENT_NAME": "pull_request"},
+                            {"GITHUB_REF": "refs/heads/feature"}, {"GITHUB_SHA": "b" * 40},
+                            {"GITHUB_REPOSITORY": "fork/example"}, {"RUNNER_ENVIRONMENT": "self-hosted"}):
+                with self.subTest(changed=changed), mock.patch.dict("os.environ", dict(env, **changed), clear=True):
+                    with self.assertRaises(evidence.Blocked):
+                        public_guard("tls-public")
 
 
 class CertificateVerificationTests(unittest.TestCase):
@@ -274,6 +291,27 @@ class CertificateVerificationTests(unittest.TestCase):
 
 
 class EvidenceTests(unittest.TestCase):
+    def test_pull_request_evidence_records_public_checks_out_of_scope(self):
+        with tempfile.TemporaryDirectory() as work:
+            directory = Path(work)
+            sha = "a" * 40
+            args = SimpleNamespace(mode="pr", sha=sha, run_id="42", attempt="1",
+                                   input=directory/"missing", output=directory/"pr")
+            with mock.patch("stage3.run.checkout_sha", return_value=sha):
+                self.assertEqual(report(args), 1)
+                args.mode = "main"
+                args.output = directory/"main"
+                self.assertEqual(report(args), 1)
+            pr = json.loads((directory/"pr/qualification.json").read_text())
+            main = json.loads((directory/"main/qualification.json").read_text())
+            self.assertEqual(pr["public_checks_out_of_scope"],
+                             {group: "NOT TESTED" for group in evidence.PUBLIC_GROUPS})
+            self.assertEqual(main["public_checks_out_of_scope"], {})
+            self.assertFalse(any(row["category"] in evidence.PUBLIC_GROUPS for row in pr["statuses"]))
+            self.assertEqual({row["category"] for row in main["statuses"]
+                              if row["result"] == "BLOCKED"} & set(evidence.PUBLIC_GROUPS),
+                             set(evidence.PUBLIC_GROUPS))
+
     def test_failure_blocks_missing_rows_and_artifacts_reject_tampering(self):
         with tempfile.TemporaryDirectory() as work:
             directory = Path(work)

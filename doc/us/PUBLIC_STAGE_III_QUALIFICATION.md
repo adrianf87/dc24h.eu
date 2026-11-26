@@ -1,6 +1,6 @@
 # Stage III public ADCS qualification report
 
-**STAGE III — NOT READY FOR FINAL ACCEPTANCE**
+**STAGE III — ACCEPTANCE PENDING**
 
 | Scope | Identity |
 | --- | --- |
@@ -103,6 +103,37 @@ separate KEYP mode through a fingerprint obtained only after verified TLS.
 For actual pinned clients the OWNER supplies an independently authenticated
 fingerprint. The synthetic TLS tests change only temporary loopback certificates.
 The operator handles live Let's Encrypt renewal under the manual runbook.
+
+## OWNER-authorized Debian 13.8 evidence
+
+The local checks took place on November 26, 2026 UTC.
+`dc24h-stage3-adcs.service` runs as `dc24h-stage3` and identifies the
+deployed release as `beta-0.9.20` from
+`7bd5600ea55c1914cf156f48d6a2250a64b6fa0f`. The on-disk and running
+binary matched SHA-256 `f31795e77661fd03f68c8c6b51e7d6fd8a11ed776fe5319111101cb64b562082`.
+This is the deployed identity. GitHub qualification records identify the
+candidate test source separately.
+
+| Check | Status | Evidence |
+| --- | --- | --- |
+| Exact service and read-only configuration validation | PASS | Active unit, successful service-account configuration check, no drop-ins or automatic restarts. ADCS-only bind, database, registered authentication, and API disabled in the hub configuration. |
+| Local DNS and listening sockets | PASS | Both certificate names resolved to the directly assigned IPv4 `62.171.156.32`. TCP 1512 listened on that address. TCP 1511 had no listener. MariaDB listened on IPv4 loopback only. |
+| HTTPS administrative routes from the VPS | PASS | The approved HTTPS vhost returned HTTP 404 for `/remote.html`, `/remote/v1/summary`, `/admin-api/v1/status`, and `/api/v1/status`. |
+| Independent public TLS, TCP exposure, and guest communication | PASS | Historical exact-commit scope `7c961238066e3de2bef5ab9303fd3945a4b85157`. The independent Ubuntu 24.04 run passed the bounded TCP matrix, real ncdc, and two-guest cases. [Regular evidence](https://github.com/adrianf87/dc24h.eu-twilight/actions/runs/45898438109/artifacts/15154663771). |
+| OWNER extended public stability | PASS | Historical exact-commit scope `7c961238066e3de2bef5ab9303fd3945a4b85157`. Observed 20 guest cycles, 19 same-identity reconnects, and 1,800 seconds of two authenticated sessions. [Extended evidence](https://github.com/adrianf87/dc24h.eu-twilight/actions/runs/45900205211/artifacts/15157510321). |
+| DNS-zone ownership, recovery console and provider ingress policy | BLOCKED | Local IPv4 and firewall inspection are available. Provider policy, zone ownership, and emergency-console access still require confirmation. The host has wildcard TCP/UDP 5355 for `systemd-resolved`; its external reachability was outside the approved bounded TCP probe. |
+| Controlled restart and recovery | BLOCKED | The qualifying access path showed one established SSH session. The runbook requires a second management session, verified provider console, and an independent observer ready for the restart. |
+| Current production certificate and final TLS from the VPS | PASS | Deployed and Let's Encrypt lineage leaves shared the same fingerprint. Each key matched its leaf. CA chain, SAN and hostname verification passed. The final handshake negotiated TLS 1.3. Issuer Let's Encrypt YE2, expiration February 16, 2027 at 02:56:52 UTC. Leaf SHA-256 `518618f863566cbb4195645e48daa6c9a30bdb6d9f29d64a8999b5e1d248de6a`. |
+| Renewal configuration inspection and ACME staging rehearsal | PASS | The installed renewal profile uses the Apache authenticator and installer. Certbot 4.0.0 separately completed a staging dry run with the existing webroot and both SANs, using private temporary state and with directory hooks disabled. The production certificate fingerprint and Apache and hub process identities stayed unchanged. |
+| Staged restore and wrong-key rejection on Debian 13 | PASS | A byte-exact temporary backup was restored and validated under the hub service account. The configuration checker rejected a mismatched key, then accepted the restored pair. The live hub remained active. |
+| Actual Apache-plugin renewal, production pair replacement, and rollback | NOT TESTED | The staging rehearsal used the webroot method. The current production pair is valid. Live restart and replacement remain subject to the recovery prerequisites. |
+| Real DC++ on an independent machine | NOT TESTED | An independent interactive DC++ client session and its observer are still needed. |
+
+The CI update adds isolated evidence for future pull requests and bounded
+public checks on protected `main`. Review the new candidate's PR artifacts and
+OWNER short snapshot for its exact SHA. The prior extended run remains
+historical evidence about the deployed endpoint. An extended dispatch
+requires its own explicit confirmation token.
 
 ## Evidence review
 

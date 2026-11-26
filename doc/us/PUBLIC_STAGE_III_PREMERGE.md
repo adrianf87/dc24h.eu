@@ -13,10 +13,14 @@ commands run inside the temporary VMs. The CTest systemd fixture invokes
 packaged system tools for offline unit verification and isolated transient
 units. The candidate hub runs under an unprivileged service account.
 
-Independent Ubuntu 24.04 jobs verify public DNS/TLS, the bounded public TCP
-set, real ncdc and two independent guest sessions. The public guest jobs
-require successful loopback and public identity prerequisites. Missing,
-failed, skipped or incomplete evidence blocks the automated gate.
+Pull requests to `main` exercise the isolated matrix. Their reports mark
+public checks NOT TESTED in that scope. After a push to protected `main` in
+the upstream repository, independent Ubuntu 24.04 jobs verify public DNS/TLS,
+the bounded public TCP set, real ncdc, and two independent guest sessions.
+The public guest jobs require successful loopback and public identity
+prerequisites. Missing, failed, or incomplete evidence blocks the gate for
+required jobs. Before merge, use the OWNER snapshot for public evidence at
+the exact candidate SHA.
 
 The evidence job downloads immutable Actions artifacts and publishes the
 checksummed `stage3-qualification-report-<attempt>` artifact. Download
@@ -28,8 +32,8 @@ Run the full workflow again for a complete new attempt.
 
 From the OWNER account in GitHub Actions, select the workflow registered
 as `debian13-stage3-full-qualification.yml`, which already exists on protected
-`main`. Select `test/stage3-public-adcs-final-qualification` for the candidate
-run and paste its verified full SHA. The workflow on the selected branch
+`main`. Select the OWNER-approved source branch and enter its verified full
+SHA. The workflow on the selected branch
 contains the extended tests. The expected duration is 32–35 minutes plus queue
 time, with a 40-minute job timeout. It uses at most two concurrent synthetic
 guests and a bounded connection schedule.
@@ -47,14 +51,14 @@ gh workflow run debian13-stage3-full-qualification.yml \
 Record the workflow run URL, exact SHA and expected duration. While queued or
 running, record **PENDING**. On completion review
 `stage3-extended-evidence-<attempt>` from the run's Artifacts section.
-Do the same for the automatic PR workflow. Keep the two run URLs in the
-qualification record.
+Record the exact-SHA isolated CI and public snapshot results alongside it.
 
 ## OWNER before/after snapshot
 
 For an external snapshot, use the same workflow and exact candidate SHA with
 `confirmation=RUN_STAGE3_UBUNTU_EXTERNAL_ONLY`. Use `premerge_phase=before`
-or `premerge_phase=after` as a label, with `production_restarts_ack=false`.
+or `premerge_phase=after` as a label for an operational change, or `none` for
+an ordinary candidate check. Use `production_restarts_ack=false`.
 A separately authorized operator records the actual host maintenance times in
 the Debian 13 record. Compare them with the independent external snapshots.
 The snapshot produces the `stage3-external-snapshot-<phase>-<attempt>` artifact.

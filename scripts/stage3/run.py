@@ -18,10 +18,10 @@ from stage3.evidence import (
 )
 
 REPOSITORY = "adrianf87/dc24h.eu-twilight"
-BRANCH = "test/stage3-public-adcs-final-qualification"
 ARTIFACT_PREFIX = "stage3"
 WORKFLOWS = {
     "pr": "Stage III public ADCS qualification",
+    "main": "Stage III public ADCS qualification",
     "extended": "Stage III OWNER extended public ADCS stability",
 }
 
@@ -147,14 +147,17 @@ def public_guard(group):
             raise Blocked("OWNER snapshot checkout did not match the exact source SHA")
     elif env.get("GITHUB_EVENT_NAME") == "workflow_dispatch":
         if not (env.get("GITHUB_ACTOR") == env.get("GITHUB_TRIGGERING_ACTOR") == "adrianf87" and
-                env.get("GITHUB_REF") in ("refs/heads/" + BRANCH, "refs/heads/main") and
+                re.fullmatch(r"refs/heads/.+", env.get("GITHUB_REF", "")) is not None and
                 env.get("OWNER_CONFIRMATION") == "RUN_STAGE3_PUBLIC_EXTENDED_STABILITY" and
                 env.get("PRODUCTION_RESTARTS_ACK") == "false" and
                 env.get("PREMERGE_PHASE") == "none" and
                 checkout_sha() == env.get("PREMERGE_CANDIDATE_SHA") == env.get("GITHUB_SHA")):
             raise Blocked("OWNER, ref, confirmation token or exact source SHA guard failed")
-    elif group == "extended" or env.get("GITHUB_EVENT_NAME") != "pull_request" or env.get("GITHUB_HEAD_REF") != BRANCH:
-        raise Blocked("Public qualification requires the designated candidate branch PR")
+    elif not (group != "extended" and env.get("GITHUB_EVENT_NAME") == "push"
+              and env.get("GITHUB_REF") == "refs/heads/main"
+              and env.get("GITHUB_REF_PROTECTED") == "true"
+              and checkout_sha() == env.get("GITHUB_SHA")):
+        raise Blocked("Automatic public qualification requires a protected main push at the exact SHA")
 
 
 def run_group(args):
@@ -194,9 +197,11 @@ def artifact_name(group, image, attempt):
 def report(args):
     if checkout_sha() != args.sha:
         raise ValueError("Report generator was checked out at the wrong source SHA")
-    modes = ([(group, image) for group in RUNNER_GROUPS for image in OS_MATRIX] +
-             [(group, "ubuntu-24.04") for group in PUBLIC_GROUPS]) if args.mode == "pr" else [
-                 ("extended", "ubuntu-24.04")]
+    modes = [(group, image) for group in RUNNER_GROUPS for image in OS_MATRIX]
+    if args.mode == "main":
+        modes.extend((group, "ubuntu-24.04") for group in PUBLIC_GROUPS)
+    elif args.mode == "extended":
+        modes = [("extended", "ubuntu-24.04")]
     rows = []
     issues = []
     binary_identity = {}
@@ -253,6 +258,9 @@ def report(args):
     title.extend(f'- {row["runner_image"]} / {row["category"]} / {row["id"]} — {row["result"]}'
                  for row in unresolved)
     if args.mode == "pr":
+        title.append("- Public TLS, exposure, ncdc, and two-client checks are NOT TESTED in pull request CI. "
+                     "Use exact-SHA evidence from protected main or an OWNER-dispatched snapshot.")
+    if args.mode in {"pr", "main"}:
         title.append("- Extended OWNER workflow evidence is recorded in a separate run.")
     if not (unresolved or issues) and args.mode == "extended":
         title.append("All extended automated results passed.")
@@ -262,6 +270,8 @@ def report(args):
     (output / "qualification.json").write_text(json.dumps({
         "source_sha": args.sha, "mode": args.mode, "run_id": args.run_id, "run_attempt": args.attempt,
         "statuses": rows, "invalid_bundles": issues, "manual": {case: "NOT TESTED" for case in MANUAL},
+        "public_checks_out_of_scope": {group: "NOT TESTED" for group in PUBLIC_GROUPS}
+        if args.mode == "pr" else {},
         "result": "FAIL" if unresolved or issues else "PASS",
     }, indent=2) + "\n")
     write_manifest(output, {"qualification.md", "qualification.json"})
