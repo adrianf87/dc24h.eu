@@ -1,6 +1,8 @@
 # Stage III public ADCS qualification report
 
-**STAGE III — ACCEPTANCE PENDING**
+**STAGE III — ACCEPTANCE PENDING CURRENT CI AND FORMAL OWNER DECISION.**
+
+**OWNER scope revision (November 27, 2026):** Latest-SHA independent public DNS A/PTR and ADCS testing, interactive real DC++ testing, and additional Contabo firewall/port verification are **removed from Stage III completion requirements**. Do not dispatch or execute them, and do not assign PASS. Controlled VPS/live-ADCS restart testing remains excluded. Wait for existing GitHub-hosted CI; **formal OWNER STAGE III ACCEPTANCE GO** and a **separate OWNER MERGE GO** remain mandatory. Historical external results below are preserved for traceability, not new test requirements.
 
 | Scope | Identity |
 | --- | --- |
@@ -23,7 +25,7 @@ operator in a separate window.
 
 On November 27, 2026 (Europe/Warsaw), the OWNER declared that `dc24h.eu` is their domain and supplied (1) terminal output showing forward `server-747585786.dc24h.eu → 62.171.156.32` and reverse `62.171.156.32 → server-747585786.dc24h.eu` lookups, and (2) a Contabo **Reverse DNS Management** screenshot showing that same IP/PTR pair. See the [sanitized OWNER DNS and CI evidence record](PUBLIC_STAGE_III_OWNER_DNS_AND_CI.md).
 
-**Evidence classification updated November 27: DNS ZONE CONTROL VERIFIED — PASS.** A unique TXT challenge was independently observed through both Google Public DNS and Cloudflare DNS (exact token, TTL 300) at 2026-11-26 23:39:32 UTC; a later OWNER shell screenshot confirms the same record. Registrar/subscriber identity remains OWNER-ATTESTED by private evidence, not independently identity-checked. The separate external `dns.ptr.forward-confirmed` case must still verify A/PTR on the new exact SHA; the TXT result cannot replace that CI case or provider firewall evidence.
+**Evidence classification updated November 27: DNS ZONE CONTROL VERIFIED — PASS.** A unique TXT challenge was independently observed through both Google Public DNS and Cloudflare DNS (exact token, TTL 300) at 2026-11-26 23:39:32 UTC; a later OWNER shell screenshot confirms the same record. Registrar/subscriber identity remains OWNER-ATTESTED by private evidence, not independently identity-checked. The external `dns.ptr.forward-confirmed` check remains in source but is not a Stage III acceptance gate under the revised OWNER scope; it must not be dispatched as a separate test.
 
 ## Evidence matrix
 
@@ -73,19 +75,14 @@ commit requires its own qualification evidence.
 | --- | --- | --- |
 | C++ build, CTest, config, security, and deployed binary identity | Three Ubuntu images, `offline` results and deployed identity in the operator record | NOT TESTED in this report |
 | Privileged tool sandbox and service example verification | Three Ubuntu images, `sandbox` results | NOT TESTED in this report |
-| DNS A and forward-confirmed PTR, public CA, SAN, SNI, validity, fingerprint, TLS 1.2/1.3 and downgrade denial | `tls-public` on independent Ubuntu, including new `dns.ptr.forward-confirmed` | NOT TESTED on the updated head |
-| Real ncdc login, active hub, inbound and observed outbound chat, search, reconnect and cleanup | `ncdc` on independent Ubuntu and the real loopback regression | NOT TESTED in this report |
-| Two guests, visible identities, chat, directed/broadcast search, result routing, CTM/RCM and quit/rejoin | `two-client` across Ubuntu and `two-client-public` externally | NOT TESTED in this report |
-| Public ADCS and bounded forbidden ports | `exposure` probe from independent Ubuntu | NOT TESTED in this report |
+| Two isolated Ubuntu guests, visible identities, chat, search, result routing, CTM/RCM and reconnect | `two-client` on GitHub-hosted Ubuntu | Required standard CI |
 | Foreign CA, wrong DNS SAN, time validity, incorrect/stale KEYP, rotation and rollback rehearsal | `tls-fixtures` across Ubuntu using synthetic certificates | NOT TESTED in this report |
 | Malformed or oversize frames, unsupported commands, invalid fields and order, invalid SID, duplicate identity, permission denials and disclosure limits | Isolated full CTest and guest search/chat policy regression | NOT TESTED in this report |
 | Twenty cycles, ten returns after refusal, idle disconnect/rejoin, abrupt TLS interruption and descriptor cleanup | `stability` across Ubuntu on loopback | NOT TESTED in this report |
 | Thirty-minute public observation, paced cycles and same-identity reconnects | Exact-ref OWNER extended run | NOT TESTED in this report |
 | OWNER declaration and fresh independent TXT challenge | [OWNER DNS evidence record](PUBLIC_STAGE_III_OWNER_DNS_AND_CI.md) | DNS ZONE CONTROL VERIFIED — PASS; subscriber identity OWNER-ATTESTED |
-| External A/PTR exact-SHA CI and provider/Debian routing/inbound policy | Independent public probe plus provider policy | PENDING |
 | Running service identity, SSH and read-only live-state inventory | OWNER Debian 13 read-only operator record | PASS for recorded scope |
 | Actual replacement and recovery of the service-owned Let's Encrypt pair | [Manual replacement and rollback](PUBLIC_STAGE_III_CERTIFICATE.md) | NOT TESTED |
-| Real DC++ interoperability | Independent DC++ client session and paired observer | NOT TESTED |
 
 The negative protocol coverage reuses the existing ADC syntax, SID/identity,
 login, authorization, search security, client close, protocol status, and
@@ -131,41 +128,24 @@ candidate test source separately.
 | Independent public TLS, TCP exposure, and guest communication | PASS | Historical exact-commit scope `7c961238066e3de2bef5ab9303fd3945a4b85157`. The independent Ubuntu 24.04 run passed the bounded TCP matrix, real ncdc, and two-guest cases. [Regular evidence](https://github.com/adrianf87/dc24h.eu-twilight/actions/runs/45898438109/artifacts/15154663771). |
 | OWNER extended public stability | PASS | Historical exact-commit scope `7c961238066e3de2bef5ab9303fd3945a4b85157`. Observed 20 guest cycles, 19 same-identity reconnects, and 1,800 seconds of two authenticated sessions. [Extended evidence](https://github.com/adrianf87/dc24h.eu-twilight/actions/runs/45900205211/artifacts/15157510321). |
 | OWNER declaration and independently confirmed TXT challenge | DNS ZONE CONTROL VERIFIED — PASS | Private registrar and DNS management screenshots support OWNER attestation; a fresh TXT token matched exact values through Google DNS and Cloudflare DNS at 2026-11-26 23:39:32 UTC and in a later OWNER shell screenshot. |
-| Independent A/PTR CI on current SHA and provider ingress policy | PENDING | External exact-SHA `dns.ptr.forward-confirmed` and provider policy still require confirmation. Provider-console access is not a prerequisite for the removed restart test. Wildcard TCP/UDP 5355 for `systemd-resolved` was outside the bounded public TCP probe; review external reachability without modifying the VPS. |
+| Latest-SHA public A/PTR/ADCS and additional provider ingress tests | EXCLUDED BY OWNER | No execution required for Stage III; unresolved provider exposure is a documented risk, not a PASS. |
 | Current production certificate and final TLS from the VPS | PASS | Deployed and Let's Encrypt lineage leaves shared the same fingerprint. Each key matched its leaf. CA chain, SAN and hostname verification passed. The final handshake negotiated TLS 1.3. Issuer Let's Encrypt YE2, expiration February 16, 2027 at 02:56:52 UTC. Leaf SHA-256 `518618f863566cbb4195645e48daa6c9a30bdb6d9f29d64a8999b5e1d248de6a`. |
 | Renewal configuration inspection and ACME staging rehearsal | PASS | The installed renewal profile uses the Apache authenticator and installer. Certbot 4.0.0 separately completed a staging dry run with the existing webroot and both SANs, using private temporary state and with directory hooks disabled. The production certificate fingerprint and Apache and hub process identities stayed unchanged. |
 | Staged restore and wrong-key rejection on Debian 13 | PASS | A byte-exact temporary backup was restored and validated under the hub service account. The configuration checker rejected a mismatched key, then accepted the restored pair. The live hub remained active. |
 | Future Apache-plugin renewal and production pair replacement/rollback | OUT OF STAGE III SCOPE | The staging rehearsal used the webroot method and the current pair is valid. A future live replacement requires separately authorized maintenance; the withdrawn controlled-restart test is not an acceptance gate. |
-| Real DC++ on an independent machine | NOT TESTED | An independent interactive DC++ client session and its observer are still needed. |
+| Real DC++ on an independent machine | EXCLUDED BY OWNER | No execution required for Stage III; no interoperability PASS is claimed. |
 
 The CI update adds isolated evidence for future pull requests and bounded
-public checks on protected `main`. Review the new candidate's PR artifacts and
-OWNER short snapshot for its exact SHA. The prior extended run remains
-historical evidence about the deployed endpoint. An extended dispatch
-requires its own explicit confirmation token.
+public checks on protected `main`. Review the new candidate's PR CI artifacts for its exact SHA. Prior public snapshot and extended stability runs remain historical; do not dispatch another external or extended run under this OWNER revision.
 
 ## Evidence review
 
 Open the [pre-merge workflow and evidence steps](PUBLIC_STAGE_III_PREMERGE.md).
 For the PR run, download the exact-attempt `stage3-qualification-report-<attempt>`
-artifact and the case bundles it names. For the OWNER extended run, download
-`stage3-extended-evidence-<attempt>`. Each case bundle contains JSON, JUnit,
+artifact and the case bundles it names. Each CI case bundle contains JSON, JUnit,
 a sanitized result log, and `SHA256SUMS`. The evidence job validates the
 bundle contents, source SHA, runner image, run ID, run attempt and expected
 case inventory. Compare the published Actions artifact digest when retrieving
 the artifact archive. Preserve reviewed copies with the manual evidence.
 
-For the required real DC++ check, use a fresh profile on a separate client
-system and a second synthetic guest as observer. Record DC++ version and OS,
-the hostname and trust mode, guest login and visible identity, bidirectional
-public/private chat, search and result reception, applicable CTM/RCM signaling,
-and disconnect/reconnect. Verify delivered chat in the independent observer.
-Use only synthetic data and, if needed, a small synthetic share. Record the exact
-deployed identity, qualification SHA, UTC interval, each result and sanitized
-evidence checksum. Stop on a certificate warning, plaintext fallback, or absent
-independent attribution.
-
-Issue #10 remains open for the independent client, exposure, stability and
-non-disruptive operator requirements above. The removed live restart/reboot test is not required. Its accepted activation smoke is historical
-evidence. Formal Stage III acceptance requires reviewed successful automated
-and manual evidence for the intended scope and separate OWNER authorization.
+Issue #10 remains open pending the completion of existing GitHub-hosted CI for the actual PR #24 head and explicit `OWNER STAGE III ACCEPTANCE GO`. A separate `OWNER MERGE GO` is still required before any merge. The withdrawn external DNS/ADCS, DC++, Contabo provider checks and controlled restarts are not to be performed or reintroduced as Stage III gates.
