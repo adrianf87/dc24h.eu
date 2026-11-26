@@ -43,6 +43,58 @@ jobs:
           python3 -m compileall -q scripts/public_stage3_qualification_external.py scripts/public_stage3_qualification_host.py scripts/test_public_stage3_qualification.py
           (cd scripts && python3 -m unittest -v test_public_stage3_qualification.py)
 
+  # OWNER-approved PR #23 diagnostics: independent clients and synthetic
+  # messages only. This job cannot run systemctl, copy TLS keys or change VPS.
+  # Keep the public host-restart qualification gated on main/workflow_dispatch.
+  external-pr:
+    name: PR #23 independent ncdc and guest protocol qualification (no host writes)
+    needs: policy-tests
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.repository == 'adrianf87/dc24h.eu-twilight' &&
+      github.actor == 'adrianf87' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'fix/stage3-ncdc-command-ack-regression'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Install real ncdc and verify exact PR head
+        shell: bash
+        env:
+          EXPECTED_PR_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_PR_SHA"
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ncdc
+          ncdc --version
+      - name: Independently check public guest chat, search and ncdc PTY
+        shell: bash
+        env:
+          EXPECTED_PR_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          result=FAIL
+          write_report() {
+            printf '{"source_sha":"%s","scope":"EXTERNAL_PR_NCDC_GUEST_PROTOCOL_NO_HOST_CHANGES","result":"%s"}\n' \
+              "$EXPECTED_PR_SHA" "$result" > "$RUNNER_TEMP/stage3-external-pr.json"
+          }
+          trap write_report EXIT
+          python3 scripts/public_stage3_qualification_external.py
+          result=PASS
+      - name: Upload sanitized PR external report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stage3-qualification-external-pr
+          path: ${{ runner.temp }}/stage3-external-pr.json
+          if-no-files-found: ignore
+          retention-days: 14
+
   external-before:
     name: Independent ncdc, two guests, protocol and exposure
     if: github.repository == 'adrianf87/dc24h.eu-twilight' && github.actor == 'adrianf87' && github.ref == 'refs/heads/main' && inputs.confirmation == 'RUN_STAGE3_PUBLIC_QUALIFICATION' && inputs.production_restarts_ack == true
