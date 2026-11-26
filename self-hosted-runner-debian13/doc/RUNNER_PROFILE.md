@@ -3,15 +3,15 @@
 | Property | Current information | Verification status |
 | --- | --- | --- |
 | GitHub repository | `adrianf87/dc24h.eu-twilight` | OWNER-provided URL |
-| Runner name | `server-747585786` | OWNER-reported; check GitHub runner details |
+| Runner name | `server-747585786` | Verified in GitHub settings and read-only run #45757153126 |
 | GitHub runner ID | `21` | From OWNER-provided runner settings URL |
-| Operating system | Debian 13 (Trixie) VPS | OWNER-reported; host preflight pending |
-| Logical CPU threads | 16 | OWNER-reported; host preflight pending |
-| Service account | `github-runner` | OWNER-reported; host preflight pending |
-| Privileges | Passwordless `sudo` | OWNER-reported; **high-risk**, never used by this workflow |
+| Operating system | Debian 13 (Trixie) VPS | Verified by read-only runner preflight |
+| Logical CPU threads | 16 | Verified by read-only runner preflight |
+| Service account | `github-runner` | Verified by read-only runner preflight |
+| Privileges | Passwordless `sudo` | OWNER-approved for a separate read-only root inventory; not yet independently run |
 | Memory, disk, isolation | Not yet independently established | Read-only host preflight pending |
 | Public IPv4 / NAT | Unknown for this runner | Never infer from Issue #10's public IP |
-| Dedicated runner label | `twilight-debian13-stage2` | **Must be added/confirmed by OWNER** |
+| Dedicated runner label | `twilight-debian13-stage2` | Verified in GitHub runner settings |
 
 This profile contains **no registration token, runner credentials, SSH keys,
 server secrets, private addresses, service logs, or private state**.
@@ -38,8 +38,9 @@ even if its workflow does not explicitly use `sudo`. For this reason:
 1. Keep the job **manual-only**, OWNER-triggered, and restricted to the reviewed
    default-branch source. Never run untrusted PR/fork payloads on this VPS.
 2. Prefer a separate disposable VM with no production secrets or mounted state.
-3. Strongly consider removing passwordless sudo or replacing it with narrowly
-   scoped, reviewed privileges before broader self-hosted CI use.
+3. The proposed Stage II qualification permits only two explicit `sudo -n`
+   commands, one for identity and one for read-only root inventory. Prefer
+   scoped sudoers policy before any broader privileged self-hosted CI use.
 4. Do not claim physical isolation or production safety until the host has been
    independently inspected and accepted.
 
