@@ -1,17 +1,17 @@
 # Supplemental Debian 13 runner test plan — Stage II (P0)
 
 **Tracking:** [Issue #10](https://github.com/adrianf87/dc24h.eu-twilight/issues/10)
-and [Draft PR #13](https://github.com/adrianf87/dc24h.eu-twilight/pull/13).
-All acceptance items remain open until independently verified.
+and [Stage II workflow update PR #15](https://github.com/adrianf87/dc24h.eu-twilight/pull/15).
+The new host qualification is proposed, not yet executed or accepted.
 
-| Test area | Supported by this initial runner integration | Remaining acceptance |
+| Test area | Proposed manual Debian 13 qualification | Remaining acceptance |
 | --- | --- | --- |
 | Debian 13 inventory | Bounded, unprivileged, read-only host/runner preflight | OWNER-reviewed actual VPS inventory, ownership and NAT evidence |
-| C++ and WebAdmin | Source identity and metadata smoke tests only | Reproducible isolated builds and staged installation from exact SHA |
-| systemd | Read-only old/new unit-state checks | Disposable VM tests of marker, `Conflicts`, and no two writers |
-| Backup and restore | **Not executed on this runner** | Synthetic backup plus verified restore and cold-start/checkpoint |
-| Upgrade and rollback | **Not executed on this runner** | Isolated upgrade, injected failure, rollback, ownership/ACL/xattrs |
-| Monitoring / RPO/RTO | CPU/tool visibility only | Measured recovery outcomes, limits, and stop criteria |
+| C++ and WebAdmin | Exact-SHA builds, temp staging and real root-owned install to unique `/opt` prefix | Production installer/package layout and actual deployment acceptance |
+| systemd | Real test-owned service, crash/restart and test-unit `Conflicts`; shipped template static contract | Production unit marker and old/new cutover are deliberately untested |
+| Backup and restore | Test-only fixture SHA-256 + modes verified across backup, corruption and restore | Private MariaDB/checkpoint, ACL/xattr and real state recovery not tested |
+| Upgrade and rollback | Corrupt installed test binary, restore byte-exact known-good executable | Historical-version package rollback and DB schema compatibility not tested |
+| Monitoring / RPO/RTO | Test unit journal, observed crash restart and cleanup | Real hub RPO/RTO and power-loss behavior untested |
 | OWNER acceptance | Not implied by any runner result | Separate `OWNER STAGE II ACCEPTANCE` and `OWNER MERGE GO` |
 
 ## Activation sequence
@@ -19,48 +19,48 @@ All acceptance items remain open until independently verified.
 1. OWNER verifies the runner is non-production and labels only runner #21 with
    `twilight-debian13-stage2`. The presence of passwordless sudo must be
    explicitly risk-reviewed.
-2. Review the workflow and tests in Draft PR #13; finish GitHub-hosted Ubuntu
-   CI. **Do not merge this draft solely to enable a runner job.**
-3. After an independently authorized merge makes the workflow available on
-   protected `main`, OWNER may manually select **Debian 13 supplemental smoke**
-   in GitHub Actions and enter `RUN_SAFE_TESTS_NO_SUDO`.
+2. Review the new privileged test scope in PR #15 and the GitHub-hosted Ubuntu
+   CI. Keep protected `main` unchanged until a new OWNER merge decision.
+3. After the independently approved merge, OWNER manually selects **Debian 13
+   Stage II full sudo host qualification** on `main` and enters the new
+   confirmation `RUN_STAGE2_SUDO_HOST_TESTS`.
 4. Confirm the run used the expected exact SHA, runner name, and Debian 13;
    review the sanitized result artifact. Failure or unknown state means NO-GO.
-5. Schedule separately approved tests on a **disposable VM/clone** for clean
-   C++/WebAdmin install, systemd conflict, backup/restore and actual rollback.
+5. Inspect `/opt`/runtime-unit cleanup evidence. Any failure or leftover
+   test-only service requires manual OWNER review before another run.
 
-Never point those destructive rehearsals at the live VPS or private state.
-No tag, production services, or public listener is authorized by this plan.
+The OWNER confirmed that this Debian 13 VPS is disposable, test-only and has
+no production secrets/private state. No real hub unit, existing data, tag,
+production deployment or public listener is authorized by this plan.
 
 ## Supplemental Stage II sudo qualification (separate manual workflow)
 
-The OWNER has explicitly authorized using the `github-runner` account and
-passwordless `sudo` for Stage II testing. The proposed
-`debian13-stage2-sudo.yml` workflow **must first be reviewed, pass hosted CI,
-and be merged to protected `main` under a separate OWNER decision**. It has no
-PR/push trigger and runs only for the exact reviewed `main` SHA on runner #21.
+The OWNER explicitly retained passwordless sudo for `github-runner` on the
+approved test VPS. The updated `debian13-stage2-sudo.yml` workflow must be
+reviewed, pass hosted CI and be merged to protected `main` under a new OWNER
+decision. It has no PR/push trigger and runs only against the reviewed `main`
+SHA on runner #21.
 
-The workflow explicitly invokes only `sudo -n id -u` and the existing
-**read-only** root preflight. This does not stop other subprocesses from
-invoking passwordless sudo; only an isolated/disposable host or separately
-approved sudoers restriction enforces that boundary. Raw root inventory remains
-in runner temporary storage; only a
-bounded summary may become a GitHub artifact. Builds and the synthetic recovery
-test run as the normal, unprivileged `github-runner` account.
+The workflow explicitly calls `sudo -n` to verify identity, run **read-only**
+inventory, and run `stage2_host_proof.py` as root. It does not limit the OS
+sudoers configuration. Raw root inventory remains private; only bounded
+redacted summaries become artifacts. C++/WebAdmin builds and synthetic checks
+still run as the normal unprivileged `github-runner` account.
 
 This workflow tests:
 
 1. Root-visible host inventory (without service or path mutation).
-2. Exact-SHA C++/WebAdmin builds, a curated **unprivileged** CTest subset,
-   `--check-config`, and a CMake install
-   into a fresh runner-temporary prefix, never `/usr` or `/usr/local`.
-3. **Static** systemd unit contract (Conflicts, OWNER marker and hardening).
-4. Synthetic-only backup, restore, injected failure and rollback with matching
-   hashes and file modes.
-5. A bounded process exit/abnormal-exit monitoring simulation.
+2. Exact-SHA C++/WebAdmin builds, curated unprivileged CTest, `--check-config`,
+   temporary staging and an additional **root-owned /opt** install; never
+   `/usr` or `/usr/local`.
+3. **Real** test-only systemd unit start/restart, SIGKILL recovery, test-unit
+   `Conflicts`, journal observation and shipped-unit static contract.
+4. Test-owned fixture backup, restore, injected corruption and byte-exact
+   installed-binary rollback; synthetic recovery tests still run separately.
+5. Actual CTest `systemd.sandbox` with sudo, then checked cleanup of test units
+   and the unique `/opt` prefix.
 
-This does **not** prove a real systemd service cutover, production checkpoint,
-restored MariaDB/private state, power loss, ACL/xattr restoration, or the hub's
-RPO/RTO. Full CTest, including tests that use sudo to create real systemd
-units or exercise dpkg process integration, is intentionally reserved for a
-disposable VM/clone. Those remain open for separate acceptance.
+This does **not** prove production service cutover, a previous-version package
+rollback, MariaDB/private-state restoration, power-loss safety, ACL/xattr
+restoration or real hub RPO/RTO. Broad CTest and dpkg/package-manager changes
+remain excluded. Those gaps require separate OWNER acceptance.

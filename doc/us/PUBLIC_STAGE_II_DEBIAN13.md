@@ -1,8 +1,8 @@
 # Public deployment Stage II — Debian 13 installation and recovery (P0)
 
 **Tracking:** [Issue #10](https://github.com/adrianf87/dc24h.eu-twilight/issues/10), Stage II.  
-**Status:** engineering kickoff and read-only host-inventory tooling. **Stage II acceptance pending.**  
-**Boundary:** no live installation, systemd activation, private-state migration, DNS/firewall changes, public hub or WebAdmin exposure, release or production GO.
+**Status:** OWNER-approved disposable-host qualification proposed. **Stage II acceptance pending.**
+**Boundary:** test-owned root installation and runtime systemd units are permitted on the dedicated test VPS; no existing service/data migration, DNS/firewall changes, public hub or WebAdmin exposure, release or production GO.
 
 **Supplemental runner:** The OWNER has designated a Debian 13 VPS runner for
 future manual, non-production source and environment checks. See the
@@ -11,13 +11,14 @@ The source-smoke workflow is OWNER-triggered and available on protected `main`.
 Its first read-only run qualified the runner identity and basic environment,
 but it does not replace installation, systemd, backup/restore, or rollback proof.
 
-The OWNER subsequently authorized controlled passwordless `sudo` for the
-`github-runner` account. A separate, proposed manual Stage II qualification
-workflow uses it **only** for read-only privileged inventory; C++/WebAdmin
-builds, temporary-prefix installation, synthetic backup/restore/rollback, and
-monitoring checks remain unprivileged. It must pass review and be merged to
-`main` before dispatch. Real service activation/conflict, private-state
-recovery, power-loss and production RPO/RTO tests remain outside this VPS job.
+The OWNER confirmed a dedicated test VPS without production secrets/private
+state and retained unrestricted passwordless `sudo` for `github-runner`. The
+proposed manual Stage II workflow adds a third root invocation for installation
+to a fresh `/opt` prefix, two uniquely named runtime systemd test units,
+start/restart/fault/conflict, test-fixture restore and binary rollback. It must
+pass review and be merged to protected `main` before a new OWNER dispatch.
+The original hub units, private MariaDB recovery, historical-version rollback,
+power loss and production RPO/RTO remain outside this test.
 
 Stage I's isolated Debian 13/ncdc evidence and OWNER acceptance are recorded in [the acceptance report](../../logs/tests/DEBIAN13-STAGE-I-FINAL-ACCEPTANCE.md). Stage II is a **separate** operating-system installation and recovery qualification; green CI and an inert `.deb` fixture do not certify an existing Debian host.
 
@@ -72,7 +73,7 @@ Check that **both hashes match** and the installed WebAdmin status parser requir
 
 - Preserve existing `dc24h` user/group and stable `/etc/dc24h`, `/var/lib/dc24h`, `/run/dc24h`, `/var/log/dc24h` paths. Never create a second writer or silently change permissions.
 - Verify the **shipped** `dc24h-twilight.service` with `systemd-analyze verify` using a temporary copy. It must keep `Conflicts=dc24h.service` and `AssertPathExists=/etc/dc24h/twilight-unit-migration-approved`.
-- Do **not** create the marker, enable/start either real unit or stop an existing unit. A systemd rehearsal must use a clean, isolated OS/VM and synthetic names until a separate OWNER-approved cutover plan is in place.
+- Do **not** create the marker, enable/start either existing real unit or stop an existing unit. A systemd rehearsal must use the confirmed disposable test VPS (or a clean VM/clone) and unique test-only unit names until a separate OWNER-approved cutover plan is in place.
 - On an isolated clone with **synthetic** data, record original file hashes, UID/GID, modes, ACL/xattrs, baseline services and database version. Take and **restore-test** a backup before attempting upgrade.
 - Require a cold-start/checkpoint preflight and fail-fast validation of missing/incorrect keys, missing DB, stale schema, unit conflicts, wrong ownership and interrupted install. Do not assume atomic v1→v2 private-state migration or rollback is implemented.
 - Inject a failure between staging and activation and prove that the old binary/service and state remain recoverable; test rollback after a successful synthetic upgrade. Record measured RPO/RTO and that no two hub services were active together.
