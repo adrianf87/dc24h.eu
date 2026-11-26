@@ -6,6 +6,8 @@ on:
       - '.github/workflows/debian13-stage3-full-qualification.yml'
       - 'scripts/public_stage3_qualification_*.py'
       - 'scripts/test_public_stage3_qualification.py'
+      - 'scripts/stage3_premerge_gate.py'
+      - 'scripts/stage3_premerge_evidence.py'
   workflow_dispatch:
     inputs:
       confirmation:
@@ -17,6 +19,16 @@ on:
         required: true
         type: boolean
         default: false
+      premerge_phase:
+        description: 'GitHub-hosted external PR qualification phase; never runs host sudo'
+        required: false
+        type: choice
+        options: [none, before, after]
+        default: none
+      premerge_candidate_sha:
+        description: 'Exact 40-character PR #23 head SHA for external before/after qualification'
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -40,7 +52,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m compileall -q scripts/public_stage3_qualification_external.py scripts/public_stage3_qualification_host.py scripts/test_public_stage3_qualification.py
+          python3 -m compileall -q scripts/public_stage3_qualification_external.py scripts/public_stage3_qualification_host.py scripts/stage3_premerge_gate.py scripts/stage3_premerge_evidence.py scripts/test_public_stage3_qualification.py
           (cd scripts && python3 -m unittest -v test_public_stage3_qualification.py)
 
   # OWNER-approved PR #23 diagnostics: independent clients and synthetic
@@ -92,6 +104,67 @@ jobs:
         with:
           name: stage3-qualification-external-pr
           path: ${{ runner.temp }}/stage3-external-pr.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # Explicit, owner-dispatched before/after evidence for PR #23. ALWAYS runs
+  # on GitHub-hosted Ubuntu; the PR must never supply root-executed host code.
+  # The actual host step is documented separately and executes trusted main.
+  premerge-external:
+    name: 'OWNER Stage III pre-merge external ncdc before/after (GitHub hosted only)'
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.repository == 'adrianf87/dc24h.eu-twilight' &&
+      github.actor == 'adrianf87' &&
+      github.ref == 'refs/heads/fix/stage3-ncdc-command-ack-regression' &&
+      inputs.confirmation == 'RUN_STAGE3_PREMERGE_EXTERNAL' &&
+      inputs.production_restarts_ack == false &&
+      (inputs.premerge_phase == 'before' || inputs.premerge_phase == 'after')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Check exact OWNER, branch, commit and GitHub-hosted runner
+        shell: bash
+        env:
+          OWNER_CONFIRMATION: ${{ inputs.confirmation }}
+          PRODUCTION_RESTARTS_ACK: ${{ inputs.production_restarts_ack }}
+          PREMERGE_PHASE: ${{ inputs.premerge_phase }}
+          PREMERGE_CANDIDATE_SHA: ${{ inputs.premerge_candidate_sha }}
+        run: |
+          set -euo pipefail
+          python3 scripts/stage3_premerge_gate.py
+          test "$(git rev-parse HEAD)" = "$PREMERGE_CANDIDATE_SHA"
+      - name: Install packaged real ncdc on the ephemeral runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ncdc
+          ncdc --version
+      - name: Verify external TLS, two guests, real ncdc and forbidden ports
+        shell: bash
+        env:
+          PREMERGE_PHASE: ${{ inputs.premerge_phase }}
+        run: |
+          set -euo pipefail
+          result=FAIL
+          write_report() {
+            printf '{"source_sha":"%s","phase":"%s","scope":"PREMERGE_EXTERNAL_NCDC_NO_HOST_WRITES","result":"%s"}\n' \
+              "$GITHUB_SHA" "$PREMERGE_PHASE" "$result" > "$RUNNER_TEMP/stage3-premerge-external.json"
+          }
+          trap write_report EXIT
+          python3 scripts/public_stage3_qualification_external.py
+          result=PASS
+      - name: Upload sanitized pre-merge external evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stage3-premerge-external-${{ inputs.premerge_phase }}
+          path: ${{ runner.temp }}/stage3-premerge-external.json
           if-no-files-found: ignore
           retention-days: 14
 

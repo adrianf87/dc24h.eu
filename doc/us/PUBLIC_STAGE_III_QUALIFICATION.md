@@ -12,6 +12,14 @@
 
 Workflow: `.github/workflows/debian13-stage3-full-qualification.yml`.
 
+For **complete pre-merge qualification of PR #23**, including live systemd
+restarts and same-pair TLS rehearsal without running any PR code as root,
+follow [the OWNER-controlled BEFORE → trusted-main HOST → AFTER procedure](PUBLIC_STAGE_III_PREMERGE.md).
+The two external gates execute on GitHub-hosted runners and the host operation
+uses a separately verified immutable `main` checkout. A manual confirmation is
+required immediately before any public service restart. **Never allow a
+pull-request workflow to perform privileged host operations.**
+
 ### PR #23 pre-merge regression gate
 
 - On the OWNER's same-repository `fix/stage3-ncdc-command-ack-regression` PR,

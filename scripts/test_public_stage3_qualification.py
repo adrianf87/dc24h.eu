@@ -6,6 +6,8 @@ from unittest import mock
 
 import public_stage3_qualification_external as external
 import public_stage3_qualification_host as host
+import stage3_premerge_gate as premerge
+import stage3_premerge_evidence as evidence
 
 
 class FakePeer:
@@ -216,6 +218,91 @@ class QualificationPolicyTests(unittest.TestCase):
             url = external.fingerprint_url(context)
         self.assertTrue(url.startswith("adcs://server-747585786.dc24h.eu:1512/?kp=SHA256/"))
         self.assertNotIn("51.255.80.233", url)
+
+
+class PremergeExternalGateTests(unittest.TestCase):
+    def setUp(self):
+        self.head_sha = "a" * 40
+        self.env = {
+            "GITHUB_EVENT_NAME": "workflow_dispatch",
+            "GITHUB_REPOSITORY": premerge.REPOSITORY,
+            "GITHUB_ACTOR": "adrianf87",
+            "GITHUB_REF": premerge.BRANCH,
+            "RUNNER_ENVIRONMENT": "github-hosted",
+            "OWNER_CONFIRMATION": premerge.CONFIRMATION,
+            "PRODUCTION_RESTARTS_ACK": "false",
+            "PREMERGE_PHASE": "before",
+            "PREMERGE_CANDIDATE_SHA": self.head_sha,
+            "GITHUB_SHA": self.head_sha,
+        }
+
+    def test_before_and_after_are_both_explicitly_allowed(self):
+        self.assertEqual(premerge.guard(self.env), "before")
+        self.env["PREMERGE_PHASE"] = "after"
+        self.assertEqual(premerge.guard(self.env), "after")
+
+    def test_candidate_sha_must_be_exact_commit(self):
+        for supplied in ("", "a" * 39, "g" * 40, "b" * 40):
+            with self.subTest(supplied=supplied):
+                with self.assertRaises(RuntimeError):
+                    premerge.guard(dict(self.env, PREMERGE_CANDIDATE_SHA=supplied))
+
+    def test_premerge_never_accepts_self_hosted_or_restart_ack(self):
+        for override in ({"RUNNER_ENVIRONMENT": "self-hosted"},
+                         {"PRODUCTION_RESTARTS_ACK": "true"}):
+            with self.subTest(override=override):
+                with self.assertRaises(RuntimeError):
+                    premerge.guard(dict(self.env, **override))
+
+    def test_premerge_requires_owner_repo_branch_manual_ack(self):
+        for override in ({"GITHUB_ACTOR": "someone-else"},
+                         {"GITHUB_REPOSITORY": "fork/dc24h.eu-twilight"},
+                         {"GITHUB_REF": "refs/heads/main"},
+                         {"GITHUB_EVENT_NAME": "pull_request"},
+                         {"OWNER_CONFIRMATION": "RUN_STAGE3_PUBLIC_QUALIFICATION"},
+                         {"PREMERGE_PHASE": "none"}):
+            with self.subTest(override=override):
+                with self.assertRaises(RuntimeError):
+                    premerge.guard(dict(self.env, **override))
+
+
+class PremergeEvidenceTests(unittest.TestCase):
+    def setUp(self):
+        self.candidate_sha = "a" * 40
+        self.main_sha = "b" * 40
+        self.before = {"source_sha": self.candidate_sha, "phase": "before",
+                       "scope": evidence.EXTERNAL_SCOPE, "result": "PASS"}
+        self.host = {"candidate_sha": self.candidate_sha,
+                     "source_sha": self.main_sha, "scope": evidence.HOST_SCOPE,
+                     "result": "PASS"}
+        self.after = {"source_sha": self.candidate_sha, "phase": "after",
+                      "scope": evidence.EXTERNAL_SCOPE, "result": "PASS"}
+
+    def check(self):
+        evidence.validate(self.before, self.host, self.after,
+                          self.candidate_sha, self.main_sha)
+
+    def test_valid_three_phase_evidence(self):
+        self.check()
+
+    def test_missing_failure_or_wrong_phase_rejected(self):
+        for field, value in (("result", "FAIL"), ("phase", "before"),
+                             ("source_sha", "c" * 40)):
+            with self.subTest(field=field):
+                old = self.after[field]
+                self.after[field] = value
+                with self.assertRaises(RuntimeError):
+                    self.check()
+                self.after[field] = old
+
+    def test_host_must_be_from_exact_trusted_main_and_candidate(self):
+        for field in ("source_sha", "candidate_sha", "scope"):
+            with self.subTest(field=field):
+                old = self.host[field]
+                self.host[field] = "wrong"
+                with self.assertRaises(RuntimeError):
+                    self.check()
+                self.host[field] = old
 
 
 if __name__ == "__main__":
