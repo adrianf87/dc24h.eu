@@ -97,6 +97,23 @@ def check_ci_repository_allowlists(errors):
             "Unexpected repository guard inventory", errors)
 
 
+def check_ci_apt_source_policy(errors):
+    """Runner-supplied third-party APT outages cannot disable Ubuntu package tests."""
+    script = check(ROOT / ".github/scripts/install-ci-deps.sh", (
+        'GITHUB_ACTIONS:-',
+        'RUNNER_ENVIRONMENT:-',
+        '/etc/apt/sources.list.d/ubuntu.sources',
+        '/etc/apt/sources.list',
+        'Dir::Etc::sourcelist=',
+        'Dir::Etc::sourceparts=-',
+        'apt-get "${apt_network_options[@]}" update',
+        'apt-get "${apt_network_options[@]}" install -y --no-install-recommends',
+    ), errors)
+    for unsafe in ('--allow-unauthenticated', 'Acquire::AllowInsecureRepositories',
+                   'APT::Get::AllowUnauthenticated', '|| true'):
+        require(unsafe not in script, f"APT policy weakens failure or signature checks: {unsafe}", errors)
+
+
 def main():
     errors = []
     cmake = check(ROOT / "CMakeLists.txt", (
@@ -129,6 +146,7 @@ def main():
     require('test "$(nproc)" -eq 4' not in workflow,
             "build.yml: fixed runner CPU count is not portable", errors)
     check_ci_repository_allowlists(errors)
+    check_ci_apt_source_policy(errors)
     require("needs: [cpp, webadmin, sanitizers]" in workflow,
             "build.yml: sanitizer failures must block the required CI result", errors)
     require("debian_compat:" not in workflow and "container:" not in workflow,
