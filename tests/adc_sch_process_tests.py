@@ -85,7 +85,8 @@ class SchProcessTests(unittest.TestCase):
                      b'EXiso GE0 TY2', b'EXiso', b'NOtmp', b'GE0', b'LE0', b'EQ0', b'TY1', b'TY2',
                      'EXŻÓŁW GE0 LE1 TOextension\\sŻółw'.encode(), b'TR' + b'A' * 39,
                      b'ANSchPrivateSecret TR' + b'A' * 39, b'TR' + TEST_TTH,
-                     b'TR' + TEST_TTH + b' ANSchPrivateSecret EXiso GE0 LE1 EQ0 TY1']
+                     b'TR' + TEST_TTH + b' ANSchPrivateSecret EXiso GE0 LE1 EQ0 TY1',
+                     b'ANx' + b' EXiso' * 20]
             for kind in (b'BSCH', b'FSCH', b'DSCH', b'ESCH'):
                 header = kind + b' ' + source.sid
                 if kind in (b'DSCH', b'ESCH'): header += b' ' + observer.sid
@@ -104,7 +105,7 @@ class SchProcessTests(unittest.TestCase):
                        b'ANx TY0', b'ANx TY3', b'ANx TY1 TY1', b'ANx TO', b'ANx TOa TOb',
                        b'ANx TRinvalid', b'TR' + TEST_TTH + b' TR' + TEST_TTH,
                        b'TR' + TEST_TTH + b'=', b'TR' + TEST_TTH.lower(), b'TR' + b'A' * 38 + b'B', b'AN' + b'x' * 257,
-                       b'ANx ' + b'NOx ' * 32, b'ANx ' + b'EXiso ' * 17,
+                       b'ANx ' + b'NOx ' * 32, b'ANx' + b' EXiso' * 21,
                        b'ANx XX' + b'x' * 4092, b'ANx TO' + b'x' * 129]
             for fields in invalid:
                 source.send(b'BSCH ' + source.sid + b' ' + fields.rstrip(b' '))

@@ -49,7 +49,7 @@ Field meanings follow [ADC SCH](https://adc.sourceforge.io/ADC.html): repeated A
 | Field | Checked representation / local policy |
 | --- | --- |
 | AN / NO | Owning decoded UTF-8/NFC strings, each 1–256 bytes; not ASCII-space-only; up to 32 combined terms |
-| EX | Owning decoded text, each 1–32 bytes; up to 16; no leading period, slash, backslash or ASCII space |
+| EX | Up to 20 owning decoded values of 1–32 bytes each, with no leading period, slash, backslash or ASCII space |
 | GE / LE / EQ | Optional nonnegative signed 64-bit integers; no overflow, fractional/plus spelling or inconsistent bounds; zero and INT64_MAX allowed |
 | TY | Optional decimal value 1 or 2; absent means `ItemType::any`; valid integer aliases such as `01` are interpreted numerically but raw spelling is retained |
 | TO | Optional nonempty decoded NFC text, 1–128 UTF-8 bytes; spaces and Unicode are retained, controls/format/line separators rejected |

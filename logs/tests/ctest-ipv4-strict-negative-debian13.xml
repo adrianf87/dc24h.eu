@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuite name="Linux-c++" tests="2" failures="2" disabled="0" skipped="0" time="0" timestamp="2026-11-26T03:15:08">
+  <testcase name="adc.rcm.process" classname="adc.rcm.process" time="0.086277" status="fail">
+    <failure message="Failed" />
+    <properties />
+    <system-out>----------------------------------------------------------------------
+RuntimeError: IPv6 ::1 is unavailable: strict dual-stack test coverage required
+----------------------------------------------------------------------
+Ran 1 test in 0.001s
+FAILED (errors=1)
+</system-out>
+  </testcase>
+  <testcase name="adc.ctm.process" classname="adc.ctm.process" time="0.0751197" status="fail">
+    <failure message="Failed" />
+    <properties />
+    <system-out>----------------------------------------------------------------------
+RuntimeError: IPv6 ::1 is unavailable: strict dual-stack test coverage required
+----------------------------------------------------------------------
+Ran 1 test in 0.001s
+FAILED (errors=1)
+</system-out>
+  </testcase>
+</testsuite>

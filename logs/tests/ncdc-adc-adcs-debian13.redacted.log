@@ -1,0 +1,18 @@
+Debian 13.8, source 068d77f35175b8f28dd326f5bc520a69c7d90661
+ncdc 1.23.1, GnuTLS 3.8.9, OpenSSL 3.5.9, disposable loopback profiles.
+Reference PKI tests and ncdc explicit KEYP tests use separate trust decisions.
+
+PASS CA/SAN CA-signed DNS:localhost, TLSv1.3, ADC NORMAL
+PASS CA/SAN rejects IP SAN mismatch (64) and untrusted CA (20)
+PASS expired certificate: OpenSSL verify and live TLS reject (10), hub refuses startup before bind
+PASS future certificate: OpenSSL verify and live TLS reject (9), hub refuses startup before bind
+PASS ncdc KEYP matches preverified leaf despite IP SAN mismatch, wrong and stale pins refuse, new pin logs in
+PASS ncdc pin failures: ADCS TLS handshakes only, no extra attempts or ADC logins
+PASS two real ncdc ADC on 127.0.0.1: NORMAL, public and private chat both ways, active doc and passive video search results
+PASS two real ncdc ADCS on 127.0.0.1: NORMAL, public and private chat both ways, active doc and passive video search results
+PASS two real ncdc ADC on [::1]: NORMAL, public and private chat both ways, active doc and passive video search results
+PASS two real ncdc ADCS on [::1]: NORMAL, public and private chat both ways, active doc and passive video search results
+
+CTest ADC/ADCS authentication on disposable MariaDB: see accounts.adc_authentication.process.
+ncdc CTM and RCM with a protocol observer: adc.ctm.ncdc, adcs.ctm.ncdc, adc.rcm.ncdc, adcs.rcm.ncdc.
+CTM and RCM process variants on both address families: ctest-ipv6-strict-debian13.xml.

@@ -98,6 +98,19 @@ void failures_and_bounds() {
         require(std::holds_alternative<ParseError>(parse_sch(body)),"Wire syntax failure lost its error type");
     }
 }
+void ncdc_file_type_filters() {
+    const auto document = checked(
+        "BSCH AAAB ANreport TY1 EXdoc EXdocx EXhtm EXhtml EXnfo EXodf EXodp EXods EXodt"
+        " EXpdf EXppt EXpptx EXrtf EXtxt EXxls EXxlsx EXxml EXxps");
+    require(document.criteria().extensions.size() == 18, "ncdc document extensions lost");
+    require(std::holds_alternative<search::Query>(document.to_core_query()), "Core refused ncdc document filters");
+
+    const auto video = checked(
+        "BSCH AAAB ANclip TY1 EX3gp EXasf EXasx EXavi EXdivx EXflv EXmkv EXmov EXmp4"
+        " EXmpeg EXmpg EXogm EXpxp EXqt EXrm EXrmvb EXswf EXvob EXwebm EXwmv");
+    require(video.criteria().extensions.size() == 20, "ncdc video extensions lost");
+    require(std::holds_alternative<search::Query>(video.to_core_query()), "Core refused ncdc video filters");
+}
 void hostile_objects_and_faults() {
     for (const auto type:{MessageType::hub,MessageType::info,MessageType::client,MessageType::udp}) {
         auto message=parse("BSCH AAAB ANx"); message.type=type;
@@ -154,7 +167,8 @@ void receive_failure_isolation() {
 }
 }
 int main() {
-    try { fields_and_projection(); failures_and_bounds(); hostile_objects_and_faults(); receive_failure_isolation();
+    try { fields_and_projection(); failures_and_bounds(); ncdc_file_type_filters();
+        hostile_objects_and_faults(); receive_failure_isolation();
         std::cout<<"PASS: typed SCH decoding, wire/semantic bounds, ownership and allocation isolation\n"; }
     catch (const std::exception& e) { allocation_budget=-1; std::cerr<<"FAIL: "<<e.what()<<'\n'; return 1; }
 }

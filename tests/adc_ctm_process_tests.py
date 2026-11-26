@@ -8,11 +8,12 @@ from transfer_statistics_support import assert_statistics
 from api_support import enable_api, fetch_status
 from network_process_tests import Hub, drain_until_eof
 from tls_support import credentials, connect_tls
+from ipv6_loopback_support import local_ip_families
 
 
 class CtmProcessTests(unittest.TestCase):
     def test_ctm_routing_recovery_and_privacy(self):
-        for ipv6 in (False, True):
+        for ipv6 in local_ip_families():
             for encrypted in (False, True):
                 with self.subTest(ipv6=ipv6, encrypted=encrypted), tempfile.TemporaryDirectory(prefix='dc24h-ctm-') as directory:
                     suffix, host = (b'6', '[::1]') if ipv6 else (b'4', '127.0.0.1')

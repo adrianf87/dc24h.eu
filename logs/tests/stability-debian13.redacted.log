@@ -1,0 +1,18 @@
+Debian 13.8, source 068d77f35175b8f28dd326f5bc520a69c7d90661
+Sampled hub /proc status, stat and fd counts, with network counters from the local API.
+Loopback-only ADC. Two durable ncdc test profiles and a two-session cap.
+120s outer time limit, 3s kill timeout, 256 FD/process and 2 GiB virtual memory/process.
+
+PASS 20 connect/disconnect cycles, 10 reconnects after nickname rejection, guest kick denied, session cap and cleanup
+Before restart: CPU=0.030s wall=3.879s average=0.77% of 1 CPU; host MemAvailable=64219224 KiB
+Samples [RSS KiB, virtual size KiB, kernel RSS high-water KiB, FD]: idle=[8204, 174272, 8204, 8], peak=[8828, 174404, 8828, 10], final=[8828, 174404, 8828, 8]
+Network accepted_connections=43 closed_connections=43 rejected_connections=1 active_connections=0 peak_connections=2
+Logs WARN=12 ERROR=0
+WARN category (1): Network peer I/O failed; connection closed
+WARN category (10): Security record=login_rejected
+WARN category (1): User session limit reached; excess peer rejected
+PASS same-port restart: two simultaneous ncdc sessions ready, accepted=2 closed=2 active=0 WARN=0 ERROR=0; final metrics=[8908, 174272, 8908, 8]
+CPU percentage is the elapsed CPU time of the hub divided by measured wall time.
+RSS measures resident memory. VmSize includes mapped and reserved address space.
+Both hub generations and both ncdc clients exited with status 0.
+The test API token was absent from both hub logs.

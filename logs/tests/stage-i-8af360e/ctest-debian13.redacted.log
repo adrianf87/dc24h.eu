@@ -1,0 +1,963 @@
+Stage I Debian 13.8 / 8af360efd03803e29e8fc2a733c7184ca31d576c
+umask 022, Release, --parallel 16, DC24H_REQUIRE_IPV6_LOOPBACK=1 (full/strict)
+Source: CTest JUnit and verbose stdout. Output bodies filtered by allowlist.
+Durations in seconds. SKIP counts on suite lines refer to CTest entries.
+
+## full
+PASS   0.086511 ci.junit.summary
+    ....
+    ----------------------------------------------------------------------
+    Ran 4 tests in 0.028s
+    OK
+PASS  0.0462291 beta.06.ci.provenance
+    .......
+    ----------------------------------------------------------------------
+    Ran 7 tests in 0.000s
+    OK
+PASS  0.0441161 beta.06.auth.gate
+    ...
+    ----------------------------------------------------------------------
+    Ran 3 tests in 0.001s
+    OK
+PASS   0.069738 beta.06.token.rotation
+    ...
+    ----------------------------------------------------------------------
+    Ran 3 tests in 0.005s
+    OK
+PASS  0.0950057 ci.timing.summary
+    ....
+    ----------------------------------------------------------------------
+    Ran 4 tests in 0.031s
+    OK
+PASS   0.058862 beta.05.stage1.perf.gate
+    .....
+    ----------------------------------------------------------------------
+    Ran 5 tests in 0.002s
+    OK
+PASS   0.054072 beta.05.stage4.endurance.gate
+    ......
+    ----------------------------------------------------------------------
+    Ran 6 tests in 0.002s
+    OK
+PASS  0.0910664 beta.05.stage1.recovery.pair
+    ....
+    ----------------------------------------------------------------------
+    Ran 4 tests in 0.035s
+    OK
+PASS   0.247007 beta.07.recovery.preflight
+    ..............
+    ----------------------------------------------------------------------
+    Ran 14 tests in 0.142s
+    OK
+PASS   0.119966 beta.07.recovery.offline.capture
+    ...
+    ----------------------------------------------------------------------
+    Ran 3 tests in 0.005s
+    OK
+PASS   0.290049 beta.07.ci.deb.prototype
+    ......
+    ----------------------------------------------------------------------
+    Ran 6 tests in 0.239s
+    OK
+PASS   0.112798 beta.07.supply.chain
+    ....
+    ----------------------------------------------------------------------
+    Ran 4 tests in 0.008s
+    OK
+PASS  0.0602114 beta.07.ubuntu.perf.matrix
+    ..
+    ----------------------------------------------------------------------
+    Ran 2 tests in 0.003s
+    OK
+PASS   0.048403 beta.07.stage1.completion.gate
+    ..
+    ----------------------------------------------------------------------
+    Ran 2 tests in 0.001s
+    OK
+PASS   0.096586 integration.ncdc_ports
+    .....
+    ----------------------------------------------------------------------
+    Ran 5 tests in 0.002s
+    OK
+PASS   0.204351 project.metadata
+PASS  0.0399127 twilight.stage3.branding
+    ....
+    ----------------------------------------------------------------------
+    Ran 4 tests in 0.001s
+    OK
+PASS   0.058108 twilight.stage4.technical_identity
+    .......
+    ----------------------------------------------------------------------
+    Ran 7 tests in 0.002s
+    OK
+PASS   0.048384 dependencies.audit
+PASS  0.0268113 security.threat_model
+PASS   0.100776 beta.baseline
+PASS  0.0510987 remote.gateway.config
+    ....
+    ----------------------------------------------------------------------
+    Ran 4 tests in 0.002s
+    OK
+PASS   0.121901 remote.pilot.preflight
+    .....
+    ----------------------------------------------------------------------
+    Ran 5 tests in 0.048s
+    OK
+PASS  0.0588288 beta.release.gate
+    ....
+    ----------------------------------------------------------------------
+    Ran 4 tests in 0.002s
+    OK
+PASS  0.0473447 beta.04.stage1
+    ....
+    ----------------------------------------------------------------------
+    Ran 4 tests in 0.001s
+    OK
+PASS   0.112732 beta.04.stage4.perf.command
+    .....
+    ----------------------------------------------------------------------
+    Ran 5 tests in 0.008s
+    OK
+PASS   0.177632 beta.04.stage4.recovery
+    ..................
+    ----------------------------------------------------------------------
+    Ran 18 tests in 0.082s
+    OK
+PASS  0.0485424 beta.04.stage4.release
+    .....
+    ----------------------------------------------------------------------
+    Ran 5 tests in 0.001s
+    OK
+PASS    5.76538 beta.04.stage4.vm.probe
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 5.704s
+    OK
+PASS   0.179686 service.controller.process
+    ....
+    ----------------------------------------------------------------------
+    Ran 4 tests in 0.123s
+    OK
+PASS   0.136849 configuration.policy.process
+    ...
+    ----------------------------------------------------------------------
+    Ran 3 tests in 0.087s
+    OK
+PASS   0.265642 database.catalog
+    .....
+    ----------------------------------------------------------------------
+    Ran 5 tests in 0.214s
+    OK
+PASS   0.198938 core.lifecycle
+PASS   0.206466 core.process
+    ........
+    ----------------------------------------------------------------------
+    Ran 8 tests in 0.165s
+    OK
+PASS  0.0144342 network.unit
+PASS     3.8371 network.process
+    ............
+    ----------------------------------------------------------------------
+    Ran 12 tests in 3.780s
+    OK
+PASS   0.017036 adc.parser
+PASS 0.00711072 adc.security
+PASS 0.00997615 adc.sch
+PASS    7.22305 adc.sch.process
+    ..
+    ----------------------------------------------------------------------
+    Ran 2 tests in 7.126s
+    OK
+PASS 0.00770701 adc.res
+PASS    2.64452 adc.res.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.552s
+    OK
+PASS  0.0166284 search.results
+PASS    2.25153 search.results.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.171s
+    OK
+PASS 0.00775453 search.connectivity
+PASS    2.55545 search.connectivity.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.476s
+    OK
+PASS 0.00967259 search.security
+PASS     11.303 search.security.process
+    ....
+    ----------------------------------------------------------------------
+    Ran 4 tests in 11.218s
+    OK
+PASS 0.00533013 transfers.routing
+PASS    1.54521 transfers.routing.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 1.461s
+    OK
+PASS 0.00598378 transfers.configuration
+PASS    43.6247 transfers.configuration.process
+    .....
+    ----------------------------------------------------------------------
+    Ran 5 tests in 43.533s
+    OK
+PASS  0.0196081 transfers.statistics
+PASS    3.30874 transfers.statistics.process
+    ..
+    ----------------------------------------------------------------------
+    Ran 2 tests in 3.242s
+    OK
+PASS 0.00544461 transfers.limits
+PASS    7.63611 transfers.limits.process
+    ...
+    ----------------------------------------------------------------------
+    Ran 3 tests in 7.551s
+    OK
+PASS  0.0595319 transfers.errors
+PASS    3.90577 transfers.errors.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 3.833s
+    OK
+PASS  0.0067637 transfers.security
+PASS    7.86562 transfers.security.process
+    ...
+    ----------------------------------------------------------------------
+    Ran 3 tests in 7.786s
+    OK
+PASS 0.00897102 transfers.tokens
+PASS    10.9895 transfers.tokens.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 10.907s
+    OK
+PASS 0.00400159 transfers.capabilities
+PASS    8.83725 transfers.capabilities.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 8.759s
+    OK
+PASS  0.0040982 transfers.protocol
+PASS    8.47485 transfers.protocol.process
+    ..
+    ----------------------------------------------------------------------
+    Ran 2 tests in 8.399s
+    OK
+PASS 0.00858675 adc.rcm
+PASS    5.04775 adc.rcm.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 4.968s
+    OK
+PASS  0.0661234 stage1.ipv6_loopback_policy
+    ......
+    ----------------------------------------------------------------------
+    Ran 6 tests in 0.002s
+    OK
+PASS  0.0062487 adc.ctm
+PASS    4.53006 adc.ctm.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 4.456s
+    OK
+PASS  0.0033792 transfers.core
+PASS   0.712904 transfers.core.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 0.627s
+    OK
+PASS 0.00575556 search.statistics
+PASS    1.03303 search.statistics.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 0.948s
+    OK
+PASS 0.00458767 search.core
+PASS   0.796271 search.core.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 0.709s
+    OK
+PASS 0.00632764 search.filters
+PASS 0.00574637 search.tth
+PASS 0.00630204 search.tokens
+PASS    1.01968 search.tokens.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 0.930s
+    OK
+PASS 0.00868833 search.features
+PASS     2.8597 search.features.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.767s
+    OK
+PASS 0.00756162 search.routing
+PASS    2.57002 search.routing.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.486s
+    OK
+PASS 0.00632602 chat.logging
+PASS    2.01035 chat.logging.process
+    ...
+    ----------------------------------------------------------------------
+    Ran 3 tests in 1.930s
+    OK
+PASS 0.00715496 chat.configuration
+PASS    4.05372 chat.configuration.process
+    ...
+    ----------------------------------------------------------------------
+    Ran 3 tests in 3.977s
+    OK
+PASS 0.00653191 chat.anti_flood
+PASS    5.96631 chat.anti_flood.process
+    ..
+    ----------------------------------------------------------------------
+    Ran 2 tests in 5.890s
+    OK
+PASS 0.00602858 adc.presence
+PASS    1.27454 adc.presence.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 1.200s
+    OK
+PASS 0.00452243 chat.validation
+PASS    1.95717 chat.validation.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 1.880s
+    OK
+PASS 0.00731302 chat.hub
+PASS   0.572542 chat.hub.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 0.502s
+    OK
+PASS 0.00760958 adc.msg.flags
+PASS    2.56714 adc.msg.flags.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.493s
+    OK
+PASS 0.00352667 chat.routing
+PASS   0.796868 chat.routing.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 0.729s
+    OK
+PASS  0.0111165 chat.private
+PASS   0.775674 chat.private.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 0.706s
+    OK
+PASS 0.00992603 chat.public
+PASS   0.505919 chat.public.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 0.434s
+    OK
+PASS  0.0111156 chat.adc
+PASS 0.00458181 chat.core
+PASS   0.666319 chat.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 0.587s
+    OK
+PASS 0.00572281 adc.msg
+PASS    2.17044 adc.msg.process
+    ..
+    ----------------------------------------------------------------------
+    Ran 2 tests in 2.097s
+    OK
+PASS 0.00517542 adc.syntax
+PASS 0.00351765 adc.state
+PASS 0.00358701 adc.sup
+PASS  0.0341024 adc.sid
+PASS    3.97029 adc.close.process
+    ...
+    ----------------------------------------------------------------------
+    Ran 3 tests in 3.895s
+    OK
+PASS 0.00580292 adc.status
+PASS     7.8523 adc.status.process
+    ....
+    ----------------------------------------------------------------------
+    Ran 4 tests in 7.777s
+    OK
+PASS 0.00627817 users.disconnect
+PASS    1.55517 users.disconnect.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 1.487s
+    OK
+PASS 0.00483402 users.statistics
+PASS    0.95081 users.statistics.process
+    ..
+    ----------------------------------------------------------------------
+    Ran 2 tests in 0.881s
+    OK
+PASS 0.00596659 users.limits
+PASS    1.32716 users.limits.process
+    ..
+    ----------------------------------------------------------------------
+    Ran 2 tests in 1.256s
+    OK
+PASS  0.0062649 users.inf_updates
+PASS   0.887855 users.inf_updates.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 0.809s
+    OK
+PASS 0.00980323 users.list
+PASS   0.777115 users.list.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 0.708s
+    OK
+PASS 0.00651912 users.login
+PASS   0.848155 users.login.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 0.776s
+    OK
+PASS  0.0048186 users.user_registry
+PASS   0.945585 users.user_registry.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 0.874s
+    OK
+PASS 0.00393104 users.nicknames
+PASS    1.75737 users.nicknames.process
+    ..
+    ----------------------------------------------------------------------
+    Ran 2 tests in 1.670s
+    OK
+PASS  0.0040097 accounts.model
+PASS 0.00488448 users.values
+PASS 0.00400639 users.registry
+PASS 0.00552356 security.authentication_limits
+PASS 0.00602969 bans.admission
+PASS 0.00591617 bans.model
+PASS  0.0095247 admin.mute
+PASS  0.0127851 admin.kick
+PASS    0.00356 security.moderation
+PASS 0.00701398 security.roles
+PASS 0.00339745 users.auth_sessions
+PASS  0.0056658 users.manager
+PASS 0.00632719 users.core
+PASS 0.00415048 users.session
+PASS 0.00519395 users.session.adc
+PASS   0.423225 users.session.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 0.356s
+    OK
+PASS 0.00560873 adc.login
+PASS    6.83958 adc.login.process
+    .......
+    ----------------------------------------------------------------------
+    Ran 7 tests in 6.763s
+    OK
+PASS 0.00740115 adc.inf
+PASS 0.00839942 adc.identity
+PASS 0.00594289 adc.identity.failure
+PASS  0.0928566 adc.process
+    ......
+    ----------------------------------------------------------------------
+    Ran 6 tests in 0.038s
+    OK
+PASS  0.0760071 adcs.crypto
+PASS    4.54885 adcs.process
+    .........
+    ----------------------------------------------------------------------
+    Ran 13 tests in 4.478s
+    OK
+PASS  0.0351563 adcs.tls_security
+PASS  0.0548494 adcs.tls_security.process
+PASS  0.0107538 configuration.unit
+PASS 0.00958676 configuration.review
+PASS 0.00677953 configuration.write
+PASS     1.6473 configuration.process
+    ..........
+    ----------------------------------------------------------------------
+    Ran 10 tests in 1.587s
+    OK
+PASS 0.00300723 profile.unit
+PASS 0.00242136 stress.unit
+PASS 0.00283726 memory.safety
+PASS 0.00242174 benchmark.unit
+PASS 0.00246393 monitoring.unit
+PASS    2.21124 logging.unit
+PASS    3.49697 logging.process
+    ........
+    ----------------------------------------------------------------------
+    Ran 8 tests in 3.436s
+    OK
+PASS 0.00281479 security.negotiation
+PASS    3.34857 security.negotiation.process
+    .....
+    ----------------------------------------------------------------------
+    Ran 5 tests in 3.269s
+    OK
+PASS  0.0259388 security.unit
+PASS    5.82252 security.process
+    ..............
+    ----------------------------------------------------------------------
+    Ran 14 tests in 5.756s
+    OK
+PASS 0.00504326 database.unit
+PASS 0.00491893 database.core
+PASS 0.00502885 database.resilience
+PASS 0.00527887 database.migrations
+PASS  0.0048156 admin.core
+PASS 0.00460979 admin.access
+PASS 0.00643072 adc.authentication
+PASS 0.00530217 accounts.account_security
+PASS     3.5548 accounts.password_security
+PASS 0.00526384 accounts.identity_mapping
+PASS   0.242571 accounts.registration
+PASS    4.62596 beta.05.stage1.matched.recovery
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 4.571s
+    OK
+PASS  0.0840496 beta.05.stage4.rollback
+    s
+    ----------------------------------------------------------------------
+    Ran 1 test in 0.000s
+    OK (skipped=1)
+    Internal SKIP: Stage IV recovery measurements run only on hosted Ubuntu CI
+PASS    9.43104 bans.process
+    Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+PASS    7.87704 admin.core.process
+    Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+PASS    3.33332 accounts.owner_cli.process
+    Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+PASS    27.3318 accounts.management.process
+    Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+PASS    19.3546 accounts.adc_authentication.process
+    Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+PASS    3.74491 accounts.password_security.process
+    Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+PASS    3.66904 accounts.identity_mapping.process
+    Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+PASS    4.39397 accounts.registration.process
+    Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+PASS    2.53954 accounts.repository.process
+    Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+PASS    94.5258 accounts.webadmin.process
+    Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+PASS    1.70775 database.process
+    Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+PASS    2.72265 database.core.process
+    Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+PASS    6.97397 database.resilience.process
+    Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+PASS    1.73619 database.migrations.process
+    Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+PASS   0.265692 api.unit
+PASS    2.26426 api.process
+    .......
+    ----------------------------------------------------------------------
+    Ran 7 tests in 2.167s
+    OK
+PASS   0.455071 apache2.https
+    .......
+    ----------------------------------------------------------------------
+    Ran 7 tests in 0.372s
+    OK
+PASS   0.534467 apache2.https.proxy
+    .......
+    ----------------------------------------------------------------------
+    Ran 7 tests in 0.458s
+    OK
+PASS   0.966946 apache2.remote.gateway
+    ..s..........
+    ----------------------------------------------------------------------
+    Ran 13 tests in 0.866s
+    OK (skipped=1)
+    Internal SKIP: Stage IV HTTPS endurance is reserved for hosted Ubuntu CI
+PASS    5.77431 database.ncdc.process
+    Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+PASS   0.481345 adc.security.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 0.395s
+    OK
+PASS   0.482656 adcs.security.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 0.396s
+    OK
+PASS    0.58398 adc.status.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 0.496s
+    OK
+PASS   0.655359 adcs.status.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 0.569s
+    OK
+PASS   0.397357 adc.identity.ncdc
+    ..
+    ----------------------------------------------------------------------
+    Ran 2 tests in 0.335s
+    OK
+PASS   0.305204 adc.inf.ncdc
+    ..
+    ----------------------------------------------------------------------
+    Ran 2 tests in 0.244s
+    OK
+PASS   0.349677 adc.sid.ncdc
+    ..
+    ----------------------------------------------------------------------
+    Ran 2 tests in 0.285s
+    OK
+PASS   0.393521 adc.sup.ncdc
+    ..
+    ----------------------------------------------------------------------
+    Ran 2 tests in 0.328s
+    OK
+PASS     1.5084 adc.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 1.401s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+PASS    1.73003 adcs.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 1.644s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+PASS    1.53208 adc.tth.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 1.444s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+PASS     1.6907 adcs.tth.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 1.598s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+PASS    5.68289 adc.feature.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 5.598s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+PASS    6.57518 adcs.feature.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 6.473s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+PASS    6.51005 adc.activepassive.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 6.419s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+PASS     7.1005 adcs.activepassive.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 7.002s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+PASS    7.39217 adcs.activepassive.bindscope.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 7.300s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+PASS    3.06195 adcs.capabilities.bindscope.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.979s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+PASS    1.47672 adc.searchsecurity.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 1.390s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+PASS    1.87624 adcs.searchsecurity.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 1.782s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+PASS    1.92242 adc.transfercore.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 1.837s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+PASS    2.20045 adcs.transfercore.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.113s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+PASS    2.36951 adc.ctm.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.281s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+PASS     2.6955 adcs.ctm.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.614s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+PASS    2.38213 adc.transferconfiguration.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.293s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+PASS    2.60999 adc.transferconfiguration.adcs.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.519s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+PASS    2.72637 adcs.transferconfiguration.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.637s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+PASS     2.8613 adcs.transferconfiguration.adcs.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.781s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+PASS    2.41295 adc.rcm.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.313s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+PASS    2.59054 adcs.rcm.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.512s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+PASS    2.96509 adcs.rcm.terminal.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.877s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+PASS    2.42036 adc.ctm.adcs.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.334s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+PASS     2.6725 adcs.ctm.adcs.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.584s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+PASS    2.68162 adc.rcm.adcs.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.597s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+PASS    2.88119 adcs.rcm.adcs.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.791s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+PASS    2.46988 adc.capabilities.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.383s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+PASS    2.80516 adc.capabilities.adcs.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.716s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+PASS    2.39084 adc.tokens.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.313s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+PASS    2.60013 adc.tokens.adcs.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.518s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+PASS    1.98334 adc.connectionsecurity.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 1.898s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+PASS    1.98107 adc.connectionsecurity.active.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 1.885s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+PASS    3.78149 adc.transferlimits.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 3.690s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+PASS    1.73869 adc.transfererrors.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 1.653s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+PASS    1.78644 adc.transfererrors.adcs.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 1.691s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+PASS    2.75968 adcs.capabilities.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.675s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+PASS    2.94052 adcs.capabilities.adcs.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.848s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+PASS    2.57685 adcs.tokens.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.493s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+PASS    2.83083 adcs.tokens.adcs.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.745s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+PASS    2.30675 adcs.connectionsecurity.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.223s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+PASS    2.31971 adcs.connectionsecurity.active.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.221s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+PASS    3.98519 adcs.transferlimits.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 3.905s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+PASS     1.9958 adcs.transfererrors.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 1.906s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+PASS     1.9516 adcs.transfererrors.adcs.ncdc
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 1.856s
+    OK
+    ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+CTest PASS=260 FAIL=0 SKIP=0
+
+## systemd
+PASS   0.900673 systemd.sandbox
+    ....
+    ----------------------------------------------------------------------
+    Ran 4 tests in 0.826s
+    OK
+CTest PASS=1 FAIL=0 SKIP=0
+
+## ipv4
+PASS    2.43662 adc.rcm.process
+    SKIP IPv6 CTM/RCM subcases: cannot bind ::1; IPv4 coverage only. Repeat with DC24H_REQUIRE_IPV6_LOOPBACK=1 on an IPv6-capable host before full dual-stack acceptance.
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.360s
+    OK
+PASS  0.0649301 stage1.ipv6_loopback_policy
+    ......
+    ----------------------------------------------------------------------
+    Ran 6 tests in 0.002s
+    OK
+PASS    2.31562 adc.ctm.process
+    SKIP IPv6 CTM/RCM subcases: cannot bind ::1; IPv4 coverage only. Repeat with DC24H_REQUIRE_IPV6_LOOPBACK=1 on an IPv6-capable host before full dual-stack acceptance.
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 2.240s
+    OK
+CTest PASS=3 FAIL=0 SKIP=0
+
+## ipv4-strict-negative
+FAIL (expected in IPv4-only strict control)  0.0779263 adc.rcm.process
+    ----------------------------------------------------------------------
+    RuntimeError: IPv6 ::1 is unavailable: strict dual-stack test coverage required
+    ----------------------------------------------------------------------
+    Ran 1 test in 0.001s
+    FAILED (errors=1)
+FAIL (expected in IPv4-only strict control)  0.0815626 adc.ctm.process
+    ----------------------------------------------------------------------
+    RuntimeError: IPv6 ::1 is unavailable: strict dual-stack test coverage required
+    ----------------------------------------------------------------------
+    Ran 1 test in 0.001s
+    FAILED (errors=1)
+CTest PASS=0 FAIL=2 SKIP=0
+
+## ipv6-strict
+PASS    3.85434 network.process
+    ............
+    ----------------------------------------------------------------------
+    Ran 12 tests in 3.793s
+    OK
+PASS    4.95824 adc.rcm.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 4.853s
+    OK
+PASS  0.0835603 stage1.ipv6_loopback_policy
+    ......
+    ----------------------------------------------------------------------
+    Ran 6 tests in 0.002s
+    OK
+PASS    4.61803 adc.ctm.process
+    .
+    ----------------------------------------------------------------------
+    Ran 1 test in 4.522s
+    OK
+CTest PASS=4 FAIL=0 SKIP=0

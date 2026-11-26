@@ -2,6 +2,8 @@
 
 **alpha-0.9.5 TLS security:** [ADCS certificate and cipher policy](TLS_SECURITY.md) checks the hub leaf before listen and limits the listener to TLS 1.2 and 1.3 AEAD. Clients still check the name and the trust chain. HTTP/2, OCSP and automatic renewal remain unimplemented. The historical notes below keep their original scope.
 
+**Public Stage I client-trust clarification:** CA/hostname verification and explicitly trusted ADC KEYP SHA-256 certificate pinning are distinct client authentication modes. In particular, ncdc with a trusted `?kp=SHA256/...` may accept a certificate without a SAN matching the connection URL; the hub cannot infer whether a client checked the name. See the [Debian 13/ncdc acceptance matrix](PUBLIC_STAGE_I_NCDC.md). Public use still requires a separately approved certificate identity and deployment policy.
+
 **Increment delivered in alpha-0.3.12:** [Limits](LIMITS.md) adds configurable session/user ceilings shared by ADC/ADCS, bounded by the connection cap. SessionManager checks capacity transactionally; LoginHub rejects a full user registry before welcome/list preparation with ISTA 211 and own IQUI. Closing reservations count until cleanup. Earlier descriptions retain their historical scope.
 
 **Increment delivered in alpha-0.2.10:** [Negotiation security](NEGOTIATION_SECURITY.md) adds pending admission caps, cumulative pre-readiness input budgets and shared pre-INF/Tiger attempt limits. Earlier release descriptions below retain their original scope.

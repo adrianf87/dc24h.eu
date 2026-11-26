@@ -49,7 +49,7 @@ Znaczenia odpowiadają [ADC SCH](https://adc.sourceforge.io/ADC.html): wielokrot
 | Pole | Reprezentacja i lokalna polityka |
 | --- | --- |
 | AN / NO | Własne odkodowane ciągi NFC UTF-8, po 1–256 bajtów, nie z samych spacji ASCII, łącznie do 32 terminów |
-| EX | Własny tekst po 1–32 bajty, do 16 wartości, bez początkowej kropki, ukośnika, odwrotnego ukośnika i spacji ASCII |
+| EX | Własny tekst po 1–32 bajty, do 20 wartości, bez początkowej kropki, ukośnika, odwrotnego ukośnika i spacji ASCII |
 | GE / LE / EQ | Opcjonalne nieujemne liczby całkowite ze znakiem 64-bit; bez przepełnienia/ułamków/plusa i sprzecznych granic; zero i INT64_MAX są dozwolone |
 | TY | Opcjonalna wartość dziesiętna 1 lub 2; brak oznacza `ItemType::any`; alias `01` jest odczytywany liczbowo, a oryginalny zapis zachowany |
 | TO | Opcjonalny niepusty odkodowany tekst NFC, 1–128 bajtów UTF-8; spacje i Unicode zachowane, kontrolki/formatowanie/separatory wierszy odrzucane |

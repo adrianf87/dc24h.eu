@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuite name="Linux-c++" tests="4" failures="0" disabled="0" skipped="0" time="5" timestamp="2026-11-26T03:15:00">
+  <testcase name="network.process" classname="network.process" time="3.84277" status="run">
+    <properties />
+    <system-out>............
+----------------------------------------------------------------------
+Ran 12 tests in 3.780s
+OK
+</system-out>
+  </testcase>
+  <testcase name="adc.rcm.process" classname="adc.rcm.process" time="5.10187" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 5.013s
+OK
+</system-out>
+  </testcase>
+  <testcase name="stage1.ipv6_loopback_policy" classname="stage1.ipv6_loopback_policy" time="0.0732088" status="run">
+    <properties />
+    <system-out>......
+----------------------------------------------------------------------
+Ran 6 tests in 0.002s
+OK
+</system-out>
+  </testcase>
+  <testcase name="adc.ctm.process" classname="adc.ctm.process" time="4.64126" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 4.560s
+OK
+</system-out>
+  </testcase>
+</testsuite>

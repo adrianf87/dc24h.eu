@@ -1,0 +1,66 @@
+dc24h.eu-twilight | Debian 13 + ncdc | Stage I | redacted evidence
+2026-11-26 01:08–01:21 UTC
+Source public/stage-i-debian13-ncdc-adcs @ 1bbcd541e86c133b884f8e29933c4b4f36363302
+Issue #10 https://github.com/adrianf87/dc24h.eu-twilight/issues/10
+Draft PR #12 https://github.com/adrianf87/dc24h.eu-twilight/pull/12
+
+A PASS Debian 13.8, Linux 6.12.117+deb13-amd64, x86_64, 8 CPU, 31 GiB RAM.
+  GCC/G++ 14.2.0; CMake 3.31.6; OpenSSL 3.5.9; ncdc 1.23.1; GnuTLS 3.8.9.
+  MariaDB 11.8.9, Connector/C 3.4.10. Test SQL through private Unix socket.
+  Isolated bind 127.0.0.1 PASS. Dual-stack bind ::1 PASS.
+  IPv4-only bind ::1 EADDRNOTAVAIL as intended.
+
+B PASS cmake -S source -B build-stage1-release -DCMAKE_BUILD_TYPE=Release -DDC24H_REQUIRE_INTEGRATION_TESTS=ON
+  cmake --build build-stage1-release --parallel 2 exit=0; C++20.
+  dc24h.eu-twilight beta-0.9.20; SHA256 a14d47bd7d4418038e336d35f138fdf69385e92a07ab2f0156757ed75a61b941
+  --check-config exit=0 after supplying a valid server leaf. Initial fixture refused.
+
+C1 PASS ctest -R ^(adc.ctm.process|adc.rcm.process|stage1.ipv6_loopback_policy)$
+  IPv4-only 3 PASS, 0 FAIL, exit=0. Two explicit IPv6 skip notices (four subcases).
+C2 PASS DC24H_REQUIRE_IPV6_LOOPBACK=1 ctest -R ^(adc.ctm.process|adc.rcm.process)$
+  Strict dual-stack 2 PASS, 0 FAIL, exit=0. Eight IPv4/IPv6 ADC/ADCS variants, no skips.
+C3 ctest --output-on-failure --parallel 2 -E ^systemd.sandbox$
+  First pass 256 PASS, 4 FAIL, 0 SKIP at CTest level, exit=8, 329.23 seconds.
+  FAIL beta.07.ci.deb.prototype, apache2.https, apache2.https.proxy, apache2.remote.gateway.
+  Corrected the test runner's umask from 077 to 022 in the private namespace.
+  Retest of the four exact entries 4 PASS, 0 FAIL, exit=0.
+  NOT RUN/BLOCKED systemd.sandbox: isolated systemd manager unavailable.
+  Inner SKIP only beta.05.stage4.rollback; partial SKIP apache2.remote.gateway
+  hosted Ubuntu endurance case (12 other cases in that entry executed).
+
+ADC PASS real ncdc reached NORMAL on 127.0.0.1:1511.
+  HSUP, ISUP, ISID [redacted], INF [redacted], IINF NIdc24h.eu-twilight,
+  Tiger(PID)=CID, BMSG echo and clean disconnect.
+
+D PASS adcs.process 13 cases. Verified TLS 1.2 and 1.3.
+  CA+SAN localhost PASS; ADC SUP, SID, INF and welcome after TLS.
+  127.0.0.1 with DNS-only SAN refused, verify=64. Foreign CA refused, verify=20.
+  KEYP verified pin PASS, including reconnect and reconnect after restart.
+  Wrong pin and stale pin after leaf replacement refused.
+  Correct trusted pin with mismatched IP SAN reached NORMAL in KEYP mode.
+  TLS ClientHello and port 1512 only, no cleartext HSUP or ADC fallback.
+  Invalid PEM, expired and not-yet-valid leaf, and bad key refused at start (exit=1).
+  TLS 1.0 and 1.1 refused with protocol version alert.
+
+E PASS two ncdc profiles on ADC and ADCS, both user lists, BMSG and private MSG
+  both directions, IQUI and reconnect, active SCH/UDP URES, passive SCH/DRES,
+  active CTM, passive RCM and reciprocal CTM. File content OUT OF SCOPE.
+
+F PASS wrong ADCS password rejected, correct password succeeded after retry,
+  pre-PAS disconnect, duplicate nickname ISTA 222, rename/reconnect,
+  malformed ADC line, unauthorized SCH ISTA 125, session cap and recovery.
+  Compared synthetic passwords and API tokens against diagnostics and responses,
+  zero matches. Private API invalid token status 401, valid token status 200.
+
+G PASS 20 clean cycles, 10 reconnects after controlled refusal, two ncdc after restart.
+  Accepted=41 closed=41 peak=2, final established=0.
+  RSS KiB idle/peak/after=7896/8532/8532.
+  FD idle/peak/after=6/8/6, socket FD=1/3/1.
+  CPU=0.04 s over 8.13 s. WARN=10 ERROR=0, restart WARN=0 ERROR=0.
+  Both hub exit codes=0, both ncdc exit codes=0.
+
+BUILD RELEASE PASS | CTEST IPV4 PASS | CTEST IPV6 PASS
+ADCS CA + SAN PASS | ADCS KEYP NCDC PASS | TWO NCDC PASS
+AUTHORIZATION PASS | STABILITY PASS | EVIDENCE COMPLETENESS FAIL
+STAGE I BLOCKED: isolated systemd evidence and OWNER trust policy decision pending.
+PUBLIC DEPLOYMENT NO-GO
