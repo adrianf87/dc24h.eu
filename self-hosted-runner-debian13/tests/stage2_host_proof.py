@@ -213,7 +213,9 @@ def host_proof(args):
                     .stdout.strip() == "not-found", "Test service name is already in use")
 
         write_unit(hub_path, "[Unit]\nDescription=Stage II test-only Direct Connect hub\n"
-                   "StartLimitIntervalSec=30\nStartLimitBurst=3\n"
+                   # Bound orphaned test services even if a runner is killed
+                   # before finally can stop the unit: 4 starts per hour.
+                   "StartLimitIntervalSec=3600\nStartLimitBurst=4\n"
                    "[Service]\nType=exec\nUser=" + RUNNER_USER + "\n"
                    "WorkingDirectory=" + str(fixture) + "\n"
                    "ExecStart=" + str(binary) + " --config " + str(config) + "\n"
