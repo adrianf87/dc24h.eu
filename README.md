@@ -10,6 +10,8 @@ Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
 **Current Twilight CI:** [All GitHub Actions](https://github.com/adrianf87/dc24h.eu-twilight/actions) · [C++/WebAdmin](https://github.com/adrianf87/dc24h.eu-twilight/actions/workflows/build.yml) · [CodeQL](https://github.com/adrianf87/dc24h.eu-twilight/actions/workflows/beta07-codeql.yml) · [TSAN/fuzz](https://github.com/adrianf87/dc24h.eu-twilight/actions/workflows/beta08-hardening.yml) · [storage/fault](https://github.com/adrianf87/dc24h.eu-twilight/actions/workflows/beta09-stage4-storage.yml) · [Ubuntu VM/systemd](https://github.com/adrianf87/dc24h.eu-twilight/actions/workflows/stage4-ubuntu-vm-validation.yml). A `main` badge does not qualify a Draft PR's final SHA.
 
+**Supplemental Debian 13 VPS runner:** [runner profile, security boundaries, and manual test plan](self-hosted-runner-debian13/README.md). The OWNER-designated `server-747585786` runner is **not** part of required GitHub-hosted CI and must not execute untrusted pull requests, privileged commands, real-state migration, or public service activation.
+
 <details>
 <summary>Beta</summary>
 

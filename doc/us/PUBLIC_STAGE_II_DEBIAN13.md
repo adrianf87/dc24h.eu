@@ -4,6 +4,13 @@
 **Status:** engineering kickoff and read-only host-inventory tooling. **Stage II acceptance pending.**  
 **Boundary:** no live installation, systemd activation, private-state migration, DNS/firewall changes, public hub or WebAdmin exposure, release or production GO.
 
+**Supplemental runner:** The OWNER has designated a Debian 13 VPS runner for
+future manual, non-production source and environment checks. See the
+[runner profile and safety policy](../../self-hosted-runner-debian13/README.md).
+The proposed self-hosted workflow is OWNER-triggered only and cannot run until
+its workflow definition is separately approved on protected `main`. It does not
+replace the isolated install, systemd, backup/restore, and rollback requirements.
+
 Stage I's isolated Debian 13/ncdc evidence and OWNER acceptance are recorded in [the acceptance report](../../logs/tests/DEBIAN13-STAGE-I-FINAL-ACCEPTANCE.md). Stage II is a **separate** operating-system installation and recovery qualification; green CI and an inert `.deb` fixture do not certify an existing Debian host.
 
 ## 1. Safe host inventory: the first deliverable
