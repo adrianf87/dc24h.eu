@@ -184,6 +184,31 @@ class PTYTests(unittest.TestCase):
 
 
 class PolicyTests(unittest.TestCase):
+    def test_forward_confirmed_ptr_requires_exact_reverse_and_forward_pair(self):
+        expected = [(2, 1, 6, "", (base.IPV4, 0))]
+        with mock.patch.object(public_checks.socket, "gethostbyaddr",
+                               return_value=(base.FQDN + ".", [], [base.IPV4])), mock.patch.object(
+                               public_checks.socket, "getaddrinfo", return_value=expected):
+            self.assertIn("Forward-confirmed", public_checks.forward_confirmed_ptr())
+
+        with mock.patch.object(public_checks.socket, "gethostbyaddr",
+                               return_value=("unapproved.example", [], [base.IPV4])):
+            with self.assertRaisesRegex(evidence.Mismatch, "PTR does not match"):
+                public_checks.forward_confirmed_ptr()
+
+        with mock.patch.object(public_checks.socket, "gethostbyaddr",
+                               return_value=(base.FQDN, [], [base.IPV4])), mock.patch.object(
+                               public_checks.socket, "getaddrinfo",
+                               return_value=[(2, 1, 6, "", ("203.0.113.99", 0))]):
+            with self.assertRaisesRegex(evidence.Mismatch, "resolve exclusively"):
+                public_checks.forward_confirmed_ptr()
+
+        with mock.patch.object(public_checks.socket, "gethostbyaddr",
+                               side_effect=OSError("private DNS resolver failure")):
+            with self.assertRaisesRegex(evidence.Blocked, "PTR lookup is unavailable") as failure:
+                public_checks.forward_confirmed_ptr()
+            self.assertNotIn("private DNS", str(failure.exception))
+
     def test_bounded_ports_distinguish_refusal_timeout_and_network_error(self):
         self.assertEqual(external.FORBIDDEN_TCP, (1511, 3000, 3306, 5173, 5432, 6379, 8000, 8080, 9090))
         for error, expected in ((ConnectionRefusedError, "actively refused"), (TimeoutError, "timed out")):
