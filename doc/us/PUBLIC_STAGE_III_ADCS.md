@@ -1,5 +1,7 @@
 # Public deployment Stage III — ADCS exposure and identity preflight (P0)
 
+**ARCHIVAL PREFLIGHT — SUPERSEDED FOR STAGE III ACCEPTANCE (OWNER, 2026-11-27).** This is a historical deployment-planning runbook, **not the current completion checklist**. The OWNER withdrew any additional independent latest-SHA public DNS A/PTR or ADCS test, real DC++ client test, and Contabo firewall/routing/port verification from Stage III acceptance. **Do not carry out or dispatch those tests for Stage III.** The separate controlled VPS reboot and live ADCS service restart exclusions remain. Continue with existing GitHub-hosted CI only; formal `OWNER STAGE III ACCEPTANCE GO` and separate `OWNER MERGE GO` are still required. See [the governing current qualification scope](PUBLIC_STAGE_III_QUALIFICATION.md).
+
 **Tracking:** [Issue #10](https://github.com/adrianf87/dc24h.eu-twilight/issues/10), Stage III.  
 **Status:** Historic Stage III preflight plan. The OWNER later confirmed public guest ADCS access; live availability must be checked independently.
 **Starting source:** protected main commit 7e46787c8a0a901fa08b5af6bb3cac7c8eb77a2d, after the [Stage II OWNER acceptance](https://github.com/adrianf87/dc24h.eu-twilight/issues/10#issuecomment-7195123564).  
