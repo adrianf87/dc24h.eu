@@ -30,9 +30,38 @@ class QualificationPolicyTests(unittest.TestCase):
                                       "search"), b"BSCH ABCD ANsecond")
 
     def test_frame_reader_rejects_hub_denial(self):
-        reader = external.Reader(FakePeer([b"ISTA 200 Permission\\sdenied\n"]))
-        with self.assertRaisesRegex(RuntimeError, "rejected"):
-            reader.until(lambda frame: False, "denied")
+        reader = external.Reader(FakePeer([b"ISTA 200 Permission\\sdenied FCBINF XXprivate-token\n"]))
+        with self.assertRaises(RuntimeError) as caught:
+            reader.until(lambda frame: False, "TCP-active signal")
+        self.assertIn("TCP-active signal", str(caught.exception))
+        self.assertIn("status=200", str(caught.exception))
+        self.assertIn("FC=BINF", str(caught.exception))
+        self.assertNotIn("private-token", str(caught.exception))
+        self.assertNotIn("Permission", str(caught.exception))
+
+    def test_frame_reader_quit_does_not_expose_remote_sid(self):
+        reader = external.Reader(FakePeer([b"IQUI ABCD DIsecret\n"]))
+        with self.assertRaises(RuntimeError) as caught:
+            reader.until(lambda frame: False, "direct search result")
+        self.assertIn("direct search result", str(caught.exception))
+        self.assertIn("IQUI", str(caught.exception))
+        self.assertNotIn("ABCD", str(caught.exception))
+        self.assertNotIn("secret", str(caught.exception))
+
+    def test_active_client_update_does_not_spoof_hub_address(self):
+        first, second = mock.Mock(), mock.Mock()
+        with mock.patch.object(external.ssl, "create_default_context"), mock.patch.object(
+                external.base, "connect_guest", side_effect=[(first, b"ABCD"), (second, b"EFGH")]
+        ), mock.patch.object(external, "Reader") as reader:
+            reader.return_value.until.return_value = b"ok"
+            external.check_two_client_protocol()
+        frames = [call.args[0] for call in first.sendall.call_args_list]
+        self.assertIn(b"BINF ABCD SUTCP4\n", frames)
+        self.assertFalse(any(b"I4" in frame for frame in frames))
+        self.assertFalse(any(external.base.IPV4.encode() in frame for frame in frames))
+        self.assertTrue(any(frame.startswith(b"DCTM ABCD EFGH ") for frame in frames))
+        self.assertTrue(any(call.args[0].startswith(b"DRCM EFGH ABCD ")
+                            for call in second.sendall.call_args_list))
 
     def test_negative_prelogin_expected_denial_is_observable(self):
         reader = external.Reader(FakePeer([b"ISTA 244 Login\\srequired\n"]))

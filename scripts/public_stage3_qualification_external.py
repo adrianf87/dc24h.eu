@@ -41,8 +41,17 @@ class Reader:
                 frame, self.pending = self.pending.split(b"\n", 1)
                 if predicate(frame):
                     return frame
-                if frame.startswith((b"ISTA 1", b"ISTA 2", b"IQUI ")):
-                    raise RuntimeError("Hub rejected the public guest session")
+                if frame.startswith((b"ISTA 1", b"ISTA 2")):
+                    # Only the numeric status and fixed FC command are safe to
+                    # publish: ADC text/extensions may contain private data.
+                    fields = frame.split(b" ")
+                    status = fields[1].decode("ascii") if len(fields) > 1 and len(fields[1]) == 3 and fields[1].isdigit() else "unknown"
+                    command = next((part[2:].decode("ascii") for part in fields[2:]
+                                    if len(part) == 6 and part.startswith(b"FC") and
+                                    all(65 <= byte <= 90 for byte in part[2:])), "unknown")
+                    raise RuntimeError(f"ADC rejected at {label}: ISTA status={status} FC={command}")
+                if frame.startswith(b"IQUI "):
+                    raise RuntimeError(f"ADC disconnected at {label}: IQUI")
                 continue
             self.peer.settimeout(min(2, max(0.1, end - time.monotonic())))
             try:
@@ -99,7 +108,10 @@ def check_two_client_protocol():
         a.until(lambda line: line.startswith(b"DRES " + second_sid + b" " + first_sid + b" ") and
                 b"TO" + token in line, "direct search result")
 
-        first.sendall(b"BINF " + first_sid + b" SUTCP4 I4" + base.IPV4.encode() + b"\n")
+        # The login INF's I40.0.0.0 is normalized by the hub to the
+        # *client's observed address*. Keep it: advertising the hub's IPv4
+        # here is an invalid/forged client address and must be rejected.
+        first.sendall(b"BINF " + first_sid + b" SUTCP4\n")
         b.until(lambda line: line.startswith(b"BINF " + first_sid + b" ") and
                 b"SUTCP4" in line, "TCP-active signal")
         first.sendall(b"DCTM " + first_sid + b" " + second_sid +
@@ -226,20 +238,26 @@ def main():
     parser.add_argument("--smoke-only", action="store_true",
                         help="post-restart CA/SAN, guest login and forbidden-port checks")
     args = parser.parse_args()
-    base.assert_dns()
-    check_forbidden_ports()
+    def step(name, check):
+        try:
+            return check()
+        except (OSError, RuntimeError, ssl.SSLError, subprocess.SubprocessError) as error:
+            raise RuntimeError(f"stage={name}: {error}") from None
+
+    step("dns", base.assert_dns)
+    step("public-ports", check_forbidden_ports)
     if args.smoke_only:
         context = ssl.create_default_context()
-        peer, _ = base.connect_guest(context, b"StageIIIPostRestart", 109)
+        peer, _ = step("post-restart-guest-login", lambda: base.connect_guest(context, b"StageIIIPostRestart", 109))
         peer.close()
         print("STAGE3_EXTERNAL_POST_RESTART_TLS_GUEST_AND_PORTS_PASS")
         return
-    check_prelogin_message_denied()
-    check_two_client_protocol()
-    check_real_ncdc()
+    step("pre-login-denial", check_prelogin_message_denied)
+    step("two-client-protocol", check_two_client_protocol)
+    step("real-ncdc", check_real_ncdc)
     for seed in range(110, 113):
         context = ssl.create_default_context()
-        peer, _ = base.connect_guest(context, b"StageIIIReconnect", seed)
+        peer, _ = step("guest-reconnect", lambda: base.connect_guest(context, b"StageIIIReconnect", seed))
         peer.close()
     print("STAGE3_EXTERNAL_NCDC_CHAT_SEARCH_RES_CTM_RCM_RECONNECT_PORTS_PASS")
 
