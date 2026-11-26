@@ -39,6 +39,8 @@ def check_no_custom_workers(errors):
             {"747585786", "self-hosted"},
         Path(".github/workflows/debian13-stage3-adcs-preflight.yml"):
             {"747585786", "github-runner", "self-hosted"},
+        Path(".github/workflows/debian13-stage3-adcs-activation.yml"):
+            {"747585786", "github-runner", "self-hosted"},
     }
     needles = (
         "contabo",
@@ -129,6 +131,37 @@ def check_no_custom_workers(errors):
             not re.search(r"(?m)^\s*sudo\s+(?!-n\s)", stage3),
             "debian13-stage3-adcs-preflight.yml: sudo must remain limited to two reviewed read-only calls",
             errors)
+    activation = (ROOT / ".github/workflows/debian13-stage3-adcs-activation.yml").read_text(encoding="utf-8")
+    for required in (
+        "  workflow_dispatch:",
+        "github.repository == 'adrianf87/dc24h.eu-twilight'",
+        "github.actor == 'adrianf87'",
+        "github.ref == 'refs/heads/main'",
+        "runs-on: [self-hosted, linux, x64, twilight-debian13-stage2]",
+        "test \"$OWNER_CONFIRMATION\" = 'RUN_STAGE3_PUBLIC_ADCS_ACTIVATION'",
+        "test \"$OWNER_CONFIRMATION\" = 'RUN_STAGE3_PUBLIC_ADCS_ROLLBACK'",
+        "test \"$RUNNER_NAME\" = 'server-747585786'",
+        "test \"$(id -un)\" = 'github-runner'",
+        "test \"$(sudo -n id -u)\" = '0'",
+        "test \"$(git rev-parse HEAD)\" = \"$EXPECTED_SHA\"",
+        "provider_tcp_1512_confirmed:",
+        "tls_renewal_plan_confirmed:",
+        "persist-credentials: false",
+        "contents: read",
+        "runs-on: ubuntu-24.04",
+        "sudo -n python3 scripts/public_stage3_adcs_preflight.py",
+        "sudo -n python3 scripts/public_stage3_adcs_activate.py",
+        "needs.external.result != 'success'",
+        "test -n \"$DEPLOYED_SHA\"",
+    ):
+        require(required in activation,
+                f"debian13-stage3-adcs-activation.yml: missing public OWNER/rollback safeguard {required!r}", errors)
+    for forbidden in ("  pull_request:", "  push:", "apt install", "dpkg -i", "nft add", "ufw allow"):
+        require(forbidden not in activation,
+                f"debian13-stage3-adcs-activation.yml: forbidden trigger or firewall change {forbidden!r}", errors)
+    require(activation.count("sudo -n ") == 6 and
+            not re.search(r"(?m)^\s*sudo\s+(?!-n\s)", activation),
+            "debian13-stage3-adcs-activation.yml: sudo must be limited to six reviewed calls", errors)
     actionlint = (ROOT / ".github" / "actionlint.yaml").read_text(encoding="utf-8")
     require("server-747585786" not in actionlint,
             "actionlint.yaml: custom runner label remains", errors)
