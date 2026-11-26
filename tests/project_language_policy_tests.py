@@ -18,6 +18,11 @@ class ProjectLanguagePolicyTests(unittest.TestCase):
         pl = {Path("README.md")}
         self.assertEqual(documentation_language_mismatches(us, pl), ([], []))
 
+    def test_stage_iii_qualification_may_be_us_only(self):
+        us = {Path("README.md"), Path("PUBLIC_STAGE_III_QUALIFICATION.md")}
+        pl = {Path("README.md")}
+        self.assertEqual(documentation_language_mismatches(us, pl), ([], []))
+
     def test_unrelated_us_only_document_remains_rejected(self):
         us = {Path("README.md"), Path("UNREVIEWED_NEW_GUIDE.md")}
         pl = {Path("README.md")}
@@ -31,15 +36,16 @@ class ProjectLanguagePolicyTests(unittest.TestCase):
                          ([], [Path("UNREVIEWED_PL_GUIDE.md")]))
 
     def test_nested_name_does_not_inherit_exception(self):
-        for name in ("PUBLIC_STAGE_II_DEBIAN13.md", "PUBLIC_STAGE_III_ADCS.md"):
+        for name in ("PUBLIC_STAGE_II_DEBIAN13.md", "PUBLIC_STAGE_III_ADCS.md", "PUBLIC_STAGE_III_QUALIFICATION.md"):
             with self.subTest(name=name):
                 nested = Path("nested") / name
                 self.assertEqual(documentation_language_mismatches({nested}, set()), ([nested], []))
 
-    def test_exceptions_are_exactly_two_reviewed_runbooks(self):
+    def test_exceptions_are_exactly_three_reviewed_runbooks(self):
         self.assertEqual(US_ONLY_DOCUMENTS, frozenset({
             Path("PUBLIC_STAGE_II_DEBIAN13.md"),
             Path("PUBLIC_STAGE_III_ADCS.md"),
+            Path("PUBLIC_STAGE_III_QUALIFICATION.md"),
         }))
 
     def test_matching_localized_pairs_still_pass(self):
