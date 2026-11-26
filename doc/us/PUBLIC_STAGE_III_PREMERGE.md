@@ -1,5 +1,7 @@
 # Stage III exact-commit workflow and evidence
 
+**CURRENT OWNER SCOPE (2026-11-27):** Only existing GitHub-hosted CI and formal OWNER review remain Stage III acceptance gates. Do **not** dispatch a new external/latest-SHA public DNS A/PTR or ADCS snapshot, real DC++ client test, or Contabo ingress/firewall/port test. They are explicitly excluded, as are controlled VPS and live ADCS restarts. The extended/snapshot commands below describe **historical, reusable workflow capabilities only** and are **not instructions to run them for this Stage III qualification**. Retain separate `OWNER STAGE III ACCEPTANCE GO` and `OWNER MERGE GO` before merge. [Current checklist](PUBLIC_STAGE_III_QUALIFICATION.md).
+
 The public guest hub is `adcs://server-747585786.dc24h.eu:1512` at
 `62.171.156.32`. [Stage III qualification report](PUBLIC_STAGE_III_QUALIFICATION.md).
 
@@ -19,8 +21,8 @@ the upstream repository, independent Ubuntu 24.04 jobs verify public DNS/TLS,
 the bounded public TCP set, real ncdc, and two independent guest sessions.
 The public guest jobs require successful loopback and public identity
 prerequisites. Missing, failed, or incomplete evidence blocks the gate for
-required jobs. Before merge, use the OWNER snapshot for public evidence at
-the exact candidate SHA.
+required jobs. The former premerge OWNER public snapshot is **withdrawn from this Stage III
+scope**; do not dispatch it. PR CI evidence is evaluated for the current head.
 
 The evidence job downloads immutable Actions artifacts and publishes the
 checksummed `stage3-qualification-report-<attempt>` artifact. Download
@@ -51,7 +53,8 @@ gh workflow run debian13-stage3-full-qualification.yml \
 Record the workflow run URL, exact SHA and expected duration. While queued or
 running, record **PENDING**. On completion review
 `stage3-extended-evidence-<attempt>` from the run's Artifacts section.
-Record the exact-SHA isolated CI and public snapshot results alongside it.
+Existing historical public snapshot evidence may be cited as historical only;
+do not request a new snapshot for this Stage III acceptance.
 
 ## OWNER before/after snapshot
 
@@ -66,8 +69,8 @@ The snapshot produces the `stage3-external-snapshot-<phase>-<attempt>` artifact.
 **OWNER exception:** A controlled reboot of the Debian 13 VPS and an intentional
 restart of the live ADCS service are removed from the Stage III test plan.
 Do not use the before/after snapshot feature to schedule those tests.
-A non-disruptive external snapshot may still be used. Missing restart evidence
-is not a qualification blocker and is not a PASS.
+A new external snapshot is also excluded from this Stage III acceptance.
+Missing external and restart evidence is neither a blocker nor a PASS.
 
 The main ref is available for this workflow after an explicitly authorized
 merge. Each run provides evidence for the checked-out commit. The final
