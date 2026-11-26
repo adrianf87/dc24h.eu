@@ -189,7 +189,10 @@ class SystemdSandboxTests(unittest.TestCase):
             unit.write_text(self.text.replace(
                 "ExecStart=/usr/local/bin/dc24h-twilight ", f"ExecStart={BINARY} ", 1), encoding="utf-8")
             self.assertIn(command, unit.read_text(encoding="utf-8"))
-            verified = run(["systemd-analyze", "verify", str(unit)], check=False)
+            # System-mode verification reads paths that older Ubuntu
+            # releases restrict to root. The verifier never starts the unit.
+            verify = ["systemd-analyze", "--man=no", "--generators=no", "verify", str(unit)]
+            verified = run([*(self.host_tools or []), *verify], check=False)
             self.assertEqual(verified.returncode, 0, verified.stderr)
             self.assertNotIn("Failed", verified.stderr)
             private = root / "root"

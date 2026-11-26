@@ -109,7 +109,15 @@ def sandbox(suite, sudo_result):
             require(text.count("ExecStart=/usr/local/bin/dc24h-twilight ") == 1,
                     "Service example ExecStart was unexpected")
             unit.write_text(text.replace("ExecStart=/usr/local/bin/dc24h-twilight ", "ExecStart=/bin/true ", 1))
-            verified = execute("systemd-analyze", "verify", str(unit), timeout=20)
+            command = ["systemd-analyze", "--man=no", "--generators=no", "verify", str(unit)]
+            if suite.image != "local":
+                if os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted":
+                    raise Blocked("System-mode unit inspection requires the disposable Ubuntu runner")
+                # Older systemd needs access to the system unit load paths.
+                # Only the packaged, offline verifier is elevated. Treat the
+                # unit as input data and never load it into the system manager.
+                command[:0] = ["sudo", "-n", "--"]
+            verified = execute(*command, timeout=20)
             require(b"Failed" not in verified.stderr, "systemd-analyze reported failed unit validation")
 
 

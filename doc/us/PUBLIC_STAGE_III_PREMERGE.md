@@ -10,8 +10,8 @@ candidate head SHA. The offline build, full relevant CTest suite, systemd
 example verification, two-client loopback, TLS fixtures and stability tests
 use GitHub-hosted Ubuntu 22.04, 24.04 and 26.04. Fixed package and systemd
 commands run inside the temporary VMs. The CTest systemd fixture invokes
-packaged system tools for isolated transient units and runs the candidate hub
-under an unprivileged service account.
+packaged system tools for offline unit verification and isolated transient
+units. The candidate hub runs under an unprivileged service account.
 
 Independent Ubuntu 24.04 jobs verify public DNS/TLS, the bounded public TCP
 set, real ncdc and two independent guest sessions. The public guest jobs

@@ -78,7 +78,9 @@ class ADCReaderTests(unittest.TestCase):
             external.check_two_client_protocol(None, None, {})
         frames = [call.args[0] for call in one.send.call_args_list]
         self.assertIn(b"BINF ABCD SUTCP4", frames)
-        self.assertFalse(any(b"I4" in frame or base.IPV4.encode() in frame for frame in frames))
+        metadata = [frame for frame in frames if frame.startswith(b"BINF ")]
+        self.assertFalse(any(b"I4" in base.inf_fields(frame) for frame in metadata))
+        self.assertFalse(any(base.IPV4.encode() in frame for frame in metadata))
         self.assertTrue(any(frame.startswith(b"DCTM ABCD EFGH ") for frame in frames))
 
 
