@@ -41,6 +41,10 @@ def check_no_custom_workers(errors):
             {"747585786", "github-runner", "self-hosted"},
         Path(".github/workflows/debian13-stage3-adcs-activation.yml"):
             {"747585786", "github-runner", "self-hosted"},
+        Path("doc/us/PUBLIC_STAGE_III_QUALIFICATION.md"):
+            {"747585786", "github-runner", "self-hosted"},
+        Path(".github/workflows/debian13-stage3-full-qualification.yml"):
+            {"747585786", "github-runner", "self-hosted"},
     }
     needles = (
         "contabo",
@@ -162,6 +166,36 @@ def check_no_custom_workers(errors):
     require(activation.count("sudo -n ") == 6 and
             not re.search(r"(?m)^\s*sudo\s+(?!-n\s)", activation),
             "debian13-stage3-adcs-activation.yml: sudo must be limited to six reviewed calls", errors)
+    qualification = (ROOT / ".github/workflows/debian13-stage3-full-qualification.yml").read_text(encoding="utf-8")
+    for required in (
+        "  workflow_dispatch:",
+        "  pull_request:",
+        "if: github.event_name == 'pull_request'",
+        "runs-on: ubuntu-24.04",
+        "github.repository == 'adrianf87/dc24h.eu-twilight'",
+        "github.actor == 'adrianf87'",
+        "github.ref == 'refs/heads/main'",
+        "runs-on: [self-hosted, linux, x64, twilight-debian13-stage2]",
+        "inputs.confirmation == 'RUN_STAGE3_PUBLIC_QUALIFICATION'",
+        "inputs.production_restarts_ack == true",
+        "needs: external-before",
+        "test \"$RUNNER_NAME\" = \"server-747585786\"",
+        'test "$(id -un)" = "github-runner"',
+        'test "$(sudo -n id -u)" = "0"',
+        'test "$(git rev-parse HEAD)" = "$GITHUB_SHA"',
+        "persist-credentials: false",
+        "contents: read",
+        "sudo -n python3 scripts/public_stage3_qualification_host.py",
+        "python3 scripts/public_stage3_qualification_external.py",
+    ):
+        require(required in qualification,
+                f"debian13-stage3-full-qualification.yml: missing guarded Stage III requirement {required!r}", errors)
+    for forbidden in ("  push:", "systemctl enable", "dpkg -i", "ufw allow", "nft add"):
+        require(forbidden not in qualification,
+                f"debian13-stage3-full-qualification.yml: forbidden event or service policy {forbidden!r}", errors)
+    require(qualification.count("sudo -n ") == 2 and
+            not re.search(r"(?m)^\s*sudo\s+(?!-n\s|apt-get\s)", qualification),
+            "debian13-stage3-full-qualification.yml: privileged sudo must remain narrowly scoped", errors)
     actionlint = (ROOT / ".github" / "actionlint.yaml").read_text(encoding="utf-8")
     require("server-747585786" not in actionlint,
             "actionlint.yaml: custom runner label remains", errors)
