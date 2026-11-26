@@ -34,6 +34,11 @@ class QualificationPolicyTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "rejected"):
             reader.until(lambda frame: False, "denied")
 
+    def test_negative_prelogin_expected_denial_is_observable(self):
+        reader = external.Reader(FakePeer([b"ISTA 244 Login\\srequired\n"]))
+        self.assertTrue(reader.until(lambda frame: frame.startswith(b"ISTA 244 "),
+                                     "prelogin").startswith(b"ISTA 244 "))
+
     def test_forbidden_ports_are_explicit_and_bounded(self):
         self.assertIn(1511, external.FORBIDDEN_TCP)
         self.assertNotIn(1512, external.FORBIDDEN_TCP)
