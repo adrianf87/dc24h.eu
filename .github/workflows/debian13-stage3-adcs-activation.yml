@@ -45,7 +45,6 @@ jobs:
       OWNER_CONFIRMATION: ${{ inputs.confirmation }}
       PROVIDER_ACK: ${{ inputs.provider_tcp_1512_confirmed }}
       RENEWAL_ACK: ${{ inputs.tls_renewal_plan_confirmed }}
-      BUILD_DIR: ${{ runner.temp }}/stage3-public-adcs-${{ github.run_id }}
     steps:
       - name: Verify exact OWNER, main, dedicated runner and root identity
         shell: bash
@@ -82,6 +81,8 @@ jobs:
             --report "$RUNNER_TEMP/stage3-activation-preflight.json"
 
       - name: Build exact-head C++ hub unprivileged
+        env:
+          BUILD_DIR: ${{ runner.temp }}/stage3-public-adcs-${{ github.run_id }}
         shell: bash
         run: |
           set -euo pipefail
@@ -90,6 +91,8 @@ jobs:
           "$BUILD_DIR/dc24h-twilight" --version
 
       - name: OWNER-approved isolated systemd installation and public listener
+        env:
+          BUILD_DIR: ${{ runner.temp }}/stage3-public-adcs-${{ github.run_id }}
         shell: bash
         run: |
           set -euo pipefail
