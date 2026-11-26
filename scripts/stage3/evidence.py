@@ -100,8 +100,7 @@ CASES["two-client-public"] = {key: value for key, value in CASES["two-client"].i
 MANUAL = {
     "owner.dns.routing": "DNS-zone control, public IP or NAT mapping, provider and Debian firewall rules",
     "owner.exposure": "Approved SSH and HTTPS/ACME exceptions and administrative route inventory",
-    "owner.systemd": "Exact deployed identity, controlled restart, SSH, guest reconnect and rollback review",
-    "owner.certificate": "Actual certificate replacement and recovery evidence",
+    "owner.certificate": "Certificate renewal plan, staging validation and non-disruptive rollback evidence",
     "owner.dcplusplus": "Real DC++ on an independent client network",
     "owner.acceptance": "OWNER reviews exact-commit CI and manual evidence",
 }
