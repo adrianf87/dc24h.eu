@@ -89,6 +89,22 @@ jobs:
           python3 self-hosted-runner-debian13/tests/stage2_isolated_proof.py \
             --scratch-parent "$RUNNER_TEMP" > "$RUNNER_TEMP/stage2-synthetic-evidence.json"
 
+      # Match the pinned Node.js toolchain used by GitHub-hosted WebAdmin CI.
+      # setup-node modifies only this job's PATH; no host-wide npm/nvm install.
+      - name: Set up Node.js 22 for the isolated WebAdmin build
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '22'
+
+      - name: Verify the unprivileged runner Node.js toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -un)" = 'github-runner'
+          node -e "const v = process.versions.node.split('.').map(Number); if (v[0] !== 22 || v[1] < 12) { console.error('Expected Node.js 22.12+'); process.exit(1) }"
+          node --version
+          npm --version
+
       - name: Isolated exact-SHA Debian 13 C++ and WebAdmin build; no host install
         shell: bash
         run: |
