@@ -7,17 +7,23 @@
 - Python regression checks for Stage II preflight and US-only documentation
   policy, executed as the unprivileged `github-runner` account.
 - Small, sanitized JSON artifact reporting only the reviewed host/test shape.
+- After a separately reviewed merge and OWNER dispatch, exactly two
+  passwordless-sudo operations for the Stage II workflow: `sudo -n id -u` and
+  `sudo -n python3 scripts/public_stage2_preflight.py` (read-only inventory).
+- Non-root temporary-prefix C++/WebAdmin builds, a curated unprivileged CTest
+  subset, and synthetic backup/restore/rollback and process-exit monitoring.
 
 ## Not authorized
 
 - Automatic execution on `push`, `pull_request`, forks, or unreviewed code.
-- Invoking `sudo`, installing OS packages, enabling systemd units, changing
+- Any other use of `sudo`, installing OS packages, enabling systemd units, changing
   firewall/DNS/TLS, binding public listeners, or launching a public WebAdmin.
 - Reading, copying, migrating, or modifying `/var/lib/dc24h`, private MariaDB,
   auth keys, production configuration, audit state, or credentials.
 - Running maintenance or rollback commands against a real existing service.
-- Running networked dependency installers or broad CTest suites on a potentially
-  shared/production VPS without first proving isolation.
+- Running broad CTest suites with privileged systemd/dpkg integration on a
+  potentially shared/production VPS. The reviewed temporary WebAdmin build may
+  use `npm ci --ignore-scripts` without root, but must not install OS packages.
 - Treating the presence of a runner, its CPU count, or green supplemental tests
   as a release, production, or Stage II GO.
 
@@ -30,7 +36,14 @@
 3. OS must be Debian 13, systemd must be PID 1, and both old/new hub unit states
    must be known and inactive. Unknown process visibility or a running hub
    blocks the test.
-4. No `sudo` command is allowed, even though passwordless sudo is available.
+4. The original supplemental smoke workflow never uses `sudo`. The separate
+   Stage II workflow permits only the two reviewed noninteractive root checks
+   specified above; all other phases run as `github-runner`.
+   **This is a workflow policy, not an OS privilege restriction:** because the
+   account has passwordless sudo, a compromised build tool or npm dependency
+   could still escalate. The OWNER must confirm that this runner is disposable
+   and contains no production secrets/state before authorizing dispatch, or
+   restrict its sudoers permissions through a separately approved host change.
 5. Published output is limited to bounded, reviewed JSON with no raw addresses,
    secrets, journal contents, private paths, or user identifiers.
 

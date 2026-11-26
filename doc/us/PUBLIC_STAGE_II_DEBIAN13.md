@@ -7,9 +7,17 @@
 **Supplemental runner:** The OWNER has designated a Debian 13 VPS runner for
 future manual, non-production source and environment checks. See the
 [runner profile and safety policy](../../self-hosted-runner-debian13/README.md).
-The proposed self-hosted workflow is OWNER-triggered only and cannot run until
-its workflow definition is separately approved on protected `main`. It does not
-replace the isolated install, systemd, backup/restore, and rollback requirements.
+The source-smoke workflow is OWNER-triggered and available on protected `main`.
+Its first read-only run qualified the runner identity and basic environment,
+but it does not replace installation, systemd, backup/restore, or rollback proof.
+
+The OWNER subsequently authorized controlled passwordless `sudo` for the
+`github-runner` account. A separate, proposed manual Stage II qualification
+workflow uses it **only** for read-only privileged inventory; C++/WebAdmin
+builds, temporary-prefix installation, synthetic backup/restore/rollback, and
+monitoring checks remain unprivileged. It must pass review and be merged to
+`main` before dispatch. Real service activation/conflict, private-state
+recovery, power-loss and production RPO/RTO tests remain outside this VPS job.
 
 Stage I's isolated Debian 13/ncdc evidence and OWNER acceptance are recorded in [the acceptance report](../../logs/tests/DEBIAN13-STAGE-I-FINAL-ACCEPTANCE.md). Stage II is a **separate** operating-system installation and recovery qualification; green CI and an inert `.deb` fixture do not certify an existing Debian host.
 
