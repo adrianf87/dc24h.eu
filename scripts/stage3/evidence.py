@@ -99,11 +99,8 @@ CASES["two-client-public"] = {key: value for key, value in CASES["two-client"].i
                             if key != "guests.permissions"}
 
 MANUAL = {
-    "owner.dns.routing": "OWNER domain attestation, independent DNS A/PTR, separate zone-control proof, public routing and provider/host firewall policy",
-    "owner.exposure": "Approved SSH and HTTPS/ACME exceptions and administrative route inventory",
     "owner.certificate": "Certificate renewal plan, staging validation and non-disruptive rollback evidence",
-    "owner.dcplusplus": "Real DC++ on an independent client network",
-    "owner.acceptance": "OWNER reviews exact-commit CI and manual evidence",
+    "owner.acceptance": "OWNER reviews completed exact-head CI and issues separate Stage III acceptance and merge decisions",
 }
 
 
