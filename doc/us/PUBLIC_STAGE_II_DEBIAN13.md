@@ -8,12 +8,12 @@ Stage I's isolated Debian 13/ncdc evidence and OWNER acceptance are recorded in 
 
 ## 1. Safe host inventory: the first deliverable
 
-`scripts/public_stage2_preflight.py` is **read-only** and prints a bounded JSON document to stdout. Run it only on a host the OWNER has authorized for inventory, with a pinned, previously reviewed checkout:
+`scripts/public_stage2_preflight.py` is **read-only** and prints a bounded JSON document to stdout. Run it only on a host the OWNER has authorized for inventory, with a pinned, previously reviewed checkout. Complete process and metadata visibility requires root privileges; non-root inventory fails closed:
 
 ```sh
 stage2_sha="<exact-40-character-review-sha>"
-git checkout --detach "$stage2_sha"
-python3 scripts/public_stage2_preflight.py --source-dir . --expected-sha "$stage2_sha"
+test "$(git rev-parse HEAD)" = "$stage2_sha" || exit 2
+sudo python3 scripts/public_stage2_preflight.py --source-dir . --expected-sha "$stage2_sha"
 ```
 
 The script does **not** write files, install packages, start/stop services, query private databases, read secrets, create approval markers or change listeners. It captures:
@@ -25,7 +25,7 @@ The script does **not** write files, install packages, start/stop services, quer
 - Network address-family counts only (no IP values or raw interfaces). External address/NAT ownership **cannot** be established by the script.
 - Exact source unit `Conflicts`, OWNER approval-marker guard and WebAdmin v1 `server.name` identity.
 
-Exit code **0** means inventory is collected and contains no known blockers (`INVENTORY_CLEAR`); it is **not an installation or activation GO**. Exit code **2** and `BLOCKED` mean a missing precondition/unknown service state. The report's `production_go`, `private_state_migration_go` and `public_listener_go` fields are **always `false`**. Redact and review the report before uploading; avoid publishing UID/GID values if your disclosure policy disallows them.
+Exit code **0** means inventory is collected and contains no known blockers (`INVENTORY_CLEAR`); it is **not an installation or activation GO**. Exit code **2** and `BLOCKED` mean a missing precondition/unknown service state. Insufficient privileges, unreadable marker/path metadata or a transitional unit state also block the result. The report's `production_go`, `private_state_migration_go` and `public_listener_go` fields are **always `false`**. Redact and review the report before uploading; avoid publishing UID/GID values if your disclosure policy disallows them.
 
 The known public IPv4 `51.255.80.233` can be a routed/NAT address; do not bind to it without an independent network/topology review. The host inventory is not a port scan and must not be presented as proof of Internet reachability.
 

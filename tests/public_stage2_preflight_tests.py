@@ -20,12 +20,14 @@ def good_report():
     return {
         "source": {"matches_expected": True},
         "host": {"os_id": "debian", "os_major": "13",
-                 "systemd_pid1": True, "systemd_manager": True},
+                 "systemd_pid1": True, "systemd_manager": True,
+                 "elevated_inventory": True},
         "services": {name: {"active": "inactive"} for name in preflight.SERVICES},
         "processes": {name: 0 for name in preflight.HUB_PROCESSES},
         "paths": {name: {"type": "missing"} for name in preflight.STABLE_PATHS},
         "tools": {name: True for name in preflight.REQUIRED_TOOLS},
         "guards": {"operator_marker_exists": False,
+                   "operator_marker_status_known": True,
                    "template_contract_valid": True},
     }
 
@@ -42,7 +44,8 @@ class PublicStage2PreflightTests(unittest.TestCase):
         for changed, code in (
             ({"source": {"matches_expected": False}}, "SOURCE_SHA_MISMATCH"),
             ({"host": {"os_id": "ubuntu", "os_major": "24",
-                       "systemd_pid1": True, "systemd_manager": True}}, "DEBIAN_13_REQUIRED"),
+                       "systemd_pid1": True, "systemd_manager": True,
+                       "elevated_inventory": True}}, "DEBIAN_13_REQUIRED"),
         ):
             with self.subTest(code=code):
                 report = good_report()
@@ -53,6 +56,22 @@ class PublicStage2PreflightTests(unittest.TestCase):
         report = good_report()
         report["host"]["systemd_manager"] = False
         self.assertIn("SYSTEMD_MANAGER_UNAVAILABLE", preflight.assess(report)["findings"])
+
+    def test_nonroot_inventory_and_unreadable_marker_fail_closed(self):
+        report = good_report()
+        report["host"]["elevated_inventory"] = False
+        report["guards"]["operator_marker_status_known"] = False
+        problems = preflight.assess(report)["findings"]
+        self.assertIn("INVENTORY_REQUIRES_ROOT", problems)
+        self.assertIn("MARKER_STATUS_UNKNOWN", problems)
+
+    def test_transitional_systemd_unit_and_unreadable_path_fail_closed(self):
+        report = good_report()
+        report["services"]["dc24h-twilight.service"]["active"] = "activating"
+        report["paths"]["/var/lib/dc24h"] = {"type": "unavailable"}
+        problems = preflight.assess(report)["findings"]
+        self.assertIn("SERVICE_NOT_INACTIVE:dc24h-twilight.service", problems)
+        self.assertIn("PATH_METADATA_UNAVAILABLE:/var/lib/dc24h", problems)
 
     def test_live_old_or_new_service_blocks_inventory(self):
         for name in preflight.SERVICES:

@@ -8,12 +8,12 @@ Etap I ma [zaakceptowany raport Debian 13/ncdc](../../logs/tests/DEBIAN13-STAGE-
 
 ## 1. Pierwsza część — bezpieczna inwentaryzacja
 
-`scripts/public_stage2_preflight.py` **niczego nie zapisuje** i zwraca ograniczony raport JSON na stdout. Uruchom na hoście zaakceptowanym przez OWNER do inwentaryzacji, ze sprawdzonego commita:
+`scripts/public_stage2_preflight.py` **niczego nie zapisuje** i zwraca ograniczony raport JSON na stdout. Uruchom na hoście zaakceptowanym przez OWNER do inwentaryzacji, z wcześniej sprawdzonego i przygotowanego checkoutu. Kompletny odczyt procesów i metadanych wymaga uprawnień roota; bez nich preflight blokuje odbiór:
 
 ```sh
 stage2_sha="<zatwierdzony-dokladny-40-znakowy-sha>"
-git checkout --detach "$stage2_sha"
-python3 scripts/public_stage2_preflight.py --source-dir . --expected-sha "$stage2_sha"
+test "$(git rev-parse HEAD)" = "$stage2_sha" || exit 2
+sudo python3 scripts/public_stage2_preflight.py --source-dir . --expected-sha "$stage2_sha"
 ```
 
 Preflight nie instaluje pakietów, nie zatrzymuje usług, nie czyta sekretów ani prywatnej bazy, nie tworzy znacznika zgody i nie zmienia listenerów. Sprawdza:
@@ -25,7 +25,7 @@ Preflight nie instaluje pakietów, nie zatrzymuje usług, nie czyta sekretów an
 - Liczby adresów IPv4/IPv6, **bez ujawniania IP**. Topologia NAT i rzeczywisty dostęp z Internetu wymagają osobnego sprawdzenia.
 - Kontrakt przykładowej jednostki: `Conflicts`, znacznik zgody i ścieżki; zgodność `server.name` WebAdmin ze źródłem.
 
-Kod wyjścia **0** oznacza wyłącznie kompletną inwentaryzację bez wykrytych blokerów (`INVENTORY_CLEAR`), **nie** zgodę na instalację. Kod **2** (`BLOCKED`) oznacza brak warunku lub nieznany stan usługi. Pola `production_go`, `private_state_migration_go`, `public_listener_go` są zawsze `false`. Przed dodaniem raportu na GitHub sprawdź jego redakcję, w tym czy wolno opublikować lokalne UID/GID.
+Kod wyjścia **0** oznacza wyłącznie kompletną inwentaryzację bez wykrytych blokerów (`INVENTORY_CLEAR`), **nie** zgodę na instalację. Kod **2** (`BLOCKED`) oznacza brak warunku lub nieznany stan usługi. Brak uprawnień, nieczytelny znacznik/ścieżka lub przejściowy stan usługi także blokuje wynik. Pola `production_go`, `private_state_migration_go`, `public_listener_go` są zawsze `false`. Przed dodaniem raportu na GitHub sprawdź jego redakcję, w tym czy wolno opublikować lokalne UID/GID.
 
 Adres `51.255.80.233` może być trasowany lub mieć NAT. Nie zakładaj, że jest adresem interfejsu VPS; preflight nie jest testem portów publicznych.
 

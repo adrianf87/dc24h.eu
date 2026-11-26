@@ -41,8 +41,11 @@ def command(args):
 def path_metadata(name):
     try:
         item = os.lstat(name)  # Deliberately never follow links to private data.
-    except (OSError, ValueError):
+    except FileNotFoundError:
         return {"type": "missing"}
+    except (OSError, ValueError):
+        # EACCES must not be confused with a missing file (fail closed).
+        return {"type": "unavailable"}
     kind = ("symlink" if stat.S_ISLNK(item.st_mode) else
             "directory" if stat.S_ISDIR(item.st_mode) else
             "file" if stat.S_ISREG(item.st_mode) else "other")
@@ -133,21 +136,29 @@ def assess(report):
         block("DEBIAN_13_REQUIRED")
     if not report["host"]["systemd_pid1"] or not report["host"]["systemd_manager"]:
         block("SYSTEMD_MANAGER_UNAVAILABLE")
+    if not report["host"].get("elevated_inventory", False):
+        block("INVENTORY_REQUIRES_ROOT")
     if not report["guards"]["template_contract_valid"]:
         block("UNIT_OR_STATUS_CONTRACT_MISMATCH")
     if report["guards"]["operator_marker_exists"]:
         block("EXISTING_MARKER_REQUIRES_OWNER_REVIEW")
+    if not report["guards"].get("operator_marker_status_known", False):
+        block("MARKER_STATUS_UNKNOWN")
     for name, unit in report["services"].items():
         if unit["active"] == "active":
             block("LIVE_HUB_SERVICE_PRESENT:" + name)
-        if unit["active"] == "unknown":
+        elif unit["active"] == "unknown":
             block("SERVICE_STATUS_UNKNOWN:" + name)
+        elif unit["active"] != "inactive":
+            block("SERVICE_NOT_INACTIVE:" + name)
     for name, number in report["processes"].items():
         if number is None or number > 0:
             block("HUB_PROCESS_PRESENT_OR_UNVERIFIED:" + name)
     for name, metadata in report["paths"].items():
         if metadata["type"] == "symlink":
             block("SYMLINK_REQUIRES_REVIEW:" + name)
+        elif metadata["type"] == "unavailable":
+            block("PATH_METADATA_UNAVAILABLE:" + name)
     if any(not report["tools"][tool] for tool in REQUIRED_TOOLS):
         block("REQUIRED_TOOL_MISSING")
 
@@ -175,6 +186,7 @@ def inventory(source, expected):
         pid1 = Path("/proc/1/comm").read_text(encoding="utf-8").strip()
     except OSError:
         pass
+    marker_meta = path_metadata(MARKER)
     report = {
         "schema": 1, "stage": "public-stage-ii-debian13", "scope": "READ_ONLY_INVENTORY",
         "source": {"expected_sha": expected, "actual_sha": sha,
@@ -183,6 +195,7 @@ def inventory(source, expected):
                  "os_major": os_release.get("VERSION_ID", "unknown").split(".")[0],
                  "kernel": os.uname().release, "architecture": os.uname().machine,
                  "cpus": os.cpu_count(), "systemd_pid1": pid1 == "systemd",
+                 "elevated_inventory": os.geteuid() == 0,
                  "systemd_manager": command(("systemctl", "show", "-p", "Version", "--value")) is not None},
         "network": network_summary(),
         "tools": {tool: shutil.which(tool) is not None
@@ -190,7 +203,8 @@ def inventory(source, expected):
         "services": {name: systemd_unit(name) for name in SERVICES},
         "processes": process_counts(),
         "paths": {name: path_metadata(name) for name in STABLE_PATHS},
-        "guards": {"operator_marker_exists": os.path.lexists(MARKER),
+        "guards": {"operator_marker_exists": marker_meta["type"] != "missing",
+                   "operator_marker_status_known": marker_meta["type"] != "unavailable",
                    "template_contract_valid": template_contract(source)},
     }
     return assess(report)
