@@ -259,9 +259,9 @@ def report(args):
                  for row in unresolved)
     if args.mode == "pr":
         title.append("- Public TLS, exposure, ncdc, and two-client checks are NOT TESTED in pull request CI. "
-                     "Use exact-SHA evidence from protected main or an OWNER-dispatched snapshot.")
+                     "They are explicitly excluded from Stage III completion by OWNER; do not dispatch a snapshot.")
     if args.mode in {"pr", "main"}:
-        title.append("- Extended OWNER workflow evidence is recorded in a separate run.")
+        title.append("- Earlier extended stability evidence is archival; no new OWNER dispatch is required for this Stage III scope.")
     if not (unresolved or issues) and args.mode == "extended":
         title.append("All extended automated results passed.")
     title += ["", "## Manual OWNER evidence", "", "| Check | Result |", "| --- | --- |"]
