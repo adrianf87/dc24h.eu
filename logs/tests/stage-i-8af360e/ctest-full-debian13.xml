@@ -1,0 +1,1673 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuite name="Linux-c++" tests="260" failures="0" disabled="0" skipped="0" time="107" timestamp="2026-11-26T02:58:07">
+  <testcase name="ci.junit.summary" classname="ci.junit.summary" time="0.086511" status="run">
+    <properties />
+    <system-out>....
+----------------------------------------------------------------------
+Ran 4 tests in 0.028s
+OK
+</system-out>
+  </testcase>
+  <testcase name="beta.06.ci.provenance" classname="beta.06.ci.provenance" time="0.0462291" status="run">
+    <properties />
+    <system-out>.......
+----------------------------------------------------------------------
+Ran 7 tests in 0.000s
+OK
+</system-out>
+  </testcase>
+  <testcase name="beta.06.auth.gate" classname="beta.06.auth.gate" time="0.0441161" status="run">
+    <properties />
+    <system-out>...
+----------------------------------------------------------------------
+Ran 3 tests in 0.001s
+OK
+</system-out>
+  </testcase>
+  <testcase name="beta.06.token.rotation" classname="beta.06.token.rotation" time="0.069738" status="run">
+    <properties />
+    <system-out>...
+----------------------------------------------------------------------
+Ran 3 tests in 0.005s
+OK
+</system-out>
+  </testcase>
+  <testcase name="ci.timing.summary" classname="ci.timing.summary" time="0.0950057" status="run">
+    <properties />
+    <system-out>....
+----------------------------------------------------------------------
+Ran 4 tests in 0.031s
+OK
+</system-out>
+  </testcase>
+  <testcase name="beta.05.stage1.perf.gate" classname="beta.05.stage1.perf.gate" time="0.058862" status="run">
+    <properties />
+    <system-out>.....
+----------------------------------------------------------------------
+Ran 5 tests in 0.002s
+OK
+</system-out>
+  </testcase>
+  <testcase name="beta.05.stage4.endurance.gate" classname="beta.05.stage4.endurance.gate" time="0.054072" status="run">
+    <properties />
+    <system-out>......
+----------------------------------------------------------------------
+Ran 6 tests in 0.002s
+OK
+</system-out>
+  </testcase>
+  <testcase name="beta.05.stage1.recovery.pair" classname="beta.05.stage1.recovery.pair" time="0.0910664" status="run">
+    <properties />
+    <system-out>....
+----------------------------------------------------------------------
+Ran 4 tests in 0.035s
+OK
+</system-out>
+  </testcase>
+  <testcase name="beta.07.recovery.preflight" classname="beta.07.recovery.preflight" time="0.247007" status="run">
+    <properties />
+    <system-out>..............
+----------------------------------------------------------------------
+Ran 14 tests in 0.142s
+OK
+</system-out>
+  </testcase>
+  <testcase name="beta.07.recovery.offline.capture" classname="beta.07.recovery.offline.capture" time="0.119966" status="run">
+    <properties />
+    <system-out>...
+----------------------------------------------------------------------
+Ran 3 tests in 0.005s
+OK
+</system-out>
+  </testcase>
+  <testcase name="beta.07.ci.deb.prototype" classname="beta.07.ci.deb.prototype" time="0.290049" status="run">
+    <properties />
+    <system-out>......
+----------------------------------------------------------------------
+Ran 6 tests in 0.239s
+OK
+</system-out>
+  </testcase>
+  <testcase name="beta.07.supply.chain" classname="beta.07.supply.chain" time="0.112798" status="run">
+    <properties />
+    <system-out>....
+----------------------------------------------------------------------
+Ran 4 tests in 0.008s
+OK
+</system-out>
+  </testcase>
+  <testcase name="beta.07.ubuntu.perf.matrix" classname="beta.07.ubuntu.perf.matrix" time="0.0602114" status="run">
+    <properties />
+    <system-out>..
+----------------------------------------------------------------------
+Ran 2 tests in 0.003s
+OK
+</system-out>
+  </testcase>
+  <testcase name="beta.07.stage1.completion.gate" classname="beta.07.stage1.completion.gate" time="0.048403" status="run">
+    <properties />
+    <system-out>..
+----------------------------------------------------------------------
+Ran 2 tests in 0.001s
+OK
+</system-out>
+  </testcase>
+  <testcase name="integration.ncdc_ports" classname="integration.ncdc_ports" time="0.096586" status="run">
+    <properties />
+    <system-out>.....
+----------------------------------------------------------------------
+Ran 5 tests in 0.002s
+OK
+</system-out>
+  </testcase>
+  <testcase name="project.metadata" classname="project.metadata" time="0.204351" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="twilight.stage3.branding" classname="twilight.stage3.branding" time="0.0399127" status="run">
+    <properties />
+    <system-out>....
+----------------------------------------------------------------------
+Ran 4 tests in 0.001s
+OK
+</system-out>
+  </testcase>
+  <testcase name="twilight.stage4.technical_identity" classname="twilight.stage4.technical_identity" time="0.058108" status="run">
+    <properties />
+    <system-out>.......
+----------------------------------------------------------------------
+Ran 7 tests in 0.002s
+OK
+</system-out>
+  </testcase>
+  <testcase name="dependencies.audit" classname="dependencies.audit" time="0.048384" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="security.threat_model" classname="security.threat_model" time="0.0268113" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="beta.baseline" classname="beta.baseline" time="0.100776" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="remote.gateway.config" classname="remote.gateway.config" time="0.0510987" status="run">
+    <properties />
+    <system-out>....
+----------------------------------------------------------------------
+Ran 4 tests in 0.002s
+OK
+</system-out>
+  </testcase>
+  <testcase name="remote.pilot.preflight" classname="remote.pilot.preflight" time="0.121901" status="run">
+    <properties />
+    <system-out>.....
+----------------------------------------------------------------------
+Ran 5 tests in 0.048s
+OK
+</system-out>
+  </testcase>
+  <testcase name="beta.release.gate" classname="beta.release.gate" time="0.0588288" status="run">
+    <properties />
+    <system-out>....
+----------------------------------------------------------------------
+Ran 4 tests in 0.002s
+OK
+</system-out>
+  </testcase>
+  <testcase name="beta.04.stage1" classname="beta.04.stage1" time="0.0473447" status="run">
+    <properties />
+    <system-out>....
+----------------------------------------------------------------------
+Ran 4 tests in 0.001s
+OK
+</system-out>
+  </testcase>
+  <testcase name="beta.04.stage4.perf.command" classname="beta.04.stage4.perf.command" time="0.112732" status="run">
+    <properties />
+    <system-out>.....
+----------------------------------------------------------------------
+Ran 5 tests in 0.008s
+OK
+</system-out>
+  </testcase>
+  <testcase name="beta.04.stage4.recovery" classname="beta.04.stage4.recovery" time="0.177632" status="run">
+    <properties />
+    <system-out>..................
+----------------------------------------------------------------------
+Ran 18 tests in 0.082s
+OK
+</system-out>
+  </testcase>
+  <testcase name="beta.04.stage4.release" classname="beta.04.stage4.release" time="0.0485424" status="run">
+    <properties />
+    <system-out>.....
+----------------------------------------------------------------------
+Ran 5 tests in 0.001s
+OK
+</system-out>
+  </testcase>
+  <testcase name="beta.04.stage4.vm.probe" classname="beta.04.stage4.vm.probe" time="5.76538" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 5.704s
+OK
+</system-out>
+  </testcase>
+  <testcase name="service.controller.process" classname="service.controller.process" time="0.179686" status="run">
+    <properties />
+    <system-out>....
+----------------------------------------------------------------------
+Ran 4 tests in 0.123s
+OK
+</system-out>
+  </testcase>
+  <testcase name="configuration.policy.process" classname="configuration.policy.process" time="0.136849" status="run">
+    <properties />
+    <system-out>...
+----------------------------------------------------------------------
+Ran 3 tests in 0.087s
+OK
+</system-out>
+  </testcase>
+  <testcase name="database.catalog" classname="database.catalog" time="0.265642" status="run">
+    <properties />
+    <system-out>.....
+----------------------------------------------------------------------
+Ran 5 tests in 0.214s
+OK
+</system-out>
+  </testcase>
+  <testcase name="core.lifecycle" classname="core.lifecycle" time="0.198938" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="core.process" classname="core.process" time="0.206466" status="run">
+    <properties />
+    <system-out>........
+----------------------------------------------------------------------
+Ran 8 tests in 0.165s
+OK
+</system-out>
+  </testcase>
+  <testcase name="network.unit" classname="network.unit" time="0.0144342" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="network.process" classname="network.process" time="3.8371" status="run">
+    <properties />
+    <system-out>............
+----------------------------------------------------------------------
+Ran 12 tests in 3.780s
+OK
+</system-out>
+  </testcase>
+  <testcase name="adc.parser" classname="adc.parser" time="0.017036" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="adc.security" classname="adc.security" time="0.00711072" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="adc.sch" classname="adc.sch" time="0.00997615" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="adc.sch.process" classname="adc.sch.process" time="7.22305" status="run">
+    <properties />
+    <system-out>..
+----------------------------------------------------------------------
+Ran 2 tests in 7.126s
+OK
+</system-out>
+  </testcase>
+  <testcase name="adc.res" classname="adc.res" time="0.00770701" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="adc.res.process" classname="adc.res.process" time="2.64452" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.552s
+OK
+</system-out>
+  </testcase>
+  <testcase name="search.results" classname="search.results" time="0.0166284" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="search.results.process" classname="search.results.process" time="2.25153" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.171s
+OK
+</system-out>
+  </testcase>
+  <testcase name="search.connectivity" classname="search.connectivity" time="0.00775453" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="search.connectivity.process" classname="search.connectivity.process" time="2.55545" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.476s
+OK
+</system-out>
+  </testcase>
+  <testcase name="search.security" classname="search.security" time="0.00967259" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="search.security.process" classname="search.security.process" time="11.303" status="run">
+    <properties />
+    <system-out>....
+----------------------------------------------------------------------
+Ran 4 tests in 11.218s
+OK
+</system-out>
+  </testcase>
+  <testcase name="transfers.routing" classname="transfers.routing" time="0.00533013" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="transfers.routing.process" classname="transfers.routing.process" time="1.54521" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 1.461s
+OK
+</system-out>
+  </testcase>
+  <testcase name="transfers.configuration" classname="transfers.configuration" time="0.00598378" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="transfers.configuration.process" classname="transfers.configuration.process" time="43.6247" status="run">
+    <properties />
+    <system-out>.....
+----------------------------------------------------------------------
+Ran 5 tests in 43.533s
+OK
+</system-out>
+  </testcase>
+  <testcase name="transfers.statistics" classname="transfers.statistics" time="0.0196081" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="transfers.statistics.process" classname="transfers.statistics.process" time="3.30874" status="run">
+    <properties />
+    <system-out>..
+----------------------------------------------------------------------
+Ran 2 tests in 3.242s
+OK
+</system-out>
+  </testcase>
+  <testcase name="transfers.limits" classname="transfers.limits" time="0.00544461" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="transfers.limits.process" classname="transfers.limits.process" time="7.63611" status="run">
+    <properties />
+    <system-out>...
+----------------------------------------------------------------------
+Ran 3 tests in 7.551s
+OK
+</system-out>
+  </testcase>
+  <testcase name="transfers.errors" classname="transfers.errors" time="0.0595319" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="transfers.errors.process" classname="transfers.errors.process" time="3.90577" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 3.833s
+OK
+</system-out>
+  </testcase>
+  <testcase name="transfers.security" classname="transfers.security" time="0.0067637" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="transfers.security.process" classname="transfers.security.process" time="7.86562" status="run">
+    <properties />
+    <system-out>...
+----------------------------------------------------------------------
+Ran 3 tests in 7.786s
+OK
+</system-out>
+  </testcase>
+  <testcase name="transfers.tokens" classname="transfers.tokens" time="0.00897102" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="transfers.tokens.process" classname="transfers.tokens.process" time="10.9895" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 10.907s
+OK
+</system-out>
+  </testcase>
+  <testcase name="transfers.capabilities" classname="transfers.capabilities" time="0.00400159" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="transfers.capabilities.process" classname="transfers.capabilities.process" time="8.83725" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 8.759s
+OK
+</system-out>
+  </testcase>
+  <testcase name="transfers.protocol" classname="transfers.protocol" time="0.0040982" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="transfers.protocol.process" classname="transfers.protocol.process" time="8.47485" status="run">
+    <properties />
+    <system-out>..
+----------------------------------------------------------------------
+Ran 2 tests in 8.399s
+OK
+</system-out>
+  </testcase>
+  <testcase name="adc.rcm" classname="adc.rcm" time="0.00858675" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="adc.rcm.process" classname="adc.rcm.process" time="5.04775" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 4.968s
+OK
+</system-out>
+  </testcase>
+  <testcase name="stage1.ipv6_loopback_policy" classname="stage1.ipv6_loopback_policy" time="0.0661234" status="run">
+    <properties />
+    <system-out>......
+----------------------------------------------------------------------
+Ran 6 tests in 0.002s
+OK
+</system-out>
+  </testcase>
+  <testcase name="adc.ctm" classname="adc.ctm" time="0.0062487" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="adc.ctm.process" classname="adc.ctm.process" time="4.53006" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 4.456s
+OK
+</system-out>
+  </testcase>
+  <testcase name="transfers.core" classname="transfers.core" time="0.0033792" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="transfers.core.process" classname="transfers.core.process" time="0.712904" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 0.627s
+OK
+</system-out>
+  </testcase>
+  <testcase name="search.statistics" classname="search.statistics" time="0.00575556" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="search.statistics.process" classname="search.statistics.process" time="1.03303" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 0.948s
+OK
+</system-out>
+  </testcase>
+  <testcase name="search.core" classname="search.core" time="0.00458767" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="search.core.process" classname="search.core.process" time="0.796271" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 0.709s
+OK
+</system-out>
+  </testcase>
+  <testcase name="search.filters" classname="search.filters" time="0.00632764" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="search.tth" classname="search.tth" time="0.00574637" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="search.tokens" classname="search.tokens" time="0.00630204" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="search.tokens.process" classname="search.tokens.process" time="1.01968" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 0.930s
+OK
+</system-out>
+  </testcase>
+  <testcase name="search.features" classname="search.features" time="0.00868833" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="search.features.process" classname="search.features.process" time="2.8597" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.767s
+OK
+</system-out>
+  </testcase>
+  <testcase name="search.routing" classname="search.routing" time="0.00756162" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="search.routing.process" classname="search.routing.process" time="2.57002" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.486s
+OK
+</system-out>
+  </testcase>
+  <testcase name="chat.logging" classname="chat.logging" time="0.00632602" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="chat.logging.process" classname="chat.logging.process" time="2.01035" status="run">
+    <properties />
+    <system-out>...
+----------------------------------------------------------------------
+Ran 3 tests in 1.930s
+OK
+</system-out>
+  </testcase>
+  <testcase name="chat.configuration" classname="chat.configuration" time="0.00715496" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="chat.configuration.process" classname="chat.configuration.process" time="4.05372" status="run">
+    <properties />
+    <system-out>...
+----------------------------------------------------------------------
+Ran 3 tests in 3.977s
+OK
+</system-out>
+  </testcase>
+  <testcase name="chat.anti_flood" classname="chat.anti_flood" time="0.00653191" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="chat.anti_flood.process" classname="chat.anti_flood.process" time="5.96631" status="run">
+    <properties />
+    <system-out>..
+----------------------------------------------------------------------
+Ran 2 tests in 5.890s
+OK
+</system-out>
+  </testcase>
+  <testcase name="adc.presence" classname="adc.presence" time="0.00602858" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="adc.presence.process" classname="adc.presence.process" time="1.27454" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 1.200s
+OK
+</system-out>
+  </testcase>
+  <testcase name="chat.validation" classname="chat.validation" time="0.00452243" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="chat.validation.process" classname="chat.validation.process" time="1.95717" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 1.880s
+OK
+</system-out>
+  </testcase>
+  <testcase name="chat.hub" classname="chat.hub" time="0.00731302" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="chat.hub.process" classname="chat.hub.process" time="0.572542" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 0.502s
+OK
+</system-out>
+  </testcase>
+  <testcase name="adc.msg.flags" classname="adc.msg.flags" time="0.00760958" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="adc.msg.flags.process" classname="adc.msg.flags.process" time="2.56714" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.493s
+OK
+</system-out>
+  </testcase>
+  <testcase name="chat.routing" classname="chat.routing" time="0.00352667" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="chat.routing.process" classname="chat.routing.process" time="0.796868" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 0.729s
+OK
+</system-out>
+  </testcase>
+  <testcase name="chat.private" classname="chat.private" time="0.0111165" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="chat.private.process" classname="chat.private.process" time="0.775674" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 0.706s
+OK
+</system-out>
+  </testcase>
+  <testcase name="chat.public" classname="chat.public" time="0.00992603" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="chat.public.process" classname="chat.public.process" time="0.505919" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 0.434s
+OK
+</system-out>
+  </testcase>
+  <testcase name="chat.adc" classname="chat.adc" time="0.0111156" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="chat.core" classname="chat.core" time="0.00458181" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="chat.process" classname="chat.process" time="0.666319" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 0.587s
+OK
+</system-out>
+  </testcase>
+  <testcase name="adc.msg" classname="adc.msg" time="0.00572281" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="adc.msg.process" classname="adc.msg.process" time="2.17044" status="run">
+    <properties />
+    <system-out>..
+----------------------------------------------------------------------
+Ran 2 tests in 2.097s
+OK
+</system-out>
+  </testcase>
+  <testcase name="adc.syntax" classname="adc.syntax" time="0.00517542" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="adc.state" classname="adc.state" time="0.00351765" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="adc.sup" classname="adc.sup" time="0.00358701" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="adc.sid" classname="adc.sid" time="0.0341024" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="adc.close.process" classname="adc.close.process" time="3.97029" status="run">
+    <properties />
+    <system-out>...
+----------------------------------------------------------------------
+Ran 3 tests in 3.895s
+OK
+</system-out>
+  </testcase>
+  <testcase name="adc.status" classname="adc.status" time="0.00580292" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="adc.status.process" classname="adc.status.process" time="7.8523" status="run">
+    <properties />
+    <system-out>....
+----------------------------------------------------------------------
+Ran 4 tests in 7.777s
+OK
+</system-out>
+  </testcase>
+  <testcase name="users.disconnect" classname="users.disconnect" time="0.00627817" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="users.disconnect.process" classname="users.disconnect.process" time="1.55517" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 1.487s
+OK
+</system-out>
+  </testcase>
+  <testcase name="users.statistics" classname="users.statistics" time="0.00483402" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="users.statistics.process" classname="users.statistics.process" time="0.95081" status="run">
+    <properties />
+    <system-out>..
+----------------------------------------------------------------------
+Ran 2 tests in 0.881s
+OK
+</system-out>
+  </testcase>
+  <testcase name="users.limits" classname="users.limits" time="0.00596659" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="users.limits.process" classname="users.limits.process" time="1.32716" status="run">
+    <properties />
+    <system-out>..
+----------------------------------------------------------------------
+Ran 2 tests in 1.256s
+OK
+</system-out>
+  </testcase>
+  <testcase name="users.inf_updates" classname="users.inf_updates" time="0.0062649" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="users.inf_updates.process" classname="users.inf_updates.process" time="0.887855" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 0.809s
+OK
+</system-out>
+  </testcase>
+  <testcase name="users.list" classname="users.list" time="0.00980323" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="users.list.process" classname="users.list.process" time="0.777115" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 0.708s
+OK
+</system-out>
+  </testcase>
+  <testcase name="users.login" classname="users.login" time="0.00651912" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="users.login.process" classname="users.login.process" time="0.848155" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 0.776s
+OK
+</system-out>
+  </testcase>
+  <testcase name="users.user_registry" classname="users.user_registry" time="0.0048186" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="users.user_registry.process" classname="users.user_registry.process" time="0.945585" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 0.874s
+OK
+</system-out>
+  </testcase>
+  <testcase name="users.nicknames" classname="users.nicknames" time="0.00393104" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="users.nicknames.process" classname="users.nicknames.process" time="1.75737" status="run">
+    <properties />
+    <system-out>..
+----------------------------------------------------------------------
+Ran 2 tests in 1.670s
+OK
+</system-out>
+  </testcase>
+  <testcase name="accounts.model" classname="accounts.model" time="0.0040097" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="users.values" classname="users.values" time="0.00488448" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="users.registry" classname="users.registry" time="0.00400639" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="security.authentication_limits" classname="security.authentication_limits" time="0.00552356" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="bans.admission" classname="bans.admission" time="0.00602969" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="bans.model" classname="bans.model" time="0.00591617" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="admin.mute" classname="admin.mute" time="0.0095247" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="admin.kick" classname="admin.kick" time="0.0127851" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="security.moderation" classname="security.moderation" time="0.00356" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="security.roles" classname="security.roles" time="0.00701398" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="users.auth_sessions" classname="users.auth_sessions" time="0.00339745" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="users.manager" classname="users.manager" time="0.0056658" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="users.core" classname="users.core" time="0.00632719" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="users.session" classname="users.session" time="0.00415048" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="users.session.adc" classname="users.session.adc" time="0.00519395" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="users.session.process" classname="users.session.process" time="0.423225" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 0.356s
+OK
+</system-out>
+  </testcase>
+  <testcase name="adc.login" classname="adc.login" time="0.00560873" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="adc.login.process" classname="adc.login.process" time="6.83958" status="run">
+    <properties />
+    <system-out>.......
+----------------------------------------------------------------------
+Ran 7 tests in 6.763s
+OK
+</system-out>
+  </testcase>
+  <testcase name="adc.inf" classname="adc.inf" time="0.00740115" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="adc.identity" classname="adc.identity" time="0.00839942" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="adc.identity.failure" classname="adc.identity.failure" time="0.00594289" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="adc.process" classname="adc.process" time="0.0928566" status="run">
+    <properties />
+    <system-out>......
+----------------------------------------------------------------------
+Ran 6 tests in 0.038s
+OK
+</system-out>
+  </testcase>
+  <testcase name="adcs.crypto" classname="adcs.crypto" time="0.0760071" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="adcs.process" classname="adcs.process" time="4.54885" status="run">
+    <properties />
+    <system-out>.........
+----------------------------------------------------------------------
+Ran 13 tests in 4.478s
+OK
+</system-out>
+  </testcase>
+  <testcase name="adcs.tls_security" classname="adcs.tls_security" time="0.0351563" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="adcs.tls_security.process" classname="adcs.tls_security.process" time="0.0548494" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="configuration.unit" classname="configuration.unit" time="0.0107538" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="configuration.review" classname="configuration.review" time="0.00958676" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="configuration.write" classname="configuration.write" time="0.00677953" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="configuration.process" classname="configuration.process" time="1.6473" status="run">
+    <properties />
+    <system-out>..........
+----------------------------------------------------------------------
+Ran 10 tests in 1.587s
+OK
+</system-out>
+  </testcase>
+  <testcase name="profile.unit" classname="profile.unit" time="0.00300723" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="stress.unit" classname="stress.unit" time="0.00242136" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="memory.safety" classname="memory.safety" time="0.00283726" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="benchmark.unit" classname="benchmark.unit" time="0.00242174" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="monitoring.unit" classname="monitoring.unit" time="0.00246393" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="logging.unit" classname="logging.unit" time="2.21124" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="logging.process" classname="logging.process" time="3.49697" status="run">
+    <properties />
+    <system-out>........
+----------------------------------------------------------------------
+Ran 8 tests in 3.436s
+OK
+</system-out>
+  </testcase>
+  <testcase name="security.negotiation" classname="security.negotiation" time="0.00281479" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="security.negotiation.process" classname="security.negotiation.process" time="3.34857" status="run">
+    <properties />
+    <system-out>.....
+----------------------------------------------------------------------
+Ran 5 tests in 3.269s
+OK
+</system-out>
+  </testcase>
+  <testcase name="security.unit" classname="security.unit" time="0.0259388" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="security.process" classname="security.process" time="5.82252" status="run">
+    <properties />
+    <system-out>..............
+----------------------------------------------------------------------
+Ran 14 tests in 5.756s
+OK
+</system-out>
+  </testcase>
+  <testcase name="database.unit" classname="database.unit" time="0.00504326" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="database.core" classname="database.core" time="0.00491893" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="database.resilience" classname="database.resilience" time="0.00502885" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="database.migrations" classname="database.migrations" time="0.00527887" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="admin.core" classname="admin.core" time="0.0048156" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="admin.access" classname="admin.access" time="0.00460979" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="adc.authentication" classname="adc.authentication" time="0.00643072" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="accounts.account_security" classname="accounts.account_security" time="0.00530217" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="accounts.password_security" classname="accounts.password_security" time="3.5548" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="accounts.identity_mapping" classname="accounts.identity_mapping" time="0.00526384" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="accounts.registration" classname="accounts.registration" time="0.242571" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="beta.05.stage1.matched.recovery" classname="beta.05.stage1.matched.recovery" time="4.62596" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 4.571s
+OK
+</system-out>
+  </testcase>
+  <testcase name="beta.05.stage4.rollback" classname="beta.05.stage4.rollback" time="0.0840496" status="run">
+    <properties />
+    <system-out>s
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+OK (skipped=1)
+Internal SKIP: Stage IV recovery measurements run only on hosted Ubuntu CI
+</system-out>
+  </testcase>
+  <testcase name="bans.process" classname="bans.process" time="9.43104" status="run">
+    <properties />
+    <system-out>Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+</system-out>
+  </testcase>
+  <testcase name="admin.core.process" classname="admin.core.process" time="7.87704" status="run">
+    <properties />
+    <system-out>Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+</system-out>
+  </testcase>
+  <testcase name="accounts.owner_cli.process" classname="accounts.owner_cli.process" time="3.33332" status="run">
+    <properties />
+    <system-out>Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+</system-out>
+  </testcase>
+  <testcase name="accounts.management.process" classname="accounts.management.process" time="27.3318" status="run">
+    <properties />
+    <system-out>Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+</system-out>
+  </testcase>
+  <testcase name="accounts.adc_authentication.process" classname="accounts.adc_authentication.process" time="19.3546" status="run">
+    <properties />
+    <system-out>Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+</system-out>
+  </testcase>
+  <testcase name="accounts.password_security.process" classname="accounts.password_security.process" time="3.74491" status="run">
+    <properties />
+    <system-out>Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+</system-out>
+  </testcase>
+  <testcase name="accounts.identity_mapping.process" classname="accounts.identity_mapping.process" time="3.66904" status="run">
+    <properties />
+    <system-out>Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+</system-out>
+  </testcase>
+  <testcase name="accounts.registration.process" classname="accounts.registration.process" time="4.39397" status="run">
+    <properties />
+    <system-out>Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+</system-out>
+  </testcase>
+  <testcase name="accounts.repository.process" classname="accounts.repository.process" time="2.53954" status="run">
+    <properties />
+    <system-out>Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+</system-out>
+  </testcase>
+  <testcase name="accounts.webadmin.process" classname="accounts.webadmin.process" time="94.5258" status="run">
+    <properties />
+    <system-out>Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+</system-out>
+  </testcase>
+  <testcase name="database.process" classname="database.process" time="1.70775" status="run">
+    <properties />
+    <system-out>Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+</system-out>
+  </testcase>
+  <testcase name="database.core.process" classname="database.core.process" time="2.72265" status="run">
+    <properties />
+    <system-out>Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+</system-out>
+  </testcase>
+  <testcase name="database.resilience.process" classname="database.resilience.process" time="6.97397" status="run">
+    <properties />
+    <system-out>Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+</system-out>
+  </testcase>
+  <testcase name="database.migrations.process" classname="database.migrations.process" time="1.73619" status="run">
+    <properties />
+    <system-out>Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+</system-out>
+  </testcase>
+  <testcase name="api.unit" classname="api.unit" time="0.265692" status="run">
+    <properties />
+    <system-out />
+  </testcase>
+  <testcase name="api.process" classname="api.process" time="2.26426" status="run">
+    <properties />
+    <system-out>.......
+----------------------------------------------------------------------
+Ran 7 tests in 2.167s
+OK
+</system-out>
+  </testcase>
+  <testcase name="apache2.https" classname="apache2.https" time="0.455071" status="run">
+    <properties />
+    <system-out>.......
+----------------------------------------------------------------------
+Ran 7 tests in 0.372s
+OK
+</system-out>
+  </testcase>
+  <testcase name="apache2.https.proxy" classname="apache2.https.proxy" time="0.534467" status="run">
+    <properties />
+    <system-out>.......
+----------------------------------------------------------------------
+Ran 7 tests in 0.458s
+OK
+</system-out>
+  </testcase>
+  <testcase name="apache2.remote.gateway" classname="apache2.remote.gateway" time="0.966946" status="run">
+    <properties />
+    <system-out>..s..........
+----------------------------------------------------------------------
+Ran 13 tests in 0.866s
+OK (skipped=1)
+Internal SKIP: Stage IV HTTPS endurance is reserved for hosted Ubuntu CI
+</system-out>
+  </testcase>
+  <testcase name="database.ncdc.process" classname="database.ncdc.process" time="5.77431" status="run">
+    <properties />
+    <system-out>Disposable MariaDB: connections, prepared values, migrations, configuration and privacy OK
+</system-out>
+  </testcase>
+  <testcase name="adc.security.ncdc" classname="adc.security.ncdc" time="0.481345" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 0.395s
+OK
+</system-out>
+  </testcase>
+  <testcase name="adcs.security.ncdc" classname="adcs.security.ncdc" time="0.482656" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 0.396s
+OK
+</system-out>
+  </testcase>
+  <testcase name="adc.status.ncdc" classname="adc.status.ncdc" time="0.58398" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 0.496s
+OK
+</system-out>
+  </testcase>
+  <testcase name="adcs.status.ncdc" classname="adcs.status.ncdc" time="0.655359" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 0.569s
+OK
+</system-out>
+  </testcase>
+  <testcase name="adc.identity.ncdc" classname="adc.identity.ncdc" time="0.397357" status="run">
+    <properties />
+    <system-out>..
+----------------------------------------------------------------------
+Ran 2 tests in 0.335s
+OK
+</system-out>
+  </testcase>
+  <testcase name="adc.inf.ncdc" classname="adc.inf.ncdc" time="0.305204" status="run">
+    <properties />
+    <system-out>..
+----------------------------------------------------------------------
+Ran 2 tests in 0.244s
+OK
+</system-out>
+  </testcase>
+  <testcase name="adc.sid.ncdc" classname="adc.sid.ncdc" time="0.349677" status="run">
+    <properties />
+    <system-out>..
+----------------------------------------------------------------------
+Ran 2 tests in 0.285s
+OK
+</system-out>
+  </testcase>
+  <testcase name="adc.sup.ncdc" classname="adc.sup.ncdc" time="0.393521" status="run">
+    <properties />
+    <system-out>..
+----------------------------------------------------------------------
+Ran 2 tests in 0.328s
+OK
+</system-out>
+  </testcase>
+  <testcase name="adc.ncdc" classname="adc.ncdc" time="1.5084" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 1.401s
+OK
+ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adcs.ncdc" classname="adcs.ncdc" time="1.73003" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 1.644s
+OK
+ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adc.tth.ncdc" classname="adc.tth.ncdc" time="1.53208" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 1.444s
+OK
+ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adcs.tth.ncdc" classname="adcs.tth.ncdc" time="1.6907" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 1.598s
+OK
+ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adc.feature.ncdc" classname="adc.feature.ncdc" time="5.68289" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 5.598s
+OK
+ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adcs.feature.ncdc" classname="adcs.feature.ncdc" time="6.57518" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 6.473s
+OK
+ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adc.activepassive.ncdc" classname="adc.activepassive.ncdc" time="6.51005" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 6.419s
+OK
+ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adcs.activepassive.ncdc" classname="adcs.activepassive.ncdc" time="7.1005" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 7.002s
+OK
+ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adcs.activepassive.bindscope.ncdc" classname="adcs.activepassive.bindscope.ncdc" time="7.39217" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 7.300s
+OK
+ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adcs.capabilities.bindscope.ncdc" classname="adcs.capabilities.bindscope.ncdc" time="3.06195" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.979s
+OK
+ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adc.searchsecurity.ncdc" classname="adc.searchsecurity.ncdc" time="1.47672" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 1.390s
+OK
+ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adcs.searchsecurity.ncdc" classname="adcs.searchsecurity.ncdc" time="1.87624" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 1.782s
+OK
+ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adc.transfercore.ncdc" classname="adc.transfercore.ncdc" time="1.92242" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 1.837s
+OK
+ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adcs.transfercore.ncdc" classname="adcs.transfercore.ncdc" time="2.20045" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.113s
+OK
+ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adc.ctm.ncdc" classname="adc.ctm.ncdc" time="2.36951" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.281s
+OK
+ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adcs.ctm.ncdc" classname="adcs.ctm.ncdc" time="2.6955" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.614s
+OK
+ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adc.transferconfiguration.ncdc" classname="adc.transferconfiguration.ncdc" time="2.38213" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.293s
+OK
+ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adc.transferconfiguration.adcs.ncdc" classname="adc.transferconfiguration.adcs.ncdc" time="2.60999" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.519s
+OK
+ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adcs.transferconfiguration.ncdc" classname="adcs.transferconfiguration.ncdc" time="2.72637" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.637s
+OK
+ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adcs.transferconfiguration.adcs.ncdc" classname="adcs.transferconfiguration.adcs.ncdc" time="2.8613" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.781s
+OK
+ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adc.rcm.ncdc" classname="adc.rcm.ncdc" time="2.41295" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.313s
+OK
+ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adcs.rcm.ncdc" classname="adcs.rcm.ncdc" time="2.59054" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.512s
+OK
+ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adcs.rcm.terminal.ncdc" classname="adcs.rcm.terminal.ncdc" time="2.96509" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.877s
+OK
+ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adc.ctm.adcs.ncdc" classname="adc.ctm.adcs.ncdc" time="2.42036" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.334s
+OK
+ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adcs.ctm.adcs.ncdc" classname="adcs.ctm.adcs.ncdc" time="2.6725" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.584s
+OK
+ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adc.rcm.adcs.ncdc" classname="adc.rcm.adcs.ncdc" time="2.68162" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.597s
+OK
+ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adcs.rcm.adcs.ncdc" classname="adcs.rcm.adcs.ncdc" time="2.88119" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.791s
+OK
+ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adc.capabilities.ncdc" classname="adc.capabilities.ncdc" time="2.46988" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.383s
+OK
+ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adc.capabilities.adcs.ncdc" classname="adc.capabilities.adcs.ncdc" time="2.80516" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.716s
+OK
+ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adc.tokens.ncdc" classname="adc.tokens.ncdc" time="2.39084" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.313s
+OK
+ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adc.tokens.adcs.ncdc" classname="adc.tokens.adcs.ncdc" time="2.60013" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.518s
+OK
+ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adc.connectionsecurity.ncdc" classname="adc.connectionsecurity.ncdc" time="1.98334" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 1.898s
+OK
+ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adc.connectionsecurity.active.ncdc" classname="adc.connectionsecurity.active.ncdc" time="1.98107" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 1.885s
+OK
+ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adc.transferlimits.ncdc" classname="adc.transferlimits.ncdc" time="3.78149" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 3.690s
+OK
+ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adc.transfererrors.ncdc" classname="adc.transfererrors.ncdc" time="1.73869" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 1.653s
+OK
+ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adc.transfererrors.adcs.ncdc" classname="adc.transfererrors.adcs.ncdc" time="1.78644" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 1.691s
+OK
+ncdc completed guest NORMAL and reconnect via ADC on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adcs.capabilities.ncdc" classname="adcs.capabilities.ncdc" time="2.75968" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.675s
+OK
+ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adcs.capabilities.adcs.ncdc" classname="adcs.capabilities.adcs.ncdc" time="2.94052" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.848s
+OK
+ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adcs.tokens.ncdc" classname="adcs.tokens.ncdc" time="2.57685" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.493s
+OK
+ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adcs.tokens.adcs.ncdc" classname="adcs.tokens.adcs.ncdc" time="2.83083" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.745s
+OK
+ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adcs.connectionsecurity.ncdc" classname="adcs.connectionsecurity.ncdc" time="2.30675" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.223s
+OK
+ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adcs.connectionsecurity.active.ncdc" classname="adcs.connectionsecurity.active.ncdc" time="2.31971" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 2.221s
+OK
+ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adcs.transferlimits.ncdc" classname="adcs.transferlimits.ncdc" time="3.98519" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 3.905s
+OK
+ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adcs.transfererrors.ncdc" classname="adcs.transfererrors.ncdc" time="1.9958" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 1.906s
+OK
+ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+</system-out>
+  </testcase>
+  <testcase name="adcs.transfererrors.adcs.ncdc" classname="adcs.transfererrors.adcs.ncdc" time="1.9516" status="run">
+    <properties />
+    <system-out>.
+----------------------------------------------------------------------
+Ran 1 test in 1.856s
+OK
+ncdc completed guest NORMAL and reconnect via ADCS on the C++ hub
+</system-out>
+  </testcase>
+</testsuite>

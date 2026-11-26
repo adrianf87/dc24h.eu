@@ -1,0 +1,13 @@
+Debian 13.8, source 8af360efd03803e29e8fc2a733c7184ca31d576c
+ncdc 1.23.1 on ADC over 127.0.0.1. Two fresh guest clients reached NORMAL.
+The sender's active /search -hub -t doc sent BSCH with 18 EX fields.
+The hub replied ISTA 100 Invalid\ssearch\squery FCBSCH.
+The server contained an EX cap of 16 in Search Core and the SCH validator reused it.
+ncdc 1.23.1 source has 18 document extensions and 20 video extensions.
+
+Expected negative control: compiled adc_sch_tests with the new ncdc cases and
+the original cap of 16. ctest -R '^adc\.sch$' failed with exit 8.
+FAIL: SCH unexpectedly refused
+
+The original registered CTest results and IPv4 control remain in this directory.
+Logs and XML omit connection identifiers, search tokens and PTY transcripts.

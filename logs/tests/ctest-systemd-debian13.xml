@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuite name="Linux-c++" tests="1" failures="0" disabled="0" skipped="0" time="0" timestamp="2026-11-26T03:13:25">
+  <testcase name="systemd.sandbox" classname="systemd.sandbox" time="0.743493" status="run">
+    <properties />
+    <system-out>....
+----------------------------------------------------------------------
+Ran 4 tests in 0.691s
+OK
+</system-out>
+  </testcase>
+</testsuite>

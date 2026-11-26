@@ -1,0 +1,16 @@
+Debian 13.8, source 068d77f35175b8f28dd326f5bc520a69c7d90661
+PID 1 systemd 257.13. systemd-run preflight returned 0.
+Host manager used transient units and namespace sandboxing. Test ran as UID 0.
+DC24H_REQUIRE_SYSTEMD_HOST=1 ctest -R ^systemd\.sandbox$ --verbose
+CTest: 1 PASS, 0 FAIL, 0 SKIP. unittest: 4 ran, 4 PASS, 0 SKIP.
+
+PASS unit directives, systemd-analyze verify and private sysusers
+PASS test hub as nobody, NoNewPrivs=1, no effective or bounding capabilities
+PASS private runtime and state modes 0700, admin Unix socket 0600, ownership checked
+PASS denied writes to protected host paths and allowed writes to state/runtime
+PASS test credential absent from logs, SIGTERM exit 0 and Result=success
+
+Additional transient unit tested mount effects directly.
+PASS PrivateTmp: host sentinel invisible and private /tmp writable
+PASS ProtectHome: /root covered by inaccessible or empty mount
+PASS ProtectSystem: /etc and /usr mounted read-only
