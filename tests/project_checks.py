@@ -8,9 +8,12 @@ import sys
 from urllib.parse import unquote, urlsplit
 
 
-# Stage II deployment guidance is maintained in US English only. Keep every
-# other existing localized document paired until explicitly reviewed.
-US_ONLY_DOCUMENTS = frozenset({Path("PUBLIC_STAGE_II_DEBIAN13.md")})
+# OWNER-reviewed public Stage II/III deployment guidance is US English only.
+# Keep every other existing localized document paired until explicitly reviewed.
+US_ONLY_DOCUMENTS = frozenset({
+    Path("PUBLIC_STAGE_II_DEBIAN13.md"),
+    Path("PUBLIC_STAGE_III_ADCS.md"),
+})
 
 
 def documentation_language_mismatches(us, pl):

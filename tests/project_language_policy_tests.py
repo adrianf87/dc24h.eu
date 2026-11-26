@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression tests for the explicit Stage II US-only documentation policy."""
+"""Regression tests for the reviewed Stage II/III US-only documentation policy."""
 
 from pathlib import Path
 import unittest
@@ -10,6 +10,11 @@ from project_checks import US_ONLY_DOCUMENTS, documentation_language_mismatches
 class ProjectLanguagePolicyTests(unittest.TestCase):
     def test_stage_ii_runbook_may_be_us_only(self):
         us = {Path("README.md"), Path("PUBLIC_STAGE_II_DEBIAN13.md")}
+        pl = {Path("README.md")}
+        self.assertEqual(documentation_language_mismatches(us, pl), ([], []))
+
+    def test_stage_iii_runbook_may_be_us_only(self):
+        us = {Path("README.md"), Path("PUBLIC_STAGE_III_ADCS.md")}
         pl = {Path("README.md")}
         self.assertEqual(documentation_language_mismatches(us, pl), ([], []))
 
@@ -26,14 +31,23 @@ class ProjectLanguagePolicyTests(unittest.TestCase):
                          ([], [Path("UNREVIEWED_PL_GUIDE.md")]))
 
     def test_nested_name_does_not_inherit_exception(self):
-        us = {Path("nested/PUBLIC_STAGE_II_DEBIAN13.md")}
-        self.assertEqual(documentation_language_mismatches(us, set()), (sorted(us), []))
+        for name in ("PUBLIC_STAGE_II_DEBIAN13.md", "PUBLIC_STAGE_III_ADCS.md"):
+            with self.subTest(name=name):
+                nested = Path("nested") / name
+                self.assertEqual(documentation_language_mismatches({nested}, set()), ([nested], []))
 
-    def test_exception_is_exact_and_single_file(self):
-        self.assertEqual(US_ONLY_DOCUMENTS, frozenset({Path("PUBLIC_STAGE_II_DEBIAN13.md")}))
+    def test_exceptions_are_exactly_two_reviewed_runbooks(self):
+        self.assertEqual(US_ONLY_DOCUMENTS, frozenset({
+            Path("PUBLIC_STAGE_II_DEBIAN13.md"),
+            Path("PUBLIC_STAGE_III_ADCS.md"),
+        }))
 
     def test_matching_localized_pairs_still_pass(self):
-        common = {Path("README.md"), Path("PUBLIC_STAGE_II_DEBIAN13.md")}
+        common = {
+            Path("README.md"),
+            Path("PUBLIC_STAGE_II_DEBIAN13.md"),
+            Path("PUBLIC_STAGE_III_ADCS.md"),
+        }
         self.assertEqual(documentation_language_mismatches(common, common), ([], []))
 
 
