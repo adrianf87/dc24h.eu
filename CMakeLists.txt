@@ -391,6 +391,9 @@ if(BUILD_TESTING)
     add_test(NAME project.metadata COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/project_checks.py")
     set_tests_properties(project.metadata PROPERTIES TIMEOUT 15)
+    add_test(NAME project.metadata.language_policy COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/project_language_policy_tests.py")
+    set_tests_properties(project.metadata.language_policy PROPERTIES TIMEOUT 15)
     add_test(NAME twilight.stage3.branding COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/twilight_stage3_branding_tests.py")
     set_tests_properties(twilight.stage3.branding PROPERTIES TIMEOUT 15)
