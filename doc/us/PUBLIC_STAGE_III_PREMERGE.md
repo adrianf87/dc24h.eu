@@ -63,6 +63,12 @@ A separately authorized operator records the actual host maintenance times in
 the Debian 13 record. Compare them with the independent external snapshots.
 The snapshot produces the `stage3-external-snapshot-<phase>-<attempt>` artifact.
 
+**OWNER exception:** A controlled reboot of the Debian 13 VPS and an intentional
+restart of the live ADCS service are removed from the Stage III test plan.
+Do not use the before/after snapshot feature to schedule those tests.
+A non-disruptive external snapshot may still be used. Missing restart evidence
+is not a qualification blocker and is not a PASS.
+
 The main ref is available for this workflow after an explicitly authorized
 merge. Each run provides evidence for the checked-out commit. The final
 decision requires OWNER review, and a merge requires separate `OWNER MERGE GO`.
