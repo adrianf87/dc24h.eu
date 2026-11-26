@@ -1,6 +1,8 @@
-# Stage III public ADCS service restart on Debian 13
+# Optional Debian 13 ADCS service maintenance and recovery runbook
 
-**Status: NOT TESTED.** The OWNER must authorize a maintenance window and a controlled restart specifically for `dc24h-stage3-adcs.service`. Record the authorization and rollback owner before beginning. Use two SSH sessions from an approved management network and verify access to the provider console. Arrange an independent external observer. Stop if any preflight fails or the rollback operator cannot reach the VPS.
+**Operational reference only — EXCLUDED FROM STAGE III QUALIFICATION by OWNER decision, November 26, 2026.** No controlled VPS reboot or intentional live `dc24h-stage3-adcs.service` restart test will be run for Issue #10 or PR #24. Neither the missing test result nor the readiness prerequisites below block Stage III acceptance; live recovery behavior remains unverified. This document is retained only for future separately authorized maintenance (such as certificate renewal) or incident recovery.
+
+If such future maintenance is separately approved, the OWNER must authorize a window and identify the operator and rollback owner. Use two SSH sessions from an approved management network, verify provider-console access, and arrange an independent external observer. Stop if preflight fails or the rollback operator cannot reach the VPS.
 
 ## Before the window
 
@@ -35,7 +37,7 @@ Privately audit the live config for `listen=none`, the approved ADCS bind, and d
 
 Securely identify the known-good systemd fragment, configuration, binary and certificate pair before the window. Confirm the operator can restore them if needed. A failed restart can normally be recovered with the same unchanged artifacts and a verified service start.
 
-## Controlled restart and verification
+## Future separately authorized service maintenance only — not a qualification test
 
 Once the OWNER authorizes the interruption and both observers are ready, record the baseline PID and start timestamp. Restart only the approved unit. Monitor runtime state and the bounded journal.
 
@@ -75,4 +77,4 @@ If the verified configuration and deployed artifacts match the preflight, the au
 | Public certificate fingerprint and expiration | |
 | Recovery duration, sanitized journal event categories and rollback disposition | |
 | Sanitized evidence locations, SHA-256 manifest and OWNER reviewer | |
-| Systemd result | NOT TESTED |
+| Stage III restart qualification | REMOVED BY OWNER; NOT RUN |
