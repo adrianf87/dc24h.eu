@@ -112,7 +112,7 @@ jobs:
           stage="$(mktemp -d -p "$RUNNER_TEMP" twilight-stage2-build.XXXXXXXX)"
           (cd webadmin && npm ci --ignore-scripts --no-audit --no-fund && npm run build)
           cmake -S . -B "$stage/build" -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX="$stage/prefix" -DC24H_INSTALL_WEBADMIN=ON \
+            -DCMAKE_INSTALL_PREFIX="$stage/prefix" -DDC24H_INSTALL_WEBADMIN=ON \
             -DDC24H_REQUIRE_INTEGRATION_TESTS=ON
           cmake --build "$stage/build" --parallel 4
           # Curated unprivileged subset only. Full CTest includes host-mutating
