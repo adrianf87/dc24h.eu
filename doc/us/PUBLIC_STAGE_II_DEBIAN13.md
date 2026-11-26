@@ -4,21 +4,19 @@
 **Status:** OWNER-approved disposable-host qualification proposed. **Stage II acceptance pending.**
 **Boundary:** test-owned root installation and runtime systemd units are permitted on the dedicated test VPS; no existing service/data migration, DNS/firewall changes, public hub or WebAdmin exposure, release or production GO.
 
-**Supplemental runner:** The OWNER has designated a Debian 13 VPS runner for
-future manual, non-production source and environment checks. See the
-[runner profile and safety policy](../../self-hosted-runner-debian13/README.md).
-The source-smoke workflow is OWNER-triggered and available on protected `main`.
-Its first read-only run qualified the runner identity and basic environment,
-but it does not replace installation, systemd, backup/restore, or rollback proof.
+**Retired runner notice:** The former Debian 13 self-managed GitHub Actions
+executor has been removed. The related setup directory, privileged Stage II
+workflow, root installation proof and runner tests are no longer included in
+the repository. CI now uses GitHub-hosted Ubuntu 22.04/24.04/26.04 only.
+The public Debian VPS is not available for Actions jobs. A hosted runner's
+`sudo` authority applies only to its own temporary Ubuntu VM; it cannot prove
+Debian 13 host installation, on-server backup/restore or live rollback.
 
-The OWNER confirmed a dedicated test VPS without production secrets/private
-state and retained unrestricted passwordless `sudo` for `github-runner`. The
-proposed manual Stage II workflow adds a third root invocation for installation
-to a fresh `/opt` prefix, two uniquely named runtime systemd test units,
-start/restart/fault/conflict, test-fixture restore and binary rollback. It must
-pass review and be merged to protected `main` before a new OWNER dispatch.
-The original hub units, private MariaDB recovery, historical-version rollback,
-power loss and production RPO/RTO remain outside this test.
+Historical Stage II reports remain evidence of the earlier qualification, not
+a reusable automation path. New Debian 13 operating-system tests require
+separate OWNER-operated access to an isolated disposable machine. The original
+hub units, private MariaDB recovery, historical-version rollback, power loss
+and production RPO/RTO remain outside the GitHub Ubuntu test scope.
 
 Stage I's isolated Debian 13/ncdc evidence and OWNER acceptance are recorded in [the acceptance report](../../logs/tests/DEBIAN13-STAGE-I-FINAL-ACCEPTANCE.md). Stage II is a **separate** operating-system installation and recovery qualification; green CI and an inert `.deb` fixture do not certify an existing Debian host.
 

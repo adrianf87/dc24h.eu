@@ -1,69 +1,99 @@
-name: Debian 13 Stage III public ADCS full qualification (OWNER only)
+name: Stage III public ADCS external qualification (GitHub Ubuntu only)
 
 on:
   pull_request:
     paths:
       - '.github/workflows/debian13-stage3-full-qualification.yml'
-      - 'scripts/public_stage3_qualification_*.py'
-      - 'scripts/test_public_stage3_qualification.py'
+      - 'scripts/public_stage3_qualification_external.py'
+      - 'scripts/public_stage3_external_probe.py'
       - 'scripts/stage3_premerge_gate.py'
-      - 'scripts/stage3_premerge_evidence.py'
+      - 'scripts/test_public_stage3_qualification.py'
+      - 'scripts/test_public_stage3_external_probe.py'
   workflow_dispatch:
     inputs:
       confirmation:
-        description: 'Exact RUN_STAGE3_PUBLIC_QUALIFICATION'
+        description: 'Exact RUN_STAGE3_UBUNTU_EXTERNAL_ONLY; no remote sudo or VPS restarts'
         required: true
         type: string
       production_restarts_ack:
-        description: 'OWNER permits three brief public hub restarts and one same-pair TLS copy/restart'
+        description: 'MUST remain false: GitHub-hosted runners do not restart the public VPS'
         required: true
         type: boolean
         default: false
       premerge_phase:
-        description: 'PR qualification: before/after external-only, or full with OWNER-approved host sudo'
-        required: false
+        description: 'Evidence label only; before/after never proves a VPS restart'
+        required: true
         type: choice
-        options: [none, before, after, full]
+        options: [none, before, after]
         default: none
       premerge_candidate_sha:
-        description: 'Exact 40-character PR #23 head SHA for branch qualification'
-        required: false
-        type: string
-      premerge_trusted_main_sha:
-        description: 'Exact reviewed main SHA used ONLY for pre-merge host sudo (full mode)'
-        required: false
+        description: 'Exact 40-character selected branch/main commit SHA'
+        required: true
         type: string
 
 permissions:
   contents: read
 
-# Do not overlap active-hub qualification with activation or rollback.
+# External tests do not mutate the public service. Avoid simultaneous
+# synthetic guests, without requiring any private worker.
 concurrency:
-  group: twilight-debian13-stage3-public-activation
+  group: stage3-external-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   policy-tests:
-    name: Offline policy tests (no network, host changes or sudo)
+    name: Offline Stage III policy and regression tests
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
-      - name: Pure Python Stage III owner and port policy tests
+      - name: Verify checkout and run offline tests without root
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          python3 -m compileall -q scripts/public_stage3_qualification_external.py scripts/public_stage3_external_probe.py scripts/stage3_premerge_gate.py scripts/test_public_stage3_qualification.py scripts/test_public_stage3_external_probe.py
+          (cd scripts && python3 -m unittest -v test_public_stage3_qualification.py test_public_stage3_external_probe.py)
+
+  ubuntu-sudo-check:
+    name: 'Ubuntu GitHub runner / safe local sudo and systemd tooling (${{ matrix.os }})'
+    if: >-
+      github.repository == 'adrianf87/dc24h.eu-twilight' &&
+      ((github.event_name == 'pull_request' &&
+        github.actor == 'adrianf87' &&
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        github.head_ref == 'fix/stage3-ncdc-command-ack-regression') ||
+       (github.event_name == 'workflow_dispatch' &&
+        github.actor == 'adrianf87' &&
+        (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/fix/stage3-ncdc-command-ack-regression') &&
+        inputs.confirmation == 'RUN_STAGE3_UBUNTU_EXTERNAL_ONLY' &&
+        inputs.production_restarts_ack == false &&
+        inputs.premerge_candidate_sha == github.sha))
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    steps:
+      - name: Verify passwordless sudo is scoped to this ephemeral GitHub Ubuntu VM
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m compileall -q scripts/public_stage3_qualification_external.py scripts/public_stage3_qualification_host.py scripts/stage3_premerge_gate.py scripts/stage3_premerge_evidence.py scripts/test_public_stage3_qualification.py
-          (cd scripts && python3 -m unittest -v test_public_stage3_qualification.py)
+          test "$RUNNER_ENVIRONMENT" = 'github-hosted'
+          test "$(id -u)" != '0'
+          test "$(sudo -n id -u)" = '0'
+          sudo -n systemctl --version | head -n 1
+          echo 'STAGE3_UBUNTU_LOCAL_SUDO_ONLY_PASS: public VPS not accessed'
 
-  # OWNER-approved PR #23 diagnostics: independent clients and synthetic
-  # messages only. This job cannot run systemctl, copy TLS keys or change VPS.
-  # Keep the public host-restart qualification gated on main/workflow_dispatch.
   external-pr:
-    name: 'PR #23 independent ncdc and guest protocol qualification (no host writes)'
+    name: PR independent ncdc, two guests, ADC/TLS and public exposure
     needs: policy-tests
     if: >-
       github.event_name == 'pull_request' &&
@@ -78,53 +108,49 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
-      - name: Install real ncdc and verify exact PR head
+      - name: Install real ncdc on GitHub Ubuntu (never on the public VPS)
         shell: bash
         env:
-          EXPECTED_PR_SHA: ${{ github.event.pull_request.head.sha }}
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$EXPECTED_PR_SHA"
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends ncdc
+          test "$RUNNER_ENVIRONMENT" = 'github-hosted'
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          sudo -n apt-get update -qq
+          sudo -n apt-get install -y --no-install-recommends ncdc
           ncdc --version
-      - name: Independently check public guest chat, search and ncdc PTY
+      - name: Qualify public ADCS from an independent network
         shell: bash
         env:
-          EXPECTED_PR_SHA: ${{ github.event.pull_request.head.sha }}
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
           result=FAIL
-          write_report() {
-            printf '{"source_sha":"%s","scope":"EXTERNAL_PR_NCDC_GUEST_PROTOCOL_NO_HOST_CHANGES","result":"%s"}\n' \
-              "$EXPECTED_PR_SHA" "$result" > "$RUNNER_TEMP/stage3-external-pr.json"
+          report() {
+            printf '{"source_sha":"%s","scope":"EXTERNAL_NCDC_UBUNTU_NO_VPS_WRITES","result":"%s"}\n' "$EXPECTED_SHA" "$result" > "$RUNNER_TEMP/stage3-ubuntu-pr.json"
           }
-          trap write_report EXIT
+          trap report EXIT
           python3 scripts/public_stage3_qualification_external.py
           result=PASS
-      - name: Upload sanitized PR external report
+      - name: Upload sanitized independent evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: stage3-qualification-external-pr
-          path: ${{ runner.temp }}/stage3-external-pr.json
+          name: stage3-ubuntu-external-pr
+          path: ${{ runner.temp }}/stage3-ubuntu-pr.json
           if-no-files-found: ignore
           retention-days: 14
 
-  # Owner-dispatched external qualification. The only privileged branch job
-  # below explicitly checks out a reviewed main SHA, never this PR's code.
-  premerge-external:
-    name: 'OWNER Stage III pre-merge external ncdc before/after (GitHub hosted)'
+  external-manual:
+    name: OWNER branch/main exact-SHA external qualification (no VPS sudo)
     if: >-
       github.event_name == 'workflow_dispatch' &&
       github.repository == 'adrianf87/dc24h.eu-twilight' &&
       github.actor == 'adrianf87' &&
-      github.ref == 'refs/heads/fix/stage3-ncdc-command-ack-regression' &&
-      ((inputs.confirmation == 'RUN_STAGE3_PREMERGE_EXTERNAL' &&
-        inputs.production_restarts_ack == false &&
-        (inputs.premerge_phase == 'before' || inputs.premerge_phase == 'after')) ||
-       (inputs.confirmation == 'RUN_STAGE3_PREMERGE_FULL_QUALIFICATION' &&
-        inputs.production_restarts_ack == true && inputs.premerge_phase == 'full'))
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/fix/stage3-ncdc-command-ack-regression') &&
+      inputs.confirmation == 'RUN_STAGE3_UBUNTU_EXTERNAL_ONLY' &&
+      inputs.production_restarts_ack == false &&
+      inputs.premerge_candidate_sha == github.sha
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -132,354 +158,43 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-      - name: Check exact OWNER, branch, commit and GitHub-hosted runner
+      - name: Require OWNER, exact branch/main SHA, and GitHub-hosted runner
         shell: bash
         env:
           OWNER_CONFIRMATION: ${{ inputs.confirmation }}
           PRODUCTION_RESTARTS_ACK: ${{ inputs.production_restarts_ack }}
           PREMERGE_PHASE: ${{ inputs.premerge_phase }}
           PREMERGE_CANDIDATE_SHA: ${{ inputs.premerge_candidate_sha }}
-          PREMERGE_TRUSTED_MAIN_SHA: ${{ inputs.premerge_trusted_main_sha }}
         run: |
           set -euo pipefail
           python3 scripts/stage3_premerge_gate.py
           test "$(git rev-parse HEAD)" = "$PREMERGE_CANDIDATE_SHA"
-      - name: Install packaged real ncdc on the ephemeral runner
+          (cd scripts && python3 -m unittest -v test_public_stage3_qualification.py test_public_stage3_external_probe.py)
+      - name: Install packaged ncdc only on this temporary Ubuntu VM
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends ncdc
+          sudo -n apt-get update -qq
+          sudo -n apt-get install -y --no-install-recommends ncdc
           ncdc --version
-      - name: Verify external TLS, two guests, real ncdc and forbidden ports
+      - name: Independently verify real ncdc, guests, TLS and forbidden ports
         shell: bash
         env:
           PREMERGE_PHASE: ${{ inputs.premerge_phase }}
         run: |
           set -euo pipefail
-          report_phase="$PREMERGE_PHASE"
-          if [ "$report_phase" = 'full' ]; then report_phase='before'; fi
           result=FAIL
-          write_report() {
-            printf '{"source_sha":"%s","phase":"%s","scope":"PREMERGE_EXTERNAL_NCDC_NO_HOST_WRITES","result":"%s"}\n' \
-              "$GITHUB_SHA" "$report_phase" "$result" > "$RUNNER_TEMP/stage3-premerge-external.json"
+          report() {
+            printf '{"source_sha":"%s","phase":"%s","scope":"EXTERNAL_NCDC_UBUNTU_NO_VPS_WRITES","result":"%s"}\n' "$GITHUB_SHA" "$PREMERGE_PHASE" "$result" > "$RUNNER_TEMP/stage3-ubuntu-manual.json"
           }
-          trap write_report EXIT
+          trap report EXIT
           python3 scripts/public_stage3_qualification_external.py
           result=PASS
-      - name: Upload sanitized pre-merge external evidence
+      - name: Upload sanitized external-only evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: stage3-premerge-external-${{ inputs.premerge_phase }}
-          path: ${{ runner.temp }}/stage3-premerge-external.json
-          if-no-files-found: ignore
-          retention-days: 14
-
-  # NEVER run this job from pull_request. The OWNER manually dispatches the
-  # exact reviewed PR SHA and a separate reviewed main SHA; root executes
-  # scripts from *main*, not from the branch/PR checkout. This is still a
-  # powerful workflow: the branch YAML must be reviewed before dispatch.
-  premerge-host:
-    name: 'OWNER Stage III pre-merge trusted-main systemd and TLS sudo rehearsal'
-    needs: premerge-external
-    if: >-
-      github.event_name == 'workflow_dispatch' &&
-      needs.premerge-external.result == 'success' &&
-      github.repository == 'adrianf87/dc24h.eu-twilight' &&
-      github.actor == 'adrianf87' &&
-      github.ref == 'refs/heads/fix/stage3-ncdc-command-ack-regression' &&
-      inputs.confirmation == 'RUN_STAGE3_PREMERGE_FULL_QUALIFICATION' &&
-      inputs.production_restarts_ack == true &&
-      inputs.premerge_phase == 'full' &&
-      inputs.premerge_candidate_sha == github.sha
-    runs-on: [self-hosted, linux, x64, twilight-debian13-stage2]
-    timeout-minutes: 15
-    steps:
-      - name: Validate explicit OWNER, immutable PR/main SHAs and exact VPS BEFORE checkout
-        shell: bash
-        env:
-          CANDIDATE_SHA: ${{ inputs.premerge_candidate_sha }}
-          TRUSTED_MAIN_SHA: ${{ inputs.premerge_trusted_main_sha }}
-          OWNER_CONFIRMATION: ${{ inputs.confirmation }}
-          OWNER_RESTART_ACK: ${{ inputs.production_restarts_ack }}
-        run: |
-          set -euo pipefail
-          test "$GITHUB_EVENT_NAME" = 'workflow_dispatch'
-          test "$GITHUB_REPOSITORY" = 'adrianf87/dc24h.eu-twilight'
-          test "$GITHUB_ACTOR" = 'adrianf87'
-          test "$GITHUB_REF" = 'refs/heads/fix/stage3-ncdc-command-ack-regression'
-          test "$OWNER_CONFIRMATION" = 'RUN_STAGE3_PREMERGE_FULL_QUALIFICATION'
-          test "$OWNER_RESTART_ACK" = 'true'
-          test "$RUNNER_NAME" = 'server-747585786'
-          test "$(id -un)" = 'github-runner'
-          test "$(sudo -n id -u)" = '0'
-          [[ "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]
-          [[ "$TRUSTED_MAIN_SHA" =~ ^[0-9a-f]{40}$ ]]
-          test "$CANDIDATE_SHA" = "$GITHUB_SHA"
-          actual_main="$(git ls-remote https://github.com/adrianf87/dc24h.eu-twilight.git refs/heads/main | cut -f1)"
-          test "$actual_main" = "$TRUSTED_MAIN_SHA"
-      - name: Checkout ONLY independently reviewed immutable main SHA
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-        with:
-          ref: ${{ inputs.premerge_trusted_main_sha }}
-          persist-credentials: false
-      - name: Validate checkout and host policy, then restart Stage III unit only
-        shell: bash
-        env:
-          TRUSTED_MAIN_SHA: ${{ inputs.premerge_trusted_main_sha }}
-          CANDIDATE_SHA: ${{ inputs.premerge_candidate_sha }}
-        run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$TRUSTED_MAIN_SHA"
-          actual_main="$(git ls-remote https://github.com/adrianf87/dc24h.eu-twilight.git refs/heads/main | cut -f1)"
-          test "$actual_main" = "$TRUSTED_MAIN_SHA"
-          (cd scripts && python3 -m unittest -v test_public_stage3_qualification.py)
-          sudo -n python3 scripts/public_stage3_qualification_host.py \
-            --confirmation RUN_STAGE3_PUBLIC_QUALIFICATION \
-            --actor "$GITHUB_ACTOR" --ref refs/heads/main \
-            --runner "$RUNNER_NAME" --runner-user "$(id -un)" \
-            --expected-sha "$TRUSTED_MAIN_SHA"
-          printf '{"candidate_sha":"%s","source_sha":"%s","scope":"TRUSTED_MAIN_STAGE3_HOST_RESTARTS_AND_TLS_REHEARSAL","result":"PASS"}\n' \
-            "$CANDIDATE_SHA" "$TRUSTED_MAIN_SHA" > "$RUNNER_TEMP/stage3-premerge-host.json"
-      - name: Upload sanitized privileged host evidence
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: stage3-premerge-host
-          path: ${{ runner.temp }}/stage3-premerge-host.json
-          if-no-files-found: ignore
-          retention-days: 14
-
-  premerge-external-after:
-    name: 'OWNER Stage III pre-merge full ncdc and ports AFTER sudo systemd restarts'
-    needs: premerge-host
-    if: >-
-      github.event_name == 'workflow_dispatch' &&
-      needs.premerge-host.result == 'success' &&
-      github.repository == 'adrianf87/dc24h.eu-twilight' &&
-      github.actor == 'adrianf87' &&
-      github.ref == 'refs/heads/fix/stage3-ncdc-command-ack-regression' &&
-      inputs.confirmation == 'RUN_STAGE3_PREMERGE_FULL_QUALIFICATION' &&
-      inputs.production_restarts_ack == true &&
-      inputs.premerge_phase == 'full' &&
-      inputs.premerge_candidate_sha == github.sha
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-        with:
-          ref: ${{ github.sha }}
-          persist-credentials: false
-      - name: Verify exact OWNER and candidate SHA on GitHub-hosted runner
-        shell: bash
-        env:
-          OWNER_CONFIRMATION: ${{ inputs.confirmation }}
-          PRODUCTION_RESTARTS_ACK: ${{ inputs.production_restarts_ack }}
-          PREMERGE_PHASE: ${{ inputs.premerge_phase }}
-          PREMERGE_CANDIDATE_SHA: ${{ inputs.premerge_candidate_sha }}
-          PREMERGE_TRUSTED_MAIN_SHA: ${{ inputs.premerge_trusted_main_sha }}
-        run: |
-          set -euo pipefail
-          python3 scripts/stage3_premerge_gate.py
-          test "$(git rev-parse HEAD)" = "$PREMERGE_CANDIDATE_SHA"
-      - name: Install packaged real ncdc on the ephemeral runner
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends ncdc
-      - name: Independently repeat all public TLS, ncdc and ADC tests after restarts
-        shell: bash
-        run: |
-          set -euo pipefail
-          result=FAIL
-          write_report() {
-            printf '{"source_sha":"%s","phase":"after","scope":"PREMERGE_EXTERNAL_NCDC_NO_HOST_WRITES","result":"%s"}\n' \
-              "$GITHUB_SHA" "$result" > "$RUNNER_TEMP/stage3-premerge-external-after.json"
-          }
-          trap write_report EXIT
-          python3 scripts/public_stage3_qualification_external.py
-          result=PASS
-      - name: Upload sanitized post-sudo external evidence
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: stage3-premerge-external-after
-          path: ${{ runner.temp }}/stage3-premerge-external-after.json
-          if-no-files-found: ignore
-          retention-days: 14
-
-  premerge-evidence:
-    name: 'OWNER Stage III pre-merge three-phase evidence and exact SHA gate'
-    needs: [premerge-external, premerge-host, premerge-external-after]
-    if: >-
-      github.event_name == 'workflow_dispatch' &&
-      needs.premerge-external.result == 'success' &&
-      needs.premerge-host.result == 'success' &&
-      needs.premerge-external-after.result == 'success' &&
-      github.repository == 'adrianf87/dc24h.eu-twilight' &&
-      github.actor == 'adrianf87' &&
-      github.ref == 'refs/heads/fix/stage3-ncdc-command-ack-regression' &&
-      inputs.confirmation == 'RUN_STAGE3_PREMERGE_FULL_QUALIFICATION' &&
-      inputs.production_restarts_ack == true &&
-      inputs.premerge_phase == 'full' &&
-      inputs.premerge_candidate_sha == github.sha
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-        with:
-          ref: ${{ github.sha }}
-          persist-credentials: false
-      - name: Download PR external BEFORE evidence
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: stage3-premerge-external-full
-          path: evidence/before
-      - name: Download pinned-main privileged HOST evidence
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: stage3-premerge-host
-          path: evidence/host
-      - name: Download PR external AFTER evidence
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: stage3-premerge-external-after
-          path: evidence/after
-      - name: Require three real PASS artifacts from exact candidate and trusted main
-        shell: bash
-        env:
-          CANDIDATE_SHA: ${{ inputs.premerge_candidate_sha }}
-          TRUSTED_MAIN_SHA: ${{ inputs.premerge_trusted_main_sha }}
-        run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
-          python3 scripts/stage3_premerge_evidence.py \
-            --before evidence/before/stage3-premerge-external.json \
-            --host evidence/host/stage3-premerge-host.json \
-            --after evidence/after/stage3-premerge-external-after.json \
-            --candidate-sha "$CANDIDATE_SHA" \
-            --trusted-main-sha "$TRUSTED_MAIN_SHA"
-
-  external-before:
-    name: Independent ncdc, two guests, protocol and exposure
-    if: github.repository == 'adrianf87/dc24h.eu-twilight' && github.actor == 'adrianf87' && github.ref == 'refs/heads/main' && inputs.confirmation == 'RUN_STAGE3_PUBLIC_QUALIFICATION' && inputs.production_restarts_ack == true
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-        with:
-          ref: ${{ github.sha }}
-          persist-credentials: false
-      - name: Install packaged real ncdc client from Ubuntu repository
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends ncdc
-          ncdc --version
-      - name: Independent external Stage III protocol and public port checks
-        shell: bash
-        run: |
-          set -euo pipefail
-          result=FAIL
-          write_report() {
-            printf '{"source_sha":"%s","scope":"EXTERNAL_NCDC_TWO_CLIENTS_CHAT_SEARCH_CTM_RCM_PUBLIC_PORTS","result":"%s"}\n' \
-              "$GITHUB_SHA" "$result" > "$RUNNER_TEMP/stage3-external-before.json"
-          }
-          trap write_report EXIT
-          python3 scripts/public_stage3_qualification_external.py
-          result=PASS
-      - name: Upload sanitized external evidence
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: stage3-qualification-external-before
-          path: ${{ runner.temp }}/stage3-external-before.json
-          if-no-files-found: ignore
-          retention-days: 14
-
-  host:
-    name: Scoped Stage III systemd and same-pair TLS rehearsal
-    needs: external-before
-    runs-on: [self-hosted, linux, x64, twilight-debian13-stage2]
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-        with:
-          ref: ${{ github.sha }}
-          persist-credentials: false
-      - name: Require exact OWNER, SHA, dedicated runner and passwordless sudo
-        shell: bash
-        env:
-          OWNER_CONFIRMATION: ${{ inputs.confirmation }}
-        run: |
-          set -euo pipefail
-          test "$OWNER_CONFIRMATION" = "RUN_STAGE3_PUBLIC_QUALIFICATION"
-          test "$GITHUB_ACTOR" = "adrianf87"
-          test "$GITHUB_REF" = "refs/heads/main"
-          test "$RUNNER_NAME" = "server-747585786"
-          test "$(id -un)" = "github-runner"
-          test "$(sudo -n id -u)" = "0"
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-      - name: Check policy regression tests without mutating host
-        shell: bash
-        run: |
-          set -euo pipefail
-          (cd scripts && python3 -m unittest -v test_public_stage3_qualification.py)
-      - name: Restart only Stage III unit three times, rehearse same TLS pair and verify recovery
-        shell: bash
-        env:
-          OWNER_CONFIRMATION: ${{ inputs.confirmation }}
-        run: |
-          set -euo pipefail
-          sudo -n python3 scripts/public_stage3_qualification_host.py \
-            --confirmation "$OWNER_CONFIRMATION" \
-            --actor "$GITHUB_ACTOR" --ref "$GITHUB_REF" \
-            --runner "$RUNNER_NAME" --runner-user "$(id -un)" \
-            --expected-sha "$GITHUB_SHA"
-          printf '{"source_sha":"%s","scope":"ONLY_STAGE3_SYSTEMD_3_RESTARTS_AND_MANUAL_SAME_PAIR_TLS_REHEARSAL","result":"PASS"}\n' "$GITHUB_SHA" > "$RUNNER_TEMP/stage3-host-qualification.json"
-      - name: Upload sanitized host evidence
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: stage3-qualification-host
-          path: ${{ runner.temp }}/stage3-host-qualification.json
-          if-no-files-found: ignore
-          retention-days: 14
-
-  external-after:
-    name: Independent full ncdc, two guests, TLS and ports after systemd restarts
-    if: always() && needs.host.result == 'success'
-    needs: host
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-        with:
-          ref: ${{ github.sha }}
-          persist-credentials: false
-      - name: Install real ncdc on fresh post-restart external runner
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends ncdc
-          ncdc --version
-      - name: Repeat full ncdc and ADC protocol qualification after systemd/TLS rehearsal
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          python3 scripts/public_stage3_qualification_external.py
-          printf '{"source_sha":"%s","scope":"POST_RESTART_FULL_NCDC_ADC_TLS_GUEST_PORTS","result":"PASS"}\n' "$GITHUB_SHA" > "$RUNNER_TEMP/stage3-external-after.json"
-      - name: Upload sanitized final evidence
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: stage3-qualification-external-after
-          path: ${{ runner.temp }}/stage3-external-after.json
+          name: stage3-ubuntu-external-${{ inputs.premerge_phase }}
+          path: ${{ runner.temp }}/stage3-ubuntu-manual.json
           if-no-files-found: ignore
           retention-days: 14
