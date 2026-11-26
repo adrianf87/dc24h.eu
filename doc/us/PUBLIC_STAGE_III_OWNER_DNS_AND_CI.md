@@ -5,6 +5,12 @@
 **Public guest service:** `adcs://server-747585786.dc24h.eu:1512` at IPv4 `62.171.156.32`.  
 **Disposition:** **DNS ZONE CONTROL VERIFIED — PASS** through a fresh TXT challenge at two independent public resolvers. Domain registrant identity remains **OWNER-ATTESTED** from private registrar screenshots. A/PTR compatibility is verified separately by the public CI suite.
 
+## OWNER stage-completion scope revision — November 27, 2026
+
+The OWNER **withdraws** these Stage III acceptance requirements: independent latest-SHA public DNS A/PTR or ADCS tests, interactive real DC++ verification, and additional Contabo provider firewall/port checks. **Do not execute or dispatch these tests and do not represent them as PASS.** Existing historical evidence and the independently verified one-time TXT challenge remain factual, but do not trigger further external checks.
+
+The controlled VPS/live ADCS service restart test remains withdrawn. **Formal OWNER STAGE III ACCEPTANCE GO and separate OWNER MERGE GO are explicitly retained.** The only current action is to await required GitHub-hosted CI and review its exact-head results before those decisions. No merge is authorized by this documentation.
+
 ## OWNER statement and supplied observations
 
 The repository OWNER (`adrianf87`) explicitly states that `dc24h.eu` is their domain. Additional privately supplied registrar and DNS-zone management screenshots show the domain under the OWNER's account and the new TXT entry. This is OWNER-provided evidence of registration and DNS administration, not an independent identity check. Personal contact data and account identifiers are omitted.
@@ -51,19 +57,16 @@ The Stage III `tls-public` evidence group now includes:
 
 The `dns.ptr.forward-confirmed` case fails closed on a mismatched PTR, a wrong forward mapping, or an inconclusive lookup. Offline unit regressions cover its valid, invalid and blocked outcomes. DNS checks are read-only; they do not change the zone or the VPS. A forward-confirmed PTR still cannot establish domain ownership.
 
-On pull requests, the public external groups are **out of scope / NOT TESTED** by design. For the candidate source, the OWNER may run the existing external-only workflow dispatch `RUN_STAGE3_UBUNTU_EXTERNAL_ONLY` with the reviewed exact SHA on GitHub-hosted Ubuntu 24.04. An automatically green PR run alone is not an external DNS/TLS acceptance test.
+On pull requests, the public external groups are **out of scope / NOT TESTED** by design. The OWNER has now removed any additional external snapshot from the Stage III completion requirements. **Do not dispatch `RUN_STAGE3_UBUNTU_EXTERNAL_ONLY` for this qualification.** Existing external test code may remain in the repository for historical/regression purposes, but it is not an acceptance gate for PR #24.
 
 ## CI and acceptance checklist — keep exact-SHA evidence
 
 - [ ] **Current PR head:** Obtain the completed GitHub Actions CI for the actual updated head SHA, not the earlier `0863f1bf820e34f64e7df0076fe51f98827ca81d`; do not reuse an older SHA as the current head.
 - [ ] **Isolated Ubuntu matrix:** Require full CTest and Stage III offline/two-client/TLS fixtures/stability/systemd *fixture* verification on GitHub-hosted Ubuntu 22.04, 24.04 and 26.04. The temporary Ubuntu systemd fixture is not a production ADCS restart.
 - [ ] **General required CI:** C++ Debug/Release, WebAdmin, address/undefined sanitizers, baseline policy, CodeQL, parser/fuzz and relevant Stage IV checks must finish successfully, with no unreviewed required failures.
-- [ ] **Public external snapshot for exact source:** Review independent public DNS A/PTR, CA/SAN/TLS, forbidden-port exposure, real ncdc and two-guest evidence for the source under review. Link run URL, SHA, attempt and checksummed artifacts.
-- [ ] **Real DC++ client:** Record version, independent network, trusted ADCS connection, two-client visibility, bidirectional chat, search and transfer signaling, reconnect and sanitized observer evidence.
 - [x] **DNS record control:** The fresh OWNER TXT challenge was independently observed by Google DNS and Cloudflare DNS and confirmed in a later OWNER terminal screenshot.
-- [ ] **Provider and remaining zone evidence:** Review authoritative NS/A records as required; verify Contabo ingress/approved SSH and HTTPS exceptions and investigate public reachability of host TCP/UDP 5355 if present.
 - [ ] **Stability provenance:** The earlier OWNER-approved 30-minute public stability run was PASS at `7c961238066e3de2bef5ab9303fd3945a4b85157`. Keep that exact SHA and deployed binary identity in the evidence; do not claim it ran on a later head. Determine explicitly whether the historical evidence suffices for the unchanged production binary.
-- [ ] **Decision:** Mark each case PASS, FAIL, BLOCKED, NOT TESTED or OWNER-ATTESTED only as supported. Separate `OWNER STAGE III ACCEPTANCE GO` and `OWNER MERGE GO` are required; PR #24 and Issue #10 remain open until their real gates are satisfied.
+- [ ] **OWNER decisions retained:** Review exact-head CI without new external/manual tests. Record excluded checks as `OUT OF SCOPE BY OWNER`, never PASS. Obtain formal `OWNER STAGE III ACCEPTANCE GO` and separate `OWNER MERGE GO` before merging; PR #24 and Issue #10 remain open in the meantime.
 
 ### Historical CI evidence, not evidence for future commits
 
