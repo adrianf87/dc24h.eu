@@ -1,6 +1,7 @@
 """Pure regression checks: neither network nor sudo/systemd is used."""
 
 import argparse
+from pathlib import Path
 import unittest
 from unittest import mock
 
@@ -233,6 +234,7 @@ class PremergeExternalGateTests(unittest.TestCase):
             "PRODUCTION_RESTARTS_ACK": "false",
             "PREMERGE_PHASE": "before",
             "PREMERGE_CANDIDATE_SHA": self.head_sha,
+            "PREMERGE_TRUSTED_MAIN_SHA": "b" * 40,
             "GITHUB_SHA": self.head_sha,
         }
 
@@ -253,6 +255,19 @@ class PremergeExternalGateTests(unittest.TestCase):
             with self.subTest(override=override):
                 with self.assertRaises(RuntimeError):
                     premerge.guard(dict(self.env, **override))
+
+    def test_full_premerge_requires_distinct_confirmation_and_main_sha(self):
+        full_env = dict(self.env, PREMERGE_PHASE="full",
+                        OWNER_CONFIRMATION=premerge.FULL_CONFIRMATION,
+                        PRODUCTION_RESTARTS_ACK="true")
+        self.assertEqual(premerge.guard(full_env), "full")
+        for override in ({"OWNER_CONFIRMATION": premerge.CONFIRMATION},
+                         {"PRODUCTION_RESTARTS_ACK": "false"},
+                         {"PREMERGE_TRUSTED_MAIN_SHA": ""},
+                         {"PREMERGE_TRUSTED_MAIN_SHA": "c" * 39}):
+            with self.subTest(override=override):
+                with self.assertRaises(RuntimeError):
+                    premerge.guard(dict(full_env, **override))
 
     def test_premerge_requires_owner_repo_branch_manual_ack(self):
         for override in ({"GITHUB_ACTOR": "someone-else"},
@@ -303,6 +318,45 @@ class PremergeEvidenceTests(unittest.TestCase):
                 with self.assertRaises(RuntimeError):
                     self.check()
                 self.host[field] = old
+
+
+class PremergeWorkflowSafetyTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        workflow = (Path(__file__).resolve().parent.parent / ".github" / "workflows" /
+                    "debian13-stage3-full-qualification.yml")
+        cls.workflow = workflow.read_text(encoding="utf-8")
+
+    def job(self, name, next_name):
+        return self.workflow.split("\n  " + name + ":\n", 1)[1].split(
+            "\n  " + next_name + ":\n", 1)[0]
+
+    def test_privileged_branch_job_cannot_trigger_on_pull_request(self):
+        host_job = self.job("premerge-host", "premerge-external-after")
+        self.assertIn("github.event_name == 'workflow_dispatch'", host_job)
+        self.assertIn("needs: premerge-external", host_job)
+        self.assertIn("inputs.production_restarts_ack == true", host_job)
+        self.assertIn("inputs.premerge_candidate_sha == github.sha", host_job)
+        self.assertIn("inputs.confirmation == 'RUN_STAGE3_PREMERGE_FULL_QUALIFICATION'", host_job)
+
+    def test_branch_root_code_is_checked_out_from_trusted_main_only(self):
+        host_job = self.job("premerge-host", "premerge-external-after")
+        self.assertIn("ref: ${{ inputs.premerge_trusted_main_sha }}", host_job)
+        self.assertNotIn("ref: ${{ github.sha }}", host_job)
+        self.assertIn("test \"$actual_main\" = \"$TRUSTED_MAIN_SHA\"", host_job)
+        self.assertIn("sudo -n python3 scripts/public_stage3_qualification_host.py", host_job)
+
+    def test_pre_and_post_branch_ncdc_run_off_host_and_full_main_retest(self):
+        external_before = self.job("premerge-external", "premerge-host")
+        external_after = self.job("premerge-external-after", "premerge-evidence")
+        main_after = self.workflow.split("\n  external-after:\n", 1)[1]
+        self.assertIn("runs-on: ubuntu-24.04", external_before)
+        self.assertIn("runs-on: ubuntu-24.04", external_after)
+        self.assertIn("public_stage3_qualification_external.py", external_before)
+        self.assertIn("public_stage3_qualification_external.py", external_after)
+        self.assertIn("public_stage3_qualification_external.py", main_after)
+        self.assertIn("sudo apt-get install -y --no-install-recommends ncdc", main_after)
+        self.assertNotIn("--smoke-only", main_after)
 
 
 if __name__ == "__main__":

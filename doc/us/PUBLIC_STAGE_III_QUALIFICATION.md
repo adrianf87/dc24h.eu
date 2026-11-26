@@ -2,7 +2,9 @@
 
 ## Scope and identity
 
-- Repository: `adrianf87/dc24h.eu-twilight`; run the workflow from protected `main` only.
+- Repository: `adrianf87/dc24h.eu-twilight`; post-merge full qualification
+  runs on protected `main`. A separately OWNER-gated manual `full` dispatch
+  on PR #23's exact branch SHA can qualify before merge (see below).
 - Public **ADCS/TLS** hub: `adcs://server-747585786.dc24h.eu:1512`, IPv4 `62.171.156.32`.
 - Dedicated Debian 13 runner: `server-747585786`, account `github-runner`, with existing passwordless `sudo`. The OWNER accepted the co-location risk.
 - No plaintext public ADC on 1511; no public WebAdmin; guest-only and no private/registered-user data.
@@ -13,12 +15,13 @@
 Workflow: `.github/workflows/debian13-stage3-full-qualification.yml`.
 
 For **complete pre-merge qualification of PR #23**, including live systemd
-restarts and same-pair TLS rehearsal without running any PR code as root,
-follow [the OWNER-controlled BEFORE → trusted-main HOST → AFTER procedure](PUBLIC_STAGE_III_PREMERGE.md).
-The two external gates execute on GitHub-hosted runners and the host operation
-uses a separately verified immutable `main` checkout. A manual confirmation is
-required immediately before any public service restart. **Never allow a
-pull-request workflow to perform privileged host operations.**
+restarts and same-pair TLS rehearsal without running any PR Python code as
+root, follow [the OWNER-controlled BEFORE → trusted-main sudo HOST → AFTER
+procedure](PUBLIC_STAGE_III_PREMERGE.md). The automated full branch mode is
+restricted to an exact OWNER dispatch with explicit restart consent and
+immutable candidate and trusted main SHAs. It is **never** triggered from
+`pull_request` events. A branch workflow itself can issue privileged commands:
+review its exact YAML revision before approving execution.
 
 ### PR #23 pre-merge regression gate
 
@@ -38,10 +41,10 @@ pull-request workflow to perform privileged host operations.**
   chat markers; it never uploads raw ncurses output. Fixed status flags and
   counts of ADC frame *types* are sufficient for failure diagnosis without
   remote SIDs, private text, or TLS/key material.
-- **Do not merge on offline tests alone.** Wait for this independent PR
-  qualification and all required PR CI checks to pass. After merge, the
-  separate OWNER-approved `workflow_dispatch` on protected `main` is still
-  required for the systemd, same-pair TLS and post-restart qualification.
+- **Do not merge on offline tests alone.** Require the full pre-merge
+  external/sudo-host/external/evidence sequence and all PR CI checks before
+  OWNER merge. Protected `main` retains its separately OWNER-approved full
+  `workflow_dispatch` for post-merge requalification.
 
 1. Confirm the public guest hub is already active and management SSH remains available. Verify the OWNER has approved a brief interruption of the live guest service.
 2. From protected `main`, select **Run workflow**, set `confirmation=RUN_STAGE3_PUBLIC_QUALIFICATION`, and check `production_restarts_ack`.
@@ -53,7 +56,10 @@ pull-request workflow to perform privileged host operations.**
 4. The external job also checks DNS A matches the OWNER IPv4, default CA chain and SAN validation, and the bounded forbidden TCP list `1511, 3000, 3306, 5173, 5432, 6379, 8000, 8080, 9090`. This is an authorized *focused* probe, not a 65k-port Internet scan.
 5. Only after the external gate passes, the dedicated Debian host job verifies the exact source SHA, OWNER actor, runner/root identity, deployed Stage III manifest and unit, and `ss -H -ltn` listener inventory. Non-loopback TCP listeners must be limited to the documented allowance: SSH 22, existing Apache/ACME 80/443 and guest ADCS 1512. A different actual SSH/Apache port requires explicit policy adjustment before running.
 6. The host job runs three separate `systemctl restart dc24h-stage3-adcs.service` cycles, checking a new CA/SAN TLS and ADC handshake after each, then rehearses **same-pair** replacement of only the service-owned certificate/key *copies* and restarts only that service. Existing key/cert bytes are backed up before replacement and restored on error. The Let's Encrypt live/archive contents are never rewritten.
-7. A final independent GitHub-hosted job checks public TLS, guest handshake and forbidden ports again. Short, sanitized job summaries are retained as GitHub Actions artifacts for 14 days.
+7. A final independent GitHub-hosted job repeats the **entire** ncdc, two-client
+   ADC chat/search/CTM/RCM/reconnect, public CA/SAN TLS and forbidden-port
+   qualification after the restarts. Short, sanitized evidence is retained
+   as GitHub Actions artifacts for 14 days.
 
 ## Trust and limitations
 

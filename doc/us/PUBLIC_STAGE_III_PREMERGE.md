@@ -10,25 +10,78 @@ restarts. Never use the retired Stage III hostname or IPv4.
 
 ## Security boundary (mandatory)
 
-- **Do not run pull-request checkout code, PR workflows, PR actions, or PR
-  Python scripts as root on `server-747585786`.** The public repo has a
-  self-hosted runner with passwordless `sudo`; GitHub warns this is unsafe for
-  untrusted PR workflow execution. A branch workflow can be modified by the
-  branch author, even when the checkout within it targets `main`.
+- **Never run PR Python/source code as root on `server-747585786`.** The public
+  repo has a self-hosted runner with passwordless `sudo`; GitHub warns about
+  the risk of executing untrusted PR workflows. The **branch workflow YAML
+  itself is executable and privileged in full mode**, so the OWNER must review
+  its exact candidate commit before authorizing a manual dispatch. Checking
+  out a pinned `main` SHA does not by itself make branch YAML trustworthy.
 - All pre/post external tests run on `runs-on: ubuntu-24.04` (GitHub-hosted),
   with read-only repository permissions and synthetic public ADC traffic.
-- The **host step is intentionally NOT a GitHub job from the PR**. An OWNER
-  with direct VPS access obtains an exact, independently verified `main`
-  commit and runs only its existing, reviewed
-  `scripts/public_stage3_qualification_host.py` with `sudo -n`.
+- The automatic `pull_request` event **never** schedules host `sudo`. An
+  explicit OWNER `workflow_dispatch` from the reviewed branch with
+  `premerge_phase=full`, the exact candidate SHA, the exact reviewed `main`
+  SHA, a distinct confirmation and restart acknowledgement is required.
+  `premerge-host` checks out only immutable `main` source and executes its
+  existing `scripts/public_stage3_qualification_host.py` using `sudo -n`.
 - Host restart/TLS authority is **separate** from the PR's external-test
-  confirmation. It requires explicit `OWNER: RUN_STAGE3_PREMERGE_HOST_TESTS`
-  at the host terminal. This permission applies to the exact main SHA and
-  deployed service only; do not infer approval from a successful PR check.
+  confirmation. The automated path requires
+  `RUN_STAGE3_PREMERGE_FULL_QUALIFICATION` **and** the checked restart-ack box;
+  the manual fallback requires `OWNER: RUN_STAGE3_PREMERGE_HOST_TESTS` at the
+  host terminal. Do not infer restart approval from a successful PR check.
 - No automated merge occurs from this procedure. The OWNER should review
   all required PR checks, the three evidence reports and chronology first.
 
-## A. Freeze and check the candidate
+## Automated full branch qualification — recommended
+
+This is the complete **BEFORE → sudo HOST → AFTER → EVIDENCE** pipeline in a
+single OWNER-dispatched GitHub Actions run **on the PR branch, before merge**.
+It performs three public Stage III systemd restarts plus one same-pair TLS
+rehearsal restart. Public guests may be briefly disconnected. Never dispatch
+without an authorized maintenance window and independently available SSH.
+
+1. Review the complete branch workflow YAML and all script changes on the
+   exact candidate SHA. Verify current `main` SHA and the deployed unit.
+2. Under `debian13-stage3-full-qualification.yml` choose **Run workflow** and
+   select `fix/stage3-ncdc-command-ack-regression`.
+3. Provide these **exact** inputs:
+
+   | Input | Value |
+   | --- | --- |
+   | `confirmation` | `RUN_STAGE3_PREMERGE_FULL_QUALIFICATION` |
+   | `production_restarts_ack` | `true` (checked, four brief restarts) |
+   | `premerge_phase` | `full` |
+   | `premerge_candidate_sha` | Exact reviewed PR #23 head SHA |
+   | `premerge_trusted_main_sha` | Exact reviewed `main` SHA |
+
+4. If the web UI displays outdated inputs from `main`, do not guess. A
+   signed-in OWNER may explicitly pass the branch and inputs with GitHub CLI:
+
+   ```bash
+   gh workflow run debian13-stage3-full-qualification.yml \
+     --ref fix/stage3-ncdc-command-ack-regression \
+     -f confirmation=RUN_STAGE3_PREMERGE_FULL_QUALIFICATION \
+     -f production_restarts_ack=true \
+     -f premerge_phase=full \
+     -f premerge_candidate_sha=REPLACE_WITH_VERIFIED_40_CHAR_PR23_SHA \
+     -f premerge_trusted_main_sha=REPLACE_WITH_VERIFIED_40_CHAR_MAIN_SHA
+   ```
+
+5. Require **SUCCESS** in all four jobs: `premerge-external`,
+   `premerge-host`, `premerge-external-after`, and `premerge-evidence`. The
+   first and third run all real ncdc/chat/search/reconnect and bounded public
+   port tests; the host job runs only the trusted-main service/TLS qualification.
+   The final job downloads all three sanitized artifacts and checks the
+   immutable candidate/trusted main SHA and correct PASS scopes.
+
+The external-only `before`/`after` mode and the manual host procedure below
+remain available as a fallback. They must **not** be combined with artifacts
+from a different candidate SHA and must respect the BEFORE → HOST → AFTER
+ordering. **Neither path merges PR #23 automatically.**
+
+## Manual fallback path (OWNER operated)
+
+### A. Freeze and check the candidate
 
 1. Record the exact 40-character **head SHA** of PR #23 (not the synthetic
    GitHub pull-request merge SHA). Confirm the PR head belongs to the same
@@ -41,7 +94,7 @@ restarts. Never use the retired Stage III hostname or IPv4.
    service interruption. Do not change firewall rules, public ports or keys
    to force a PASS.
 
-## B. External ncdc qualification — BEFORE host tests
+### B. External ncdc qualification — BEFORE host tests
 
 From the GitHub Actions workflow
 `debian13-stage3-full-qualification.yml`, use **Run workflow** and select
@@ -78,7 +131,7 @@ gh workflow run debian13-stage3-full-qualification.yml \
 Check the resulting workflow's ref and SHA before trusting its result; a
 skipped job is **not** a successful qualification.
 
-## C. Trusted `main` host checks — manually on the VPS
+### C. Trusted `main` host checks — manually on the VPS
 
 **This stage deliberately interrupts the public guest hub**: the trusted
 script performs three `systemctl restart dc24h-stage3-adcs.service` cycles,
@@ -140,7 +193,7 @@ the script's rollback result from trusted main, restore availability under
 OWNER supervision and keep PR #23 unmerged. Do not automatically retry
 privileged operations.
 
-## D. External ncdc qualification — AFTER host tests
+### D. External ncdc qualification — AFTER host tests
 
 Dispatch the **same workflow and exact unchanged candidate SHA** on the
 PR #23 branch, with `confirmation=RUN_STAGE3_PREMERGE_EXTERNAL`,
@@ -155,7 +208,7 @@ real ncdc inbound/outbound chat, reconnects and forbidden ports after the
 service was restarted. Any new PR commit invalidates **both** external
 reports: rerun B/C/D against the new immutable head SHA.
 
-## E. Evidence, CI and merge hold
+### E. Evidence, CI and merge hold
 
 Copy the two external JSON reports and manually generated host JSON into
 separate folders (both external artifacts contain the same filename). From
