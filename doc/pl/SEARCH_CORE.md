@@ -53,7 +53,7 @@ Od alpha-0.5.6 produkcyjny LoginHub używa [Search Routing](SEARCH_ROUTING.md) i
 | `include` | Opcjonalne od alpha-0.5.3; łącznie wymagane co najmniej jedno kryterium nazwy/rozszerzenia/rozmiaru/typu/TTH |
 | `include` + `exclude` | Łącznie do 32 terminów, każdy niepusty, nie z samych spacji ASCII i do 256 bajtów UTF-8 |
 | Tekst terminów | Wymagane gotowe NFC UTF-8; Text odrzuca znaki sterujące/formatujące i separatory wierszy/akapitów; zachowuje spacje wewnętrzne i brzegowe |
-| `extensions` | Do 16 niepustych wartości, każda do 32 bajtów; ta sama walidacja tekstu, bez początkowej kropki, ukośnika, odwrotnego ukośnika i spacji ASCII |
+| `extensions` | Do 20 niepustych wartości po maksymalnie 32 bajty, z tą samą walidacją tekstu i bez początkowej kropki, ukośnika, odwrotnego ukośnika i spacji ASCII |
 | `min_bytes`, `max_bytes`, `exact_bytes` | Opcjonalne nieujemne liczby całkowite ze znakiem 64-bit; minimum nie przekracza maksimum, exact mieści się w podanych granicach; zero i INT64_MAX są poprawne |
 | `type` | Sprawdzany enum `ItemType::any`, `file` lub `directory` |
 | `token` | Opcjonalny; jeśli podano, 1–128 bajtów gotowego NFC UTF-8 ze spacjami/Unicode, bez interpretacji (alpha-0.5.3) |

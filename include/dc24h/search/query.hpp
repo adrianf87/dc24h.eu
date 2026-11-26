@@ -13,7 +13,7 @@ namespace dc24h::search {
 // Application bounds for textual/filter/TTH queries, not ADC wire limits.
 inline constexpr std::size_t max_terms = 32;
 inline constexpr std::size_t max_term_bytes = 256;
-inline constexpr std::size_t max_extensions = 16;
+inline constexpr std::size_t max_extensions = 20; // ncdc's video category uses 20 EX fields.
 inline constexpr std::size_t max_extension_bytes = 32;
 inline constexpr std::size_t max_token_bytes = 128;
 inline constexpr std::size_t max_query_bytes = 4096;

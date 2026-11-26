@@ -53,7 +53,7 @@ Since alpha-0.5.6, production LoginHub uses [Search Routing](SEARCH_ROUTING.md) 
 | `include` | Optional as of alpha-0.5.3; at least one recognized name/extension/size/type/TTH criterion overall |
 | `include` + `exclude` | At most 32 terms combined; each nonempty, not ASCII-space-only and at most 256 UTF-8 bytes |
 | Text terms | Already-NFC UTF-8; controls, format characters and line/paragraph separators rejected by existing Text validation; internal/edge spaces are retained |
-| `extensions` | At most 16 nonempty values, each at most 32 bytes, with the same text validation and no leading period, slash, backslash or ASCII space |
+| `extensions` | At most 20 nonempty values, each at most 32 bytes, with the same text validation and no leading period, slash, backslash or ASCII space |
 | `min_bytes`, `max_bytes`, `exact_bytes` | Optional nonnegative signed 64-bit values; minimum must not exceed maximum, and exact must satisfy any supplied bounds; zero and INT64_MAX are valid |
 | `type` | Checked `ItemType::any`, `file` or `directory` enum |
 | `token` | Optional; if supplied, 1–128 already-NFC UTF-8 bytes, including spaces/Unicode, preserved without interpretation (alpha-0.5.3) |
