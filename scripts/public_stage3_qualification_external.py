@@ -39,10 +39,10 @@ class Reader:
         while time.monotonic() < end:
             if b"\n" in self.pending:
                 frame, self.pending = self.pending.split(b"\n", 1)
-                if frame.startswith((b"ISTA 1", b"ISTA 2", b"IQUI ")):
-                    raise RuntimeError("Hub rejected the public guest session")
                 if predicate(frame):
                     return frame
+                if frame.startswith((b"ISTA 1", b"ISTA 2", b"IQUI ")):
+                    raise RuntimeError("Hub rejected the public guest session")
                 continue
             self.peer.settimeout(min(2, max(0.1, end - time.monotonic())))
             try:
@@ -84,6 +84,9 @@ def check_two_client_protocol():
         second.sendall(b"BMSG " + second_sid + b" stage3-qualification-two\n")
         a.until(lambda line: line == b"BMSG " + second_sid + b" stage3-qualification-two",
                 "second-to-first chat")
+        private = b"DMSG " + first_sid + b" " + second_sid + b" stage3-private PM" + first_sid
+        first.sendall(private + b"\n")
+        b.until(lambda line: line == private, "first-to-second private message")
 
         token = b"StageIIIQual2026"
         first.sendall(b"BSCH " + first_sid + b" ANstage3qualification TO" + token + b"\n")
@@ -112,6 +115,26 @@ def check_two_client_protocol():
             second.close()
         if first:
             first.close()
+
+
+def check_prelogin_message_denied():
+    context = ssl.create_default_context()
+    with socket.create_connection((base.IPV4, 1512), timeout=6) as plain:
+        with context.wrap_socket(plain, server_hostname=base.FQDN) as peer:
+            peer.settimeout(6)
+            pending = b""
+            peer.sendall(b"HSUP ADBASE ADTIGR\n")
+            first, pending = base.recv_line(peer, pending)
+            second, pending = base.recv_line(peer, pending)
+            if first != b"ISUP ADBASE ADTIGR" or not second.startswith(b"ISID "):
+                raise RuntimeError("Pre-login security test could not handshake")
+            sid = second[5:]
+            peer.sendall(b"BMSG " + sid + b" forbidden-premature-chat\n")
+            denied = Reader(peer)
+            denied.pending = pending
+            # This unauthenticated protocol action must never be accepted.
+            denied.until(lambda frame: frame.startswith(b"ISTA 244 "),
+                         "pre-login denial", timeout=6)
 
 
 def fingerprint_url(context):
@@ -211,6 +234,7 @@ def main():
         peer.close()
         print("STAGE3_EXTERNAL_POST_RESTART_TLS_GUEST_AND_PORTS_PASS")
         return
+    check_prelogin_message_denied()
     check_two_client_protocol()
     check_real_ncdc()
     for seed in range(110, 113):
