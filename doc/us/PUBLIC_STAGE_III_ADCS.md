@@ -5,14 +5,14 @@
 **Starting source:** protected main commit 7e46787c8a0a901fa08b5af6bb3cac7c8eb77a2d, after the [Stage II OWNER acceptance](https://github.com/adrianf87/dc24h.eu-twilight/issues/10#issuecomment-7195123564).  
 **OWNER-selected public hub FQDN:** server-747585786.dc24h.eu (**DNS A record, zone control and live certificate still require independent verification**).  
 **OWNER-selected public IPv4:** 62.171.156.32 (the Debian 13 VPS's reported address; direct assignment/NAT and external reachability must still be verified).  
-**OWNER topology override:** The public hub is now requested **on the same Debian 13 VPS as the GitHub self-hosted runner**. The previous assumption of a dedicated, secret-free test-only VPS no longer covers this configuration. The self-hosted account has passwordless root sudo; this co-location must be separately risk-assessed before storing real login credentials or private TLS keys.  
+**OWNER topology override:** The public hub is now requested **on the same Debian 13 VPS as the GitHub self-hosted runner**. The previous assumption of a dedicated, secret-free test-only VPS no longer covers this configuration. The self-hosted account has passwordless root sudo; the OWNER **explicitly accepted this co-location risk** on November 26, 2026. This does not make real private credentials safe: Stage III first uses guest access with database/authentication disabled and must keep private state outside the rollout.  
 **Retired historical deployment target — never use:** 51.255.80.233 / server-759505093.dc24h.eu.
 
 The OWNER has requested actual public ADCS activation at the specified new target. This runbook is only the pre-deployment safety gate; it does not itself change a VPS firewall, provider ACL, DNS record, TLS private key, service unit, process, or listener. The existing systemd example requires a separate OWNER migration marker and approval; do not create the marker, enable a unit, or stop a legacy service as a side effect of Stage III planning.
 
 ## 1. OWNER decisions and blocking dependencies
 
-The OWNER has named the host and requested public activation. Record and verify the following before carrying out changes; a request is not proof that TLS, credentials, firewall or rollback prerequisites are met:
+The OWNER has named the host, approved ADCS/TLS TCP 1512 with guest access and accepted the existing privileged-runner co-location risk. Record and verify the following before carrying out changes; a request is not proof that TLS, credentials, firewall or rollback prerequisites are met:
 
 | Decision / evidence | Required value | Current disposition |
 | --- | --- | --- |
@@ -20,11 +20,11 @@ The OWNER has named the host and requested public activation. Record and verify 
 | Hostname | Exact OWNER-controlled FQDN to place in DNS A record and certificate SAN | OWNER selected **server-747585786.dc24h.eu**; zone ownership, current A record and SAN still unverified |
 | DNS authority | Proven control of the chosen DNS zone and intended TTL | **BLOCKED** |
 | Network path | Direct assignment vs. provider NAT/port forwarding; external reachability | **BLOCKED** |
-| ADCS port | Explicit TCP port, suggested 1512 only as a proposal | **BLOCKED: no final port decision** |
-| Plaintext ADC | TLS-only preferred; do not expose TCP 1511 without a separate risk acceptance | TLS-only proposed; public binding not approved |
+| ADCS port | TCP 1512 | **OWNER approved** for public ADCS-only access; live firewall/listener still unverified |
+| Plaintext ADC | No public TCP 1511 | **OWNER approved TLS-only ADCS**; guest users may connect over the verified TLS transport |
 | Certificates | Publicly trusted CA, correct DNS SAN, valid full chain, matching key, renewal/restart owner | **BLOCKED** |
 | External testing | OWNER-controlled independent network and authorized bounded scan scope | **BLOCKED** |
-| Public activation | Exact named service, host, port, source SHA, certificate, credentials, fallback and rollback plan | OWNER requested activation on this VPS; **execution blocked pending the documented readiness gates and updated co-location risk acceptance** |
+| Public activation | Exact named service, host, port, source SHA, certificate, guest-login policy, fallback and rollback plan | OWNER requested activation and **accepted runner/sudo co-location risk**; execution still blocked by independent DNS/TLS/firewall/rollback readiness checks |
 
 The internal WebAdmin/C++ value **server.name = dc24h.eu-twilight** is not a DNS hostname and must not be used as a certificate identity, Origin, or WebAuthn RP ID merely because its text resembles a domain. WebAdmin Internet exposure is a **different** OWNER decision and is not part of this gate.
 
@@ -76,7 +76,7 @@ openssl s_client -connect "$stage3_fqdn:1512" -servername "$stage3_fqdn" \
   -verify_hostname "$stage3_fqdn" -verify_return_error -brief </dev/null
 ~~~
 
-Port 1512 above is illustrative, not a confirmed deployment decision. A successful TLS handshake alone does not prove ADC login or hub features; verify those separately.
+TCP 1512 is the OWNER-approved candidate; the listener remains disabled until DNS, TLS, routing and firewall gates pass. A successful TLS handshake alone does not prove ADC login or hub features; verify those separately.
 
 ## 5. Candidate ADCS-only configuration (review-only; DO NOT APPLY)
 
@@ -125,4 +125,4 @@ Never disable TLS validation, silently downgrade to adc://, or treat a trusted K
 
 Required report: exact commit SHA and binary version, independently verified mapping for server-747585786.dc24h.eu and 62.171.156.32 on the actual shared hub/runner VPS, OWNER-approved port, proof of DNS control and public-IP topology, TLS certificate SAN/issuer/expiry and **public** fingerprint (never private key), provider and local firewall decisions, pre/post network observations, external source/network, test matrix with negative results, redacted logs, rollback procedure, and artifact checksums. Document any unresolved failure as **FAIL / NO-GO**.
 
-**Stage III disposition: OWNER REQUESTED PUBLIC ACTIVATION / TECHNICAL READINESS BLOCKED.** This PR changes documentation only. It neither dispatches GitHub Actions nor touches the VPS. No RELEASE GO, PUBLIC HUB ACTIVATION GO, WEBADMIN PUBLIC ACTIVATION GO, PRIVATE-STATE MIGRATION GO, or opening of public ports is implied. Such actions require their own exact-scope OWNER commands and post-change verification under [Issue #10](https://github.com/adrianf87/dc24h.eu-twilight/issues/10).
+**Stage III disposition: OWNER REQUESTED PUBLIC ACTIVATION / TECHNICAL READINESS BLOCKED.** This PR adds a manual OWNER-only *read-only* host preflight workflow and its tests in addition to documentation; neither the workflow nor this PR installs or opens the hub. It neither dispatches GitHub Actions nor touches the VPS. No RELEASE GO, PUBLIC HUB ACTIVATION GO, WEBADMIN PUBLIC ACTIVATION GO, PRIVATE-STATE MIGRATION GO, or opening of public ports is implied. Such actions require their own exact-scope OWNER commands and post-change verification under [Issue #10](https://github.com/adrianf87/dc24h.eu-twilight/issues/10).
