@@ -50,6 +50,7 @@ CASES = {
     },
     "tls-public": {
         "dns.a": "DNS A records exclusively match the approved IPv4",
+        "dns.ptr.forward-confirmed": "Independent PTR matches the approved hostname and resolves back to the approved IPv4",
         "tls.identity": "SNI, trusted chain, exact DNS SAN, validity and Let's Encrypt issuer verify",
         "tls.fingerprint": "Independent TLS reads and OpenSSL agree on the public leaf SHA-256",
         "tls.v12": "TLS 1.2 negotiates successfully",
@@ -98,7 +99,7 @@ CASES["two-client-public"] = {key: value for key, value in CASES["two-client"].i
                             if key != "guests.permissions"}
 
 MANUAL = {
-    "owner.dns.routing": "DNS-zone control, public IP or NAT mapping, provider and Debian firewall rules",
+    "owner.dns.routing": "OWNER domain attestation, independent DNS A/PTR, separate zone-control proof, public routing and provider/host firewall policy",
     "owner.exposure": "Approved SSH and HTTPS/ACME exceptions and administrative route inventory",
     "owner.certificate": "Certificate renewal plan, staging validation and non-disruptive rollback evidence",
     "owner.dcplusplus": "Real DC++ on an independent client network",
