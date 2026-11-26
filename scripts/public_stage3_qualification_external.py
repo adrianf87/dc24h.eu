@@ -8,6 +8,7 @@ no upload/download shares. This script never asks users for credentials.
 
 import argparse
 import base64
+import fcntl
 import hashlib
 import os
 import pty
@@ -15,8 +16,10 @@ import select
 import shutil
 import socket
 import ssl
+import struct
 import subprocess
 import tempfile
+import termios
 import time
 
 import public_stage3_external_probe as base
@@ -24,6 +27,8 @@ import public_stage3_external_probe as base
 
 FORBIDDEN_TCP = (1511, 3000, 3306, 5173, 5432, 6379, 8000, 8080, 9090)
 NCDC_NICK = b"StageIIINcdcQ"
+NCDC_CHAT = b"stage3-ncdc-qualified"
+NCDC_SEARCH = b"stage3ncdcqualification"
 TERM = 20
 
 
@@ -158,7 +163,60 @@ def fingerprint_url(context):
 
 
 def send_ncdc(master, command):
-    os.write(master, command.encode("ascii") + b"\r")
+    # Ctrl+U clears any stale ncurses input before each command; CR submits it.
+    # The command is never printed or included in failure diagnostics.
+    wire = b"\x15" + command.encode("ascii") + b"\r"
+    while wire:
+        sent = os.write(master, wire)
+        if sent <= 0:
+            raise RuntimeError("ncdc terminal input write failed")
+        wire = wire[sent:]
+
+
+def select_ncdc_hub_tab(master):
+    # In a new isolated profile the first tab is the main tab and the second
+    # is the sole hub. ncdc documents Alt+<num> as an explicit tab selector.
+    os.write(master, b"\x1b2")
+
+
+def drain_ncdc_terminal(master):
+    """Consume bounded ncurses output; never log or retain screen contents."""
+    chunks = 0
+    for _ in range(16):
+        readable, _, _ = select.select([master], [], [], 0)
+        if not readable:
+            break
+        try:
+            chunk = os.read(master, 8192)
+        except OSError:
+            raise RuntimeError("ncdc terminal output closed") from None
+        if not chunk:
+            raise RuntimeError("ncdc terminal output ended")
+        chunks += 1
+    return chunks
+
+
+def await_ncdc_frame(reader, master, process, predicate, label, timeout):
+    """Keep the PTY drained while waiting for independent ADC evidence."""
+    deadline = time.monotonic() + timeout
+    terminal_activity = False
+    while time.monotonic() < deadline:
+        if process.poll() is not None:
+            raise RuntimeError(f"ncdc process exited during {label}")
+        terminal_activity |= bool(drain_ncdc_terminal(master))
+        try:
+            return reader.until(predicate, label, timeout=min(0.35, max(0.1, deadline-time.monotonic())))
+        except RuntimeError as error:
+            if not str(error).startswith("Timed out waiting for:"):
+                raise
+    # The only exported PTY observation is a boolean, never ncurses text.
+    seen = "yes" if terminal_activity else "no"
+    raise RuntimeError(f"Timed out waiting for: {label}; ncdc_alive=yes; tty_output_seen={seen}")
+
+
+def is_ncdc_search_frame(frame):
+    # ncdc may send broadcast SCH or feature-routed SCH depending on mode.
+    return frame.startswith((b"BSCH ", b"FSCH ")) and NCDC_SEARCH in frame
 
 
 def check_real_ncdc():
@@ -170,55 +228,46 @@ def check_real_ncdc():
     process = None
     with tempfile.TemporaryDirectory(prefix="stage3-ncdc-") as session:
         try:
-            observer, _ = base.connect_guest(context, b"StageIIIQNcdcObserver", 107)
+            observer, observer_sid = base.connect_guest(context, b"StageIIIQNcdcObserver", 107)
             peer = Reader(observer)
+            # Feature-routed (FSCH) searches reach only compatible recipients.
+            # The observer advertises TCP4 for signaling, not an actual transfer.
+            observer.sendall(b"BINF " + observer_sid + b" SUTCP4\n")
+            peer.until(lambda line: line.startswith(b"BINF " + observer_sid + b" ") and
+                       b"SUTCP4" in line, "ncdc observer search capability")
             url = fingerprint_url(context)
             master, slave = pty.openpty()
             try:
+                fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 30, 100, 0, 0))
                 env = dict(os.environ, TERM="xterm-256color", LANG="C.UTF-8")
                 process = subprocess.Popen(["ncdc", "-n", "-c", session],
                                            stdin=slave, stdout=slave, stderr=slave,
                                            close_fds=True, env=env, start_new_session=True)
             finally:
                 os.close(slave)
-            # ncurses initialization is asynchronous; consume terminal output.
+            # ncurses initialization is asynchronous; drain the bounded PTY.
             time.sleep(2)
             if process.poll() is not None:
                 raise RuntimeError("ncdc exited before it connected")
+            drain_ncdc_terminal(master)
             send_ncdc(master, "/set nick " + NCDC_NICK.decode("ascii"))
             time.sleep(0.5)
+            drain_ncdc_terminal(master)
             send_ncdc(master, "/open stage3qual " + url)
-            end = time.monotonic() + 20
-            connected = False
-            while time.monotonic() < end:
-                if process.poll() is not None:
-                    raise RuntimeError("ncdc process exited unexpectedly")
-                ready, _, _ = select.select([master], [], [], 0.2)
-                if ready:
-                    try:
-                        os.read(master, 8192)  # Never report terminal contents.
-                    except OSError:
-                        pass
-                try:
-                    frame = peer.until(lambda line: line.startswith(b"BINF ") and
-                                       b"NI" + NCDC_NICK in line,
-                                       "real ncdc guest login", timeout=1)
-                except RuntimeError as error:
-                    if str(error).startswith("Timed out"):
-                        continue
-                    raise
-                if frame:
-                    connected = True
-                    break
-            if not connected:
-                raise RuntimeError("Independent ncdc did not reach guest login")
-            send_ncdc(master, "/say stage3-ncdc-qualified")
-            peer.until(lambda line: line.startswith(b"BMSG ") and
-                       b"stage3-ncdc-qualified" in line, "ncdc public chat", timeout=10)
-            send_ncdc(master, "/search stage3ncdcqualification")
-            peer.until(lambda line: line.startswith(b"BSCH ") and
-                       b"stage3ncdcqualification" in line,
-                       "ncdc search broadcast", timeout=10)
+            await_ncdc_frame(peer, master, process,
+                             lambda line: line.startswith(b"BINF ") and b"NI" + NCDC_NICK in line,
+                             "real ncdc guest login", timeout=20)
+            # The observer's BINF proves protocol login, not UI focus.
+            # Explicitly select the only hub tab before chat commands.
+            select_ncdc_hub_tab(master)
+            drain_ncdc_terminal(master)
+            send_ncdc(master, "/say " + NCDC_CHAT.decode("ascii"))
+            await_ncdc_frame(peer, master, process,
+                             lambda line: line.startswith(b"BMSG ") and NCDC_CHAT in line,
+                             "ncdc public chat", timeout=15)
+            send_ncdc(master, "/search " + NCDC_SEARCH.decode("ascii"))
+            await_ncdc_frame(peer, master, process, is_ncdc_search_frame,
+                             "ncdc search broadcast or feature search", timeout=15)
         finally:
             if process is not None:
                 process.terminate()
