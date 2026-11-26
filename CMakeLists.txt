@@ -397,6 +397,9 @@ if(BUILD_TESTING)
     add_test(NAME twilight.stage4.technical_identity COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/twilight_stage4_identity_tests.py")
     set_tests_properties(twilight.stage4.technical_identity PROPERTIES TIMEOUT 15)
+    add_test(NAME public.stage2.debian13_preflight COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/public_stage2_preflight_tests.py")
+    set_tests_properties(public.stage2.debian13_preflight PROPERTIES TIMEOUT 15)
     add_test(NAME dependencies.audit COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/dependency_audit_tests.py"
         "${CMAKE_BINARY_DIR}"
