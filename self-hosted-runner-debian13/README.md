@@ -25,16 +25,18 @@ is **manual-only** (`workflow_dispatch`). It has no `push` or `pull_request` tri
 never calls `sudo`, and requires a dedicated runner label
 `twilight-debian13-stage2`. This label has been verified on runner #21.
 
-A **separate proposed** [Stage II sudo qualification workflow](../.github/workflows/debian13-stage2-sudo.yml)
-uses `sudo -n` only for identity checking and a read-only privileged inventory.
-Unprivileged steps then build and stage C++/WebAdmin in a temporary prefix and
-prove synthetic-only backup/restore/rollback and bounded monitoring. It cannot
-run until separately reviewed, merged to protected `main`, and explicitly
-dispatched by the OWNER. Real hub service activation is never part of this job.
-The Unix account still has passwordless sudo beyond the workflow's two explicit
-calls; build dependencies could abuse that privilege. Do not dispatch unless
-the VPS is confirmed disposable and free of production secrets/state, or a
-separately approved restricted sudoers configuration enforces least privilege.
+The separate [Stage II sudo qualification workflow](../.github/workflows/debian13-stage2-sudo.yml)
+originally performed only inventory and synthetic checks. Following explicit
+OWNER confirmation that `server-747585786` is a dedicated test VPS without
+production secrets/state, the revised workflow adds a third `sudo -n` call for
+real test-only `/opt` installation and temporary `systemd` service, conflict,
+crash/restart, backup/restore and binary rollback checks. The unprivileged
+runner keeps its existing passwordless sudo privileges; no `sudoers` changes
+are required. The rehearsal never enables the real hub units or accesses
+existing `/etc/dc24h` and `/var/lib/dc24h` state. It requires a separately
+reviewed merge into protected `main` and a new explicit OWNER dispatch phrase.
+Build dependencies still carry root-escalation risk on an unrestricted-sudo
+runner; only run it on the approved disposable test host.
 
 GitHub's standard workflows continue to use **GitHub-hosted Ubuntu** as required
 CI. The self-hosted run is supplemental evidence only and is not a required PR

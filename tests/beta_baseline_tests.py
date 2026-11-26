@@ -84,21 +84,22 @@ def check_no_custom_workers(errors):
         "runs-on: [self-hosted, linux, x64, twilight-debian13-stage2]",
         "test \"$RUNNER_NAME\" = 'server-747585786'",
         "test \"$(id -un)\" = 'github-runner'",
-        "test \"$OWNER_CONFIRMATION\" = 'RUN_STAGE2_SUDO_ISOLATED'",
+        "test \"$OWNER_CONFIRMATION\" = 'RUN_STAGE2_SUDO_HOST_TESTS'",
         "persist-credentials: false",
         "contents: read",
         "sudo -n id -u",
         "sudo -n python3 scripts/public_stage2_preflight.py",
+        "sudo -n python3 self-hosted-runner-debian13/tests/stage2_host_proof.py",
+        "DC24H_REQUIRE_SYSTEMD_HOST=1 ctest",
     ):
         require(required in privileged,
                 f"debian13-stage2-sudo.yml: missing OWNER/privilege safeguard {required!r}", errors)
-    for forbidden in ("  pull_request:", "  push:", "systemctl start", "systemctl stop",
-                      "systemctl enable", "apt install", "dpkg -i"):
+    for forbidden in ("  pull_request:", "  push:", "systemctl enable", "apt install", "dpkg -i"):
         require(forbidden not in privileged,
                 f"debian13-stage2-sudo.yml: forbidden trigger or service change {forbidden!r}", errors)
-    require(privileged.count("sudo -n ") == 2 and
+    require(privileged.count("sudo -n ") == 3 and
             not re.search(r"(?m)^\s*sudo\s+(?!-n\s)", privileged),
-            "debian13-stage2-sudo.yml: sudo must be limited to identity and read-only inventory", errors)
+            "debian13-stage2-sudo.yml: sudo must be limited to three reviewed guarded commands", errors)
     actionlint = (ROOT / ".github" / "actionlint.yaml").read_text(encoding="utf-8")
     require("server-747585786" not in actionlint,
             "actionlint.yaml: custom runner label remains", errors)

@@ -1,10 +1,10 @@
-name: Debian 13 Stage II sudo inventory and isolated qualification (OWNER only)
+name: Debian 13 Stage II full sudo host qualification (OWNER only)
 
 on:
   workflow_dispatch:
     inputs:
       confirmation:
-        description: 'Type RUN_STAGE2_SUDO_ISOLATED (no real service or private-state changes)'
+        description: 'Type RUN_STAGE2_SUDO_HOST_TESTS (test-only /opt install and systemd unit changes)'
         required: true
         type: string
 
@@ -16,8 +16,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  stage2-sudo-and-synthetic:
-    name: Debian 13 Stage II inventory, isolated C++/WebAdmin and synthetic recovery
+  stage2-sudo-host-qualification:
+    name: Debian 13 Stage II privileged host install, systemd and recovery
     if: github.repository == 'adrianf87/dc24h.eu-twilight' && github.actor == 'adrianf87' && github.ref == 'refs/heads/main'
     runs-on: [self-hosted, linux, x64, twilight-debian13-stage2]
     timeout-minutes: 90
@@ -30,7 +30,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$OWNER_CONFIRMATION" = 'RUN_STAGE2_SUDO_ISOLATED'
+          test "$OWNER_CONFIRMATION" = 'RUN_STAGE2_SUDO_HOST_TESTS'
           test "$RUNNER_NAME" = 'server-747585786'
           test "$(id -un)" = 'github-runner'
           test "$(sudo -n id -u)" = '0'
@@ -89,7 +89,23 @@ jobs:
           python3 self-hosted-runner-debian13/tests/stage2_isolated_proof.py \
             --scratch-parent "$RUNNER_TEMP" > "$RUNNER_TEMP/stage2-synthetic-evidence.json"
 
-      - name: Isolated exact-SHA Debian 13 C++ and WebAdmin build; no host install
+      # Match the pinned Node.js toolchain used by GitHub-hosted WebAdmin CI.
+      # setup-node modifies only this job's PATH; no host-wide npm/nvm install.
+      - name: Set up Node.js 22 for the isolated WebAdmin build
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '22'
+
+      - name: Verify the unprivileged runner Node.js toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -un)" = 'github-runner'
+          node -e "const v = process.versions.node.split('.').map(Number); if (v[0] !== 22 || v[1] < 12) { console.error('Expected Node.js 22.12+'); process.exit(1) }"
+          node --version
+          npm --version
+
+      - name: Exact-SHA Debian 13 C++ and WebAdmin build; prepare host tests
         shell: bash
         run: |
           set -euo pipefail
@@ -109,17 +125,42 @@ jobs:
           test -f "$stage/prefix/share/dc24h/webadmin/index.html"
           test "$(sha256sum "$stage/build/dc24h-twilight" | cut -d' ' -f1)" = \
                "$(sha256sum "$stage/prefix/bin/dc24h-twilight" | cut -d' ' -f1)"
+          printf '%s\n' "$stage/build" > "$RUNNER_TEMP/stage2-build-dir.path"
           printf '{"source_sha":"%s","scope":"TEMPORARY_PREFIX_ONLY","cpp_install":true,"webadmin_assets":true,"production_go":false}\n' \
             "$EXPECTED_SHA" > "$RUNNER_TEMP/stage2-build-summary.json"
+
+      - name: Real sudo host installation, systemd, fault recovery, backup and rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Deliberate root execution on the OWNER-approved test VPS only.
+          # The script creates only unique test-owned /opt and /run/systemd/system
+          # targets and always attempts to stop/remove them on failure.
+          build_dir="$(cat "$RUNNER_TEMP/stage2-build-dir.path")"
+          sudo -n python3 self-hosted-runner-debian13/tests/stage2_host_proof.py \
+            --confirmation "$OWNER_CONFIRMATION" --runner "$RUNNER_NAME" \
+            --actor "$GITHUB_ACTOR" --ref "$GITHUB_REF" \
+            --expected-sha "$EXPECTED_SHA" --source-dir "$GITHUB_WORKSPACE" \
+            --build-dir "$build_dir" --runner-temp "$RUNNER_TEMP" \
+            --report "$RUNNER_TEMP/stage2-host-proof-summary.json"
+
+      - name: Run the real systemd sandbox CTest on the test VPS
+        shell: bash
+        run: |
+          set -euo pipefail
+          build_dir="$(cat "$RUNNER_TEMP/stage2-build-dir.path")"
+          DC24H_REQUIRE_SYSTEMD_HOST=1 ctest --test-dir "$build_dir" \
+            --output-on-failure --timeout 90 -R '^systemd\.sandbox$'
 
       - name: Upload only bounded, sanitized test evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: twilight-debian13-stage2-isolated-evidence
+          name: twilight-debian13-stage2-host-evidence
           path: |
             ${{ runner.temp }}/stage2-root-inventory-summary.json
             ${{ runner.temp }}/stage2-synthetic-evidence.json
             ${{ runner.temp }}/stage2-build-summary.json
+            ${{ runner.temp }}/stage2-host-proof-summary.json
           if-no-files-found: ignore
           retention-days: 7

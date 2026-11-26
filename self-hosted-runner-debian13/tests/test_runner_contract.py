@@ -78,7 +78,7 @@ class RunnerContractTests(unittest.TestCase):
         self.assertIn("contents: read", body)
         self.assertNotRegex(body, re.compile(r"\bsudo\s+(?:-\S+\s+)*\w+"))
 
-    def test_sudo_workflow_is_manual_main_only_and_privilege_scoped(self):
+    def test_sudo_workflow_is_manual_main_only_and_host_test_scoped(self):
         body = SUDO_WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("  workflow_dispatch:", body)
         self.assertNotIn("  pull_request:", body)
@@ -86,14 +86,17 @@ class RunnerContractTests(unittest.TestCase):
         self.assertIn("github.actor == 'adrianf87'", body)
         self.assertIn("github.ref == 'refs/heads/main'", body)
         self.assertIn("twilight-debian13-stage2", body)
-        self.assertIn("RUN_STAGE2_SUDO_ISOLATED", body)
+        self.assertIn("RUN_STAGE2_SUDO_HOST_TESTS", body)
         self.assertIn("persist-credentials: false", body)
         self.assertIn("contents: read", body)
-        self.assertEqual(body.count("sudo -n "), 2)
+        self.assertEqual(body.count("sudo -n "), 3)
         self.assertIn("sudo -n id -u", body)
         self.assertIn("sudo -n python3 scripts/public_stage2_preflight.py", body)
+        self.assertIn("sudo -n python3 self-hosted-runner-debian13/tests/stage2_host_proof.py", body)
+        self.assertIn("DC24H_REQUIRE_SYSTEMD_HOST=1 ctest", body)
+        self.assertIn("stage2-host-proof-summary.json", body)
         self.assertNotRegex(body, re.compile(r"(?m)^\s*sudo\s+(?!-n\s)"))
-        for forbidden in ("systemctl start", "systemctl stop", "systemctl enable", "apt install", "dpkg -i"):
+        for forbidden in ("systemctl enable", "apt install", "dpkg -i"):
             self.assertNotIn(forbidden, body)
 
 
