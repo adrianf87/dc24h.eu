@@ -63,6 +63,55 @@ class QualificationPolicyTests(unittest.TestCase):
         self.assertTrue(any(call.args[0].startswith(b"DRCM EFGH ABCD ")
                             for call in second.sendall.call_args_list))
 
+    def test_ncdc_command_clears_stale_input_and_submits_return(self):
+        with mock.patch.object(external.os, "write", side_effect=lambda _fd, payload: len(payload)) as write:
+            external.send_ncdc(91, "/say stage3-ncdc-qualified")
+        self.assertEqual(write.call_args.args,
+                         (91, b"\x15/say stage3-ncdc-qualified\r"))
+        self.assertEqual(external.NCDC_CHAT, b"stage3-ncdc-qualified")
+
+    def test_ncdc_hub_tab_selection_uses_documented_alt_two(self):
+        with mock.patch.object(external.os, "write") as write:
+            external.select_ncdc_hub_tab(91)
+        write.assert_called_once_with(91, b"\x1b2")
+
+    def test_ncdc_observer_wait_drains_terminal_between_adc_checks(self):
+        reader = mock.Mock()
+        reader.until.side_effect = [RuntimeError("Timed out waiting for: ncdc public chat"),
+                                    b"BMSG ABCD stage3-ncdc-qualified"]
+        process = mock.Mock()
+        process.poll.return_value = None
+        with mock.patch.object(external, "drain_ncdc_terminal", side_effect=[1, 0]) as drain:
+            frame = external.await_ncdc_frame(
+                reader, 91, process, lambda line: b"stage3-ncdc-qualified" in line,
+                "ncdc public chat", timeout=4)
+        self.assertEqual(frame, b"BMSG ABCD stage3-ncdc-qualified")
+        self.assertEqual(drain.call_count, 2)
+
+    def test_ncdc_timeout_diagnostic_never_includes_terminal_contents(self):
+        reader = mock.Mock()
+        reader.until.side_effect = RuntimeError("Timed out waiting for: ncdc public chat")
+        process = mock.Mock()
+        process.poll.return_value = None
+        with mock.patch.object(external, "drain_ncdc_terminal", return_value=1), mock.patch.object(
+                external.time, "monotonic", side_effect=[0, 0, 0.1, 1.1]):
+            with self.assertRaises(RuntimeError) as caught:
+                external.await_ncdc_frame(reader, 91, process, lambda line: False,
+                                          "ncdc public chat", timeout=1)
+        self.assertIn("tty_output_seen=yes", str(caught.exception))
+        self.assertIn("ncdc_alive=yes", str(caught.exception))
+        self.assertNotIn("stage3-ncdc-qualified", str(caught.exception))
+
+    def test_ncdc_search_observer_accepts_broadcast_and_feature_routes(self):
+        self.assertTrue(external.is_ncdc_search_frame(
+            b"BSCH ABCD ANstage3ncdcqualification"))
+        self.assertTrue(external.is_ncdc_search_frame(
+            b"FSCH ABCD +TCP4 ANstage3ncdcqualification"))
+        self.assertFalse(external.is_ncdc_search_frame(
+            b"DSCH ABCD EFGH ANstage3ncdcqualification"))
+        self.assertFalse(external.is_ncdc_search_frame(
+            b"BSCH ABCD ANunrelated"))
+
     def test_negative_prelogin_expected_denial_is_observable(self):
         reader = external.Reader(FakePeer([b"ISTA 244 Login\\srequired\n"]))
         self.assertTrue(reader.until(lambda frame: frame.startswith(b"ISTA 244 "),
