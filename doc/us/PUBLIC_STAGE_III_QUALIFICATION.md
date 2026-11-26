@@ -17,6 +17,8 @@ workflows run exclusively on GitHub-hosted Ubuntu. The Debian 13 VPS is the
 public service target. Host maintenance is performed by the authorized
 operator in a separate window.
 
+**OWNER SCOPE DECISION (November 26, 2026):** The controlled VPS reboot and the intentional live `dc24h-stage3-adcs.service` restart/recovery qualification test are **removed** from Stage III. Do not run them and do not use a missing result as a gate or report it as BLOCKED, FAIL, PENDING, NOT TESTED or PASS. This leaves live restart/reboot recovery unverified; the OWNER accepts that residual risk for this stage. Service restarts needed for a future certificate renewal or actual incident remain separately authorized operational maintenance, not qualification tests.
+
 ## Evidence matrix
 
 The initial matrix records the disposition before exact-commit evidence review.
@@ -74,7 +76,7 @@ commit requires its own qualification evidence.
 | Twenty cycles, ten returns after refusal, idle disconnect/rejoin, abrupt TLS interruption and descriptor cleanup | `stability` across Ubuntu on loopback | NOT TESTED in this report |
 | Thirty-minute public observation, paced cycles and same-identity reconnects | Exact-ref OWNER extended run | NOT TESTED in this report |
 | DNS-zone ownership and provider/Debian routing and inbound policy | OWNER provider and host record plus independent external check | NOT TESTED |
-| Running service identity, SSH, controlled restart, external guest reconnect, chat and recovery readiness | [Debian 13 systemd procedure](PUBLIC_STAGE_III_SYSTEMD.md) | NOT TESTED |
+| Running service identity, SSH and read-only live-state inventory | OWNER Debian 13 read-only operator record | PASS for recorded scope |
 | Actual replacement and recovery of the service-owned Let's Encrypt pair | [Manual replacement and rollback](PUBLIC_STAGE_III_CERTIFICATE.md) | NOT TESTED |
 | Real DC++ interoperability | Independent DC++ client session and paired observer | NOT TESTED |
 
@@ -122,11 +124,10 @@ candidate test source separately.
 | Independent public TLS, TCP exposure, and guest communication | PASS | Historical exact-commit scope `7c961238066e3de2bef5ab9303fd3945a4b85157`. The independent Ubuntu 24.04 run passed the bounded TCP matrix, real ncdc, and two-guest cases. [Regular evidence](https://github.com/adrianf87/dc24h.eu-twilight/actions/runs/45898438109/artifacts/15154663771). |
 | OWNER extended public stability | PASS | Historical exact-commit scope `7c961238066e3de2bef5ab9303fd3945a4b85157`. Observed 20 guest cycles, 19 same-identity reconnects, and 1,800 seconds of two authenticated sessions. [Extended evidence](https://github.com/adrianf87/dc24h.eu-twilight/actions/runs/45900205211/artifacts/15157510321). |
 | DNS-zone ownership, recovery console and provider ingress policy | BLOCKED | Local IPv4 and firewall inspection are available. Provider policy, zone ownership, and emergency-console access still require confirmation. The host has wildcard TCP/UDP 5355 for `systemd-resolved`; its external reachability was outside the approved bounded TCP probe. |
-| Controlled restart and recovery | BLOCKED | The qualifying access path showed one established SSH session. The runbook requires a second management session, verified provider console, and an independent observer ready for the restart. |
 | Current production certificate and final TLS from the VPS | PASS | Deployed and Let's Encrypt lineage leaves shared the same fingerprint. Each key matched its leaf. CA chain, SAN and hostname verification passed. The final handshake negotiated TLS 1.3. Issuer Let's Encrypt YE2, expiration February 16, 2027 at 02:56:52 UTC. Leaf SHA-256 `518618f863566cbb4195645e48daa6c9a30bdb6d9f29d64a8999b5e1d248de6a`. |
 | Renewal configuration inspection and ACME staging rehearsal | PASS | The installed renewal profile uses the Apache authenticator and installer. Certbot 4.0.0 separately completed a staging dry run with the existing webroot and both SANs, using private temporary state and with directory hooks disabled. The production certificate fingerprint and Apache and hub process identities stayed unchanged. |
 | Staged restore and wrong-key rejection on Debian 13 | PASS | A byte-exact temporary backup was restored and validated under the hub service account. The configuration checker rejected a mismatched key, then accepted the restored pair. The live hub remained active. |
-| Actual Apache-plugin renewal, production pair replacement, and rollback | NOT TESTED | The staging rehearsal used the webroot method. The current production pair is valid. Live restart and replacement remain subject to the recovery prerequisites. |
+| Future Apache-plugin renewal and production pair replacement/rollback | OUT OF STAGE III SCOPE | The staging rehearsal used the webroot method and the current pair is valid. A future live replacement requires separately authorized maintenance; the withdrawn controlled-restart test is not an acceptance gate. |
 | Real DC++ on an independent machine | NOT TESTED | An independent interactive DC++ client session and its observer are still needed. |
 
 The CI update adds isolated evidence for future pull requests and bounded
@@ -157,6 +158,6 @@ evidence checksum. Stop on a certificate warning, plaintext fallback, or absent
 independent attribution.
 
 Issue #10 remains open for the independent client, exposure, stability and
-operator requirements above. Its accepted activation smoke is historical
+non-disruptive operator requirements above. The removed live restart/reboot test is not required. Its accepted activation smoke is historical
 evidence. Formal Stage III acceptance requires reviewed successful automated
 and manual evidence for the intended scope and separate OWNER authorization.
