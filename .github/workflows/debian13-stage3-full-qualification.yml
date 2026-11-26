@@ -79,6 +79,7 @@ jobs:
   host:
     name: Scoped Stage III systemd and same-pair TLS rehearsal
     needs: external-before
+    if: github.repository == 'adrianf87/dc24h.eu-twilight' && github.actor == 'adrianf87' && github.ref == 'refs/heads/main' && inputs.confirmation == 'RUN_STAGE3_PUBLIC_QUALIFICATION' && inputs.production_restarts_ack == true
     runs-on: [self-hosted, linux, x64, twilight-debian13-stage2]
     timeout-minutes: 15
     steps:
