@@ -3,11 +3,11 @@
 **Date recorded:** November 27, 2026 (Europe/Warsaw).  
 **Tracking:** [Issue #10](https://github.com/adrianf87/dc24h.eu-twilight/issues/10) and [PR #24](https://github.com/adrianf87/dc24h.eu-twilight/pull/24).  
 **Public guest service:** `adcs://server-747585786.dc24h.eu:1512` at IPv4 `62.171.156.32`.  
-**Disposition:** **OWNER-ATTESTED / DNS FORWARD-REVERSE MATCH REPORTED**, not independent proof of registrar ownership or DNS-zone administration.
+**Disposition:** **DNS ZONE CONTROL VERIFIED — PASS** through a fresh TXT challenge at two independent public resolvers. Domain registrant identity remains **OWNER-ATTESTED** from private registrar screenshots. A/PTR compatibility is verified separately by the public CI suite.
 
 ## OWNER statement and supplied observations
 
-The repository OWNER (`adrianf87`) explicitly states that `dc24h.eu` is their domain and supplies two screenshots as supporting evidence. Record this as an OWNER declaration; do not attribute it to an independent registrar, provider identity check, or verified domain-registration record.
+The repository OWNER (`adrianf87`) explicitly states that `dc24h.eu` is their domain. Additional privately supplied registrar and DNS-zone management screenshots show the domain under the OWNER's account and the new TXT entry. This is OWNER-provided evidence of registration and DNS administration, not an independent identity check. Personal contact data and account identifiers are omitted.
 
 1. **Command screenshot, supplied by OWNER:** The read-only command `host 62.171.156.32` returned a PTR mapping to `server-747585786.dc24h.eu`. The command `host server-747585786.dc24h.eu` returned the A address `62.171.156.32`.
 2. **Contabo Customer Panel screenshot, supplied by OWNER:** **Network → DNS Management → Reverse DNS Management** displayed the same IP address and hostname in one row: `62.171.156.32` → `server-747585786.dc24h.eu`. The screenshot shows the Contabo reverse-DNS management view, **not** the forward-zone administration or domain registrar account.
@@ -15,12 +15,28 @@ The repository OWNER (`adrianf87`) explicitly states that `dc24h.eu` is their do
 
 The original screenshots were supplied in the OWNER conversation; they are **not** embedded in this public repository or included as independently hashed GitHub Actions artifacts. The exact mapping, its source, and the evidentiary limits are retained here without exposing a provider account session.
 
+## Independent TXT challenge — PASS (November 26, 2026, 23:39:32 UTC)
+
+The OWNER created a fresh TXT record under the managed `dc24h.eu` DNS zone. Earlier shell output during provider processing returned a legacy alias/SPF answer and was not accepted. A later OWNER shell screenshot returned the correct TXT value.
+
+Two independent public recursive resolvers were queried over HTTPS:
+
+| Field | Verified value |
+| --- | --- |
+| Query | `_dc24h-stage3-verify.dc24h.eu` TXT |
+| Expected token | `dc24h-stage3-owner=f9defa5ca27e018bec03296bc11f11c15324600c` |
+| Google Public DNS | `Status: 0`; exact token; TTL 300 — **PASS** |
+| Cloudflare DNS | `Status: 0`; exact token; TTL 300 — **PASS** |
+| Later OWNER `host -t TXT` screenshot | Exact token returned — **PASS** |
+
+The Cloudflare response displayed DNS TXT quotation marks around the same value; the semantic token matches. This is an independently observed, fresh proof that the OWNER can publish records under `dc24h.eu` at the verification time. It does **not** independently authenticate the legal identity of the registrar account holder. Do not turn this one-time challenge into a permanent CI dependency. No service restart, DNS editing by CI, or VPS mutation occurred during verification.
+
 ## Evidence boundary: DNS records versus ownership
 
 - **Supported by OWNER evidence:** Forward lookup of the selected hostname and reverse lookup of the selected IPv4 agree. The OWNER also demonstrates visibility of the IP's PTR entry in their Contabo Customer Panel and asserts ownership of the domain.
-- **Not independently proven by these screenshots:** Registrar/domain-holder identity, delegated control of the authoritative `dc24h.eu` DNS zone, editing rights for its forward A record, and provider firewall ownership. A/PTR records and a PTR-management panel do not prove those facts.
-- **Remaining manual evidence if a formal zone-control gate is required:** An OWNER-redacted registrar or authoritative DNS-zone management record identifying `dc24h.eu` and the exact A record, together with the delegated NS information; verify the current authoritative DNS records independently. Never publish account IDs, tokens, personal billing data, or session cookies.
-- **Acceptance notation:** Use `OWNER-ATTESTED` for domain ownership and `DNS FORWARD-REVERSE VERIFIED` only after independent external CI passes. Never record `independently verified zone ownership` without the separate evidence above.
+- **Now independently verified:** The freshly published TXT challenge demonstrates technical control of a record under `dc24h.eu`. Registrar identity remains OWNER-ATTESTED, not independently identity-checked. The existing A record was not edited, and provider firewall permissions are still a separate check.
+- **Remaining if required for the broader Stage III gate:** Independently compare authoritative NS/A records and verify provider ingress and approved port exceptions. The OWNER supplied registrar screenshots privately; never publish account IDs, personal contact/billing data, passwords, or session cookies.
+- **Acceptance notation:** `DNS ZONE CONTROL VERIFIED — PASS` for the TXT challenge; `OWNER-ATTESTED` for subscriber identity; `DNS FORWARD-REVERSE VERIFIED` only after the separate independent A/PTR CI case passes.
 
 ## Added automated DNS regression and external qualification
 
@@ -44,7 +60,8 @@ On pull requests, the public external groups are **out of scope / NOT TESTED** b
 - [ ] **General required CI:** C++ Debug/Release, WebAdmin, address/undefined sanitizers, baseline policy, CodeQL, parser/fuzz and relevant Stage IV checks must finish successfully, with no unreviewed required failures.
 - [ ] **Public external snapshot for exact source:** Review independent public DNS A/PTR, CA/SAN/TLS, forbidden-port exposure, real ncdc and two-guest evidence for the source under review. Link run URL, SHA, attempt and checksummed artifacts.
 - [ ] **Real DC++ client:** Record version, independent network, trusted ADCS connection, two-client visibility, bidirectional chat, search and transfer signaling, reconnect and sanitized observer evidence.
-- [ ] **Provider/zone evidence:** Review authoritative `dc24h.eu` zone control or retain the explicit OWNER-attested limitation; verify Contabo ingress/approved SSH and HTTPS exceptions and investigate public reachability of host TCP/UDP 5355 if present.
+- [x] **DNS record control:** The fresh OWNER TXT challenge was independently observed by Google DNS and Cloudflare DNS and confirmed in a later OWNER terminal screenshot.
+- [ ] **Provider and remaining zone evidence:** Review authoritative NS/A records as required; verify Contabo ingress/approved SSH and HTTPS exceptions and investigate public reachability of host TCP/UDP 5355 if present.
 - [ ] **Stability provenance:** The earlier OWNER-approved 30-minute public stability run was PASS at `7c961238066e3de2bef5ab9303fd3945a4b85157`. Keep that exact SHA and deployed binary identity in the evidence; do not claim it ran on a later head. Determine explicitly whether the historical evidence suffices for the unchanged production binary.
 - [ ] **Decision:** Mark each case PASS, FAIL, BLOCKED, NOT TESTED or OWNER-ATTESTED only as supported. Separate `OWNER STAGE III ACCEPTANCE GO` and `OWNER MERGE GO` are required; PR #24 and Issue #10 remain open until their real gates are satisfied.
 
