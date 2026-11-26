@@ -35,6 +35,10 @@ def check_no_custom_workers(errors):
             {"747585786", "github-runner", "self-hosted"},
         Path(".github/workflows/debian13-stage2-sudo.yml"):
             {"747585786", "github-runner", "self-hosted"},
+        Path("doc/us/PUBLIC_STAGE_III_ADCS.md"):
+            {"747585786", "self-hosted"},
+        Path(".github/workflows/debian13-stage3-adcs-preflight.yml"):
+            {"747585786", "github-runner", "self-hosted"},
     }
     needles = (
         "contabo",
@@ -100,6 +104,31 @@ def check_no_custom_workers(errors):
     require(privileged.count("sudo -n ") == 3 and
             not re.search(r"(?m)^\s*sudo\s+(?!-n\s)", privileged),
             "debian13-stage2-sudo.yml: sudo must be limited to three reviewed guarded commands", errors)
+    stage3 = (ROOT / ".github/workflows/debian13-stage3-adcs-preflight.yml").read_text(encoding="utf-8")
+    for required in (
+        "  workflow_dispatch:",
+        "github.repository == 'adrianf87/dc24h.eu-twilight'",
+        "github.actor == 'adrianf87'",
+        "github.ref == 'refs/heads/main'",
+        "runs-on: [self-hosted, linux, x64, twilight-debian13-stage2]",
+        "test \"$OWNER_CONFIRMATION\" = 'RUN_STAGE3_ADCS_READ_ONLY_PREFLIGHT'",
+        "test \"$RUNNER_NAME\" = 'server-747585786'",
+        "test \"$(id -un)\" = 'github-runner'",
+        "test \"$(sudo -n id -u)\" = '0'",
+        "test \"$(git rev-parse HEAD)\" = \"$EXPECTED_SHA\"",
+        "persist-credentials: false",
+        "contents: read",
+        "sudo -n python3 scripts/public_stage3_adcs_preflight.py",
+    ):
+        require(required in stage3,
+                f"debian13-stage3-adcs-preflight.yml: missing OWNER/read-only safeguard {required!r}", errors)
+    for forbidden in ("  pull_request:", "  push:", "systemctl enable", "apt install", "dpkg -i"):
+        require(forbidden not in stage3,
+                f"debian13-stage3-adcs-preflight.yml: forbidden trigger or service change {forbidden!r}", errors)
+    require(stage3.count("sudo -n ") == 2 and
+            not re.search(r"(?m)^\s*sudo\s+(?!-n\s)", stage3),
+            "debian13-stage3-adcs-preflight.yml: sudo must remain limited to two reviewed read-only calls",
+            errors)
     actionlint = (ROOT / ".github" / "actionlint.yaml").read_text(encoding="utf-8")
     require("server-747585786" not in actionlint,
             "actionlint.yaml: custom runner label remains", errors)
