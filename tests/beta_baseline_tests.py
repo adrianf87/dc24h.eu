@@ -24,6 +24,16 @@ def check(path, phrases, errors):
 
 
 def check_no_custom_workers(errors):
+    # The OWNER-approved Debian 13 runner is supplemental only. Keep the
+    # historical prohibition in every required CI workflow and all other docs.
+    # These exceptions permit disclosure and a tightly gated manual workflow,
+    # not selection of a private runner by required pull-request CI.
+    supplemental_mentions = {
+        Path("README.md"): {"747585786", "self-hosted"},
+        Path("doc/us/PUBLIC_STAGE_II_DEBIAN13.md"): {"self-hosted"},
+        Path(".github/workflows/debian13-supplemental.yml"):
+            {"747585786", "github-runner", "self-hosted"},
+    }
     needles = (
         "contabo",
         "hetzner",
@@ -44,9 +54,26 @@ def check_no_custom_workers(errors):
     for path in paths:
         folded = path.read_text(encoding="utf-8").casefold()
         relative = path.relative_to(ROOT)
+        approved = supplemental_mentions.get(relative, set())
         for needle in needles:
-            require(needle.casefold() not in folded,
+            require(needle in approved or needle.casefold() not in folded,
                     f"{relative}: custom worker term {needle!r}", errors)
+    supplemental = (ROOT / ".github/workflows/debian13-supplemental.yml").read_text(encoding="utf-8")
+    for required in (
+        "  workflow_dispatch:",
+        "github.actor == 'adrianf87'",
+        "github.ref == 'refs/heads/main'",
+        "runs-on: [self-hosted, linux, x64, twilight-debian13-stage2]",
+        "test \"$RUNNER_NAME\" = 'server-747585786'",
+        "test \"$(id -un)\" = 'github-runner'",
+        "persist-credentials: false",
+        "contents: read",
+    ):
+        require(required in supplemental,
+                f"debian13-supplemental.yml: missing manual runner safeguard {required!r}", errors)
+    for forbidden in ("  pull_request:", "  push:", "sudo "):
+        require(forbidden not in supplemental,
+                f"debian13-supplemental.yml: unexpected runner trigger or privilege {forbidden!r}", errors)
     actionlint = (ROOT / ".github" / "actionlint.yaml").read_text(encoding="utf-8")
     require("server-747585786" not in actionlint,
             "actionlint.yaml: custom runner label remains", errors)
