@@ -39,6 +39,11 @@
 4. The original supplemental smoke workflow never uses `sudo`. The separate
    Stage II workflow permits only the two reviewed noninteractive root checks
    specified above; all other phases run as `github-runner`.
+   **This is a workflow policy, not an OS privilege restriction:** because the
+   account has passwordless sudo, a compromised build tool or npm dependency
+   could still escalate. The OWNER must confirm that this runner is disposable
+   and contains no production secrets/state before authorizing dispatch, or
+   restrict its sudoers permissions through a separately approved host change.
 5. Published output is limited to bounded, reviewed JSON with no raw addresses,
    secrets, journal contents, private paths, or user identifiers.
 

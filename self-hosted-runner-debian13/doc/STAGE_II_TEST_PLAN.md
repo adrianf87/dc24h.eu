@@ -40,8 +40,11 @@ passwordless `sudo` for Stage II testing. The proposed
 and be merged to protected `main` under a separate OWNER decision**. It has no
 PR/push trigger and runs only for the exact reviewed `main` SHA on runner #21.
 
-Privilege is limited to `sudo -n id -u` and the existing **read-only** root
-preflight. Raw root inventory remains in runner temporary storage; only a
+The workflow explicitly invokes only `sudo -n id -u` and the existing
+**read-only** root preflight. This does not stop other subprocesses from
+invoking passwordless sudo; only an isolated/disposable host or separately
+approved sudoers restriction enforces that boundary. Raw root inventory remains
+in runner temporary storage; only a
 bounded summary may become a GitHub artifact. Builds and the synthetic recovery
 test run as the normal, unprivileged `github-runner` account.
 

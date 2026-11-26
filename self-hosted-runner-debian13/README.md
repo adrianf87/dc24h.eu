@@ -31,6 +31,10 @@ Unprivileged steps then build and stage C++/WebAdmin in a temporary prefix and
 prove synthetic-only backup/restore/rollback and bounded monitoring. It cannot
 run until separately reviewed, merged to protected `main`, and explicitly
 dispatched by the OWNER. Real hub service activation is never part of this job.
+The Unix account still has passwordless sudo beyond the workflow's two explicit
+calls; build dependencies could abuse that privilege. Do not dispatch unless
+the VPS is confirmed disposable and free of production secrets/state, or a
+separately approved restricted sudoers configuration enforces least privilege.
 
 GitHub's standard workflows continue to use **GitHub-hosted Ubuntu** as required
 CI. The self-hosted run is supplemental evidence only and is not a required PR
