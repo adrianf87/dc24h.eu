@@ -1,79 +1,64 @@
-# Stage III — PR #23 qualification using GitHub-hosted Ubuntu only
+# Stage III exact-commit workflow and evidence
 
-The public guest ADCS hub is `adcs://server-747585786.dc24h.eu:1512`, IPv4
-`62.171.156.32`. Do not use the retired alternative target.
+The public guest hub is `adcs://server-747585786.dc24h.eu:1512` at
+`62.171.156.32`. [Stage III qualification report](PUBLIC_STAGE_III_QUALIFICATION.md).
 
-## OWNER runner decision
+## Automatic pull request qualification
 
-The Debian 13 VPS is **not a GitHub Actions runner**. The entire former runner
-directory, dedicated Debian runner workflows, root-enabled host qualification
-and activation automation have been removed from this branch. Every remaining
-CI job uses GitHub-hosted Ubuntu 22.04, 24.04 or 26.04.
+`.github/workflows/public-stage3-qualification.yml` checks out the exact
+candidate head SHA. The offline build, full relevant CTest suite, systemd
+example verification, two-client loopback, TLS fixtures and stability tests
+use GitHub-hosted Ubuntu 22.04, 24.04 and 26.04. Fixed package and systemd
+commands run inside the temporary VMs. The CTest systemd fixture invokes
+packaged system tools for isolated transient units and runs the candidate hub
+under an unprivileged service account.
 
-In this configuration, `sudo` is allowed **only inside ephemeral GitHub Ubuntu
-VMs** for trusted package installation and benign OS-tool checks. It cannot
-restart the public VPS, inspect its systemd unit, access its private Let's
-Encrypt certificate files or prove a real host rollback. Never infer those
-outcomes from a successful external CI run.
+Independent Ubuntu 24.04 jobs verify public DNS/TLS, the bounded public TCP
+set, real ncdc and two independent guest sessions. The public guest jobs
+require successful loopback and public identity prerequisites. Missing,
+failed, skipped or incomplete evidence blocks the automated gate.
 
-## Before merge: automatic regression
+The evidence job downloads immutable Actions artifacts and publishes the
+checksummed `stage3-qualification-report-<attempt>` artifact. Download
+artifacts for the same run attempt and verify the internal SHA-256 manifests
+from their individual directories using `sha256sum -c SHA256SUMS`.
+Run the full workflow again for a complete new attempt.
 
-The `pull_request` run of
-`.github/workflows/debian13-stage3-full-qualification.yml` includes:
+## OWNER extended public stability
 
-1. Offline Stage III policy and ncdc regression tests on Ubuntu 24.04.
-2. Safe `sudo -n id -u` and systemd-tool presence checks on ephemeral Ubuntu
-   22.04, 24.04 and 26.04 environments.
-3. A real `ncdc` client, two synthetic guest ADC clients, inbound and outbound
-   chat, search, CTM/RCM, reconnect, public CA/SAN TLS identity and bounded
-   forbidden TCP ports, from independent GitHub Ubuntu 24.04 networking.
-
-The GitHub runner uses `sudo` to install the packaged `ncdc` executable **on
-its own VM**, never on the Debian hub VPS. The external job uploads a sanitized
-`stage3-ubuntu-external-pr` report. A skipped job is not a PASS.
-
-## Manual exact-SHA external qualification on the branch or main
-
-Under the same workflow select **Run workflow** and the desired ref:
-
-- `fix/stage3-ncdc-command-ack-regression` for **before-merge** tests;
-- `main` for **after-merge** tests, only when OWNER separately authorizes merge.
-
-Required inputs:
-
-| Input | Value |
-| --- | --- |
-| `confirmation` | `RUN_STAGE3_UBUNTU_EXTERNAL_ONLY` |
-| `production_restarts_ack` | `false` (no VPS restarts) |
-| `premerge_phase` | `none`, `before`, or `after` (report label) |
-| `premerge_candidate_sha` | Exact 40-character SHA of the selected ref |
-
-CLI example for the unmerged branch:
+From the OWNER account in GitHub Actions, select the workflow registered
+as `debian13-stage3-full-qualification.yml`, which already exists on protected
+`main`. Select `test/stage3-public-adcs-final-qualification` for the candidate
+run and paste its verified full SHA. The workflow on the selected branch
+contains the extended tests. The expected duration is 32–35 minutes plus queue
+time, with a 40-minute job timeout. It uses at most two concurrent synthetic
+guests and a bounded connection schedule.
 
 ```bash
 gh workflow run debian13-stage3-full-qualification.yml \
-  --ref fix/stage3-ncdc-command-ack-regression \
-  -f confirmation=RUN_STAGE3_UBUNTU_EXTERNAL_ONLY \
+  --repo adrianf87/dc24h.eu-twilight \
+  --ref test/stage3-public-adcs-final-qualification \
+  -f confirmation=RUN_STAGE3_PUBLIC_EXTENDED_STABILITY \
   -f production_restarts_ack=false \
-  -f premerge_phase=before \
-  -f premerge_candidate_sha=REPLACE_WITH_VERIFIED_40_CHAR_BRANCH_SHA
+  -f premerge_phase=none \
+  -f premerge_candidate_sha=REPLACE_WITH_VERIFIED_40_CHARACTER_SHA
 ```
 
-The OWNER, checked-out commit and runner type are verified before public
-testing. The result is **external-only** evidence. Selecting `after` does not
-prove that any real server restart happened between the two runs.
+Record the workflow run URL, exact SHA and expected duration. While queued or
+running, record **PENDING**. On completion review
+`stage3-extended-evidence-<attempt>` from the run's Artifacts section.
+Do the same for the automatic PR workflow. Keep the two run URLs in the
+qualification record.
 
-## Host operations removed from CI
+## OWNER before/after snapshot
 
-The running public service is independent of GitHub-hosted Ubuntu. Actual
-Debian 13 systemd restarts, on-host listener audit, local filesystem backup,
-TLS pair replacement, restore, rollback and certificate renewal remain
-**unverified by this workflow**. Those tasks require a separate, OWNER-operated
-VPS maintenance procedure with an independently confirmed backup, remote SSH
-access and maintenance window. This repository must not silently reconnect
-an Ubuntu runner to the VPS over SSH or introduce secret-based remote sudo.
+For an external snapshot, use the same workflow and exact candidate SHA with
+`confirmation=RUN_STAGE3_UBUNTU_EXTERNAL_ONLY`. Use `premerge_phase=before`
+or `premerge_phase=after` as a label, with `production_restarts_ack=false`.
+A separately authorized operator records the actual host maintenance times in
+the Debian 13 record. Compare them with the independent external snapshots.
+The snapshot produces the `stage3-external-snapshot-<phase>-<attempt>` artifact.
 
-**Merge hold:** require green GitHub Ubuntu policy/ncdc/port CI, independently
-document any missing live-host acceptance criteria, and obtain a separate
-OWNER decision before merging PR #23 or closing Issue #10. Do not label Stage
-III fully accepted based on external-only checks.
+The main ref is available for this workflow after an explicitly authorized
+merge. Each run provides evidence for the checked-out commit. The final
+decision requires OWNER review, and a merge requires separate `OWNER MERGE GO`.

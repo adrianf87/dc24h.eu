@@ -130,6 +130,12 @@ Required report: exact commit SHA and binary version, independently verified map
 
 ## 8. Public hub operations after retirement of the VPS runner
 
+The current acceptance record and evidence matrix are in the
+[Stage III qualification report](PUBLIC_STAGE_III_QUALIFICATION.md).
+Use the [Debian 13 systemd runbook](PUBLIC_STAGE_III_SYSTEMD.md) and the
+[certificate replacement and rollback runbook](PUBLIC_STAGE_III_CERTIFICATE.md)
+for separately authorized maintenance.
+
 The prior `.github/workflows/debian13-stage3-adcs-activation.yml`
 proposal, its privileged host preflight and automated rollback jobs have been
 removed. **GitHub-hosted Ubuntu cannot install, restart or roll back the

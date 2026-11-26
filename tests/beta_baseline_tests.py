@@ -54,28 +54,22 @@ def check_no_custom_workers(errors):
                 "github-runner" not in content,
                 f"{path.relative_to(ROOT)}: retired worker documentation", errors)
 
-    qualification = (ROOT / ".github/workflows/debian13-stage3-full-qualification.yml").read_text(
-        encoding="utf-8")
-    for required in (
-        "  workflow_dispatch:",
-        "  pull_request:",
-        "runs-on: ubuntu-24.04",
-        "os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]",
-        "runs-on: ${{ matrix.os }}",
-        "test \"$RUNNER_ENVIRONMENT\" = 'github-hosted'",
-        "sudo -n apt-get install -y --no-install-recommends ncdc",
-        "sudo -n id -u",
-        "python3 scripts/public_stage3_qualification_external.py",
-        "inputs.production_restarts_ack == false",
-        "contents: read",
+    workflow_dir = ROOT / ".github" / "workflows"
+    pr = (workflow_dir / "public-stage3-qualification.yml").read_text(encoding="utf-8")
+    manual = (workflow_dir / "debian13-stage3-full-qualification.yml").read_text(encoding="utf-8")
+    for workflow, entries in (
+        (pr, ("  pull_request:", "os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]",
+              "runs-on: ${{ matrix.os }}", "sudo -n id -u", "stage3.run run ncdc")),
+        (manual, ("  workflow_dispatch:", "RUN_STAGE3_PUBLIC_EXTENDED_STABILITY",
+                  "stage3.run run extended", "inputs.production_restarts_ack == false")),
     ):
-        require(required in qualification,
-                f"Stage III Ubuntu-only workflow missing {required!r}", errors)
-    for prohibited in ("systemctl restart", "sudo -n python3",
-                       "RUN_STAGE3_PUBLIC_QUALIFICATION", "premerge-host:",
-                       "self-hosted", "ssh "):
-        require(prohibited not in qualification,
-                f"Stage III workflow attempted retired host action {prohibited!r}", errors)
+        for required in (*entries, "runs-on: ubuntu-24.04", "contents: read",
+                         "test \"$RUNNER_ENVIRONMENT\" = 'github-hosted'",
+                         "sudo -n apt-get install -y --no-install-recommends ncdc"):
+            require(required in workflow, f"Stage III workflow missing {required!r}", errors)
+        for prohibited in ("systemctl restart", "sudo -n python3", "premerge-host:",
+                           "RUN_STAGE3_PUBLIC_QUALIFICATION", "self-hosted", "ssh "):
+            require(prohibited not in workflow, f"Stage III workflow attempts {prohibited!r}", errors)
     require(not (ROOT / ".github" / "actionlint.yaml").exists(),
             "Retired custom-runner actionlint shim remains", errors)
 

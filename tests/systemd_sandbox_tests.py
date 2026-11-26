@@ -5,6 +5,7 @@ import grp
 import hashlib
 import os
 from pathlib import Path
+import platform
 import pwd
 import re
 import secrets
@@ -21,8 +22,7 @@ REQUIRE_SYSTEMD_HOST = (os.environ.get("DC24H_REQUIRE_SYSTEMD_HOST") == "1" or
                         "--require-systemd-host" in sys.argv)
 if "--require-systemd-host" in sys.argv:
     sys.argv.remove("--require-systemd-host")
-LAUNCH = sys.argv[:]
-BINARY, SERVICE, SYSUSERS = LAUNCH[1:4]
+BINARY, SERVICE, SYSUSERS = sys.argv[1:4]
 del sys.argv[1:4]
 
 SANDBOX_KEYS = (
@@ -133,16 +133,15 @@ def problems(text):
     return errors
 
 
-def become_root():
-    if os.geteuid() == 0:
-        return
-    sudo = shutil.which("sudo")
-    if sudo and subprocess.run([sudo, "-n", "true"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
-        # sys.argv no longer has the hub and example paths; pass the saved launch line.
-        # sudo normally strips unknown environment variables; carry the strict
-        # Ubuntu CI requirement as a private test-runner argument instead.
-        flags = ["--require-systemd-host"] if REQUIRE_SYSTEMD_HOST else []
-        os.execv(sudo, [sudo, "-n", "--", sys.executable, *LAUNCH, *flags])
+def host_tool_prefix():
+    if (os.environ.get("GITHUB_ACTIONS") == "true" and
+            os.environ.get("RUNNER_ENVIRONMENT") == "github-hosted" and
+            platform.freedesktop_os_release().get("ID") == "ubuntu" and shutil.which("sudo") and
+            subprocess.run(["sudo", "-n", "id", "-u"], capture_output=True, timeout=10).stdout.strip() == b"0"):
+        return ["sudo", "-n", "--"]
+    if os.geteuid() == 0 and os.environ.get("GITHUB_ACTIONS") != "true":
+        return []
+    return None
 
 
 def run(command, check=True, timeout=15):
@@ -155,10 +154,10 @@ def run(command, check=True, timeout=15):
 class SystemdSandboxTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        become_root()
+        cls.host_tools = host_tool_prefix()
         if REQUIRE_SYSTEMD_HOST:
-            if os.geteuid() != 0:
-                raise AssertionError("Required systemd-host test needs root or passwordless sudo")
+            if cls.host_tools is None or (os.geteuid() == 0 and os.environ.get("GITHUB_ACTIONS") == "true"):
+                raise AssertionError("Required systemd-host test needs an unprivileged runner with sudo")
             manager = subprocess.run(
                 ["systemctl", "show", "-p", "Version", "--value"],
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=15,
@@ -209,7 +208,11 @@ class SystemdSandboxTests(unittest.TestCase):
             self.assertTrue(row[6].endswith("nologin"))
             self.assertFalse(any(line.startswith("dc24h:") for line in Path("/etc/passwd").read_text(encoding="utf-8").splitlines()))
 
+    def host(self, command, **kwargs):
+        return run([*self.host_tools, *command], **kwargs)
+
     def sandbox_properties(self, runtime):
+        self.assertEqual(problems(self.text), [])
         service = self.parsed["Service"]
         properties = [f"-p{key}={service[key]}" for key in SANDBOX_KEYS]
         properties.extend([
@@ -224,33 +227,36 @@ class SystemdSandboxTests(unittest.TestCase):
     def test_hub_under_sandbox(self):
         if os.environ.get("DC24H_SANITIZER") in {"address", "thread"}:
             self.skipTest("MemoryDenyWriteExecute blocks this sanitizer runtime; the shipped unit is unchanged")
-        if os.geteuid() != 0:
-            self.skipTest("systemd sandbox requires root or passwordless sudo")
+        if self.host_tools is None:
+            self.skipTest("systemd sandbox requires an isolated Ubuntu runner with sudo")
         name = "dc24h-sandbox-" + secrets.token_hex(4)
         stage = Path("/var/lib") / name
         unit = name + ".service"
         token = secrets.token_hex(32)
         try:
-            stage.mkdir(mode=0o755)
-            shutil.copy(BINARY, stage / "dc24h")
-            os.chmod(stage / "dc24h", 0o755)
+            self.host(["install", "-d", "-m", "0755", str(stage)])
+            self.host(["install", "-m", "0755", BINARY, str(stage / "dc24h")])
             token_path = stage / "admin.token"
-            token_path.write_text(token + "\n", encoding="utf-8")
-            os.chown(token_path, self.account.pw_uid, self.account.pw_gid)
-            os.chmod(token_path, 0o600)
             with socket.socket() as probe:
                 probe.bind(("127.0.0.1", 0))
                 port = probe.getsockname()[1]
-            (stage / "hub.ini").write_text(
-                "[network]\nlisten=127.0.0.1:%d\n[api]\nenabled=on\nsocket=/run/%s/admin.sock\ntoken_file=%s\n"
-                % (port, name, token_path), encoding="utf-8")
-            os.chmod(stage / "hub.ini", 0o644)
-            run(["systemd-run", "--unit=" + name, "--collect", *self.sandbox_properties(name),
-                 str(stage / "dc24h"), "--config", str(stage / "hub.ini")])
+            with tempfile.TemporaryDirectory(prefix="dc24h-sandbox-files-") as private:
+                token_source = Path(private) / "admin.token"
+                token_source.write_text(token + "\n", encoding="utf-8")
+                token_source.chmod(0o600)
+                self.host(["install", "-m", "0600", "-o", self.account.pw_name,
+                           "-g", self.group, str(token_source), str(token_path)])
+                config = Path(private) / "hub.ini"
+                config.write_text(
+                    "[network]\nlisten=127.0.0.1:%d\n[api]\nenabled=on\nsocket=/run/%s/admin.sock\ntoken_file=%s\n"
+                    % (port, name, token_path), encoding="utf-8")
+                self.host(["install", "-m", "0644", str(config), str(stage / "hub.ini")])
+            self.host(["systemd-run", "--unit=" + name, "--collect", *self.sandbox_properties(name),
+                       str(stage / "dc24h"), "--config", str(stage / "hub.ini")])
             deadline = time.monotonic() + 5
             log = ""
             while time.monotonic() < deadline:
-                log = run(["journalctl", "-u", unit, "--no-pager", "-o", "cat"], check=False).stdout
+                log = self.host(["journalctl", "-u", unit, "--no-pager", "-o", "cat"], check=False).stdout
                 if "Network listening on" in log and "Local API listening" in log:
                     break
                 time.sleep(0.05)
@@ -263,19 +269,17 @@ class SystemdSandboxTests(unittest.TestCase):
                 pass
             socket_path = Path("/run") / name / "admin.sock"
             parent = socket_path.parent.stat()
-            info = socket_path.stat()
+            info = self.host(["stat", "--format=%F:%a:%u", str(socket_path)]).stdout.strip()
             self.assertEqual(stat.S_IMODE(parent.st_mode), 0o700)
             self.assertEqual(parent.st_uid, self.account.pw_uid)
-            self.assertTrue(stat.S_ISSOCK(info.st_mode))
-            self.assertEqual(stat.S_IMODE(info.st_mode), 0o600)
-            self.assertEqual(info.st_uid, self.account.pw_uid)
+            self.assertEqual(info, f"socket:600:{self.account.pw_uid}")
             pid = run(["systemctl", "show", "-p", "MainPID", "--value", unit]).stdout.strip()
             status = Path("/proc", pid, "status").read_text(encoding="utf-8")
             self.assertIn("NoNewPrivs:\t1", status)
             self.assertIn("CapEff:\t0000000000000000", status)
             self.assertIn("CapBnd:\t0000000000000000", status)
             self.assertEqual(run(["ps", "-o", "user=", "-p", pid]).stdout.strip(), self.account.pw_name)
-            run(["systemctl", "kill", "-s", "SIGTERM", unit])
+            self.host(["systemctl", "kill", "-s", "SIGTERM", unit])
             deadline = time.monotonic() + 5
             while time.monotonic() < deadline:
                 if run(["systemctl", "is-active", unit], check=False).stdout.strip() == "inactive":
@@ -287,13 +291,12 @@ class SystemdSandboxTests(unittest.TestCase):
             self.assertIn("ExecMainStatus=0", shown)
             self.assertIn("Result=success", shown)
         finally:
-            subprocess.run(["systemctl", "stop", unit], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10)
-            shutil.rmtree(stage, ignore_errors=True)
-            shutil.rmtree(Path("/run") / name, ignore_errors=True)
+            self.host(["systemctl", "stop", unit], check=False)
+            self.host(["rm", "-rf", "--", str(stage), str(Path("/run") / name)])
 
     def test_sandbox_rejects_host_writes(self):
-        if os.geteuid() != 0:
-            self.skipTest("systemd sandbox requires root or passwordless sudo")
+        if self.host_tools is None:
+            self.skipTest("systemd sandbox requires an isolated Ubuntu runner with sudo")
         name = "dc24h-write-" + secrets.token_hex(4)
         state = Path("/var/lib") / name
         runtime = Path("/run") / name
@@ -303,25 +306,22 @@ class SystemdSandboxTests(unittest.TestCase):
             properties.append(f"-pStateDirectory={name}")
             properties.append("-pStateDirectoryMode=" + self.parsed["Service"]["StateDirectoryMode"])
             for path in probes:
-                result = run(["systemd-run", "--quiet", "--wait", "--collect", "--pipe", *properties,
+                result = self.host(["systemd-run", "--quiet", "--wait", "--collect", "--pipe", *properties,
                               "/usr/bin/touch", str(path)], check=False)
                 self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertFalse(path.exists())
-            allowed = run(["systemd-run", "--quiet", "--wait", "--collect", "--pipe", *properties,
+            allowed = self.host(["systemd-run", "--quiet", "--wait", "--collect", "--pipe", *properties,
                            "/usr/bin/touch", str(state / "ok")], check=False)
             self.assertEqual(allowed.returncode, 0, allowed.stderr)
             created = (state / "ok").stat()
             self.assertEqual(created.st_uid, self.account.pw_uid)
             self.assertEqual(stat.S_IMODE(created.st_mode), 0o600)
             self.assertEqual(stat.S_IMODE(state.stat().st_mode), 0o700)
-            runtime_write = run(["systemd-run", "--quiet", "--wait", "--collect", "--pipe", *properties,
+            runtime_write = self.host(["systemd-run", "--quiet", "--wait", "--collect", "--pipe", *properties,
                                  "/usr/bin/touch", str(runtime / "ok")], check=False)
             self.assertEqual(runtime_write.returncode, 0, runtime_write.stderr)
         finally:
-            for path in probes:
-                path.unlink(missing_ok=True)
-            shutil.rmtree(state, ignore_errors=True)
-            shutil.rmtree(runtime, ignore_errors=True)
+            self.host(["rm", "-rf", "--", *map(str, (state, runtime, *probes))])
 
 
 if __name__ == "__main__":
