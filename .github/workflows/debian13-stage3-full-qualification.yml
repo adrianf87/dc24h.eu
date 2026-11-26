@@ -47,7 +47,7 @@ jobs:
   # messages only. This job cannot run systemctl, copy TLS keys or change VPS.
   # Keep the public host-restart qualification gated on main/workflow_dispatch.
   external-pr:
-    name: PR #23 independent ncdc and guest protocol qualification (no host writes)
+    name: 'PR #23 independent ncdc and guest protocol qualification (no host writes)'
     needs: policy-tests
     if: >-
       github.event_name == 'pull_request' &&
