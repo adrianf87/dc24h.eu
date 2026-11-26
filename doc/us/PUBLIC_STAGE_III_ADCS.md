@@ -3,7 +3,9 @@
 **Tracking:** [Issue #10](https://github.com/adrianf87/dc24h.eu-twilight/issues/10), Stage III.  
 **Status:** IN PROGRESS — documentation and read-only preflight preparation only; **public deployment NO-GO**.  
 **Starting source:** protected main commit 7e46787c8a0a901fa08b5af6bb3cac7c8eb77a2d, after the [Stage II OWNER acceptance](https://github.com/adrianf87/dc24h.eu-twilight/issues/10#issuecomment-7195123564).  
-**Candidate public IPv4:** 51.255.80.233 (stated in Issue #10; **not** proof of assignment, routing, firewall policy, or DNS ownership).
+**OWNER-nominated hub FQDN:** server-759505093.dc24h.eu (**DNS A record, zone control, and live certificate not yet independently verified**).  
+**Candidate hub IPv4:** 51.255.80.233 (the original Issue #10 target; OWNER has **not yet confirmed** that this IP belongs to the separate intended hub host or maps to this hostname).  
+**Infrastructure separation:** The OWNER-designated self-hosted Debian 13 GitHub runner and isolated test VPS are **not** the public hub deployment target. Its network address and test-runner hostname are deliberately omitted from this public runbook. Do not activate ADCS on the test VPS by inference.
 
 This document starts engineering work. Nothing here authorizes changing a VPS firewall, provider ACL, DNS record, TLS private key, service unit, process, or listener. The existing systemd example requires a separate OWNER migration marker and approval; do not create the marker, enable a unit, or stop a legacy service as a side effect of Stage III planning.
 
@@ -13,8 +15,8 @@ The OWNER has approved **starting Stage III preparation**, not yet a specific pu
 
 | Decision / evidence | Required value | Current disposition |
 | --- | --- | --- |
-| Public service and IPv4 | Explicit permission to serve an ADCS hub at 51.255.80.233 | Candidate from Issue #10; operational mapping unverified |
-| Hostname | Exact OWNER-controlled FQDN to place in DNS A record and certificate SAN | **BLOCKED: not supplied/verified** |
+| Public hub IPv4 | Confirm the actual public address of the host intended to serve the ADCS hub (51.255.80.233 is the earlier candidate) | **BLOCKED: OWNER must confirm target IP and actual host; do not use the test VPS IP** |
+| Hostname | Exact OWNER-controlled FQDN to place in DNS A record and certificate SAN | OWNER nominated **server-759505093.dc24h.eu**; zone ownership, current A record and SAN still unverified |
 | DNS authority | Proven control of the chosen DNS zone and intended TTL | **BLOCKED** |
 | Network path | Direct assignment vs. provider NAT/port forwarding; external reachability | **BLOCKED** |
 | ADCS port | Explicit TCP port, suggested 1512 only as a proposal | **BLOCKED: no final port decision** |
@@ -35,7 +37,7 @@ The internal WebAdmin/C++ value **server.name = dc24h.eu-twilight** is not a DNS
 
 ## 3. Read-only host and provider inventory — before any modification
 
-Run these *manually* only on the OWNER-approved host. The commands are observations, not a deploy procedure. Keep unredacted network, process, host and firewall output private; publish only bounded summaries. Do not infer the target public IP from an outbound route.
+Run these *manually* only on the separately identified OWNER-approved **future public hub host**, not on the isolated self-hosted test runner as a substitute. The commands are observations, not a deploy procedure. Keep unredacted network, process, host and firewall output private; publish only bounded summaries. Do not infer the target public IP from an outbound route.
 
 ~~~sh
 cat /etc/os-release
@@ -54,16 +56,12 @@ Record a proposed least-privilege inbound policy for **one selected ADCS TCP por
 
 ## 4. DNS, TLS certificate and renewal gate
 
-Before requesting a public certificate, the OWNER must supply the **exact** owned DNS name and authorize the chosen A record. Resolve it from multiple independent recursive resolvers and record results, TTL, authoritative zone and change timestamp. The DNS value must resolve to the approved reachable public endpoint (direct or NAT), not merely to a machine's outbound address.
+The OWNER has nominated **server-759505093.dc24h.eu** as the hub name; before requesting a public certificate, verify the OWNER's DNS-zone control and obtain approval for its exact A record, target host and port. Resolve it from multiple independent recursive resolvers and record results, TTL, authoritative zone and change timestamp. The DNS value must resolve to the approved reachable public endpoint (direct or NAT), not merely to a machine's outbound address.
 
-Example read-only DNS command; deliberately fails until the OWNER replaces the placeholder:
+Example read-only DNS command for the OWNER-nominated name (this checks a response; it does **not** independently establish DNS ownership or authorize changes):
 
 ~~~sh
-stage3_fqdn='REPLACE_WITH_OWNER_APPROVED_FQDN'
-if [ "$stage3_fqdn" = 'REPLACE_WITH_OWNER_APPROVED_FQDN' ]; then
-  echo 'STOP: OWNER-approved DNS name required' >&2
-  exit 2
-fi
+stage3_fqdn='server-759505093.dc24h.eu'
 dig +short A "$stage3_fqdn"
 ~~~
 
@@ -124,6 +122,6 @@ Never disable TLS validation, silently downgrade to adc://, or treat a trusted K
 
 ## 7. Evidence and separate OWNER gates
 
-Required report: exact commit SHA and binary version, OWNER-approved FQDN and port, proof of DNS control and public-IP topology, TLS certificate SAN/issuer/expiry and **public** fingerprint (never private key), provider and local firewall decisions, pre/post network observations, external source/network, test matrix with negative results, redacted logs, rollback procedure, and artifact checksums. Document any unresolved failure as **FAIL / NO-GO**.
+Required report: exact commit SHA and binary version, independently verified mapping for server-759505093.dc24h.eu and the eventual public-hub IPv4 (not the test-runner IP), OWNER-approved port, proof of DNS control and public-IP topology, TLS certificate SAN/issuer/expiry and **public** fingerprint (never private key), provider and local firewall decisions, pre/post network observations, external source/network, test matrix with negative results, redacted logs, rollback procedure, and artifact checksums. Document any unresolved failure as **FAIL / NO-GO**.
 
 **Stage III kickoff disposition: IN PROGRESS / ACTIVATION BLOCKED.** This PR changes documentation only. It neither dispatches GitHub Actions nor touches the VPS. No RELEASE GO, PUBLIC HUB ACTIVATION GO, WEBADMIN PUBLIC ACTIVATION GO, PRIVATE-STATE MIGRATION GO, or opening of public ports is implied. Such actions require their own exact-scope OWNER commands and post-change verification under [Issue #10](https://github.com/adrianf87/dc24h.eu-twilight/issues/10).
