@@ -17,6 +17,7 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest import mock
 
 REQUIRE_SYSTEMD_HOST = (os.environ.get("DC24H_REQUIRE_SYSTEMD_HOST") == "1" or
                         "--require-systemd-host" in sys.argv)
@@ -214,6 +215,31 @@ class SystemdSandboxTests(unittest.TestCase):
     def host(self, command, **kwargs):
         return run([*self.host_tools, *command], **kwargs)
 
+    def assert_host_path_absent(self, path):
+        # Match the exact fixture entry, including a dangling symlink.
+        # An inaccessible parent makes find fail instead of looking empty.
+        result = self.host(["find", str(path.parent), "-mindepth", "1", "-maxdepth", "1",
+                            "-name", path.name, "-print", "-quit"], check=False)
+        self.assertEqual(result.returncode, 0, f"Could not verify fixture path {path}: {result.stderr}")
+        self.assertEqual(result.stdout, "", f"Unexpected fixture path: {path}")
+
+    def test_protected_path_check_uses_unprivileged_runner_host_tools(self):
+        path = Path("/root/dc24h-write-test")
+        with mock.patch.object(self, "host_tools", ["sudo", "-n", "--"]), \
+                mock.patch.object(Path, "exists", side_effect=PermissionError), \
+                mock.patch(f"{__name__}.run") as invoke:
+            invoke.return_value = subprocess.CompletedProcess([], 0, "", "")
+            self.assert_host_path_absent(path)
+            invoke.assert_called_once_with(
+                ["sudo", "-n", "--", "find", "/root", "-mindepth", "1", "-maxdepth", "1",
+                 "-name", path.name, "-print", "-quit"], check=False)
+            invoke.return_value = subprocess.CompletedProcess([], 0, f"{path}\n", "")
+            with self.assertRaisesRegex(AssertionError, "Unexpected fixture path"):
+                self.assert_host_path_absent(path)
+            invoke.return_value = subprocess.CompletedProcess([], 1, "", "Permission denied")
+            with self.assertRaisesRegex(AssertionError, "Could not verify fixture path.*Permission denied"):
+                self.assert_host_path_absent(path)
+
     def sandbox_properties(self, runtime):
         self.assertEqual(problems(self.text), [])
         service = self.parsed["Service"]
@@ -304,6 +330,9 @@ class SystemdSandboxTests(unittest.TestCase):
         state = Path("/var/lib") / name
         runtime = Path("/run") / name
         probes = [Path("/etc") / name, Path("/usr") / name, Path("/root") / name]
+        fixture_paths = (state, runtime, *probes)
+        for path in fixture_paths:
+            self.assert_host_path_absent(path)
         try:
             properties = [item for item in self.sandbox_properties(name) if not item.startswith("-pWorkingDirectory")]
             properties.append(f"-pStateDirectory={name}")
@@ -312,19 +341,21 @@ class SystemdSandboxTests(unittest.TestCase):
                 result = self.host(["systemd-run", "--quiet", "--wait", "--collect", "--pipe", *properties,
                               "/usr/bin/touch", str(path)], check=False)
                 self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
-                self.assertFalse(path.exists())
+                self.assert_host_path_absent(path)
             allowed = self.host(["systemd-run", "--quiet", "--wait", "--collect", "--pipe", *properties,
                            "/usr/bin/touch", str(state / "ok")], check=False)
             self.assertEqual(allowed.returncode, 0, allowed.stderr)
-            created = (state / "ok").stat()
-            self.assertEqual(created.st_uid, self.account.pw_uid)
-            self.assertEqual(stat.S_IMODE(created.st_mode), 0o600)
-            self.assertEqual(stat.S_IMODE(state.stat().st_mode), 0o700)
+            created = self.host(["stat", "--format=%u:%a", str(state / "ok")]).stdout.strip()
+            self.assertEqual(created, f"{self.account.pw_uid}:600")
+            state_mode = self.host(["stat", "--format=%a", str(state)]).stdout.strip()
+            self.assertEqual(state_mode, "700")
             runtime_write = self.host(["systemd-run", "--quiet", "--wait", "--collect", "--pipe", *properties,
                                  "/usr/bin/touch", str(runtime / "ok")], check=False)
             self.assertEqual(runtime_write.returncode, 0, runtime_write.stderr)
         finally:
-            self.host(["rm", "-rf", "--", *map(str, (state, runtime, *probes))])
+            self.host(["rm", "-rf", "--", *map(str, fixture_paths)])
+            for path in fixture_paths:
+                self.assert_host_path_absent(path)
 
 
 if __name__ == "__main__":

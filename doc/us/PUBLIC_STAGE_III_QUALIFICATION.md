@@ -22,6 +22,27 @@ operator in a separate window.
 The initial matrix records the disposition before exact-commit evidence review.
 Use the Markdown result matrix and artifacts from the commit under review.
 
+### Hosted systemd regression
+
+The [Stage III run for `f1771b1`](https://github.com/adrianf87/dc24h.eu-twilight/actions/runs/45893716889)
+recorded `systemd.sandbox` failures on all three Ubuntu images. The
+[Stage IV](https://github.com/adrianf87/dc24h.eu-twilight/actions/runs/45893716980)
+and [C++ Debug/Release](https://github.com/adrianf87/dc24h.eu-twilight/actions/runs/45893716891)
+logs show the unprivileged runner was denied access while inspecting the
+protected `/root` path or the file in the service's mode-0700 state directory.
+The Stage III evidence gate reported the missing dependent loopback and public
+bundles. The timing and summary checks also failed after their CTest inputs
+failed.
+
+The fix uses the hosted runner's packaged tools to verify the exact temporary
+paths and inspect state-file ownership and mode. The test still runs the
+service write probes against `/root`, `/etc`, and `/usr` and checks cleanup.
+The added regression exercises absent, present, and permission-denied
+outcomes through the unprivileged runner's host-tool path. The replacement
+commit requires its own Ubuntu matrix and external artifacts.
+
+### Acceptance checklist
+
 | Requirement | Exact-commit evidence | Initial disposition |
 | --- | --- | --- |
 | C++ build, CTest, config, security, and deployed binary identity | Three Ubuntu images, `offline` results and deployed identity in the operator record | NOT TESTED in this report |
