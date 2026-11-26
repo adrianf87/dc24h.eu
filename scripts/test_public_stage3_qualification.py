@@ -2,13 +2,14 @@
 
 import errno
 from pathlib import Path
+import ssl
 import tempfile
 import unittest
 from unittest import mock
 
 import public_stage3_external_probe as base
 import public_stage3_qualification_external as external
-from stage3 import evidence, public_checks
+from stage3 import evidence, fixtures, public_checks
 from stage3.run import BRANCH, public_guard
 import stage3_premerge_gate as premerge
 
@@ -229,6 +230,47 @@ class PolicyTests(unittest.TestCase):
                 with self.subTest(changed=changed), mock.patch.dict("os.environ", dict(env, **changed), clear=True):
                     with self.assertRaises(evidence.Blocked):
                         public_guard("extended")
+
+
+class CertificateVerificationTests(unittest.TestCase):
+    def test_foreign_ca_fixture_has_its_own_issuer_and_valid_leaf(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            trusted = fixtures.authority(root / "trusted").parent / "ca.pem"
+            issuer = fixtures.authority(root / "other")
+            foreign = fixtures.issue(root, issuer, "foreign")
+            with fixtures.certificate_server(foreign) as settings:
+                observed = fixtures.verify_certificate_rejection(fixtures.loopback_context(trusted), settings, 20)
+                self.assertEqual(observed, "OpenSSL verification code 20 (local issuer not found)")
+            with fixtures.certificate_server(foreign) as settings:
+                with base.open_tls(fixtures.loopback_context(issuer.parent / "ca.pem"), **settings):
+                    pass
+
+    def test_certificate_diagnostics_use_only_the_code_and_controlled_category(self):
+        for code, category in (
+            (9, "certificate not yet valid"), (10, "certificate expired"),
+            (20, "local issuer not found"), (62, "DNS hostname mismatch"),
+        ):
+            with self.subTest(code=code):
+                error = ssl.SSLCertVerificationError("sensitive certificate detail")
+                error.verify_code = code
+                with mock.patch.object(base, "open_tls", side_effect=error):
+                    self.assertEqual(fixtures.verify_certificate_rejection(None, {}, code),
+                                     f"OpenSSL verification code {code} ({category})")
+
+    def test_wrong_reason_generic_error_and_accepted_leaf_fail(self):
+        error = ssl.SSLCertVerificationError("sensitive certificate detail")
+        error.verify_code = 30
+        with mock.patch.object(base, "open_tls", side_effect=error):
+            with self.assertRaisesRegex(evidence.Mismatch, "code 30 .*identifier mismatch.*Expected 20") as failure:
+                fixtures.verify_certificate_rejection(None, {}, 20)
+            self.assertNotIn("sensitive certificate detail", str(failure.exception))
+        with mock.patch.object(base, "open_tls", side_effect=ssl.SSLError("generic handshake error")):
+            with self.assertRaises(ssl.SSLError):
+                fixtures.verify_certificate_rejection(None, {}, 20)
+        with mock.patch.object(base, "open_tls"):
+            with self.assertRaisesRegex(evidence.Mismatch, "accepted a deliberately invalid certificate"):
+                fixtures.verify_certificate_rejection(None, {}, 20)
 
 
 class EvidenceTests(unittest.TestCase):

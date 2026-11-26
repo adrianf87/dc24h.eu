@@ -24,6 +24,14 @@ from public_stage3_qualification_external import (
 LOOPBACK = "127.0.0.1"
 READY = re.compile(rb"ADCS listening on 127\.0\.0\.1:([0-9]+)")
 
+VERIFY_CATEGORIES = {
+    9: "certificate not yet valid",
+    10: "certificate expired",
+    20: "local issuer not found",
+    30: "authority and subject key identifier mismatch",
+    62: "DNS hostname mismatch",
+}
+
 
 def run(*command, input_data=None):
     return subprocess.run(command, input=input_data, capture_output=True, check=True, timeout=30).stdout
@@ -52,8 +60,10 @@ commonName = supplied
     (root / "index").touch()
     (root / "index.attr").write_text("unique_subject = no\n")
     (root / "serial").write_text("1000\n")
+    # Separate issuer DNs keep older OpenSSL from considering the trusted
+    # CA as an issuer candidate for the leaf signed by the other CA.
     openssl("req", "-new", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "7",
-            "-subj", "/CN=Stage III synthetic CA",
+            "-subj", f"/CN=Stage III synthetic {root.name} CA",
             "-addext", "basicConstraints=critical,CA:TRUE",
             "-addext", "keyUsage=critical,keyCertSign,cRLSign",
             "-out", root / "ca.pem", "-keyout", root / "ca.key")
@@ -246,6 +256,19 @@ def certificate_server(pair):
             require(not thread.is_alive() and not errors, "Loopback TLS fixture did not complete")
 
 
+def verify_certificate_rejection(context, settings, expected):
+    try:
+        with base.open_tls(context, **settings):
+            pass
+    except ssl.SSLCertVerificationError as error:
+        code = error.verify_code
+        category = VERIFY_CATEGORIES.get(code, "other certificate verification error")
+        observed = f"OpenSSL verification code {code} ({category})"
+        require(code == expected, f"{observed}. Expected {expected} ({VERIFY_CATEGORIES[expected]})")
+        return observed
+    require(False, "TLS accepted a deliberately invalid certificate")
+
+
 def tls_fixtures(suite, binary, root):
     original, context, issuer = local_credentials(root)
     config = root / "hub.ini"
@@ -264,14 +287,7 @@ def tls_fixtures(suite, binary, root):
         with suite.case(identifier) as outcome:
             pair = issue(root, ca, identifier, san=san, start=start, end=end)
             with certificate_server(pair) as settings:
-                try:
-                    with base.open_tls(context, **settings):
-                        pass
-                except ssl.SSLCertVerificationError as error:
-                    require(error.verify_code == expected, "Unexpected certificate rejection reason")
-                    outcome.observed = f"OpenSSL verification code {expected}"
-                else:
-                    require(False, "TLS accepted a deliberately invalid certificate")
+                outcome.observed = verify_certificate_rejection(context, settings, expected)
 
     replacement = issue(root, issuer, "replacement")
     write_config(config, original)
