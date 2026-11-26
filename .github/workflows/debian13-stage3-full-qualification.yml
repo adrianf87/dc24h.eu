@@ -1,6 +1,11 @@
 name: Debian 13 Stage III public ADCS full qualification (OWNER only)
 
 on:
+  pull_request:
+    paths:
+      - '.github/workflows/debian13-stage3-full-qualification.yml'
+      - 'scripts/public_stage3_qualification_*.py'
+      - 'scripts/test_public_stage3_qualification.py'
   workflow_dispatch:
     inputs:
       confirmation:
@@ -22,6 +27,22 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  policy-tests:
+    name: Offline policy tests (no network, host changes or sudo)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Pure Python Stage III owner and port policy tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m compileall -q scripts/public_stage3_qualification_external.py scripts/public_stage3_qualification_host.py scripts/test_public_stage3_qualification.py
+          (cd scripts && python3 -m unittest -v test_public_stage3_qualification.py)
+
   external-before:
     name: Independent ncdc, two guests, protocol and exposure
     if: github.repository == 'adrianf87/dc24h.eu-twilight' && github.actor == 'adrianf87' && github.ref == 'refs/heads/main' && inputs.confirmation == 'RUN_STAGE3_PUBLIC_QUALIFICATION' && inputs.production_restarts_ack == true
