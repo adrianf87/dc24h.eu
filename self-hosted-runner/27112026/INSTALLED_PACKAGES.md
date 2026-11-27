@@ -12,10 +12,10 @@
 | Original inventory snapshot | `/home/github-runner/self-hosted-runner/inventory/20261127T164249Z` |
 | Earlier Git commit in deleted repository | `2b753ec33bf62d60e5fa3e9817ae270ed17f9f98` |
 
-**Full 1,110 name/version rows are not currently available in this new repo.** The previous remote repository was deleted. The original snapshot was already collected on the VPS; [copy it from the local clone](README.md#import-the-exact-on-host-inventory) and verify `SHA256SUMS`. Do not substitute guessed packages or treat the `screenfetch` count as a list.
+**Full 1,110 name/version rows are not currently available in this new repo.** The previous remote repository was deleted. The original snapshot was already collected on the VPS but its local clone was subsequently deleted. [Recollect a new dated inventory](README.md#recovery-after-local-inventory-deletion) and verify `SHA256SUMS`; do not substitute guessed packages or treat the `screenfetch` count as a list.
 
-Once imported, the exact names and versions will be in:
-`inventory/20261127T164249Z/installed-packages.tsv`, with explicitly installed packages in `apt-manual.txt`.
+A newly collected report stores exact package names and versions in:
+`inventory/<new_utc_timestamp>/installed-packages.tsv`, with manually installed packages in `apt-manual.txt`. Do not label that file with the deleted report's timestamp.
 
 ## Previously sampled tool versions
 
