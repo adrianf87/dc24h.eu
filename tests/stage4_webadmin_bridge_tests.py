@@ -105,9 +105,17 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual(self.call("POST", "/api/v1/admin/access",
                                    {"Content-Type": "application/x-www-form-urlencoded",
                                     "Transfer-Encoding": "chunked"}, b"x=1")[0], 400)
-        self.assertEqual(self.call("POST", "/api/v1/admin/access",
-                                   {"Content-Type": "application/x-www-form-urlencoded",
-                                    "Content-Length": "16385"}, b"x=1")[0], 400)
+        # The bridge rejects an oversized Content-Length before consuming the
+        # body. Depending on socket scheduling, the client may receive HTTP 400
+        # or BrokenPipe/connection reset while still transmitting invalid data.
+        try:
+            status, _ = self.call("POST", "/api/v1/admin/access",
+                                  {"Content-Type": "application/x-www-form-urlencoded",
+                                   "Content-Length": "16385"}, b"x=1")
+        except (BrokenPipeError, ConnectionResetError, http.client.RemoteDisconnected):
+            pass
+        else:
+            self.assertEqual(status, 400)
         self.assertEqual(self.call("GET", "/api/v1/status", {"Content-Length": "2"})[0], 400)
         self.assertEqual(Upstream.seen, [])
 
