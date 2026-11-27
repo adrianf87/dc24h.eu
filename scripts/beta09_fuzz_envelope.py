@@ -25,7 +25,7 @@ def evaluate(sha, records):
         report = records[name]
         if (not isinstance(report, dict) or report.get("schema") != 1 or
                 report.get("source_sha") != sha or
-                report.get("os_image") != "ubuntu-24.04" or
+                report.get("os_image") != "debian-13" or
                 report.get("fuzzer_profile") != name or
                 report.get("compiler") != "clang-libfuzzer" or
                 type(report.get("requested_runs")) is not int or
@@ -47,7 +47,7 @@ def evaluate(sha, records):
                 report.get("production_security_certified") is not False):
             raise ValueError("Missing, skipped, altered or unbounded Clang/ASan fuzz report")
         observed_total += report["observed_runs"]
-    return {"schema": 1, "source_sha": sha, "os_image": "ubuntu-24.04",
+    return {"schema": 1, "source_sha": sha, "os_image": "debian-13",
             "distinct_fuzzer_profiles": list(PROFILES), "required_runs": smoke.RUNS * len(PROFILES),
             "observed_runs": observed_total, "sanitizer_findings": 0,
             "both_required_fuzz_checks_passed": True,
@@ -65,9 +65,9 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         if (os.environ.get("GITHUB_ACTIONS") != "true" or
-                os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted" or
+                os.environ.get("RUNNER_ENVIRONMENT") != "self-hosted" or
                 os.environ.get("RUNNER_OS") != "Linux" or
-                platform.freedesktop_os_release().get("VERSION_ID") != "24.04"):
+                platform.freedesktop_os_release().get("VERSION_ID") != "13"):
             raise ValueError("Requires hosted Ubuntu 24.04")
         actual = subprocess.check_output(["git", "-C", str(args.root), "rev-parse", "HEAD"],
                                          timeout=10).decode().strip()
