@@ -195,6 +195,10 @@ jobs:
       - name: Run privileged bootstrap only against the disposable database fixture
         run: |
           node_dir=$(dirname "$(dirname "$(command -v node)")")
-          sudo -n ./scripts/stage4_install.sh "$node_dir" "$RUNNER_TEMP/stage4-build"
+          # sudo sanitizes the environment; pass the GitHub-hosted identity
+          # explicitly so the disposable VM does not try to replace its
+          # runner-managed AppArmor profile during the installer rehearsal.
+          sudo -n env "GITHUB_ACTIONS=$GITHUB_ACTIONS" "RUNNER_ENVIRONMENT=$RUNNER_ENVIRONMENT" \
+            ./scripts/stage4_install.sh "$node_dir" "$RUNNER_TEMP/stage4-build"
           sudo -n env "PATH=$node_dir/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/bin" ./scripts/stage4_test_database.sh
           python3 tests/stage4_msmtp_process.py -v
