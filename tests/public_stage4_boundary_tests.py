@@ -212,7 +212,8 @@ class PublicStageIVBoundaryTests(unittest.TestCase):
         installer = (ROOT / ".github/scripts/install-ci-deps.sh").read_text(encoding="utf-8")
         # All Stage III package installs share one signed Ubuntu-only helper,
         # excluding unrelated third-party feeds on the hosted image.
-        self.assertGreaterEqual(workflow.count('bash .github/scripts/install-ci-deps.sh'), 3)
+        self.assertGreaterEqual(workflow.count('bash .github/scripts/install-ci-deps.sh'), 2)
+        self.assertNotIn('apt-get ', workflow)
         self.assertIn('Dir::Etc::sourcelist=${ubuntu_apt_source}', installer)
         self.assertIn('Dir::Etc::sourceparts=-', installer)
         self.assertIn('apt-get "${apt_network_options[@]}" update', installer)

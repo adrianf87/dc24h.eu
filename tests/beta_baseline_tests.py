@@ -55,12 +55,12 @@ def check_no_custom_workers(errors):
                 f"{path.relative_to(ROOT)}: retired worker documentation", errors)
 
     workflow_dir = ROOT / ".github" / "workflows"
-    pr = (workflow_dir / "public-stage3-qualification.yml").read_text(encoding="utf-8")
+    automatic = (workflow_dir / "public-stage3-qualification.yml").read_text(encoding="utf-8")
     manual = (workflow_dir / "debian13-stage3-full-qualification.yml").read_text(encoding="utf-8")
     for workflow, entries in (
-        (pr, ("  pull_request:", "os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]",
-              "runs-on: ${{ matrix.os }}", "sudo -n id -u", "stage3.run run ncdc",
-              "bash .github/scripts/install-ci-deps.sh ncdc")),
+        (automatic, ("  pull_request:", "  push:", "os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]",
+                     "runs-on: ${{ matrix.os }}", "sudo -n id -u", "group: [two-client, tls-fixtures, stability]",
+                     "needs: [offline, sandbox, loopback]")),
         (manual, ("  workflow_dispatch:", "RUN_STAGE3_PUBLIC_EXTENDED_STABILITY",
                   "stage3.run run extended", "inputs.production_restarts_ack == false",
                   "bash .github/scripts/install-ci-deps.sh ncdc")),
@@ -71,6 +71,8 @@ def check_no_custom_workers(errors):
         for prohibited in ("systemctl restart", "sudo -n python3", "premerge-host:",
                            "RUN_STAGE3_PUBLIC_QUALIFICATION", "self-hosted", "ssh "):
             require(prohibited not in workflow, f"Stage III workflow attempts {prohibited!r}", errors)
+    for public_group in ("tls-public", "exposure", "two-client-public", "stage3.run run ncdc"):
+        require(public_group not in automatic, f"Automatic Stage III workflow includes {public_group!r}", errors)
     require(not (ROOT / ".github" / "actionlint.yaml").exists(),
             "Retired custom-runner actionlint shim remains", errors)
 

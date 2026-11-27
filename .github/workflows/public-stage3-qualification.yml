@@ -158,95 +158,9 @@ jobs:
           path: ${{ runner.temp }}/results/
           if-no-files-found: error
 
-  external-identity:
-    name: Public ${{ matrix.group }} from hosted Ubuntu 22.04
-    needs: [offline, sandbox]
-    if: >-
-      github.repository == 'adrianf87/dc24h.eu-twilight' &&
-      github.event_name == 'push' &&
-      github.ref == 'refs/heads/main' &&
-      github.ref_protected
-    strategy:
-      fail-fast: false
-      matrix:
-        group: [tls-public, exposure]
-    runs-on: ubuntu-22.04
-    timeout-minutes: 10
-    steps:
-      - name: Verify GitHub-hosted Ubuntu 22.04 runner
-        run: |
-          . /etc/os-release
-          test "$RUNNER_ENVIRONMENT" = github-hosted
-          test "$ID" = ubuntu && test "$VERSION_ID" = 22.04
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-        with:
-          ref: ${{ env.SOURCE_SHA }}
-          persist-credentials: false
-      - name: Verify approved public TLS identity and bounded TCP exposure
-        env:
-          TEST_GROUP: ${{ matrix.group }}
-        run: |
-          python3 -m stage3.run run "$TEST_GROUP" --sha "$SOURCE_SHA" --image ubuntu-22.04 \
-            --output "$RUNNER_TEMP/results"
-      - name: Upload sanitized public identity results
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: stage3-${{ matrix.group }}-ubuntu-22.04-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/results/
-          if-no-files-found: error
-
-  external-clients:
-    name: Real ncdc and independent two-client public qualification
-    needs: [loopback, external-identity]
-    runs-on: ubuntu-22.04
-    timeout-minutes: 15
-    concurrency:
-      group: stage3-public-guests
-      cancel-in-progress: false
-    steps:
-      - name: Verify GitHub-hosted Ubuntu 22.04 runner
-        run: |
-          . /etc/os-release
-          test "$RUNNER_ENVIRONMENT" = github-hosted
-          test "$ID" = ubuntu && test "$VERSION_ID" = 22.04
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-        with:
-          ref: ${{ env.SOURCE_SHA }}
-          persist-credentials: false
-      - id: prepare_ncdc
-        name: Install packaged Ubuntu 22.04 ncdc
-        run: |
-          test "$RUNNER_ENVIRONMENT" = github-hosted
-          bash .github/scripts/install-ci-deps.sh ncdc
-      - name: Verify two independent guest sessions and signaling
-        run: |
-          python3 -m stage3.run run two-client-public --sha "$SOURCE_SHA" --image ubuntu-22.04 \
-            --output "$RUNNER_TEMP/two-client-public"
-      - name: Verify packaged ncdc chat, search and reconnection
-        if: "!cancelled() && steps.prepare_ncdc.outcome == 'success'"
-        id: ncdc
-        run: |
-          python3 -m stage3.run run ncdc --sha "$SOURCE_SHA" --image ubuntu-22.04 \
-            --output "$RUNNER_TEMP/ncdc"
-      - name: Upload sanitized public two-client results
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: stage3-two-client-public-ubuntu-22.04-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/two-client-public
-          if-no-files-found: error
-      - name: Upload sanitized public ncdc results
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: stage3-ncdc-ubuntu-22.04-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/ncdc
-          if-no-files-found: error
-
   evidence:
     name: Verify complete exact-head evidence and publish qualification matrix
-    needs: [offline, sandbox, loopback, external-identity, external-clients]
+    needs: [offline, sandbox, loopback]
     if: always()
     runs-on: ubuntu-22.04
     timeout-minutes: 10

@@ -135,8 +135,10 @@ candidate test source separately.
 | Future Apache-plugin renewal and production pair replacement/rollback | OUT OF STAGE III SCOPE | The staging rehearsal used the webroot method and the current pair is valid. A future live replacement requires separately authorized maintenance; the withdrawn controlled-restart test is not an acceptance gate. |
 | Real DC++ on an independent machine | EXCLUDED BY OWNER | No execution required for Stage III; no interoperability PASS is claimed. |
 
-The CI update adds isolated evidence for future pull requests and bounded
-public checks on protected `main`. Review the new candidate's PR CI artifacts for its exact SHA. Prior public snapshot and extended stability runs remain historical; do not dispatch another external or extended run under this OWNER revision.
+Pull requests and pushes to `main` produce isolated Ubuntu CI evidence for
+the exact source commit. The CI report marks the public checks
+`OUT OF SCOPE BY OWNER`. Prior public snapshot and extended stability runs
+remain historical evidence.
 
 ## Evidence review
 
