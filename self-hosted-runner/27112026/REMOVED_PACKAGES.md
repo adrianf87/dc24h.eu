@@ -6,13 +6,13 @@ The prior on-host snapshot contained:
 - **18** logged `remove` or `purge` rows concerning packages **not installed** when the collector ran.
 - **0** warning lines about collecting the available package history.
 
-The previous GitHub repository is deleted; the complete 18 rows and their package names must be [imported from the local VPS inventory](README.md#import-the-exact-on-host-inventory). Do **not** invent names or versions.
+The previous GitHub repository and its local VPS clone were both deleted; the former 18 rows cannot be imported from that location. [Recollect a new dated inventory](README.md#recovery-after-local-inventory-deletion) from the retained `dpkg` logs. Its removal event count may differ if logs rotated or packages changed. Do **not** invent names or versions.
 
 After import:
 
 | File | Role |
 | --- | --- |
-| `inventory/20261127T164249Z/dpkg-package-events.tsv` | Dated `install`, `upgrade`, `remove`, `purge` events retained in `/var/log/dpkg.log*` |
+| `inventory/<new_utc_timestamp>/dpkg-package-events.tsv` | Dated `install`, `upgrade`, `remove`, `purge` events retained in `/var/log/dpkg.log*` |
 | `inventory/20261127T164249Z/removed-not-installed.tsv` | Events concerning packages that are currently absent |
 | `inventory/20261127T164249Z/inventory-warnings.txt` | Missing or unreadable source warnings |
 | `inventory/20261127T164249Z/SHA256SUMS` | Integrity checks |
