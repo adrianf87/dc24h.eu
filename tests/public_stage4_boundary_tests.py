@@ -152,6 +152,21 @@ class PublicStageIVBoundaryTests(unittest.TestCase):
         self.assertIn('env.DC24H_API_TOKEN_FILE', adapter)
         self.assertNotIn('credentials(process.env)', gateway)
 
+    def test_stage_iv_ci_does_not_weaken_production_apparmor_reload(self):
+        installer = (ROOT / "scripts/stage4_install.sh").read_text(encoding="utf-8")
+        workflow = (ROOT / ".github/workflows/public-stage4-design.yml").read_text(
+            encoding="utf-8"
+        )
+        # sudo drops the runner identity unless the disposable CI job passes
+        # both variables. Never grant this exception on the Debian VPS or a
+        # self-hosted runner.
+        self.assertIn('"${GITHUB_ACTIONS:-}" = "true"', installer)
+        self.assertIn('"${RUNNER_ENVIRONMENT:-}" = "github-hosted"', installer)
+        self.assertIn('elif ! apparmor_parser -r "$profile"; then', installer)
+        self.assertIn('exit 1', installer.split('elif ! apparmor_parser -r "$profile"; then')[1])
+        self.assertIn('"GITHUB_ACTIONS=$GITHUB_ACTIONS"', workflow)
+        self.assertIn('"RUNNER_ENVIRONMENT=$RUNNER_ENVIRONMENT"', workflow)
+
     def test_stage_iii_apt_uses_only_signed_ubuntu_feed(self):
         workflow = (ROOT / ".github/workflows/public-stage3-qualification.yml").read_text(encoding="utf-8")
         # Every apt update and install must ignore unrelated hosted-image
