@@ -180,6 +180,11 @@ Run `scripts/stage4_test_database.sh` against its disposable fixture after
 installation. The test exercises native SQL migrations, owner initialization,
 the C++ proof path, session and challenge transactions, signup, SMTP rejection
 with a mock sender, backup/restore and restart of the disposable MariaDB.
-GitHub qualification runs on hosted Ubuntu 22.04 only. Record
-production systemd startup/restart, actual mailbox receipt, successful Owner
-enrollment and external HTTPS separately with result and deployed commit SHA.
+GitHub qualification covers hosted Ubuntu 22.04, 24.04 and 26.04 on the
+exact implementation SHA tested. The OWNER reported a successful live
+Administrator email-OTP login and working password change on November 27,
+2026. Record the corresponding deployed SHA, actual mailbox receipt and
+service state separately from independent external TLS, denied-route,
+role/session, restart and rollback acceptance. New documentation commits
+require their own exact-head CI verification; green CI or operator evidence
+alone is not `OWNER STAGE IV ACCEPTANCE` or `OWNER MERGE GO`.
