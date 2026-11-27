@@ -1,4 +1,4 @@
-name: Stage IV public WebAdmin design boundary (Ubuntu only)
+name: Stage IV public WebAdmin design boundary (Debian 13)
 
 on:
   pull_request:
@@ -73,13 +73,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
-    runs-on: ${{ matrix.os }}
+        os: [debian-13]
+    runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 5
     steps:
-      - name: Confirm disposable GitHub runner
+      - name: Verify Debian 13 self-hosted runner identity
+        shell: bash
         run: |
-          test "$RUNNER_ENVIRONMENT" = 'github-hosted'
+          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
+          . /etc/os-release
+          test "$ID" = 'debian' && test "$VERSION_ID" = '13'
+          test "$(hostname -s)" = 'server-747585786'
+          test "$(id -un)" = 'github-runner'
+      - name: Confirm Debian 13 self-hosted runner
+        run: |
+          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
@@ -108,11 +116,19 @@ jobs:
 
   playwright-shell:
     name: Standalone Stage IV browser/CSRF flow (hosted Ubuntu 24.04)
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 15
     steps:
-      - name: Confirm disposable GitHub runner
-        run: test "$RUNNER_ENVIRONMENT" = 'github-hosted'
+      - name: Verify Debian 13 self-hosted runner identity
+        shell: bash
+        run: |
+          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
+          . /etc/os-release
+          test "$ID" = 'debian' && test "$VERSION_ID" = '13'
+          test "$(hostname -s)" = 'server-747585786'
+          test "$(id -un)" = 'github-runner'
+      - name: Confirm Debian 13 self-hosted runner
+        run: test "$RUNNER_ENVIRONMENT" = 'self-hosted'
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
@@ -132,12 +148,20 @@ jobs:
 
   dedicated-systemd:
     name: Isolated non-root Unix bridge / systemd sandbox (Ubuntu 24.04)
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 8
     steps:
+      - name: Verify Debian 13 self-hosted runner identity
+        shell: bash
+        run: |
+          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
+          . /etc/os-release
+          test "$ID" = 'debian' && test "$VERSION_ID" = '13'
+          test "$(hostname -s)" = 'server-747585786'
+          test "$(id -un)" = 'github-runner'
       - name: Confirm disposable GitHub Ubuntu runner and passwordless systemd
         run: |
-          test "$RUNNER_ENVIRONMENT" = 'github-hosted'
+          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
           test "$(id -u)" != '0'
           test "$(sudo -n id -u)" = '0'
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -166,22 +190,26 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
-    runs-on: ${{ matrix.os }}
+        os: [debian-13]
+    runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 30
     steps:
-      - name: Confirm hosted runner
-        run: test "$RUNNER_ENVIRONMENT" = 'github-hosted'
+      - name: Verify Debian 13 self-hosted runner identity
+        shell: bash
+        run: |
+          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
+          . /etc/os-release
+          test "$ID" = 'debian' && test "$VERSION_ID" = '13'
+          test "$(hostname -s)" = 'server-747585786'
+          test "$(id -un)" = 'github-runner'
+      - name: Confirm Debian 13 runner
+        run: test "$RUNNER_ENVIRONMENT" = 'self-hosted'
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      - name: Install signed Ubuntu build and database packages
+      - name: Install Debian 13 build and database packages
         run: |
-          source_file=/etc/apt/sources.list.d/ubuntu.sources
-          if [ ! -r "$source_file" ]; then source_file=/etc/apt/sources.list; fi
-          options=(-o "Dir::Etc::sourcelist=$source_file" -o Dir::Etc::sourceparts=- -o Acquire::Retries=3)
-          sudo -n apt-get "${options[@]}" update -qq
-          sudo -n env DEBIAN_FRONTEND=noninteractive apt-get "${options[@]}" install -y --no-install-recommends \
+          bash self-hosted-runner/scripts/install-debian13-ci-deps.sh \
             cmake g++ libssl-dev libgcrypt20-dev libutf8proc-dev libmariadb-dev mariadb-server apache2 msmtp
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
@@ -192,13 +220,9 @@ jobs:
         run: |
           cmake -S . -B "$RUNNER_TEMP/stage4-build" -DCMAKE_BUILD_TYPE=Release
           cmake --build "$RUNNER_TEMP/stage4-build" --parallel "$(nproc)" --target dc24h dc24h-owner dc24h-account-admin
-      - name: Run privileged bootstrap only against the disposable database fixture
+      - name: Exercise disposable MariaDB and account tests without replacing live WebAdmin
         run: |
           node_dir=$(dirname "$(dirname "$(command -v node)")")
-          # sudo sanitizes the environment; pass the GitHub-hosted identity
-          # explicitly so the disposable VM does not try to replace its
-          # runner-managed AppArmor profile during the installer rehearsal.
-          sudo -n env "GITHUB_ACTIONS=$GITHUB_ACTIONS" "RUNNER_ENVIRONMENT=$RUNNER_ENVIRONMENT" \
-            ./scripts/stage4_install.sh "$node_dir" "$RUNNER_TEMP/stage4-build"
-          sudo -n env "PATH=$node_dir/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/bin" ./scripts/stage4_test_database.sh
+          sudo -n env "PATH=$node_dir/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/bin" \
+            ./scripts/stage4_test_database.sh
           python3 tests/stage4_msmtp_process.py -v
