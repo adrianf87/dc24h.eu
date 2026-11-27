@@ -16,14 +16,17 @@ wskazanie nie oznacza jeszcze zweryfikowania skrzynki.
 3. Dopiero po poprawnym teście zostaje utworzony prywatny plik 0600
    `verified-emails.json`. Narzędzie nie nadpisuje istniejących powiązań,
    nie tworzy kont C++, nie nadaje uprawnień i nie otwiera portów.
-4. `msmtp` musi działać dla **użytkownika usługi**, nie tylko root. Serwer
+4. `msmtp` musi działać dla **oddzielnego użytkownika `dc24h-webadmin`**, nie tylko root. Serwer
    SMTP musi używać uwierzytelnienia i poprawnego TLS. Hasła pozostają poza
    repozytorium, logami i CI; konfiguracja `/root/.msmtprc` nie jest
-   automatycznie dostępna dla nieuprzywilejowanego systemd.
+   automatycznie dostępna dla nieuprzywilejowanego systemd. Konfigurację
+   `/var/lib/dc24h-stage4/.msmtprc` (0600) odczytuje wyłącznie WebAdmin.
 5. Logowanie przez C++ w działającym hubie jest **domyślnie wyłączone**.
    Wymaga osobnej zgody OWNER, zmiennej
    `DC24H_STAGE4_PRIVATE_AUTH_ACK=OWNER_WEBADMIN_PUBLIC_ACTIVATION_GO`
    i kontrolowanego restartu huba. Do czasu odbioru nie dodawać tej zmiennej.
+   Gniazdo i token C++ nadal należą do UID huba; WebAdmin łączy się wyłącznie
+   przez ograniczony most Unix sprawdzający UID procesu (`SO_PEERCRED`).
 
 ## Przygotowanie i uruchomienie narzędzia
 
@@ -52,9 +55,8 @@ Następnie w konsoli dostawcy, przy zatrzymanym publicznym gateway, jako
 użytkownik usługi i z prywatnym dostępem do C++ API:
 
 ```text
-DC24H_API_SOCKET=<PRYWATNE_GNIAZDO> \
-DC24H_API_TOKEN_FILE=<PRYWATNY_TOKEN_PLIK> \
-/usr/bin/node /opt/dc24h/webadmin/dist/public-email-enroll-main.mjs \
+DC24H_STAGE4_BRIDGE_SOCKET=/run/dc24h-stage4-bridge/bridge.sock \
+/opt/dc24h/node24/bin/node /opt/dc24h/webadmin/dist/public-email-enroll-main.mjs \
   --account-name Administrator \
   --email admin@dc24h.eu \
   --catalog /var/lib/dc24h-stage4/verified-emails.json \
@@ -84,3 +86,5 @@ Publiczny hub `adcs://server-747585786.dc24h.eu:1512` pozostaje bez zmian.
 Panel `https://server-747585786.dc24h.eu:7278` nadal jest wyłączony.
 
 Szczegółowy plan w [wersji EN-US](../us/STAGE_IV_EMAIL_ENROLLMENT.md).
+Nowa procedura wydzielonej usługi, SMTP, systemd i rollbacku:
+[Etap IV — osobny WebAdmin](STAGE_IV_DEDICATED_SERVICE.md).

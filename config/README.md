@@ -1,5 +1,14 @@
 # Configuration
 
+Stage IV public WebAdmin uses a **separate `dc24h-webadmin` account** and
+restricted Unix auth bridge, never the serving hub UID for Node. Review
+`dc24h-stage4-webadmin.sysusers.example`,
+`dc24h-twilight-stage4-bridge.service.example` and
+`dc24h-twilight-stage4-webadmin.service.example` together. Nothing is
+installed/enabled by the repository. Deployment and rollback checklist:
+[US](../doc/us/STAGE_IV_DEDICATED_SERVICE.md) |
+[PL](../doc/pl/STAGE_IV_DEDICATED_SERVICE.md).
+
 Copy `dc24h.ini.example` to a local INI, edit settings, then run:
 
 ```sh

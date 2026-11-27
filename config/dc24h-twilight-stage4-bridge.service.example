@@ -1,0 +1,45 @@
+# Example ONLY. Bridge runs with hub UID, WebAdmin GID; exposes only three
+# allowlisted private C++ routes after checking SO_PEERCRED == dc24h-webadmin.
+# Requires independently reviewed bridge script and exact hub socket/token.
+[Unit]
+Description=dc24h Stage IV restricted local C++ auth bridge (Unix only)
+After=dc24h-stage3-adcs.service
+Requires=dc24h-stage3-adcs.service
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=dc24h-stage3
+Group=dc24h-webadmin
+WorkingDirectory=/opt/dc24h
+RuntimeDirectory=dc24h-stage4-bridge
+RuntimeDirectoryMode=0750
+UMask=0077
+ExecStart=/usr/bin/python3 -B /opt/dc24h/scripts/stage4_webadmin_bridge.py
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+ProcSubset=pid
+RestrictNamespaces=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=multi-user.target

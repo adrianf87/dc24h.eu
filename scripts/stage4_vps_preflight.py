@@ -80,8 +80,27 @@ def main() -> int:
         int(version.group(1)) == 22 and int(version.group(2)) >= 12) else "FAIL"
     checks["msmtp_installed"] = "PASS" if Path("/usr/bin/msmtp").is_file() else "FAIL"
 
+    # The root shell's Node or msmtp does not qualify the dedicated service.
+    webadmin = command("getent", "passwd", "dc24h-webadmin")
+    checks["webadmin_dedicated_uid"] = (
+        "PASS" if webadmin and webadmin.split(":")[0] == "dc24h-webadmin"
+        and webadmin.split(":")[2] not in ("0", "") else "NOT_CONFIGURED"
+    )
+    service_node = Path("/opt/dc24h/node24/bin/node")
+    if service_node.is_file():
+        service_version = command(str(service_node), "--version")
+        checks["webadmin_node24"] = "PASS" if re.fullmatch(r"v24\.\d+\.\d+", service_version or "") else "FAIL"
+    else:
+        checks["webadmin_node24"] = "NOT_CONFIGURED"
+    checks["webadmin_bridge"] = (
+        "PASS" if command("systemctl", "is-active", "dc24h-twilight-stage4-bridge.service") == "active"
+        else "DISABLED"
+    )
+
     if shutil.which("systemctl"):
-        state = command("systemctl", "is-active", "dc24h-twilight.service")
+        state = command("systemctl", "is-active", "dc24h-stage3-adcs.service")
+        if state is None:
+            state = command("systemctl", "is-active", "dc24h-twilight.service")
         checks["hub_service"] = "PASS" if state == "active" else "UNVERIFIED"
     if shutil.which("apache2ctl"):
         outcome = command("apache2ctl", "configtest")

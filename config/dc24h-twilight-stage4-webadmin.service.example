@@ -1,24 +1,23 @@
 # NOT INSTALLED OR ENABLED. Stage IV OWNER qualification template only.
-# Requires a separately approved /etc/dc24h/stage4-activation.env, verified
-# private account catalog, a working authenticated msmtp configuration and
-# exact same-UID access to the private serving C++ API Unix socket/token.
-# This sample uses the hub UID due to the current strict same-UID socket gate;
-# review the shared security boundary before enabling on a public host.
+# Requires separately approved /etc/dc24h/stage4-activation.env, a verified
+# email catalog, service-private msmtp settings and the pinned restricted Unix
+# bridge. No direct hub socket/token access: keep Stage III's UID isolated.
 [Unit]
 Description=dc24h.eu public WebAdmin email-code gateway (loopback only)
-After=network-online.target dc24h-twilight.service
+After=network-online.target dc24h-twilight-stage4-bridge.service
+Requires=dc24h-twilight-stage4-bridge.service
 Wants=network-online.target
 StartLimitIntervalSec=60
 StartLimitBurst=5
 
 [Service]
 Type=simple
-User=dc24h
-Group=dc24h
+User=dc24h-webadmin
+Group=dc24h-webadmin
 WorkingDirectory=/opt/dc24h/webadmin
-Environment=DC24H_API_SOCKET=/run/dc24h/api.sock
-Environment=DC24H_API_TOKEN_FILE=/run/dc24h/api.token
+Environment=DC24H_STAGE4_BRIDGE_SOCKET=/run/dc24h-stage4-bridge/bridge.sock
 Environment=DC24H_STAGE4_ORIGIN=https://server-747585786.dc24h.eu:7278
+Environment=HOME=/var/lib/dc24h-stage4
 StateDirectory=dc24h-stage4
 StateDirectoryMode=0700
 Environment=DC24H_STAGE4_VERIFIED_EMAIL_FILE=/var/lib/dc24h-stage4/verified-emails.json
@@ -26,8 +25,9 @@ Environment=DC24H_STAGE4_AUDIT_FILE=/var/lib/dc24h-stage4/stage4-audit.jsonl
 Environment=DC24H_STAGE4_RATE_LIMIT_FILE=/var/lib/dc24h-stage4/stage4-limits.json
 # Mandatory separate OWNER activation file; never commit it or precreate it.
 EnvironmentFile=/etc/dc24h/stage4-activation.env
-# Must be a service-accessible Node >=22.12 runtime, not /root/.nvm.
-ExecStart=/usr/bin/node /opt/dc24h/webadmin/dist/public-main.mjs
+# Provision a root-owned, verified Node 24 LTS runtime here. Debian's
+# /usr/bin/node (v20) and /root/.nvm are intentionally NOT used.
+ExecStart=/opt/dc24h/node24/bin/node /opt/dc24h/webadmin/dist/public-main.mjs
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=20

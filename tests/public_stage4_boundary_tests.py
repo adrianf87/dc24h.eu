@@ -72,7 +72,8 @@ class PublicStageIVBoundaryTests(unittest.TestCase):
 
     def test_mail_transport_has_fixed_sender_and_no_shell(self):
         mailer = (ROOT / "webadmin/server/public-msmtp.ts").read_text(encoding="utf-8")
-        self.assertIn('spawn(binary, ["-t"], { shell: false', mailer)
+        self.assertIn('spawn(binary, ["--file=" + mailConfiguration, "-t"]', mailer)
+        self.assertIn('dedicatedMsmtpConfigReady()', mailer)
         self.assertIn('From: admin@dc24h.eu', mailer)
         self.assertIn('To: " + recipient', mailer)
         self.assertNotIn('odbiorca@gmail.com', mailer)
@@ -129,11 +130,35 @@ class PublicStageIVBoundaryTests(unittest.TestCase):
     def test_disabled_stage4_unit_has_no_baked_activation_or_public_node_listener(self):
         unit = (ROOT / "config/dc24h-twilight-stage4-webadmin.service.example").read_text(
             encoding="utf-8")
-        for required in ("User=dc24h", "EnvironmentFile=/etc/dc24h/stage4-activation.env",
+        for required in ("User=dc24h-webadmin", "EnvironmentFile=/etc/dc24h/stage4-activation.env",
                          "StateDirectoryMode=0700", "NoNewPrivileges=true", "ProtectSystem=strict"):
             self.assertIn(required, unit)
+        self.assertNotIn("Environment=DC24H_API_TOKEN_FILE", unit)
+        self.assertIn("DC24H_STAGE4_BRIDGE_SOCKET=", unit)
+        self.assertIn("node24/bin/node", unit)
         self.assertNotIn("Environment=DC24H_STAGE4_STARTUP_ACK=", unit)
         self.assertNotIn("ExecStart=/usr/bin/sudo", unit)
+
+    def test_dedicated_bridge_keeps_hub_token_out_of_webadmin(self):
+        bridge = (ROOT / "scripts/stage4_webadmin_bridge.py").read_text(encoding="utf-8")
+        gateway = (ROOT / "webadmin/server/public-main.ts").read_text(encoding="utf-8")
+        adapter = (ROOT / "webadmin/server/public-bridge-credentials.ts").read_text(encoding="utf-8")
+        unit = (ROOT / "config/dc24h-twilight-stage4-bridge.service.example").read_text(encoding="utf-8")
+        self.assertIn("socket.SO_PEERCRED", bridge)
+        self.assertIn("ROUTES =", bridge)
+        self.assertIn("User=dc24h-stage3", unit)
+        self.assertIn("Group=dc24h-webadmin", unit)
+        self.assertIn('publicBridgeCredentials(process.env)', gateway)
+        self.assertIn('env.DC24H_API_TOKEN_FILE', adapter)
+        self.assertNotIn('credentials(process.env)', gateway)
+
+    def test_stage_iii_apt_uses_only_signed_ubuntu_feed(self):
+        workflow = (ROOT / ".github/workflows/public-stage3-qualification.yml").read_text(encoding="utf-8")
+        # Every apt update and install must ignore unrelated hosted-image
+        # third-party feeds, including the Microsoft feed that returned 403.
+        self.assertEqual(workflow.count('Dir::Etc::sourcelist=$source_file'), 6)
+        self.assertEqual(workflow.count('Dir::Etc::sourceparts=-'), 6)
+        self.assertNotIn("--allow-unauthenticated", workflow)
 
 
 if __name__ == "__main__":

@@ -17,6 +17,7 @@ on:
       - 'webadmin/server/public-msmtp.ts'
       - 'webadmin/server/public-verified-email.ts'
       - 'webadmin/server/public-backend.ts'
+      - 'webadmin/server/public-bridge-credentials.ts'
       - 'webadmin/server/public-gateway.ts'
       - 'webadmin/server/public-main.ts'
       - 'webadmin/server/public-private-init.ts'
@@ -25,11 +26,18 @@ on:
       - 'webadmin/tests/public-email-gateway.test.ts'
       - 'webadmin/tests/public-verified-email.test.ts'
       - 'webadmin/tests/public-backend.test.ts'
+      - 'webadmin/tests/public-dedicated-service.test.ts'
       - 'webadmin/tests/public-stage4.spec.ts'
       - 'webadmin/public-stage4/**'
       - 'config/dc24h-twilight-stage4-webadmin.service.example'
+      - 'config/dc24h-twilight-stage4-bridge.service.example'
+      - 'config/dc24h-stage4-webadmin.sysusers.example'
+      - 'scripts/stage4_webadmin_bridge.py'
+      - 'tests/stage4_webadmin_bridge_tests.py'
       - 'doc/us/STAGE_IV_EMAIL_ENROLLMENT.md'
       - 'doc/pl/STAGE_IV_EMAIL_ENROLLMENT.md'
+      - 'doc/us/STAGE_IV_DEDICATED_SERVICE.md'
+      - 'doc/pl/STAGE_IV_DEDICATED_SERVICE.md'
       - 'include/dc24h/api/accounts.hpp'
       - 'src/api/accounts.cpp'
       - 'src/main.cpp'
@@ -67,6 +75,7 @@ jobs:
         run: |
           python3 -m unittest discover -s tests -p 'public_stage4_boundary_tests.py' -v
           python3 -m unittest discover -s tests -p 'stage4_vps_preflight_tests.py' -v
+          python3 -m unittest discover -s tests -p 'stage4_webadmin_bridge_tests.py' -v
           python3 tests/project_checks.py
           python3 tests/project_language_policy_tests.py
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -78,7 +87,7 @@ jobs:
         working-directory: webadmin
         run: |
           npm ci --no-audit --no-fund
-          node --import tsx --test tests/public-email-code.test.ts tests/public-email-enrollment.test.ts tests/public-email-gateway.test.ts tests/public-verified-email.test.ts tests/public-backend.test.ts
+          node --import tsx --test tests/public-email-code.test.ts tests/public-email-enrollment.test.ts tests/public-email-gateway.test.ts tests/public-verified-email.test.ts tests/public-backend.test.ts tests/public-dedicated-service.test.ts
           node --check public-stage4/panel.js
           npm run build:public:ci
           npm run build:enrollment:ci
@@ -107,3 +116,26 @@ jobs:
       - name: Run isolated public browser tests; never contact the VPS
         working-directory: webadmin
         run: npx playwright test tests/public-stage4.spec.ts
+
+  dedicated-systemd:
+    name: Isolated non-root Unix bridge / systemd sandbox (Ubuntu 24.04)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Confirm disposable GitHub Ubuntu runner and passwordless systemd
+        run: |
+          test "$RUNNER_ENVIRONMENT" = 'github-hosted'
+          test "$(id -u)" != '0'
+          test "$(sudo -n id -u)" = '0'
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Execute real AF_UNIX peer tests inside non-root systemd sandbox
+        run: |
+          # The repository test code executes as nobody, never as root.
+          # PrivateNetwork isolates this synthetic fixture from the VPS.
+          sudo -n systemd-run --wait --collect --quiet \
+            --property=User=nobody --property=NoNewPrivileges=yes \
+            --property=PrivateNetwork=yes --property=ProtectSystem=strict \
+            --property="WorkingDirectory=$GITHUB_WORKSPACE" \
+            /usr/bin/python3 -B -m unittest discover -s tests -p 'stage4_webadmin_bridge_tests.py' -v

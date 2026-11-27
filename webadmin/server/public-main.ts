@@ -1,7 +1,7 @@
 // Explicitly gated startup adapter. No public TCP listener is ever opened by
 // Node: a separately approved Apache 7278 vhost would proxy fixed API paths.
 import { createServer } from "node:http";
-import { credentials } from "./local-api.ts";
+import { publicBridgeCredentials } from "./public-bridge-credentials.ts";
 import { publicBackend } from "./public-backend.ts";
 import { publicGateway } from "./public-gateway.ts";
 import { PUBLIC_WEBADMIN_ORIGIN } from "./public-email-code.ts";
@@ -14,8 +14,7 @@ if (process.env.DC24H_STAGE4_STARTUP_ACK !== "OWNER_WEBADMIN_PUBLIC_ACTIVATION_G
   throw Error("Stage IV startup refused: separate OWNER activation acknowledgement required");
 if (process.env.DC24H_STAGE4_ORIGIN !== PUBLIC_WEBADMIN_ORIGIN)
   throw Error("Stage IV fixed public origin mismatch");
-const config = credentials(process.env);
-if (!config) throw Error("Private C++ API credentials required");
+const config = publicBridgeCredentials(process.env);
 const emailPath = process.env.DC24H_STAGE4_VERIFIED_EMAIL_FILE;
 const auditPath = process.env.DC24H_STAGE4_AUDIT_FILE;
 const limiterPath = process.env.DC24H_STAGE4_RATE_LIMIT_FILE;
@@ -23,7 +22,12 @@ if (!emailPath || !auditPath || !limiterPath) throw Error("Pre-provisioned priva
 
 const email = openVerifiedEmailCatalog(emailPath);
 const audit = openRemoteAuditStore(auditPath);
-const limiter = openRemoteRateLimitStore(limiterPath, config.token);
+// Rate-limit integrity is tied to a separate service-local random key,
+// NEVER the C++ private token (which WebAdmin cannot read).
+const limiterKey = process.env.DC24H_STAGE4_LIMITER_KEY;
+if (!limiterKey || !/^[0-9a-f]{64}$/.test(limiterKey))
+  throw Error("Stage IV independent limiter key required");
+const limiter = openRemoteRateLimitStore(limiterPath, limiterKey);
 const app = createServer(publicGateway({
   backend: publicBackend(config),
   email,

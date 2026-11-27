@@ -1,7 +1,7 @@
 // Run manually from the VPS console as the dedicated service account, with
 // the public gateway STOPPED. Do not invoke this from GitHub Actions.
 import { stdin, stdout, stderr } from "node:process";
-import { credentials } from "./local-api.ts";
+import { publicBridgeCredentials } from "./public-bridge-credentials.ts";
 import { publicBackend } from "./public-backend.ts";
 import { enrollFirstVerifiedEmail } from "./public-email-enrollment.ts";
 import { createMsmtpSender } from "./public-msmtp.ts";
@@ -43,8 +43,7 @@ async function main() {
   if (args.length !== 8 || args[0] !== "--account-name" || args[2] !== "--email" ||
       args[4] !== "--catalog" || args[6] !== "--owner-ack" ||
       args[7] !== "STAGE4_EMAIL_ENROLLMENT_GO") throw Error("Invalid OWNER enrollment arguments");
-  const config = credentials(process.env);
-  if (!config) throw Error("Private C++ account verification unavailable");
+  const config = publicBridgeCredentials(process.env);
   const backend = publicBackend(config);
   const password = await hiddenPrompt("C++ account password (not echoed): ");
   const actor = await enrollFirstVerifiedEmail(args[5]!, args[1]!, args[3]!, password, {

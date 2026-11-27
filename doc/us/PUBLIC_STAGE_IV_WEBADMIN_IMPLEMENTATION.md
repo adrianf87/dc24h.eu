@@ -20,10 +20,15 @@ Public ADCS on `62.171.156.32:1512` must remain unchanged.
 - `webadmin/server/public-verified-email.ts`: restricted, verified owner/admin
   account-to-mailbox bindings, never client-specified recipients.
 - `webadmin/server/public-msmtp.ts`: `admin@dc24h.eu` sender with fixed
-  `msmtp -t` invocation and no shell/recipient header injection.
+  dedicated-UID `msmtp --file=/var/lib/dc24h-stage4/.msmtprc -t` invocation,
+  private configuration ownership checks, and no shell/header injection.
 - `webadmin/server/public-main.ts`: private configuration and durable state are
   required; startup rejects absent explicit OWNER activation acknowledgement;
   Node binds **only `127.0.0.1:4278`**, not the public interface.
+- `scripts/stage4_webadmin_bridge.py`: restricted Unix socket bridge from
+  `dc24h-webadmin` to hub-UID C++ API, verified by kernel `SO_PEERCRED` with
+  exactly three paths. The C++ token never enters Node. See
+  [dedicated service deployment/rollback](STAGE_IV_DEDICATED_SERVICE.md).
 - `webadmin/server/public-private-init.ts`: first-install-only audit/limiter
   catalog creation, without creating users, emails or public routes.
 - `webadmin/server/public-email-enrollment.ts` and
@@ -100,8 +105,8 @@ Public ADCS on `62.171.156.32:1512` must remain unchanged.
 | Guest ADCS | `adcs://server-747585786.dc24h.eu:1512` — unchanged |
 | Public WebAdmin TLS | `https://server-747585786.dc24h.eu:7278` — DISABLED |
 | New internal Node API | `127.0.0.1:4278` — DISABLED |
-| C++ private API | Unix socket, server-owned token; not exposed |
-| Verified mail/limiter/audit | Owner-only files, sender `admin@dc24h.eu` via `msmtp -t` |
+| C++ private API | Hub-owned Unix socket and token; restricted Unix bridge to WebAdmin only |
+| Verified mail/limiter/audit | WebAdmin UID-only files, sender `admin@dc24h.eu` via pinned `msmtp --file ... -t` |
 
 **Release status: FIX/QUALIFICATION REQUIRED.** This candidate is not the final
 public WebAdmin and cannot be safely activated until these gaps are resolved.

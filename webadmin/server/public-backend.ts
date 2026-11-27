@@ -20,9 +20,9 @@ export function publicBackend(config: PublicBackendCredentials) {
   const call = (path: APIPath, method: "GET" | "POST", body = "", grant?: PublicBackendGrant): Promise<unknown> =>
     new Promise((resolve, reject) => {
       const headers: Record<string, string> = {
-        Host: "localhost", Authorization: "Bearer " + config.token,
-        Accept: "application/json", Connection: "close",
+        Host: "localhost", Accept: "application/json", Connection: "close",
       };
+      if (config.token) headers.Authorization = "Bearer " + config.token;
       if (grant) {
         headers["X-DC24H-Admin-Grant"] = grant.grant;
         headers["X-DC24H-Session"] = grant.session;

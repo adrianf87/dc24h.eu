@@ -49,9 +49,11 @@ independent network/VPS checks. Run it **only after checking out the expected
 tested commit**, not by piping unreviewed source from the Internet into a
 privileged shell.
 
-1. Verify the real running C++ service uses a private API and that its socket,
-   API token and permissions belong to the same effective UID selected for the
-   public gateway (see example systemd unit). Exposing admin routes on a TCP
+1. Verify the real running C++ service uses a private API. Its existing socket
+   and token must remain accessible **only to the hub UID**. The public gateway
+   now runs under the separate `dc24h-webadmin` UID and uses the reviewed
+   `SO_PEERCRED` Unix bridge; it must NEVER receive the hub token. Exposing
+   admin routes on a TCP
    listener is forbidden. The serving API permits only private password proof
    and read-only grant discovery; other account/management paths must return
    404. Validate against a real seeded C++/MariaDB fixture before production.
@@ -59,15 +61,16 @@ privileged shell.
    explicit `DC24H_STAGE4_PRIVATE_AUTH_ACK=OWNER_WEBADMIN_PUBLIC_ACTIVATION_GO`
    in the C++ service environment and a separately approved hub restart. Do
    not add that environment variable before live qualification and OWNER GO.
-2. Check `/usr/bin/node --version` meets package requirements. Node installed
-   under `/root/.nvm` is not usable by an unprivileged systemd service.
+2. Check `/opt/dc24h/node24/bin/node --version` reports a verified Node 24 LTS.
+   Debian `/usr/bin/node` v20 and `/root/.nvm` do not qualify this service.
 3. Confirm that `/usr/bin/msmtp` works as the **service UID**, not just root.
    The mail transport must authenticate to the OWNER-approved SMTP provider
    over verified TLS, send as `admin@dc24h.eu`, and read secrets only from a
-   0600 protected service-owned configuration. Do not place SMTP passwords in
+   0600 `/var/lib/dc24h-stage4/.msmtprc` owned by `dc24h-webadmin`.
+   Do not place SMTP passwords in
    Git, command arguments, environment output, scripts or log artifacts.
 4. With the gateway still stopped, send one non-sensitive test message using
-   the service account's configured `msmtp -t` and confirm actual arrival in
+   the service account's configured `msmtp --file=/var/lib/dc24h-stage4/.msmtprc -t` and confirm actual arrival in
    `admin@dc24h.eu` (including delay/bounce/error behavior). Do not interpret
    exit 0 alone as delivery proof. In particular, DO NOT reuse root's
    `/root/.msmtprc` from an unprivileged service.
@@ -88,14 +91,12 @@ npm run build:public:ci
 npm run build:enrollment:ci
 ```
 
-After confirming the **stored C++ account name** and arranging safe access
-to the private C++ API token/socket, run as the correct service UID from the
-provider console (example placeholders are NOT shell-ready):
+After confirming the **stored C++ account name** and the restricted bridge,
+run as **`dc24h-webadmin`** from the provider console:
 
 ```text
-DC24H_API_SOCKET=<PRIVATE_UNIX_SOCKET> \
-DC24H_API_TOKEN_FILE=<PRIVATE_TOKEN_FILE> \
-/usr/bin/node /opt/dc24h/webadmin/dist/public-email-enroll-main.mjs \
+DC24H_STAGE4_BRIDGE_SOCKET=/run/dc24h-stage4-bridge/bridge.sock \
+/opt/dc24h/node24/bin/node /opt/dc24h/webadmin/dist/public-email-enroll-main.mjs \
   --account-name Administrator \
   --email admin@dc24h.eu \
   --catalog /var/lib/dc24h-stage4/verified-emails.json \
@@ -108,6 +109,9 @@ The command must fail without creating a catalog for a wrong password,
 unavailable SMTP, wrong code, expiration, role revocation, wrong permissions,
 existing binding or changed parent. A success prints the resolved numeric
 account ID and binds it to exactly one address without starting a web listener.
+
+Review [the dedicated service and rollback runbook](STAGE_IV_DEDICATED_SERVICE.md)
+before following any earlier same-UID instructions.
 
 ## Deployment/acceptance remains separate
 
