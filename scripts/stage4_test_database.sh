@@ -42,11 +42,24 @@ db_pid=
 cleanup() {
     if [ -n "$native_pid" ]; then kill "$native_pid" 2>/dev/null || :; wait "$native_pid" 2>/dev/null || :; fi
     if [ -n "$db_pid" ]; then kill "$db_pid" 2>/dev/null || :; wait "$db_pid" 2>/dev/null || :; fi
+    # Ubuntu 26.04 uses the packaged, AppArmor-approved runtime socket path.
+    # Only the random fixture socket is removed; never touch a system socket.
+    if [ "${socket:-}" = "/run/mysqld/stage4-fixture-$fixture_nonce.sock" ]; then
+        rm -f -- "$socket"
+    fi
     rm -rf -- "$scratch" "$state"
     rm -f -- "$bootstrap" "$link"
 }
 trap cleanup EXIT
 socket=$scratch/mysqld.sock
+if [ "${mysql_exec[0]:-}" = setpriv ]; then
+    # Bootstrap and data remain under the Ubuntu 26.04 MariaDB confinement,
+    # while the local socket respects both AppArmor and Stage IV's strict
+    # /run/.../*.sock bootstrap schema. Never change the production validator.
+    [ ! -L /run/mysqld ] || { echo "Unsafe MariaDB runtime directory" >&2; exit 1; }
+    install -d -m 0755 -o mysql -g mysql /run/mysqld
+    socket=/run/mysqld/stage4-fixture-$fixture_nonce.sock
+fi
 # The socket is reachable only over the local file system, on an isolated datadir.
 chmod 0775 "$scratch"
 chgrp mysql "$scratch"

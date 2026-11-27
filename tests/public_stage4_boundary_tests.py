@@ -184,6 +184,8 @@ class PublicStageIVBoundaryTests(unittest.TestCase):
         self.assertIn('scratch=/var/lib/mariadb/stage4-fixture-$fixture_nonce', script)
         self.assertIn('mysql_exec=(setpriv --reuid=mysql --regid=mysql --init-groups)', script)
         self.assertIn('mysql_user_arg=()', script)
+        self.assertIn('socket=/run/mysqld/stage4-fixture-$fixture_nonce.sock', script)
+        self.assertIn('install -d -m 0755 -o mysql -g mysql /run/mysqld', script)
         self.assertIn('"${mysql_exec[@]}" mariadbd', script)
         self.assertIn('mariadb-install-db --no-defaults', script)
         self.assertIn("sed -n '1,20p' \"$scratch/db-bootstrap.log\"", script)
@@ -192,6 +194,8 @@ class PublicStageIVBoundaryTests(unittest.TestCase):
         self.assertNotIn('aa-disable', script)
         self.assertNotIn('aa-complain', script)
         self.assertIn('"GITHUB_ACTIONS=$GITHUB_ACTIONS" "RUNNER_ENVIRONMENT=$RUNNER_ENVIRONMENT"', workflow)
+        validator = (ROOT / "webadmin/server/stage4-bootstrap-config.ts").read_text(encoding="utf-8")
+        self.assertIn('requireField("MARIADB_SOCKET", /^\\/run\\/', validator)
 
     def test_hosted_browser_install_skips_unscoped_apt_sources(self):
         for name in ("build.yml", "stage4-ubuntu-vm-validation.yml",
