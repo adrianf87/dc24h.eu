@@ -34,9 +34,14 @@ oddzielić nazwy sesji, blokować przekazywanie cookies i wykazać w testach,
 że nie dochodzi do wycieku lub kolizji. Sam osobny port nie daje izolacji sesji.
 
 Publiczne konto OWNER i konta administratorów muszą być rozdzielone.
-Wymagane są zweryfikowane passkeys z weryfikacją użytkownika, bezpieczna
-procedura odzyskiwania, kontrola ról i sesji oraz testy negatywne. Publiczne
-logowanie oparte wyłącznie na haśle/TOTP nie jest zatwierdzone tą decyzją.
+**Decyzja OWNER: hasło ORAZ passkey są obowiązkowe przy każdym publicznym
+logowaniu uprzywilejowanym.** Najpierw backend potwierdza hasło konta, a potem
+WebAuthn weryfikuje passkey tego samego użytkownika, dokładny Origin/RP ID,
+obecność i weryfikację użytkownika, podpis, replay i odwołanie uprawnień.
+Dopiero po obu czynnikach i ponownym sprawdzeniu roli można wydać sesję.
+Wymagane są bezpieczne procedury odzyskiwania, unieważniania sesji oraz testy
+negatywne. Logowanie oparte wyłącznie na haśle, passkey albo haśle/TOTP nie
+jest zatwierdzone tą decyzją.
 
 Certyfikat Let's Encrypt musi zawierać prawidłowy SAN dla nazwy hosta.
 Klucze prywatne, tokeny usługowe i sekrety nie mogą trafiać do repozytorium,
