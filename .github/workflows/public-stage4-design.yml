@@ -134,8 +134,15 @@ jobs:
         run: |
           # The repository test code executes as nobody, never as root.
           # PrivateNetwork isolates this synthetic fixture from the VPS.
-          sudo -n systemd-run --wait --collect --quiet \
+          fixture=$(mktemp -d /var/tmp/dc24h-stage4-ci.XXXXXXXX)
+          trap 'rm -rf -- "$fixture"' EXIT
+          install -d -m 0755 "$fixture/scripts" "$fixture/tests"
+          install -m 0644 scripts/stage4_webadmin_bridge.py "$fixture/scripts/"
+          install -m 0644 tests/stage4_webadmin_bridge_tests.py "$fixture/tests/"
+          chmod 0755 "$fixture"
+          sudo -n -u nobody test -r "$fixture/tests/stage4_webadmin_bridge_tests.py"
+          sudo -n systemd-run --wait --pipe --collect \
             --property=User=nobody --property=NoNewPrivileges=yes \
-            --property=PrivateNetwork=yes --property=ProtectSystem=strict \
-            --property="WorkingDirectory=$GITHUB_WORKSPACE" \
+            --property=PrivateNetwork=yes --property=ProtectSystem=strict --property=PrivateTmp=yes \
+            --property="WorkingDirectory=$fixture" \
             /usr/bin/python3 -B -m unittest discover -s tests -p 'stage4_webadmin_bridge_tests.py' -v

@@ -59,13 +59,15 @@ def check_no_custom_workers(errors):
     manual = (workflow_dir / "debian13-stage3-full-qualification.yml").read_text(encoding="utf-8")
     for workflow, entries in (
         (pr, ("  pull_request:", "os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]",
-              "runs-on: ${{ matrix.os }}", "sudo -n id -u", "stage3.run run ncdc")),
+              "runs-on: ${{ matrix.os }}", "sudo -n id -u", "stage3.run run ncdc",
+              'sudo -n apt-get -o "Dir::Etc::sourcelist=$source_file" '
+              '-o Dir::Etc::sourceparts=- install -y --no-install-recommends ncdc')),
         (manual, ("  workflow_dispatch:", "RUN_STAGE3_PUBLIC_EXTENDED_STABILITY",
-                  "stage3.run run extended", "inputs.production_restarts_ack == false")),
+                  "stage3.run run extended", "inputs.production_restarts_ack == false",
+                  "sudo -n apt-get install -y --no-install-recommends ncdc")),
     ):
         for required in (*entries, "runs-on: ubuntu-24.04", "contents: read",
-                         "test \"$RUNNER_ENVIRONMENT\" = 'github-hosted'",
-                         "sudo -n apt-get install -y --no-install-recommends ncdc"):
+                         "test \"$RUNNER_ENVIRONMENT\" = 'github-hosted'"):
             require(required in workflow, f"Stage III workflow missing {required!r}", errors)
         for prohibited in ("systemctl restart", "sudo -n python3", "premerge-host:",
                            "RUN_STAGE3_PUBLIC_QUALIFICATION", "self-hosted", "ssh "):
