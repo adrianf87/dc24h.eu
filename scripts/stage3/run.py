@@ -99,9 +99,9 @@ def offline(suite, build, private, parallel, *, local=False):
 
 
 def sandbox(suite, sudo_result):
-    with suite.case("ubuntu.sudo"):
+    with suite.case("debian.sudo"):
         if sudo_result != "success":
-            raise Blocked("Fixed Ubuntu sudo/systemd fixture failed or was not run")
+            raise Blocked("Debian 13 sudo/systemd fixture failed or was not run")
     with suite.case("systemd.verify"):
         with tempfile.TemporaryDirectory(prefix="stage3-unit-") as work:
             unit = Path(work) / "dc24h-twilight.service"
@@ -111,8 +111,8 @@ def sandbox(suite, sudo_result):
             unit.write_text(text.replace("ExecStart=/usr/local/bin/dc24h-twilight ", "ExecStart=/bin/true ", 1))
             command = ["systemd-analyze", "--man=no", "--generators=no", "verify", str(unit)]
             if suite.image != "local":
-                if os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted":
-                    raise Blocked("System-mode unit inspection requires the disposable Ubuntu runner")
+                if os.environ.get("RUNNER_ENVIRONMENT") != "self-hosted":
+                    raise Blocked("System-mode unit inspection requires the approved Debian 13 runner")
                 # Older systemd needs access to the system unit load paths.
                 # Only the packaged, offline verifier is elevated. Treat the
                 # unit as input data and never load it into the system manager.
@@ -135,9 +135,9 @@ def verified_binary(suite, directory):
 
 def public_guard(group):
     env = os.environ
-    if not (env.get("GITHUB_ACTIONS") == "true" and env.get("RUNNER_ENVIRONMENT") == "github-hosted"
+    if not (env.get("GITHUB_ACTIONS") == "true" and env.get("RUNNER_ENVIRONMENT") == "self-hosted"
             and env.get("GITHUB_REPOSITORY") == REPOSITORY):
-        raise Blocked("Public qualification requires an independent GitHub-hosted runner")
+        raise Blocked("Public qualification requires the approved Debian 13 self-hosted runner")
     if env.get("GITHUB_EVENT_NAME") == "workflow_dispatch" and group != "extended":
         try:
             premerge.guard(env)
@@ -199,9 +199,9 @@ def report(args):
         raise ValueError("Report generator was checked out at the wrong source SHA")
     modes = [(group, image) for group in RUNNER_GROUPS for image in OS_MATRIX]
     if args.mode == "main":
-        modes.extend((group, "ubuntu-24.04") for group in PUBLIC_GROUPS)
+        modes.extend((group, "debian-13") for group in PUBLIC_GROUPS)
     elif args.mode == "extended":
-        modes = [("extended", "ubuntu-24.04")]
+        modes = [("extended", "debian-13")]
     rows = []
     issues = []
     binary_identity = {}
