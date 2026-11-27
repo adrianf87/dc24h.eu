@@ -52,7 +52,14 @@ for unit in dc24h-twilight-stage4-webadmin dc24h-twilight-stage4-bridge dc24h-tw
 done
 # Check the Stage IV units themselves; unrelated host units can emit warnings
 # (for example obsolete CPUAccounting= on newer systemd releases).
-systemd-analyze --recursive-errors=no verify /etc/systemd/system/dc24h-twilight-stage4-*.service
+# Ubuntu 22.04 ships systemd 249 and does not have --recursive-errors.
+printf '%s\n' 'Stage IV: verifying installed systemd units'
+if systemd-analyze --help | grep -Fq -- '--recursive-errors='; then
+    systemd-analyze --recursive-errors=no verify /etc/systemd/system/dc24h-twilight-stage4-*.service
+else
+    systemd-analyze verify /etc/systemd/system/dc24h-twilight-stage4-*.service
+fi
+printf '%s\n' 'Stage IV: reloading systemd manager'
 systemctl daemon-reload
 install -m 0644 "$source/config/apache2-webadmin-public.conf.example" \
     /etc/apache2/sites-available/dc24h-stage4-webadmin.conf
@@ -61,6 +68,7 @@ install -m 0644 "$source/config/apache2-webadmin-public.conf.example" \
 profile=/etc/apparmor.d/usr.bin.msmtp
 local_policy=/etc/apparmor.d/local/usr.bin.msmtp
 rule="owner /var/lib/dc24h-stage4/.msmtprc r,"
+printf '%s\n' 'Stage IV: reviewing optional msmtp AppArmor profile'
 if [ -f "$profile" ] && command -v apparmor_parser >/dev/null 2>&1; then
     install -d -m 0755 /etc/apparmor.d/local
     grep -Fqx "$rule" "$local_policy" 2>/dev/null || printf '\n%s\n' "$rule" >> "$local_policy"
