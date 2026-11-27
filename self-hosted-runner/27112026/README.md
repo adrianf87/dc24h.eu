@@ -11,6 +11,7 @@
 | [Security](SECURITY.md) | Passwordless `sudo` risk and safe inventory constraints |
 | [CI workflows](CI_WORKFLOWS.md) | Current runners and Debian 13 migration gaps |
 | [Change log](CHANGELOG.md) | Dated runner configuration and package changes |
+| [Runner-specific tests](../tests/README.md) | Offline validation and manual read-only VPS diagnostics |
 | [Inventory subdirectory](inventory/README.md) | Full package files once imported from the local VPS |
 
 ## Previous verified inventory
