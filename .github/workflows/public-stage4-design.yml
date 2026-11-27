@@ -20,6 +20,18 @@ on:
       - 'webadmin/server/public-bridge-credentials.ts'
       - 'webadmin/server/public-gateway.ts'
       - 'webadmin/server/public-main.ts'
+      - 'webadmin/server/stage4-*.ts'
+      - 'webadmin/tests/stage4-mariadb.integration.ts'
+      - 'database/stage4/**'
+      - 'config/stage4-webadmin-bootstrap.env.example'
+      - 'config/dc24h-twilight-stage4-auth.service.example'
+      - 'scripts/dc24h-stage4-init'
+      - 'scripts/stage4_install.sh'
+      - 'scripts/stage4_test_database.sh'
+      - 'tests/stage4_msmtp_process.py'
+      - 'src/account_admin.cpp'
+      - 'src/owner_admin.cpp'
+      - 'src/accounts/management.cpp'
       - 'webadmin/server/public-private-init.ts'
       - 'webadmin/tests/public-email-code.test.ts'
       - 'webadmin/tests/public-email-enrollment.test.ts'
@@ -91,6 +103,7 @@ jobs:
           node --check public-stage4/panel.js
           npm run build:public:ci
           npm run build:enrollment:ci
+          npm run build:stage4-init
           npm run typecheck
 
   playwright-shell:
@@ -143,6 +156,45 @@ jobs:
           sudo -n -u nobody test -r "$fixture/tests/stage4_webadmin_bridge_tests.py"
           sudo -n systemd-run --wait --pipe --collect \
             --property=User=nobody --property=NoNewPrivileges=yes \
-            --property=PrivateNetwork=yes --property=ProtectSystem=strict --property=PrivateTmp=yes \
+            --property=PrivateNetwork=yes --property=ProtectSystem=strict \
+            --property=TemporaryFileSystem=/tmp:rw,mode=1777 \
             --property="WorkingDirectory=$fixture" \
             /usr/bin/python3 -B -m unittest discover -s tests -p 'stage4_webadmin_bridge_tests.py' -v
+
+  mariadb-qualification:
+    name: Disposable Stage IV MariaDB and C++ authentication / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - name: Confirm hosted runner
+        run: test "$RUNNER_ENVIRONMENT" = 'github-hosted'
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Install signed Ubuntu build and database packages
+        run: |
+          source_file=/etc/apt/sources.list.d/ubuntu.sources
+          if [ ! -r "$source_file" ]; then source_file=/etc/apt/sources.list; fi
+          options=(-o "Dir::Etc::sourcelist=$source_file" -o Dir::Etc::sourceparts=- -o Acquire::Retries=3)
+          sudo -n apt-get "${options[@]}" update -qq
+          sudo -n env DEBIAN_FRONTEND=noninteractive apt-get "${options[@]}" install -y --no-install-recommends \
+            cmake g++ libssl-dev libgcrypt20-dev libutf8proc-dev libmariadb-dev mariadb-server apache2 msmtp
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: webadmin/package-lock.json
+      - name: Compile the native account executables
+        run: |
+          cmake -S . -B "$RUNNER_TEMP/stage4-build" -DCMAKE_BUILD_TYPE=Release
+          cmake --build "$RUNNER_TEMP/stage4-build" --parallel "$(nproc)" --target dc24h dc24h-owner dc24h-account-admin
+      - name: Run privileged bootstrap only against the disposable database fixture
+        run: |
+          node_dir=$(dirname "$(dirname "$(command -v node)")")
+          sudo -n ./scripts/stage4_install.sh "$node_dir" "$RUNNER_TEMP/stage4-build"
+          sudo -n env "PATH=$node_dir/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/bin" ./scripts/stage4_test_database.sh
+          python3 tests/stage4_msmtp_process.py -v

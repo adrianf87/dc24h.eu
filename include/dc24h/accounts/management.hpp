@@ -46,7 +46,7 @@ public:
     // is active with a separate account password and no ADC identity/credential.
     // Refuses any existing Owner, including disabled ones. No schema changes.
     [[nodiscard]] StoredAccount bootstrap_owner(std::string_view name,
-        std::string_view password, Timestamp created_at);
+        std::string_view password, Timestamp created_at, bool stage4_email_pending = false);
     // Both active snapshots and password proofs are required. Target must be an
     // Administrator. Atomically makes target active Owner, actor disabled Admin,
     // increments both revisions and deletes both ADC credentials.

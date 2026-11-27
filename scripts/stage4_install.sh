@@ -1,0 +1,68 @@
+#!/bin/sh
+set -eu
+
+if [ "$(id -u)" -ne 0 ] || [ "$#" -ne 2 ]; then
+    echo "Usage: stage4_install.sh NODE24_DIRECTORY CMAKE_BUILD_DIRECTORY" >&2
+    exit 2
+fi
+node_dir=$(realpath "$1")
+build=$(realpath "$2")
+source=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
+target=/opt/dc24h
+node="$node_dir/bin/node"
+case "$("$node" --version)" in
+    v24.*) ;;
+    *) echo "Node 24 LTS required" >&2; exit 2 ;;
+esac
+for unit in dc24h-twilight-stage4-webadmin dc24h-twilight-stage4-bridge dc24h-twilight-stage4-auth; do
+    if systemctl is-active --quiet "$unit"; then
+        echo "Stop the Stage IV units before installing a replacement" >&2
+        exit 2
+    fi
+done
+export PATH="$node_dir/bin:/usr/bin:/bin"
+(
+    cd "$source/webadmin"
+    npm ci --no-audit --no-fund
+    npm run typecheck
+    npm run build:public:ci
+    npm run build:stage4-init
+)
+install -d -m 0755 "$target/bin" "$target/node24/bin" "$target/scripts" \
+    "$target/database/stage4" "$target/webadmin/dist" /usr/local/share/dc24h/stage4 /etc/sysusers.d
+install -m 0755 "$node" "$target/node24/bin/node"
+for program in dc24h-twilight dc24h-twilight-owner dc24h-twilight-account-admin; do
+    install -m 0755 "$build/$program" "$target/bin/$program"
+done
+install -m 0755 "$source/scripts/dc24h-stage4-init" /usr/local/sbin/dc24h-stage4-init
+install -m 0644 "$source/scripts/stage4_webadmin_bridge.py" "$target/scripts/"
+install -m 0644 "$source"/database/stage4/*.sql "$target/database/stage4/"
+install -m 0644 "$source"/webadmin/dist/public-main.mjs "$source"/webadmin/dist/stage4-init.mjs "$target/webadmin/dist/"
+install -m 0644 "$source"/webadmin/package.json "$source"/webadmin/package-lock.json "$target/webadmin/"
+(
+    cd "$target/webadmin"
+    npm ci --omit=dev --no-audit --no-fund
+)
+install -m 0644 "$source"/webadmin/public-stage4/index.html "$source"/webadmin/public-stage4/panel.css \
+    "$source"/webadmin/public-stage4/panel.js /usr/local/share/dc24h/stage4/
+install -m 0644 "$source/config/dc24h-stage4-webadmin.sysusers.example" /etc/sysusers.d/dc24h-stage4-webadmin.conf
+systemd-sysusers /etc/sysusers.d/dc24h-stage4-webadmin.conf
+for unit in dc24h-twilight-stage4-webadmin dc24h-twilight-stage4-bridge dc24h-twilight-stage4-auth; do
+    install -m 0644 "$source/config/$unit.service.example" "/etc/systemd/system/$unit.service"
+done
+systemd-analyze verify /etc/systemd/system/dc24h-twilight-stage4-*.service
+systemctl daemon-reload
+install -m 0644 "$source/config/apache2-webadmin-public.conf.example" \
+    /etc/apache2/sites-available/dc24h-stage4-webadmin.conf
+
+# Debian's optional msmtp AppArmor profile needs this single service-owned path.
+profile=/etc/apparmor.d/usr.bin.msmtp
+local_policy=/etc/apparmor.d/local/usr.bin.msmtp
+rule="owner /var/lib/dc24h-stage4/.msmtprc r,"
+if [ -f "$profile" ] && command -v apparmor_parser >/dev/null 2>&1; then
+    install -d -m 0755 /etc/apparmor.d/local
+    grep -Fqx "$rule" "$local_policy" 2>/dev/null || printf '\n%s\n' "$rule" >> "$local_policy"
+    if [ -d /sys/kernel/security/apparmor ]; then
+        apparmor_parser -r "$profile"
+    fi
+fi

@@ -5,6 +5,7 @@ import { parseAccess } from "../src/lib/access.ts";
 import { parseManagement } from "../src/lib/management.ts";
 import { parseRemoteSummary } from "../src/lib/status.ts";
 import { isJsonContentType } from "./json-content-type.ts";
+import type { Identity } from "./stage4-store.ts";
 import type { PublicAdminRole, PublicPasswordGrant } from "./public-email-code.ts";
 
 export type PublicBackendGrant = PublicPasswordGrant & {
@@ -66,7 +67,38 @@ export function publicBackend(config: PublicBackendCredentials) {
       return catalog.areas[0].allowed && catalog.areas[1].allowed;
     } catch { return false; }
   };
+  const accountOperation = (values: Record<string, string>) =>
+    call("/api/v1/admin/access", "POST", new URLSearchParams(values).toString());
+
   return {
+    async prove(accountName: string, password: string): Promise<Identity | null> {
+      try {
+        const { account } = await accountOperation({ action: "prove", account_name: accountName, proof: password }) as
+          { account: Identity };
+        const decimal = (value: unknown) => typeof value === "string" && /^[1-9][0-9]{0,18}$/.test(value);
+        return account && decimal(account.id) && decimal(account.revision) &&
+          ["active", "disabled"].includes(account.status) ? account : null;
+      } catch { return null; }
+    },
+    async prepare(accountName: string, password: string): Promise<string | null> {
+      try {
+        const { verifier } = await accountOperation({ action: "prepare", account_name: accountName, proof: password }) as
+          { verifier: string };
+        return typeof verifier === "string" &&
+          /^\$dc24h-scrypt\$v=1,ln=17,r=8,p=1\$[0-9a-f]{64}\$[0-9a-f]{64}$/.test(verifier) ? verifier : null;
+      } catch { return null; }
+    },
+    async change(identity: Identity, current: string, password: string): Promise<boolean> {
+      try {
+        const { changed } = await accountOperation({ action: "change", actor_id: identity.id,
+          revision: identity.revision, proof: current, password }) as { changed: boolean };
+        return changed === true;
+      } catch { return false; }
+    },
+    async health(): Promise<boolean> {
+      try { await call("/api/v1/status", "GET"); return true; }
+      catch { return false; }
+    },
     async verifyNamedPassword(accountName: string, password: string): Promise<PublicBackendGrant | null> {
       if (!accountName || Buffer.byteLength(accountName, "utf8") > 64 || !password || password.length > 1024) return null;
       try {

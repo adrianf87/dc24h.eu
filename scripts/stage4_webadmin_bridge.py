@@ -16,12 +16,13 @@ import socketserver
 import stat
 import struct
 import threading
+import time
 from http.server import BaseHTTPRequestHandler
 
 
 BRIDGE_SOCKET = Path("/run/dc24h-stage4-bridge/bridge.sock")
-HUB_SOCKET = Path("/run/dc24h/api.sock")
-HUB_TOKEN = Path("/run/dc24h/api.token")
+AUTH_SOCKET = Path("/run/dc24h-stage4-auth/api.sock")
+AUTH_TOKEN = Path("/var/lib/dc24h-stage4-auth/api.token")
 ROUTES = {("POST", "/api/v1/admin/access"),
           ("GET", "/api/v1/management"),
           ("GET", "/api/v1/status")}
@@ -171,10 +172,17 @@ def main():
     if (not stat.S_ISDIR(parent.st_mode) or parent.st_uid != hub_uid or
             parent.st_gid != webadmin.pw_gid or (parent.st_mode & 0o777) != 0o750):
         raise SystemExit("Stage IV bridge: unsafe runtime directory")
-    token = checked_hub_credentials(HUB_SOCKET, HUB_TOKEN, hub_uid)
+    for attempt in range(40):
+        try:
+            token = checked_hub_credentials(AUTH_SOCKET, AUTH_TOKEN, hub_uid)
+            break
+        except FileNotFoundError:
+            if attempt == 39:
+                raise SystemExit("Stage IV bridge: C++ auth socket is not ready") from None
+            time.sleep(0.25)
     if os.path.lexists(BRIDGE_SOCKET):
         raise SystemExit("Stage IV bridge: socket already exists")
-    server = BridgeServer(BRIDGE_SOCKET, webadmin.pw_uid, HUB_SOCKET, token)
+    server = BridgeServer(BRIDGE_SOCKET, webadmin.pw_uid, AUTH_SOCKET, token)
     try:
         server.serve_forever(poll_interval=0.2)
     finally:

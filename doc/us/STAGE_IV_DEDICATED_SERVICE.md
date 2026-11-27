@@ -1,117 +1,185 @@
-# Stage IV — dedicated WebAdmin service (review-only deployment runbook)
+# Stage IV WebAdmin operations
 
-**Status: source and GitHub-hosted tests only. NOT INSTALLED on the Debian 13 VPS.**
-Do not enable either unit or the Apache `:7278` vhost before independent
-qualification and a separate `OWNER WEBADMIN PUBLIC ACTIVATION GO`. Existing
-ADCS `:1512` must remain unchanged; ADC `:1511` must remain closed.
+The public endpoint is `https://server-747585786.dc24h.eu:7278`. Apache terminates TLS
+and forwards the approved API paths to Node at `127.0.0.1:4278`. The Stage III
+guest hub remains on ADCS TCP 1512. ADC TCP 1511 stays disabled.
 
-## Trust boundaries
+Node runs as `dc24h-webadmin` and uses a dedicated local MariaDB account. The
+C++ account service uses the existing account and password-verifier tables in
+the selected database. It opens a private Unix socket and runs without hub
+listeners, so the existing Stage III service can continue serving during
+Stage IV deployment. The bridge uses the Stage III UID and verifies the exact
+WebAdmin UID with `SO_PEERCRED`. The C++ socket and token stay private to that
+UID. The browser panel supports account authentication, verified registration,
+session management, password changes and a staff-only account-service status.
 
-| Component | Linux identity | Reachability / secrets |
-| --- | --- | --- |
-| Stage III ADCS hub | `dc24h-stage3` | Existing `:1512`, original C++ API socket and token remain `0700/0600` and same-UID only |
-| Restricted auth bridge | UID `dc24h-stage3`, primary GID `dc24h-webadmin` | `/run/dc24h-stage4-bridge/bridge.sock` only, `0750` directory and `0660` socket; `SO_PEERCRED` requires exact WebAdmin UID |
-| Public WebAdmin Node 24 | `dc24h-webadmin` | HTTP `127.0.0.1:4278` only; **no** hub token, socket or hub UID access |
-| Apache TLS | existing Apache user | Approved hostname HTTPS `:7278`, fixed public allowlist only |
+## Install the reviewed checkout on Debian 13
 
-The bridge runs under the hub UID, so it **remains trusted code with hub-level
-access** and must receive a security review. Its narrow API allowlist is only:
-`POST /api/v1/admin/access`, `GET /api/v1/management`, and `GET /api/v1/status`.
-It drops client-provided `Authorization` and substitutes the private C++ bearer
-token. It does not provide a general-purpose Unix or HTTP proxy. The C++
-same-UID gate stays intact and the Node gateway never sees that token.
-
-## Provisioning order — manual provider console, not CI
-
-1. Confirm the running service really is `dc24h-stage3-adcs.service` under
-   `dc24h-stage3`, and verify the C++ API has been separately activated by
-   OWNER. The bridge expects the actual private hub socket and token at
-   `/run/dc24h/api.sock` and `/run/dc24h/api.token` in a **hub-owned 0700**
-   parent; check their real paths before installation. Do not change their
-   ownership, group or mode to make WebAdmin connect.
-2. Review and install `config/dc24h-stage4-webadmin.sysusers.example` using
-   `systemd-sysusers` to create `dc24h-webadmin`; verify that it differs from
-   `dc24h-stage3` and root. Do not remove or rename the existing hub account.
-3. Install a verified, root-owned Node **24 LTS** runtime under
-   `/opt/dc24h/node24/bin/node` with executable permissions for the service.
-   Verify the distribution's SHA-256 and publisher provenance. Debian's
-   `/usr/bin/node` (observed v20) and `/root/.nvm` do not qualify this unit.
-4. Install the exact reviewed source under `/opt/dc24h`; keep the bridge
-   script, compiled `dist/public-main.mjs`, enrollment CLI and static panel
-   root-owned/non-writable to WebAdmin. Verify `npm ci`, TypeScript, Python,
-   C++ integration and Ubuntu CI on the exact commit before proceeding.
-5. Stage the owner's provider-specific `msmtp` configuration in
-   `/var/lib/dc24h-stage4/.msmtprc`, mode `0600`, owned by **only**
-   `dc24h-webadmin`; its parent directory must be `0700` and owned by the
-   same UID. Configure `account default`, authenticated SMTP, verified TLS,
-   `from admin@dc24h.eu`, and the correct home.pl relay. Do not copy
-   `/root/.msmtprc`, print credentials or place secrets in GitHub Actions.
-   The sender invokes exactly `msmtp --file=/var/lib/dc24h-stage4/.msmtprc -t`
-   without a shell; it rejects missing, symlinked or group-accessible config.
-6. Separately provision owner-reviewed `/etc/dc24h/stage4-activation.env`
-   as root-only `0600`. It must include
-   `DC24H_STAGE4_STARTUP_ACK=OWNER_WEBADMIN_PUBLIC_ACTIVATION_GO` and a
-   **stable, unique**, lowercase 64-hex
-   `DC24H_STAGE4_LIMITER_KEY` generated with `openssl rand -hex 32`.
-   Do not reuse the hub API token or rotate the limiter key during an active
-   authentication window. Keep the activation file absent until final GO.
-7. Install examples as two separate reviewed systemd units, without enabling:
-   `dc24h-twilight-stage4-bridge.service` **before**
-   `dc24h-twilight-stage4-webadmin.service`. Use `systemd-analyze verify` and
-   manual `systemctl show -p User -p Group` checks. The bridge depends on the
-   existing Stage III hub; WebAdmin depends on the bridge. Neither has sudo.
-8. With Node gateway stopped, perform the existing one-time verified mailbox
-   enrollment on the provider console **as `dc24h-webadmin`** using the new
-   bridge socket, Node 24 and account `Administrator` / `admin@dc24h.eu`.
-   Type the C++ password and received e-mail code interactively (never in
-   logs or chat). Create audit/rate-limit catalogs under
-   `/var/lib/dc24h-stage4` as the dedicated UID; preserve the first-install
-   `O_EXCL` and no-replacement rules.
-9. Verify local authentication, SMTP delivery and actual mailbox receipt;
-   negative OTP tests; role revocation; session/logout/CSRF; root/user
-   isolation; concurrent requests; service restart and reversible rollback
-   **before** any public listener is opened.
-10. Apache's existing `config/apache2-webadmin-public.conf.example` is the
-    HTTPS `:7278` proposal using the approved Let's Encrypt hostname. Enable
-    only after exact-host/SAN, independent Internet ingress, cookie/path,
-    TLS, port exposure (`1512`, `1511`, `4278`, `7278`) and backup review.
-    This repository never edits `/etc/apache2`, certificates or host firewall.
-
-## Safe checks and evidence
-
-From the provider console, before deployment, gather only non-secret outputs:
+From the provider console as root, with the Stage IV feature branch checked
+out and a verified Node 24 LTS distribution extracted at `/opt/node24-release`:
 
 ```sh
-python3 scripts/stage4_vps_preflight.py
-systemctl show dc24h-stage3-adcs.service -p User -p Group -p ActiveState
-getent passwd dc24h-stage3 dc24h-webadmin
-ss -lnt '( sport = :1512 or sport = :1511 or sport = :4278 or sport = :7278 )'
+apt-get update
+apt-get install cmake g++ libssl-dev libgcrypt20-dev libutf8proc-dev libmariadb-dev \
+  mariadb-server mariadb-client msmtp apache2 ca-certificates
+cmake -S . -B build-stage4 -DCMAKE_BUILD_TYPE=Release
+cmake --build build-stage4 --parallel "$(nproc)" --target dc24h dc24h-owner dc24h-account-admin
+./scripts/stage4_install.sh /opt/node24-release build-stage4
 ```
 
-For manual SMTP qualification, use the dedicated account and its exact config
-path; do not run the real sender as root:
+Verify the Node tarball with Node.js's signed `SHASUMS256.txt` using a trusted
+release key before extraction. The installer installs the three units, the
+Apache site definition and the compiled application. Unit and site activation
+are separate commands below. The VPS must already have `dc24h-stage3` and
+the working ADCS service.
+
+## First-run configuration and provisioning
+
+If the bootstrap file has not been prepared, create it from the example
+with owner `root:root` and mode `0600`.
 
 ```sh
-printf 'From: admin@dc24h.eu\nTo: admin@dc24h.eu\nSubject: Stage IV dedicated SMTP probe\n\nManual delivery check.\n' | \
-  sudo -u dc24h-webadmin -H /usr/bin/msmtp --file=/var/lib/dc24h-stage4/.msmtprc -t
+install -d -o root -g root -m 0700 /etc/dc24h
+test -e /etc/dc24h/stage4-webadmin-bootstrap.env ||
+  install -o root -g root -m 0600 config/stage4-webadmin-bootstrap.env.example \
+    /etc/dc24h/stage4-webadmin-bootstrap.env
+editor /etc/dc24h/stage4-webadmin-bootstrap.env
 ```
 
-Success requires both exit status 0 and independent mailbox receipt. A root
-SMTP test proves nothing about the WebAdmin account. Never send a real login
-OTP in CI. Store only redacted pass/fail evidence.
+Set `STAGE4_ENVIRONMENT=production` and both `MARIADB_DATABASE` and
+`MARIADB_APPROVED_DATABASE` to `dc24h_stage4_production`. Use a dedicated
+application user ending in `_production`, such as `dc24h_stage4_production`.
+Keep MariaDB on the local Unix socket. An empty `MARIADB_ROOT_PASSWORD` uses
+the usual Debian MariaDB Unix-socket root authentication. Fill
+`ADMIN_INITIAL_PASSWORD` before the first run, with at least 15 characters,
+and choose distinct strong MariaDB application and SMTP passwords. Set the SMTP
+hostname, username and provider port. Use STARTTLS on 587 or set
+`SMTP_STARTTLS=false` for implicit TLS on the provider's port. TLS and
+certificate verification are mandatory in both modes. The sender is
+`admin@dc24h.eu`. Values are literal text after the first equals sign.
+Store production input in the protected file and type passwords only on the
+console or HTTPS form as appropriate.
 
-## Recovery / rollback
+```sh
+/usr/local/sbin/dc24h-stage4-init
+```
 
-Before activating Apache, snapshot exact binaries, both unit files, all
-service-private catalogs, Apache configuration and certificate metadata
-under an owner-controlled backup. The bridge itself retains no catalog.
-If a check fails: disable/remove **only** the new WebAdmin Apache `:7278`
-vhost, stop WebAdmin then stop the bridge, restore the reviewed configs and
-catalogs, and rerun `stage4_vps_preflight.py`. Do not stop/replace the hub,
-alter its `:1512` listener, change its original token permissions, or touch
-the real Let's Encrypt private key. A systemd restart/rollback result from
-Ubuntu CI is not a claim of a Debian 13 VPS test.
+The initializer verifies the approved schema name, applies the native C++
+migrations followed by versioned Stage IV migrations, checks schema and grants,
+and provisions `Administrator` using the C++ password implementation.
+An existing unbound Administrator or Owner requires operator review and an
+audited migration. Re-running the initializer on the same database preserves
+the established Administrator and verifier. After creation, the initial
+password can be blank when re-provisioning the same database. The running
+units receive the generated service credentials and dedicated `msmtp` config.
+Erase the `ADMIN_INITIAL_PASSWORD` and `MARIADB_ROOT_PASSWORD` values from the
+bootstrap file once initialization succeeds. If removing the entire bootstrap
+file, keep any recurring configuration needed for later provisioning in the
+owner's approved password store. Editing or unlinking the file does not erase
+old blocks, snapshots, editor history or backups.
 
-**Remaining owner-side checks:** live mailbox enrollment, actual SMTP relay,
-hub role revocation, independent Internet TLS, Debian 13 dual-unit restarts,
-backup/restore and rollback. None is considered PASS merely because CI passes.
+For a disposable installation use the example's `test` environment and
+explicit `dc24h_stage4_test` schema. Its generated material is under
+`/etc/dc24h/stage4-test`. The production systemd unit rejects that database.
+
+## Start, SMTP qualification and HTTPS
+
+```sh
+systemctl start dc24h-twilight-stage4-webadmin.service
+systemctl status dc24h-twilight-stage4-{auth,bridge,webadmin}.service --no-pager
+journalctl -u dc24h-twilight-stage4-webadmin.service --no-pager -n 30
+ss -ltn '( sport = :4278 or sport = :7278 or sport = :1512 or sport = :1511 or sport = :3306 )'
+```
+
+Before opening ingress, test mail from the dedicated service account. Exit
+status zero confirms relay acceptance. Confirm the message separately in
+`admin@dc24h.eu`. This probe contains no login code.
+
+```sh
+printf 'From: admin@dc24h.eu\nTo: admin@dc24h.eu\nSubject: Stage IV SMTP probe\n\nDelivery check.\n' |
+  runuser -u dc24h-webadmin -- /usr/bin/msmtp --file=/var/lib/dc24h-stage4/.msmtprc -t
+```
+
+Check that the hostname resolves to the VPS and inspect the existing HTTPS
+sites for access logging of cookie headers and upstream cookie forwarding.
+Cookies are shared across HTTPS ports on this hostname. The certificate
+paths live under `/etc/letsencrypt/live/server-747585786.dc24h.eu/`.
+
+```sh
+a2enmod ssl headers rewrite proxy proxy_http
+a2ensite dc24h-stage4-webadmin
+apache2ctl configtest && systemctl reload apache2
+systemctl enable dc24h-twilight-stage4-webadmin.service
+```
+
+Allow TCP 7278 in the provider firewall when it filters ingress. Keep TCP
+4278 and 3306 local and keep TCP 1511 closed. From an outside network run
+`curl --fail --silent --show-error https://server-747585786.dc24h.eu:7278/`
+with certificate verification enabled, and verify the ADCS hub on 1512
+with a client that validates its TLS certificate.
+
+Sign in with username `Administrator` and the initial password. The first
+successful password proof triggers an eight-digit enrollment code to
+`admin@dc24h.eu`. Enter that code on the same page to activate the account.
+Each later login sends a fresh code to the stored address. New users use
+**Załóż konto**, enter a username, password and email, then verify a code
+before the application creates their `registered` account. They sign in
+separately with password and a fresh code. Codes expire after five minutes
+or five incorrect guesses. A failed or delayed registration can be started
+again after the pending reservation expires, subject to attempt limits.
+Password changes invalidate existing sessions.
+
+```sh
+systemctl restart dc24h-twilight-stage4-webadmin.service
+systemctl status dc24h-twilight-stage4-{auth,bridge,webadmin}.service --no-pager
+```
+
+## Backup, restore and rollback
+
+Store backups encrypted and limit access to the recovery operator. Include
+MariaDB data and procedures, the private Stage IV runtime files, the exact
+deployed binaries and the Apache/systemd configurations. Keep the database
+backup and runtime credential archive together as a matched pair.
+
+```sh
+umask 077
+backup="/root/stage4-production-$(date -u +%Y%m%dT%H%M%SZ).sql"
+mariadb-dump --protocol=socket --single-transaction --routines \
+  --databases dc24h_stage4_production >"$backup"
+```
+
+Rehearse restoration on a separate disposable MariaDB server before
+production recovery. A recovery operator must identify the incident and
+account out of band and record the decision in the protected incident log.
+Do not mark an address verified by editing the database. If mailbox access is
+lost, keep the affected account suspended until mailbox control is recovered
+or an audited ownership transfer is completed through the existing C++
+maintenance tooling. Use the operator's backup process or recover the mailbox
+first. The public panel offers no email-only recovery path. After restoring a
+matched backup and checking migrations, invalidate restored capabilities by
+clearing `stage4_sessions` and `stage4_challenges` before enabling ingress.
+The latter also clears pending registration reservations.
+
+To withdraw the Stage IV release, disable only its vhost and units:
+
+```sh
+a2dissite dc24h-stage4-webadmin
+apache2ctl configtest && systemctl reload apache2
+systemctl disable --now dc24h-twilight-stage4-webadmin.service
+systemctl stop dc24h-twilight-stage4-bridge.service dc24h-twilight-stage4-auth.service
+systemctl is-active dc24h-stage3-adcs.service
+```
+
+Restore only the reviewed Stage IV artifacts and matching database if needed.
+Avoid restoring an old database over new registrations without an approved
+recovery decision. Leave the live certificate and Stage III service in place.
+
+## Acceptance
+
+Run `scripts/stage4_test_database.sh` against its disposable fixture after
+installation. The test exercises native SQL migrations, owner initialization,
+the C++ proof path, session and challenge transactions, signup, SMTP rejection
+with a mock sender, backup/restore and restart of the disposable MariaDB.
+GitHub qualification runs on hosted Ubuntu 22.04, 24.04 and 26.04. Record
+production systemd startup/restart, actual mailbox receipt, successful Owner
+enrollment and external HTTPS separately with result and deployed commit SHA.

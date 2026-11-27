@@ -1,4 +1,5 @@
 #include "dc24h/admin/core.hpp"
+#include "dc24h/accounts/management.hpp"
 #include "dc24h/configuration/configuration.hpp"
 #include "dc24h/security/secret_file.hpp"
 #include "dc24h/version.hpp"
@@ -42,11 +43,12 @@ int main(int argc,char* argv[]) {
         for (int i = 1; i < argc; ++i) {
             const std::string key = argv[i];
             if (key == "--confirm-stopped") { if (confirmed) { throw std::runtime_error("Duplicate option"); } confirmed = true; continue; }
-            if (key != "--config" && key != "--bootstrap" && key != "--password-file" && key != "--transfer" &&
+            if (key != "--config" && key != "--bootstrap" && key != "--stage4-bootstrap" && key != "--password-file" && key != "--transfer" &&
                 key != "--revision" && key != "--to" && key != "--to-revision" && key != "--target-password-file") { throw std::runtime_error("Unknown option"); }
             if (++i == argc || !options.emplace(key,argv[i]).second) { throw std::runtime_error("Invalid option"); }
         }
-        const bool bootstrap = options.contains("--bootstrap");
+        const bool stage4 = options.contains("--stage4-bootstrap");
+        const bool bootstrap = stage4 || options.contains("--bootstrap");
         if (!confirmed || options.size() != (bootstrap ? 3U : 7U)) { throw std::runtime_error("Invalid options"); }
         char* config_argv[]{argv[0],const_cast<char*>("--config"),options.at("--config").data()};
         const auto settings = configuration::parse_arguments(3,config_argv).settings;
@@ -62,7 +64,12 @@ int main(int argc,char* argv[]) {
         admin::Engine engine(settings.database,admin::Origin::owner_cli);
         const auto now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         admin::Command command;command.time=now;
-        if (bootstrap) {
+        if (stage4) {
+            database::Connection connection(settings.database);
+            const auto result = accounts::AccountManagementService(connection).bootstrap_owner(
+                options.at("--stage4-bootstrap"), proof.text, now, true);
+            metadata("owner",result);
+        } else if (bootstrap) {
             command.action=admin::Action::bootstrap_owner;command.name=options.at("--bootstrap");command.password=proof.text;
             const auto result = std::get<accounts::StoredAccount>(engine.execute(command));
             std::cout << i18n::translate("Owner provisioning completed",language) << '\n'; metadata("owner",result);

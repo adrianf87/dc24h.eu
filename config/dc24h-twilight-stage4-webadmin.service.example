@@ -1,7 +1,5 @@
-# NOT INSTALLED OR ENABLED. Stage IV OWNER qualification template only.
-# Requires separately approved /etc/dc24h/stage4-activation.env, a verified
-# email catalog, service-private msmtp settings and the pinned restricted Unix
-# bridge. No direct hub socket/token access: keep Stage III's UID isolated.
+# Install after reviewing the Stage IV runbook. The initializer generates
+# the activation marker, private SQL credential and dedicated SMTP settings.
 [Unit]
 Description=dc24h.eu public WebAdmin email-code gateway (loopback only)
 After=network-online.target dc24h-twilight-stage4-bridge.service
@@ -20,10 +18,7 @@ Environment=DC24H_STAGE4_ORIGIN=https://server-747585786.dc24h.eu:7278
 Environment=HOME=/var/lib/dc24h-stage4
 StateDirectory=dc24h-stage4
 StateDirectoryMode=0700
-Environment=DC24H_STAGE4_VERIFIED_EMAIL_FILE=/var/lib/dc24h-stage4/verified-emails.json
-Environment=DC24H_STAGE4_AUDIT_FILE=/var/lib/dc24h-stage4/stage4-audit.jsonl
-Environment=DC24H_STAGE4_RATE_LIMIT_FILE=/var/lib/dc24h-stage4/stage4-limits.json
-# Mandatory separate OWNER activation file; never commit it or precreate it.
+LoadCredential=stage4-runtime.json:/etc/dc24h/stage4-runtime.json
 EnvironmentFile=/etc/dc24h/stage4-activation.env
 # Provision a root-owned, verified Node 24 LTS runtime here. Debian's
 # /usr/bin/node (v20) and /root/.nvm are intentionally NOT used.

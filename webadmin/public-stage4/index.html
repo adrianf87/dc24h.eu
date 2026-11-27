@@ -10,17 +10,31 @@
 </head>
 <body>
   <main>
-    <header><h1>dc24h.eu — WebAdmin</h1><p>Panel administracyjny · HTTPS 7278</p></header>
+    <header><h1>dc24h.eu — WebAdmin</h1></header>
     <section id="login" aria-labelledby="login-label">
-      <h2 id="login-label">Logowanie OWNER / administrator</h2>
-      <p>Wymagane są hasło konta i 8-cyfrowy kod wysłany na zweryfikowany adres e-mail tego konta.</p>
+      <h2 id="login-label">Logowanie</h2>
+      <p>Wymagane są hasło konta i 8-cyfrowy kod wysłany na adres e-mail konta.</p>
       <form id="login-form">
-        <label for="actor">ID konta administratora</label>
-        <input id="actor" name="actor" inputmode="numeric" autocomplete="username" required pattern="[1-9][0-9]*" maxlength="19">
+        <label for="actor">Nazwa użytkownika</label>
+        <input id="actor" name="actor" autocomplete="username" required maxlength="64">
         <label for="password">Hasło</label>
         <input id="password" name="password" type="password" autocomplete="current-password" required>
         <button type="submit">Wyślij kod e-mail</button>
       </form>
+      <button id="start-registration" type="button">Załóż konto</button>
+    </section>
+    <section id="registration" hidden aria-labelledby="registration-label">
+      <h2 id="registration-label">Rejestracja</h2>
+      <form id="registration-form">
+        <label for="new-username">Nazwa użytkownika</label>
+        <input id="new-username" autocomplete="username" required maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9_.\-]*">
+        <label for="email">Adres e-mail</label>
+        <input id="email" type="email" autocomplete="email" required maxlength="254">
+        <label for="new-password">Hasło (co najmniej 15 znaków)</label>
+        <input id="new-password" type="password" autocomplete="new-password" required minlength="15">
+        <button type="submit">Wyślij kod rejestracyjny</button>
+      </form>
+      <button id="cancel-registration" type="button">Wróć do logowania</button>
     </section>
     <section id="verification" hidden aria-labelledby="verification-label">
       <h2 id="verification-label">Wpisz kod z wiadomości e-mail</h2>
@@ -33,18 +47,24 @@
       <button id="restart-login" type="button">Zacznij od nowa</button>
     </section>
     <section id="dashboard" hidden aria-labelledby="dashboard-label">
-      <h2 id="dashboard-label">Sesja administratora</h2>
+      <h2 id="dashboard-label">Moje konto</h2>
       <p id="role"></p>
       <div class="actions">
-        <button id="refresh" type="button">Odśwież stan huba</button>
+        <button id="refresh" type="button">Odśwież stan usługi kont</button>
         <button id="revoke-sessions" type="button">Unieważnij moje sesje</button>
         <button id="logout" type="button">Wyloguj</button>
       </div>
       <pre id="result"></pre>
-      <p>Zmiany konfiguracji, bazy danych i systemd nie są dostępne przez ten panel.</p>
+      <form id="password-form">
+        <label for="current-password">Dotychczasowe hasło</label>
+        <input id="current-password" type="password" autocomplete="current-password" required>
+        <label for="replacement-password">Nowe hasło (co najmniej 15 znaków)</label>
+        <input id="replacement-password" type="password" autocomplete="new-password" minlength="15" required>
+        <button type="submit">Zmień hasło</button>
+      </form>
     </section>
     <p id="message" role="status" aria-live="polite"></p>
-    <footer>Adres e-mail zmienia zweryfikowany operator poza publicznym formularzem. Nigdy nie udostępniaj kodu logowania.</footer>
+    <footer>Nigdy nie udostępniaj kodu logowania.</footer>
   </main>
 </body>
 </html>

@@ -1,0 +1,3 @@
+#!/bin/sh
+set -eu
+exec /opt/dc24h/node24/bin/node /opt/dc24h/webadmin/dist/stage4-init.mjs "$@"

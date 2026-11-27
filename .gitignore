@@ -32,3 +32,11 @@ __pycache__/
 # Only manually reviewed, sanitized test evidence may be tracked.
 # Keep the repository-wide *.log rule for raw logs.
 !/logs/tests/*.redacted.log
+
+# First-run and generated Stage IV private inputs and backups
+stage4-webadmin-bootstrap*.env
+stage4-activation.env
+.msmtprc
+*.sql.gz
+stage4-runtime.json
+stage4-auth-key
