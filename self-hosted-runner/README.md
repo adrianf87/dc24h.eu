@@ -29,7 +29,7 @@ The 27 November 2026 baseline was supplied through OWNER shell output. A package
 
 ## CI migration status
 
-OWNER policy is **Debian 13 only** for future testing. Existing project workflow files previously still referenced Ubuntu 22.04/24.04/26.04, and must be deliberately migrated in a reviewed change. Adding this directory does not register a runner, change job routing, or launch tests. Do not automatically run PR builds or dependencies with passwordless `sudo` on this live host.
+OWNER policy is **Debian 13 only** for testing. **All eight GitHub Actions workflows were migrated to the registered self-hosted Debian 13 runner on branch `feature/stage4-webadmin-dedicated-service`**. The public test hub and WebAdmin share this VPS; the OWNER expressly authorized automated build/dependency tests and use of passwordless `sudo` on it without new confirmation gates. CI results are not yet final. See the [workflow migration details and test status](27112026/CI_WORKFLOWS.md).
 
 ## Sensitive data policy
 
