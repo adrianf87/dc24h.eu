@@ -40,6 +40,8 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+      - name: Activate Debian 13 application test snapshot
+        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '22'

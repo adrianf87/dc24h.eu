@@ -91,6 +91,8 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
+      - name: Activate Debian 13 application test snapshot
+        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
       - name: Verify design boundaries without network or sudo
         run: |
           python3 -m unittest discover -s tests -p 'public_stage4_boundary_tests.py' -v
@@ -132,6 +134,8 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
+      - name: Activate Debian 13 application test snapshot
+        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '24'
@@ -167,6 +171,8 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
+      - name: Activate Debian 13 application test snapshot
+        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
       - name: Execute real AF_UNIX peer tests inside non-root systemd sandbox
         run: |
           # The repository test code executes as nobody, never as root.
@@ -207,6 +213,8 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
+      - name: Activate Debian 13 application test snapshot
+        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
       - name: Install Debian 13 build and database packages
         run: |
           bash self-hosted-runner/scripts/install-debian13-ci-deps.sh \

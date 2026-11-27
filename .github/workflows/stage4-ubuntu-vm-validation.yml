@@ -38,6 +38,8 @@ jobs:
         with:
           ref: ${{ env.SOURCE_SHA }}
           persist-credentials: false
+      - name: Activate Debian 13 application test snapshot
+        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
       - name: Verify exact checkout and runner documentation tests
         run: |
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"

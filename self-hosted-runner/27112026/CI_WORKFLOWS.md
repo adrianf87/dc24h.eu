@@ -23,10 +23,10 @@ The Stage IV VM workflow has been replaced by a Debian 13 host job. It builds th
 
 ## Verification snapshot
 
-- **PASS:** parsed all eight YAML workflows; runner routing consistently Debian 13 self-hosted.
+- **PASS:** parsed all eight YAML workflows; runner routing consistently Debian 13 self-hosted. Each checkout job now overlays the complete `self-hosted-runner/tests/debian-13/` test snapshot before running tests.
 - **PASS:** Bash syntax for the Debian 13 package helper; Python syntax for migrated policy/evidence files.
 - **PASS:** 12 Beta06/Beta07/Beta09 policy unit tests and 29 Stage III qualification unit tests in a local fixture (41/41).
-- **PENDING:** actual GitHub Actions on registered Debian 13 runner. The most recent observed run was queued/pending on 27 November 2026, without final CI conclusions. See [Actions](https://github.com/adrianf87/dc24h.eu-twilight/actions).
+- **CANCEL REQUESTED by OWNER:** currently queued/pending GitHub Actions. No new PASS is claimed. Original snapshot tests were copied and syntax-checked. Earlier status: actual GitHub Actions on registered Debian 13 runner was pending. The most recent observed run was queued/pending on 27 November 2026, without final CI conclusions. See [Actions](https://github.com/adrianf87/dc24h.eu-twilight/actions).
 - **NOT VERIFIED:** exact registration labels, online status, full on-host dependency/test suite and public-service stability after real runner jobs.
 
 ## Operational notes

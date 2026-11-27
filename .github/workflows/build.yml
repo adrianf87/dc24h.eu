@@ -45,6 +45,8 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
+      - name: Activate Debian 13 application test snapshot
+        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
       - name: Install build and integration dependencies
         run: |
           bash self-hosted-runner/scripts/install-debian13-ci-deps.sh \
@@ -166,6 +168,8 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
+      - name: Activate Debian 13 application test snapshot
+        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
       - name: Install C++ API build dependencies
         run: |
           bash self-hosted-runner/scripts/install-debian13-ci-deps.sh \
@@ -277,6 +281,8 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
+      - name: Activate Debian 13 application test snapshot
+        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
       - name: Install C++ dependencies
         run: |
           bash self-hosted-runner/scripts/install-debian13-ci-deps.sh \

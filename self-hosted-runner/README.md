@@ -14,6 +14,8 @@ This directory is the new **in-repository home** for all inventory, configuratio
 - [27 November 2026 — active runner](27112026/README.md)
 - [Read-only inventory collector](scripts/collect-inventory.sh)
 - [Runner-specific test suite](tests/README.md)
+- [Complete Debian 13 application test snapshot](tests/debian-13/README.md)
+- [CI test activation script](scripts/activate-debian13-tests.sh)
 - [Test runner entry point](scripts/run-tests.sh)
 - [Repository-local placement and safety rules](AGENTS.md)
 - [CI workflow migration audit](27112026/CI_WORKFLOWS.md)

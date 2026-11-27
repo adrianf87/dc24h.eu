@@ -90,6 +90,8 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+      - name: Activate Debian 13 application test snapshot
+        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
       - name: Run paced public ADCS cycles and 30-minute observation
         env:
           OWNER_CONFIRMATION: ${{ inputs.confirmation }}
@@ -141,6 +143,8 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+      - name: Activate Debian 13 application test snapshot
+        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
       - name: Record public TLS, exposure, ncdc and two-guest snapshots
         env:
           OWNER_CONFIRMATION: ${{ inputs.confirmation }}

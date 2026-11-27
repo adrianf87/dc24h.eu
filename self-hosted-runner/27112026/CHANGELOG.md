@@ -15,6 +15,8 @@ This log tracks verified runner changes and captures the difference between OWNE
 | 2026-11-27 | Migrated all eight GitHub Actions workflows on the feature branch from Ubuntu runners to self-hosted Debian 13. | OS/user/hostname checks, dedicated Debian 13 APT helper, Stage III/Beta evidence metadata and regression updates; see [CI_WORKFLOWS.md](CI_WORKFLOWS.md). |
 | 2026-11-27 | Validated workflow syntax and policy unit tests. | All eight YAML files parsed; 12 Beta tests and 29 Stage III tests passed (41/41) in the local validation fixture. GitHub Actions runs still pending at observation time; no deployment or runner-host test PASS claimed. |
 
+| 2026-11-27 | Copied all 267 repository test files to the Debian 13 runner snapshot and adapted 13 host-dependent Python files. | All eight CI workflows now activate the dedicated test snapshot after checkout. YAML and Python syntax passed; real Debian 13 CI results NOT TESTED after OWNER-requested cancellation. |
+
 ## Add future entries
 
 For package additions, upgrades or removals, record:

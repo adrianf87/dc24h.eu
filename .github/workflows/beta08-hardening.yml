@@ -35,6 +35,8 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+      - name: Activate Debian 13 application test snapshot
+        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
       - name: Check exact checkout and install disposable dependencies
         run: |
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
@@ -92,6 +94,8 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+      - name: Activate Debian 13 application test snapshot
+        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
       - name: Check exact checkout and install Clang/libFuzzer dependencies
         run: |
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"

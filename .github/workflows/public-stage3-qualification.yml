@@ -43,6 +43,8 @@ jobs:
         with:
           ref: ${{ env.SOURCE_SHA }}
           persist-credentials: false
+      - name: Activate Debian 13 application test snapshot
+        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
       - name: Build and run exact-source CTest without elevating repository executables
         env:
           DC24H_REQUIRE_SYSTEMD_HOST: '1'
@@ -99,6 +101,8 @@ jobs:
         with:
           ref: ${{ env.SOURCE_SHA }}
           persist-credentials: false
+      - name: Activate Debian 13 application test snapshot
+        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
       - name: Verify the submitted unit file without starting it
         if: '!cancelled()'
         env:
@@ -144,6 +148,8 @@ jobs:
         with:
           ref: ${{ env.SOURCE_SHA }}
           persist-credentials: false
+      - name: Activate Debian 13 application test snapshot
+        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: stage3-binary-${{ matrix.os }}-${{ github.run_attempt }}
@@ -190,6 +196,8 @@ jobs:
         with:
           ref: ${{ env.SOURCE_SHA }}
           persist-credentials: false
+      - name: Activate Debian 13 application test snapshot
+        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
       - name: Verify approved public TLS identity and bounded TCP exposure
         env:
           TEST_GROUP: ${{ matrix.group }}
@@ -231,6 +239,8 @@ jobs:
         with:
           ref: ${{ env.SOURCE_SHA }}
           persist-credentials: false
+      - name: Activate Debian 13 application test snapshot
+        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
       - name: Verify two independent guest sessions and signaling
         run: |
           python3 -m stage3.run run two-client-public --sha "$SOURCE_SHA" --image debian-13 \
@@ -275,6 +285,8 @@ jobs:
         with:
           ref: ${{ env.SOURCE_SHA }}
           persist-credentials: false
+      - name: Activate Debian 13 application test snapshot
+        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           pattern: stage3-*-${{ github.run_attempt }}
