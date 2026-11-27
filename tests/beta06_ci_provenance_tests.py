@@ -12,12 +12,12 @@ SHA = "a" * 40
 
 
 def report():
-    return {"schema": 1, "suite": "cpp-ubuntu-24.04-Debug", "commit_sha": SHA,
+    return {"schema": 1, "suite": "cpp-debian-13-Debug", "commit_sha": SHA,
             "state": "passed", "tests": 120, "failures": 0, "skipped": 0}
 
 
-def run(value, *, sha=SHA, suite="cpp-ubuntu-24.04-Debug",
-        image="ubuntu-24.04", environment="github-hosted", release="24.04"):
+def run(value, *, sha=SHA, suite="cpp-debian-13-Debug",
+        image="debian-13", environment="self-hosted", release="13"):
     return validate(value, sha=sha, suite=suite, image=image,
                     environment=environment, release=release)
 
@@ -59,14 +59,14 @@ class ProvenanceTests(unittest.TestCase):
             run(item)
 
     def test_unsupported_or_mismatched_runner_refused(self):
-        for options in ({"image": "debian-13"}, {"image": "ubuntu-26.04"},
-                        {"environment": "self-hosted"}, {"release": "22.04"}):
+        for options in ({"image": "ubuntu-24.04"}, {"image": "ubuntu-26.04"},
+                        {"environment": "github-hosted"}, {"release": "24.04"}):
             with self.subTest(options=options), self.assertRaises(ValueError):
                 run(report(), **options)
 
     def test_wrong_suite_and_invalid_suite(self):
         with self.assertRaises(ValueError):
-            run(report(), suite="cpp-ubuntu-24.04-Release")
+            run(report(), suite="cpp-debian-13-Release")
         with self.assertRaises(ValueError):
             run(report(), suite="../../leak")
 
