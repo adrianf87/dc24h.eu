@@ -10,6 +10,9 @@ RUNNER_ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 class RunnerLayoutTests(unittest.TestCase):
+    def test_repository_runner_rules_present(self) -> None:
+        self.assertTrue((RUNNER_ROOT / "AGENTS.md").is_file())
+
     def test_dated_runner_documents_present(self) -> None:
         dated = RUNNER_ROOT / "27112026"
         required = (
