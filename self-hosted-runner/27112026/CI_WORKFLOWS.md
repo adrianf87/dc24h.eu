@@ -1,27 +1,37 @@
-# CI workflow audit — 27 November 2026
+# CI workflow migration — 27 November 2026
 
-**Inspected branch:** `feature/stage4-webadmin-dedicated-service` in `adrianf87/dc24h.eu-twilight`. Inspected the eight `.github/workflows/` files read-only after creating this runner documentation.
+**Branch:** `feature/stage4-webadmin-dedicated-service` in `adrianf87/dc24h.eu-twilight`.
 
-| Workflow file | Runner declaration(s) seen | Debian 13 migration |
+The OWNER confirmed that `server-747585786` is a **test VPS** and approved executing the hub, WebAdmin, build scripts, and sudo-enabled CI tests using the `github-runner` account. No additional OWNER confirmation gate was introduced for automatic pull-request CI. The public ADCS and WebAdmin services share this Debian 13 machine, so CI build and package steps execute on that same host.
+
+## Migrated workflow inventory
+
+| Workflow file | Runner / OS after migration | Notes |
 | --- | --- | --- |
-| `beta07-codeql.yml` | `${{ matrix.os }}` (Ubuntu matrix) | Pending |
-| `beta08-hardening.yml` | `ubuntu-24.04` | Pending |
-| `beta09-stage4-storage.yml` | `${{ matrix.os }}` (Ubuntu matrix) | Pending |
-| `build.yml` | `${{ matrix.os }}` and `ubuntu-24.04` | Pending |
-| `debian13-stage3-full-qualification.yml` | `ubuntu-24.04` | Pending |
-| `public-stage3-qualification.yml` | `${{ matrix.os }}` and `ubuntu-24.04` | Pending |
-| `public-stage4-design.yml` | `${{ matrix.os }}` and `ubuntu-24.04` | Pending |
-| `stage4-ubuntu-vm-validation.yml` | `${{ matrix.os }}` | Pending |
+| `beta07-codeql.yml` | `[self-hosted, Linux, X64]`, Debian 13 | Exact-head CodeQL and package prerequisites |
+| `beta08-hardening.yml` | `[self-hosted, Linux, X64]`, Debian 13 | TSAN and parser fuzz |
+| `beta09-stage4-storage.yml` | `[self-hosted, Linux, X64]`, Debian 13 | Stage IV offline audit and fault tests |
+| `build.yml` | `[self-hosted, Linux, X64]`, Debian 13 | C++, WebAdmin and regression checks |
+| `debian13-stage3-full-qualification.yml` | `[self-hosted, Linux, X64]`, Debian 13 | Manual Stage III extended/public tests; existing workflow approval remains |
+| `public-stage3-qualification.yml` | `[self-hosted, Linux, X64]`, Debian 13 | Public ADCS qualification, some jobs require `main` |
+| `public-stage4-design.yml` | `[self-hosted, Linux, X64]`, Debian 13 | Stage IV service design, database/SMTP fixtures, browser tests |
+| `stage4-ubuntu-vm-validation.yml` | `[self-hosted, Linux, X64]`, Debian 13 | Retained historical workflow filename; renamed display to **Stage IV Debian 13 self-hosted qualification** |
 
-**OWNER's desired CI policy:** future tests on **Debian 13 only**, not Ubuntu 22.04/24.04/26.04 or Debian 12. The current file state has **not yet been migrated**. This documentation change does not modify workflow triggers, required branch checks or job scheduling.
+All eight workflow YAML files use the self-hosted labels; none route a job to Ubuntu 22.04/24.04/26.04 or Debian 12. Debian 13-specific installation uses `self-hosted-runner/scripts/install-debian13-ci-deps.sh`. Identity checks reject execution on the wrong host, OS, or account.
 
-## Safe next steps
+The Stage IV VM workflow has been replaced by a Debian 13 host job. It builds the C++ targets, runs CTest, Node 24 WebAdmin checks, Playwright and read-only host probes. **Destructive dpkg downgrades, full host installation/rollback and historical Ubuntu performance comparisons are NOT TESTED in that job**, not counted as PASS.
 
-1. Confirm the actual registered label set and online status of runner [#22](https://github.com/adrianf87/dc24h.eu-twilight/settings/actions/runners/22) without disclosing credentials.
-2. Classify jobs by trust boundary: pull-request code, trusted builds, privileged systemd/host tests, public integration tests.
-3. Prevent automatic PR code and package install scripts from gaining host-root via the `github-runner` account's passwordless `sudo` on this public service machine.
-4. Prepare a separate reviewed workflow change; route approved manual privileged tests to the exact Debian 13 runner and commit.
-5. Verify Node.js compatibility for WebAdmin (runner had Node.js **20.19.2**, npm **9.2.0** at snapshot).
-6. Coordinate required check names and test status reporting. Skipped jobs are not qualification PASS.
+## Verification snapshot
 
-**Result:** documentation/audit only. No CI workflow dispatch or live host change was performed by this directory addition.
+- **PASS:** parsed all eight YAML workflows; runner routing consistently Debian 13 self-hosted.
+- **PASS:** Bash syntax for the Debian 13 package helper; Python syntax for migrated policy/evidence files.
+- **PASS:** 12 Beta06/Beta07/Beta09 policy unit tests and 29 Stage III qualification unit tests in a local fixture (41/41).
+- **PENDING:** actual GitHub Actions on registered Debian 13 runner. The most recent observed run was queued/pending on 27 November 2026, without final CI conclusions. See [Actions](https://github.com/adrianf87/dc24h.eu-twilight/actions).
+- **NOT VERIFIED:** exact registration labels, online status, full on-host dependency/test suite and public-service stability after real runner jobs.
+
+## Operational notes
+
+- All modifications are in `feature/stage4-webadmin-dedicated-service`; `main` and active VPS services were not modified by this migration work.
+- Some workflow triggers are unchanged: Stage III public checks that require `main` still skip on pull-request runs. A skipped job is not PASS.
+- Automatic pull-request CI is enabled under the OWNER's explicit test-host authorization. Because `github-runner` has passwordless `sudo`, checked-out PR code and dependencies can have host-root impact. This is an accepted test-VPS tradeoff, not an assertion of isolation.
+- Do not commit runner credentials, SMTP secrets, TLS private keys, database passwords or dumps.
