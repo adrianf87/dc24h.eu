@@ -50,7 +50,9 @@ systemd-sysusers /etc/sysusers.d/dc24h-stage4-webadmin.conf
 for unit in dc24h-twilight-stage4-webadmin dc24h-twilight-stage4-bridge dc24h-twilight-stage4-auth; do
     install -m 0644 "$source/config/$unit.service.example" "/etc/systemd/system/$unit.service"
 done
-systemd-analyze verify /etc/systemd/system/dc24h-twilight-stage4-*.service
+# Check the Stage IV units themselves; unrelated host units can emit warnings
+# (for example obsolete CPUAccounting= on newer systemd releases).
+systemd-analyze --recursive-errors=no verify /etc/systemd/system/dc24h-twilight-stage4-*.service
 systemctl daemon-reload
 install -m 0644 "$source/config/apache2-webadmin-public.conf.example" \
     /etc/apache2/sites-available/dc24h-stage4-webadmin.conf
