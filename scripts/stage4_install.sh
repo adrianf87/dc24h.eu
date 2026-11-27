@@ -72,7 +72,12 @@ printf '%s\n' 'Stage IV: reviewing optional msmtp AppArmor profile'
 if [ -f "$profile" ] && command -v apparmor_parser >/dev/null 2>&1; then
     install -d -m 0755 /etc/apparmor.d/local
     grep -Fqx "$rule" "$local_policy" 2>/dev/null || printf '\n%s\n' "$rule" >> "$local_policy"
-    if [ -d /sys/kernel/security/apparmor ]; then
+    # Respect profiles explicitly disabled by the image operator. Hosted
+    # Ubuntu images may ship msmtp in /etc/apparmor.d/disable and reject a
+    # forced profile reload. Debian production still reloads an active profile.
+    if [ -d /sys/kernel/security/apparmor ] &&
+       [ ! -e /etc/apparmor.d/disable/usr.bin.msmtp ] &&
+       [ ! -L /etc/apparmor.d/disable/usr.bin.msmtp ]; then
         apparmor_parser -r "$profile"
     fi
 fi
