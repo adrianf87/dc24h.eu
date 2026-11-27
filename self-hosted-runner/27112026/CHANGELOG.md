@@ -9,6 +9,7 @@ This log tracks verified runner changes and captures the difference between OWNE
 | 2026-11-27 | First inventory pushed to the now-deleted `adrianf87/self-hosted-runner` repository. | Historical commit `2b753ec33bf62d60e5fa3e9817ae270ed17f9f98`; local copy must be imported here. |
 | 2026-11-27 | Runner documentation moved into project branch `feature/stage4-webadmin-dedicated-service`. | `self-hosted-runner/27112026/` created. No service or workflow configuration modified. |
 | 2026-11-27 | Audited eight existing workflow files. | Ubuntu runner declarations remain; [CI_WORKFLOWS.md](CI_WORKFLOWS.md). |
+| 2026-11-27 | Centralized self-hosted-runner-specific test code and commands. | [Test suite](../tests/README.md), [run-tests.sh](../scripts/run-tests.sh); syntax validation passed, no live VPS tests executed. |
 
 ## Add future entries
 
