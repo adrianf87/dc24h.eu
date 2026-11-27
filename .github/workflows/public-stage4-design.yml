@@ -11,13 +11,16 @@ on:
       - 'doc/pl/PUBLIC_STAGE_IV_WEBADMIN_DESIGN.md'
       - 'tests/public_stage4_boundary_tests.py'
       - 'webadmin/server/remote-main.ts'
-      - 'webadmin/server/public-two-factor.ts'
+      - 'webadmin/server/public-email-code.ts'
+      - 'webadmin/server/public-msmtp.ts'
+      - 'webadmin/server/public-verified-email.ts'
       - 'webadmin/server/public-backend.ts'
       - 'webadmin/server/public-gateway.ts'
       - 'webadmin/server/public-main.ts'
       - 'webadmin/server/public-private-init.ts'
-      - 'webadmin/tests/public-two-factor.test.ts'
-      - 'webadmin/tests/public-gateway.test.ts'
+      - 'webadmin/tests/public-email-code.test.ts'
+      - 'webadmin/tests/public-email-gateway.test.ts'
+      - 'webadmin/tests/public-verified-email.test.ts'
       - 'webadmin/tests/public-backend.test.ts'
       - 'webadmin/tests/public-stage4.spec.ts'
       - 'webadmin/public-stage4/**'
@@ -56,11 +59,11 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: webadmin/package-lock.json
-      - name: Test password plus passkey gate and TypeScript policy
+      - name: Test password plus verified email code and TypeScript policy
         working-directory: webadmin
         run: |
           npm ci --no-audit --no-fund
-          node --import tsx --test tests/public-two-factor.test.ts tests/public-gateway.test.ts tests/public-backend.test.ts
+          node --import tsx --test tests/public-email-code.test.ts tests/public-email-gateway.test.ts tests/public-verified-email.test.ts tests/public-backend.test.ts
           node --check public-stage4/panel.js
           npm run build:public:ci
           npm run typecheck

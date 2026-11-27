@@ -8,45 +8,51 @@ Public ADCS on `62.171.156.32:1512` must remain unchanged.
 - `webadmin/server/public-backend.ts`: fixed-path, bounded Unix-socket calls for
   the C++ password, grant/permission recheck and sanitized status projection.
 - `webadmin/server/public-gateway.ts`: new, separate loopback-only handler with
-  explicit read-only routes; password **and** WebAuthn passkey for a session;
+  explicit read-only routes; C++ password **and** emailed code for a session;
   server-side opaque session cookies and CSRF; idle/absolute expiration;
-  per-request C++ grant reauthorization; passkey device enrollment/revocation,
-  same-actor session revocation; fixed, nonidentifying durable audit outcomes;
-  persistent attempt budget; exact Origin/RP ID and reject-by-default headers.
+  per-request C++ grant reauthorization, same-actor session revocation; fixed,
+  nonidentifying durable audit outcomes, persistent attempt budget and strict
+  Origin/Host checks.
+- `webadmin/server/public-email-code.ts`: CSPRNG eight-digit single-use codes,
+  HMAC-only pending state, five-minute expiry, five-guess cap, replay denial.
+- `webadmin/server/public-verified-email.ts`: restricted, verified owner/admin
+  account-to-mailbox bindings, never client-specified recipients.
+- `webadmin/server/public-msmtp.ts`: `admin@dc24h.eu` sender with fixed
+  `msmtp -t` invocation and no shell/recipient header injection.
 - `webadmin/server/public-main.ts`: private configuration and durable state are
   required; startup rejects absent explicit OWNER activation acknowledgement;
   Node binds **only `127.0.0.1:4278`**, not the public interface.
-- `webadmin/server/public-private-init.ts`: first-install-only private catalog
-  creation, without creating users, passkeys, recovery secrets or public routes.
+- `webadmin/server/public-private-init.ts`: first-install-only audit/limiter
+  catalog creation, without creating users, emails or public routes.
 - `config/apache2-webadmin-public.conf.example`: separate, **disabled** HTTPS
   7278 Apache vhost with a fixed route/method/Host/Origin allowlist, Let's
   Encrypt file references and a tiny separate webroot.
-- `webadmin/public-stage4/`: separate static HTML, CSS and browser WebAuthn
+- `webadmin/public-stage4/`: separate static HTML, CSS and email-code form
   client. It does not ship private `/remote.html` or the local development UI.
-- `webadmin/tests/public-gateway.test.ts` and
+- `webadmin/tests/public-email-gateway.test.ts` and
   `webadmin/tests/public-stage4.spec.ts`: local synthetic HTTP and Playwright
   browser regressions. CI runs on GitHub-hosted Ubuntu only, never the VPS.
 
 ## Critical acceptance blockers — all must be closed BEFORE deployment
 
-1. **Initial OWNER/admin passkey enrollment.** The public gateway deliberately
-   cannot create a login session without an already-registered passkey for the
-   exact production RP ID. The private `localhost` credential does not count.
-   First-enrollment requires a separately designed, independently supervised
-   OWNER-only process with proof checked by C++ and a protected HTTPS browser
-   session under the actual FQDN and Origin. Do not expose a password-only
-   public enrollment endpoint or import old RP credentials. No first OWNER
-   passkey is provisioned by this branch.
-2. **Recovery and separation of duties.** Existing
-   `webadmin/server/remote-passkey-recovery.ts` provides offline two-operator
-   **revocation**, not proof of independent identity or re-enrollment. Define
-   and rehearse external identity verification, restoration/re-enrollment,
-   immutable evidence, durable backups, session invalidation and VNC/console
-   fallback. There is no public recovery bypass.
+1. **Verified OWNER/admin email enrollment.** The C++ account model has no
+   verified contact email field; the ADC user's public `EM` profile is NOT
+   authoritative. An OWNER must verify mailbox ownership out of band and
+   provision an owner-private catalog:
+   `{"schema":1,"accounts":[{"actor":"7","email":"person@example.test","verified":true}]}`.
+   This is a schema example, **not** a preverified address or authorization
+   to send mail. Without a correctly provisioned catalog, login refuses to
+   issue codes. The recipient must never be taken from the login request.
+2. **Recovery and separation of duties.** Implement and rehearse independent
+   mailbox change/reverification, account identity proof, durable backups,
+   session revocation and VNC/console fallback. There is **no public change
+   email or password-only recovery endpoint**. A catalog entry marked
+   `verified` by an operator is not proof that out-of-band verification
+   actually occurred; this process needs acceptance evidence.
 3. **Role/grant audit.** Validate against a *real* Debian 13 backend with
    a dedicated OWNER and least-privilege administrator, including demotion,
    password rotation, session-revocation races and C++ permission denial.
-   The new public gateway permits only status reads and one's own passkeys,
+   The new public gateway permits only status reads and session revocation,
    not management, SQL, hub control or systemd operations. Verify this is the
    approved initial feature scope.
 4. **Same-host cookies.** TCP port is NOT a cookie isolation boundary. Audit
@@ -60,12 +66,15 @@ Public ADCS on `62.171.156.32:1512` must remain unchanged.
    verify `:7278` ingress externally and forbid local API/DB/dev ports. Check
    cert renewal/rollback policy, Apache reload validation and production
    service ownership. Do not blindly enable the example configuration.
-6. **Build, tests and audit evidence.** GitHub-hosted Ubuntu 22.04, 24.04 and
+6. **Build, email transport, tests and audit evidence.** Validate Debian 13
+   `msmtp -t` configuration and authenticated sender identity
+   `admin@dc24h.eu`, successful delivery to the **verified** mailbox,
+   relay TLS, bounce/error handling, mail header injection and non-delivery
+   failure. GitHub-hosted Ubuntu 22.04, 24.04 and
    26.04 TypeScript/HTTP/regression CI plus isolated Chromium Playwright,
-   real backend integration, malformed WebAuthn/CSRF/concurrency negative
+   real backend integration, malformed email code/CSRF/concurrency negative
    cases, exact-SHA artifacts and secure restart/restore rehearsal must pass.
-   A synthetic passkey verifier only tests orchestration, not hardware
-   authenticator cryptography or browser-to-Debian interoperability.
+   Synthetic mailer tests do not prove real SMTP delivery or mailbox security.
 7. **Host operations and OWNER release.** No deployment, firewall/DNS/Apache
    enablement, public listener or production credentials are written by
    GitHub Actions. Independently verify provider console/VNC rollback and
@@ -79,7 +88,7 @@ Public ADCS on `62.171.156.32:1512` must remain unchanged.
 | Public WebAdmin TLS | `https://server-747585786.dc24h.eu:7278` — DISABLED |
 | New internal Node API | `127.0.0.1:4278` — DISABLED |
 | C++ private API | Unix socket, server-owned token; not exposed |
-| Credential/limiter/audit | Owner-only private files, RP ID pinned to FQDN |
+| Verified mail/limiter/audit | Owner-only files, sender `admin@dc24h.eu` via `msmtp -t` |
 
 **Release status: FIX/QUALIFICATION REQUIRED.** This candidate is not the final
 public WebAdmin and cannot be safely activated until these gaps are resolved.

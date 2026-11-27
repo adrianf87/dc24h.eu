@@ -10,11 +10,12 @@ bez zmian. Planowany panel: `https://server-747585786.dc24h.eu:7278`.
 - Oddzielny gateway `webadmin/server/public-gateway.ts` na wewnętrznym
   `127.0.0.1:4278`, z zamkniętą listą tras, bez publicznego `/remote.html`.
 - Weryfikacja hasła i uprawnień przez C++ na prywatnym gnieździe Unix oraz
-  **obowiązkowy passkey** z kontrolą Origin i RP ID.
+  **obowiązkowy 8-cyfrowy kod e-mail** przesłany przez `msmtp -t` z adresu
+  `admin@dc24h.eu` na wcześniej zweryfikowany adres przypisany do konta.
 - Sesje po stronie serwera, ciasteczka `Secure`, `HttpOnly`, `SameSite=Strict`,
   ochrona CSRF, limity prób, wygasanie, wylogowanie i unieważnianie.
-- Zarządzanie własnymi passkeys z ponowną kontrolą autoryzacji; dziennik
-  zdarzeń i trwałe limity prób z istniejących bezpiecznych modułów.
+- Chroniony rejestr odbiorców, 5 minut ważności kodu, najwyżej 5 błędnych
+  prób, jednokrotne użycie; dziennik zdarzeń i trwałe limity wysyłek.
 - Osobny minimalny interfejs przeglądarkowy oraz **niewłączony** przykład
   Apache HTTPS na TCP 7278, korzystający ze wskazanych plików Let's Encrypt.
 - Regresje HTTP, TypeScript, testy ścieżek i Playwright na runnerach GitHub
@@ -22,14 +23,14 @@ bez zmian. Planowany panel: `https://server-747585786.dc24h.eu:7278`.
 
 ## Co wciąż blokuje włączenie do Internetu?
 
-1. **Pierwszy passkey OWNER.** Wymagane jest bezpieczne, nadzorowane
-   zarejestrowanie passkey dla produkcyjnej domeny; istniejący passkey
-   `localhost` nie pasuje. Nie ma publicznego sposobu ominięcia drugiego
-   składnika. Zatwierdzona metoda pierwszego zapisania klucza wciąż wymaga
-   projektu i testu na izolowanym środowisku.
-2. **Odzyskiwanie.** Obecne narzędzie offline unieważnia urządzenia, lecz
-   potrzebna jest dodatkowa niezależna weryfikacja tożsamości, bezpieczne
-   ponowne zapisanie passkey, zapasowe kopie i test odtwarzania.
+1. **Zweryfikowany adres e-mail OWNER.** Konta C++ nie mają jeszcze pola
+   zweryfikowanego adresu; pole `EM` w kliencie ADC jest niewiarygodne.
+   OWNER musi zweryfikować skrzynkę niezależnym kanałem i bezpiecznie
+   przypisać ją do identyfikatora konta w prywatnym katalogu. Adres
+   wpisany do formularza logowania nie może zastępować tego przypisania.
+2. **Odzyskiwanie.** Potrzebna jest osobna, zatwierdzona procedura
+   zmiany/adresu e-mail po potwierdzeniu tożsamości, tworzenia kopii
+   rejestru, unieważniania sesji i dostępu przez konsolę/VNC.
 3. **Rzeczywisty backend.** Należy potwierdzić role OWNER i administratorów,
    cofnięcie uprawnień oraz zachowanie restartu/usługi C++ na Debianie 13.
 4. **Ciasteczka między portami.** HTTPS na tej samej domenie nie izoluje
@@ -39,7 +40,8 @@ bez zmian. Planowany panel: `https://server-747585786.dc24h.eu:7278`.
    SNI, listę tras, otwarte porty, odnowienie certyfikatu i rollback.
 6. **CI i test rzeczywistego klienta.** Do odbioru wymagane są zielone wyniki
    testów przeglądarkowych, serwera oraz niezależnych testów integracyjnych,
-   w tym testów odmowy i restartu.
+   w tym testów odmowy i restartu. Osobno trzeba potwierdzić konfigurację
+   `msmtp` na Debianie 13, szyfrowane połączenie SMTP i dostarczenie e-maila.
 7. **Osobna zgoda aktywacyjna.** Dopiero po zamknięciu blokad i zatwierdzeniu
    przez OWNER poleceniem `OWNER WEBADMIN PUBLIC ACTIVATION GO` można
    przygotować uruchomienie portu 7278 na VPS.

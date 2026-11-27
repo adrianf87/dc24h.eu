@@ -14,20 +14,22 @@ Pełne wymagania techniczne i macierz testów są w [wersji US](../us/PUBLIC_STA
 | Publiczny hub ADCS dla gości | `adcs://server-747585786.dc24h.eu:1512` |
 | Przyszły panel WebAdmin | `https://server-747585786.dc24h.eu:7278` |
 | IPv4 VPS Debian 13 | `62.171.156.32` |
-| WebAuthn RP ID | `server-747585786.dc24h.eu` |
 | Dokładny Origin przeglądarki | `https://server-747585786.dc24h.eu:7278` |
-| Uwierzytelnianie | odrębne konta OWNER/admin, passkeys i MFA |
+| Uwierzytelnianie | odrębne konta OWNER/admin: hasło + kod e-mail |
+| Nadawca kodu | `admin@dc24h.eu` przez `msmtp -t` |
+| Odbiorca | zweryfikowany adres przypisany do danego konta |
 | Aktywacja | osobna decyzja `OWNER WEBADMIN PUBLIC ACTIVATION GO` |
 
-WebAuthn RP ID to sama nazwa hosta, **bez portu**. Origin zawiera schemat HTTPS,
-nazwę hosta **i port 7278**. Klucze z lokalnego pilota `localhost` wymagają
-odrębnej, jawnie zaakceptowanej rejestracji lub migracji.
+Origin zawiera schemat HTTPS, nazwę hosta **i port 7278**. OWNER zastąpił
+wcześniejszą decyzję o passkey: publiczne logowanie ma wymagać hasła konta
+oraz 8-cyfrowego kodu e-mail. Dotychczasowy prywatny pilot WebAuthn
+na `localhost` pozostaje bez zmian.
 
 Istniejący `/remote.html` oraz gateway na `127.0.0.1:4182` pozostają
 wyłącznie lokalne. Nie wolno ich publicznie wystawiać przez prostą zmianę
 Apache. Nowy gateway musi mieć osobny punkt wejścia, ścisłą listę dozwolonych
 tras i metod, weryfikację uprawnień w C++, CSRF, bezpieczne sesje,
-ograniczenia prób logowania, unieważnianie urządzeń i audyt.
+ograniczenia prób logowania, unieważnianie sesji i audyt.
 
 **Ważne ryzyko:** ciasteczka przeglądarki nie są izolowane według numeru portu.
 Ten sam host może otrzymywać cookies zarówno na 7278, jak i na innych portach
@@ -36,14 +38,18 @@ oddzielić nazwy sesji, blokować przekazywanie cookies i wykazać w testach,
 że nie dochodzi do wycieku lub kolizji. Sam osobny port nie daje izolacji sesji.
 
 Publiczne konto OWNER i konta administratorów muszą być rozdzielone.
-**Decyzja OWNER: hasło ORAZ passkey są obowiązkowe przy każdym publicznym
-logowaniu uprzywilejowanym.** Najpierw backend potwierdza hasło konta, a potem
-WebAuthn weryfikuje passkey tego samego użytkownika, dokładny Origin/RP ID,
-obecność i weryfikację użytkownika, podpis, replay i odwołanie uprawnień.
-Dopiero po obu czynnikach i ponownym sprawdzeniu roli można wydać sesję.
-Wymagane są bezpieczne procedury odzyskiwania, unieważniania sesji oraz testy
-negatywne. Logowanie oparte wyłącznie na haśle, passkey albo haśle/TOTP nie
-jest zatwierdzone tą decyzją.
+**Aktualna decyzja OWNER: hasło ORAZ jednorazowy kod e-mail są obowiązkowe.**
+Po poprawnym haśle potwierdzonym w C++ gateway odczytuje zweryfikowany adres
+e-mail **z prywatnego rejestru kont**, a nie z pola podanego w formularzu lub
+publicznego profilu ADC. Wysyła ośmiocyfrowy kod przez `msmtp -t` z adresu
+`admin@dc24h.eu`. Kod jest ważny maksymalnie 5 minut, ma limit 5 błędnych
+prób i nie jest przechowywany jawnym tekstem. Weryfikacja kodu oraz ponowna
+kontrola roli w C++ są wymagane przed utworzeniem sesji.
+Zmiana adresu lub odzyskiwanie konta wymaga zatwierdzonej procedury OWNER
+poza publicznym formularzem. Hasło bez kodu nie wystarcza.
+
+**Ryzyko:** kod e-mail jest słabszy od passkey i nie jest odporny na phishing.
+Skrzynka pocztowa musi mieć silne, niezależne zabezpieczenia i MFA.
 
 Certyfikat Let's Encrypt musi zawierać prawidłowy SAN dla nazwy hosta.
 Klucze prywatne, tokeny usługowe i sekrety nie mogą trafiać do repozytorium,

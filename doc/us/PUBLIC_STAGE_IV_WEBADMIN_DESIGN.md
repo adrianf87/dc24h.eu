@@ -16,20 +16,21 @@ See [implementation and acceptance gaps](PUBLIC_STAGE_IV_WEBADMIN_IMPLEMENTATION
 | Public guest ADCS hub | `adcs://server-747585786.dc24h.eu:1512` |
 | Future browser WebAdmin | `https://server-747585786.dc24h.eu:7278` |
 | IPv4 of the existing Debian 13 VPS | `62.171.156.32` |
-| WebAuthn relying-party ID | `server-747585786.dc24h.eu` |
-| Exact WebAuthn / browser API Origin | `https://server-747585786.dc24h.eu:7278` |
-| WebAdmin authentication | OWNER and separate administrator accounts, verified passkeys/MFA |
+| Exact browser/API Origin | `https://server-747585786.dc24h.eu:7278` |
+| WebAdmin authentication | OWNER and administrators: password **and 8-digit emailed code** |
+| Fixed sender | `admin@dc24h.eu` via local `msmtp -t` |
+| Recipient | Previously verified, owner-bound private account email catalog |
 | Release decision | Separate `OWNER WEBADMIN PUBLIC ACTIVATION GO` after Stage IV acceptance |
 
 Do not use the retired public host or create an `admin.*` hostname. Do not
 change TCP 1512, enable plaintext ADC on TCP 1511, or expose existing internal C++ APIs,
 MariaDB, service-maintenance endpoints, or development WebAdmin ports.
 
-The WebAuthn RP ID is the hostname **without** a scheme or port. The accepted Origin
-includes HTTPS, the hostname, **and** port 7278. Reject a different port, IP-literal
-Origin, untrusted forwarded host, and any non-exact RP ID. Credentials registered for
-the existing `localhost` pilot must not be silently accepted for this public RP ID;
-use explicit OWNER-approved enrollment/migration with rollback.
+The accepted Origin includes HTTPS, the hostname, **and** port 7278. Reject a
+different port, IP-literal Origin or untrusted forwarded host. The OWNER
+**superseded the earlier passkey decision**: public Stage IV login now requires
+the C++ account password followed by a code sent to that account's preverified
+email address. The private localhost passkey pilot remains unchanged.
 
 ## Existing private gateway is not a public implementation
 
@@ -61,15 +62,22 @@ Proposed separation, not yet deployed:
 - OWNER and administrator are separate least-privilege principals; never use public
   guest admission as administrator authentication. Define the account bootstrap and
   scoped privilege grants before the first public test.
-- **OWNER decision: password + verified passkey are BOTH mandatory** for every
-  public privileged login. First verify the account password through the private
-  backend; only then begin a short-lived passkey challenge for that same account.
-  A session or admin grant must not be issued until the WebAuthn assertion also
-  passes user verification, exact `Origin`, RP ID hash, signature, credential
-  ownership, replay/counter and revocation checks plus fresh backend role checks.
-  Password-only, passkey-only, or password/TOTP-only fallback is **not approved**.
-  The public two-factor state machine is an internal building block, not a public
-  HTTP endpoint, and must be integrated only after gateway security review.
+- **Latest OWNER decision: password + emailed single-use code are BOTH mandatory**
+  for every public privileged login, replacing passkey login for this gateway.
+  Verify the C++ account password first. Resolve the recipient from an owner-
+  verified, read-only private catalog bound to the backend account ID; **never**
+  trust an email address supplied in the login POST or ADC public user profile.
+  Send an eight-digit CSPRNG code from `admin@dc24h.eu` using an argument-fixed
+  `msmtp -t` subprocess (no shell). Store only an HMAC digest of the code,
+  expire it after five minutes, deny after five invalid guesses and require
+  fresh C++ role reauthorization before issuing an opaque session. Delivery
+  failure, missing/unverified email, audit or rate-limiter failure deny login.
+  No password-only session, email-code-only entrypoint, or public account
+  email enrollment/fallback is permitted.
+- **Security tradeoff:** email OTP is less phishing-resistant than passkeys and
+  may not constitute a fully independent possession factor when the mailbox
+  reuses the account password or lacks its own MFA. OWNER requested this change;
+  verify strong mailbox protections before activation.
 - Server-side short-lived opaque sessions; secure logout, idle/absolute expiry,
   session rotation, concurrent-session bounds, live role/revocation checks, and
   explicit step-up for sensitive management operations.
@@ -81,10 +89,11 @@ Proposed separation, not yet deployed:
   acceptance, logging and collision; use a dedicated session name, server-side
   origin/authority binding, strict header stripping, and refuse activation if a
   trustworthy boundary cannot be demonstrated.
-- Owner-only, auditable passkey enrollment and device revocation; independent
-  recovery with an offline protected recovery mechanism, verified identity,
-  session/device revocation and no silent MFA bypass. Never put recovery codes,
-  passwords, OTP seeds or private WebAuthn key material in the repository or CI.
+- Owner-verified binding of an email address to each distinct administrator
+  account and offline owner-approved email change/recovery. Account enrollment
+  and email verification cannot be initiated through the public login form.
+  Revoke active sessions when a contact mailbox or account authority changes.
+  Do not put email codes, SMTP passwords or private catalogs into repo/CI.
 - Generic login errors, bounded rate limits, account lockout/recovery controls,
   no secrets in logs, session fixation protection and audited grant changes.
 
@@ -108,15 +117,16 @@ Proposed separation, not yet deployed:
 Before requesting `OWNER WEBADMIN PUBLIC ACTIVATION GO`, demonstrate on isolated
 GitHub-hosted environments with sanitized exact-SHA reports:
 
-1. Dedicated TLS 7278 SNI/Host/Origin/RP ID verification; wrong hostname, port,
+1. Dedicated TLS 7278 SNI/Host/Origin verification; wrong hostname, port,
    insecure scheme, SAN/chain, missing/expired certificate and plaintext rejection.
 2. Exact route/method allowlist, strict body framing, traversal/encoding bypass,
    prohibited `/admin-api`, private sockets, MariaDB, service-control and development
    paths denied at the edge and independently at the gateway.
 3. Positive OWNER/admin access and negative guest, role-bypass, revoked-account,
-   revoked-device, stale-session and cross-account privilege tests.
-4. Valid/invalid passkeys, user-verification requirement, challenge expiry/replay,
-   wrong Origin/RP ID, credential mismatch and account recovery failure modes.
+   wrong-bound-mailbox, stale-session and cross-account privilege tests.
+4. Valid/invalid/expired/replayed email codes, incorrect mailbox, missing email,
+   failed `msmtp` delivery, mail header injection, five-guess lockout, rate limits,
+   unverified catalog changes and operator recovery failure modes.
 5. Cookies across ports on the **same hostname**, CSRF, Host/proxy header spoofing,
    CORS, session fixation, logout, concurrent requests and rate limiting.
 6. Backend authorization/audit for every allowed action and denial; failure of
@@ -130,10 +140,12 @@ the current public ADCS hub unchanged throughout development.
 
 ## Primary standards
 
-- [W3C Web Authentication](https://www.w3.org/TR/webauthn-3/): RP ID and Origin
-  semantics, registration and authentication verification.
+- [msmtp official manual](https://marlam.de/msmtp/msmtp.html): `-t` recipient
+  handling from MIME message headers.
+- [OWASP Email Verification](https://cheatsheetseries.owasp.org/cheatsheets/Email_Validation_and_Verification_Cheat_Sheet.html)
+  and [Multifactor Authentication](https://cheatsheetseries.owasp.org/cheatsheets/Multifactor_Authentication_Cheat_Sheet.html):
+  verified account mailboxes, short-lived codes, phishing and independence risks.
 - [RFC 6454](https://www.rfc-editor.org/rfc/rfc6454.html): scheme/host/port Origin.
 - [RFC 6265](https://www.rfc-editor.org/rfc/rfc6265.html): cookies are not isolated
   by port.
-- [OWASP Passkey Security](https://cheatsheetseries.owasp.org/cheatsheets/Passkey_Security_Cheat_Sheet.html)
-  and [Session Management](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html).
+- [OWASP Session Management](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html).

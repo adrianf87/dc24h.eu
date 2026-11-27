@@ -5,7 +5,7 @@ import { parseAccess } from "../src/lib/access.ts";
 import { parseManagement } from "../src/lib/management.ts";
 import { parseRemoteSummary } from "../src/lib/status.ts";
 import { isJsonContentType } from "./json-content-type.ts";
-import type { PublicAdminRole, PublicPasswordGrant } from "./public-two-factor.ts";
+import type { PublicAdminRole, PublicPasswordGrant } from "./public-email-code.ts";
 
 export type PublicBackendGrant = PublicPasswordGrant & {
   grant: string;

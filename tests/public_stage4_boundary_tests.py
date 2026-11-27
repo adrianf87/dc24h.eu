@@ -41,8 +41,11 @@ class PublicStageIVBoundaryTests(unittest.TestCase):
         client = (ROOT / "webadmin/public-stage4/panel.js").read_text(encoding="utf-8")
         html = (ROOT / "webadmin/public-stage4/index.html").read_text(encoding="utf-8")
         self.assertIn('const api = "/stage4/v1/"', client)
-        self.assertIn("navigator.credentials.get", client)
-        self.assertIn("navigator.credentials.create", client)
+        self.assertIn('call("login/send"', client)
+        self.assertIn('call("login/verify"', client)
+        self.assertIn('id="email-code"', html)
+        self.assertNotIn("navigator.credentials", client)
+        self.assertNotIn("passkey", client.lower() + html.lower())
         for forbidden in ("/admin-api", "/remote/v1", "DC24H_API_TOKEN_FILE", "localStorage"):
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, client + html)
@@ -59,13 +62,24 @@ class PublicStageIVBoundaryTests(unittest.TestCase):
                 self.assertIn("OWNER WEBADMIN PUBLIC ACTIVATION GO", document)
                 self.assertNotIn("51.255.80.233", document)
 
-    def test_relying_party_id_is_hostname_not_origin(self):
+    def test_email_sender_and_public_origin_are_fixed(self):
         document = (ROOT / "doc/us/PUBLIC_STAGE_IV_WEBADMIN_DESIGN.md").read_text(
             encoding="utf-8"
         )
-        self.assertIn("WebAuthn relying-party ID | `" + FQDN + "`", document)
-        self.assertIn("Exact WebAuthn / browser API Origin | `" + ORIGIN + "`", document)
+        self.assertIn("Exact browser/API Origin | `" + ORIGIN + "`", document)
+        self.assertIn("Fixed sender | `admin@dc24h.eu` via local `msmtp -t`", document)
         self.assertIn("cookies do **not** isolate by TCP port", document)
+
+    def test_mail_transport_has_fixed_sender_and_no_shell(self):
+        mailer = (ROOT / "webadmin/server/public-msmtp.ts").read_text(encoding="utf-8")
+        self.assertIn('spawn(binary, ["-t"], { shell: false', mailer)
+        self.assertIn('From: admin@dc24h.eu', mailer)
+        self.assertIn('To: " + recipient', mailer)
+        self.assertNotIn('odbiorca@gmail.com', mailer)
+        gateway = (ROOT / "webadmin/server/public-gateway.ts").read_text(encoding="utf-8")
+        self.assertIn('"login/send"', gateway)
+        self.assertIn('"login/verify"', gateway)
+        self.assertNotIn('"devices/revoke"', gateway)
 
     def test_existing_private_gateway_remains_local_only(self):
         gateway = (ROOT / "webadmin/server/remote-main.ts").read_text(encoding="utf-8")
