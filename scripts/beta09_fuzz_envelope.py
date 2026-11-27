@@ -16,8 +16,9 @@ import beta08_fuzz_smoke as smoke
 PROFILES = ("adc_parser", "adc_fragments")
 
 
-def evaluate(sha, records):
+def evaluate(sha, records, image="ubuntu-22.04"):
     if (not isinstance(sha, str) or not re.fullmatch(r"[0-9a-f]{40}", sha) or
+            image not in smoke.IMAGES or
             not isinstance(records, dict) or set(records) != set(PROFILES)):
         raise ValueError("Wrong source or missing independent fuzz profile")
     observed_total = 0
@@ -25,7 +26,7 @@ def evaluate(sha, records):
         report = records[name]
         if (not isinstance(report, dict) or report.get("schema") != 1 or
                 report.get("source_sha") != sha or
-                report.get("os_image") != "ubuntu-24.04" or
+                report.get("os_image") != image or
                 report.get("fuzzer_profile") != name or
                 report.get("compiler") != "clang-libfuzzer" or
                 type(report.get("requested_runs")) is not int or
@@ -47,7 +48,7 @@ def evaluate(sha, records):
                 report.get("production_security_certified") is not False):
             raise ValueError("Missing, skipped, altered or unbounded Clang/ASan fuzz report")
         observed_total += report["observed_runs"]
-    return {"schema": 1, "source_sha": sha, "os_image": "ubuntu-24.04",
+    return {"schema": 1, "source_sha": sha, "os_image": image,
             "distinct_fuzzer_profiles": list(PROFILES), "required_runs": smoke.RUNS * len(PROFILES),
             "observed_runs": observed_total, "sanitizer_findings": 0,
             "both_required_fuzz_checks_passed": True,
@@ -59,16 +60,19 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--sha", required=True)
+    parser.add_argument("--os-image", required=True, choices=smoke.IMAGES)
     parser.add_argument("--parser-report", type=Path, required=True)
     parser.add_argument("--fragments-report", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
+        host = platform.freedesktop_os_release()
         if (os.environ.get("GITHUB_ACTIONS") != "true" or
                 os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted" or
                 os.environ.get("RUNNER_OS") != "Linux" or
-                platform.freedesktop_os_release().get("VERSION_ID") != "24.04"):
-            raise ValueError("Requires hosted Ubuntu 24.04")
+                host.get("ID") != "ubuntu" or
+                host.get("VERSION_ID") != args.os_image.removeprefix("ubuntu-")):
+            raise ValueError("Requires approved GitHub-hosted Ubuntu")
         actual = subprocess.check_output(["git", "-C", str(args.root), "rev-parse", "HEAD"],
                                          timeout=10).decode().strip()
         if actual != args.sha:
@@ -78,7 +82,7 @@ def main(argv=None):
             raise ValueError("Unbounded fuzz summary")
         records = {name: json.loads(path.read_text(encoding="utf8"))
                    for name, path in paths.items()}
-        report = evaluate(args.sha, records)
+        report = evaluate(args.sha, records, args.os_image)
         with args.output.open("x", encoding="utf8") as stream:
             json.dump(report, stream, sort_keys=True)
             stream.write("\n")

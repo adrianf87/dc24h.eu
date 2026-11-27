@@ -6,6 +6,12 @@ import type { AuthenticationResponseJSON, RegistrationResponseJSON } from "@simp
 import type { PasskeyStore } from "./remote-passkeys.ts";
 import { credentialForVerification } from "./remote-passkeys.ts";
 
+// Pin algorithms supported by the bounded private credential catalog. The
+// library's runtime-dependent defaults can prefer ML-DSA-44 on Node 24, whose
+// larger public key exceeds the current catalog's strict 1400-char limit.
+// Use the same set at both registration-option creation and verification.
+const supportedAlgorithmIDs = [-7, -257]; // ES256 and RS256
+
 // Do not infer the RP ID from Host or X-Forwarded-* headers. The operator must
 // choose a fixed secure HTTPS origin; a changed origin needs deliberate
 // credential migration/re-enrollment, not automatic acceptance.
@@ -29,6 +35,7 @@ export function passkeyCeremonies(store: PasskeyStore, origin: string, rpID: str
       userDisplayName: "Administrator " + actor,
       userID: new Uint8Array(Buffer.from(userHandle, "base64url")),
       timeout: 60_000, attestationType: "none",
+      supportedAlgorithmIDs,
       excludeCredentials: existing.map(c => ({ id: c.id, transports: c.transports })),
       authenticatorSelection: { residentKey: "required", userVerification: "required" },
     });
@@ -39,6 +46,7 @@ export function passkeyCeremonies(store: PasskeyStore, origin: string, rpID: str
     const verification = await verifyRegistrationResponse({
       response, expectedChallenge: challenge, expectedOrigin: origin,
       expectedRPID: rpID, requireUserPresence: true, requireUserVerification: true,
+      supportedAlgorithmIDs,
     });
     if (!verification.verified || !await beforePersist()) return false;
     const info = verification.registrationInfo;

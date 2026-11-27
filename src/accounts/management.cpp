@@ -217,10 +217,10 @@ StoredAccount AccountManagementService::perform(Action action,const StoredAccoun
 }
 
 StoredAccount AccountManagementService::bootstrap_owner(std::string_view name,
-    std::string_view password, Timestamp time) {
+    std::string_view password, Timestamp time, bool stage4_email_pending) {
     if (time < 0 || time > max_timestamp) { fail(ManagementErrorKind::invalid_input); }
     const auto checked = AccountName::create(name);
-    if (!checked) { fail(ManagementErrorKind::invalid_input); }
+    if (!checked || (stage4_email_pending && name != "Administrator")) { fail(ManagementErrorKind::invalid_input); }
     detail::validate_password(password);
     AccountRepository repository(connection_);
     repository.require_schema();
@@ -236,11 +236,17 @@ StoredAccount AccountManagementService::bootstrap_owner(std::string_view name,
     OwnershipLock guard{connection_,lock}; acquire(connection_,lock);
     auto transaction = connection_.transaction();
     if (connection_.scalar("SELECT COUNT(*) FROM dc24h_accounts WHERE role='owner'") != "0") { fail(ManagementErrorKind::unauthorized); }
-    auto result = repository.insert_in_transaction({checked->text(),Role::owner,Status::active,{time,time,{}}});
+    auto result = repository.insert_in_transaction({checked->text(),Role::owner,
+        stage4_email_pending ? Status::disabled : Status::active,{time,time,{}}});
     database::Parameters bound; EraseParameters erase{bound}; bound.reserve(3);
     bound.emplace_back(result.account.id().value());
     bound.emplace_back(database::Bytes(verifier.bytes.begin(),verifier.bytes.end())); bound.emplace_back(time);
     if (connection_.execute_prepared("INSERT INTO dc24h_account_credentials(account_id,verifier,created_at) VALUES (?,?,?)",bound).affected_rows != 1) {
+        fail(ManagementErrorKind::invalid_record);
+    }
+    if (stage4_email_pending && connection_.execute_prepared(
+        "INSERT INTO stage4_emails(account_id,email,initial_owner) VALUES (?,'admin@dc24h.eu',1)",
+        parameters(result.account.id().value())).affected_rows != 1) {
         fail(ManagementErrorKind::invalid_record);
     }
     audit_append(connection_, "ownership.bootstrap", result.account.id().value(), result.account.id().value(), time);

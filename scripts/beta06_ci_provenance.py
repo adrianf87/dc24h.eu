@@ -25,9 +25,9 @@ def validate(report, *, sha, suite, image, environment, release):
     if not isinstance(suite, str) or not SUITE.fullmatch(suite):
         raise ValueError("Invalid CI suite")
     if image not in IMAGES or release != image.removeprefix("ubuntu-"):
-        raise ValueError("Required hosted Ubuntu image does not match the running OS")
+        raise ValueError("Required Ubuntu image does not match the running OS")
     if environment != "github-hosted":
-        raise ValueError("Self-hosted runners cannot supply beta-0.6 evidence")
+        raise ValueError("Expected GitHub-hosted Ubuntu evidence")
     if not isinstance(report, dict) or set(report) != EXPECTED_KEYS:
         raise ValueError("Incomplete or unreviewed CI result shape")
     if type(report["schema"]) is not int or report["schema"] != 1 or (

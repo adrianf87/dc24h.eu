@@ -59,7 +59,7 @@ class PublicStageIVBoundaryTests(unittest.TestCase):
                 self.assertIn(f"adcs://{FQDN}:1512", document)
                 self.assertIn(ORIGIN, document)
                 self.assertIn("62.171.156.32", document)
-                self.assertIn("OWNER WEBADMIN PUBLIC ACTIVATION GO", document)
+                self.assertIn("`OWNER WEBADMIN PUBLIC ACTIVATION GO`", document)
                 self.assertNotIn("51.255.80.233", document)
 
     def test_email_sender_and_public_origin_are_fixed(self):
@@ -72,7 +72,8 @@ class PublicStageIVBoundaryTests(unittest.TestCase):
 
     def test_mail_transport_has_fixed_sender_and_no_shell(self):
         mailer = (ROOT / "webadmin/server/public-msmtp.ts").read_text(encoding="utf-8")
-        self.assertIn('spawn(binary, ["-t"], { shell: false', mailer)
+        self.assertIn('spawn(binary, ["--file=" + mailConfiguration, "-t"]', mailer)
+        self.assertIn('dedicatedMsmtpConfigReady()', mailer)
         self.assertIn('From: admin@dc24h.eu', mailer)
         self.assertIn('To: " + recipient', mailer)
         self.assertNotIn('odbiorca@gmail.com', mailer)
@@ -97,7 +98,9 @@ class PublicStageIVBoundaryTests(unittest.TestCase):
             encoding="utf-8"
         )
         for condition in (
-            "NO PUBLIC WEBADMIN ACTIVATION",
+            "reported operation does not imply final security acceptance",
+            "`OWNER STAGE IV ACCEPTANCE`",
+            "`OWNER MERGE GO`",
             "Do not remove those safety checks",
             "GitHub-hosted Ubuntu 22.04, 24.04 and 26.04",
             "no CI SSH or remote `sudo`",
@@ -129,11 +132,92 @@ class PublicStageIVBoundaryTests(unittest.TestCase):
     def test_disabled_stage4_unit_has_no_baked_activation_or_public_node_listener(self):
         unit = (ROOT / "config/dc24h-twilight-stage4-webadmin.service.example").read_text(
             encoding="utf-8")
-        for required in ("User=dc24h", "EnvironmentFile=/etc/dc24h/stage4-activation.env",
+        for required in ("User=dc24h-webadmin", "EnvironmentFile=/etc/dc24h/stage4-activation.env",
                          "StateDirectoryMode=0700", "NoNewPrivileges=true", "ProtectSystem=strict"):
             self.assertIn(required, unit)
+        self.assertNotIn("Environment=DC24H_API_TOKEN_FILE", unit)
+        self.assertIn("DC24H_STAGE4_BRIDGE_SOCKET=", unit)
+        self.assertIn("node24/bin/node", unit)
         self.assertNotIn("Environment=DC24H_STAGE4_STARTUP_ACK=", unit)
         self.assertNotIn("ExecStart=/usr/bin/sudo", unit)
+
+    def test_dedicated_bridge_keeps_hub_token_out_of_webadmin(self):
+        bridge = (ROOT / "scripts/stage4_webadmin_bridge.py").read_text(encoding="utf-8")
+        gateway = (ROOT / "webadmin/server/public-main.ts").read_text(encoding="utf-8")
+        adapter = (ROOT / "webadmin/server/public-bridge-credentials.ts").read_text(encoding="utf-8")
+        unit = (ROOT / "config/dc24h-twilight-stage4-bridge.service.example").read_text(encoding="utf-8")
+        self.assertIn("socket.SO_PEERCRED", bridge)
+        self.assertIn("ROUTES =", bridge)
+        self.assertIn("User=dc24h-stage3", unit)
+        self.assertIn("Group=dc24h-webadmin", unit)
+        self.assertIn('publicBridgeCredentials(process.env)', gateway)
+        self.assertIn('env.DC24H_API_TOKEN_FILE', adapter)
+        self.assertNotIn('credentials(process.env)', gateway)
+
+    def test_stage_iv_ci_does_not_weaken_production_apparmor_reload(self):
+        installer = (ROOT / "scripts/stage4_install.sh").read_text(encoding="utf-8")
+        workflow = (ROOT / ".github/workflows/public-stage4-design.yml").read_text(
+            encoding="utf-8"
+        )
+        # sudo drops the runner identity unless the disposable CI job passes
+        # both variables. Never grant this exception on the production VPS.
+        self.assertIn('"${GITHUB_ACTIONS:-}" = "true"', installer)
+        self.assertIn('"${RUNNER_ENVIRONMENT:-}" = "github-hosted"', installer)
+        self.assertIn('if ! apparmor_parser -r "$profile"; then', installer)
+        self.assertIn('exit 1', installer.split('if ! apparmor_parser -r "$profile"; then')[1])
+        # The CI exception must short-circuit BEFORE the production host
+        # profile directory or rule can be modified.
+        self.assertLess(
+            installer.index('"${RUNNER_ENVIRONMENT:-}" = "github-hosted"'),
+            installer.index('install -d -m 0755 /etc/apparmor.d/local')
+        )
+        self.assertIn('elif [ -f "$profile" ]', installer)
+        self.assertIn('"GITHUB_ACTIONS=$GITHUB_ACTIONS"', workflow)
+        self.assertIn('"RUNNER_ENVIRONMENT=$RUNNER_ENVIRONMENT"', workflow)
+
+    def test_ubuntu_2604_disposable_mariadb_respects_apparmor_confinement(self):
+        script = (ROOT / "scripts/stage4_test_database.sh").read_text(encoding="utf-8")
+        workflow = (ROOT / ".github/workflows/public-stage4-design.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('"${GITHUB_ACTIONS:-}" = "true"', script)
+        self.assertIn('"${RUNNER_ENVIRONMENT:-}" = "github-hosted"', script)
+        self.assertIn('[ "$ID" = ubuntu ] && [ "$VERSION_ID" = 26.04 ]', script)
+        self.assertIn('scratch=/var/lib/mariadb/stage4-fixture-$fixture_nonce', script)
+        self.assertIn('mysql_exec=(setpriv --reuid=mysql --regid=mysql --init-groups)', script)
+        self.assertIn('mysql_user_arg=()', script)
+        self.assertIn('socket=/run/mysqld/stage4-fixture-$fixture_nonce.sock', script)
+        self.assertIn('install -d -m 0755 -o mysql -g mysql /run/mysqld', script)
+        self.assertIn('"${mysql_exec[@]}" mariadbd', script)
+        self.assertIn('mariadb-install-db --no-defaults', script)
+        self.assertIn("sed -n '1,20p' \"$scratch/db-bootstrap.log\"", script)
+        self.assertIn('tail -n 25 "$scratch/db-bootstrap.log"', script)
+        self.assertNotIn('apparmor_parser', script)
+        self.assertNotIn('aa-disable', script)
+        self.assertNotIn('aa-complain', script)
+        self.assertIn('"GITHUB_ACTIONS=$GITHUB_ACTIONS" "RUNNER_ENVIRONMENT=$RUNNER_ENVIRONMENT"', workflow)
+        validator = (ROOT / "webadmin/server/stage4-bootstrap-config.ts").read_text(encoding="utf-8")
+        self.assertIn('requireField("MARIADB_SOCKET", /^\\/run\\/', validator)
+
+    def test_hosted_browser_install_skips_unscoped_apt_sources(self):
+        for name in ("build.yml", "stage4-ubuntu-vm-validation.yml",
+                     "public-stage4-design.yml"):
+            workflow = (ROOT / ".github/workflows" / name).read_text(encoding="utf-8")
+            with self.subTest(workflow=name):
+                self.assertIn("npx playwright install chromium", workflow)
+                self.assertNotIn("playwright install --with-deps", workflow)
+
+    def test_stage_iii_apt_uses_only_signed_ubuntu_feed(self):
+        workflow = (ROOT / ".github/workflows/public-stage3-qualification.yml").read_text(encoding="utf-8")
+        installer = (ROOT / ".github/scripts/install-ci-deps.sh").read_text(encoding="utf-8")
+        # All Stage III package installs share one signed Ubuntu-only helper,
+        # excluding unrelated third-party feeds on the hosted image.
+        self.assertGreaterEqual(workflow.count('bash .github/scripts/install-ci-deps.sh'), 3)
+        self.assertIn('Dir::Etc::sourcelist=${ubuntu_apt_source}', installer)
+        self.assertIn('Dir::Etc::sourceparts=-', installer)
+        self.assertIn('apt-get "${apt_network_options[@]}" update', installer)
+        self.assertNotIn("--allow-unauthenticated", workflow)
+        self.assertNotIn("--allow-unauthenticated", installer)
 
 
 if __name__ == "__main__":

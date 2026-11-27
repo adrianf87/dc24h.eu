@@ -1,16 +1,14 @@
-# Stage IV PROPOSED PUBLIC APACHE VHOST. NOT DEPLOYED, NOT ENABLED.
-# Requires a separate OWNER WEBADMIN PUBLIC ACTIVATION GO after acceptance.
+# Stage IV Apache vhost. Enable after protected bootstrap and SMTP checks.
 # The ADCS hub on TCP 1512 and local-only remote pilot stay unchanged.
 # Modules: ssl, headers, rewrite, proxy, proxy_http, authz_core, dir.
 # Preflight: verify port ownership, DNS/SAN/chain, all HTTPS same-host cookies,
 # Apache ingress, backend authorization and an independent rollback path.
 Listen 7278
-ProxyRequests Off
-ProxyPreserveHost Off
-ProxyAddHeaders Off
-TraceEnable Off
-
 <VirtualHost *:7278>
+    ProxyRequests Off
+    ProxyPreserveHost Off
+    ProxyAddHeaders Off
+    TraceEnable Off
     ServerName server-747585786.dc24h.eu
     ServerSignature Off
     MergeSlashes Off
@@ -50,7 +48,7 @@ TraceEnable Off
     # remote.html, /admin-api or the private development build.
     RewriteCond %{REQUEST_URI} !^/$
     RewriteCond %{REQUEST_URI} !^/(?:index\.html|panel\.(?:js|css))$
-    RewriteCond %{REQUEST_URI} !^/stage4/v1/(?:challenge|login/(?:send|verify)|session|summary|logout|sessions/revoke)$
+    RewriteCond %{REQUEST_URI} !^/stage4/v1/(?:challenge|(?:login|register)/(?:send|verify)|password/change|session|summary|logout|sessions/revoke)$
     RewriteRule ^ - [F,END]
     RewriteCond %{REQUEST_URI} ^/(?:index\.html|panel\.(?:js|css)|)$
     RewriteCond %{REQUEST_METHOD} !^GET$
@@ -58,7 +56,7 @@ TraceEnable Off
     RewriteCond %{REQUEST_URI} ^/stage4/v1/(?:challenge|session|summary)$
     RewriteCond %{REQUEST_METHOD} !^GET$
     RewriteRule ^ - [F,END]
-    RewriteCond %{REQUEST_URI} ^/stage4/v1/(?:login/(?:send|verify)|logout|sessions/revoke)$
+    RewriteCond %{REQUEST_URI} ^/stage4/v1/(?:(?:login|register)/(?:send|verify)|password/change|logout|sessions/revoke)$
     RewriteCond %{REQUEST_METHOD} !^POST$
     RewriteRule ^ - [F,END]
     RewriteCond %{HTTP:Origin} !^$
@@ -98,6 +96,7 @@ TraceEnable Off
     RequestHeader unset X-DC24H-Csrf
     RequestHeader unset Forwarded
     RequestHeader unset X-Real-IP
+    RequestHeader set X-DC24H-Stage4-IP "expr=%{REMOTE_ADDR}"
     RequestHeader unset X-Original-URL
     RequestHeader unset X-Rewrite-URL
     RequestHeader unset X-Forwarded-For
@@ -106,7 +105,7 @@ TraceEnable Off
     RequestHeader unset X-Forwarded-Port
     RequestHeader unset X-Forwarded-Prefix
     RequestHeader unset X-Forwarded-User
-    ProxyPassMatch "^(/stage4/v1/(?:challenge|login/(?:send|verify)|session|summary|logout|sessions/revoke))$" "http://127.0.0.1:4278$1"
+    ProxyPassMatch "^(/stage4/v1/(?:challenge|(?:login|register)/(?:send|verify)|password/change|session|summary|logout|sessions/revoke))$" "http://127.0.0.1:4278$1"
 
     Header always set Cache-Control "no-store"
     Header always set X-Content-Type-Options "nosniff"

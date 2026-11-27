@@ -4,6 +4,7 @@
 #include "dc24h/admin/core.hpp"
 #include "dc24h/accounts/password_security.hpp"
 #include "dc24h/accounts/registration.hpp"
+#include "../accounts/registration_internal.hpp"
 #include "dc24h/configuration/configuration.hpp"
 #include <openssl/crypto.h>
 #include <charconv>
@@ -516,6 +517,70 @@ AccountHandler public_account_access_handler(database::Options options) {
             return private_auth(request);
         }
         return response(404, "{\"error\":\"not_found\"}");
+    };
+}
+
+AccountHandler stage4_account_handler(database::Options options) {
+    // Equalize the expensive branch for unknown and ineligible identities.
+    auto dummy = std::make_shared<accounts::detail::EncodedPassword>();
+    accounts::detail::hash_password("stage4 dummy password proof", *dummy);
+    return [options=std::move(options),dummy=std::move(dummy)](const Request& request) {
+        if (request.method != "POST" || request.target != "/api/v1/admin/access") {
+            return response(404, "{\"error\":\"not_found\"}");
+        }
+        try {
+            using namespace accounts;
+            Fields fields;
+            form(request.body, fields);
+            const auto action = fields.get("action");
+            const auto proof = fields.get("proof");
+            if (action == "prepare") {
+                fields.exact({"action","account_name","proof"});
+                if (!AccountName::create(fields.get("account_name"))) { bad(); }
+                accounts::detail::EncodedPassword verifier;
+                accounts::detail::hash_password(proof, verifier);
+                auto encoded = std::string(reinterpret_cast<const char*>(verifier.bytes.data()), verifier.bytes.size());
+                return response(200, "{\"verifier\":" + json_string(encoded) + "}");
+            }
+            database::Connection connection(options);
+            AccountRepository repository(connection);
+            if (action == "change") {
+                fields.exact({"action","actor_id","revision","proof","password"});
+                const auto id = AccountId::from_value(number(fields.get("actor_id")));
+                if (!id) { bad(); }
+                const auto account = repository.find_by_id(*id);
+                if (!account || account->revision != number(fields.get("revision"))) {
+                    return response(403, "{\"error\":\"proof_refused\"}");
+                }
+                const auto now = std::chrono::duration_cast<std::chrono::seconds>(
+                    std::chrono::system_clock::now().time_since_epoch()).count();
+                (void)AccountManagementService(connection).change_password(*account, proof, fields.get("password"), now);
+                return response(200, "{\"changed\":true}");
+            }
+            if (action != "prove") { bad(); }
+            fields.exact({"action","account_name","proof"});
+            const auto name = AccountName::create(fields.get("account_name"));
+            if (!name) { bad(); }
+            const auto account = repository.find_by_name(*name);
+            const bool pending_owner = account && account->account.role() == Role::owner &&
+                connection.scalar("SELECT COUNT(*) FROM stage4_emails WHERE account_id=? "
+                    "AND initial_owner=1 AND verified_at IS NULL AND email='admin@dc24h.eu'",
+                    {std::to_string(account->account.id().value())}) == "1";
+            if (!account || (account->account.status() != Status::active && !pending_owner)) {
+                const auto bytes = std::string_view(reinterpret_cast<const char*>(dummy->bytes.data()), dummy->bytes.size());
+                (void)accounts::detail::verify_password(proof, bytes);
+                return response(403, "{\"error\":\"proof_refused\"}");
+            }
+            if (PasswordSecurityService(connection).verify(account->account.id(), proof) != PasswordVerification::matched ||
+                repository.find_by_id(account->account.id()) != account) {
+                return response(403, "{\"error\":\"proof_refused\"}");
+            }
+            return response(200, "{\"account\":" + json(*account) + "}");
+        } catch (const HttpError&) { return response(400, "{\"error\":\"invalid_input\"}"); }
+        catch (const RegistrationError&) { return response(403, "{\"error\":\"proof_refused\"}"); }
+        catch (const PasswordSecurityError&) { return response(403, "{\"error\":\"proof_refused\"}"); }
+        catch (const ManagementError&) { return response(403, "{\"error\":\"proof_refused\"}"); }
+        catch (...) { return response(503, "{\"error\":\"unavailable\"}"); }
     };
 }
 }

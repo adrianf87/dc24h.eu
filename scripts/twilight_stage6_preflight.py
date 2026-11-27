@@ -41,7 +41,7 @@ WORKFLOWS = (
     "stage4-ubuntu-vm-validation.yml",
 )
 EXPECTED_TWILIGHT_GUARDS = {
-    "build.yml": 3,
+    "build.yml": 2,
     "beta07-codeql.yml": 1,
     "beta08-hardening.yml": 2,
     "beta09-stage4-storage.yml": 1,

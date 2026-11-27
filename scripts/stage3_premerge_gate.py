@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Fail-closed OWNER branch/main GitHub Ubuntu external-only qualification.
+"""Fail-closed OWNER branch/main hosted Ubuntu 22.04 external-route qualification.
 
-This script is intentionally safe on a GitHub-hosted runner. It neither
+This script is intentionally safe on a GitHub-hosted Ubuntu 22.04 runner. It neither
 connects to a host nor invokes sudo, systemd, certbot or any local secrets.
 """
 
@@ -10,7 +10,7 @@ import re
 
 
 REPOSITORY = "adrianf87/dc24h.eu-twilight"
-CONFIRMATION = "RUN_STAGE3_UBUNTU_EXTERNAL_ONLY"
+CONFIRMATION = "RUN_STAGE3_UBUNTU2204_EXTERNAL_ONLY"
 PHASES = frozenset({"none", "before", "after"})
 
 
@@ -29,7 +29,7 @@ def guard(env):
         re.fullmatch(r"[0-9a-f]{40}", sha) is not None,
         sha == env.get("GITHUB_SHA"),
     )):
-        raise RuntimeError("Stage III external Ubuntu OWNER/ref/SHA/runner guard failed")
+        raise RuntimeError("Stage III external Ubuntu 22.04 OWNER/ref/SHA/runner guard failed")
     return phase
 
 

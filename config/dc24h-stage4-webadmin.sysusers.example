@@ -1,0 +1,2 @@
+# Example ONLY; not installed by build or CI. Hub remains dc24h-stage3.
+u dc24h-webadmin - "Stage IV public WebAdmin" /var/lib/dc24h-stage4 /usr/sbin/nologin

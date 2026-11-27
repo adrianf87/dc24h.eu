@@ -1,86 +1,81 @@
-# Etap IV — weryfikacja e-mail Administratora i odbiór publicznego WebAdmin
+# Etap IV — weryfikacja adresu e-mail i rejestracja kont
 
-**Kod przygotowywany do PR. Nie uruchomiono panelu ani nie wysłano prawdziwego e-maila.**
-OWNER wskazał `admin@dc24h.eu` jako adres konta **Administrator**. Samo
-wskazanie nie oznacza jeszcze zweryfikowania skrzynki.
+**Stan na 27 listopada 2026: IMPLEMENTACJA GOTOWA / OWNER ZGŁOSIŁ UDANE LOGOWANIE / ODBIÓR KOŃCOWY OTWARTY.**
 
-## Wymagane warunki
+Według [Issue #10](https://github.com/adrianf87/dc24h.eu-twilight/issues/10)
+OWNER pomyślnie zalogował się na publiczny WebAdmin
+`https://server-747585786.dc24h.eu:7278` jako `Administrator` hasłem
+i ośmiocyfrowym kodem doręczonym na `admin@dc24h.eu`.
+Potwierdził także dashboard, stan usługi kont i zmianę hasła.
+To dowód operatora, **nie** niezależna kwalifikacja bezpieczeństwa,
+akceptacja `OWNER STAGE IV ACCEPTANCE` ani zgoda na scalenie.
+Implementacja pozostaje w [Draft PR #27](https://github.com/adrianf87/dc24h.eu-twilight/pull/27).
 
-1. Wskazać dokładną nazwę konta C++ `Administrator`. Nowy mechanizm sam
-   sprawdza nazwę z hasłem w prywatnym API C++ i ustala jego **numeryczny ID**.
-   Nie trzeba podawać ID w czacie ani zgadywać go z nicku/pola `EM` w ADC.
-   Konto musi być aktywne i mieć rolę administratora lub OWNER.
-2. Prawdziwy odbiorca musi odebrać wiadomość na `admin@dc24h.eu` i przepisać
-   kod podczas wykonywania narzędzia w konsoli usługodawcy. Narzędzie sprawdza
-   hasło konta C++, rolę, kod 8-cyfrowy, termin 5 minut i rolę ponownie.
-3. Dopiero po poprawnym teście zostaje utworzony prywatny plik 0600
-   `verified-emails.json`. Narzędzie nie nadpisuje istniejących powiązań,
-   nie tworzy kont C++, nie nadaje uprawnień i nie otwiera portów.
-4. `msmtp` musi działać dla **użytkownika usługi**, nie tylko root. Serwer
-   SMTP musi używać uwierzytelnienia i poprawnego TLS. Hasła pozostają poza
-   repozytorium, logami i CI; konfiguracja `/root/.msmtprc` nie jest
-   automatycznie dostępna dla nieuprzywilejowanego systemd.
-5. Logowanie przez C++ w działającym hubie jest **domyślnie wyłączone**.
-   Wymaga osobnej zgody OWNER, zmiennej
-   `DC24H_STAGE4_PRIVATE_AUTH_ACK=OWNER_WEBADMIN_PUBLIC_ACTIVATION_GO`
-   i kontrolowanego restartu huba. Do czasu odbioru nie dodawać tej zmiennej.
+## Aktualny model kont i kodów
 
-## Przygotowanie i uruchomienie narzędzia
+- Chroniony `dc24h-stage4-init` czyta plik
+  `/etc/dc24h/stage4-webadmin-bootstrap.env` należący do root (0600),
+  przygotowuje konto `Administrator`, natywny weryfikator hasła C++
+  oraz tabele Stage IV MariaDB. Produkcyjna i testowa baza są odrębne.
+- Pierwsze logowanie Administratora wymaga hasła i kodu na jego skonfigurowany
+  adres e-mail; poprawny kod weryfikuje skrzynkę i aktywuje konto.
+  Każde następne logowanie wymaga ponownego podania hasła i nowego kodu.
+- Publiczne **Załóż konto** pozwala utworzyć tylko użytkownika `registered`:
+  użytkownik wprowadza nazwę, hasło i e-mail, potwierdza skrzynkę kodem,
+  a następnie loguje się osobno. Nie może sam nadać sobie praw admin/OWNER.
+- Formularz logowania **nie wybiera odbiorcy**. Zweryfikowany e-mail pochodzi
+  z prywatnego rekordu konta; pole `EM` publicznego profilu ADC nie stanowi
+  dowodu tożsamości. Uprawnienia, status i wersja poświadczeń są ponownie
+  sprawdzane w backendzie C++.
+- Kod ma osiem cyfr, nie jest przechowywany jawnie (HMAC), wygasa po pięciu
+  minutach, jest jednorazowy i dopuszcza maksymalnie pięć błędnych prób.
+  Odmowy, błędna dostawa, utrata roli, unieważnienie i wygaśnięcie sesji
+  muszą działać fail-closed. Samo hasło albo sam kod nie wystarczają.
+- Publiczne logowanie Stage IV **nie korzysta z passkey**. Zmiany e-mail,
+  odzyskiwanie kont oraz nadawanie ról uprzywilejowanych wymagają osobnej,
+  audytowanej procedury OWNER poza formularzem rejestracyjnym.
 
-Po przeprowadzeniu testów na izolowanej maszynie zbudować z dokładnego commita:
+## SMTP i podział usług
 
-Odczyt stanu VPS bez modyfikowania usług można wykonać przez własną konsolę
-VNC usługodawcy, po pobraniu i sprawdzeniu przetestowanego commita:
+- Apache udostępnia HTTPS na 7278; Node działa wyłącznie pod
+  `127.0.0.1:4278` jako `dc24h-webadmin` i łączy się z prywatnym C++
+  przez ograniczony Unix bridge z kontrolą UID. ADCS pozostaje na 1512.
+- Nadawcą jest `admin@dc24h.eu`, transport zapewnia `/usr/bin/msmtp`
+  z poprawnym TLS. Sekrety należą do konta usługi w prywatnym pliku
+  `/var/lib/dc24h-stage4/.msmtprc` (0600), nigdy w repo, logach lub CI.
+  OWNER potwierdził połączenie home.pl na porcie 465 z TLS implicit
+  (`tls_starttls off`); dla portu 587 typowo używa się STARTTLS.
+- Ciasteczka `Secure`, `HttpOnly`, `SameSite=Strict` nie są izolowane
+  numerem portu. Konieczny pozostaje niezależny test ich przekazywania
+  między usługami tego samego hosta, CSRF, nagłówków, sesji i tras.
 
-```sh
-python3 scripts/stage4_vps_preflight.py
-```
+## Obecna procedura i ograniczenia
 
-Raport JSON nie ujawnia haseł ani kluczy; pola `NOT_TESTED` nadal wymagają
-ręcznego potwierdzenia. Nie jest potrzebny self-hosted runner ani przekazanie
-mi hasła SSH.
+Do instalacji, inicjalizacji, diagnostyki, kopii i rollbacku stosuj
+[instrukcję wydzielonej usługi](STAGE_IV_DEDICATED_SERVICE.md).
+**Nie używaj starej procedury**
+`public-email-enroll-main.mjs --catalog verified-emails.json`:
+aktualny Stage IV przechowuje weryfikację konta w MariaDB, a pierwsze
+potwierdzenie Administratora następuje przez formularz WebAdmin.
 
-```sh
-cd webadmin
-npm ci --no-audit --no-fund
-npm run typecheck
-npm run build:public:ci
-npm run build:enrollment:ci
-```
+Przed kolejną zmianą VPS sprawdź SHA, zainstalowane pliki i oddzielną
+zgodę OWNER. Udane logowanie nie oznacza zgody na restart, firewall,
+migrację prywatnych danych, wydanie wersji ani scalenie PR.
 
-Następnie w konsoli dostawcy, przy zatrzymanym publicznym gateway, jako
-użytkownik usługi i z prywatnym dostępem do C++ API:
+## Nadal wymagane do odbioru
 
-```text
-DC24H_API_SOCKET=<PRYWATNE_GNIAZDO> \
-DC24H_API_TOKEN_FILE=<PRYWATNY_TOKEN_PLIK> \
-/usr/bin/node /opt/dc24h/webadmin/dist/public-email-enroll-main.mjs \
-  --account-name Administrator \
-  --email admin@dc24h.eu \
-  --catalog /var/lib/dc24h-stage4/verified-emails.json \
-  --owner-ack STAGE4_EMAIL_ENROLLMENT_GO
-```
+1. Niezależne zewnętrzne testy HTTPS/TLS/SAN/Host/Origin i odrzuceń
+   niedozwolonych metod, nagłówków i tras; brak publicznego dostępu
+   do MariaDB, wewnętrznego API, portu Node 4278 i panelu developerskiego.
+2. Testy negatywne kodów, ról, sesji, CSRF, limitów oraz cookies na
+   innych portach HTTPS tej samej domeny.
+3. Weryfikacja nowego użytkownika przez rzeczywistą skrzynkę, kontrola
+   cofnięcia dostępu, utraty poczty i odzyskania konta oraz audytu.
+4. Dowody bezpiecznego odtworzenia danych, procedury restartu i rollbacku
+   bez celowego restartowania działającego huba Stage III/VPS na potrzeby testu.
+5. Formalny zapis decyzji o publicznej aktywacji,
+   `OWNER STAGE IV ACCEPTANCE` i osobne `OWNER MERGE GO`.
 
-Hasło C++ i kod e-mail wpisuje się w konsoli bez wyświetlania. Po sukcesie
-narzędzie pokaże prawdziwy numeryczny ID konta. Błędny kod,
-brak dostawy, wygaszenie, cofnięta rola, niewłaściwe uprawnienia pliku lub
-istniejące przypisanie kończą operację odmową, bez utworzenia nowego wpisu.
-
-Zakładanie nowych kont administratorów odbywa się wyłącznie poprzez istniejące
-zaufane narzędzia C++ OWNER, a nie przez publiczny formularz rejestracyjny.
-Zmiana adresu i odzyskiwanie dostępu wymagają osobnej procedury offline,
-kopii zapasowej, kontroli tożsamości i unieważnienia sesji.
-
-## Co nadal jest do zrobienia?
-
-- Test faktycznego wysłania i odebrania wiadomości przez `msmtp` na Debianie 13.
-- Test prawdziwego konta Administrator i kompletnego backendu C++.
-- Kontrola Apache HTTPS `:7278`, portów i certyfikatu Let's Encrypt.
-- Testy dwóch usług, sesji, ról, restartu systemd, odzyskania i rollbacku.
-- Niezależna kontrola publicznego dostępu, bezpieczeństwa ciasteczek i zgoda
-  `OWNER WEBADMIN PUBLIC ACTIVATION GO` **po** zakończeniu kwalifikacji.
-
-Publiczny hub `adcs://server-747585786.dc24h.eu:1512` pozostaje bez zmian.
-Panel `https://server-747585786.dc24h.eu:7278` nadal jest wyłączony.
-
-Szczegółowy plan w [wersji EN-US](../us/STAGE_IV_EMAIL_ENROLLMENT.md).
+Ostatni zatwierdzony kod przechodził CI na GitHub-hosted Ubuntu
+22.04, 24.04 i 26.04. Zmiany dokumentacji tworzą nowszy SHA,
+dlatego wynik trzeba odnosić do konkretnego commita.

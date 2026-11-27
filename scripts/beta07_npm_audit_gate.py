@@ -13,7 +13,7 @@ import subprocess
 
 
 SHA = re.compile(r"[0-9a-f]{40}\Z")
-IMAGES = {"ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04"}
+IMAGES = {"debian-13"}
 LEVELS = ("info", "low", "moderate", "high", "critical")
 
 

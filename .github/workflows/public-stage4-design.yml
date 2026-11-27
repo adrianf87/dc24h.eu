@@ -1,6 +1,8 @@
-name: Stage IV public WebAdmin design boundary (Ubuntu only)
+name: Stage IV public WebAdmin design boundary (Ubuntu 22.04 24.04 26.04)
 
 on:
+  push:
+    branches: [feature/stage4-webadmin-dedicated-service]
   pull_request:
     branches: [main]
     paths:
@@ -17,19 +19,39 @@ on:
       - 'webadmin/server/public-msmtp.ts'
       - 'webadmin/server/public-verified-email.ts'
       - 'webadmin/server/public-backend.ts'
+      - 'webadmin/server/public-bridge-credentials.ts'
       - 'webadmin/server/public-gateway.ts'
       - 'webadmin/server/public-main.ts'
+      - 'webadmin/server/stage4-*.ts'
+      - 'webadmin/tests/stage4-mariadb.integration.ts'
+      - 'database/stage4/**'
+      - 'config/stage4-webadmin-bootstrap.env.example'
+      - 'config/dc24h-twilight-stage4-auth.service.example'
+      - 'scripts/dc24h-stage4-init'
+      - 'scripts/stage4_install.sh'
+      - 'scripts/stage4_test_database.sh'
+      - 'tests/stage4_msmtp_process.py'
+      - 'src/account_admin.cpp'
+      - 'src/owner_admin.cpp'
+      - 'src/accounts/management.cpp'
       - 'webadmin/server/public-private-init.ts'
       - 'webadmin/tests/public-email-code.test.ts'
       - 'webadmin/tests/public-email-enrollment.test.ts'
       - 'webadmin/tests/public-email-gateway.test.ts'
       - 'webadmin/tests/public-verified-email.test.ts'
       - 'webadmin/tests/public-backend.test.ts'
+      - 'webadmin/tests/public-dedicated-service.test.ts'
       - 'webadmin/tests/public-stage4.spec.ts'
       - 'webadmin/public-stage4/**'
       - 'config/dc24h-twilight-stage4-webadmin.service.example'
+      - 'config/dc24h-twilight-stage4-bridge.service.example'
+      - 'config/dc24h-stage4-webadmin.sysusers.example'
+      - 'scripts/stage4_webadmin_bridge.py'
+      - 'tests/stage4_webadmin_bridge_tests.py'
       - 'doc/us/STAGE_IV_EMAIL_ENROLLMENT.md'
       - 'doc/pl/STAGE_IV_EMAIL_ENROLLMENT.md'
+      - 'doc/us/STAGE_IV_DEDICATED_SERVICE.md'
+      - 'doc/pl/STAGE_IV_DEDICATED_SERVICE.md'
       - 'include/dc24h/api/accounts.hpp'
       - 'src/api/accounts.cpp'
       - 'src/main.cpp'
@@ -57,9 +79,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 5
     steps:
-      - name: Confirm disposable GitHub runner
+      - name: Verify GitHub-hosted Ubuntu image
+        shell: bash
+        env:
+          EXPECTED_IMAGE: ${{ matrix.os }}
         run: |
           test "$RUNNER_ENVIRONMENT" = 'github-hosted'
+          . /etc/os-release
+          test "$ID" = ubuntu && test "$VERSION_ID" = "${EXPECTED_IMAGE#ubuntu-}"
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
@@ -67,6 +94,7 @@ jobs:
         run: |
           python3 -m unittest discover -s tests -p 'public_stage4_boundary_tests.py' -v
           python3 -m unittest discover -s tests -p 'stage4_vps_preflight_tests.py' -v
+          python3 -m unittest discover -s tests -p 'stage4_webadmin_bridge_tests.py' -v
           python3 tests/project_checks.py
           python3 tests/project_language_policy_tests.py
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -78,19 +106,30 @@ jobs:
         working-directory: webadmin
         run: |
           npm ci --no-audit --no-fund
-          node --import tsx --test tests/public-email-code.test.ts tests/public-email-enrollment.test.ts tests/public-email-gateway.test.ts tests/public-verified-email.test.ts tests/public-backend.test.ts
+          node --import tsx --test tests/public-email-code.test.ts tests/public-email-enrollment.test.ts tests/public-email-gateway.test.ts tests/public-verified-email.test.ts tests/public-backend.test.ts tests/public-dedicated-service.test.ts
           node --check public-stage4/panel.js
           npm run build:public:ci
           npm run build:enrollment:ci
+          npm run build:stage4-init
           npm run typecheck
 
   playwright-shell:
-    name: Standalone Stage IV browser/CSRF flow (hosted Ubuntu 24.04)
-    runs-on: ubuntu-24.04
+    name: Standalone Stage IV browser/CSRF flow / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
     steps:
-      - name: Confirm disposable GitHub runner
-        run: test "$RUNNER_ENVIRONMENT" = 'github-hosted'
+      - name: Verify GitHub-hosted Ubuntu image
+        shell: bash
+        env:
+          EXPECTED_IMAGE: ${{ matrix.os }}
+        run: |
+          test "$RUNNER_ENVIRONMENT" = 'github-hosted'
+          . /etc/os-release
+          test "$ID" = ubuntu && test "$VERSION_ID" = "${EXPECTED_IMAGE#ubuntu-}"
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
@@ -103,7 +142,97 @@ jobs:
         working-directory: webadmin
         run: |
           npm ci --no-audit --no-fund
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
       - name: Run isolated public browser tests; never contact the VPS
         working-directory: webadmin
         run: npx playwright test tests/public-stage4.spec.ts
+
+  dedicated-systemd:
+    name: Isolated non-root Unix bridge / systemd sandbox / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
+    steps:
+      - name: Verify GitHub-hosted Ubuntu image
+        shell: bash
+        env:
+          EXPECTED_IMAGE: ${{ matrix.os }}
+        run: |
+          test "$RUNNER_ENVIRONMENT" = 'github-hosted'
+          . /etc/os-release
+          test "$ID" = ubuntu && test "$VERSION_ID" = "${EXPECTED_IMAGE#ubuntu-}"
+      - name: Confirm disposable GitHub Ubuntu runner and passwordless systemd
+        run: |
+          test "$RUNNER_ENVIRONMENT" = 'github-hosted'
+          test "$(id -u)" != '0'
+          test "$(sudo -n id -u)" = '0'
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Execute real AF_UNIX peer tests inside non-root systemd sandbox
+        run: |
+          # The repository test code executes as nobody, never as root.
+          # PrivateNetwork isolates this synthetic fixture from the VPS.
+          fixture=$(mktemp -d /var/tmp/dc24h-stage4-ci.XXXXXXXX)
+          trap 'rm -rf -- "$fixture"' EXIT
+          install -d -m 0755 "$fixture/scripts" "$fixture/tests"
+          install -m 0644 scripts/stage4_webadmin_bridge.py "$fixture/scripts/"
+          install -m 0644 tests/stage4_webadmin_bridge_tests.py "$fixture/tests/"
+          chmod 0755 "$fixture"
+          sudo -n -u nobody test -r "$fixture/tests/stage4_webadmin_bridge_tests.py"
+          sudo -n systemd-run --wait --pipe --collect \
+            --property=User=nobody --property=NoNewPrivileges=yes \
+            --property=PrivateNetwork=yes --property=ProtectSystem=strict \
+            --property=TemporaryFileSystem=/tmp:rw,mode=1777 \
+            --property="WorkingDirectory=$fixture" \
+            /usr/bin/python3 -B -m unittest discover -s tests -p 'stage4_webadmin_bridge_tests.py' -v
+
+  mariadb-qualification:
+    name: Disposable Stage IV MariaDB and C++ authentication / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - name: Verify GitHub-hosted Ubuntu image
+        shell: bash
+        env:
+          EXPECTED_IMAGE: ${{ matrix.os }}
+        run: |
+          test "$RUNNER_ENVIRONMENT" = 'github-hosted'
+          . /etc/os-release
+          test "$ID" = ubuntu && test "$VERSION_ID" = "${EXPECTED_IMAGE#ubuntu-}"
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Install Ubuntu build and database packages
+        run: |
+          bash .github/scripts/install-ci-deps.sh \
+            cmake g++ libssl-dev libgcrypt20-dev libutf8proc-dev libmariadb-dev mariadb-server apache2 msmtp
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: webadmin/package-lock.json
+      - name: Compile the native account executables
+        run: |
+          cmake -S . -B "$RUNNER_TEMP/stage4-build" -DCMAKE_BUILD_TYPE=Release
+          cmake --build "$RUNNER_TEMP/stage4-build" --parallel "$(nproc)" --target dc24h dc24h-owner dc24h-account-admin
+      - name: Validate packaged Stage IV service installation on disposable Ubuntu
+        run: |
+          node_dir=$(dirname "$(dirname "$(command -v node)")")
+          sudo -n env "PATH=$node_dir/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/bin" \
+            "GITHUB_ACTIONS=$GITHUB_ACTIONS" "RUNNER_ENVIRONMENT=$RUNNER_ENVIRONMENT" \
+            sh ./scripts/stage4_install.sh "$node_dir" "$RUNNER_TEMP/stage4-build"
+      - name: Exercise disposable MariaDB and account tests without replacing live WebAdmin
+        run: |
+          node_dir=$(dirname "$(dirname "$(command -v node)")")
+          sudo -n env "PATH=$node_dir/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/bin" \
+            "GITHUB_ACTIONS=$GITHUB_ACTIONS" "RUNNER_ENVIRONMENT=$RUNNER_ENVIRONMENT" \
+            ./scripts/stage4_test_database.sh
+          python3 tests/stage4_msmtp_process.py -v

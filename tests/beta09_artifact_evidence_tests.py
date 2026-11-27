@@ -106,7 +106,7 @@ class IndependentArtifactTests(unittest.TestCase):
     def test_twilight_stage_vi_preflight_artifact_cannot_claim_release_go(self):
         name = "twilight-stage6-preflight.json"
         self.assertIn(name, gate.COMMON)
-        report = stage6.evaluate(Path(__file__).resolve().parents[1], SHA, "ubuntu-24.04")
+        report = stage6.evaluate(Path(__file__).resolve().parents[1], SHA, "ubuntu-22.04")
         gate._report_semantics(name, report)
         for field, forged_value in (
                 ("status", "GO"), ("owner_release_acceptance_recorded", True),

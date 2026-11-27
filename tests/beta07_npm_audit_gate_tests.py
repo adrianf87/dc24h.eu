@@ -10,7 +10,7 @@ import beta07_npm_audit_gate as gate
 
 
 SHA = "a" * 40
-OS = "ubuntu-24.04"
+OS = "debian-13"
 
 
 def example():
@@ -38,7 +38,7 @@ class NpmAuditGateTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             gate.evaluate(base, SHA, "b" * 40, OS, 0)
         with self.assertRaises(ValueError):
-            gate.evaluate(base, SHA, SHA, "debian-13", 0)
+            gate.evaluate(base, SHA, SHA, "ubuntu-24.04", 0)
         with self.assertRaises(ValueError):
             gate.evaluate(base, SHA, SHA, OS, 1)
 

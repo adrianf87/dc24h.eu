@@ -12,4 +12,6 @@ namespace dc24h::api {
 // discovery. No account writes, management actions, role changes or public
 // network listeners. All other account routes are unconditionally denied.
 [[nodiscard]] AccountHandler public_account_access_handler(database::Options options);
+// Scoped password operations for the dedicated Stage IV process.
+[[nodiscard]] AccountHandler stage4_account_handler(database::Options options);
 }

@@ -55,6 +55,8 @@ test("genuine ES256 WebAuthn registration and assertion reject wrong Origin, cha
     const opts = await service.beginEnrollment("7");
     assert.equal(opts.rp.id, rpID);
     assert.equal(opts.authenticatorSelection?.userVerification, "required");
+    assert.deepEqual(opts.pubKeyCredParams.map(p => p.alg), [-7, -257],
+      "enrollment algorithms must fit the bounded private credential catalog");
     await assert.rejects(() => service.finishEnrollment("7", opts.challenge,
       device.registration(opts.challenge, "https://evil.example"), 1000));
     for (const [label, response] of [

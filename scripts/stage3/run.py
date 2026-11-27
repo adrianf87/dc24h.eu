@@ -101,7 +101,7 @@ def offline(suite, build, private, parallel, *, local=False):
 def sandbox(suite, sudo_result):
     with suite.case("ubuntu.sudo"):
         if sudo_result != "success":
-            raise Blocked("Fixed Ubuntu sudo/systemd fixture failed or was not run")
+            raise Blocked("Ubuntu sudo/systemd fixture failed or was not run")
     with suite.case("systemd.verify"):
         with tempfile.TemporaryDirectory(prefix="stage3-unit-") as work:
             unit = Path(work) / "dc24h-twilight.service"
@@ -112,7 +112,7 @@ def sandbox(suite, sudo_result):
             command = ["systemd-analyze", "--man=no", "--generators=no", "verify", str(unit)]
             if suite.image != "local":
                 if os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted":
-                    raise Blocked("System-mode unit inspection requires the disposable Ubuntu runner")
+                    raise Blocked("System-mode unit inspection requires GitHub-hosted Ubuntu")
                 # Older systemd needs access to the system unit load paths.
                 # Only the packaged, offline verifier is elevated. Treat the
                 # unit as input data and never load it into the system manager.
@@ -137,7 +137,7 @@ def public_guard(group):
     env = os.environ
     if not (env.get("GITHUB_ACTIONS") == "true" and env.get("RUNNER_ENVIRONMENT") == "github-hosted"
             and env.get("GITHUB_REPOSITORY") == REPOSITORY):
-        raise Blocked("Public qualification requires an independent GitHub-hosted runner")
+        raise Blocked("Public qualification requires GitHub-hosted Ubuntu 22.04")
     if env.get("GITHUB_EVENT_NAME") == "workflow_dispatch" and group != "extended":
         try:
             premerge.guard(env)
@@ -199,9 +199,9 @@ def report(args):
         raise ValueError("Report generator was checked out at the wrong source SHA")
     modes = [(group, image) for group in RUNNER_GROUPS for image in OS_MATRIX]
     if args.mode == "main":
-        modes.extend((group, "ubuntu-24.04") for group in PUBLIC_GROUPS)
+        modes.extend((group, "ubuntu-22.04") for group in PUBLIC_GROUPS)
     elif args.mode == "extended":
-        modes = [("extended", "ubuntu-24.04")]
+        modes = [("extended", "ubuntu-22.04")]
     rows = []
     issues = []
     binary_identity = {}

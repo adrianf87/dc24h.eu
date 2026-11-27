@@ -46,10 +46,11 @@ def mutate(root, name, old, new):
 
 class TwilightStageSixPreflightTests(unittest.TestCase):
     def test_exact_active_repository_structure_is_no_go_not_owner_approval(self):
-        report = stage6.evaluate(ROOT, SHA, "ubuntu-22.04")
-        self.assertEqual(report["status"], "NO-GO")
-        self.assertEqual(report["source_sha"], SHA)
-        self.assertEqual(report["active_display_files_checked"], len(stage6.ACTIVE_DISPLAY))
+        for image in ("ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04"):
+            report = stage6.evaluate(ROOT, SHA, image)
+            self.assertEqual(report["status"], "NO-GO")
+            self.assertEqual(report["source_sha"], SHA)
+            self.assertEqual(report["active_display_files_checked"], len(stage6.ACTIVE_DISPLAY))
         for name in ("complete_final_sha_github_ci_verified",
                      "artifact_zips_independently_hashed",
                      "stage_v_documentation_accepted",
@@ -60,7 +61,8 @@ class TwilightStageSixPreflightTests(unittest.TestCase):
 
     def test_wrong_sha_os_or_unsupported_identity_refused(self):
         for sha, image in (("bad", "ubuntu-22.04"), ("0" * 40, "ubuntu-22.04"),
-                           (SHA, "ubuntu-20.04"), (SHA, "debian-13")):
+                           (SHA, "ubuntu-20.04"), (SHA, "ubuntu-28.04"),
+                           (SHA, "debian-13")):
             with self.subTest(sha=sha, image=image), self.assertRaises(ValueError):
                 stage6.evaluate(ROOT, sha, image)
 
@@ -79,10 +81,10 @@ class TwilightStageSixPreflightTests(unittest.TestCase):
                 mutate(root, filename, marker, replacement)
                 if filename.endswith("App.tsx"):
                     with self.assertRaisesRegex(ValueError, "legacy user-facing"):
-                        stage6.evaluate(root, SHA, "ubuntu-24.04")
+                        stage6.evaluate(root, SHA, "ubuntu-22.04")
                 else:
                     with self.assertRaises(ValueError):
-                        stage6.evaluate(root, SHA, "ubuntu-24.04")
+                        stage6.evaluate(root, SHA, "ubuntu-22.04")
 
     def test_strict_status_api_and_passkey_origin_cannot_be_relaxed(self):
         for filename, old, replacement in (
@@ -98,7 +100,7 @@ class TwilightStageSixPreflightTests(unittest.TestCase):
                 root = fixture(Path(directory))
                 mutate(root, filename, old, replacement)
                 with self.assertRaises(ValueError):
-                    stage6.evaluate(root, SHA, "ubuntu-24.04")
+                    stage6.evaluate(root, SHA, "ubuntu-22.04")
 
     def test_operator_marker_service_user_and_repo_guard_cannot_be_removed(self):
         for filename, old, replacement in (
@@ -116,12 +118,12 @@ class TwilightStageSixPreflightTests(unittest.TestCase):
                 root = fixture(Path(directory))
                 mutate(root, filename, old, replacement)
                 with self.assertRaises(ValueError):
-                    stage6.evaluate(root, SHA, "ubuntu-24.04")
+                    stage6.evaluate(root, SHA, "ubuntu-22.04")
 
     def test_report_is_bounded_redacted_and_has_no_automatic_go(self):
         with tempfile.TemporaryDirectory() as directory:
             root = fixture(Path(directory))
-            report = stage6.evaluate(root, SHA, "ubuntu-26.04")
+            report = stage6.evaluate(root, SHA, "ubuntu-22.04")
             serialized = json.dumps(report)
             self.assertLess(len(serialized), 4096)
             self.assertNotIn("password", serialized.lower())

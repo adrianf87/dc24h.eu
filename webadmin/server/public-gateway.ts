@@ -1,6 +1,10 @@
 // Dedicated Stage IV password + verified-email-code gateway. Never mount the
 // legacy localhost remote gateway or expose the C++ management API here.
 import { randomBytes, timingSafeEqual } from "node:crypto";
+import { isIP } from "node:net";
+import { isSafeMailbox } from "./public-msmtp.ts";
+import { opaque, validToken } from "./stage4-store.ts";
+import type { Stage4Store } from "./stage4-store.ts";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { PublicBackend, PublicBackendGrant } from "./public-backend.ts";
 import { createPublicEmailCodeGate, PUBLIC_WEBADMIN_ORIGIN } from "./public-email-code.ts";
@@ -25,7 +29,7 @@ type Session = {
 type Pending = { csrf: string; issued: number; expires: number };
 type PublicRateLimiter = Pick<RemoteRateLimitStore, "healthy" | "hit">;
 export type PublicGatewayDependencies = {
-  backend: PublicBackend;
+  backend: Pick<PublicBackend, "verifyNamedPassword" | "verifyPassword" | "reauthorize" | "summary">;
   email: { healthy(): boolean; forActor(actor: string): string | null };
   sendCode(email: string, code: string): Promise<boolean>;
   limiter: PublicRateLimiter;
@@ -272,6 +276,179 @@ export function publicGateway(deps: PublicGatewayDependencies) {
     } catch {
       sessions.clear();
       reply(res, 503, { error: "unavailable" }, [clear(sessionCookie)]);
+    }
+  };
+}
+
+const registrationRoutes = new Map([...routes,
+  ["register/send", "POST"], ["register/verify", "POST"], ["password/change", "POST"]]);
+const usernameOK = (value: unknown): value is string =>
+  typeof value === "string" && /^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/.test(value);
+const passwordOK = (value: unknown): value is string =>
+  typeof value === "string" && [...value].length >= 15 && Buffer.byteLength(value) <= 1024 &&
+  !/[\u0000-\u001f\u007f\ud800-\udfff]/u.test(value);
+const strongPassword = (value: unknown): value is string =>
+  passwordOK(value) && new Set(value).size >= 8 &&
+  !/^(?:password|administrator|changeme|qwerty|1234)[0-9!@#$._-]*$/i.test(value);
+
+type DatabaseGateway = {
+  db: Stage4Store;
+  backend: Pick<PublicBackend, "prove" | "prepare" | "change" | "health">;
+  sendCode(email: string, code: string): Promise<boolean>;
+  now?: () => number;
+};
+
+export function databasePublicGateway({ db, backend, sendCode, now = Date.now }: DatabaseGateway) {
+  const initials = new Map<string, number>();
+  let registrationSends = 0;
+  const reply = (res: ServerResponse, status: number, data: object, cookies: string[] = []) => {
+    if (res.writableEnded || res.destroyed) return;
+    res.writeHead(status, {
+      "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY",
+      "Referrer-Policy": "no-referrer", "Cross-Origin-Resource-Policy": "same-origin",
+      "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+      ...(status === 429 ? { "Retry-After": "60" } : {}),
+      ...(cookies.length ? { "Set-Cookie": cookies } : {}),
+    });
+    res.end(JSON.stringify(data));
+  };
+  const client = (req: IncomingMessage, method: string) => {
+    if (req.socket.remoteAddress !== "127.0.0.1" || req.headers.host !== internalHost ||
+        (req.headers.origin !== undefined && req.headers.origin !== PUBLIC_WEBADMIN_ORIGIN) ||
+        (method === "POST" && req.headers.origin !== PUBLIC_WEBADMIN_ORIGIN) ||
+        (req.headers["sec-fetch-site"] !== undefined &&
+          !["same-origin", "none"].includes(String(req.headers["sec-fetch-site"]))) ||
+        Object.keys(req.headers).some(name => name.startsWith("x-forwarded-") ||
+          ["forwarded", "x-real-ip", "authorization", "x-dc24h-admin-grant",
+           "x-dc24h-session", "x-dc24h-csrf"].includes(name))) return null;
+    const ip = req.headers["x-dc24h-stage4-ip"];
+    return typeof ip === "string" && isIP(ip) ? ip : null;
+  };
+  const minutes = 60_000;
+  const limited = (endpoint: string, ip: string, global: number, perIp: number,
+    extra: [string, number, number][] = []) => db.allowed([
+      [endpoint + ":all", global, minutes], [endpoint + ":ip:" + ip, perIp, minutes], ...extra,
+    ]);
+  const outputSession = (session: { token: string; identity: { role: string } }) => ({
+    schema: 1, authenticated: true, role: session.identity.role, csrf: db.csrf("session", session.token),
+  });
+  const deliver = async (ticket: string, email: string, code: string) => {
+    const ok = await sendCode(email, code).catch(() => false);
+    return db.delivery(ticket, ok);
+  };
+
+  return async (req: IncomingMessage, res: ServerResponse) => {
+    const endpoint = req.url?.startsWith(prefix) ? req.url.slice(prefix.length) : "";
+    const method = registrationRoutes.get(endpoint);
+    if (!method || req.method !== method) return reply(res, 404, { error: "not_found" });
+    const ip = client(req, method);
+    if (!ip) return reply(res, 403, { error: "forbidden" });
+    if (method === "GET" && (req.headers["transfer-encoding"] ||
+        (req.headers["content-length"] && req.headers["content-length"] !== "0")))
+      return reply(res, 400, { error: "bad_request" });
+    const supplied = req.headers["x-dc24h-stage4-csrf"];
+    const rateLimited = () => reply(res, 429, { error: "rate_limited" });
+    try {
+      if (endpoint === "challenge") {
+        const t = now();
+        for (const [key, expiry] of initials) if (expiry <= t) initials.delete(key);
+        if (!await limited(endpoint, ip, 120, 20) || initials.size >= 128) return rateLimited();
+        const token = opaque();
+        initials.set(token, t + minutes);
+        return reply(res, 200, { schema: 1, csrf: db.csrf("init", token) }, [cookie(initialCookie, token, 60)]);
+      }
+      if (endpoint === "login/send" || endpoint === "register/send") {
+        const init = readCookie(req, initialCookie);
+        const expiry = initials.get(init) ?? 0;
+        if (expiry <= now() || !db.isCsrf("init", init, supplied))
+          return reply(res, 403, { error: "csrf_required" });
+        initials.delete(init);
+        const registration = endpoint === "register/send";
+        const data = await body(req).catch(() => null);
+        const fields = registration ? ["username", "password", "email"] : ["username", "password"];
+        if (!data || !exactFields(data, fields) || !usernameOK(data.username) ||
+            (registration ? !strongPassword(data.password) || !isSafeMailbox(data.email) : !passwordOK(data.password)))
+          return reply(res, 400, { error: "bad_request" });
+        const nameKey = data.username.toLowerCase();
+        const email = registration ? (data.email as string).toLowerCase() : "";
+        const extras: [string, number, number][] = [[endpoint + ":name:" + nameKey, 4, minutes]];
+        if (registration) extras.push([endpoint + ":email:" + email, 2, 5 * minutes]);
+        if (!await limited(endpoint, ip, 16, 6, extras)) return rateLimited();
+        if (registration) {
+          if (registrationSends >= 4) return rateLimited();
+          const verifier = await backend.prepare(data.username, data.password as string);
+          const attempt = verifier && email !== "admin@dc24h.eu" && nameKey !== "administrator" ?
+            await db.beginRegistration(data.username, email, verifier) : null;
+          const token = attempt?.ticket ?? opaque();
+          // The HTTP result is identical for duplicate names and email addresses.
+          // A challenge cannot verify until msmtp has accepted the message.
+          if (attempt) {
+            registrationSends++;
+            void deliver(attempt.ticket, email, attempt.code).catch(() => {}).finally(() => registrationSends--);
+          }
+          return reply(res, 200, { schema: 1, csrf: db.csrf("register", token), expires_in: 300 },
+            [clear(initialCookie), cookie(pendingCookie, token, 300)]);
+        }
+        const identity = await backend.prove(data.username, data.password as string);
+        const attempt = identity && await db.beginLogin(identity);
+        if (!attempt || !await deliver(attempt.ticket, attempt.email, attempt.code))
+          return reply(res, 403, { error: "login_refused" }, [clear(initialCookie), clear(pendingCookie)]);
+        return reply(res, 200, { schema: 1, sent: true, csrf: db.csrf("login", attempt.ticket),
+          expires_in: Math.ceil((attempt.expires - now()) / 1000) },
+          [clear(initialCookie), cookie(pendingCookie, attempt.ticket, 300)]);
+      }
+      if (endpoint === "login/verify" || endpoint === "register/verify") {
+        const registration = endpoint === "register/verify";
+        const ticket = readCookie(req, pendingCookie);
+        if (!validToken(ticket) || !db.isCsrf(registration ? "register" : "login", ticket, supplied))
+          return reply(res, 403, { error: "csrf_required" });
+        const data = await body(req).catch(() => null);
+        if (!data || !exactFields(data, ["code"]) || typeof data.code !== "string" || !/^\d{8}$/.test(data.code))
+          return reply(res, 400, { error: "bad_request" });
+        if (!await limited(endpoint, ip, 120, 25)) return rateLimited();
+        const approved = await db.verify(ticket, data.code, registration);
+        if (!approved) return reply(res, 403, { error: "code_refused" });
+        if ("registered" in approved)
+          return reply(res, 200, { schema: 1, registered: true }, [clear(pendingCookie)]);
+        return reply(res, 200, outputSession(approved), [clear(pendingCookie), cookie(sessionCookie, approved.token, 600)]);
+      }
+
+      const token = readCookie(req, sessionCookie);
+      const active = validToken(token) && await db.session(token);
+      if (!active) return reply(res, 401, { error: "unauthorized" }, [clear(sessionCookie)]);
+      if (method === "POST" && !db.isCsrf("session", token, supplied))
+        return reply(res, 403, { error: "csrf_required" });
+      if (endpoint === "summary") {
+        if (!["owner", "administrator"].includes(active.identity.role))
+          return reply(res, 403, { error: "forbidden" });
+        const available = await backend.health();
+        if (!await db.session(token)) return reply(res, 401, { error: "unauthorized" }, [clear(sessionCookie)]);
+        await db.touch(token);
+        return reply(res, 200, { schema: 1, summary: { account_service: available ? "available" : "unavailable" } });
+      }
+      if (endpoint === "session") {
+        await db.touch(token);
+        return reply(res, 200, outputSession(active));
+      }
+      const data = await body(req).catch(() => null);
+      if (endpoint === "password/change") {
+        if (!data || !exactFields(data, ["current", "password"]) || !passwordOK(data.current) ||
+            !strongPassword(data.password)) return reply(res, 400, { error: "bad_request" });
+        if (!await limited(endpoint, ip, 8, 4, [["change:account:" + active.identity.id, 3, minutes]]))
+          return rateLimited();
+        if (!await db.session(token) || !await backend.change(active.identity, data.current, data.password))
+          return reply(res, 403, { error: "password_refused" });
+        await db.revoke(token, active.identity.id, "password_change");
+      } else {
+        if (!data || !exactFields(data, [])) return reply(res, 400, { error: "bad_request" });
+        if (endpoint === "sessions/revoke" && now() - active.issued >= minutes)
+          return reply(res, 403, { error: "fresh_login_required" });
+        await db.revoke(token, active.identity.id, endpoint === "logout" ? "logout" : "revoke_sessions");
+      }
+      return reply(res, 200, { schema: 1, authenticated: false }, [clear(sessionCookie), clear(pendingCookie)]);
+    } catch {
+      return reply(res, 503, { error: "unavailable" });
     }
   };
 }

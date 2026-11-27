@@ -1,8 +1,8 @@
-name: Stage IV isolated Ubuntu VM validation
+name: Stage IV Ubuntu 22.04 24.04 26.04 isolated qualification
 
 on:
   push:
-    branches: [main, test/stage4-ubuntu-vm-validation, beta-0.9.x-stage-full-fix-pass]
+    branches: [main, feature/stage4-webadmin-dedicated-service]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -10,264 +10,67 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: stage4-ubuntu-vm-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
-
 jobs:
-  ubuntu-operational:
-    name: Stage IV VM - ${{ matrix.os }}
+  stage4-ubuntu:
+    name: Stage IV isolated tests / ${{ matrix.os }}
     if: github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 90
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
-    env:
-      CI: 'true'
-      CXX: g++
-      DC24H_REQUIRE_SYSTEMD_HOST: '1'
-      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-
-      - name: Install isolated C++ and service-test dependencies
+      - name: Verify hosted Ubuntu image
+        env:
+          EXPECTED_IMAGE: ${{ matrix.os }}
+        run: |
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          . /etc/os-release
+          test "$ID" = ubuntu && test "$VERSION_ID" = "${EXPECTED_IMAGE#ubuntu-}"
+      - name: Run Stage IV Python boundary tests
+        run: |
+          python3 -m unittest discover -s tests -p 'public_stage4_boundary_tests.py' -v
+          python3 -m unittest discover -s tests -p 'stage4_webadmin_bridge_tests.py' -v
+          python3 -m unittest discover -s tests -p 'stage4_vps_preflight_tests.py' -v
+          python3 tests/project_checks.py
+      - name: Compile isolated Stage IV hub on Ubuntu
         run: |
           bash .github/scripts/install-ci-deps.sh \
-            build-essential cmake python3 libutf8proc-dev libgcrypt20-dev \
-            libssl-dev libmariadb-dev openssl ncdc mariadb-server apache2
-
-      - name: Configure C++20 and require the integration fixtures
-        run: cmake -S . -B build/Stage4VM -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DDC24H_REQUIRE_INTEGRATION_TESTS=ON
-
-      - name: Compile server and integration tests
-        run: cmake --build build/Stage4VM --parallel "$(nproc)"
-
-      - name: Checkout immutable beta-0.5.16 historical baseline
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+            build-essential cmake libssl-dev libgcrypt20-dev libutf8proc-dev libmariadb-dev
+          cmake -S . -B build/Stage4VM -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+          cmake --build build/Stage4VM --target dc24h --parallel 4
+      - name: Exercise bounded ADC/ADCS loopback and endurance
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          DC24H_VM_REPORT_DIR: ${{ runner.temp }}/stage4-ubuntu-evidence
+        run: |
+          mkdir -p "$DC24H_VM_REPORT_DIR"
+          python3 tests/stage4_ubuntu_vm_probe_tests.py build/Stage4VM/dc24h-twilight
+      - name: Upload sanitized Ubuntu loopback reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          ref: 5cd7b571fd974cbb7d59d8e4478185ff819e248a
-          path: beta05-reference
-          persist-credentials: false
-
-      - name: Compile actual previous-version server and maintenance authority separately
-        run: |
-          cmake -S beta05-reference -B build/Beta05 -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
-          cmake --build build/Beta05 --target dc24h dc24h-account-admin --parallel 2
-
-      - name: Exercise disposable MariaDB, private HTTPS, API and ADC/ADCS
-        run: |
-          mkdir -p vm-evidence
-          DC24H_VM_REPORT_DIR="$PWD/vm-evidence" ctest \
-            --test-dir build/Stage4VM \
-            --output-on-failure \
-            --output-junit "$RUNNER_TEMP/ctest-vm.xml" \
-            --parallel 2 \
-            -R '^(database\.(process|resilience\.process|migrations\.process)|apache2\.(https|https\.proxy|remote\.gateway)|api\.(unit|process)|adcs\.tls_security\.process|beta\.04\.stage4\.(perf\.command|recovery|release|vm\.probe)|beta\.05\.stage1\.(perf\.gate|recovery\.pair|matched\.recovery)|beta\.05\.stage4\.(endurance\.gate|rollback)|systemd\.sandbox|ci\.timing\.summary|remote\.(gateway\.config|pilot\.preflight))$'
-
-      - name: Record exact checked-out head and pinned action/npm inventory
-        run: |
-          python3 scripts/beta07_supply_chain.py \
-            --root "$GITHUB_WORKSPACE" --sha "$SOURCE_SHA" \
-            --os-image "${{ matrix.os }}" \
-            --output "$PWD/vm-evidence/beta07-supply-chain.json"
-
-      - name: Inject bounded ADC/ADCS slow peers, TLS cutover, restarts and recovery faults
-        run: |
-          ctest --test-dir build/Stage4VM --output-on-failure \
-            --output-junit "$RUNNER_TEMP/ctest-beta06-chaos.xml" --parallel 2 \
-            -R '^(transfers\.protocol\.process|adc\.login\.process|adc\.close\.process|adcs\.tls_security\.process|beta\.04\.stage4\.recovery|systemd\.sandbox)$'
-          python3 -m unittest discover -s tests -p 'beta06_integrated_chaos_gate_tests.py'
-
-      - name: Qualify exact-head bounded fault and drain durations without raw logs
-        run: |
-          python3 -m unittest discover -s tests -p beta07_bounded_fault_gate_tests.py
-          python3 scripts/beta07_bounded_fault_gate.py \
-            --junit "$RUNNER_TEMP/ctest-beta06-chaos.xml" \
-            --sha "$SOURCE_SHA" --os-image "${{ matrix.os }}" \
-            --output "$PWD/vm-evidence/beta07-bounded-faults.json"
-
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+          name: stage4-${{ matrix.os }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/stage4-ubuntu-evidence/
+          if-no-files-found: warn
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: '22'
+          node-version: '24'
           cache: npm
           cache-dependency-path: webadmin/package-lock.json
-
-      - name: Install WebAdmin dependencies using the lockfile
-        working-directory: webadmin
-        run: npm ci
-
-      - name: Check React/TypeScript/Vite build
-        working-directory: webadmin
-        run: npm run build
-
-      - name: Rehearse compiled local-only Node gateway with runtime dependencies only
-        run: |
-          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
-          npm --prefix webadmin run build:remote:ci
-          node --check webadmin/dist/remote-main.mjs
-          task_runtime_dir=$(mktemp -d "$RUNNER_TEMP/beta08-runtime-XXXXXXXX")
-          trap 'rm -rf -- "$task_runtime_dir"' EXIT
-          mkdir -p "$task_runtime_dir/dist"
-          cp webadmin/package.json webadmin/package-lock.json "$task_runtime_dir/"
-          cp webadmin/dist/remote-main.mjs "$task_runtime_dir/dist/"
-          (cd "$task_runtime_dir" && npm ci --omit=dev --no-audit --no-fund)
-          node webadmin/tests/beta08-runtime-only-gateway.mjs "$task_runtime_dir/dist/remote-main.mjs"
-          DC24H_VM_REPORT_DIR="$PWD/vm-evidence" DC24H_OS_IMAGE="${{ matrix.os }}" \
-            node webadmin/tests/beta08-runtime-only-gateway.mjs "$task_runtime_dir/dist/remote-main.mjs" --systemd
-
-      - name: Install Chromium and Playwright system dependencies
-        working-directory: webadmin
-        run: npx playwright install --with-deps chromium
-
-      - name: Browser end-to-end security regressions
-        working-directory: webadmin
-        run: npm run test:e2e -- --workers=2 --fully-parallel --reporter=junit
-        env:
-          PLAYWRIGHT_JUNIT_OUTPUT_FILE: ${{ runner.temp }}/playwright-junit.xml
-
-      - name: Run WebAdmin unit and real C++ API integration tests
+      - name: Run isolated Node and browser regressions
         working-directory: webadmin
         run: |
-          node --import tsx --test --test-concurrency=2 tests/*.test.ts
-          npm run test:integration -- ../build/Stage4VM/dc24h-twilight
-
-      - name: Measure authenticated real C++ to Node to Apache HTTPS
-        run: |
-          # The Playwright browser callback must remain native ESM. Running
-          # this fixture via tsx injects __name helpers unavailable in Chromium.
-          node --check webadmin/tests/beta07-live-passkey-client.mjs
-          # A restored limiter must retain the real actor/global budgets;
-          # only schedule the browser proof after its original window ends.
-          python3 -m unittest discover -s tests -p beta08_restored_login_budget_tests.py
-          DC24H_VM_REPORT_DIR="$PWD/vm-evidence" python3 \
-            tests/beta06_authenticated_api_process_tests.py \
-            build/Stage4VM/dc24h-twilight build/Stage4VM/account_webadmin_tests \
-            build/Stage4VM/dc24h-twilight-account-admin
-          python3 scripts/beta06_auth_gate.py \
-            --report vm-evidence/beta06-authenticated-https.json \
-            --sha "$SOURCE_SHA" --os-image "${{ matrix.os }}" \
-            --output vm-evidence/beta06-authenticated-gate.json
-
-      - name: Require real beta-0.8 Stage II Chromium and matched-restoration proof
-        run: |
-          python3 -m unittest discover -s tests -p beta08_stage2_gate_tests.py
-          python3 scripts/beta08_stage2_gate.py \
-            --browser "$RUNNER_TEMP/playwright-junit.xml" \
-            --restore vm-evidence/beta06-restored-login.json \
-            --auth vm-evidence/beta06-authenticated-gate.json \
-            --sha "$SOURCE_SHA" --os-image "${{ matrix.os }}" \
-            --output vm-evidence/beta08-stage2-authentication.json
-
-      - name: Require three comparable within-profile ADC ADCS and authenticated HTTPS windows
-        run: |
-          python3 -m unittest discover -s tests -p beta07_ubuntu_perf_matrix_tests.py
-          python3 scripts/beta07_ubuntu_perf_matrix.py \
-            --sha "$SOURCE_SHA" --os-image "${{ matrix.os }}" \
-            --adc-windows vm-evidence/beta07-adc-adcs-windows.json \
-            --https-report vm-evidence/beta06-authenticated-https.json \
-            --output vm-evidence/beta07-transport-performance.json
-
-      - name: Bind Stage V transport evidence to raw windows and toolchain identity
-        run: |
-          python3 -m unittest discover -s tests -p beta08_transport_evidence_tests.py
-          python3 scripts/beta08_transport_evidence.py \
-            --root "$GITHUB_WORKSPACE" --sha "$SOURCE_SHA" \
-            --os-image "${{ matrix.os }}" \
-            --adc vm-evidence/beta07-adc-adcs-windows.json \
-            --https vm-evidence/beta06-authenticated-https.json \
-            --summary vm-evidence/beta07-transport-performance.json \
-            --output vm-evidence/beta08-transport-evidence.json
-
-      - name: Bind beta-0.9 hosted Ubuntu APT and build provenance
-        run: |
-          python3 -m unittest discover -s tests -p beta09_os_provenance_tests.py
-          python3 scripts/beta09_os_provenance.py \
-            --root "$GITHUB_WORKSPACE" --sha "$SOURCE_SHA" \
-            --os-image "${{ matrix.os }}" \
-            --output vm-evidence/beta09-os-provenance.json
-
-      - name: Recompute beta-0.9 three-window transport and bounded resource envelope
-        run: |
-          python3 -m unittest discover -s tests -p beta09_security_envelope_tests.py
-          python3 scripts/beta09_security_envelope.py \
-            --root "$GITHUB_WORKSPACE" --sha "$SOURCE_SHA" \
-            --os-image "${{ matrix.os }}" \
-            --adc vm-evidence/beta07-adc-adcs-windows.json \
-            --https vm-evidence/beta06-authenticated-https.json \
-            --transport vm-evidence/beta08-transport-evidence.json \
-            --fault vm-evidence/beta07-bounded-faults.json \
-            --provenance vm-evidence/beta09-os-provenance.json \
-            --output vm-evidence/beta09-security-envelope.json
-
-      - name: Rehearse actual previous-version binary rollback on disposable state
-        run: |
-          DC24H_VM_REPORT_DIR="$PWD/vm-evidence" python3 \
-            tests/beta06_previous_version_rollback.py \
-            build/Stage4VM/dc24h-twilight build/Beta05/dc24h beta05-reference
-
-      - name: Install and downgrade dpkg, authenticate with old C++ and restart hardened systemd services
-        run: |
-          python3 -m unittest discover -s tests -p beta07_ci_deb_tests.py
-          python3 -m unittest discover -s tests -p beta08_recovery_auth_tests.py
-          python3 -m unittest discover -s tests -p beta09_stage2_auth_proposal_tests.py
-          python3 -m unittest discover -s tests -p beta09_stage2_cold_start_tests.py
-          python3 -m unittest discover -s tests -p beta08_fix_pass3_tests.py
-          python3 -m unittest discover -s tests -p beta09_stage3_recovery_tests.py
-          python3 -m unittest discover -s tests -p beta09_systemd_cpp_service_tests.py
-          python3 -m unittest discover -s tests -p beta08_postrollback_state_tests.py
-          DC24H_VM_REPORT_DIR="$PWD/vm-evidence" python3 \
-            tests/beta07_dpkg_process_tests.py \
-            build/Stage4VM/dc24h-twilight build/Beta05/dc24h beta05-reference \
-            build/Stage4VM/dc24h-twilight-account-admin build/Beta05/dc24h-account-admin \
-            build/Stage4VM/account_webadmin_tests
-
-      - name: Require exact-head beta-0.9 Stage III old-login, recovery, descriptor and systemd proofs
-        run: |
-          python3 -m unittest discover -s tests -p beta09_stage3_gate_tests.py
-          python3 scripts/beta09_stage3_gate.py \
-            --dpkg vm-evidence/beta07-dpkg-rollback.json \
-            --systemd-node vm-evidence/beta09-systemd-node.json \
-            --sha "$SOURCE_SHA" --os-image "${{ matrix.os }}" \
-            --output vm-evidence/beta09-stage3-gate.json
-
-      - name: Rehearse named-package migration refusal, explicit rollback and synthetic systemd conflict
-        run: |
-          python3 -m unittest discover -s tests -p twilight_stage4_migration_gate_tests.py
-          DC24H_VM_REPORT_DIR="$PWD/vm-evidence" python3 \
-            tests/twilight_stage4_migration_process_tests.py \
-            build/Stage4VM/dc24h-twilight build/Beta05/dc24h beta05-reference \
-            build/Stage4VM/dc24h-twilight-account-admin build/Beta05/dc24h-account-admin
-          python3 scripts/twilight_stage4_migration_gate.py \
-            --report vm-evidence/twilight-stage4-name-migration.json \
-            --sha "$SOURCE_SHA" --os-image "${{ matrix.os }}" \
-            --output vm-evidence/twilight-stage4-migration-gate.json
-
-      - name: Require complete integrated chaos evidence on this exact Ubuntu head
-        run: |
-          python3 scripts/beta06_integrated_chaos_gate.py \
-            --evidence-dir vm-evidence --junit "$RUNNER_TEMP/ctest-beta06-chaos.xml" \
-            --sha "$SOURCE_SHA" --os-image "${{ matrix.os }}" \
-            --output vm-evidence/beta06-integrated-chaos.json
-
-      - name: Prepare non-sensitive Ubuntu test timing report
-        if: always()
-        run: |
-          python3 scripts/ci_timing_summary.py \
-            --ctest "$RUNNER_TEMP/ctest-vm.xml" \
-            --browser "$RUNNER_TEMP/playwright-junit.xml" \
-            --os "${{ matrix.os }}" --sha "$SOURCE_SHA" \
-            --output "$PWD/vm-evidence/timing-summary.json"
-
-      - name: Preserve isolated Ubuntu aggregates only
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (Node 24)
-        with:
-          name: stage4-ubuntu-vm-${{ matrix.os }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: vm-evidence/
-          if-no-files-found: error
-          retention-days: 7
+          npm ci --no-audit --no-fund
+          npm run typecheck
+          npm run build:public:ci
+          npm run build:enrollment:ci
+          npm run build:stage4-init
+          npm test
+          npx playwright install chromium
+          npx playwright test tests/public-stage4.spec.ts

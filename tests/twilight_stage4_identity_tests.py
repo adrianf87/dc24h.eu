@@ -83,9 +83,10 @@ class StageIVTechnicalIdentityTests(unittest.TestCase):
         self.assertIn("ConditionPathExists=/__dc24h_ci_fixture_never_start__", fixture)
         workflow = source(".github/workflows/stage4-ubuntu-vm-validation.yml")
         self.assertIn("build/Stage4VM/dc24h-twilight", workflow)
-        self.assertIn("build/Beta05/dc24h beta05-reference", workflow)
-        self.assertIn("build/Beta05/dc24h-account-admin", workflow)
-        self.assertIn("twilight_stage4_migration_process_tests.py", workflow)
+        self.assertIn("stage4_ubuntu_vm_probe_tests.py", workflow)
+        self.assertIn("runs-on: ${{ matrix.os }}", workflow)
+        self.assertIn("os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]", workflow)
+        self.assertNotIn("self-hosted", workflow)
 
     def test_status_api_dns_origin_passkey_and_sysusers_are_stable(self):
         self.assertIn(r'\"name\":\"dc24h.eu-twilight\"', source("src/api/server.cpp"))

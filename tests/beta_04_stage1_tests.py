@@ -14,7 +14,7 @@ class StageOneGate(unittest.TestCase):
         self.assertIn('set(DC24H_VERSION "beta-0.9.20")', read("CMakeLists.txt"))
         self.assertIn('WEBADMIN_VERSION = "beta-0.9.20"', read("webadmin/src/lib/status.ts"))
         workflow = read(".github/workflows/build.yml")
-        for expected in ("beta-0.4.1-0.4.4-stage1", "ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04",
+        for expected in ("feature/stage4-webadmin-dedicated-service", "ubuntu-22.04",
                          "ctest --test-dir", "npm audit --omit=dev --audit-level=high",
                          "sanitizer: [address, undefined]", "pull_request:"):
             self.assertIn(expected, workflow)

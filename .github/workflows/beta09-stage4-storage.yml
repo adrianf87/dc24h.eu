@@ -2,7 +2,7 @@ name: Beta 0.9 Stage IV offline audit and fault validation
 
 on:
   push:
-    branches: [main, beta-0.9.x-stage-full-fix-pass]
+    branches: [main, feature/stage4-webadmin-dedicated-service]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -28,6 +28,14 @@ jobs:
       SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       CI: 'true'
     steps:
+      - name: Verify GitHub-hosted Ubuntu runner
+        shell: bash
+        env:
+          EXPECTED_IMAGE: ${{ matrix.os }}
+        run: |
+          test "$RUNNER_ENVIRONMENT" = 'github-hosted'
+          . /etc/os-release
+          test "$ID" = ubuntu && test "$VERSION_ID" = "${EXPECTED_IMAGE#ubuntu-}"
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
