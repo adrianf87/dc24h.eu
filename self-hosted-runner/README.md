@@ -25,7 +25,7 @@ Create a **new dated directory in DDMMYYYY format** when the runner is replaced 
 
 The 27 November 2026 baseline was supplied through OWNER shell output. A package inventory previously generated on the VPS at `2026-11-27T16:42:49Z` was confirmed uploaded to the now-deleted repository before deletion: 1,110 installed packages, 188 marked manually installed, 992 retained `dpkg` package events, 18 remove/purge rows for currently absent packages, and an empty warning file.
 
-**The complete package-by-package files are NOT yet copied into this repository.** They should be imported from the local clone still on the VPS if present. See [import instructions](27112026/README.md#import-the-exact-on-host-inventory).
+**The complete package-by-package files are NOT yet copied into this repository.** The former local clone was deleted on November 27, 2026, so the full original files are no longer available by that path. See [fresh inventory recovery](27112026/README.md#recovery-after-local-inventory-deletion); do not claim a new snapshot is the old one.
 
 ## CI migration status
 
