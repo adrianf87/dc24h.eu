@@ -22,33 +22,42 @@
 - 8 files: `SHA256SUMS`, `apt-manual.txt`, `dpkg-package-events.tsv`, `installed-packages.tsv`, `inventory-warnings.txt`, `removed-not-installed.tsv`, `system.txt`, `tool-versions.tsv`.
 - No warnings reported by the collector.
 
-## Import the exact on-host inventory
+## Recovery after local inventory deletion
 
-The old GitHub repository was deleted, **but the local clone may still exist on the VPS**. On `server-747585786`, from the project checkout **after switching to this feature branch**, check for the files:
+The OWNER deleted `/home/github-runner/self-hosted-runner` with `rm -rf` on November 27, 2026. The former separate GitHub repository had already been deleted. The original eight files from `20261127T164249Z` are therefore **not available through those paths**. Empty directories recreated afterward do **not** restore the files: do not copy or commit them as historical evidence, and do not add a replacement `SHA256SUMS` to the empty historical timestamp.
+
+**Create a fresh, accurately timestamped inventory in a checkout of the current project.** As `github-runner` on the approved VPS, clone the target feature branch if you do not already have a project checkout:
 
 ```bash
-test -f /home/github-runner/self-hosted-runner/inventory/20261127T164249Z/SHA256SUMS
+cd /home/github-runner
+git clone --branch feature/stage4-webadmin-dedicated-service --single-branch \
+  https://github.com/adrianf87/dc24h.eu-twilight.git dc24h-stage4-ci
+cd dc24h-stage4-ci
 ```
 
-If the check succeeds, import without reading service secrets:
+If a project checkout exists instead, use that directory and update it to the same feature branch without discarding unrelated edits. Do **not** run the collector in the separate, empty `~/self-hosted-runner` directory.
 
 ```bash
-mkdir -p self-hosted-runner/27112026/inventory
-cp -a /home/github-runner/self-hosted-runner/inventory/20261127T164249Z self-hosted-runner/27112026/inventory/
-(
-  cd self-hosted-runner/27112026/inventory/20261127T164249Z
-  sha256sum -c SHA256SUMS
-)
+git branch --show-current
+bash self-hosted-runner/scripts/collect-inventory.sh
+bash self-hosted-runner/scripts/run-tests.sh offline
 ```
 
-Review the copied files and ensure `git status --short` shows only intended inventory additions before committing:
+The collector prints the **new** timestamped report path. To verify the newest snapshot in this date folder:
 
 ```bash
-git add self-hosted-runner/27112026/inventory/20261127T164249Z
-git commit -m "inventory: import verified Debian 13 runner snapshot"
+snapshot_dir="$(find self-hosted-runner/27112026/inventory -mindepth 1 -maxdepth 1 \
+  -type d -name '20*T*Z' | sort | tail -n 1)"
+test -n "$snapshot_dir"
+( cd "$snapshot_dir" && sha256sum -c SHA256SUMS )
+```
+
+Review the report and `git status --short` before recording it:
+
+```bash
+git add self-hosted-runner/27112026/inventory/
+git commit -m "inventory: recollect Debian 13 runner after local deletion"
 git push origin feature/stage4-webadmin-dedicated-service
 ```
 
-**Do not run these commands from the old deleted-repository clone.** The working directory must be the `dc24h.eu-twilight` checkout on the target branch.
-
-If the local clone is unavailable, generate a fresh report using `bash self-hosted-runner/scripts/collect-inventory.sh` and note that its timestamp and package counts may differ. Do not invent historical package names.
+This new report may have the same package counts if the host has not changed, but it is **not** the original snapshot. The earlier `20261127T164249Z` counts remain independently observed historical facts; only backups or retained logs could recover missing original file contents.
