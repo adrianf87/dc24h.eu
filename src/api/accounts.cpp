@@ -487,4 +487,17 @@ AccountHandler account_handler(database::Options options, std::shared_ptr<const 
         catch(...){return response(503,written?"{\"error\":\"outcome_unknown\"}":"{\"error\":\"account_unavailable\"}");}
     };
 }
+
+AccountHandler public_account_access_handler(database::Options options) {
+    auto private_auth = account_handler(std::move(options));
+    return [private_auth = std::move(private_auth)](const Request& request) mutable {
+        // Exact method/path allowlist, deliberately narrower than the
+        // maintenance API. Do not expose its write-capable dispatch here.
+        if ((request.method == "POST" && request.target == "/api/v1/admin/access") ||
+            (request.method == "GET" && request.target == "/api/v1/management")) {
+            return private_auth(request);
+        }
+        return response(404, "{\"error\":\"not_found\"}");
+    };
+}
 }

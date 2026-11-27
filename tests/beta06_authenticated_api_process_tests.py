@@ -241,9 +241,9 @@ def run(binary, seeder, account_admin, historical_checkout=None):
                 raise AssertionError("Synthetic C++ account seed missing")
             actor = actors.group(1)
             api_socket, api_token = enable_api(config, db.root)
-            # The serving hub deliberately does not accept account-password
-            # POSTs. Verify its real read-only status before shutting it down;
-            # the separate maintenance binary is the sole password authority.
+            # The serving hub stays historically read-only WITHOUT the
+            # explicit OWNER opt-in. The new password grant cannot silently
+            # become live just because the binary was upgraded.
             cpp = subprocess.Popen([str(binary), "--config", str(config)],
                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                                    start_new_session=True)
@@ -258,10 +258,27 @@ def run(binary, seeder, account_admin, historical_checkout=None):
                     raise AssertionError("Serving hub read-only API preflight failed")
                 time.sleep(0.05)
             if synthetic_password_proof_status(api_socket, api_token, actor) != 400:
-                raise AssertionError("Serving hub unexpectedly exposes C++ password authority")
+                raise AssertionError("Serving hub unexpectedly enabled Stage IV password proof")
             terminate(cpp); cpp = None
             if api_socket.exists():
                 raise AssertionError("Serving hub did not release private API socket")
+            # Exact OWNER opt-in permits ONLY the private read-only Stage IV
+            # password and role-discovery paths, not maintenance writes.
+            cpp = subprocess.Popen([str(binary), "--config", str(config)],
+                                   env={**os.environ, "DC24H_STAGE4_PRIVATE_AUTH_ACK":
+                                        "OWNER_WEBADMIN_PUBLIC_ACTIVATION_GO"},
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                   start_new_session=True)
+            until = time.monotonic() + 15
+            while not api_socket.exists():
+                if cpp.poll() is not None or time.monotonic() > until:
+                    raise AssertionError("Stage IV private-auth serving hub did not start")
+                time.sleep(0.05)
+            if synthetic_password_proof_status(api_socket, api_token, actor) != 200:
+                raise AssertionError("Stage IV private C++ account password proof unavailable")
+            terminate(cpp); cpp = None
+            if api_socket.exists():
+                raise AssertionError("Stage IV private-auth serving hub did not release socket")
             cpp = subprocess.Popen([str(account_admin), "--config", str(config)],
                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                                    start_new_session=True)

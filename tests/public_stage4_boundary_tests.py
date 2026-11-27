@@ -105,6 +105,36 @@ class PublicStageIVBoundaryTests(unittest.TestCase):
             with self.subTest(condition=condition):
                 self.assertIn(condition, document)
 
+    def test_offline_account_enrollment_requires_mailbox_proof_and_denies_replacement(self):
+        source = (ROOT / "webadmin/server/public-email-enrollment.ts").read_text(encoding="utf-8")
+        cli = (ROOT / "webadmin/server/public-email-enroll-main.ts").read_text(encoding="utf-8")
+        for required in ("verifyPassword", "reauthorize", "readCode", "sendCode",
+                         "timingSafeEqual", "publishPrivateLeafNoReplace", "O_EXCL"):
+            self.assertIn(required, source)
+        self.assertIn("STAGE4_EMAIL_ENROLLMENT_GO", cli)
+        self.assertIn("stdin.setRawMode(true)", cli)
+        self.assertNotIn("console.log", cli)
+        self.assertNotIn("admin@dc24h.eu", source)  # Recipient is an operator choice.
+
+    def test_serving_cpp_api_accepts_only_local_password_proof_and_role_discovery(self):
+        code = (ROOT / "src/api/accounts.cpp").read_text(encoding="utf-8")
+        main = (ROOT / "src/main.cpp").read_text(encoding="utf-8")
+        self.assertIn("public_account_access_handler", code)
+        self.assertIn('request.method == "POST" && request.target == "/api/v1/admin/access"', code)
+        self.assertIn('request.method == "GET" && request.target == "/api/v1/management"', code)
+        self.assertIn('return response(404, "{\\"error\\":\\"not_found\\"}")', code)
+        self.assertIn("database && stage4_private_auth", main)
+        self.assertIn("DC24H_STAGE4_PRIVATE_AUTH_ACK", main)
+
+    def test_disabled_stage4_unit_has_no_baked_activation_or_public_node_listener(self):
+        unit = (ROOT / "config/dc24h-twilight-stage4-webadmin.service.example").read_text(
+            encoding="utf-8")
+        for required in ("User=dc24h", "EnvironmentFile=/etc/dc24h/stage4-activation.env",
+                         "StateDirectoryMode=0700", "NoNewPrivileges=true", "ProtectSystem=strict"):
+            self.assertIn(required, unit)
+        self.assertNotIn("Environment=DC24H_STAGE4_STARTUP_ACK=", unit)
+        self.assertNotIn("ExecStart=/usr/bin/sudo", unit)
+
 
 if __name__ == "__main__":
     unittest.main()

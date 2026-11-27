@@ -1,4 +1,5 @@
 #include "dc24h/adcs/tls.hpp"
+#include "dc24h/api/accounts.hpp"
 #include "dc24h/accounts/adc_authentication.hpp"
 #include "dc24h/configuration/configuration.hpp"
 #include "dc24h/core/server.hpp"
@@ -163,6 +164,12 @@ int main(int argc, char* argv[]) {
             dc24h::core::Server server(logger, &network);
             std::atomic<bool> signal_error{false};
             const auto started = std::chrono::steady_clock::now();
+            // Keep the serving hub's historical read-only API by default.
+            // Stage IV private password verification is enabled only after a
+            // separately reviewed OWNER activation + hub restart.
+            const char* stage4_private_ack = std::getenv("DC24H_STAGE4_PRIVATE_AUTH_ACK");
+            const bool stage4_private_auth = stage4_private_ack &&
+                std::string_view(stage4_private_ack) == "OWNER_WEBADMIN_PUBLIC_ACTIVATION_GO";
             std::unique_ptr<dc24h::api::Server> api;
             if (parsed.settings.api.enabled) {
                 struct CpuWindow {
@@ -212,7 +219,11 @@ int main(int argc, char* argv[]) {
                         stats.login_samples, stats.login_last_ms, stats.login_max_ms,
                         stats.reactor_samples, stats.reactor_last_ms, stats.reactor_max_ms,
                         network.listeners_ready()};
-                }, [&] { signal_error.store(true); server.request_stop(); }, dc24h::api::AccountHandler{}, [&] { return network.presence(); });
+                }, [&] { signal_error.store(true); server.request_stop(); },
+                database && stage4_private_auth
+                    ? dc24h::api::public_account_access_handler(parsed.settings.database)
+                    : dc24h::api::AccountHandler{},
+                [&] { return network.presence(); });
                 api->start();
             }
 
