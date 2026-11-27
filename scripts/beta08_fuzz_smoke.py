@@ -79,16 +79,16 @@ def main(argv=None):
     try:
         version = platform.freedesktop_os_release().get("VERSION_ID")
         if (os.environ.get("GITHUB_ACTIONS") != "true" or
-                os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted" or
-                os.environ.get("RUNNER_OS") != "Linux" or version != "24.04" or
+                os.environ.get("RUNNER_ENVIRONMENT") != "self-hosted" or
+                os.environ.get("RUNNER_OS") != "Linux" or version != "13" or
                 not SHA.fullmatch(args.sha)):
-            raise ValueError("Only GitHub-hosted Ubuntu 24.04 hardening is permitted")
+            raise ValueError("Only approved Debian 13 self-hosted runner hardening is permitted")
         actual = subprocess.check_output(["git", "-C", str(args.root), "rev-parse", "HEAD"],
                                          timeout=10).decode().strip()
         if actual != args.sha or not args.binary.is_file() or not args.corpus.is_dir():
             raise ValueError("Missing exact-head fuzzer executable or seed corpus")
         observed, elapsed = run_bounded(args.binary, args.corpus)
-        report = {"schema": 1, "source_sha": args.sha, "os_image": "ubuntu-24.04",
+        report = {"schema": 1, "source_sha": args.sha, "os_image": "debian-13",
                   "fuzzer_profile": args.profile,
                   "compiler": "clang-libfuzzer", "seed": SEED, "requested_runs": RUNS,
                   "observed_runs": observed, "input_max_bytes": 4096,
@@ -102,7 +102,7 @@ def main(argv=None):
             json.dump(report, output, sort_keys=True)
             output.write("\n")
     except (OSError, ValueError, subprocess.SubprocessError):
-        parser.exit(1, "Bounded hosted fuzz smoke refused; no raw trace exported.\n")
+        parser.exit(1, "Bounded Debian 13 fuzz smoke refused; no raw trace exported.\n")
     print("Exact-head bounded libFuzzer smoke passed; no production certification")
 
 
