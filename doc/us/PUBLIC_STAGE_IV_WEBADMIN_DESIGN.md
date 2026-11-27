@@ -24,7 +24,7 @@ by this document. The current installation and recovery steps are in
 | WebAdmin authentication | OWNER and administrators: password **and 8-digit emailed code** |
 | Fixed sender | `admin@dc24h.eu` via local `msmtp -t` |
 | Recipient | Verified account-bound email in private Stage IV MariaDB; login form cannot choose a mailbox |
-| Decision record | Explicit OWNER public-activation record and separate Stage IV acceptance, merge and release decisions |
+| Decision record | Explicit `OWNER WEBADMIN PUBLIC ACTIVATION GO` with separate Stage IV acceptance, merge and release decisions |
 
 Do not use the retired public host or create an `admin.*` hostname. Do not
 change TCP 1512, enable plaintext ADC on TCP 1511, or expose existing internal C++ APIs,

@@ -59,7 +59,7 @@ class PublicStageIVBoundaryTests(unittest.TestCase):
                 self.assertIn(f"adcs://{FQDN}:1512", document)
                 self.assertIn(ORIGIN, document)
                 self.assertIn("62.171.156.32", document)
-                self.assertIn("OWNER WEBADMIN PUBLIC ACTIVATION GO", document)
+                self.assertIn("`OWNER WEBADMIN PUBLIC ACTIVATION GO`", document)
                 self.assertNotIn("51.255.80.233", document)
 
     def test_email_sender_and_public_origin_are_fixed(self):
@@ -98,7 +98,9 @@ class PublicStageIVBoundaryTests(unittest.TestCase):
             encoding="utf-8"
         )
         for condition in (
-            "NO PUBLIC WEBADMIN ACTIVATION",
+            "reported operation does not imply final security acceptance",
+            "`OWNER STAGE IV ACCEPTANCE`",
+            "`OWNER MERGE GO`",
             "Do not remove those safety checks",
             "GitHub-hosted Ubuntu 22.04, 24.04 and 26.04",
             "no CI SSH or remote `sudo`",
