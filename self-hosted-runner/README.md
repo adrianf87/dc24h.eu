@@ -13,6 +13,9 @@ This directory is the new **in-repository home** for all inventory, configuratio
 
 - [27 November 2026 — active runner](27112026/README.md)
 - [Read-only inventory collector](scripts/collect-inventory.sh)
+- [Runner-specific test suite](tests/README.md)
+- [Test runner entry point](scripts/run-tests.sh)
+- [Repository-local placement and safety rules](AGENTS.md)
 - [CI workflow migration audit](27112026/CI_WORKFLOWS.md)
 - [Dated runner change log](27112026/CHANGELOG.md)
 
