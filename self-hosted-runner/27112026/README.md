@@ -9,6 +9,8 @@
 | [Installed packages](INSTALLED_PACKAGES.md) | Verified counts, sampled versions, exact snapshot provenance |
 | [Removed packages](REMOVED_PACKAGES.md) | Retained `dpkg` event evidence and limits |
 | [Security](SECURITY.md) | Passwordless `sudo` risk and safe inventory constraints |
+| [CI workflows](CI_WORKFLOWS.md) | Current runners and Debian 13 migration gaps |
+| [Change log](CHANGELOG.md) | Dated runner configuration and package changes |
 | [Inventory subdirectory](inventory/README.md) | Full package files once imported from the local VPS |
 
 ## Previous verified inventory
