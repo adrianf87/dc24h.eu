@@ -77,18 +77,19 @@ def main(argv=None):
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
-        version = platform.freedesktop_os_release().get("VERSION_ID")
+        host = platform.freedesktop_os_release()
         if (os.environ.get("GITHUB_ACTIONS") != "true" or
-                os.environ.get("RUNNER_ENVIRONMENT") != "self-hosted" or
-                os.environ.get("RUNNER_OS") != "Linux" or version != "13" or
+                os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted" or
+                os.environ.get("RUNNER_OS") != "Linux" or
+                host.get("ID") != "ubuntu" or host.get("VERSION_ID") != "22.04" or
                 not SHA.fullmatch(args.sha)):
-            raise ValueError("Only approved Debian 13 self-hosted runner hardening is permitted")
+            raise ValueError("Only GitHub-hosted Ubuntu 22.04 fuzzing is permitted")
         actual = subprocess.check_output(["git", "-C", str(args.root), "rev-parse", "HEAD"],
                                          timeout=10).decode().strip()
         if actual != args.sha or not args.binary.is_file() or not args.corpus.is_dir():
             raise ValueError("Missing exact-head fuzzer executable or seed corpus")
         observed, elapsed = run_bounded(args.binary, args.corpus)
-        report = {"schema": 1, "source_sha": args.sha, "os_image": "debian-13",
+        report = {"schema": 1, "source_sha": args.sha, "os_image": "ubuntu-22.04",
                   "fuzzer_profile": args.profile,
                   "compiler": "clang-libfuzzer", "seed": SEED, "requested_runs": RUNS,
                   "observed_runs": observed, "input_max_bytes": 4096,
@@ -102,7 +103,7 @@ def main(argv=None):
             json.dump(report, output, sort_keys=True)
             output.write("\n")
     except (OSError, ValueError, subprocess.SubprocessError):
-        parser.exit(1, "Bounded Debian 13 fuzz smoke refused; no raw trace exported.\n")
+        parser.exit(1, "Bounded Ubuntu 22.04 fuzz smoke refused; no raw trace exported.\n")
     print("Exact-head bounded libFuzzer smoke passed; no production certification")
 
 

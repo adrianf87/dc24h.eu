@@ -14,7 +14,7 @@ SHA = "a" * 40
 
 
 def fixture():
-    return {name: {"schema": 1, "source_sha": SHA, "os_image": "debian-13",
+    return {name: {"schema": 1, "source_sha": SHA, "os_image": "ubuntu-22.04",
                    "fuzzer_profile": name, "compiler": "clang-libfuzzer",
                    "requested_runs": old.RUNS, "observed_runs": old.RUNS,
                    "seed": old.SEED, "input_max_bytes": 4096, "rss_limit_mib": 512,
@@ -36,6 +36,8 @@ class DualFuzzTests(unittest.TestCase):
         for damage in (
             lambda x: x.pop("adc_fragments"),
             lambda x: x["adc_fragments"].update(source_sha="b" * 40),
+            lambda x: x["adc_fragments"].update(os_image="ubuntu-24.04"),
+            lambda x: x["adc_fragments"].update(os_image="debian-13"),
             lambda x: x["adc_fragments"].update(fuzzer_profile="adc_parser"),
             lambda x: x["adc_fragments"].update(observed_runs=1023),
             lambda x: x["adc_parser"].update(sanitizer_findings=1),
