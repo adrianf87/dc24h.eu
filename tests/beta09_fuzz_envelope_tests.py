@@ -14,7 +14,7 @@ SHA = "a" * 40
 
 
 def fixture():
-    return {name: {"schema": 1, "source_sha": SHA, "os_image": "ubuntu-24.04",
+    return {name: {"schema": 1, "source_sha": SHA, "os_image": "debian-13",
                    "fuzzer_profile": name, "compiler": "clang-libfuzzer",
                    "requested_runs": old.RUNS, "observed_runs": old.RUNS,
                    "seed": old.SEED, "input_max_bytes": 4096, "rss_limit_mib": 512,
