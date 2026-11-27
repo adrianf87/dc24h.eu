@@ -6,7 +6,7 @@ The first verified snapshot was collected on the VPS before the old separate Git
 
 `/home/github-runner/self-hosted-runner/inventory/20261127T164249Z`
 
-Copy it here as `20261127T164249Z/` from the **local VPS clone**, then run `sha256sum -c SHA256SUMS` from inside that directory. See [import instructions](../README.md#import-the-exact-on-host-inventory).
+The OWNER later deleted that local clone as well as the old GitHub repository. Newly created empty directories are not evidence. **Do not copy a vacant directory or invent the former checksum file.** Follow the [fresh collection instructions](../README.md#recovery-after-local-inventory-deletion) from a checkout of `dc24h.eu-twilight`. Each new report uses a new UTC timestamp.
 
 The full 1,110 package names/versions and 18 removed/purged event rows have **not yet been imported** into this repository. No historical package file should be reconstructed from guessed data.
 
