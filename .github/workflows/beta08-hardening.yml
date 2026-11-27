@@ -16,13 +16,21 @@ concurrency:
 
 jobs:
   tsan:
-    name: TSAN - ubuntu-24.04
+    name: TSAN - debian-13
     if: github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 55
     env:
       SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
+      - name: Verify Debian 13 self-hosted runner
+        shell: bash
+        run: |
+          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
+          . /etc/os-release
+          test "$ID" = 'debian' && test "$VERSION_ID" = '13'
+          test "$(hostname -s)" = 'server-747585786'
+          test "$(id -un)" = 'github-runner'
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -30,7 +38,7 @@ jobs:
       - name: Check exact checkout and install disposable dependencies
         run: |
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
-          bash .github/scripts/install-ci-deps.sh \
+          bash self-hosted-runner/scripts/install-debian13-ci-deps.sh \
             build-essential cmake python3 libutf8proc-dev libgcrypt20-dev \
             libssl-dev libmariadb-dev
       - name: Compile TSAN-instrumented C++ parser, routing, network and security
@@ -53,7 +61,7 @@ jobs:
             --output "$RUNNER_TEMP/beta08-evidence/tsan-summary.json"
           python3 scripts/beta06_ci_provenance.py \
             --summary "$RUNNER_TEMP/beta08-evidence/tsan-summary.json" \
-            --sha "$SOURCE_SHA" --suite beta08-tsan --os-image ubuntu-24.04 \
+            --sha "$SOURCE_SHA" --suite beta08-tsan --os-image debian-13 \
             --output "$RUNNER_TEMP/beta08-evidence/tsan-provenance.json"
       - name: Upload sanitized TSAN outcome (no raw logs)
         if: always()
@@ -65,13 +73,21 @@ jobs:
           retention-days: 7
 
   fuzz:
-    name: ADC parser fuzz - ubuntu-24.04
+    name: ADC parser fuzz - debian-13
     if: github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 55
     env:
       SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
+      - name: Verify Debian 13 self-hosted runner
+        shell: bash
+        run: |
+          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
+          . /etc/os-release
+          test "$ID" = 'debian' && test "$VERSION_ID" = '13'
+          test "$(hostname -s)" = 'server-747585786'
+          test "$(id -un)" = 'github-runner'
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -79,7 +95,7 @@ jobs:
       - name: Check exact checkout and install Clang/libFuzzer dependencies
         run: |
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
-          bash .github/scripts/install-ci-deps.sh \
+          bash self-hosted-runner/scripts/install-debian13-ci-deps.sh \
             build-essential cmake clang python3 libutf8proc-dev libgcrypt20-dev \
             libssl-dev libmariadb-dev
       - name: Build coverage-instrumented standalone ADC parser fuzzer
