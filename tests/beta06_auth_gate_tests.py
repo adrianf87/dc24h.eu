@@ -12,7 +12,7 @@ SHA = "b" * 40
 
 
 def report():
-    return {"schema": 1, "source_sha": SHA, "os_image": "ubuntu-24.04",
+    return {"schema": 1, "source_sha": SHA, "os_image": "ubuntu-22.04",
             "evidence": "real-account-admin-node-apache-authenticated-totp",
             "maintenance_mode": True, "hub_readonly_boundary_verified": True,
             "requests": 24, "success": 24, "failure": 0, "concurrency": 2,
@@ -30,18 +30,18 @@ def report():
 
 class RealAuthGateTests(unittest.TestCase):
     def test_equal_workload_accepts_honest_observations(self):
-        result = gate.validate(report(), sha=SHA, image="ubuntu-24.04")
+        result = gate.validate(report(), sha=SHA, image="ubuntu-22.04")
         self.assertTrue(result["ci_regression_gate_passed"])
         self.assertFalse(result["production_capacity_claim"])
 
     def test_refuses_wrong_head_image_or_forged_fixture(self):
-        cases = ({"source_sha": "c" * 40}, {"os_image": "ubuntu-22.04"},
+        cases = ({"source_sha": "c" * 40}, {"os_image": "ubuntu-24.04"},
                  {"evidence": "synthetic-upstream-only"}, {"capacity_claim": True},
                  {"passkey_browser_flow_exercised": True})
         for changes in cases:
             item = report(); item.update(changes)
             with self.subTest(changes=changes), self.assertRaises(ValueError):
-                gate.validate(item, sha=SHA, image="ubuntu-24.04")
+                gate.validate(item, sha=SHA, image="ubuntu-22.04")
 
     def test_refuses_missing_faked_or_mismatched_measurements(self):
         cases = ({"requests": 12}, {"concurrency": 4}, {"request_spacing_ms": 0},
@@ -55,7 +55,7 @@ class RealAuthGateTests(unittest.TestCase):
         for changes in cases:
             item = copy.deepcopy(report()); item.update(changes)
             with self.subTest(changes=changes), self.assertRaises(ValueError):
-                gate.validate(item, sha=SHA, image="ubuntu-24.04")
+                gate.validate(item, sha=SHA, image="ubuntu-22.04")
 
 
 if __name__ == "__main__":

@@ -35,9 +35,11 @@ RUNTIME_LIBRARIES = frozenset({
     "libstdc++.so.6",
 })
 SANITIZER_LIBRARIES = {
-    "address": "libasan.so.8",
-    "undefined": "libubsan.so.1",
-    "thread": "libtsan.so.2",
+    # GCC 11 from Ubuntu 22.04 links libasan.so.6/libtsan.so.0;
+    # newer GCC toolchains link libasan.so.8/libtsan.so.2.
+    "address": frozenset({"libasan.so.6", "libasan.so.8"}),
+    "undefined": frozenset({"libubsan.so.1"}),
+    "thread": frozenset({"libtsan.so.0", "libtsan.so.2"}),
 }
 
 
@@ -74,14 +76,16 @@ def check_binary(binary, mode):
     sanitizer = SANITIZER_LIBRARIES.get(mode)
     if mode and sanitizer is None:
         return fail("DC24H_SANITIZER must be address, undefined, thread, or empty")
-    foreign = [item for item in SANITIZER_LIBRARIES.values() if item != sanitizer]
+    foreign = set().union(*(items for selected_mode, items in SANITIZER_LIBRARIES.items()
+                            if selected_mode != mode))
     present_foreign = sorted(item for item in foreign if item in needed)
     if present_foreign:
         return fail(f"{name} links a sanitizer runtime that this build does not select: {', '.join(present_foreign)}")
     if sanitizer:
-        if sanitizer not in needed:
-            return fail(f"{name} is missing its sanitizer runtime: {sanitizer}")
-        allowed.add(sanitizer)
+        present = needed & sanitizer
+        if len(present) != 1:
+            return fail(f"{name} must link exactly one sanitizer runtime from: {', '.join(sorted(sanitizer))}")
+        allowed.update(present)
     unexpected = sorted(needed - allowed)
     if unexpected:
         return fail(f"{name} links an unexpected library: {', '.join(unexpected)}")

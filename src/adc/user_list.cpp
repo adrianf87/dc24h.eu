@@ -31,8 +31,15 @@ UserListResult UserList::prepare(users::SessionId joining, const ClientSession& 
         frames.push_back(PreparedWelcomeFrame{std::move(message), std::move(*wire)});
         return true;
     };
-    if (!append({MessageType::info, "INF", Command::inf, {}, {}, {},
-            {"CT32", "NIdc24h.eu-twilight", "DEDirect Connect hub"}, {}})) { return UserListError::output_limit; }
+    // Construct each parameter in an owned vector. A temporary initializer_list
+    // of heap-backed strings can leak during injected allocation failure on
+    // GCC 11 (Ubuntu 22.04), before the aggregate Message is fully created.
+    Message welcome{MessageType::info, "INF", Command::inf, {}, {}, {}, {}, {}};
+    welcome.parameters.reserve(3);
+    welcome.parameters.emplace_back("CT32");
+    welcome.parameters.emplace_back("NIdc24h.eu-twilight");
+    welcome.parameters.emplace_back("DEDirect Connect hub");
+    if (!append(std::move(welcome))) { return UserListError::output_limit; }
     std::uint64_t after = 0;
     for (;;) {
         const auto page = sessions_.public_users(after, users::SessionManager::max_page_size);

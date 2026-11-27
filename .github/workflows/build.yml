@@ -10,6 +10,9 @@ on:
 permissions:
   contents: read
 
+env:
+  SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
 concurrency:
   group: dc24h-ubuntu2204-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
@@ -67,7 +70,8 @@ jobs:
         working-directory: webadmin
         run: |
           npx playwright install --with-deps chromium
-          npx playwright test
+          npm run test:e2e
+          npm run test:integration -- "$RUNNER_TEMP/dc24h-build/dc24h-twilight"
       - name: Run Python source and Stage IV policy tests
         run: |
           python3 tests/project_checks.py

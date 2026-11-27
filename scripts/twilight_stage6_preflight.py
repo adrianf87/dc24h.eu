@@ -17,7 +17,7 @@ import subprocess
 REPO = "adrianf87/dc24h.eu-twilight"
 OLD_REPO = "adrianf87/dc24h.eu-high-starter"
 BRAND = "dc24h.eu-twilight"
-IMAGES = ("ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04")
+IMAGES = ("ubuntu-22.04",)
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 ACTIVE_DISPLAY = (
     "src/main.cpp",
@@ -41,7 +41,7 @@ WORKFLOWS = (
     "stage4-ubuntu-vm-validation.yml",
 )
 EXPECTED_TWILIGHT_GUARDS = {
-    "build.yml": 3,
+    "build.yml": 2,
     "beta07-codeql.yml": 1,
     "beta08-hardening.yml": 2,
     "beta09-stage4-storage.yml": 1,

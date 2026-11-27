@@ -38,8 +38,8 @@ class StageFourReleaseGate(unittest.TestCase):
             self.assertIn(f"add_test(NAME {check} ", cmake)
         workflow = source(".github/workflows/build.yml")
         for required in (
-            BRANCH, "ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04",
-            "sanitizer: [address, undefined]", "needs: [cpp, webadmin, sanitizers]",
+            "feature/stage4-webadmin-dedicated-service", "runs-on: ubuntu-22.04",
+            "sanitizer: [address, undefined]", "needs: [application, sanitizers]",
         ):
             self.assertIn(required, workflow)
 

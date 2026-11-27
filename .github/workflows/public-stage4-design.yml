@@ -207,15 +207,15 @@ jobs:
         run: |
           cmake -S . -B "$RUNNER_TEMP/stage4-build" -DCMAKE_BUILD_TYPE=Release
           cmake --build "$RUNNER_TEMP/stage4-build" --parallel "$(nproc)" --target dc24h dc24h-owner dc24h-account-admin
-      - name: Exercise disposable MariaDB and account tests without replacing live WebAdmin
-        run: |
-          node_dir=$(dirname "$(dirname "$(command -v node)")")
-          sudo -n env "PATH=$node_dir/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/bin" \
-            ./scripts/stage4_test_database.sh
-          python3 tests/stage4_msmtp_process.py -v
       - name: Validate packaged Stage IV service installation on disposable Ubuntu
         run: |
           node_dir=$(dirname "$(dirname "$(command -v node)")")
           sudo -n env "PATH=$node_dir/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/bin" \
             "GITHUB_ACTIONS=$GITHUB_ACTIONS" "RUNNER_ENVIRONMENT=$RUNNER_ENVIRONMENT" \
             sh ./scripts/stage4_install.sh "$node_dir" "$RUNNER_TEMP/stage4-build"
+      - name: Exercise disposable MariaDB and account tests without replacing live WebAdmin
+        run: |
+          node_dir=$(dirname "$(dirname "$(command -v node)")")
+          sudo -n env "PATH=$node_dir/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/bin" \
+            ./scripts/stage4_test_database.sh
+          python3 tests/stage4_msmtp_process.py -v
