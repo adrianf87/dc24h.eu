@@ -18,12 +18,12 @@ jobs:
   cpp:
     name: C++ ${{ matrix.build_type }} - ${{ matrix.os }}
     if: github.repository == 'adrianf87/dc24h.eu' || github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
-    runs-on: ${{ matrix.os }}
+    runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
+        os: [debian-13]
         build_type: [Debug, Release]
     env:
       CXX: g++
@@ -32,6 +32,14 @@ jobs:
       SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       DC24H_REQUIRE_SYSTEMD_HOST: '1'
     steps:
+      - name: Verify Debian 13 self-hosted runner
+        shell: bash
+        run: |
+          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
+          . /etc/os-release
+          test "$ID" = 'debian' && test "$VERSION_ID" = '13'
+          test "$(hostname -s)" = 'server-747585786'
+          test "$(id -un)" = 'github-runner'
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -39,7 +47,7 @@ jobs:
 
       - name: Install build and integration dependencies
         run: |
-          bash .github/scripts/install-ci-deps.sh \
+          bash self-hosted-runner/scripts/install-debian13-ci-deps.sh \
             build-essential cmake python3 libutf8proc-dev libgcrypt20-dev \
             libssl-dev libmariadb-dev openssl ncdc mariadb-server apache2
 
@@ -134,17 +142,25 @@ jobs:
   webadmin:
     name: WebAdmin - ${{ matrix.os }}
     if: github.repository == 'adrianf87/dc24h.eu' || github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
-    runs-on: ${{ matrix.os }}
+    runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
+        os: [debian-13]
     env:
       CXX: g++
       CI: 'true'
       SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
+      - name: Verify Debian 13 self-hosted runner
+        shell: bash
+        run: |
+          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
+          . /etc/os-release
+          test "$ID" = 'debian' && test "$VERSION_ID" = '13'
+          test "$(hostname -s)" = 'server-747585786'
+          test "$(id -un)" = 'github-runner'
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -152,7 +168,7 @@ jobs:
 
       - name: Install C++ API build dependencies
         run: |
-          bash .github/scripts/install-ci-deps.sh \
+          bash self-hosted-runner/scripts/install-debian13-ci-deps.sh \
             build-essential cmake python3 libutf8proc-dev libgcrypt20-dev \
             libssl-dev libmariadb-dev
 
@@ -235,9 +251,9 @@ jobs:
         run: npm run test:integration -- ../build/Release/dc24h-twilight
 
   sanitizers:
-    name: C++ ${{ matrix.sanitizer }} - ubuntu-24.04
+    name: C++ ${{ matrix.sanitizer }} - debian-13
     if: github.repository == 'adrianf87/dc24h.eu' || github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -248,6 +264,14 @@ jobs:
       CI: 'true'
       SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
+      - name: Verify Debian 13 self-hosted runner
+        shell: bash
+        run: |
+          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
+          . /etc/os-release
+          test "$ID" = 'debian' && test "$VERSION_ID" = '13'
+          test "$(hostname -s)" = 'server-747585786'
+          test "$(id -un)" = 'github-runner'
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -255,7 +279,7 @@ jobs:
 
       - name: Install C++ dependencies
         run: |
-          bash .github/scripts/install-ci-deps.sh \
+          bash self-hosted-runner/scripts/install-debian13-ci-deps.sh \
             build-essential cmake python3 libutf8proc-dev libgcrypt20-dev \
             libssl-dev libmariadb-dev
 
@@ -274,7 +298,7 @@ jobs:
 
       - name: Enforce exact-head sanitizer evidence
         if: always()
-        run: python3 scripts/beta06_ci_provenance.py --summary "$RUNNER_TEMP/evidence/summary.json" --output "$RUNNER_TEMP/evidence/provenance.json" --sha "$SOURCE_SHA" --suite "sanitizer-${{ matrix.sanitizer }}" --os-image ubuntu-24.04
+        run: python3 scripts/beta06_ci_provenance.py --summary "$RUNNER_TEMP/evidence/summary.json" --output "$RUNNER_TEMP/evidence/provenance.json" --sha "$SOURCE_SHA" --suite "sanitizer-${{ matrix.sanitizer }}" --os-image debian-13
 
       - name: Upload immutable sanitizer status
         if: always()
@@ -290,9 +314,17 @@ jobs:
     name: CI (C++ and WebAdmin)
     needs: [cpp, webadmin, sanitizers]
     if: ${{ !cancelled() }}
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 5
     steps:
+      - name: Verify Debian 13 self-hosted runner
+        shell: bash
+        run: |
+          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
+          . /etc/os-release
+          test "$ID" = 'debian' && test "$VERSION_ID" = '13'
+          test "$(hostname -s)" = 'server-747585786'
+          test "$(id -un)" = 'github-runner'
       - name: Ensure all C++ and WebAdmin checks passed
         env:
           CPP_RESULT: ${{ needs.cpp.result }}
