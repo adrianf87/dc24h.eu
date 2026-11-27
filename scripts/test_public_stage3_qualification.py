@@ -258,19 +258,17 @@ class PolicyTests(unittest.TestCase):
                     with self.assertRaises(evidence.Blocked):
                         public_guard("extended")
 
-    def test_automatic_public_checks_require_protected_main_at_exact_commit(self):
-        env = dict(self.owner_env, GITHUB_EVENT_NAME="push", GITHUB_REF="refs/heads/main",
-                   GITHUB_REF_PROTECTED="true")
+    def test_public_checks_require_explicit_owner_dispatch(self):
+        env = dict(self.owner_env, OWNER_CONFIRMATION=premerge.CONFIRMATION, PREMERGE_PHASE="before",
+                   GITHUB_REF="refs/heads/main", GITHUB_REF_PROTECTED="true")
         with mock.patch("stage3.run.checkout_sha", return_value=self.sha):
             with mock.patch.dict("os.environ", env, clear=True):
                 public_guard("tls-public")
-                with self.assertRaises(evidence.Blocked):
-                    public_guard("extended")
-            for changed in ({"GITHUB_REF_PROTECTED": "false"}, {"GITHUB_EVENT_NAME": "pull_request"},
-                            {"GITHUB_REF": "refs/heads/feature"}, {"GITHUB_SHA": "b" * 40},
-                            {"GITHUB_REPOSITORY": "fork/example"}, {"RUNNER_ENVIRONMENT": "self-hosted"}):
-                with self.subTest(changed=changed), mock.patch.dict("os.environ", dict(env, **changed), clear=True):
-                    with self.assertRaises(evidence.Blocked):
+            for event in ("push", "pull_request"):
+                with self.subTest(event=event), mock.patch.dict(
+                    "os.environ", dict(env, GITHUB_EVENT_NAME=event), clear=True
+                ):
+                    with self.assertRaisesRegex(evidence.Blocked, "explicit OWNER dispatch"):
                         public_guard("tls-public")
 
 
@@ -316,26 +314,22 @@ class CertificateVerificationTests(unittest.TestCase):
 
 
 class EvidenceTests(unittest.TestCase):
-    def test_pull_request_evidence_records_public_checks_out_of_scope(self):
+    def test_automatic_ci_evidence_records_public_checks_out_of_scope(self):
         with tempfile.TemporaryDirectory() as work:
             directory = Path(work)
             sha = "a" * 40
-            args = SimpleNamespace(mode="pr", sha=sha, run_id="42", attempt="1",
-                                   input=directory/"missing", output=directory/"pr")
-            with mock.patch("stage3.run.checkout_sha", return_value=sha):
-                self.assertEqual(report(args), 1)
-                args.mode = "main"
-                args.output = directory/"main"
-                self.assertEqual(report(args), 1)
-            pr = json.loads((directory/"pr/qualification.json").read_text())
-            main = json.loads((directory/"main/qualification.json").read_text())
-            self.assertEqual(pr["public_checks_out_of_scope"],
-                             {group: "NOT TESTED" for group in evidence.PUBLIC_GROUPS})
-            self.assertEqual(main["public_checks_out_of_scope"], {})
-            self.assertFalse(any(row["category"] in evidence.PUBLIC_GROUPS for row in pr["statuses"]))
-            self.assertEqual({row["category"] for row in main["statuses"]
-                              if row["result"] == "BLOCKED"} & set(evidence.PUBLIC_GROUPS),
-                             set(evidence.PUBLIC_GROUPS))
+            expected_groups = {(group, image) for group in evidence.RUNNER_GROUPS for image in evidence.OS_MATRIX}
+            for mode in ("pr", "main"):
+                with self.subTest(mode=mode), mock.patch("stage3.run.checkout_sha", return_value=sha):
+                    args = SimpleNamespace(mode=mode, sha=sha, run_id="42", attempt="1",
+                                           input=directory / "missing", output=directory / mode)
+                    self.assertEqual(report(args), 1)
+                    result = json.loads((args.output / "qualification.json").read_text())
+                    self.assertEqual(result["public_checks_out_of_scope"],
+                                     dict.fromkeys(evidence.PUBLIC_GROUPS, "OUT OF SCOPE BY OWNER"))
+                    self.assertEqual({(row["category"], row["runner_image"]) for row in result["statuses"]},
+                                     expected_groups)
+                    self.assertEqual({row["result"] for row in result["statuses"]}, {"BLOCKED"})
 
     def test_failure_blocks_missing_rows_and_artifacts_reject_tampering(self):
         with tempfile.TemporaryDirectory() as work:

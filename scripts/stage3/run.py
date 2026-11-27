@@ -138,26 +138,22 @@ def public_guard(group):
     if not (env.get("GITHUB_ACTIONS") == "true" and env.get("RUNNER_ENVIRONMENT") == "github-hosted"
             and env.get("GITHUB_REPOSITORY") == REPOSITORY):
         raise Blocked("Public qualification requires GitHub-hosted Ubuntu 22.04")
-    if env.get("GITHUB_EVENT_NAME") == "workflow_dispatch" and group != "extended":
+    if env.get("GITHUB_EVENT_NAME") != "workflow_dispatch":
+        raise Blocked("Public qualification requires an explicit OWNER dispatch")
+    if group != "extended":
         try:
             premerge.guard(env)
         except RuntimeError:
             raise Blocked("OWNER external snapshot guard failed") from None
         if checkout_sha() != env.get("GITHUB_SHA"):
             raise Blocked("OWNER snapshot checkout did not match the exact source SHA")
-    elif env.get("GITHUB_EVENT_NAME") == "workflow_dispatch":
-        if not (env.get("GITHUB_ACTOR") == env.get("GITHUB_TRIGGERING_ACTOR") == "adrianf87" and
-                re.fullmatch(r"refs/heads/.+", env.get("GITHUB_REF", "")) is not None and
-                env.get("OWNER_CONFIRMATION") == "RUN_STAGE3_PUBLIC_EXTENDED_STABILITY" and
-                env.get("PRODUCTION_RESTARTS_ACK") == "false" and
-                env.get("PREMERGE_PHASE") == "none" and
-                checkout_sha() == env.get("PREMERGE_CANDIDATE_SHA") == env.get("GITHUB_SHA")):
-            raise Blocked("OWNER, ref, confirmation token or exact source SHA guard failed")
-    elif not (group != "extended" and env.get("GITHUB_EVENT_NAME") == "push"
-              and env.get("GITHUB_REF") == "refs/heads/main"
-              and env.get("GITHUB_REF_PROTECTED") == "true"
-              and checkout_sha() == env.get("GITHUB_SHA")):
-        raise Blocked("Automatic public qualification requires a protected main push at the exact SHA")
+    elif not (env.get("GITHUB_ACTOR") == env.get("GITHUB_TRIGGERING_ACTOR") == "adrianf87" and
+              re.fullmatch(r"refs/heads/.+", env.get("GITHUB_REF", "")) is not None and
+              env.get("OWNER_CONFIRMATION") == "RUN_STAGE3_PUBLIC_EXTENDED_STABILITY" and
+              env.get("PRODUCTION_RESTARTS_ACK") == "false" and
+              env.get("PREMERGE_PHASE") == "none" and
+              checkout_sha() == env.get("PREMERGE_CANDIDATE_SHA") == env.get("GITHUB_SHA")):
+        raise Blocked("OWNER, ref, confirmation token or exact source SHA guard failed")
 
 
 def run_group(args):
@@ -197,11 +193,12 @@ def artifact_name(group, image, attempt):
 def report(args):
     if checkout_sha() != args.sha:
         raise ValueError("Report generator was checked out at the wrong source SHA")
-    modes = [(group, image) for group in RUNNER_GROUPS for image in OS_MATRIX]
-    if args.mode == "main":
-        modes.extend((group, "ubuntu-22.04") for group in PUBLIC_GROUPS)
-    elif args.mode == "extended":
+    if args.mode == "extended":
         modes = [("extended", "ubuntu-22.04")]
+        public_checks_out_of_scope = {}
+    else:
+        modes = [(group, image) for group in RUNNER_GROUPS for image in OS_MATRIX]
+        public_checks_out_of_scope = dict.fromkeys(PUBLIC_GROUPS, "OUT OF SCOPE BY OWNER")
     rows = []
     issues = []
     binary_identity = {}
@@ -257,11 +254,9 @@ def report(args):
     title.extend("- " + item for item in issues)
     title.extend(f'- {row["runner_image"]} / {row["category"]} / {row["id"]} — {row["result"]}'
                  for row in unresolved)
-    if args.mode == "pr":
-        title.append("- Public TLS, exposure, ncdc, and two-client checks are NOT TESTED in pull request CI. "
-                     "They are explicitly excluded from Stage III completion by OWNER; do not dispatch a snapshot.")
-    if args.mode in {"pr", "main"}:
-        title.append("- Earlier extended stability evidence is archival; no new OWNER dispatch is required for this Stage III scope.")
+    if public_checks_out_of_scope:
+        title.append("- Public TLS, exposure, ncdc, and two-client checks are **OUT OF SCOPE BY OWNER** for automatic CI.")
+        title.append("- Earlier extended stability evidence is archival.")
     if not (unresolved or issues) and args.mode == "extended":
         title.append("All extended automated results passed.")
     title += ["", "## Manual OWNER evidence", "", "| Check | Result |", "| --- | --- |"]
@@ -270,8 +265,7 @@ def report(args):
     (output / "qualification.json").write_text(json.dumps({
         "source_sha": args.sha, "mode": args.mode, "run_id": args.run_id, "run_attempt": args.attempt,
         "statuses": rows, "invalid_bundles": issues, "manual": {case: "NOT TESTED" for case in MANUAL},
-        "public_checks_out_of_scope": {group: "NOT TESTED" for group in PUBLIC_GROUPS}
-        if args.mode == "pr" else {},
+        "public_checks_out_of_scope": public_checks_out_of_scope,
         "result": "FAIL" if unresolved or issues else "PASS",
     }, indent=2) + "\n")
     write_manifest(output, {"qualification.md", "qualification.json"})

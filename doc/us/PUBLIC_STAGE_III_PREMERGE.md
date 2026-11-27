@@ -5,7 +5,7 @@
 The public guest hub is `adcs://server-747585786.dc24h.eu:1512` at
 `62.171.156.32`. [Stage III qualification report](PUBLIC_STAGE_III_QUALIFICATION.md).
 
-## Automatic pull request qualification
+## Automatic qualification on pull requests and main
 
 `.github/workflows/public-stage3-qualification.yml` checks out the exact
 candidate head SHA. The offline build, full relevant CTest suite, systemd
@@ -15,14 +15,10 @@ commands run inside the temporary VMs. The CTest systemd fixture invokes
 packaged system tools for offline unit verification and isolated transient
 units. The candidate hub runs under an unprivileged service account.
 
-Pull requests to `main` exercise the isolated matrix. Their reports mark
-public checks NOT TESTED in that scope. After a push to protected `main` in
-the upstream repository, independent Ubuntu 24.04 jobs verify public DNS/TLS,
-the bounded public TCP set, real ncdc, and two independent guest sessions.
-The public guest jobs require successful loopback and public identity
-prerequisites. Missing, failed, or incomplete evidence blocks the gate for
-required jobs. The former premerge OWNER public snapshot is **withdrawn from this Stage III
-scope**; do not dispatch it. PR CI evidence is evaluated for the current head.
+Pull requests to `main` and pushes to `main` exercise the same isolated matrix.
+The report marks public TLS, port exposure, ncdc, and two-client checks
+`OUT OF SCOPE BY OWNER`. The evidence gate requires complete passing results
+from the isolated jobs for the exact source commit.
 
 The evidence job downloads immutable Actions artifacts and publishes the
 checksummed `stage3-qualification-report-<attempt>` artifact. Download
