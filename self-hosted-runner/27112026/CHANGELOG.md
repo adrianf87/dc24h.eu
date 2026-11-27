@@ -12,6 +12,9 @@ This log tracks verified runner changes and captures the difference between OWNE
 | 2026-11-27 | Centralized self-hosted-runner-specific test code and commands. | [Test suite](../tests/README.md), [run-tests.sh](../scripts/run-tests.sh); syntax validation passed, no live VPS tests executed. |
 | 2026-11-27 | OWNER removed `/home/github-runner/self-hosted-runner` after deletion of the old remote. Empty replacement directories contain no original files. | Historical `20261127T164249Z` snapshot files no longer available at that path; new collection required. |
 
+| 2026-11-27 | Migrated all eight GitHub Actions workflows on the feature branch from Ubuntu runners to self-hosted Debian 13. | OS/user/hostname checks, dedicated Debian 13 APT helper, Stage III/Beta evidence metadata and regression updates; see [CI_WORKFLOWS.md](CI_WORKFLOWS.md). |
+| 2026-11-27 | Validated workflow syntax and policy unit tests. | All eight YAML files parsed; 12 Beta tests and 29 Stage III tests passed (41/41) in the local validation fixture. GitHub Actions runs still pending at observation time; no deployment or runner-host test PASS claimed. |
+
 ## Add future entries
 
 For package additions, upgrades or removals, record:
