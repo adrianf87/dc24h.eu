@@ -13,6 +13,8 @@ This directory is the new **in-repository home** for all inventory, configuratio
 
 - [27 November 2026 — active runner](27112026/README.md)
 - [Read-only inventory collector](scripts/collect-inventory.sh)
+- [CI workflow migration audit](27112026/CI_WORKFLOWS.md)
+- [Dated runner change log](27112026/CHANGELOG.md)
 
 Create a **new dated directory in DDMMYYYY format** when the runner is replaced or a later baseline is taken. Keep older snapshots for comparison and record actual installs, upgrades and removals; never rewrite a historic inventory.
 
