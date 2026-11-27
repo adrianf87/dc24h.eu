@@ -1,0 +1,119 @@
+# Stage IV PROPOSED PUBLIC APACHE VHOST. NOT DEPLOYED, NOT ENABLED.
+# Requires a separate OWNER WEBADMIN PUBLIC ACTIVATION GO after acceptance.
+# The ADCS hub on TCP 1512 and local-only remote pilot stay unchanged.
+# Modules: ssl, headers, rewrite, proxy, proxy_http, authz_core, dir.
+# Preflight: verify port ownership, DNS/SAN/chain, all HTTPS same-host cookies,
+# Apache ingress, backend authorization and an independent rollback path.
+Listen 7278
+ProxyRequests Off
+ProxyPreserveHost Off
+ProxyAddHeaders Off
+TraceEnable Off
+
+<VirtualHost *:7278>
+    ServerName server-747585786.dc24h.eu
+    ServerSignature Off
+    MergeSlashes Off
+    DocumentRoot "/usr/local/share/dc24h/stage4"
+    DirectoryIndex index.html
+    SSLEngine On
+    SSLStrictSNIVHostCheck On
+    SSLCertificateFile "/etc/letsencrypt/live/server-747585786.dc24h.eu/fullchain.pem"
+    SSLCertificateKeyFile "/etc/letsencrypt/live/server-747585786.dc24h.eu/privkey.pem"
+    SSLProtocol -all +TLSv1.2 +TLSv1.3
+    SSLCipherSuite "ECDHE+AESGCM:ECDHE+CHACHA20:!aNULL:!eNULL:!MD5:!3DES:!RC4"
+    SSLCompression Off
+    SSLSessionTickets Off
+    LimitRequestLine 2048
+    LimitRequestFields 48
+    LimitRequestFieldSize 8192
+    LimitRequestBody 32768
+    Timeout 5
+    # The password check and bounded msmtp dispatch can take longer than a
+    # typical status read; do not truncate the response before the 10 s mailer limit.
+    ProxyTimeout 20
+    KeepAliveTimeout 2
+
+    RewriteEngine On
+    # HTTP Host includes the approved public HTTPS port; wrong Host is denied.
+    RewriteCond %{HTTP_HOST} !^server-747585786\.dc24h\.eu:7278$
+    RewriteRule ^ - [F,END]
+    # Reject normalized/traversal/query variants using the original request.
+    RewriteCond %{THE_REQUEST} \s/[^\s?]*[%;] [NC]
+    RewriteRule ^ - [F,END]
+    RewriteCond %{THE_REQUEST} \s/[^\s?]*/\.\.?(?:/|\?|\s) [NC]
+    RewriteRule ^ - [F,END]
+    RewriteCond %{QUERY_STRING} !^$
+    RewriteRule ^ - [F,END]
+
+    # Static files are a distinct, minimal UI; never mount index.html,
+    # remote.html, /admin-api or the private development build.
+    RewriteCond %{REQUEST_URI} !^/$
+    RewriteCond %{REQUEST_URI} !^/(?:index\.html|panel\.(?:js|css))$
+    RewriteCond %{REQUEST_URI} !^/stage4/v1/(?:challenge|login/(?:send|verify)|session|summary|logout|sessions/revoke)$
+    RewriteRule ^ - [F,END]
+    RewriteCond %{REQUEST_URI} ^/(?:index\.html|panel\.(?:js|css)|)$
+    RewriteCond %{REQUEST_METHOD} !^GET$
+    RewriteRule ^ - [F,END]
+    RewriteCond %{REQUEST_URI} ^/stage4/v1/(?:challenge|session|summary)$
+    RewriteCond %{REQUEST_METHOD} !^GET$
+    RewriteRule ^ - [F,END]
+    RewriteCond %{REQUEST_URI} ^/stage4/v1/(?:login/(?:send|verify)|logout|sessions/revoke)$
+    RewriteCond %{REQUEST_METHOD} !^POST$
+    RewriteRule ^ - [F,END]
+    RewriteCond %{HTTP:Origin} !^$
+    RewriteCond %{HTTP:Origin} !^https://server-747585786\.dc24h\.eu:7278$
+    RewriteRule ^ - [F,END]
+    RewriteCond %{REQUEST_METHOD} ^POST$
+    RewriteCond %{HTTP:Origin} !^https://server-747585786\.dc24h\.eu:7278$
+    RewriteRule ^ - [F,END]
+    RewriteCond %{HTTP:Sec-Fetch-Site} !^$
+    RewriteCond %{HTTP:Sec-Fetch-Site} !^(?:same-origin|none)$
+    RewriteRule ^ - [F,END]
+    RewriteCond %{REQUEST_URI} ^/stage4/v1/(?:challenge|session|summary)$
+    RewriteCond %{HTTP:Transfer-Encoding} !^$
+    RewriteRule ^ - [F,END]
+    RewriteCond %{REQUEST_URI} ^/stage4/v1/(?:challenge|session|summary)$
+    RewriteCond %{HTTP:Content-Length} !^(?:0)?$
+    RewriteRule ^ - [F,END]
+    RewriteCond %{REQUEST_METHOD} ^POST$
+    RewriteCond %{HTTP:Transfer-Encoding} !^$
+    RewriteRule ^ - [F,END]
+    RewriteCond %{REQUEST_METHOD} ^POST$
+    RewriteCond %{HTTP:Content-Length} !^[1-9][0-9]{0,4}$
+    RewriteRule ^ - [F,END]
+    RewriteCond %{REQUEST_METHOD} ^POST$
+    RewriteCond %{HTTP:Content-Length} -gt32768
+    RewriteRule ^ - [F,END]
+
+    <Directory "/usr/local/share/dc24h/stage4">
+        Options -Indexes -Includes -ExecCGI -FollowSymLinks
+        AllowOverride None
+        Require all granted
+    </Directory>
+    RequestHeader unset Authorization
+    RequestHeader unset Proxy-Authorization
+    RequestHeader unset X-DC24H-Admin-Grant
+    RequestHeader unset X-DC24H-Session
+    RequestHeader unset X-DC24H-Csrf
+    RequestHeader unset Forwarded
+    RequestHeader unset X-Real-IP
+    RequestHeader unset X-Original-URL
+    RequestHeader unset X-Rewrite-URL
+    RequestHeader unset X-Forwarded-For
+    RequestHeader unset X-Forwarded-Host
+    RequestHeader unset X-Forwarded-Proto
+    RequestHeader unset X-Forwarded-Port
+    RequestHeader unset X-Forwarded-Prefix
+    RequestHeader unset X-Forwarded-User
+    ProxyPassMatch "^(/stage4/v1/(?:challenge|login/(?:send|verify)|session|summary|logout|sessions/revoke))$" "http://127.0.0.1:4278$1"
+
+    Header always set Cache-Control "no-store"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "DENY"
+    Header always set Referrer-Policy "no-referrer"
+    Header always set Cross-Origin-Opener-Policy "same-origin"
+    Header always set Cross-Origin-Resource-Policy "same-origin"
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+    Header always set Content-Security-Policy "default-src 'none'; script-src 'self'; connect-src 'self'; style-src 'self'; form-action 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'"
+</VirtualHost>

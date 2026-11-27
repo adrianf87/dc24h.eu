@@ -1,0 +1,15 @@
+:root { color-scheme: dark; font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; }
+body { margin: 0; padding: 2rem 1rem; }
+main { max-width: 680px; margin: auto; }
+section { border: 1px solid #475569; border-radius: 12px; padding: 1.3rem; margin: 1.2rem 0; background: #172238; }
+header p, footer { color: #a6b6c9; }
+footer { font-size: .85rem; }
+label { display: block; margin: 1rem 0 .3rem; }
+input { box-sizing: border-box; width: 100%; padding: .7rem; background: #f8fafc; color: #111827; border: 2px solid #334155; border-radius: 6px; }
+button { background: #60a5fa; color: #0a152a; border: 0; padding: .7rem 1rem; margin: .8rem .4rem .2rem 0; border-radius: 6px; cursor: pointer; font-weight: 600; }
+button:disabled { opacity: .5; cursor: wait; }
+button:focus-visible, input:focus-visible { outline: 3px solid #fde68a; outline-offset: 2px; }
+.actions { display: flex; flex-wrap: wrap; gap: .3rem; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #101827; padding: 1rem; border-radius: 6px; }
+#message { min-height: 2rem; }
+[hidden] { display: none !important; }

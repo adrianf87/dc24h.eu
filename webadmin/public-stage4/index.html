@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>dc24h.eu — WebAdmin</title>
+  <link rel="stylesheet" href="./panel.css">
+  <script src="./panel.js" defer></script>
+</head>
+<body>
+  <main>
+    <header><h1>dc24h.eu — WebAdmin</h1><p>Panel administracyjny · HTTPS 7278</p></header>
+    <section id="login" aria-labelledby="login-label">
+      <h2 id="login-label">Logowanie OWNER / administrator</h2>
+      <p>Wymagane są hasło konta i 8-cyfrowy kod wysłany na zweryfikowany adres e-mail tego konta.</p>
+      <form id="login-form">
+        <label for="actor">ID konta administratora</label>
+        <input id="actor" name="actor" inputmode="numeric" autocomplete="username" required pattern="[1-9][0-9]*" maxlength="19">
+        <label for="password">Hasło</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+        <button type="submit">Wyślij kod e-mail</button>
+      </form>
+    </section>
+    <section id="verification" hidden aria-labelledby="verification-label">
+      <h2 id="verification-label">Wpisz kod z wiadomości e-mail</h2>
+      <p>Kod jest ważny przez 5 minut. Jeśli go nie otrzymasz, rozpocznij logowanie ponownie.</p>
+      <form id="code-form">
+        <label for="email-code">Kod jednorazowy</label>
+        <input id="email-code" name="email-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{8}" maxlength="8" required>
+        <button type="submit">Potwierdź kod</button>
+      </form>
+      <button id="restart-login" type="button">Zacznij od nowa</button>
+    </section>
+    <section id="dashboard" hidden aria-labelledby="dashboard-label">
+      <h2 id="dashboard-label">Sesja administratora</h2>
+      <p id="role"></p>
+      <div class="actions">
+        <button id="refresh" type="button">Odśwież stan huba</button>
+        <button id="revoke-sessions" type="button">Unieważnij moje sesje</button>
+        <button id="logout" type="button">Wyloguj</button>
+      </div>
+      <pre id="result"></pre>
+      <p>Zmiany konfiguracji, bazy danych i systemd nie są dostępne przez ten panel.</p>
+    </section>
+    <p id="message" role="status" aria-live="polite"></p>
+    <footer>Adres e-mail zmienia zweryfikowany operator poza publicznym formularzem. Nigdy nie udostępniaj kodu logowania.</footer>
+  </main>
+</body>
+</html>
