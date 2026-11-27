@@ -157,7 +157,11 @@ działający hub ADCS i certyfikat Let's Encrypt.
 
 `scripts/stage4_test_database.sh` sprawdza inicjalizację konta, migracje,
 C++ i MariaDB, transakcje, rejestrację, kody, symulowane awarie SMTP, restart
-bazy oraz kopię i odtwarzanie w środowisku jednorazowym. CI korzysta z
-hostowanych przez GitHub obrazów Ubuntu 22.04. Osobno odnotuj
-potwierdzony restart systemd na VPS, dostarczenie prawdziwej wiadomości,
-aktywację Administratora i weryfikację HTTPS z zewnątrz wraz z SHA wdrożenia.
+bazy oraz kopię i odtwarzanie w środowisku jednorazowym. CI obejmuje
+GitHub-hosted Ubuntu 22.04, 24.04 i 26.04 dla dokładnego SHA badanego kodu.
+OWNER zgłosił 27 listopada 2026 udane logowanie Administratora kodem e-mail
+i zmianę hasła. Oddzielnie udokumentuj SHA rzeczywiście wdrożonego kodu,
+stan usług, doręczenie poczty oraz niezależne testy TLS, odmów dostępu,
+uprawnień, sesji, odtworzenia i rollbacku. Po zmianach dokumentacji powstaje
+nowy SHA wymagający osobnej weryfikacji CI. Zielone CI i potwierdzenie
+operatora nie są `OWNER STAGE IV ACCEPTANCE` ani `OWNER MERGE GO`.
