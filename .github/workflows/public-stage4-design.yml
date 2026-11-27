@@ -1,0 +1,38 @@
+name: Stage IV public WebAdmin design boundary (Ubuntu only)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/public-stage4-design.yml'
+      - 'doc/us/PUBLIC_STAGE_IV_WEBADMIN_DESIGN.md'
+      - 'doc/pl/PUBLIC_STAGE_IV_WEBADMIN_DESIGN.md'
+      - 'tests/public_stage4_boundary_tests.py'
+      - 'webadmin/server/remote-main.ts'
+      - 'config/apache2-webadmin-remote.conf.example'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  design-boundary:
+    name: Offline Stage IV scope and private gateway regression / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    steps:
+      - name: Confirm disposable GitHub runner
+        run: |
+          test "$RUNNER_ENVIRONMENT" = 'github-hosted'
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Verify design boundaries without network or sudo
+        run: |
+          python3 -m unittest discover -s tests -p 'public_stage4_boundary_tests.py' -v
+          python3 tests/project_checks.py
+          python3 tests/project_language_policy_tests.py
