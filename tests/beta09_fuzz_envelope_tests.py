@@ -28,9 +28,14 @@ def fixture():
 
 class DualFuzzTests(unittest.TestCase):
     def test_two_real_profiles_are_required_and_no_production_claim(self):
-        result = gate.evaluate(SHA, fixture())
-        self.assertEqual(result["required_runs"], 2048)
-        self.assertFalse(result["independent_production_security_certification"])
+        for image in ("ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04"):
+            records = fixture()
+            for report in records.values():
+                report["os_image"] = image
+            result = gate.evaluate(SHA, records, image)
+            self.assertEqual(result["os_image"], image)
+            self.assertEqual(result["required_runs"], 2048)
+            self.assertFalse(result["independent_production_security_certification"])
 
     def test_wrong_head_skip_partial_or_unbounded_report_fails(self):
         for damage in (

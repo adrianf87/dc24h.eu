@@ -19,6 +19,7 @@ SEED = 424242
 MAX_SECONDS = 180
 MAX_LOG_BYTES = 1024 * 1024
 SHA = re.compile(r"[0-9a-f]{40}\Z")
+IMAGES = ("ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04")
 
 
 def classify(returncode, stderr, elapsed, requested=RUNS):
@@ -72,6 +73,7 @@ def main(argv=None):
     parser.add_argument("--binary", type=Path, required=True)
     parser.add_argument("--corpus", type=Path, required=True)
     parser.add_argument("--sha", required=True)
+    parser.add_argument("--os-image", required=True, choices=IMAGES)
     parser.add_argument("--profile", choices=("adc_parser", "adc_fragments"),
                         default="adc_parser")
     parser.add_argument("--output", type=Path, required=True)
@@ -81,15 +83,16 @@ def main(argv=None):
         if (os.environ.get("GITHUB_ACTIONS") != "true" or
                 os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted" or
                 os.environ.get("RUNNER_OS") != "Linux" or
-                host.get("ID") != "ubuntu" or host.get("VERSION_ID") != "22.04" or
+                host.get("ID") != "ubuntu" or
+                host.get("VERSION_ID") != args.os_image.removeprefix("ubuntu-") or
                 not SHA.fullmatch(args.sha)):
-            raise ValueError("Only GitHub-hosted Ubuntu 22.04 fuzzing is permitted")
+            raise ValueError("Only approved GitHub-hosted Ubuntu fuzzing is permitted")
         actual = subprocess.check_output(["git", "-C", str(args.root), "rev-parse", "HEAD"],
                                          timeout=10).decode().strip()
         if actual != args.sha or not args.binary.is_file() or not args.corpus.is_dir():
             raise ValueError("Missing exact-head fuzzer executable or seed corpus")
         observed, elapsed = run_bounded(args.binary, args.corpus)
-        report = {"schema": 1, "source_sha": args.sha, "os_image": "ubuntu-22.04",
+        report = {"schema": 1, "source_sha": args.sha, "os_image": args.os_image,
                   "fuzzer_profile": args.profile,
                   "compiler": "clang-libfuzzer", "seed": SEED, "requested_runs": RUNS,
                   "observed_runs": observed, "input_max_bytes": 4096,
@@ -103,7 +106,7 @@ def main(argv=None):
             json.dump(report, output, sort_keys=True)
             output.write("\n")
     except (OSError, ValueError, subprocess.SubprocessError):
-        parser.exit(1, "Bounded Ubuntu 22.04 fuzz smoke refused; no raw trace exported.\n")
+        parser.exit(1, "Bounded Ubuntu fuzz smoke refused; no raw trace exported.\n")
     print("Exact-head bounded libFuzzer smoke passed; no production certification")
 
 

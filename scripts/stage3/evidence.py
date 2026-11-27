@@ -15,7 +15,7 @@ import xml.etree.ElementTree as ET
 
 STATUSES = {"PASS", "FAIL", "BLOCKED", "NOT TESTED", "NOT APPLICABLE"}
 PAYLOADS = {"results.json", "junit.xml", "summary.log"}
-OS_MATRIX = ("ubuntu-22.04",)
+OS_MATRIX = ("ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04")
 RUNNER_GROUPS = ("offline", "two-client", "tls-fixtures", "sandbox", "stability")
 PUBLIC_GROUPS = ("ncdc", "two-client-public", "tls-public", "exposure")
 

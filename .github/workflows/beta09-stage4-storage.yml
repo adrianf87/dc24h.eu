@@ -18,22 +18,24 @@ jobs:
   offline-audit:
     if: github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
     name: Stage IV private storage - ${{ matrix.os }}
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04]
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
     env:
       SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       CI: 'true'
     steps:
-      - name: Verify GitHub-hosted Ubuntu 22.04 runner
+      - name: Verify GitHub-hosted Ubuntu runner
         shell: bash
+        env:
+          EXPECTED_IMAGE: ${{ matrix.os }}
         run: |
           test "$RUNNER_ENVIRONMENT" = 'github-hosted'
           . /etc/os-release
-          test "$ID" = ubuntu && test "$VERSION_ID" = 22.04
+          test "$ID" = ubuntu && test "$VERSION_ID" = "${EXPECTED_IMAGE#ubuntu-}"
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}

@@ -16,19 +16,25 @@ concurrency:
 
 jobs:
   tsan:
-    name: TSAN - ubuntu-22.04
+    name: TSAN - ${{ matrix.os }}
     if: github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
     env:
       SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
-      - name: Verify GitHub-hosted Ubuntu 22.04 runner
+      - name: Verify GitHub-hosted Ubuntu runner
         shell: bash
+        env:
+          EXPECTED_IMAGE: ${{ matrix.os }}
         run: |
           test "$RUNNER_ENVIRONMENT" = 'github-hosted'
           . /etc/os-release
-          test "$ID" = ubuntu && test "$VERSION_ID" = 22.04
+          test "$ID" = ubuntu && test "$VERSION_ID" = "${EXPECTED_IMAGE#ubuntu-}"
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -59,31 +65,37 @@ jobs:
             --output "$RUNNER_TEMP/beta08-evidence/tsan-summary.json"
           python3 scripts/beta06_ci_provenance.py \
             --summary "$RUNNER_TEMP/beta08-evidence/tsan-summary.json" \
-            --sha "$SOURCE_SHA" --suite beta08-tsan --os-image ubuntu-22.04 \
+            --sha "$SOURCE_SHA" --suite beta08-tsan --os-image '${{ matrix.os }}' \
             --output "$RUNNER_TEMP/beta08-evidence/tsan-provenance.json"
       - name: Upload sanitized TSAN outcome (no raw logs)
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: tsan-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          name: tsan-evidence-${{ matrix.os }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/beta08-evidence/
           if-no-files-found: error
           retention-days: 7
 
   fuzz:
-    name: ADC parser fuzz - ubuntu-22.04
+    name: ADC parser fuzz - ${{ matrix.os }}
     if: github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
     env:
       SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
-      - name: Verify GitHub-hosted Ubuntu 22.04 runner
+      - name: Verify GitHub-hosted Ubuntu runner
         shell: bash
+        env:
+          EXPECTED_IMAGE: ${{ matrix.os }}
         run: |
           test "$RUNNER_ENVIRONMENT" = 'github-hosted'
           . /etc/os-release
-          test "$ID" = ubuntu && test "$VERSION_ID" = 22.04
+          test "$ID" = ubuntu && test "$VERSION_ID" = "${EXPECTED_IMAGE#ubuntu-}"
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -114,17 +126,17 @@ jobs:
             --root "$GITHUB_WORKSPACE" \
             --binary "$RUNNER_TEMP/beta08-fuzz/adc_parser_fuzzer" \
             --corpus "$GITHUB_WORKSPACE/tests/fuzz_corpus/adc" \
-            --sha "$SOURCE_SHA" \
+            --sha "$SOURCE_SHA" --os-image '${{ matrix.os }}' \
             --profile adc_parser \
             --output "$RUNNER_TEMP/beta08-evidence/fuzz-smoke.json"
           python3 scripts/beta08_fuzz_smoke.py \
             --root "$GITHUB_WORKSPACE" \
             --binary "$RUNNER_TEMP/beta08-fuzz/adc_fragment_fuzzer" \
             --corpus "$GITHUB_WORKSPACE/tests/fuzz_corpus/adc_fragments" \
-            --sha "$SOURCE_SHA" --profile adc_fragments \
+            --sha "$SOURCE_SHA" --profile adc_fragments --os-image '${{ matrix.os }}' \
             --output "$RUNNER_TEMP/beta08-evidence/fuzz-fragments-smoke.json"
           python3 scripts/beta09_fuzz_envelope.py \
-            --root "$GITHUB_WORKSPACE" --sha "$SOURCE_SHA" \
+            --root "$GITHUB_WORKSPACE" --sha "$SOURCE_SHA" --os-image '${{ matrix.os }}' \
             --parser-report "$RUNNER_TEMP/beta08-evidence/fuzz-smoke.json" \
             --fragments-report "$RUNNER_TEMP/beta08-evidence/fuzz-fragments-smoke.json" \
             --output "$RUNNER_TEMP/beta08-evidence/beta09-fuzz-envelope.json"
@@ -132,7 +144,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: fuzz-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          name: fuzz-evidence-${{ matrix.os }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/beta08-evidence/
           if-no-files-found: error
           retention-days: 7

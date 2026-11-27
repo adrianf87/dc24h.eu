@@ -100,7 +100,7 @@ class PublicStageIVBoundaryTests(unittest.TestCase):
         for condition in (
             "NO PUBLIC WEBADMIN ACTIVATION",
             "Do not remove those safety checks",
-            "GitHub-hosted Ubuntu 22.04 only",
+            "GitHub-hosted Ubuntu 22.04, 24.04 and 26.04",
             "no CI SSH or remote `sudo`",
         ):
             with self.subTest(condition=condition):

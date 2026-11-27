@@ -84,7 +84,8 @@ class StageIVTechnicalIdentityTests(unittest.TestCase):
         workflow = source(".github/workflows/stage4-ubuntu-vm-validation.yml")
         self.assertIn("build/Stage4VM/dc24h-twilight", workflow)
         self.assertIn("stage4_ubuntu_vm_probe_tests.py", workflow)
-        self.assertIn("runs-on: ubuntu-22.04", workflow)
+        self.assertIn("runs-on: ${{ matrix.os }}", workflow)
+        self.assertIn("os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]", workflow)
         self.assertNotIn("self-hosted", workflow)
 
     def test_status_api_dns_origin_passkey_and_sysusers_are_stable(self):

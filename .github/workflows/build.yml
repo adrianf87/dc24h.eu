@@ -14,29 +14,34 @@ env:
   SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
 concurrency:
-  group: dc24h-ubuntu2204-${{ github.workflow }}-${{ github.ref }}
+  group: dc24h-ubuntu-matrix-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   application:
-    name: C++ CTest and WebAdmin / Ubuntu 22.04
+    name: C++ CTest and WebAdmin / ${{ matrix.os }}
     if: github.repository == 'adrianf87/dc24h.eu' || github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      - name: Verify GitHub-hosted Ubuntu 22.04 and exact checkout
+      - name: Verify GitHub-hosted Ubuntu image and exact checkout
         env:
           SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          EXPECTED_IMAGE: ${{ matrix.os }}
         run: |
           test "$RUNNER_ENVIRONMENT" = github-hosted
           . /etc/os-release
-          test "$ID" = ubuntu && test "$VERSION_ID" = 22.04
+          test "$ID" = ubuntu && test "$VERSION_ID" = "${EXPECTED_IMAGE#ubuntu-}"
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
-      - name: Install Ubuntu 22.04 C++ and integration dependencies
+      - name: Install Ubuntu C++ and integration dependencies
         run: |
           bash .github/scripts/install-ci-deps.sh \
             build-essential cmake python3 libutf8proc-dev libgcrypt20-dev libssl-dev \
@@ -81,20 +86,28 @@ jobs:
           python3 -m unittest discover -s tests -p 'stage4_webadmin_bridge_tests.py' -v
 
   sanitizers:
-    name: C++ sanitizer ${{ matrix.sanitizer }} / Ubuntu 22.04
+    name: C++ sanitizer ${{ matrix.sanitizer }} / ${{ matrix.os }}
     if: github.repository == 'adrianf87/dc24h.eu' || github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
         sanitizer: [address, undefined]
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      - name: Install Ubuntu 22.04 native dependencies
+      - name: Verify GitHub-hosted Ubuntu image
+        env:
+          EXPECTED_IMAGE: ${{ matrix.os }}
+        run: |
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          . /etc/os-release
+          test "$ID" = ubuntu && test "$VERSION_ID" = "${EXPECTED_IMAGE#ubuntu-}"
+      - name: Install Ubuntu native dependencies
         run: |
           bash .github/scripts/install-ci-deps.sh \
             build-essential cmake python3 libutf8proc-dev libgcrypt20-dev \
@@ -115,7 +128,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 5
     steps:
-      - name: Require all Ubuntu 22.04 application tests to pass
+      - name: Require all Ubuntu 22.04 24.04 and 26.04 tests to pass
         env:
           APPLICATION_RESULT: ${{ needs.application.result }}
           SANITIZERS_RESULT: ${{ needs.sanitizers.result }}

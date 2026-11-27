@@ -353,11 +353,13 @@ class EvidenceTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "SHA-256 manifest mismatch"):
                 evidence.verify_bundle(directory, "sandbox", "ubuntu-22.04", "a" * 40, suite.context["run_id"])
 
-    def test_qualification_workflows_use_hosted_ubuntu2204(self):
+    def test_qualification_workflows_use_only_approved_hosted_ubuntu(self):
         workflows = Path(__file__).resolve().parent.parent / ".github/workflows"
         for name in ("debian13-stage3-full-qualification.yml", "public-stage3-qualification.yml"):
             document = (workflows / name).read_text()
-            self.assertNotRegex(document, r"(?m)^\s*runs-on: (?!ubuntu-22\.04$)")
+            self.assertNotRegex(document, r"(?m)^\s*runs-on: (?!ubuntu-22\.04$|\$\{\{ matrix\.os \}\}$)")
+            if name == "public-stage3-qualification.yml":
+                self.assertIn("os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]", document)
             self.assertNotIn("self-hosted", document)
             self.assertNotIn("sudo -n python", document)
             self.assertNotIn("sudo -n bash", document)

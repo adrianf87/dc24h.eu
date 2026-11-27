@@ -56,7 +56,7 @@ Klucze prywatne, tokeny usługowe i sekrety nie mogą trafiać do repozytorium,
 artefaktów CI ani przeglądarki. Port 1512 pozostaje dla ADCS; publiczny ADC
 1511, MariaDB, wewnętrzne API i porty developerskie pozostają niedostępne.
 
-Testy CI używają wyłącznie GitHub-hosted Ubuntu 22.04.
+Testy CI używają wyłącznie GitHub-hosted Ubuntu 22.04, 24.04 i 26.04.
 Nie przywracamy self-hosted runnera i nie wykonujemy zdalnego `sudo` przez CI.
 Uruchomienie publicznego panelu wymaga oddzielnego odbioru Etapu IV oraz zgody
 `OWNER WEBADMIN PUBLIC ACTIVATION GO`.

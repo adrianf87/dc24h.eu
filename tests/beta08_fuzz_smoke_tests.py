@@ -13,7 +13,7 @@ import beta08_fuzz_smoke as gate
 
 
 class FuzzSmokeTests(unittest.TestCase):
-    def test_only_exact_head_github_hosted_ubuntu_2204_is_accepted(self):
+    def test_only_exact_head_github_hosted_approved_ubuntu_is_accepted(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             binary = root / "fuzzer"
@@ -30,11 +30,15 @@ class FuzzSmokeTests(unittest.TestCase):
             with (patch.dict(os.environ, hosted),
                   patch.object(gate.subprocess, "check_output", return_value=sha.encode()),
                   patch.object(gate, "run_bounded", return_value=(gate.RUNS, 1.0)) as run):
-                with patch.object(gate.platform, "freedesktop_os_release",
-                                  return_value={"ID": "ubuntu", "VERSION_ID": "22.04"}):
-                    gate.main(args)
-                self.assertEqual(json.loads(output.read_text())["os_image"], "ubuntu-22.04")
-                self.assertEqual(run.call_count, 1)
+                for release in ("22.04", "24.04", "26.04"):
+                    with (self.subTest(release=release),
+                          patch.object(gate.platform, "freedesktop_os_release",
+                                       return_value={"ID": "ubuntu", "VERSION_ID": release})):
+                        gate.main(args + ["--os-image", "ubuntu-" + release])
+                        self.assertEqual(json.loads(output.read_text())["os_image"],
+                                         "ubuntu-" + release)
+                        output.unlink()
+                self.assertEqual(run.call_count, 3)
                 for environment, host in (
                     ({**hosted, "RUNNER_ENVIRONMENT": "self-hosted"},
                      {"ID": "ubuntu", "VERSION_ID": "22.04"}),
@@ -45,8 +49,8 @@ class FuzzSmokeTests(unittest.TestCase):
                           patch.dict(os.environ, environment),
                           patch.object(gate.platform, "freedesktop_os_release", return_value=host),
                           self.assertRaises(SystemExit)):
-                        gate.main(args)
-                self.assertEqual(run.call_count, 1,
+                        gate.main(args + ["--os-image", "ubuntu-22.04"])
+                self.assertEqual(run.call_count, 3,
                                  "unapproved hosts must never invoke the fuzz executable")
 
     def test_completed_bounded_run(self):

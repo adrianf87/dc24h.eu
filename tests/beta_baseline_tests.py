@@ -58,14 +58,14 @@ def check_no_custom_workers(errors):
     pr = (workflow_dir / "public-stage3-qualification.yml").read_text(encoding="utf-8")
     manual = (workflow_dir / "debian13-stage3-full-qualification.yml").read_text(encoding="utf-8")
     for workflow, entries in (
-        (pr, ("  pull_request:", "os: [ubuntu-22.04]",
-              "runs-on: ubuntu-22.04", "sudo -n id -u", "stage3.run run ncdc",
+        (pr, ("  pull_request:", "os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]",
+              "runs-on: ${{ matrix.os }}", "sudo -n id -u", "stage3.run run ncdc",
               "bash .github/scripts/install-ci-deps.sh ncdc")),
         (manual, ("  workflow_dispatch:", "RUN_STAGE3_PUBLIC_EXTENDED_STABILITY",
                   "stage3.run run extended", "inputs.production_restarts_ack == false",
                   "bash .github/scripts/install-ci-deps.sh ncdc")),
     ):
-        for required in (*entries, "runs-on: ubuntu-22.04", "contents: read",
+        for required in (*entries, "contents: read",
                          "test \"$RUNNER_ENVIRONMENT\" = github-hosted"):
             require(required in workflow, f"Stage III workflow missing {required!r}", errors)
         for prohibited in ("systemctl restart", "sudo -n python3", "premerge-host:",
@@ -127,15 +127,17 @@ def main():
     require('set(DC24H_VERSION "alpha-' not in cmake, "CMakeLists.txt: alpha version string remains", errors)
     check(ROOT / "cmake/version.hpp.in", ('inline constexpr std::string_view version = "@DC24H_VERSION@";',), errors)
     workflow = check(ROOT / ".github/workflows/build.yml", (
-        "runs-on: ubuntu-22.04",
+        "runs-on: ${{ matrix.os }}",
+        "os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]",
         'sanitizer: [address, undefined]',
         'npm audit --omit=dev --audit-level=high',
         "feature/stage4-webadmin-dedicated-service",
         "pull_request:",
         "name: CI (C++ and WebAdmin)",
     ), errors)
-    require(workflow.count("runs-on: ubuntu-22.04") == 3,
-            "build.yml: application, sanitizers and required check must use Ubuntu 22.04", errors)
+    require(workflow.count("runs-on: ${{ matrix.os }}") == 2 and
+            workflow.count("runs-on: ubuntu-22.04") == 1,
+            "build.yml: application and sanitizers must test all three Ubuntu versions", errors)
     require('test "$(nproc)" -eq 4' not in workflow,
             "build.yml: fixed runner CPU count is not portable", errors)
     check_ci_repository_allowlists(errors)

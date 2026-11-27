@@ -20,20 +20,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04]
-    runs-on: ubuntu-22.04
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
-      - name: Verify GitHub-hosted Ubuntu 22.04 runner
+      - name: Verify GitHub-hosted Ubuntu runner
+        env:
+          EXPECTED_IMAGE: ${{ matrix.os }}
         run: |
           . /etc/os-release
           test "$RUNNER_ENVIRONMENT" = github-hosted
-          test "$ID" = ubuntu && test "$VERSION_ID" = 22.04
+          test "$ID" = ubuntu && test "$VERSION_ID" = "${EXPECTED_IMAGE#ubuntu-}"
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ env.SOURCE_SHA }}
           persist-credentials: false
-      - name: Install Ubuntu 22.04 packaged build and integration dependencies
+      - name: Install Ubuntu packaged build and integration dependencies
         run: |
           test "$RUNNER_ENVIRONMENT" = github-hosted
           bash .github/scripts/install-ci-deps.sh \
@@ -64,19 +66,21 @@ jobs:
           if-no-files-found: error
 
   sandbox:
-    name: Ubuntu 22.04 sudo and systemd unit verification / ${{ matrix.os }}
+    name: Ubuntu sudo and systemd unit verification / ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04]
-    runs-on: ubuntu-22.04
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 8
     steps:
-      - name: Verify GitHub-hosted Ubuntu 22.04 runner
+      - name: Verify GitHub-hosted Ubuntu runner
+        env:
+          EXPECTED_IMAGE: ${{ matrix.os }}
         run: |
           . /etc/os-release
           test "$RUNNER_ENVIRONMENT" = github-hosted
-          test "$ID" = ubuntu && test "$VERSION_ID" = 22.04
+          test "$ID" = ubuntu && test "$VERSION_ID" = "${EXPECTED_IMAGE#ubuntu-}"
       - id: fixed_fixture
         name: Run packaged systemd tools on disposable GitHub runner
         run: |
@@ -114,21 +118,23 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04]
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
         group: [two-client, tls-fixtures, stability]
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     steps:
-      - name: Verify GitHub-hosted Ubuntu 22.04 runner
+      - name: Verify GitHub-hosted Ubuntu runner
+        env:
+          EXPECTED_IMAGE: ${{ matrix.os }}
         run: |
           . /etc/os-release
           test "$RUNNER_ENVIRONMENT" = github-hosted
-          test "$ID" = ubuntu && test "$VERSION_ID" = 22.04
+          test "$ID" = ubuntu && test "$VERSION_ID" = "${EXPECTED_IMAGE#ubuntu-}"
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ env.SOURCE_SHA }}
           persist-credentials: false
-      - name: Install Ubuntu 22.04 clients and hub runtime dependencies
+      - name: Install Ubuntu clients and hub runtime dependencies
         run: |
           test "$RUNNER_ENVIRONMENT" = github-hosted
           bash .github/scripts/install-ci-deps.sh \
@@ -261,7 +267,7 @@ jobs:
       - name: Verify SHA-256 manifests, test outcomes and run provenance
         if: '!cancelled()'
         env:
-          REPORT_MODE: ${{ github.event_name == 'push' && github.repository == 'adrianf87/dc24h.eu-twilight' && 'main' || 'pr' }}
+          REPORT_MODE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.ref_protected && github.repository == 'adrianf87/dc24h.eu-twilight' && 'main' || 'pr' }}
         run: |
           python3 -m stage3.run report --mode "$REPORT_MODE" --sha "$SOURCE_SHA" --run-id "$GITHUB_RUN_ID" \
             --attempt "$GITHUB_RUN_ATTEMPT" --input "$RUNNER_TEMP/bundles" --output "$RUNNER_TEMP/report"

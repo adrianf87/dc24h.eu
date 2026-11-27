@@ -101,7 +101,7 @@ def offline(suite, build, private, parallel, *, local=False):
 def sandbox(suite, sudo_result):
     with suite.case("ubuntu.sudo"):
         if sudo_result != "success":
-            raise Blocked("Ubuntu 22.04 sudo/systemd fixture failed or was not run")
+            raise Blocked("Ubuntu sudo/systemd fixture failed or was not run")
     with suite.case("systemd.verify"):
         with tempfile.TemporaryDirectory(prefix="stage3-unit-") as work:
             unit = Path(work) / "dc24h-twilight.service"
@@ -112,7 +112,7 @@ def sandbox(suite, sudo_result):
             command = ["systemd-analyze", "--man=no", "--generators=no", "verify", str(unit)]
             if suite.image != "local":
                 if os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted":
-                    raise Blocked("System-mode unit inspection requires GitHub-hosted Ubuntu 22.04")
+                    raise Blocked("System-mode unit inspection requires GitHub-hosted Ubuntu")
                 # Older systemd needs access to the system unit load paths.
                 # Only the packaged, offline verifier is elevated. Treat the
                 # unit as input data and never load it into the system manager.

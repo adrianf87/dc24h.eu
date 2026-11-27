@@ -148,7 +148,7 @@ class RemoteConfiguration(unittest.TestCase):
         self.assertIn('set(DC24H_VERSION "beta-0.9.20")', self.text("CMakeLists.txt"))
         self.assertIn('WEBADMIN_VERSION = "beta-0.9.20"', self.text("webadmin/src/lib/status.ts"))
         self.assertIn("feature/stage4-webadmin-dedicated-service", self.text(".github/workflows/build.yml"))
-        self.assertIn("runs-on: ubuntu-22.04", self.text(".github/workflows/build.yml"))
+        self.assertIn("runs-on: ${{ matrix.os }}", self.text(".github/workflows/build.yml"))
         self.assertNotIn("runs-on: [self-hosted", self.text(".github/workflows/build.yml"))
         self.assertIn("remote.gateway.config", self.text("CMakeLists.txt"))
         self.assertIn("apache2.remote.gateway", self.text("CMakeLists.txt"))

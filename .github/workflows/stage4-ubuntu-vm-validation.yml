@@ -1,4 +1,4 @@
-name: Stage IV Ubuntu 22.04 isolated qualification
+name: Stage IV Ubuntu 22.04 24.04 26.04 isolated qualification
 
 on:
   push:
@@ -12,27 +12,33 @@ permissions:
 
 jobs:
   stage4-ubuntu:
-    name: Stage IV isolated tests / Ubuntu 22.04
+    name: Stage IV isolated tests / ${{ matrix.os }}
     if: github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      - name: Verify hosted Ubuntu 22.04
+      - name: Verify hosted Ubuntu image
+        env:
+          EXPECTED_IMAGE: ${{ matrix.os }}
         run: |
           test "$RUNNER_ENVIRONMENT" = github-hosted
           . /etc/os-release
-          test "$ID" = ubuntu && test "$VERSION_ID" = 22.04
+          test "$ID" = ubuntu && test "$VERSION_ID" = "${EXPECTED_IMAGE#ubuntu-}"
       - name: Run Stage IV Python boundary tests
         run: |
           python3 -m unittest discover -s tests -p 'public_stage4_boundary_tests.py' -v
           python3 -m unittest discover -s tests -p 'stage4_webadmin_bridge_tests.py' -v
           python3 -m unittest discover -s tests -p 'stage4_vps_preflight_tests.py' -v
           python3 tests/project_checks.py
-      - name: Compile isolated Stage IV hub on Ubuntu 22.04
+      - name: Compile isolated Stage IV hub on Ubuntu
         run: |
           bash .github/scripts/install-ci-deps.sh \
             build-essential cmake libssl-dev libgcrypt20-dev libutf8proc-dev libmariadb-dev
@@ -45,11 +51,11 @@ jobs:
         run: |
           mkdir -p "$DC24H_VM_REPORT_DIR"
           python3 tests/stage4_ubuntu_vm_probe_tests.py build/Stage4VM/dc24h-twilight
-      - name: Upload sanitized Ubuntu 22.04 loopback reports
+      - name: Upload sanitized Ubuntu loopback reports
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: stage4-ubuntu-22.04-${{ github.run_attempt }}
+          name: stage4-${{ matrix.os }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/stage4-ubuntu-evidence/
           if-no-files-found: warn
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0

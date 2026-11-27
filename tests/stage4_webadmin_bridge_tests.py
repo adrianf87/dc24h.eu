@@ -27,6 +27,11 @@ class Upstream(BaseHTTPRequestHandler):
         self.respond()
 
     def respond(self):
+        # Consume the forwarded POST body before closing the upstream socket.
+        # Otherwise Linux may RST a response that the bridge is still reading.
+        if self.command == "POST":
+            length = int(self.headers.get("Content-Length", "0"))
+            self.rfile.read(length)
         Upstream.seen.append((self.command, self.path, dict(self.headers)))
         content = b'{"schema":2,"safe":true}'
         self.send_response(200)
@@ -102,20 +107,24 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual(len(Upstream.seen), 3)
 
     def test_smuggling_and_oversized_password_request_denied(self):
-        self.assertEqual(self.call("POST", "/api/v1/admin/access",
-                                   {"Content-Type": "application/x-www-form-urlencoded",
-                                    "Transfer-Encoding": "chunked"}, b"x=1")[0], 400)
-        # The bridge rejects an oversized Content-Length before consuming the
-        # body. Depending on socket scheduling, the client may receive HTTP 400
-        # or BrokenPipe/connection reset while still transmitting invalid data.
-        try:
-            status, _ = self.call("POST", "/api/v1/admin/access",
-                                  {"Content-Type": "application/x-www-form-urlencoded",
-                                   "Content-Length": "16385"}, b"x=1")
-        except (BrokenPipeError, ConnectionResetError, http.client.RemoteDisconnected):
-            pass
-        else:
-            self.assertEqual(status, 400)
+        # The bridge rejects malformed framing before reading the request body.
+        # Depending on scheduling, an invalid writer sees HTTP 400 or an early
+        # close. Only these deliberately malformed requests allow early close.
+        for headers in (
+            {"Content-Type": "application/x-www-form-urlencoded",
+             "Transfer-Encoding": "chunked"},
+            {"Content-Type": "application/x-www-form-urlencoded",
+             "Content-Length": "16385"},
+        ):
+            with self.subTest(headers=headers):
+                try:
+                    status, _ = self.call("POST", "/api/v1/admin/access",
+                                          headers, b"x=1")
+                except (BrokenPipeError, ConnectionResetError,
+                        http.client.RemoteDisconnected):
+                    pass
+                else:
+                    self.assertEqual(status, 400)
         self.assertEqual(self.call("GET", "/api/v1/status", {"Content-Length": "2"})[0], 400)
         self.assertEqual(Upstream.seen, [])
 
