@@ -1,10 +1,12 @@
 # Etap IV — zatwierdzony projekt publicznego WebAdmin (P0)
 
-**Status: PROJEKT ZATWIERDZONY / NIEZAIMPLEMENTOWANY / BRAK PUBLICZNEJ AKTYWACJI WEBADMIN.**
+**Status: KANDYDAT IMPLEMENTACJI / BRAK PEŁNEGO ODBIORU / BRAK PUBLICZNEJ AKTYWACJI WEBADMIN.**
 
 OWNER wybrał publiczny panel HTTPS na istniejącej domenie VPS oraz osobnym porcie.
-Dokument opisuje decyzję i warunki bezpieczeństwa; nie upoważnia do otwarcia portu,
-instalacji gateway, zmiany DNS, certyfikatu ani konfiguracji publicznego serwera.
+Zgoda OWNER obejmuje przygotowanie kodu na roboczej gałęzi, ale nie uruchomienie
+panelu na VPS. Dokument nie upoważnia do otwarcia portu, instalacji na serwerze,
+zmiany DNS, certyfikatu ani konfiguracji publicznego serwera.
+Wykaz blokad odbioru: [raport Stage IV](../us/PUBLIC_STAGE_IV_WEBADMIN_IMPLEMENTATION.md).
 Pełne wymagania techniczne i macierz testów są w [wersji US](../us/PUBLIC_STAGE_IV_WEBADMIN_DESIGN.md).
 
 | Cel | Wartość |

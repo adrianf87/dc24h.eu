@@ -10,6 +10,43 @@ ORIGIN = f"https://{FQDN}:7278"
 
 
 class PublicStageIVBoundaryTests(unittest.TestCase):
+    def test_new_gateway_is_dedicated_loopback_only_with_startup_gate(self):
+        main = (ROOT / "webadmin/server/public-main.ts").read_text(encoding="utf-8")
+        handler = (ROOT / "webadmin/server/public-gateway.ts").read_text(encoding="utf-8")
+        self.assertIn('app.listen(4278, "127.0.0.1"', main)
+        self.assertIn("OWNER_WEBADMIN_PUBLIC_ACTIVATION_GO", main)
+        self.assertIn('const internalHost = "127.0.0.1:4278"', handler)
+        self.assertIn('const prefix = "/stage4/v1/"', handler)
+        self.assertNotIn('import { remoteGateway }', main)
+
+    def test_public_apache_example_pins_exact_origin_and_only_public_routes(self):
+        apache = (ROOT / "config/apache2-webadmin-public.conf.example").read_text(
+            encoding="utf-8"
+        )
+        for required in (
+            "Listen 7278", "ServerName server-747585786.dc24h.eu",
+            "SSLEngine On", "SSLStrictSNIVHostCheck On",
+            "letsencrypt/live/server-747585786.dc24h.eu/fullchain.pem",
+            "http://127.0.0.1:4278", "ProxyAddHeaders Off",
+            "RequestHeader unset Authorization", "RequestHeader unset X-DC24H-Admin-Grant",
+            'DocumentRoot "/usr/local/share/dc24h/stage4"',
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, apache)
+        self.assertNotIn("51.255.80.233", apache)
+        self.assertNotIn("ProxyPass /admin-api", apache)
+        self.assertNotIn("ProxyPass /remote", apache)
+
+    def test_public_shell_contains_no_privileged_tokens_or_private_gateway(self):
+        client = (ROOT / "webadmin/public-stage4/panel.js").read_text(encoding="utf-8")
+        html = (ROOT / "webadmin/public-stage4/index.html").read_text(encoding="utf-8")
+        self.assertIn('const api = "/stage4/v1/"', client)
+        self.assertIn("navigator.credentials.get", client)
+        self.assertIn("navigator.credentials.create", client)
+        for forbidden in ("/admin-api", "/remote/v1", "DC24H_API_TOKEN_FILE", "localStorage"):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, client + html)
+
     def test_owner_design_pins_separate_hub_and_webadmin_ports(self):
         for locale in ("us", "pl"):
             document = (ROOT / "doc" / locale / "PUBLIC_STAGE_IV_WEBADMIN_DESIGN.md").read_text(

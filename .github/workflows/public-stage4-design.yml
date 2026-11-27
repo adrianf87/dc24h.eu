@@ -6,14 +6,25 @@ on:
     paths:
       - '.github/workflows/public-stage4-design.yml'
       - 'doc/us/PUBLIC_STAGE_IV_WEBADMIN_DESIGN.md'
+      - 'doc/us/PUBLIC_STAGE_IV_WEBADMIN_IMPLEMENTATION.md'
+      - 'doc/pl/PUBLIC_STAGE_IV_WEBADMIN_IMPLEMENTATION.md'
       - 'doc/pl/PUBLIC_STAGE_IV_WEBADMIN_DESIGN.md'
       - 'tests/public_stage4_boundary_tests.py'
       - 'webadmin/server/remote-main.ts'
       - 'webadmin/server/public-two-factor.ts'
+      - 'webadmin/server/public-backend.ts'
+      - 'webadmin/server/public-gateway.ts'
+      - 'webadmin/server/public-main.ts'
+      - 'webadmin/server/public-private-init.ts'
       - 'webadmin/tests/public-two-factor.test.ts'
+      - 'webadmin/tests/public-gateway.test.ts'
+      - 'webadmin/tests/public-backend.test.ts'
+      - 'webadmin/tests/public-stage4.spec.ts'
+      - 'webadmin/public-stage4/**'
       - 'webadmin/package.json'
       - 'webadmin/package-lock.json'
       - 'config/apache2-webadmin-remote.conf.example'
+      - 'config/apache2-webadmin-public.conf.example'
   workflow_dispatch:
 
 permissions:
@@ -49,5 +60,31 @@ jobs:
         working-directory: webadmin
         run: |
           npm ci --no-audit --no-fund
-          node --import tsx --test tests/public-two-factor.test.ts
+          node --import tsx --test tests/public-two-factor.test.ts tests/public-gateway.test.ts tests/public-backend.test.ts
+          node --check public-stage4/panel.js
+          npm run build:public:ci
           npm run typecheck
+
+  playwright-shell:
+    name: Standalone Stage IV browser/CSRF flow (hosted Ubuntu 24.04)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Confirm disposable GitHub runner
+        run: test "$RUNNER_ENVIRONMENT" = 'github-hosted'
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: webadmin/package-lock.json
+      - name: Install isolated test browser
+        working-directory: webadmin
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Run isolated public browser tests; never contact the VPS
+        working-directory: webadmin
+        run: npx playwright test tests/public-stage4.spec.ts

@@ -1,12 +1,13 @@
 # Stage IV — OWNER-approved public WebAdmin design (P0)
 
-**Status: DESIGN APPROVED / NOT IMPLEMENTED / NO PUBLIC WEBADMIN ACTIVATION.**
+**Status: IMPLEMENTATION CANDIDATE / NOT FULLY QUALIFIED / NO PUBLIC WEBADMIN ACTIVATION.**
 
 Issue [#10](https://github.com/adrianf87/dc24h.eu-twilight/issues/10) requires a separate
 OWNER decision on the administration boundary. The OWNER selected Internet-facing HTTPS,
-the existing VPS hostname, and a distinct TCP port. This document records that decision;
-it does **not** authorize opening a listener, provisioning administrator credentials,
-installing a gateway, or changing the public VPS.
+the existing VPS hostname, and a distinct TCP port. OWNER authorized preparing
+the Stage IV candidate on a draft branch. This does **not** authorize opening
+a listener, provisioning production credentials, installing on or changing the VPS.
+See [implementation and acceptance gaps](PUBLIC_STAGE_IV_WEBADMIN_IMPLEMENTATION.md).
 
 ## Fixed deployment identity
 
