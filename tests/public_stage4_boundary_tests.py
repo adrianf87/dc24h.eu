@@ -182,12 +182,24 @@ class PublicStageIVBoundaryTests(unittest.TestCase):
         self.assertIn('"${RUNNER_ENVIRONMENT:-}" = "github-hosted"', script)
         self.assertIn('[ "$ID" = ubuntu ] && [ "$VERSION_ID" = 26.04 ]', script)
         self.assertIn('scratch=/var/lib/mariadb/stage4-fixture-$fixture_nonce', script)
+        self.assertIn('mysql_exec=(setpriv --reuid=mysql --regid=mysql --init-groups)', script)
+        self.assertIn('mysql_user_arg=()', script)
+        self.assertIn('"${mysql_exec[@]}" mariadbd', script)
         self.assertIn('mariadb-install-db --no-defaults', script)
+        self.assertIn("sed -n '1,20p' \"$scratch/db-bootstrap.log\"", script)
         self.assertIn('tail -n 25 "$scratch/db-bootstrap.log"', script)
         self.assertNotIn('apparmor_parser', script)
         self.assertNotIn('aa-disable', script)
         self.assertNotIn('aa-complain', script)
         self.assertIn('"GITHUB_ACTIONS=$GITHUB_ACTIONS" "RUNNER_ENVIRONMENT=$RUNNER_ENVIRONMENT"', workflow)
+
+    def test_hosted_browser_install_skips_unscoped_apt_sources(self):
+        for name in ("build.yml", "stage4-ubuntu-vm-validation.yml",
+                     "public-stage4-design.yml"):
+            workflow = (ROOT / ".github/workflows" / name).read_text(encoding="utf-8")
+            with self.subTest(workflow=name):
+                self.assertIn("npx playwright install chromium", workflow)
+                self.assertNotIn("playwright install --with-deps", workflow)
 
     def test_stage_iii_apt_uses_only_signed_ubuntu_feed(self):
         workflow = (ROOT / ".github/workflows/public-stage3-qualification.yml").read_text(encoding="utf-8")

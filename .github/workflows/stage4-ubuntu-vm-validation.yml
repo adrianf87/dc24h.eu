@@ -72,5 +72,5 @@ jobs:
           npm run build:enrollment:ci
           npm run build:stage4-init
           npm test
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
           npx playwright test tests/public-stage4.spec.ts

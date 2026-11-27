@@ -142,7 +142,7 @@ jobs:
         working-directory: webadmin
         run: |
           npm ci --no-audit --no-fund
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
       - name: Run isolated public browser tests; never contact the VPS
         working-directory: webadmin
         run: npx playwright test tests/public-stage4.spec.ts
