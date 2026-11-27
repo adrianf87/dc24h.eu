@@ -173,6 +173,22 @@ class PublicStageIVBoundaryTests(unittest.TestCase):
         self.assertIn('"GITHUB_ACTIONS=$GITHUB_ACTIONS"', workflow)
         self.assertIn('"RUNNER_ENVIRONMENT=$RUNNER_ENVIRONMENT"', workflow)
 
+    def test_ubuntu_2604_disposable_mariadb_respects_apparmor_confinement(self):
+        script = (ROOT / "scripts/stage4_test_database.sh").read_text(encoding="utf-8")
+        workflow = (ROOT / ".github/workflows/public-stage4-design.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('"${GITHUB_ACTIONS:-}" = "true"', script)
+        self.assertIn('"${RUNNER_ENVIRONMENT:-}" = "github-hosted"', script)
+        self.assertIn('[ "$ID" = ubuntu ] && [ "$VERSION_ID" = 26.04 ]', script)
+        self.assertIn('scratch=/var/lib/mariadb/stage4-fixture-$fixture_nonce', script)
+        self.assertIn('mariadb-install-db --no-defaults', script)
+        self.assertIn('tail -n 25 "$scratch/db-bootstrap.log"', script)
+        self.assertNotIn('apparmor_parser', script)
+        self.assertNotIn('aa-disable', script)
+        self.assertNotIn('aa-complain', script)
+        self.assertIn('"GITHUB_ACTIONS=$GITHUB_ACTIONS" "RUNNER_ENVIRONMENT=$RUNNER_ENVIRONMENT"', workflow)
+
     def test_stage_iii_apt_uses_only_signed_ubuntu_feed(self):
         workflow = (ROOT / ".github/workflows/public-stage3-qualification.yml").read_text(encoding="utf-8")
         installer = (ROOT / ".github/scripts/install-ci-deps.sh").read_text(encoding="utf-8")

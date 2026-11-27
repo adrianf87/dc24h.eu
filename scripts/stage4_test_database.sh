@@ -4,7 +4,21 @@ set -euo pipefail
 umask 077
 test "$(id -u)" = 0
 repo=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
-scratch=/run/stage4-fixture-$(openssl rand -hex 8)
+fixture_nonce=$(openssl rand -hex 8)
+scratch=/run/stage4-fixture-$fixture_nonce
+# Ubuntu 26.04 ships MariaDB 11.8 with an enforcing AppArmor profile for
+# /var/lib/mariadb. Keep this disposable database *inside* that confined
+# directory; never disable or change the host AppArmor policy. Only hosted CI
+# may use this fixture exception, never a production or self-hosted runner.
+if [ "${GITHUB_ACTIONS:-}" = "true" ] && [ "${RUNNER_ENVIRONMENT:-}" = "github-hosted" ]; then
+    . /etc/os-release
+    if [ "$ID" = ubuntu ] && [ "$VERSION_ID" = 26.04 ]; then
+        [ -d /var/lib/mariadb ] && [ ! -L /var/lib/mariadb ] || {
+            echo "Ubuntu 26.04 MariaDB confined directory missing or unsafe" >&2; exit 1;
+        }
+        scratch=/var/lib/mariadb/stage4-fixture-$fixture_nonce
+    fi
+fi
 bootstrap=/etc/dc24h/stage4-webadmin-bootstrap-ci.env
 state=/etc/dc24h/stage4-test
 link=/etc/dc24h/stage4-webadmin-bootstrap-ci-link.env
@@ -28,7 +42,13 @@ socket=$scratch/mysqld.sock
 # The socket is reachable only over the local file system, on an isolated datadir.
 chmod 0775 "$scratch"
 chgrp mysql "$scratch"
-mariadb-install-db --no-defaults --user=mysql --datadir="$scratch/db" --skip-test-db >/dev/null 2>&1
+if ! mariadb-install-db --no-defaults --user=mysql --datadir="$scratch/db" \
+        --skip-test-db >"$scratch/db-bootstrap.log" 2>&1; then
+    echo "Disposable MariaDB initialization failed on the selected Ubuntu image" >&2
+    # No credentials exist yet. Report a bounded excerpt for CI diagnosis.
+    tail -n 25 "$scratch/db-bootstrap.log" >&2
+    exit 1
+fi
 start_database() {
     mariadbd --no-defaults --user=mysql --datadir="$scratch/db" --skip-networking \
         --socket="$socket" --pid-file="$scratch/db/mariadb.pid" --log-error="$scratch/db/mariadb.log" &

@@ -233,5 +233,6 @@ jobs:
         run: |
           node_dir=$(dirname "$(dirname "$(command -v node)")")
           sudo -n env "PATH=$node_dir/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/bin" \
+            "GITHUB_ACTIONS=$GITHUB_ACTIONS" "RUNNER_ENVIRONMENT=$RUNNER_ENVIRONMENT" \
             ./scripts/stage4_test_database.sh
           python3 tests/stage4_msmtp_process.py -v
