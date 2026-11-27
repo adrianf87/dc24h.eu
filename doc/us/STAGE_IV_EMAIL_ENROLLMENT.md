@@ -115,7 +115,7 @@ before following any earlier same-UID instructions.
 
 ## Deployment/acceptance remains separate
 
-1. Run GitHub-hosted Ubuntu 22.04/24.04/26.04 matrix and Chromium; verify
+1. Run GitHub-hosted Ubuntu 22.04 CI and Chromium; verify
    C++ account role/grant revocation, private write-path denials, browser CSRF,
    cookie overlap on the same DNS hostname, negative OTP cases, full build and
    audit/limiter restore. In CI, use injected fake mail only; never real SMTP

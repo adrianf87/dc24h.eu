@@ -15,7 +15,7 @@ import xml.etree.ElementTree as ET
 
 STATUSES = {"PASS", "FAIL", "BLOCKED", "NOT TESTED", "NOT APPLICABLE"}
 PAYLOADS = {"results.json", "junit.xml", "summary.log"}
-OS_MATRIX = ("debian-13",)
+OS_MATRIX = ("ubuntu-22.04",)
 RUNNER_GROUPS = ("offline", "two-client", "tls-fixtures", "sandbox", "stability")
 PUBLIC_GROUPS = ("ncdc", "two-client-public", "tls-public", "exposure")
 
@@ -77,7 +77,7 @@ CASES = {
            for port in (1511, 3000, 3306, 5173, 5432, 6379, 8000, 8080, 9090)},
     },
     "sandbox": {
-        "debian.sudo": "The runner's fixed tools can exercise a disposable systemd fixture",
+        "ubuntu.sudo": "The runner's fixed tools can exercise a disposable systemd fixture",
         "systemd.verify": "systemd-analyze verifies the submitted service example without starting it",
     },
     "stability": {

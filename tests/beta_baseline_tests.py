@@ -58,16 +58,15 @@ def check_no_custom_workers(errors):
     pr = (workflow_dir / "public-stage3-qualification.yml").read_text(encoding="utf-8")
     manual = (workflow_dir / "debian13-stage3-full-qualification.yml").read_text(encoding="utf-8")
     for workflow, entries in (
-        (pr, ("  pull_request:", "os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]",
-              "runs-on: ${{ matrix.os }}", "sudo -n id -u", "stage3.run run ncdc",
-              'sudo -n apt-get -o "Dir::Etc::sourcelist=$source_file" '
-              '-o Dir::Etc::sourceparts=- install -y --no-install-recommends ncdc')),
+        (pr, ("  pull_request:", "os: [ubuntu-22.04]",
+              "runs-on: ubuntu-22.04", "sudo -n id -u", "stage3.run run ncdc",
+              "bash .github/scripts/install-ci-deps.sh ncdc")),
         (manual, ("  workflow_dispatch:", "RUN_STAGE3_PUBLIC_EXTENDED_STABILITY",
                   "stage3.run run extended", "inputs.production_restarts_ack == false",
-                  "sudo -n apt-get install -y --no-install-recommends ncdc")),
+                  "bash .github/scripts/install-ci-deps.sh ncdc")),
     ):
-        for required in (*entries, "runs-on: ubuntu-24.04", "contents: read",
-                         "test \"$RUNNER_ENVIRONMENT\" = 'github-hosted'"):
+        for required in (*entries, "runs-on: ubuntu-22.04", "contents: read",
+                         "test \"$RUNNER_ENVIRONMENT\" = github-hosted"):
             require(required in workflow, f"Stage III workflow missing {required!r}", errors)
         for prohibited in ("systemctl restart", "sudo -n python3", "premerge-host:",
                            "RUN_STAGE3_PUBLIC_QUALIFICATION", "self-hosted", "ssh "):
@@ -81,7 +80,7 @@ def check_ci_repository_allowlists(errors):
     twilight = "github.repository == 'adrianf87/dc24h.eu-twilight'"
     original = "github.repository == 'adrianf87/dc24h.eu'"
     policies = {
-        "build.yml": (3, {old, twilight, original}),
+        "build.yml": (2, {old, twilight, original}),
         "beta07-codeql.yml": (1, {old, twilight}),
         "beta08-hardening.yml": (2, {old, twilight}),
         "beta09-stage4-storage.yml": (1, {old, twilight}),
@@ -95,7 +94,7 @@ def check_ci_repository_allowlists(errors):
             clauses = guard.strip().split(" || ")
             require(len(clauses) == len(allowlist) and set(clauses) == allowlist,
                     f"{name}: foreign repo or altered exact repository allowlist", errors)
-    require(sum(count for count, _ in policies.values()) == 8,
+    require(sum(count for count, _ in policies.values()) == 7,
             "Unexpected repository guard inventory", errors)
 
 
@@ -128,28 +127,20 @@ def main():
     require('set(DC24H_VERSION "alpha-' not in cmake, "CMakeLists.txt: alpha version string remains", errors)
     check(ROOT / "cmake/version.hpp.in", ('inline constexpr std::string_view version = "@DC24H_VERSION@";',), errors)
     workflow = check(ROOT / ".github/workflows/build.yml", (
-        "os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]",
-        "runs-on: ${{ matrix.os }}",
-        'beta-0.3.1-12-full',
+        "runs-on: ubuntu-22.04",
         'sanitizer: [address, undefined]',
         'npm audit --omit=dev --audit-level=high',
-        "beta-0.1",
-        "beta-0.2",
-        "beta-0.2.1",
-        "beta-0.2-code",
-        "beta-0.2.7-beta-0.2.12-finish",
+        "feature/stage4-webadmin-dedicated-service",
         "pull_request:",
         "name: CI (C++ and WebAdmin)",
     ), errors)
-    require(workflow.count("os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]") == 2,
-            "build.yml: both jobs must list the three public images", errors)
-    require(workflow.count("runs-on: ${{ matrix.os }}") == 2,
-            "build.yml: both jobs must use the public image matrix", errors)
+    require(workflow.count("runs-on: ubuntu-22.04") == 3,
+            "build.yml: application, sanitizers and required check must use Ubuntu 22.04", errors)
     require('test "$(nproc)" -eq 4' not in workflow,
             "build.yml: fixed runner CPU count is not portable", errors)
     check_ci_repository_allowlists(errors)
     check_ci_apt_source_policy(errors)
-    require("needs: [cpp, webadmin, sanitizers]" in workflow,
+    require("needs: [application, sanitizers]" in workflow,
             "build.yml: sanitizer failures must block the required CI result", errors)
     require("debian_compat:" not in workflow and "container:" not in workflow,
             "build.yml: Debian container tests are disabled by owner instruction", errors)

@@ -180,6 +180,6 @@ Run `scripts/stage4_test_database.sh` against its disposable fixture after
 installation. The test exercises native SQL migrations, owner initialization,
 the C++ proof path, session and challenge transactions, signup, SMTP rejection
 with a mock sender, backup/restore and restart of the disposable MariaDB.
-GitHub qualification runs on hosted Ubuntu 22.04, 24.04 and 26.04. Record
+GitHub qualification runs on hosted Ubuntu 22.04 only. Record
 production systemd startup/restart, actual mailbox receipt, successful Owner
 enrollment and external HTTPS separately with result and deployed commit SHA.

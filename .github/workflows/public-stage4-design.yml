@@ -1,6 +1,8 @@
-name: Stage IV public WebAdmin design boundary (Debian 13)
+name: Stage IV public WebAdmin design boundary (Ubuntu 22.04)
 
 on:
+  push:
+    branches: [feature/stage4-webadmin-dedicated-service]
   pull_request:
     branches: [main]
     paths:
@@ -73,26 +75,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [debian-13]
-    runs-on: [self-hosted, Linux, X64]
+        os: [ubuntu-22.04]
+    runs-on: ubuntu-22.04
     timeout-minutes: 5
     steps:
-      - name: Verify Debian 13 self-hosted runner identity
+      - name: Verify GitHub-hosted Ubuntu 22.04
         shell: bash
         run: |
-          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
+          test "$RUNNER_ENVIRONMENT" = 'github-hosted'
           . /etc/os-release
-          test "$ID" = 'debian' && test "$VERSION_ID" = '13'
-          test "$(hostname -s)" = 'server-747585786'
-          test "$(id -un)" = 'github-runner'
-      - name: Confirm Debian 13 self-hosted runner
-        run: |
-          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
+          test "$ID" = ubuntu && test "$VERSION_ID" = 22.04
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      - name: Activate Debian 13 application test snapshot
-        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
       - name: Verify design boundaries without network or sudo
         run: |
           python3 -m unittest discover -s tests -p 'public_stage4_boundary_tests.py' -v
@@ -117,25 +112,19 @@ jobs:
           npm run typecheck
 
   playwright-shell:
-    name: Standalone Stage IV browser/CSRF flow (hosted Ubuntu 24.04)
-    runs-on: [self-hosted, Linux, X64]
+    name: Standalone Stage IV browser/CSRF flow (Ubuntu 22.04)
+    runs-on: ubuntu-22.04
     timeout-minutes: 15
     steps:
-      - name: Verify Debian 13 self-hosted runner identity
+      - name: Verify GitHub-hosted Ubuntu 22.04
         shell: bash
         run: |
-          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
+          test "$RUNNER_ENVIRONMENT" = 'github-hosted'
           . /etc/os-release
-          test "$ID" = 'debian' && test "$VERSION_ID" = '13'
-          test "$(hostname -s)" = 'server-747585786'
-          test "$(id -un)" = 'github-runner'
-      - name: Confirm Debian 13 self-hosted runner
-        run: test "$RUNNER_ENVIRONMENT" = 'self-hosted'
+          test "$ID" = ubuntu && test "$VERSION_ID" = 22.04
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      - name: Activate Debian 13 application test snapshot
-        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '24'
@@ -151,28 +140,24 @@ jobs:
         run: npx playwright test tests/public-stage4.spec.ts
 
   dedicated-systemd:
-    name: Isolated non-root Unix bridge / systemd sandbox (Ubuntu 24.04)
-    runs-on: [self-hosted, Linux, X64]
+    name: Isolated non-root Unix bridge / systemd sandbox (Ubuntu 22.04)
+    runs-on: ubuntu-22.04
     timeout-minutes: 8
     steps:
-      - name: Verify Debian 13 self-hosted runner identity
+      - name: Verify GitHub-hosted Ubuntu 22.04
         shell: bash
         run: |
-          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
+          test "$RUNNER_ENVIRONMENT" = 'github-hosted'
           . /etc/os-release
-          test "$ID" = 'debian' && test "$VERSION_ID" = '13'
-          test "$(hostname -s)" = 'server-747585786'
-          test "$(id -un)" = 'github-runner'
+          test "$ID" = ubuntu && test "$VERSION_ID" = 22.04
       - name: Confirm disposable GitHub Ubuntu runner and passwordless systemd
         run: |
-          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
+          test "$RUNNER_ENVIRONMENT" = 'github-hosted'
           test "$(id -u)" != '0'
           test "$(sudo -n id -u)" = '0'
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      - name: Activate Debian 13 application test snapshot
-        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
       - name: Execute real AF_UNIX peer tests inside non-root systemd sandbox
         run: |
           # The repository test code executes as nobody, never as root.
@@ -196,28 +181,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [debian-13]
-    runs-on: [self-hosted, Linux, X64]
+        os: [ubuntu-22.04]
+    runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:
-      - name: Verify Debian 13 self-hosted runner identity
+      - name: Verify GitHub-hosted Ubuntu 22.04
         shell: bash
         run: |
-          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
+          test "$RUNNER_ENVIRONMENT" = 'github-hosted'
           . /etc/os-release
-          test "$ID" = 'debian' && test "$VERSION_ID" = '13'
-          test "$(hostname -s)" = 'server-747585786'
-          test "$(id -un)" = 'github-runner'
-      - name: Confirm Debian 13 runner
-        run: test "$RUNNER_ENVIRONMENT" = 'self-hosted'
+          test "$ID" = ubuntu && test "$VERSION_ID" = 22.04
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      - name: Activate Debian 13 application test snapshot
-        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
-      - name: Install Debian 13 build and database packages
+      - name: Install Ubuntu 22.04 build and database packages
         run: |
-          bash self-hosted-runner/scripts/install-debian13-ci-deps.sh \
+          bash .github/scripts/install-ci-deps.sh \
             cmake g++ libssl-dev libgcrypt20-dev libutf8proc-dev libmariadb-dev mariadb-server apache2 msmtp
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
@@ -234,3 +213,9 @@ jobs:
           sudo -n env "PATH=$node_dir/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/bin" \
             ./scripts/stage4_test_database.sh
           python3 tests/stage4_msmtp_process.py -v
+      - name: Validate packaged Stage IV service installation on disposable Ubuntu
+        run: |
+          node_dir=$(dirname "$(dirname "$(command -v node)")")
+          sudo -n env "PATH=$node_dir/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/bin" \
+            "GITHUB_ACTIONS=$GITHUB_ACTIONS" "RUNNER_ENVIRONMENT=$RUNNER_ENVIRONMENT" \
+            sh ./scripts/stage4_install.sh "$node_dir" "$RUNNER_TEMP/stage4-build"

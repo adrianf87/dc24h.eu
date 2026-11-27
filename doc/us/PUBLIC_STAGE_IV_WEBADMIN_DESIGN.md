@@ -108,7 +108,7 @@ Proposed separation, not yet deployed:
   port 7278, provider ingress policy, DNS and independent reachability. This design
   does not change any firewall, certificate, DNS, systemd unit or listener.
 - Keep the retired self-hosted runner removed. CI and integration tests use only
-  GitHub-hosted Ubuntu 22.04, 24.04 and 26.04; no CI SSH or remote `sudo` on the VPS.
+  GitHub-hosted Ubuntu 22.04 only; no CI SSH or remote `sudo` on the VPS.
 - Existing manual Stage III Let's Encrypt renewal responsibility and hub service
   remain unchanged. Any public WebAdmin activation is a new OWNER gate.
 

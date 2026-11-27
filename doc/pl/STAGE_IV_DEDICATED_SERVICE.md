@@ -158,6 +158,6 @@ działający hub ADCS i certyfikat Let's Encrypt.
 `scripts/stage4_test_database.sh` sprawdza inicjalizację konta, migracje,
 C++ i MariaDB, transakcje, rejestrację, kody, symulowane awarie SMTP, restart
 bazy oraz kopię i odtwarzanie w środowisku jednorazowym. CI korzysta z
-hostowanych przez GitHub obrazów Ubuntu 22.04, 24.04 i 26.04. Osobno odnotuj
+hostowanych przez GitHub obrazów Ubuntu 22.04. Osobno odnotuj
 potwierdzony restart systemd na VPS, dostarczenie prawdziwej wiadomości,
 aktywację Administratora i weryfikację HTTPS z zewnątrz wraz z SHA wdrożenia.

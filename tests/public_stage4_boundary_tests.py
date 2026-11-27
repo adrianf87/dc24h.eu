@@ -100,7 +100,7 @@ class PublicStageIVBoundaryTests(unittest.TestCase):
         for condition in (
             "NO PUBLIC WEBADMIN ACTIVATION",
             "Do not remove those safety checks",
-            "GitHub-hosted Ubuntu 22.04, 24.04 and 26.04",
+            "GitHub-hosted Ubuntu 22.04 only",
             "no CI SSH or remote `sudo`",
         ):
             with self.subTest(condition=condition):
@@ -158,8 +158,7 @@ class PublicStageIVBoundaryTests(unittest.TestCase):
             encoding="utf-8"
         )
         # sudo drops the runner identity unless the disposable CI job passes
-        # both variables. Never grant this exception on the Debian VPS or a
-        # self-hosted runner.
+        # both variables. Never grant this exception on the production VPS.
         self.assertIn('"${GITHUB_ACTIONS:-}" = "true"', installer)
         self.assertIn('"${RUNNER_ENVIRONMENT:-}" = "github-hosted"', installer)
         self.assertIn('if ! apparmor_parser -r "$profile"; then', installer)
@@ -176,11 +175,15 @@ class PublicStageIVBoundaryTests(unittest.TestCase):
 
     def test_stage_iii_apt_uses_only_signed_ubuntu_feed(self):
         workflow = (ROOT / ".github/workflows/public-stage3-qualification.yml").read_text(encoding="utf-8")
-        # Every apt update and install must ignore unrelated hosted-image
-        # third-party feeds, including the Microsoft feed that returned 403.
-        self.assertEqual(workflow.count('Dir::Etc::sourcelist=$source_file'), 6)
-        self.assertEqual(workflow.count('Dir::Etc::sourceparts=-'), 6)
+        installer = (ROOT / ".github/scripts/install-ci-deps.sh").read_text(encoding="utf-8")
+        # All Stage III package installs share one signed Ubuntu-only helper,
+        # excluding unrelated third-party feeds on the hosted image.
+        self.assertGreaterEqual(workflow.count('bash .github/scripts/install-ci-deps.sh'), 3)
+        self.assertIn('Dir::Etc::sourcelist=${ubuntu_apt_source}', installer)
+        self.assertIn('Dir::Etc::sourceparts=-', installer)
+        self.assertIn('apt-get "${apt_network_options[@]}" update', installer)
         self.assertNotIn("--allow-unauthenticated", workflow)
+        self.assertNotIn("--allow-unauthenticated", installer)
 
 
 if __name__ == "__main__":

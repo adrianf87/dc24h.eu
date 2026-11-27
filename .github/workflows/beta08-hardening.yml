@@ -2,7 +2,7 @@ name: Beta 0.8 bounded TSAN and parser fuzz
 
 on:
   push:
-    branches: [main, beta-0.9.x-stage-full-fix-pass]
+    branches: [main, feature/stage4-webadmin-dedicated-service]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -16,31 +16,27 @@ concurrency:
 
 jobs:
   tsan:
-    name: TSAN - debian-13
+    name: TSAN - ubuntu-22.04
     if: github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-22.04
     timeout-minutes: 55
     env:
       SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
-      - name: Verify Debian 13 self-hosted runner
+      - name: Verify GitHub-hosted Ubuntu 22.04 runner
         shell: bash
         run: |
-          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
+          test "$RUNNER_ENVIRONMENT" = 'github-hosted'
           . /etc/os-release
-          test "$ID" = 'debian' && test "$VERSION_ID" = '13'
-          test "$(hostname -s)" = 'server-747585786'
-          test "$(id -un)" = 'github-runner'
+          test "$ID" = ubuntu && test "$VERSION_ID" = 22.04
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      - name: Activate Debian 13 application test snapshot
-        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
       - name: Check exact checkout and install disposable dependencies
         run: |
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
-          bash self-hosted-runner/scripts/install-debian13-ci-deps.sh \
+          bash .github/scripts/install-ci-deps.sh \
             build-essential cmake python3 libutf8proc-dev libgcrypt20-dev \
             libssl-dev libmariadb-dev
       - name: Compile TSAN-instrumented C++ parser, routing, network and security
@@ -63,7 +59,7 @@ jobs:
             --output "$RUNNER_TEMP/beta08-evidence/tsan-summary.json"
           python3 scripts/beta06_ci_provenance.py \
             --summary "$RUNNER_TEMP/beta08-evidence/tsan-summary.json" \
-            --sha "$SOURCE_SHA" --suite beta08-tsan --os-image debian-13 \
+            --sha "$SOURCE_SHA" --suite beta08-tsan --os-image ubuntu-22.04 \
             --output "$RUNNER_TEMP/beta08-evidence/tsan-provenance.json"
       - name: Upload sanitized TSAN outcome (no raw logs)
         if: always()
@@ -75,31 +71,27 @@ jobs:
           retention-days: 7
 
   fuzz:
-    name: ADC parser fuzz - debian-13
+    name: ADC parser fuzz - ubuntu-22.04
     if: github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-22.04
     timeout-minutes: 55
     env:
       SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
-      - name: Verify Debian 13 self-hosted runner
+      - name: Verify GitHub-hosted Ubuntu 22.04 runner
         shell: bash
         run: |
-          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
+          test "$RUNNER_ENVIRONMENT" = 'github-hosted'
           . /etc/os-release
-          test "$ID" = 'debian' && test "$VERSION_ID" = '13'
-          test "$(hostname -s)" = 'server-747585786'
-          test "$(id -un)" = 'github-runner'
+          test "$ID" = ubuntu && test "$VERSION_ID" = 22.04
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      - name: Activate Debian 13 application test snapshot
-        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
       - name: Check exact checkout and install Clang/libFuzzer dependencies
         run: |
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
-          bash self-hosted-runner/scripts/install-debian13-ci-deps.sh \
+          bash .github/scripts/install-ci-deps.sh \
             build-essential cmake clang python3 libutf8proc-dev libgcrypt20-dev \
             libssl-dev libmariadb-dev
       - name: Build coverage-instrumented standalone ADC parser fuzzer

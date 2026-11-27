@@ -230,7 +230,7 @@ class PolicyTests(unittest.TestCase):
             "GITHUB_ACTIONS": "true", "GITHUB_EVENT_NAME": "workflow_dispatch",
             "GITHUB_REPOSITORY": premerge.REPOSITORY, "GITHUB_ACTOR": "adrianf87",
             "GITHUB_TRIGGERING_ACTOR": "adrianf87", "GITHUB_REF": "refs/heads/a-future-candidate",
-            "RUNNER_ENVIRONMENT": "self-hosted", "PRODUCTION_RESTARTS_ACK": "false",
+            "RUNNER_ENVIRONMENT": "github-hosted", "PRODUCTION_RESTARTS_ACK": "false",
             "GITHUB_SHA": self.sha, "PREMERGE_CANDIDATE_SHA": self.sha,
         }
 
@@ -268,7 +268,7 @@ class PolicyTests(unittest.TestCase):
                     public_guard("extended")
             for changed in ({"GITHUB_REF_PROTECTED": "false"}, {"GITHUB_EVENT_NAME": "pull_request"},
                             {"GITHUB_REF": "refs/heads/feature"}, {"GITHUB_SHA": "b" * 40},
-                            {"GITHUB_REPOSITORY": "fork/example"}, {"RUNNER_ENVIRONMENT": "github-hosted"}):
+                            {"GITHUB_REPOSITORY": "fork/example"}, {"RUNNER_ENVIRONMENT": "self-hosted"}):
                 with self.subTest(changed=changed), mock.patch.dict("os.environ", dict(env, **changed), clear=True):
                     with self.assertRaises(evidence.Blocked):
                         public_guard("tls-public")
@@ -340,24 +340,25 @@ class EvidenceTests(unittest.TestCase):
     def test_failure_blocks_missing_rows_and_artifacts_reject_tampering(self):
         with tempfile.TemporaryDirectory() as work:
             directory = Path(work)
-            suite = evidence.Suite("sandbox", directory, "a" * 40, "debian-13", verify_checkout=False)
+            suite = evidence.Suite("sandbox", directory, "a" * 40, "ubuntu-22.04", verify_checkout=False)
             with suite:
-                with suite.case("debian.sudo"):
+                with suite.case("ubuntu.sudo"):
                     raise RuntimeError("untrusted raw secret")
-            rows = evidence.verify_bundle(directory, "sandbox", "debian-13", "a" * 40, suite.context["run_id"])
+            rows = evidence.verify_bundle(directory, "sandbox", "ubuntu-22.04", "a" * 40, suite.context["run_id"])
             self.assertEqual([row["result"] for row in rows], ["FAIL", "BLOCKED"])
             self.assertNotIn("untrusted raw secret", (directory / "results.json").read_text())
             with self.assertRaisesRegex(ValueError, "identity mismatch"):
-                evidence.verify_bundle(directory, "sandbox", "debian-13", "b" * 40, suite.context["run_id"])
+                evidence.verify_bundle(directory, "sandbox", "ubuntu-22.04", "b" * 40, suite.context["run_id"])
             (directory / "summary.log").write_text("substituted")
             with self.assertRaisesRegex(ValueError, "SHA-256 manifest mismatch"):
-                evidence.verify_bundle(directory, "sandbox", "debian-13", "a" * 40, suite.context["run_id"])
+                evidence.verify_bundle(directory, "sandbox", "ubuntu-22.04", "a" * 40, suite.context["run_id"])
 
-    def test_qualification_workflows_use_debian13_runner_and_packaged_commands(self):
+    def test_qualification_workflows_use_hosted_ubuntu2204(self):
         workflows = Path(__file__).resolve().parent.parent / ".github/workflows"
         for name in ("debian13-stage3-full-qualification.yml", "public-stage3-qualification.yml"):
             document = (workflows / name).read_text()
-            self.assertNotRegex(document, r"(?m)^\s*runs-on: (?!\[self-hosted, Linux, X64\])")
+            self.assertNotRegex(document, r"(?m)^\s*runs-on: (?!ubuntu-22\.04$)")
+            self.assertNotIn("self-hosted", document)
             self.assertNotIn("sudo -n python", document)
             self.assertNotIn("sudo -n bash", document)
             self.assertNotIn("systemctl restart", document)

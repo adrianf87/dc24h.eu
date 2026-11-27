@@ -10,7 +10,7 @@ Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
 **Current Twilight CI:** [All GitHub Actions](https://github.com/adrianf87/dc24h.eu-twilight/actions) · [C++/WebAdmin](https://github.com/adrianf87/dc24h.eu-twilight/actions/workflows/build.yml) · [CodeQL](https://github.com/adrianf87/dc24h.eu-twilight/actions/workflows/beta07-codeql.yml) · [TSAN/fuzz](https://github.com/adrianf87/dc24h.eu-twilight/actions/workflows/beta08-hardening.yml) · [storage/fault](https://github.com/adrianf87/dc24h.eu-twilight/actions/workflows/beta09-stage4-storage.yml) · [Ubuntu VM/systemd](https://github.com/adrianf87/dc24h.eu-twilight/actions/workflows/stage4-ubuntu-vm-validation.yml). A `main` badge does not qualify a Draft PR's final SHA.
 
-**CI execution:** GitHub-hosted Ubuntu 22.04/24.04/26.04 runners only. The former Debian 13 VPS GitHub runner has been retired and its workflow, setup files and privileged runner hooks removed. The public ADCS VPS is an external test target, not a CI executor; GitHub-hosted `sudo` affects only disposable Ubuntu VMs.
+**CI execution (Stage IV branch):** GitHub-hosted Ubuntu 22.04 runners only. The `self-hosted-runner/` directory and five-distro Docker CI have been removed from this branch. The Debian 13 public ADCS VPS remains an external service, never a CI executor; GitHub-hosted `sudo` affects only disposable Ubuntu VMs. No production operating-system migration is implied.
 
 <details>
 <summary>Beta</summary>
@@ -79,7 +79,7 @@ Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
 </details>
 
-CI on `main`: [Twilight GitHub-hosted Ubuntu 22.04, 24.04 and 26.04](https://github.com/adrianf87/dc24h.eu-twilight/actions) runs C++ Debug, C++ Release and WebAdmin, plus separate security/VM workflows. [EN/US guide](doc/us/GITHUB_CI.md) · [PL](doc/pl/GITHUB_CI.md). Historical High Starter runs cannot certify a new Twilight SHA.
+CI on the Stage IV branch: [Twilight GitHub-hosted Ubuntu 22.04](https://github.com/adrianf87/dc24h.eu-twilight/actions) runs C++, WebAdmin, Playwright, ASan/UBSan, CodeQL and security/VM workflows. `main` retains its own configuration until this branch is merged. [EN/US guide](doc/us/GITHUB_CI.md) · [PL](doc/pl/GITHUB_CI.md). Historical High Starter runs cannot certify a new Twilight SHA.
 
 Historical High Starter development increments (the old bullets describe their then-current delivery scope; older draft/CI notices are **not** Twilight's current status):
 

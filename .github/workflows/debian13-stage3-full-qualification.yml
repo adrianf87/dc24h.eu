@@ -1,4 +1,4 @@
-name: Stage III OWNER extended public ADCS stability
+name: Stage III OWNER extended public ADCS stability (Ubuntu 22.04)
 
 # This workflow already has a dispatch entry on the default branch. Select the
 # candidate branch so the extended checks run at its exact source SHA.
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       confirmation:
-        description: 'RUN_STAGE3_PUBLIC_EXTENDED_STABILITY or RUN_STAGE3_DEBIAN13_EXTERNAL_ONLY'
+        description: 'RUN_STAGE3_PUBLIC_EXTENDED_STABILITY or RUN_STAGE3_UBUNTU2204_EXTERNAL_ONLY'
         required: true
         type: string
       production_restarts_ack:
@@ -35,17 +35,14 @@ env:
 jobs:
   owner-gate:
     name: Verify OWNER dispatch and candidate SHA
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-22.04
     timeout-minutes: 5
     steps:
-      - name: Verify Debian 13 self-hosted runner
-        shell: bash
+      - name: Verify GitHub-hosted Ubuntu 22.04 runner
         run: |
-          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
           . /etc/os-release
-          test "$ID" = 'debian' && test "$VERSION_ID" = '13'
-          test "$(hostname -s)" = 'server-747585786'
-          test "$(id -un)" = 'github-runner'
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          test "$ID" = ubuntu && test "$VERSION_ID" = 22.04
       - name: Check repository, actor, runner, ref, approval and mode
         env:
           OWNER_CONFIRMATION: ${{ inputs.confirmation }}
@@ -53,7 +50,7 @@ jobs:
           PREMERGE_PHASE: ${{ inputs.premerge_phase }}
           PREMERGE_CANDIDATE_SHA: ${{ inputs.premerge_candidate_sha }}
         run: |
-          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
+          test "$RUNNER_ENVIRONMENT" = github-hosted
           test "$GITHUB_REPOSITORY" = adrianf87/dc24h.eu-twilight
           test "$GITHUB_ACTOR" = adrianf87
           test "$GITHUB_TRIGGERING_ACTOR" = adrianf87
@@ -64,7 +61,7 @@ jobs:
           test "$PRODUCTION_RESTARTS_ACK" = false
           case "$OWNER_CONFIRMATION" in
             RUN_STAGE3_PUBLIC_EXTENDED_STABILITY) test "$PREMERGE_PHASE" = none ;;
-            RUN_STAGE3_DEBIAN13_EXTERNAL_ONLY) [[ "$PREMERGE_PHASE" =~ ^(none|before|after)$ ]] ;;
+            RUN_STAGE3_UBUNTU2204_EXTERNAL_ONLY) [[ "$PREMERGE_PHASE" =~ ^(none|before|after)$ ]] ;;
             *) exit 1 ;;
           esac
 
@@ -72,26 +69,21 @@ jobs:
     name: Extended stability with exact-commit evidence
     needs: owner-gate
     if: inputs.confirmation == 'RUN_STAGE3_PUBLIC_EXTENDED_STABILITY' && inputs.production_restarts_ack == false
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-22.04
     timeout-minutes: 40
     concurrency:
       group: stage3-public-guests
       cancel-in-progress: false
     steps:
-      - name: Verify Debian 13 self-hosted runner
-        shell: bash
+      - name: Verify GitHub-hosted Ubuntu 22.04 runner
         run: |
-          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
           . /etc/os-release
-          test "$ID" = 'debian' && test "$VERSION_ID" = '13'
-          test "$(hostname -s)" = 'server-747585786'
-          test "$(id -un)" = 'github-runner'
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          test "$ID" = ubuntu && test "$VERSION_ID" = 22.04
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-      - name: Activate Debian 13 application test snapshot
-        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
       - name: Run paced public ADCS cycles and 30-minute observation
         env:
           OWNER_CONFIRMATION: ${{ inputs.confirmation }}
@@ -99,8 +91,8 @@ jobs:
           PREMERGE_PHASE: ${{ inputs.premerge_phase }}
           PREMERGE_CANDIDATE_SHA: ${{ inputs.premerge_candidate_sha }}
         run: |
-          python3 -m stage3.run run extended --sha "$GITHUB_SHA" --image debian-13 \
-            --output "$RUNNER_TEMP/bundles/stage3-extended-debian-13-$GITHUB_RUN_ATTEMPT"
+          python3 -m stage3.run run extended --sha "$GITHUB_SHA" --image ubuntu-22.04 \
+            --output "$RUNNER_TEMP/bundles/stage3-extended-ubuntu-22.04-$GITHUB_RUN_ATTEMPT"
       - name: Verify and summarize the extended evidence
         if: '!cancelled()'
         run: |
@@ -119,32 +111,26 @@ jobs:
   external-snapshot:
     name: OWNER before/after external snapshot
     needs: owner-gate
-    if: inputs.confirmation == 'RUN_STAGE3_DEBIAN13_EXTERNAL_ONLY' && inputs.production_restarts_ack == false
-    runs-on: [self-hosted, Linux, X64]
+    if: inputs.confirmation == 'RUN_STAGE3_UBUNTU2204_EXTERNAL_ONLY' && inputs.production_restarts_ack == false
+    runs-on: ubuntu-22.04
     timeout-minutes: 20
     concurrency:
       group: stage3-public-guests
       cancel-in-progress: false
     steps:
-      - name: Verify Debian 13 self-hosted runner
-        shell: bash
+      - name: Verify GitHub-hosted Ubuntu 22.04 runner
         run: |
-          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
           . /etc/os-release
-          test "$ID" = 'debian' && test "$VERSION_ID" = '13'
-          test "$(hostname -s)" = 'server-747585786'
-          test "$(id -un)" = 'github-runner'
-      - name: Install packaged ncdc
-        run: |
-          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
-          sudo -n apt-get -o Acquire::Retries=3 update -qq
-          sudo -n apt-get install -y --no-install-recommends ncdc
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          test "$ID" = ubuntu && test "$VERSION_ID" = 22.04
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-      - name: Activate Debian 13 application test snapshot
-        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
+      - name: Install packaged ncdc
+        run: |
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          bash .github/scripts/install-ci-deps.sh ncdc
       - name: Record public TLS, exposure, ncdc and two-guest snapshots
         env:
           OWNER_CONFIRMATION: ${{ inputs.confirmation }}
@@ -154,7 +140,7 @@ jobs:
         run: |
           failed=0
           for group in tls-public exposure ncdc two-client-public; do
-            python3 -m stage3.run run "$group" --sha "$GITHUB_SHA" --image debian-13 \
+            python3 -m stage3.run run "$group" --sha "$GITHUB_SHA" --image ubuntu-22.04 \
               --output "$RUNNER_TEMP/snapshot/$group" || failed=1
           done
           exit "$failed"

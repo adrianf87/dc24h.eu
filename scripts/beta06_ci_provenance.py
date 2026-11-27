@@ -13,7 +13,7 @@ import platform
 import re
 
 
-IMAGES = {"debian-13"}
+IMAGES = {"ubuntu-22.04"}
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 SUITE = re.compile(r"[a-zA-Z0-9_.-]{1,80}\Z")
 EXPECTED_KEYS = {"schema", "suite", "commit_sha", "state", "tests", "failures", "skipped"}
@@ -24,10 +24,10 @@ def validate(report, *, sha, suite, image, environment, release):
         raise ValueError("Exact nonzero source SHA is required")
     if not isinstance(suite, str) or not SUITE.fullmatch(suite):
         raise ValueError("Invalid CI suite")
-    if image not in IMAGES or release != image.removeprefix("debian-"):
-        raise ValueError("Required self-hosted Debian 13 image does not match the running OS")
-    if environment != "self-hosted":
-        raise ValueError("Expected Debian 13 self-hosted evidence")
+    if image not in IMAGES or release != image.removeprefix("ubuntu-"):
+        raise ValueError("Required Ubuntu 22.04 image does not match the running OS")
+    if environment != "github-hosted":
+        raise ValueError("Expected GitHub-hosted Ubuntu 22.04 evidence")
     if not isinstance(report, dict) or set(report) != EXPECTED_KEYS:
         raise ValueError("Incomplete or unreviewed CI result shape")
     if type(report["schema"]) is not int or report["schema"] != 1 or (
@@ -52,7 +52,7 @@ def main():
     parser.add_argument("--os-image", required=True)
     args = parser.parse_args()
     if os.environ.get("GITHUB_ACTIONS") != "true" or os.environ.get("RUNNER_OS") != "Linux":
-        parser.error("This evidence gate runs only on GitHub-self-hosted Debian 13 CI")
+        parser.error("This evidence gate runs only on GitHub-hosted Ubuntu 22.04 CI")
     if not args.summary.is_file() or args.summary.stat().st_size > 8192:
         parser.error("Missing or oversized redacted CI summary")
     try:
@@ -67,7 +67,7 @@ def main():
     with args.output.open("x", encoding="utf-8") as output:
         json.dump(checked, output, sort_keys=True, indent=2)
         output.write("\n")
-    print("Verified self-hosted Debian 13 CI suite:", checked["suite"])
+    print("Verified hosted Ubuntu 22.04 CI suite:", checked["suite"])
 
 
 if __name__ == "__main__":

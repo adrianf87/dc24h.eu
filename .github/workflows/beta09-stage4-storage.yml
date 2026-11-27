@@ -2,7 +2,7 @@ name: Beta 0.9 Stage IV offline audit and fault validation
 
 on:
   push:
-    branches: [main, beta-0.9.x-stage-full-fix-pass]
+    branches: [main, feature/stage4-webadmin-dedicated-service]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -18,30 +18,26 @@ jobs:
   offline-audit:
     if: github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
     name: Stage IV private storage - ${{ matrix.os }}
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-22.04
     timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
-        os: [debian-13]
+        os: [ubuntu-22.04]
     env:
       SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       CI: 'true'
     steps:
-      - name: Verify Debian 13 self-hosted runner
+      - name: Verify GitHub-hosted Ubuntu 22.04 runner
         shell: bash
         run: |
-          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
+          test "$RUNNER_ENVIRONMENT" = 'github-hosted'
           . /etc/os-release
-          test "$ID" = 'debian' && test "$VERSION_ID" = '13'
-          test "$(hostname -s)" = 'server-747585786'
-          test "$(id -un)" = 'github-runner'
+          test "$ID" = ubuntu && test "$VERSION_ID" = 22.04
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      - name: Activate Debian 13 application test snapshot
-        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '22'
