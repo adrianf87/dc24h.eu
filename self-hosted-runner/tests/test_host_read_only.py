@@ -7,7 +7,6 @@ from __future__ import annotations
 import os
 import pathlib
 import pwd
-import re
 import socket
 import subprocess
 import unittest
