@@ -162,8 +162,15 @@ class PublicStageIVBoundaryTests(unittest.TestCase):
         # self-hosted runner.
         self.assertIn('"${GITHUB_ACTIONS:-}" = "true"', installer)
         self.assertIn('"${RUNNER_ENVIRONMENT:-}" = "github-hosted"', installer)
-        self.assertIn('elif ! apparmor_parser -r "$profile"; then', installer)
-        self.assertIn('exit 1', installer.split('elif ! apparmor_parser -r "$profile"; then')[1])
+        self.assertIn('if ! apparmor_parser -r "$profile"; then', installer)
+        self.assertIn('exit 1', installer.split('if ! apparmor_parser -r "$profile"; then')[1])
+        # The CI exception must short-circuit BEFORE the production host
+        # profile directory or rule can be modified.
+        self.assertLess(
+            installer.index('"${RUNNER_ENVIRONMENT:-}" = "github-hosted"'),
+            installer.index('install -d -m 0755 /etc/apparmor.d/local')
+        )
+        self.assertIn('elif [ -f "$profile" ]', installer)
         self.assertIn('"GITHUB_ACTIONS=$GITHUB_ACTIONS"', workflow)
         self.assertIn('"RUNNER_ENVIRONMENT=$RUNNER_ENVIRONMENT"', workflow)
 
