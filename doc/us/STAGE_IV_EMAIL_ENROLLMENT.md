@@ -8,10 +8,11 @@ enters the challenge from that mailbox on the VPS provider console.
 
 ## Critical identity boundary
 
-- The C++ identity is a **numeric actor/account ID**, not the display name
-  `Administrator`. Resolve and double-check the active administrator's ID in
-  the trusted private account-management tool before running enrollment. Do not
-  guess an ID or map a nickname from the public ADC `EM` field.
+- The C++ identity is ultimately a **numeric actor/account ID**. The new
+  private password proof resolves an **exact stored account name** and returns
+  the real numeric ID, so no manual ID lookup is necessary. Use `Administrator`
+  only if it is the actual stored C++ account name, with matching case.
+  Never infer identity from the public ADC `EM` field.
 - C++ must have an existing, active **owner/administrator** account with a
   password. Public users cannot sign up for admin roles. A new staff account is
   created/activated by the already trusted, offline C++ OWNER workflow only;
@@ -31,6 +32,22 @@ enters the challenge from that mailbox on the VPS provider console.
 These commands are an **operator procedure, not an automated deployment**.
 The code must be audited and compiled on a disposable test system before any
 host change. The public ADCS listener on `:1512` must stay available.
+
+After CI has approved the exact source revision and that revision has been
+reviewed on the VPS, the OWNER can run a **non-mutating** check directly from
+their VNC/provider console (no SSH access for Codex is needed):
+
+```sh
+python3 scripts/stage4_vps_preflight.py
+```
+
+The script prints bounded redacted JSON to the console, checks local listeners,
+DNS, runtime, Apache syntax and certificate presence. It never attempts real
+SMTP delivery, restarts any process or enables HTTPS. Its `NOT_TESTED` fields
+must later be completed through the interactive mailbox challenge and
+independent network/VPS checks. Run it **only after checking out the expected
+tested commit**, not by piping unreviewed source from the Internet into a
+privileged shell.
 
 1. Verify the real running C++ service uses a private API and that its socket,
    API token and permissions belong to the same effective UID selected for the
@@ -71,7 +88,7 @@ npm run build:public:ci
 npm run build:enrollment:ci
 ```
 
-After selecting the **verified numeric account ID** and arranging safe access
+After confirming the **stored C++ account name** and arranging safe access
 to the private C++ API token/socket, run as the correct service UID from the
 provider console (example placeholders are NOT shell-ready):
 
@@ -79,7 +96,7 @@ provider console (example placeholders are NOT shell-ready):
 DC24H_API_SOCKET=<PRIVATE_UNIX_SOCKET> \
 DC24H_API_TOKEN_FILE=<PRIVATE_TOKEN_FILE> \
 /usr/bin/node /opt/dc24h/webadmin/dist/public-email-enroll-main.mjs \
-  --actor-id <VERIFIED_ADMIN_ACTOR_ID> \
+  --account-name Administrator \
   --email admin@dc24h.eu \
   --catalog /var/lib/dc24h-stage4/verified-emails.json \
   --owner-ack STAGE4_EMAIL_ENROLLMENT_GO
@@ -89,8 +106,8 @@ The two interactive prompts take the **C++ account password** and then the
 **code received in `admin@dc24h.eu`**. Neither is echoed or included in CI.
 The command must fail without creating a catalog for a wrong password,
 unavailable SMTP, wrong code, expiration, role revocation, wrong permissions,
-existing binding or changed parent. A success binds exactly one numeric account
-to exactly one address and does NOT start a web listener.
+existing binding or changed parent. A success prints the resolved numeric
+account ID and binds it to exactly one address without starting a web listener.
 
 ## Deployment/acceptance remains separate
 

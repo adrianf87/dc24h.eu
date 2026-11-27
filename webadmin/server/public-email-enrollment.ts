@@ -12,7 +12,7 @@ const validActor = (id: string) => /^[1-9]\d{0,18}$/.test(id) &&
   BigInt(id) <= 9223372036854775807n;
 
 export type EnrollmentDependencies<Grant extends PublicPasswordGrant> = {
-  verifyPassword(actor: string, password: string): Promise<Grant | null>;
+  verifyNamedPassword(name: string, password: string): Promise<Grant | null>;
   reauthorize(grant: Grant): Promise<boolean>;
   sendCode(email: string, code: string): Promise<boolean>;
   readCode(signal: AbortSignal): Promise<string>;
@@ -22,11 +22,12 @@ export type EnrollmentDependencies<Grant extends PublicPasswordGrant> = {
 /** Only bootstraps a MISSING catalog. Existing bindings demand a separate,
  * audited, offline rotation procedure; never silently replace a mailbox. */
 export async function enrollFirstVerifiedEmail<Grant extends PublicPasswordGrant>(
-  catalogPath: string, actor: string, email: string, password: string,
+  catalogPath: string, accountName: string, email: string, password: string,
   deps: EnrollmentDependencies<Grant>,
-): Promise<boolean> {
-  if (!isAbsolute(catalogPath) || !validActor(actor) || !isSafeMailbox(email) ||
-      !password || password.length > 1024) return false;
+): Promise<string | null> {
+  if (!isAbsolute(catalogPath) || !accountName || Buffer.byteLength(accountName, "utf8") > 64 ||
+      !isSafeMailbox(email) ||
+      !password || password.length > 1024) return null;
   assertPrivateParent(catalogPath);
   const absent = () => {
     try { lstatPrivateLeaf(catalogPath); return false; }
@@ -35,25 +36,26 @@ export async function enrollFirstVerifiedEmail<Grant extends PublicPasswordGrant
       throw error;
     }
   };
-  if (!absent()) return false;
-  const grant = await deps.verifyPassword(actor, password).catch(() => null);
-  if (!grant || grant.actor !== actor || !["owner", "administrator"].includes(grant.role) ||
-      !await deps.reauthorize(grant).catch(() => false) || !absent()) return false;
+  if (!absent()) return null;
+  const grant = await deps.verifyNamedPassword(accountName, password).catch(() => null);
+  if (!grant || !validActor(grant.actor) || !["owner", "administrator"].includes(grant.role) ||
+      !await deps.reauthorize(grant).catch(() => false) || !absent()) return null;
+  const actor = grant.actor;
 
   const code = randomInt(0, 100_000_000).toString().padStart(8, "0");
   const start = (deps.now ?? Date.now)();
-  if (!await deps.sendCode(email, code).catch(() => false)) return false;
+  if (!await deps.sendCode(email, code).catch(() => false)) return null;
 
   const abort = new AbortController();
   const timer = setTimeout(() => abort.abort(), 300_000);
   let supplied: string;
   try { supplied = await deps.readCode(abort.signal); }
-  catch { return false; }
+  catch { return null; }
   finally { clearTimeout(timer); }
   const at = (deps.now ?? Date.now)();
   if (at < start || at - start >= 300_000 || !/^[0-9]{8}$/.test(supplied) ||
       !timingSafeEqual(Buffer.from(code), Buffer.from(supplied)) ||
-      !await deps.reauthorize(grant).catch(() => false) || !absent()) return false;
+      !await deps.reauthorize(grant).catch(() => false) || !absent()) return null;
 
   // Pin the private directory and atomically publish without replacing a
   // pre-existing file. A unique private temporary file is fsync'ed first.
@@ -71,7 +73,7 @@ export async function enrollFirstVerifiedEmail<Grant extends PublicPasswordGrant
     fsyncSync(fd); closeSync(fd); fd = undefined;
     publishPrivateLeafNoReplace(temporary, catalogPath);
     syncPrivateParent(catalogPath);
-    return true;
+    return actor;
   } finally {
     bytes.fill(0);
     if (fd !== undefined) closeSync(fd);

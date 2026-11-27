@@ -67,6 +67,19 @@ export function publicBackend(config: PublicBackendCredentials) {
     } catch { return false; }
   };
   return {
+    async verifyNamedPassword(accountName: string, password: string): Promise<PublicBackendGrant | null> {
+      if (!accountName || Buffer.byteLength(accountName, "utf8") > 64 || !password || password.length > 1024) return null;
+      try {
+        const form = "account_name=" + encodeURIComponent(accountName) + "&proof=" + encodeURIComponent(password);
+        const access = parseAccess(await call("/api/v1/admin/access", "POST", form));
+        if (!["owner", "administrator"].includes(access.actor.role)) return null;
+        const grant: PublicBackendGrant = {
+          actor: access.actor.id, role: access.actor.role as PublicAdminRole,
+          grant: access.grant, session: access.session, csrf: access.csrf,
+        };
+        return await reauthorize(grant) ? grant : null;
+      } catch { return null; }
+    },
     async verifyPassword(actor: string, password: string): Promise<PublicBackendGrant | null> {
       try {
         const form = "actor_id=" + encodeURIComponent(actor) + "&proof=" + encodeURIComponent(password);

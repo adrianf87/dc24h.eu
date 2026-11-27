@@ -6,9 +6,10 @@ wskazanie nie oznacza jeszcze zweryfikowania skrzynki.
 
 ## Wymagane warunki
 
-1. W prywatnym narzędziu C++ ustalić prawdziwy **numeryczny ID konta**
-   `Administrator`; nie zgadywać ID na podstawie nicku ani niezaufanego pola
-   `EM` w ADC. Konto musi być aktywne i mieć rolę administratora lub OWNER.
+1. Wskazać dokładną nazwę konta C++ `Administrator`. Nowy mechanizm sam
+   sprawdza nazwę z hasłem w prywatnym API C++ i ustala jego **numeryczny ID**.
+   Nie trzeba podawać ID w czacie ani zgadywać go z nicku/pola `EM` w ADC.
+   Konto musi być aktywne i mieć rolę administratora lub OWNER.
 2. Prawdziwy odbiorca musi odebrać wiadomość na `admin@dc24h.eu` i przepisać
    kod podczas wykonywania narzędzia w konsoli usługodawcy. Narzędzie sprawdza
    hasło konta C++, rolę, kod 8-cyfrowy, termin 5 minut i rolę ponownie.
@@ -28,6 +29,17 @@ wskazanie nie oznacza jeszcze zweryfikowania skrzynki.
 
 Po przeprowadzeniu testów na izolowanej maszynie zbudować z dokładnego commita:
 
+Odczyt stanu VPS bez modyfikowania usług można wykonać przez własną konsolę
+VNC usługodawcy, po pobraniu i sprawdzeniu przetestowanego commita:
+
+```sh
+python3 scripts/stage4_vps_preflight.py
+```
+
+Raport JSON nie ujawnia haseł ani kluczy; pola `NOT_TESTED` nadal wymagają
+ręcznego potwierdzenia. Nie jest potrzebny self-hosted runner ani przekazanie
+mi hasła SSH.
+
 ```sh
 cd webadmin
 npm ci --no-audit --no-fund
@@ -43,13 +55,14 @@ użytkownik usługi i z prywatnym dostępem do C++ API:
 DC24H_API_SOCKET=<PRYWATNE_GNIAZDO> \
 DC24H_API_TOKEN_FILE=<PRYWATNY_TOKEN_PLIK> \
 /usr/bin/node /opt/dc24h/webadmin/dist/public-email-enroll-main.mjs \
-  --actor-id <POTWIERDZONY_ID_ADMINISTRATORA> \
+  --account-name Administrator \
   --email admin@dc24h.eu \
   --catalog /var/lib/dc24h-stage4/verified-emails.json \
   --owner-ack STAGE4_EMAIL_ENROLLMENT_GO
 ```
 
-Hasło C++ i kod e-mail wpisuje się w konsoli bez wyświetlania. Błędny kod,
+Hasło C++ i kod e-mail wpisuje się w konsoli bez wyświetlania. Po sukcesie
+narzędzie pokaże prawdziwy numeryczny ID konta. Błędny kod,
 brak dostawy, wygaszenie, cofnięta rola, niewłaściwe uprawnienia pliku lub
 istniejące przypisanie kończą operację odmową, bez utworzenia nowego wpisu.
 

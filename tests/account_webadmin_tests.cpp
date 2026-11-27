@@ -80,8 +80,9 @@ void run(const database::Options& options) {
     require(public_call("GET","/api/v1/management/configuration").starts_with("HTTP/1.1 404"));
     require(public_call("GET","/api/v1/management").starts_with("HTTP/1.1 401"));
     const auto readonly=public_call("POST","/api/v1/admin/access",
-        "actor_id="+std::to_string(actor.account.id().value())+"&proof=WebAdmin+operator+password!");
+        "account_name=WebAdminOperator&proof=WebAdmin+operator+password!");
     require(readonly.starts_with("HTTP/1.1 200"));
+    require(readonly.find("\"id\":\""+std::to_string(actor.account.id().value())+"\"")!=std::string::npos);
     require(readonly.find("verifier")==std::string::npos);
     require(public_call("POST","/api/v1/management","invalid").starts_with("HTTP/1.1 404"));
     const auto actor_id=std::to_string(actor.account.id().value());

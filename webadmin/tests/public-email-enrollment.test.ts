@@ -10,7 +10,7 @@ async function fixture(callback: (args: {
   path: string; run: (options?: {
     password?: string; role?: "administrator" | "owner" | "registered";
     accepted?: boolean; delivery?: boolean; stale?: boolean; revoke?: boolean;
-  }) => Promise<boolean>;
+  }) => Promise<string | null>;
   readMail: () => { recipient: string; code: string } | null;
   dir: string;
 }) => Promise<void>) {
@@ -21,9 +21,9 @@ async function fixture(callback: (args: {
   let at = 1000;
   const run = (opts: { password?: string; role?: "administrator" | "owner" | "registered";
     accepted?: boolean; delivery?: boolean; stale?: boolean; revoke?: boolean } = {}) =>
-    enrollFirstVerifiedEmail(path, "7", "admin@dc24h.eu", opts.password ?? "valid-password", {
-      verifyPassword: async (actor, password) => opts.accepted === false || password !== "valid-password" ? null :
-        { actor, role: (opts.role ?? "administrator") as "administrator" },
+    enrollFirstVerifiedEmail(path, "Administrator", "admin@dc24h.eu", opts.password ?? "valid-password", {
+      verifyNamedPassword: async (name, password) => opts.accepted === false || name !== "Administrator" || password !== "valid-password" ? null :
+        { actor: "7", role: (opts.role ?? "administrator") as "administrator" },
       reauthorize: async () => !opts.revoke,
       sendCode: async (recipient, code) => {
         mail = { recipient, code };
@@ -41,12 +41,12 @@ async function fixture(callback: (args: {
 
 test("Administrator mailbox requires C++ password, email delivery and OTP proof", async () => {
   await fixture(async ({ path, run, readMail, dir }) => {
-    assert.equal(await run({ password: "wrong" }), false);
+    assert.equal(await run({ password: "wrong" }), null);
     assert.equal(readMail(), null);
-    assert.equal(await run({ role: "registered" }), false);
-    assert.equal(await run({ delivery: false }), false);
+    assert.equal(await run({ role: "registered" }), null);
+    assert.equal(await run({ delivery: false }), null);
     assert.equal(existsSync(path), false);
-    assert.equal(await run(), true);
+    assert.equal(await run(), "7");
     assert.equal(readMail()?.recipient, "admin@dc24h.eu");
     assert.match(readMail()!.code, /^[0-9]{8}$/);
     assert.equal(openVerifiedEmailCatalog(path).forActor("7"), "admin@dc24h.eu");
@@ -58,7 +58,7 @@ test("Administrator mailbox requires C++ password, email delivery and OTP proof"
 test("an existing catalog cannot be replaced by email re-enrollment", async () => {
   await fixture(async ({ path, run, readMail }) => {
     writeFileSync(path, '{"schema":1,"accounts":[]}\n', { mode: 0o600 });
-    assert.equal(await run(), false);
+    assert.equal(await run(), null);
     assert.equal(readMail(), null);
   });
 });
@@ -66,7 +66,7 @@ test("an existing catalog cannot be replaced by email re-enrollment", async () =
 test("expired OTP, role revocation and private permissions fail without a binding", async () => {
   for (const opts of [{ stale: true }, { revoke: true }])
     await fixture(async ({ path, run }) => {
-      assert.equal(await run(opts), false);
+      assert.equal(await run(opts), null);
       assert.equal(existsSync(path), false);
     });
   await fixture(async ({ path, run, dir }) => {
@@ -76,20 +76,20 @@ test("expired OTP, role revocation and private permissions fail without a bindin
   });
 });
 
-test("invalid actor, invalid email and wrong OTP are rejected with no catalog", async () => {
+test("invalid name, invalid email and wrong OTP are rejected with no catalog", async () => {
   await fixture(async ({ path, dir }) => {
     const fake = {
-      verifyPassword: async (actor: string) => ({ actor, role: "administrator" as const }),
+      verifyNamedPassword: async () => ({ actor: "7", role: "administrator" as const }),
       reauthorize: async () => true,
       sendCode: async () => true,
       readCode: async () => "wrong-code",
     };
-    for (const [actor, email] of [["0", "admin@dc24h.eu"],
-      ["7", "other@example.test\nBcc:bad@example.test"]]) {
-      assert.equal(await enrollFirstVerifiedEmail(path, actor!, email!, "valid-password", fake), false);
+    for (const [name, email] of [["", "admin@dc24h.eu"],
+      ["Administrator", "other@example.test\nBcc:bad@example.test"]]) {
+      assert.equal(await enrollFirstVerifiedEmail(path, name!, email!, "valid-password", fake), null);
     }
     // A guessed code must not create the private roster.
-    assert.equal(await enrollFirstVerifiedEmail(path, "7", "admin@dc24h.eu", "valid-password", fake), false);
+    assert.equal(await enrollFirstVerifiedEmail(path, "Administrator", "admin@dc24h.eu", "valid-password", fake), null);
     assert.equal(existsSync(path), false);
     assert.deepEqual(readdirSync(dir), []);
   });

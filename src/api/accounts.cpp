@@ -418,8 +418,26 @@ AccountHandler account_handler(database::Options options, std::shared_ptr<const 
             }
             if(request.target=="/api/v1/admin/access") {
                 if(request.method!="POST"){throw HttpError{405,"method_not_allowed"};}
-                Fields fields;form(request.body,fields);fields.exact({"actor_id","proof"});
-                auto issued=gate.issue(number(fields.get("actor_id")),fields.get("proof"));
+                Fields fields;form(request.body,fields);
+                std::uint64_t actor_id{};
+                if(fields.values.contains("account_name")) {
+                    fields.exact({"account_name","proof"});
+                    auto name=AccountName::create(fields.get("account_name"));
+                    if(!name){bad();}
+                    database::Connection connection(audit_options);
+                    auto named=AccountRepository(connection).find_by_name(*name);
+                    // Never reveal whether an unknown name or non-staff account
+                    // exists. Password proof follows in AccessGate::issue.
+                    if(!named || (named->account.role()!=Role::owner &&
+                                    named->account.role()!=Role::administrator)) {
+                        throw admin::Error(admin::ErrorKind::forbidden);
+                    }
+                    actor_id=named->account.id().value();
+                } else {
+                    fields.exact({"actor_id","proof"});
+                    actor_id=number(fields.get("actor_id"));
+                }
+                auto issued=gate.issue(actor_id,fields.get("proof"));
                 const auto role=parse_role(issued.role);if(!role){throw HttpError{503,"account_unavailable"};}
                 std::string body=access_json(issued, *role);
                 OPENSSL_cleanse(issued.grant.data(),issued.grant.size());issued.grant.clear();

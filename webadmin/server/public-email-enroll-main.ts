@@ -40,20 +40,20 @@ const hiddenPrompt = (label: string, signal?: AbortSignal): Promise<string> => {
 
 async function main() {
   const args = process.argv.slice(2);
-  if (args.length !== 8 || args[0] !== "--actor-id" || args[2] !== "--email" ||
+  if (args.length !== 8 || args[0] !== "--account-name" || args[2] !== "--email" ||
       args[4] !== "--catalog" || args[6] !== "--owner-ack" ||
       args[7] !== "STAGE4_EMAIL_ENROLLMENT_GO") throw Error("Invalid OWNER enrollment arguments");
   const config = credentials(process.env);
   if (!config) throw Error("Private C++ account verification unavailable");
   const backend = publicBackend(config);
   const password = await hiddenPrompt("C++ account password (not echoed): ");
-  const success = await enrollFirstVerifiedEmail(args[5]!, args[1]!, args[3]!, password, {
-    verifyPassword: backend.verifyPassword, reauthorize: backend.reauthorize,
+  const actor = await enrollFirstVerifiedEmail(args[5]!, args[1]!, args[3]!, password, {
+    verifyNamedPassword: backend.verifyNamedPassword, reauthorize: backend.reauthorize,
     sendCode: createMsmtpSender(),
     readCode: signal => hiddenPrompt("One-time email code (not echoed): ", signal),
   });
-  if (!success) throw Error("Account/mailbox enrollment refused");
-  stdout.write("Mailbox verified and bound to the existing C++ account. Restart the gateway separately.\n");
+  if (!actor) throw Error("Account/mailbox enrollment refused");
+  stdout.write("Mailbox verified and bound to C++ account ID " + actor + ". Restart the gateway separately.\n");
 }
 
 main().catch(() => {

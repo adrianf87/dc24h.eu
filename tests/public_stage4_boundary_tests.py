@@ -108,7 +108,7 @@ class PublicStageIVBoundaryTests(unittest.TestCase):
     def test_offline_account_enrollment_requires_mailbox_proof_and_denies_replacement(self):
         source = (ROOT / "webadmin/server/public-email-enrollment.ts").read_text(encoding="utf-8")
         cli = (ROOT / "webadmin/server/public-email-enroll-main.ts").read_text(encoding="utf-8")
-        for required in ("verifyPassword", "reauthorize", "readCode", "sendCode",
+        for required in ("verifyNamedPassword", "reauthorize", "readCode", "sendCode",
                          "timingSafeEqual", "publishPrivateLeafNoReplace", "O_EXCL"):
             self.assertIn(required, source)
         self.assertIn("STAGE4_EMAIL_ENROLLMENT_GO", cli)

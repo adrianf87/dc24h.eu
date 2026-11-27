@@ -35,6 +35,9 @@ on:
       - 'src/main.cpp'
       - 'tests/account_webadmin_tests.cpp'
       - 'tests/beta06_authenticated_api_process_tests.py'
+      - 'tests/stage4_vps_preflight_tests.py'
+      - 'scripts/stage4_vps_preflight.py'
+      - 'CMakeLists.txt'
       - 'webadmin/package.json'
       - 'webadmin/package-lock.json'
       - 'config/apache2-webadmin-remote.conf.example'
@@ -63,6 +66,7 @@ jobs:
       - name: Verify design boundaries without network or sudo
         run: |
           python3 -m unittest discover -s tests -p 'public_stage4_boundary_tests.py' -v
+          python3 -m unittest discover -s tests -p 'stage4_vps_preflight_tests.py' -v
           python3 tests/project_checks.py
           python3 tests/project_language_policy_tests.py
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
