@@ -10,6 +10,7 @@ This log tracks verified runner changes and captures the difference between OWNE
 | 2026-11-27 | Runner documentation moved into project branch `feature/stage4-webadmin-dedicated-service`. | `self-hosted-runner/27112026/` created. No service or workflow configuration modified. |
 | 2026-11-27 | Audited eight existing workflow files. | Ubuntu runner declarations remain; [CI_WORKFLOWS.md](CI_WORKFLOWS.md). |
 | 2026-11-27 | Centralized self-hosted-runner-specific test code and commands. | [Test suite](../tests/README.md), [run-tests.sh](../scripts/run-tests.sh); syntax validation passed, no live VPS tests executed. |
+| 2026-11-27 | OWNER removed `/home/github-runner/self-hosted-runner` after deletion of the old remote. Empty replacement directories contain no original files. | Historical `20261127T164249Z` snapshot files no longer available at that path; new collection required. |
 
 ## Add future entries
 
