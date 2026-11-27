@@ -69,22 +69,26 @@ profile=/etc/apparmor.d/usr.bin.msmtp
 local_policy=/etc/apparmor.d/local/usr.bin.msmtp
 rule="owner /var/lib/dc24h-stage4/.msmtprc r,"
 printf '%s\n' 'Stage IV: reviewing optional msmtp AppArmor profile'
-if [ -f "$profile" ] && command -v apparmor_parser >/dev/null 2>&1; then
+# The disposable GitHub-hosted matrix validates the packaged installation,
+# not the GitHub image's host-wide AppArmor policy. Leave that host policy
+# untouched; this exception requires BOTH runner identity markers explicitly
+# passed through sudo by the workflow. Debian VPS and self-hosted deployments
+# are never exempt from installing/reloading an active msmtp policy.
+if [ "${GITHUB_ACTIONS:-}" = "true" ] &&
+   [ "${RUNNER_ENVIRONMENT:-}" = "github-hosted" ]; then
+    printf '%s\n' 'Stage IV: hosted CI: no host AppArmor policy changes'
+elif [ -f "$profile" ] && command -v apparmor_parser >/dev/null 2>&1; then
     install -d -m 0755 /etc/apparmor.d/local
-    grep -Fqx "$rule" "$local_policy" 2>/dev/null || printf '\n%s\n' "$rule" >> "$local_policy"
-    # On disposable GitHub-hosted Ubuntu VMs, AppArmor profile replacement
-    # may be forbidden by the runner image. Do not alter the runner's loaded
-    # profiles. This exception does not apply to Debian VPS deployments or
-    # self-hosted runners: active msmtp profiles must reload successfully.
+    if ! grep -Fqx "$rule" "$local_policy" 2>/dev/null; then
+        printf '\n%s\n' "$rule" >> "$local_policy"
+    fi
     if [ -d /sys/kernel/security/apparmor ] &&
        [ ! -e /etc/apparmor.d/disable/usr.bin.msmtp ] &&
        [ ! -L /etc/apparmor.d/disable/usr.bin.msmtp ]; then
-        if [ "${GITHUB_ACTIONS:-}" = "true" ] &&
-           [ "${RUNNER_ENVIRONMENT:-}" = "github-hosted" ]; then
-            printf '%s\n' 'Stage IV: hosted CI: preserving the runner-managed AppArmor profile'
-        elif ! apparmor_parser -r "$profile"; then
+        if ! apparmor_parser -r "$profile"; then
             printf '%s\n' 'Stage IV: failed to reload active msmtp AppArmor profile' >&2
             exit 1
         fi
     fi
+    printf '%s\n' 'Stage IV: msmtp AppArmor policy installed'
 fi
