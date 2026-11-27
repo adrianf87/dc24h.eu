@@ -72,12 +72,19 @@ printf '%s\n' 'Stage IV: reviewing optional msmtp AppArmor profile'
 if [ -f "$profile" ] && command -v apparmor_parser >/dev/null 2>&1; then
     install -d -m 0755 /etc/apparmor.d/local
     grep -Fqx "$rule" "$local_policy" 2>/dev/null || printf '\n%s\n' "$rule" >> "$local_policy"
-    # Respect profiles explicitly disabled by the image operator. Hosted
-    # Ubuntu images may ship msmtp in /etc/apparmor.d/disable and reject a
-    # forced profile reload. Debian production still reloads an active profile.
+    # On disposable GitHub-hosted Ubuntu VMs, AppArmor profile replacement
+    # may be forbidden by the runner image. Do not alter the runner's loaded
+    # profiles. This exception does not apply to Debian VPS deployments or
+    # self-hosted runners: active msmtp profiles must reload successfully.
     if [ -d /sys/kernel/security/apparmor ] &&
        [ ! -e /etc/apparmor.d/disable/usr.bin.msmtp ] &&
        [ ! -L /etc/apparmor.d/disable/usr.bin.msmtp ]; then
-        apparmor_parser -r "$profile"
+        if [ "${GITHUB_ACTIONS:-}" = "true" ] &&
+           [ "${RUNNER_ENVIRONMENT:-}" = "github-hosted" ]; then
+            printf '%s\n' 'Stage IV: hosted CI: preserving the runner-managed AppArmor profile'
+        elif ! apparmor_parser -r "$profile"; then
+            printf '%s\n' 'Stage IV: failed to reload active msmtp AppArmor profile' >&2
+            exit 1
+        fi
     fi
 fi
