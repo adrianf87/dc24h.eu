@@ -15,328 +15,43 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  cpp:
-    name: C++ ${{ matrix.build_type }} - ${{ matrix.os }}
+  docker_application:
+    name: C++ and WebAdmin / five Docker distros sequentially
     if: github.repository == 'adrianf87/dc24h.eu' || github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
     runs-on: [self-hosted, Linux, X64]
-    timeout-minutes: 120
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [debian-13]
-        build_type: [Debug, Release]
-    env:
-      CXX: g++
-      CI: 'true'
-      BUILD_TYPE: ${{ matrix.build_type }}
-      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      DC24H_REQUIRE_SYSTEMD_HOST: '1'
+    timeout-minutes: 720
     steps:
-      - name: Verify Debian 13 self-hosted runner
-        shell: bash
-        run: |
-          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
-          . /etc/os-release
-          test "$ID" = 'debian' && test "$VERSION_ID" = '13'
-          test "$(hostname -s)" = 'server-747585786'
-          test "$(id -un)" = 'github-runner'
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
-      - name: Activate Debian 13 application test snapshot
-        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
-      - name: Install build and integration dependencies
-        run: |
-          bash self-hosted-runner/scripts/install-debian13-ci-deps.sh \
-            build-essential cmake python3 libutf8proc-dev libgcrypt20-dev \
-            libssl-dev libmariadb-dev openssl ncdc mariadb-server apache2
-
-      - name: Configure C++20
-        run: cmake -S . -B "build/$BUILD_TYPE" -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DBUILD_TESTING=ON -DDC24H_REQUIRE_INTEGRATION_TESTS=ON
-
-      - name: Build
-        run: cmake --build "build/$BUILD_TYPE" --parallel 2
-
-      - name: Test
+      - name: Verify exact checked-out commit
         env:
-          DC24H_VM_REPORT_DIR: ${{ runner.temp }}/evidence
-        run: |
-          mkdir -p "$DC24H_VM_REPORT_DIR"
-          ctest --test-dir "build/$BUILD_TYPE" --parallel 2 --output-on-failure --output-junit "$RUNNER_TEMP/ctest.xml"
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
 
-      - name: Verify exact checked-out head and pinned action/npm inventory
-        run: |
-          python3 -m unittest discover -s tests -p beta07_supply_chain_tests.py
-          python3 -m unittest discover -s tests -p beta07_stage1_completion_gate_tests.py
-          python3 -m unittest discover -s tests -p beta07_release_candidate_gate_tests.py
-          python3 scripts/beta07_supply_chain.py \
-            --root "$GITHUB_WORKSPACE" --sha "$SOURCE_SHA" \
-            --os-image "${{ matrix.os }}" \
-            --output "$RUNNER_TEMP/evidence/beta07-supply-chain.json"
+      - name: C++ / CTest / sanitizers / WebAdmin / Playwright on five Docker distros
+        run: bash self-hosted-runner/scripts/run-docker-sequential.sh
 
-      - name: Stage VI Twilight source and contract preflight (NOT release GO)
-        run: |
-          python3 -m unittest discover -s tests -p twilight_stage5_docs_tests.py
-          python3 -m unittest discover -s tests -p twilight_stage6_preflight_tests.py
-          python3 scripts/twilight_stage6_preflight.py \
-            --root "$GITHUB_WORKSPACE" --sha "$SOURCE_SHA" \
-            --os-image "${{ matrix.os }}" \
-            --output "$RUNNER_TEMP/evidence/twilight-stage6-preflight.json"
-
-      - name: Bind GitHub-hosted Ubuntu APT, compiler, Node and Action provenance
-        run: |
-          python3 -m unittest discover -s tests -p beta09_os_provenance_tests.py
-          python3 scripts/beta09_os_provenance.py \
-            --root "$GITHUB_WORKSPACE" --sha "$SOURCE_SHA" \
-            --os-image "${{ matrix.os }}" \
-            --output "$RUNNER_TEMP/evidence/beta09-os-provenance.json"
-
-      - name: Verify pinned independent ADC client and redact capability evidence
-        run: |
-          python3 -m unittest discover -s tests -p 'beta07_client_evidence_tests.py'
-          python3 scripts/beta07_client_evidence.py \
-            --junit "$RUNNER_TEMP/ctest.xml" --sha "$SOURCE_SHA" \
-            --os-image "${{ matrix.os }}" \
-            --output "$RUNNER_TEMP/evidence/beta07-client-capabilities.json"
-
-      - name: Verify beta-0.8 Stage I ADC ADCS interoperability evidence
-        run: |
-          python3 -m unittest discover -s tests -p 'beta08_stage1_gate_tests.py'
-          python3 scripts/beta08_stage1_gate.py \
-            --junit "$RUNNER_TEMP/ctest.xml" \
-            --ncdc-report "$RUNNER_TEMP/evidence/beta07-client-capabilities.json" \
-            --sha "$SOURCE_SHA" --os-image "${{ matrix.os }}" \
-            --output "$RUNNER_TEMP/evidence/beta08-stage1-interoperability.json"
-
-      - name: Verify beta-0.9 Stage I revocation transfer TLS and client limits
-        run: |
-          python3 -m unittest discover -s tests -p 'beta09_stage1_gate_tests.py'
-          python3 scripts/beta09_stage1_gate.py \
-            --junit "$RUNNER_TEMP/ctest.xml" \
-            --ncdc-report "$RUNNER_TEMP/evidence/beta07-client-capabilities.json" \
-            --sha "$SOURCE_SHA" --os-image "${{ matrix.os }}" \
-            --output "$RUNNER_TEMP/evidence/beta09-stage1-interoperability.json"
-
-      - name: Probe beta-0.9 Stage II five-store authenticity design without migration
-        run: |
-          python3 -m unittest discover -s tests -p beta09_stage2_auth_proposal_tests.py
-          python3 -m unittest discover -s tests -p beta09_stage2_cold_start_tests.py
-
-      - name: Prepare redacted CTest evidence
+      - name: Upload per-distribution test reports
         if: always()
-        run: python3 scripts/ci_junit_summary.py --junit "$RUNNER_TEMP/ctest.xml" --output "$RUNNER_TEMP/evidence/summary.json" --suite "cpp-${{ matrix.os }}-${{ matrix.build_type }}" --sha "$SOURCE_SHA"
-
-      - name: Enforce exact-head hosted Ubuntu evidence
-        if: always()
-        run: python3 scripts/beta06_ci_provenance.py --summary "$RUNNER_TEMP/evidence/summary.json" --output "$RUNNER_TEMP/evidence/provenance.json" --sha "$SOURCE_SHA" --suite "cpp-${{ matrix.os }}-${{ matrix.build_type }}" --os-image "${{ matrix.os }}"
-
-      - name: Upload immutable status artifact
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (Node 24)
-        with:
-          name: cpp-${{ matrix.os }}-${{ matrix.build_type }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/evidence/
-          if-no-files-found: error
-          retention-days: 14
-
-  webadmin:
-    name: WebAdmin - ${{ matrix.os }}
-    if: github.repository == 'adrianf87/dc24h.eu' || github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
-    runs-on: [self-hosted, Linux, X64]
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [debian-13]
-    env:
-      CXX: g++
-      CI: 'true'
-      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-    steps:
-      - name: Verify Debian 13 self-hosted runner
-        shell: bash
-        run: |
-          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
-          . /etc/os-release
-          test "$ID" = 'debian' && test "$VERSION_ID" = '13'
-          test "$(hostname -s)" = 'server-747585786'
-          test "$(id -un)" = 'github-runner'
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
-
-      - name: Activate Debian 13 application test snapshot
-        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
-      - name: Install C++ API build dependencies
-        run: |
-          bash self-hosted-runner/scripts/install-debian13-ci-deps.sh \
-            build-essential cmake python3 libutf8proc-dev libgcrypt20-dev \
-            libssl-dev libmariadb-dev
-
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
-        with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: webadmin/package-lock.json
-
-      - name: Build Release C++ API for browser integration
-        run: |
-          cmake -S . -B build/Release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
-          cmake --build build/Release --target dc24h --parallel 2
-
-      - name: Install frontend dependencies
-        working-directory: webadmin
-        run: npm ci
-
-      - name: Audit production npm dependencies and require redacted exact-head evidence
-        working-directory: webadmin
-        run: |
-          python3 -m unittest discover -s ../tests -p beta07_npm_audit_gate_tests.py
-          private_audit="$RUNNER_TEMP/beta07-npm-audit-private.json"
-          trap 'rm -f "$private_audit"' EXIT
-          if npm audit --omit=dev --audit-level=high --json > "$private_audit"; then
-            audit_result=0
-          else
-            audit_result=$?
-          fi
-          mkdir -p "$RUNNER_TEMP/evidence"
-          python3 ../scripts/beta07_npm_audit_gate.py \
-            --root "$GITHUB_WORKSPACE" --sha "$SOURCE_SHA" \
-            --os-image "${{ matrix.os }}" --audit "$private_audit" \
-            --audit-exit "$audit_result" \
-            --output "$RUNNER_TEMP/evidence/beta07-npm-audit.json"
-
-      - name: Upload de-identified production dependency audit only
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (Node 24)
-        with:
-          name: beta07-npm-audit-${{ matrix.os }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/evidence/beta07-npm-audit.json
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Qualify runtime and CI/build-chain npm advisories
-        working-directory: webadmin
-        run: |
-          python3 -m unittest discover -s ../tests -p beta08_build_chain_audit_tests.py
-          python3 ../scripts/beta08_build_chain_audit.py \
-            --root "$GITHUB_WORKSPACE" --sha "$SOURCE_SHA" \
-            --os-image "${{ matrix.os }}" \
-            --output "$RUNNER_TEMP/evidence/beta08-build-chain-audit.json"
-
-      - name: Upload only aggregated full-dependency advisory totals
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: beta08-build-audit-${{ matrix.os }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/evidence/beta08-build-chain-audit.json
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Typecheck and production build
-        working-directory: webadmin
-        run: npm run build
-
-      - name: Frontend unit tests
-        working-directory: webadmin
-        run: node --import tsx --test --test-concurrency=2 tests/*.test.ts
-
-      - name: Install Chromium and system dependencies
-        working-directory: webadmin
-        run: npx playwright install --with-deps chromium
-
-      - name: Browser tests
-        working-directory: webadmin
-        run: npm run test:e2e -- --workers=2 --fully-parallel
-
-      - name: Real C++ API integration
-        working-directory: webadmin
-        run: npm run test:integration -- ../build/Release/dc24h-twilight
-
-  sanitizers:
-    name: C++ ${{ matrix.sanitizer }} - debian-13
-    if: github.repository == 'adrianf87/dc24h.eu' || github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
-    runs-on: [self-hosted, Linux, X64]
-    timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        sanitizer: [address, undefined]
-    env:
-      CXX: g++
-      CI: 'true'
-      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-    steps:
-      - name: Verify Debian 13 self-hosted runner
-        shell: bash
-        run: |
-          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
-          . /etc/os-release
-          test "$ID" = 'debian' && test "$VERSION_ID" = '13'
-          test "$(hostname -s)" = 'server-747585786'
-          test "$(id -un)" = 'github-runner'
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
-
-      - name: Activate Debian 13 application test snapshot
-        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
-      - name: Install C++ dependencies
-        run: |
-          bash self-hosted-runner/scripts/install-debian13-ci-deps.sh \
-            build-essential cmake python3 libutf8proc-dev libgcrypt20-dev \
-            libssl-dev libmariadb-dev
-
-      - name: Configure isolated sanitizer build
-        run: cmake -S . -B "build/sanitizer-${{ matrix.sanitizer }}" -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DDC24H_SANITIZER="${{ matrix.sanitizer }}"
-
-      - name: Build instrumented unit tests
-        run: cmake --build "build/sanitizer-${{ matrix.sanitizer }}" --parallel 2
-
-      - name: Run sanitizer and security regression subset
-        run: ctest --test-dir "build/sanitizer-${{ matrix.sanitizer }}" --output-on-failure --output-junit "$RUNNER_TEMP/ctest.xml" -R '^(memory\.safety|adc\.(parser|security|syntax|sch|rcm|ctm)|network\.unit|transfers\.(protocol|tokens)|security\.unit|api\.unit|beta\.baseline)$'
-
-      - name: Prepare redacted sanitizer evidence
-        if: always()
-        run: python3 scripts/ci_junit_summary.py --junit "$RUNNER_TEMP/ctest.xml" --output "$RUNNER_TEMP/evidence/summary.json" --suite "sanitizer-${{ matrix.sanitizer }}" --sha "$SOURCE_SHA"
-
-      - name: Enforce exact-head sanitizer evidence
-        if: always()
-        run: python3 scripts/beta06_ci_provenance.py --summary "$RUNNER_TEMP/evidence/summary.json" --output "$RUNNER_TEMP/evidence/provenance.json" --sha "$SOURCE_SHA" --suite "sanitizer-${{ matrix.sanitizer }}" --os-image debian-13
-
-      - name: Upload immutable sanitizer status
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (Node 24)
-        with:
-          name: sanitizer-${{ matrix.sanitizer }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/evidence/summary.json
-          if-no-files-found: error
+          name: cpp-webadmin-five-distros-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/dc24h-docker-results/
+          if-no-files-found: warn
           retention-days: 14
 
   required_ci:
-    # Preserve the required check name configured by branch protection.
+    # Keep the check name expected by the repository ruleset.
     name: CI (C++ and WebAdmin)
-    needs: [cpp, webadmin, sanitizers]
+    needs: [docker_application]
     if: ${{ !cancelled() }}
     runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 5
     steps:
-      - name: Verify Debian 13 self-hosted runner
-        shell: bash
-        run: |
-          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
-          . /etc/os-release
-          test "$ID" = 'debian' && test "$VERSION_ID" = '13'
-          test "$(hostname -s)" = 'server-747585786'
-          test "$(id -un)" = 'github-runner'
-      - name: Ensure all C++ and WebAdmin checks passed
+      - name: Require all five Docker distributions to pass
         env:
-          CPP_RESULT: ${{ needs.cpp.result }}
-          WEBADMIN_RESULT: ${{ needs.webadmin.result }}
-          SANITIZERS_RESULT: ${{ needs.sanitizers.result }}
-        run: |
-          test "$CPP_RESULT" = "success"
-          test "$WEBADMIN_RESULT" = "success"
-          test "$SANITIZERS_RESULT" = "success"
+          DOCKER_RESULT: ${{ needs.docker_application.result }}
+        run: test "$DOCKER_RESULT" = 'success'

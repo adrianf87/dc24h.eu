@@ -1,106 +1,42 @@
-name: Stage IV Debian 13 self-hosted qualification
+name: Stage IV five-distro Docker qualification
 
 on:
   push:
-    branches: [main, feature/stage4-webadmin-dedicated-service]
-  pull_request:
-    branches: [main]
+    branches: [feature/stage4-webadmin-dedicated-service]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: stage4-debian13-${{ github.workflow }}-${{ github.ref }}
+  group: stage4-docker-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  debian13-operational:
-    name: Debian 13 C++ WebAdmin and runner qualification
+  docker-application-sequential:
+    name: Docker Debian 12/13 Ubuntu 22/24/26 (sequential)
     if: github.repository == 'adrianf87/dc24h.eu-twilight'
     runs-on: [self-hosted, Linux, X64]
-    timeout-minutes: 120
-    env:
-      CI: 'true'
-      CXX: g++
-      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      DC24H_REQUIRE_SYSTEMD_HOST: '1'
+    timeout-minutes: 720
     steps:
-      - name: Verify approved Debian 13 runner
-        shell: bash
-        run: |
-          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
-          . /etc/os-release
-          test "$ID" = 'debian' && test "$VERSION_ID" = '13'
-          test "$(hostname -s)" = 'server-747585786'
-          test "$(id -un)" = 'github-runner'
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          ref: ${{ env.SOURCE_SHA }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      - name: Activate Debian 13 application test snapshot
-        run: bash self-hosted-runner/scripts/activate-debian13-tests.sh
-      - name: Verify exact checkout and runner documentation tests
-        run: |
-          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
-          bash self-hosted-runner/scripts/run-tests.sh offline
-      - name: Install Debian 13 C++ database TLS and ncdc dependencies
-        run: |
-          bash self-hosted-runner/scripts/install-debian13-ci-deps.sh \
-            build-essential cmake python3 libutf8proc-dev libgcrypt20-dev \
-            libssl-dev libmariadb-dev openssl ncdc mariadb-server apache2 msmtp
-      - name: Build C++ and integration test targets
-        run: |
-          cmake -S . -B "$RUNNER_TEMP/dc24h-stage4-build" \
-            -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DDC24H_REQUIRE_INTEGRATION_TESTS=ON
-          cmake --build "$RUNNER_TEMP/dc24h-stage4-build" --parallel 8
-      - name: Run complete CTest on Debian 13
-        run: |
-          ctest --test-dir "$RUNNER_TEMP/dc24h-stage4-build" \
-            --output-on-failure --parallel 4 \
-            --output-junit "$RUNNER_TEMP/dc24h-stage4-ctest.xml"
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
-        with:
-          node-version: '24'
-          cache: npm
-          cache-dependency-path: webadmin/package-lock.json
-      - name: Validate WebAdmin Node 24 runtime and dependencies
-        working-directory: webadmin
-        run: |
-          node --version
-          npm ci --no-audit --no-fund
-          npm run typecheck
-          npm run build
-          npm run build:public:ci
-          npm run build:stage4-init
-          npm run build:enrollment:ci
-      - name: Run WebAdmin unit and C++ integration tests
-        working-directory: webadmin
-        run: |
-          npm test
-          npm run test:integration -- "$RUNNER_TEMP/dc24h-stage4-build/dc24h-twilight"
-      - name: Install Chromium and system dependencies on Debian 13
-        working-directory: webadmin
-        run: npx playwright install --with-deps chromium
-      - name: Run WebAdmin Playwright regressions
-        working-directory: webadmin
-        run: npx playwright test tests/public-stage4.spec.ts
-      - name: Verify host services and exposure read-only
-        run: bash self-hosted-runner/scripts/run-tests.sh host-read-only
-      - name: Record pending disposable VM-only proofs
-        if: always()
-        run: |
-          {
-            echo '### Debian 13 qualification scope'
-            echo '- Debian 13 self-hosted C++ / CTest / WebAdmin / Playwright / host checks: see job steps.'
-            echo '- NOT TESTED in this job: destructive package downgrade, complete host installation/rollback, and Ubuntu-specific historical performance baselines.'
-            echo '- Those require a separate disposable Debian 13 system environment; no PASS is claimed.'
-          } >> "$GITHUB_STEP_SUMMARY"
-      - name: Upload available CTest report
+
+      - name: Verify exact checkout
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+
+      - name: Run five isolated Docker containers in strict order
+        run: bash self-hosted-runner/scripts/run-docker-sequential.sh
+
+      - name: Upload per-distro status and test artifacts
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: stage4-debian13-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/dc24h-stage4-ctest.xml
+          name: stage4-docker-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/dc24h-docker-results/
           if-no-files-found: warn
           retention-days: 14

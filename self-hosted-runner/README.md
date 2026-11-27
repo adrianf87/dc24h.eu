@@ -1,38 +1,57 @@
-# Self-hosted GitHub Actions runner
+# Self-hosted GitHub Actions runner: sequential Docker application tests
 
-This directory is the new **in-repository home** for all inventory, configuration facts, installed/removed package history, and operational documentation for the Debian 13 runner. The previously separate `adrianf87/self-hosted-runner` repository was deleted by the OWNER. Do not rely on that old remote.
+This branch tests the C++ server and WebAdmin in **five disposable Docker containers**, in exactly this order:
 
-- Registered runner: **`server-747585786`**
-- Runner settings: [repository runner #22](https://github.com/adrianf87/dc24h.eu-twilight/settings/actions/runners/22)
-- OS: **Debian 13 (Trixie)**; OWNER's future CI target
-- System account: `github-runner`, with passwordless `sudo` (OWNER-confirmed)
-- Host: `server-747585786.dc24h.eu` / `62.171.156.32`
-- Lives on a **shared public-service VPS**, also running the public ADCS hub and WebAdmin
+1. `debian:12`
+2. `debian:13`
+3. `ubuntu:22.04`
+4. `ubuntu:24.04`
+5. `ubuntu:26.04`
 
-## Dated runner records
+The runner is `server-747585786`, Debian 13, running as `github-runner`. The host itself is **not** reconfigured or upgraded by the application test scripts. Docker must be installed and available to that account before the job starts.
 
-- [27 November 2026 — active runner](27112026/README.md)
-- [Read-only inventory collector](scripts/collect-inventory.sh)
-- [Runner-specific test suite](tests/README.md)
-- [Complete Debian 13 application test snapshot](tests/debian-13/README.md)
-- [CI test activation script](scripts/activate-debian13-tests.sh)
-- [Test runner entry point](scripts/run-tests.sh)
-- [Repository-local placement and safety rules](AGENTS.md)
-- [CI workflow migration audit](27112026/CI_WORKFLOWS.md)
-- [Dated runner change log](27112026/CHANGELOG.md)
+## Resource limits and sequencing
 
-Create a **new dated directory in DDMMYYYY format** when the runner is replaced or a later baseline is taken. Keep older snapshots for comparison and record actual installs, upgrades and removals; never rewrite a historic inventory.
+- Each container uses exactly **16 logical CPU IDs**, selected from the runner account's CPU affinity, passed through Docker's `--cpuset-cpus`. No `--cpus` or CPU time quota is set.
+- Each container uses `--memory 32g --memory-swap 32g` (32 GiB RAM and no additional swap allowance).
+- The script holds a host-wide `flock` for the full five-image run. Only one application-test container is started at a time. After its tests finish (PASS or FAIL), its reports are copied and the container is stopped and removed before the next image starts.
+- A failure in one distribution does not skip the remaining distributions. The overall GitHub Action fails if **any** distribution fails.
+- Docker images may remain cached for faster future runs; running containers are removed. The script never uses `docker system prune` or removes unrelated containers.
 
-## Source and confidence
+## Tests
 
-The 27 November 2026 baseline was supplied through OWNER shell output. A package inventory previously generated on the VPS at `2026-11-27T16:42:49Z` was confirmed uploaded to the now-deleted repository before deletion: 1,110 installed packages, 188 marked manually installed, 992 retained `dpkg` package events, 18 remove/purge rows for currently absent packages, and an empty warning file.
+Workflow entry point: `self-hosted-runner/scripts/run-docker-sequential.sh`.
 
-**The complete package-by-package files are NOT yet copied into this repository.** The former local clone was deleted on November 27, 2026, so the full original files are no longer available by that path. See [fresh inventory recovery](27112026/README.md#recovery-after-local-inventory-deletion); do not claim a new snapshot is the old one.
+For each OS, `test-app-in-container.sh` installs its build tools and verified official Node.js 24, then runs:
 
-## CI migration status
+- C++ Debug and Release compilation and CTest;
+- AddressSanitizer and UndefinedBehaviorSanitizer regression subsets;
+- WebAdmin typecheck, public/Stage IV builds and unit tests;
+- Playwright Chromium regressions and WebAdmin/C++ integration tests.
 
-OWNER policy is **Debian 13 only** for testing. **All eight GitHub Actions workflows were migrated to the registered self-hosted Debian 13 runner on branch `feature/stage4-webadmin-dedicated-service`**. The public test hub and WebAdmin share this VPS; the OWNER expressly authorized automated build/dependency tests and use of passwordless `sudo` on it without new confirmation gates. CI results are not yet final. See the [workflow migration details and test status](27112026/CI_WORKFLOWS.md).
+The original application tests remain in repository-root `tests/`; no extra test copy exists under `self-hosted-runner/`.
 
-## Sensitive data policy
+Reports are stored in `${RUNNER_TEMP}/dc24h-docker-results/<distribution>/`, uploaded as workflow artifacts and summarized per OS. `FAIL` and `NOT_TESTED` must not be reported as `PASS`.
 
-Never commit runner `.credentials*`, registration/PAT tokens, passwords, `/etc/dc24h`, SMTP configurations, TLS private keys, session cookies, database dumps, raw process environments, or shell/command histories. Capture only sanitized package metadata, high-level service versions, non-secret runner facts and verified status changes. Review each generated inventory before `git add`.
+## Safety and limitations
+
+The host also runs public ADCS and WebAdmin. Test containers are disposable, have no published ports, and do not bind-mount host services, database directories, credentials or the Docker socket. They can reach external package registries while provisioning dependencies.
+
+The `github-runner` account can use the Docker daemon; access to Docker on a shared service host remains root-equivalent. Only trusted workflow code should invoke the Docker CLI. Never expose secrets through container environment or logs.
+
+The workflow does not claim that host-level systemd service restarts, production migrations or rollback are tested in Docker. Browser dependencies for newer OS images must be verified by actual CI runs; an unsupported dependency must fail visibly.
+
+To check the local orchestration script syntax without running Docker:
+
+```bash
+bash -n self-hosted-runner/scripts/run-docker-sequential.sh
+bash -n self-hosted-runner/scripts/test-app-in-container.sh
+```
+
+To run on the authorized self-hosted VPS from an exact clean checkout:
+
+```bash
+bash self-hosted-runner/scripts/run-docker-sequential.sh
+```
+
+Do not commit `.credentials*`, PATs, database/SMTP secrets, TLS private keys, user data or raw process environments.
