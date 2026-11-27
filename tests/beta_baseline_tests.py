@@ -54,28 +54,22 @@ def check_no_custom_workers(errors):
                 "github-runner" not in content,
                 f"{path.relative_to(ROOT)}: retired worker documentation", errors)
 
-    qualification = (ROOT / ".github/workflows/debian13-stage3-full-qualification.yml").read_text(
-        encoding="utf-8")
-    for required in (
-        "  workflow_dispatch:",
-        "  pull_request:",
-        "runs-on: ubuntu-24.04",
-        "os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]",
-        "runs-on: ${{ matrix.os }}",
-        "test \"$RUNNER_ENVIRONMENT\" = 'github-hosted'",
-        "sudo -n apt-get install -y --no-install-recommends ncdc",
-        "sudo -n id -u",
-        "python3 scripts/public_stage3_qualification_external.py",
-        "inputs.production_restarts_ack == false",
-        "contents: read",
+    workflow_dir = ROOT / ".github" / "workflows"
+    pr = (workflow_dir / "public-stage3-qualification.yml").read_text(encoding="utf-8")
+    manual = (workflow_dir / "debian13-stage3-full-qualification.yml").read_text(encoding="utf-8")
+    for workflow, entries in (
+        (pr, ("  pull_request:", "os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]",
+              "runs-on: ${{ matrix.os }}", "sudo -n id -u", "stage3.run run ncdc")),
+        (manual, ("  workflow_dispatch:", "RUN_STAGE3_PUBLIC_EXTENDED_STABILITY",
+                  "stage3.run run extended", "inputs.production_restarts_ack == false")),
     ):
-        require(required in qualification,
-                f"Stage III Ubuntu-only workflow missing {required!r}", errors)
-    for prohibited in ("systemctl restart", "sudo -n python3",
-                       "RUN_STAGE3_PUBLIC_QUALIFICATION", "premerge-host:",
-                       "self-hosted", "ssh "):
-        require(prohibited not in qualification,
-                f"Stage III workflow attempted retired host action {prohibited!r}", errors)
+        for required in (*entries, "runs-on: ubuntu-24.04", "contents: read",
+                         "test \"$RUNNER_ENVIRONMENT\" = 'github-hosted'",
+                         "sudo -n apt-get install -y --no-install-recommends ncdc"):
+            require(required in workflow, f"Stage III workflow missing {required!r}", errors)
+        for prohibited in ("systemctl restart", "sudo -n python3", "premerge-host:",
+                           "RUN_STAGE3_PUBLIC_QUALIFICATION", "self-hosted", "ssh "):
+            require(prohibited not in workflow, f"Stage III workflow attempts {prohibited!r}", errors)
     require(not (ROOT / ".github" / "actionlint.yaml").exists(),
             "Retired custom-runner actionlint shim remains", errors)
 
@@ -101,6 +95,23 @@ def check_ci_repository_allowlists(errors):
                     f"{name}: foreign repo or altered exact repository allowlist", errors)
     require(sum(count for count, _ in policies.values()) == 8,
             "Unexpected repository guard inventory", errors)
+
+
+def check_ci_apt_source_policy(errors):
+    """Runner-supplied third-party APT outages cannot disable Ubuntu package tests."""
+    script = check(ROOT / ".github/scripts/install-ci-deps.sh", (
+        'GITHUB_ACTIONS:-',
+        'RUNNER_ENVIRONMENT:-',
+        '/etc/apt/sources.list.d/ubuntu.sources',
+        '/etc/apt/sources.list',
+        'Dir::Etc::sourcelist=',
+        'Dir::Etc::sourceparts=-',
+        'apt-get "${apt_network_options[@]}" update',
+        'apt-get "${apt_network_options[@]}" install -y --no-install-recommends',
+    ), errors)
+    for unsafe in ('--allow-unauthenticated', 'Acquire::AllowInsecureRepositories',
+                   'APT::Get::AllowUnauthenticated', '|| true'):
+        require(unsafe not in script, f"APT policy weakens failure or signature checks: {unsafe}", errors)
 
 
 def main():
@@ -135,6 +146,7 @@ def main():
     require('test "$(nproc)" -eq 4' not in workflow,
             "build.yml: fixed runner CPU count is not portable", errors)
     check_ci_repository_allowlists(errors)
+    check_ci_apt_source_policy(errors)
     require("needs: [cpp, webadmin, sanitizers]" in workflow,
             "build.yml: sanitizer failures must block the required CI result", errors)
     require("debian_compat:" not in workflow and "container:" not in workflow,

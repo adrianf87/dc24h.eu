@@ -1,287 +1,368 @@
-"""Pure regression checks: neither network nor sudo/systemd is used."""
+"""Offline Stage III protocol, PTY, workflow and evidence regressions."""
 
+import errno
+import json
 from pathlib import Path
+import ssl
+import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest import mock
 
+import public_stage3_external_probe as base
 import public_stage3_qualification_external as external
+from stage3 import evidence, fixtures, public_checks
+from stage3.run import public_guard, report
 import stage3_premerge_gate as premerge
 
 
 class FakePeer:
-    def __init__(self, frames):
-        self.frames = list(frames)
-        self.timeout = None
+    def __init__(self, *chunks):
+        self.chunks = list(chunks)
+        self.sent = []
 
-    def settimeout(self, value):
-        self.timeout = value
+    def settimeout(self, _):
+        pass
 
-    def recv(self, _size):
-        return self.frames.pop(0) if self.frames else b""
+    def recv(self, _):
+        return self.chunks.pop(0) if self.chunks else b""
+
+    def sendall(self, value):
+        self.sent.append(value)
+
+    def close(self):
+        pass
 
 
-class QualificationPolicyTests(unittest.TestCase):
-    def test_frame_reader_preserves_overshoot(self):
-        peer = FakePeer([b"BMSG ABCD first\nBSCH ABCD ANsecond\n"])
-        reader = external.Reader(peer)
-        self.assertEqual(reader.until(lambda frame: frame.startswith(b"BMSG"),
-                                      "msg"), b"BMSG ABCD first")
-        self.assertEqual(reader.until(lambda frame: frame.startswith(b"BSCH"),
-                                      "search"), b"BSCH ABCD ANsecond")
-        self.assertEqual(reader.message_frames, 1)
-        self.assertEqual(reader.search_frames, 1)
+class ADCReaderTests(unittest.TestCase):
+    def test_reader_retains_overshoot_and_ignores_unrelated_disconnects(self):
+        peer = FakePeer(b"BMSG ABCD first\nIQUI JJJJ DIprivate\nBSCH ABCD ANsecond\n")
+        reader = external.Reader(peer, b"ABCD")
+        self.assertEqual(reader.until(lambda line: line.startswith(b"BMSG"), "chat"), b"BMSG ABCD first")
+        self.assertEqual(reader.until(lambda line: line.startswith(b"BSCH"), "search"), b"BSCH ABCD ANsecond")
+        self.assertEqual((reader.message_frames, reader.search_frames), (1, 1))
 
-    def test_frame_reader_rejects_hub_denial(self):
-        reader = external.Reader(FakePeer([b"ISTA 200 Permission\\sdenied FCBINF XXprivate-token\n"]))
-        with self.assertRaises(RuntimeError) as caught:
-            reader.until(lambda frame: False, "TCP-active signal")
-        self.assertIn("TCP-active signal", str(caught.exception))
-        self.assertIn("status=200", str(caught.exception))
-        self.assertIn("FC=BINF", str(caught.exception))
-        self.assertNotIn("private-token", str(caught.exception))
-        self.assertNotIn("Permission", str(caught.exception))
+    def test_status_redacts_hub_text(self):
+        reader = external.Reader(FakePeer(b"ISTA 200 Permission\\sdenied FCBINF XXprivate-token\n"))
+        with self.assertRaisesRegex(evidence.Mismatch, "^ADC rejected update with ISTA 200$"):
+            reader.until(lambda _: False, "update")
 
-    def test_frame_reader_quit_does_not_expose_remote_sid(self):
-        reader = external.Reader(FakePeer([b"IQUI ABCD DIsecret\n"]))
-        with self.assertRaises(RuntimeError) as caught:
-            reader.until(lambda frame: False, "direct search result")
-        self.assertIn("direct search result", str(caught.exception))
-        self.assertIn("IQUI", str(caught.exception))
-        self.assertNotIn("ABCD", str(caught.exception))
-        self.assertNotIn("secret", str(caught.exception))
+    def test_expected_status_is_observable(self):
+        reader = external.Reader(FakePeer(b"ISTA 244 Login\\srequired\n"))
+        self.assertTrue(reader.until(lambda line: line.startswith(b"ISTA 244 "), "denial"))
 
-    def test_active_client_update_does_not_spoof_hub_address(self):
-        first, second = mock.Mock(), mock.Mock()
-        with mock.patch.object(external.ssl, "create_default_context"), mock.patch.object(
-                external.base, "connect_guest", side_effect=[(first, b"ABCD"), (second, b"EFGH")]
-        ), mock.patch.object(external, "Reader") as reader:
-            reader.return_value.until.return_value = b"ok"
-            external.check_two_client_protocol()
-        frames = [call.args[0] for call in first.sendall.call_args_list]
-        self.assertIn(b"BINF ABCD SUTCP4\n", frames)
-        self.assertFalse(any(b"I4" in frame for frame in frames))
-        self.assertFalse(any(external.base.IPV4.encode() in frame for frame in frames))
+    def test_own_quit_is_fatal_without_disclosing_sid(self):
+        reader = external.Reader(FakePeer(b"IQUI ABCD DIsecret\n"), b"ABCD")
+        with self.assertRaisesRegex(evidence.Mismatch, "^Own ADC session was disconnected during chat$"):
+            reader.until(lambda _: False, "chat")
+
+    def test_login_returns_presences_before_and_after_identity(self):
+        peer = FakePeer(
+            b"ISUP ADBASE ADTIGR\nISID ABCD\nIINF CT32\nBINF EFGH NIexisting IDwrong\n"
+            b"BINF ABCD NIprobe IDexpected\nBINF IJKL NIanother IDother\n")
+        with mock.patch.object(base, "open_tls", return_value=peer):
+            tls, sid, pending = base.connect_guest(None, b"probe", identity=(b"synthetic-pid", b"expected"))
+        self.assertIs(tls, peer)
+        self.assertEqual(sid, b"ABCD")
+        self.assertEqual(pending, b"BINF EFGH NIexisting IDwrong\nBINF IJKL NIanother IDother\n")
+
+    def test_guest_rejects_wrong_identity_disclosed_pid_or_privileged_type(self):
+        for frame in (b"BINF ABCD NInotExpected IDexpected", b"BINF ABCD NIprobe IDanother",
+                      b"BINF ABCD NIprobe IDexpected PDhidden", b"BINF ABCD NIprobe IDexpected CT4"):
+            with self.subTest(frame=frame):
+                self.assertFalse(base.guest_identity(frame, b"probe", b"expected"))
+
+    def test_active_client_update_does_not_advertise_hub_address(self):
+        one, two, replacement = (mock.Mock(sid=sid) for sid in (b"ABCD", b"EFGH", b"IJKL"))
+        for peer in (one, two, replacement):
+            peer.until.return_value = b"BINF " + peer.sid + b" NItest"
+        with mock.patch.object(external, "guest") as guest_call, mock.patch.object(external, "see_identity"):
+            guest_call.side_effect = [external.nullcontext(peer) for peer in (one, two, replacement)]
+            external.check_two_client_protocol(None, None, {})
+        frames = [call.args[0] for call in one.send.call_args_list]
+        self.assertIn(b"BINF ABCD SUTCP4", frames)
+        metadata = [frame for frame in frames if frame.startswith(b"BINF ")]
+        self.assertFalse(any(b"I4" in base.inf_fields(frame) for frame in metadata))
+        self.assertFalse(any(base.IPV4.encode() in frame for frame in metadata))
         self.assertTrue(any(frame.startswith(b"DCTM ABCD EFGH ") for frame in frames))
-        self.assertTrue(any(call.args[0].startswith(b"DRCM EFGH ABCD ")
-                            for call in second.sendall.call_args_list))
 
-    def test_ncdc_command_clears_stale_input_and_submits_return(self):
-        with mock.patch.object(external.os, "write", side_effect=lambda _fd, payload: len(payload)) as write:
-            external.send_ncdc(91, "/say stage3-ncdc-qualified")
-        self.assertEqual(write.call_args.args,
-                         (91, b"\x15/say stage3-ncdc-qualified\r"))
-        self.assertEqual(external.NCDC_CHAT, b"stage3-ncdc-qualified")
 
-    def test_ncdc_hub_tab_selection_uses_documented_alt_two(self):
-        with mock.patch.object(external.os, "write") as write:
+class PTYTests(unittest.TestCase):
+    def test_ncdc_input_clears_line_and_submits_carriage_return(self):
+        with mock.patch.object(external, "write_terminal") as write:
+            external.send_ncdc(91, "test-message")
+        write.assert_called_once_with(91, b"\x15test-message\r")
+
+    def test_ncdc_tab_selection_uses_documented_alt_two(self):
+        with mock.patch.object(external, "write_terminal") as write:
             external.select_ncdc_hub_tab(91)
         write.assert_called_once_with(91, b"\x1b2")
 
-    def test_ncdc_terminal_recognizes_split_synthetic_markers_only(self):
-        terminal = external.NcdcTerminal()
-        terminal.observe(b"private-should-never-appear #stage3q")
-        terminal.observe(b"ual \x1b[1;2Hstage3-ncdc-inb")
-        terminal.observe(b"ound-ready\r\nprivate-secret")
-        self.assertTrue(terminal.hub_tab_visible)
-        self.assertTrue(terminal.inbound_chat_visible)
-        self.assertIn("guest_to_ncdc_displayed=yes", terminal.flags())
-        self.assertNotIn("private", terminal.flags())
-        self.assertNotIn("secret", terminal.flags())
-        self.assertLess(len(terminal._tail), len(external.NCDC_INBOUND))
+    def test_partial_and_interrupted_pty_writes(self):
+        with mock.patch.object(external.select, "select", return_value=([], [91], [])), mock.patch.object(
+                external.os, "write", side_effect=[2, BlockingIOError, 2]) as write:
+            external.write_terminal(91, b"abcd")
+        self.assertEqual([call.args[1] for call in write.call_args_list], [b"abcd", b"cd", b"cd"])
 
-    def test_ncdc_inbound_requires_actual_terminal_rendering(self):
+    def test_pty_write_timeout_is_explicit(self):
+        with mock.patch.object(external.select, "select", return_value=([], [], [])):
+            with self.assertRaisesRegex(evidence.Mismatch, "did not become writable"):
+                external.write_terminal(91, b"input")
+
+    def test_split_marker_requires_a_fresh_observation(self):
+        terminal = external.NcdcTerminal()
+        terminal.observe(b"actual-marker")
+        terminal.watch(b"actual-marker")
+        terminal.observe(b"private-actual-")
+        self.assertFalse(terminal.expected[b"actual-marker"])
+        terminal.observe(b"marker-private")
+        self.assertTrue(terminal.expected[b"actual-marker"])
+        self.assertLess(len(terminal._tail), len(b"actual-marker"))
+
+    def test_screen_must_render_expected_marker_with_process_alive(self):
         terminal = external.NcdcTerminal()
         process = mock.Mock()
         process.poll.return_value = None
-        with mock.patch.object(external, "drain_ncdc_terminal",
-                               side_effect=lambda _fd, probe: probe.observe(external.NCDC_INBOUND)):
-            external.await_ncdc_screen(terminal, 91, process, timeout=1)
-        self.assertTrue(terminal.inbound_chat_visible)
+        terminal.watch(b"synthetic-marker")
+        with mock.patch.object(external, "drain_ncdc_terminal", side_effect=[
+            None, terminal.observe(b"private-unrelated")
+        ]), mock.patch.object(external.time, "monotonic", side_effect=[0, 0, 0.25, 2]):
+            with self.assertRaisesRegex(evidence.Mismatch, "^ncdc terminal update timed out; output activity=True$"):
+                external.await_ncdc_screen(terminal, 91, process, b"synthetic-marker", timeout=1)
+        process.poll.return_value = 2
+        with self.assertRaisesRegex(evidence.Mismatch, "ncdc exited"):
+            external.await_ncdc_screen(terminal, 91, process, b"synthetic-marker", timeout=1)
 
-    def test_ncdc_inbound_timeout_reports_only_safe_flags(self):
+    def test_drain_detects_terminal_eof(self):
+        with mock.patch.object(external.select, "select", return_value=([91], [], [])), mock.patch.object(
+                external.os, "read", return_value=b""):
+            with self.assertRaisesRegex(evidence.Mismatch, "terminal output ended"):
+                external.drain_ncdc_terminal(91, external.NcdcTerminal())
+
+    def test_independent_frame_poll_drains_pty_between_adc_waits(self):
         terminal = external.NcdcTerminal()
-        terminal.observe(b"sensitive-other-user")
-        process = mock.Mock()
+        reader, process = mock.Mock(), mock.Mock()
         process.poll.return_value = None
-        with mock.patch.object(external, "drain_ncdc_terminal", return_value=0), mock.patch.object(
-                external.time, "monotonic", side_effect=[0, 0, 2]):
-            with self.assertRaises(RuntimeError) as caught:
-                external.await_ncdc_screen(terminal, 91, process, timeout=1)
-        self.assertIn("guest_to_ncdc_displayed=no", str(caught.exception))
-        self.assertNotIn("sensitive", str(caught.exception))
-
-    def test_ncdc_outbound_requires_independent_sender_sid(self):
-        sender = b"EFGH"
-        self.assertTrue(external.is_ncdc_chat_frame(
-            b"BMSG EFGH stage3-ncdc-qualified", sender))
-        self.assertFalse(external.is_ncdc_chat_frame(
-            b"BMSG ABCD stage3-ncdc-qualified", sender))
-        self.assertFalse(external.is_ncdc_chat_frame(
-            b"BMSG EFGH stage3-ncdc-qualified-tampered", sender))
-        self.assertFalse(external.is_ncdc_chat_frame(
-            b"BMSG EFGH other message", sender))
-
-    def test_ncdc_observer_wait_drains_terminal_between_adc_checks(self):
-        reader = mock.Mock()
-        reader.until.side_effect = [RuntimeError("Timed out waiting for: ncdc public chat"),
-                                    b"BMSG ABCD stage3-ncdc-qualified"]
-        process = mock.Mock()
-        process.poll.return_value = None
-        with mock.patch.object(external, "drain_ncdc_terminal", side_effect=[1, 0]) as drain:
-            frame = external.await_ncdc_frame(
-                reader, 91, process, lambda line: b"stage3-ncdc-qualified" in line,
-                "ncdc public chat", timeout=4)
-        self.assertEqual(frame, b"BMSG ABCD stage3-ncdc-qualified")
+        reader.until.side_effect = [external.FrameTimeout, b"BMSG ABCD synthetic"]
+        with mock.patch.object(external, "drain_ncdc_terminal") as drain:
+            frame = external.await_ncdc_frame(reader, 91, process, lambda _: True, "chat", 1, terminal)
+        self.assertEqual(frame, b"BMSG ABCD synthetic")
         self.assertEqual(drain.call_count, 2)
 
-    def test_ncdc_timeout_diagnostic_never_includes_terminal_contents(self):
-        reader = mock.Mock()
-        reader.until.side_effect = RuntimeError("Timed out waiting for: ncdc public chat")
-        process = mock.Mock()
+    def test_observer_timeout_excludes_terminal_content(self):
+        terminal = external.NcdcTerminal()
+        terminal.observe(b"private-other-user")
+        reader, process = mock.Mock(message_frames=1, search_frames=1), mock.Mock()
         process.poll.return_value = None
-        with mock.patch.object(external, "drain_ncdc_terminal", return_value=1), mock.patch.object(
+        reader.until.side_effect = external.FrameTimeout
+        with mock.patch.object(external, "drain_ncdc_terminal"), mock.patch.object(
                 external.time, "monotonic", side_effect=[0, 0, 0.1, 1.1]):
-            with self.assertRaises(RuntimeError) as caught:
-                external.await_ncdc_frame(reader, 91, process, lambda line: False,
-                                          "ncdc public chat", timeout=1)
-        self.assertIn("tty_output_seen=yes", str(caught.exception))
-        self.assertIn("ncdc_alive=yes", str(caught.exception))
-        self.assertNotIn("stage3-ncdc-qualified", str(caught.exception))
+            with self.assertRaisesRegex(evidence.Mismatch, "output activity=True") as caught:
+                external.await_ncdc_frame(reader, 91, process, lambda _: False, "chat", 1, terminal)
+        self.assertNotIn("private-other-user", str(caught.exception))
 
-    def test_ncdc_search_observer_accepts_broadcast_and_feature_routes(self):
-        self.assertTrue(external.is_ncdc_search_frame(
-            b"BSCH ABCD ANstage3ncdcqualification"))
-        self.assertTrue(external.is_ncdc_search_frame(
-            b"FSCH ABCD +TCP4 ANstage3ncdcqualification"))
-        self.assertFalse(external.is_ncdc_search_frame(
-            b"DSCH ABCD EFGH ANstage3ncdcqualification"))
-        self.assertFalse(external.is_ncdc_search_frame(
-            b"BSCH ABCD ANunrelated"))
+    def test_attribution_requires_exact_sid_and_marker(self):
+        frame = b"BMSG ABCD synthetic"
+        self.assertTrue(external.attributed(frame, b"BMSG", b"synthetic", frame))
+        self.assertFalse(external.attributed(b"BMSG ABCD synthetic-extra", b"BMSG", b"synthetic", frame))
+        with self.assertRaises(evidence.Mismatch):
+            external.attributed(b"BMSG EFGH synthetic", b"BMSG", b"synthetic", frame)
+        for sender, marker, matched in ((b"ABCD", b"synthetic", True), (b"EFGH", b"synthetic", False),
+                                        (b"ABCD", b"synthetic-extra", False)):
+            self.assertEqual(external.is_ncdc_search_frame(b"FSCH " + sender + b" +TCP4 AN" + marker,
+                                                          b"ABCD", b"synthetic"), matched)
 
-    def test_negative_prelogin_expected_denial_is_observable(self):
-        reader = external.Reader(FakePeer([b"ISTA 244 Login\\srequired\n"]))
-        self.assertTrue(reader.until(lambda frame: frame.startswith(b"ISTA 244 "),
-                                     "prelogin").startswith(b"ISTA 244 "))
-
-    def test_forbidden_ports_are_explicit_and_bounded(self):
-        self.assertIn(1511, external.FORBIDDEN_TCP)
-        self.assertNotIn(1512, external.FORBIDDEN_TCP)
-        for known_allowed in (22, 80, 443):
-            self.assertNotIn(known_allowed, external.FORBIDDEN_TCP)
-        self.assertLessEqual(len(external.FORBIDDEN_TCP), 12)
-
-    def test_public_listener_detection_fails_closed(self):
-        peer = mock.Mock()
-        with mock.patch.object(external.socket, "create_connection", return_value=peer):
-            with self.assertRaisesRegex(RuntimeError, "publicly accessible"):
-                external.check_forbidden_ports()
-        peer.close.assert_called_once()
-
-    def test_ncdc_url_pin_matches_sha256_der(self):
-        fake = mock.MagicMock()
-        fake.getpeercert.return_value = b"public DER sample"
+    def test_ncdc_pin_is_derived_from_verified_der(self):
         context = mock.MagicMock()
-        context.wrap_socket.return_value.__enter__.return_value = fake
-        with mock.patch.object(external.socket, "create_connection"):
+        peer = mock.MagicMock()
+        peer.getpeercert.return_value = b"sample public DER"
+        with mock.patch.object(base, "open_tls") as connect:
+            connect.return_value.__enter__.return_value = peer
             url = external.fingerprint_url(context)
-        self.assertTrue(url.startswith("adcs://server-747585786.dc24h.eu:1512/?kp=SHA256/"))
-        self.assertNotIn("51.255.80.233", url)
+        self.assertEqual(url, f"adcs://{base.FQDN}:1512/?kp=SHA256/{external.keyprint(b'sample public DER')}")
+        connect.assert_called_once_with(context, (base.IPV4, base.ADCS_PORT), base.FQDN)
 
 
-class PremergeExternalGateTests(unittest.TestCase):
+class PolicyTests(unittest.TestCase):
+    def test_forward_confirmed_ptr_requires_exact_reverse_and_forward_pair(self):
+        expected = [(2, 1, 6, "", (base.IPV4, 0))]
+        with mock.patch.object(public_checks.socket, "gethostbyaddr",
+                               return_value=(base.FQDN + ".", [], [base.IPV4])), mock.patch.object(
+                               public_checks.socket, "getaddrinfo", return_value=expected):
+            self.assertIn("Forward-confirmed", public_checks.forward_confirmed_ptr())
+
+        with mock.patch.object(public_checks.socket, "gethostbyaddr",
+                               return_value=("unapproved.example", [], [base.IPV4])):
+            with self.assertRaisesRegex(evidence.Mismatch, "PTR does not match"):
+                public_checks.forward_confirmed_ptr()
+
+        with mock.patch.object(public_checks.socket, "gethostbyaddr",
+                               return_value=(base.FQDN, [], [base.IPV4])), mock.patch.object(
+                               public_checks.socket, "getaddrinfo",
+                               return_value=[(2, 1, 6, "", ("203.0.113.99", 0))]):
+            with self.assertRaisesRegex(evidence.Mismatch, "resolve exclusively"):
+                public_checks.forward_confirmed_ptr()
+
+        with mock.patch.object(public_checks.socket, "gethostbyaddr",
+                               side_effect=OSError("private DNS resolver failure")):
+            with self.assertRaisesRegex(evidence.Blocked, "PTR lookup is unavailable") as failure:
+                public_checks.forward_confirmed_ptr()
+            self.assertNotIn("private DNS", str(failure.exception))
+
+    def test_bounded_ports_distinguish_refusal_timeout_and_network_error(self):
+        self.assertEqual(external.FORBIDDEN_TCP, (1511, 3000, 3306, 5173, 5432, 6379, 8000, 8080, 9090))
+        for error, expected in ((ConnectionRefusedError, "actively refused"), (TimeoutError, "timed out")):
+            with mock.patch.object(public_checks.socket, "create_connection", side_effect=error):
+                self.assertIn(expected, public_checks.port_observation(1511))
+        with mock.patch.object(public_checks.socket, "create_connection",
+                               side_effect=OSError(errno.ENETUNREACH, "unreachable")):
+            with self.assertRaises(evidence.Blocked):
+                public_checks.port_observation(1511)
+        peer = mock.MagicMock()
+        with mock.patch.object(public_checks.socket, "create_connection", return_value=peer):
+            with self.assertRaisesRegex(evidence.Mismatch, "publicly accessible"):
+                public_checks.port_observation(1511)
+        peer.__exit__.assert_called_once()
+
     def setUp(self):
-        self.head_sha = "a" * 40
-        self.env = {
-            "GITHUB_EVENT_NAME": "workflow_dispatch",
-            "GITHUB_REPOSITORY": premerge.REPOSITORY,
-            "GITHUB_ACTOR": "adrianf87",
-            "GITHUB_REF": premerge.BRANCH,
-            "RUNNER_ENVIRONMENT": "github-hosted",
-            "OWNER_CONFIRMATION": premerge.CONFIRMATION,
-            "PRODUCTION_RESTARTS_ACK": "false",
-            "PREMERGE_PHASE": "before",
-            "PREMERGE_CANDIDATE_SHA": self.head_sha,
-            "GITHUB_SHA": self.head_sha,
+        self.sha = "a" * 40
+        self.owner_env = {
+            "GITHUB_ACTIONS": "true", "GITHUB_EVENT_NAME": "workflow_dispatch",
+            "GITHUB_REPOSITORY": premerge.REPOSITORY, "GITHUB_ACTOR": "adrianf87",
+            "GITHUB_TRIGGERING_ACTOR": "adrianf87", "GITHUB_REF": "refs/heads/a-future-candidate",
+            "RUNNER_ENVIRONMENT": "github-hosted", "PRODUCTION_RESTARTS_ACK": "false",
+            "GITHUB_SHA": self.sha, "PREMERGE_CANDIDATE_SHA": self.sha,
         }
 
-    def test_before_and_after_are_both_explicitly_allowed(self):
-        self.assertEqual(premerge.guard(self.env), "before")
-        self.env["PREMERGE_PHASE"] = "after"
-        self.assertEqual(premerge.guard(self.env), "after")
-        self.env["PREMERGE_PHASE"] = "none"
-        self.env["GITHUB_REF"] = "refs/heads/main"
-        self.assertEqual(premerge.guard(self.env), "none")
+    def test_external_snapshots_require_owner_ref_exact_sha_and_mode(self):
+        env = dict(self.owner_env, OWNER_CONFIRMATION=premerge.CONFIRMATION, PREMERGE_PHASE="before")
+        self.assertEqual(premerge.guard(env), "before")
+        self.assertEqual(premerge.guard(dict(env, PREMERGE_PHASE="after")), "after")
+        for changed in ({"RUNNER_ENVIRONMENT": "other"}, {"PREMERGE_PHASE": "full"},
+                        {"PRODUCTION_RESTARTS_ACK": "true"}, {"GITHUB_TRIGGERING_ACTOR": "other"},
+                        {"GITHUB_REF": "refs/tags/unreviewed"}, {"PREMERGE_CANDIDATE_SHA": "b" * 40}):
+            with self.subTest(changed=changed), self.assertRaises(RuntimeError):
+                premerge.guard(dict(env, **changed))
 
-    def test_candidate_sha_must_be_exact_commit(self):
-        for supplied in ("", "a" * 39, "g" * 40, "b" * 40):
-            with self.subTest(supplied=supplied):
-                with self.assertRaises(RuntimeError):
-                    premerge.guard(dict(self.env, PREMERGE_CANDIDATE_SHA=supplied))
+    def test_extended_requires_exact_token_sha_owner_and_no_host_operations(self):
+        env = dict(self.owner_env, OWNER_CONFIRMATION="RUN_STAGE3_PUBLIC_EXTENDED_STABILITY",
+                   PREMERGE_PHASE="none")
+        with mock.patch("stage3.run.checkout_sha", return_value=self.sha):
+            with mock.patch.dict("os.environ", env, clear=True):
+                public_guard("extended")
+            for changed in ({"GITHUB_ACTOR": "other"}, {"GITHUB_TRIGGERING_ACTOR": "other"},
+                            {"PREMERGE_PHASE": "after"}, {"PREMERGE_CANDIDATE_SHA": "b" * 40},
+                            {"OWNER_CONFIRMATION": premerge.CONFIRMATION}, {"PRODUCTION_RESTARTS_ACK": "true"},
+                            {"GITHUB_EVENT_NAME": "pull_request"}, {"GITHUB_REF": "refs/tags/release"}):
+                with self.subTest(changed=changed), mock.patch.dict("os.environ", dict(env, **changed), clear=True):
+                    with self.assertRaises(evidence.Blocked):
+                        public_guard("extended")
 
-    def test_premerge_never_accepts_self_hosted_or_restart_ack(self):
-        for override in ({"RUNNER_ENVIRONMENT": "self-hosted"},
-                         {"PRODUCTION_RESTARTS_ACK": "true"}):
-            with self.subTest(override=override):
-                with self.assertRaises(RuntimeError):
-                    premerge.guard(dict(self.env, **override))
-
-    def test_no_host_restart_full_mode_can_be_authorized(self):
-        for override in ({"PREMERGE_PHASE": "full"},
-                         {"OWNER_CONFIRMATION": "RUN_STAGE3_PREMERGE_FULL_QUALIFICATION"},
-                         {"PRODUCTION_RESTARTS_ACK": "true"}):
-            with self.subTest(override=override):
-                with self.assertRaises(RuntimeError):
-                    premerge.guard(dict(self.env, **override))
-
-    def test_external_only_requires_owner_repo_ref_and_manual_dispatch(self):
-        for override in ({"GITHUB_ACTOR": "someone-else"},
-                         {"GITHUB_REPOSITORY": "fork/dc24h.eu-twilight"},
-                         {"GITHUB_REF": "refs/heads/unreviewed"},
-                         {"GITHUB_EVENT_NAME": "pull_request"},
-                         {"OWNER_CONFIRMATION": "RUN_STAGE3_PUBLIC_QUALIFICATION"},
-                         {"PREMERGE_PHASE": "full"}):
-            with self.subTest(override=override):
-                with self.assertRaises(RuntimeError):
-                    premerge.guard(dict(self.env, **override))
+    def test_automatic_public_checks_require_protected_main_at_exact_commit(self):
+        env = dict(self.owner_env, GITHUB_EVENT_NAME="push", GITHUB_REF="refs/heads/main",
+                   GITHUB_REF_PROTECTED="true")
+        with mock.patch("stage3.run.checkout_sha", return_value=self.sha):
+            with mock.patch.dict("os.environ", env, clear=True):
+                public_guard("tls-public")
+                with self.assertRaises(evidence.Blocked):
+                    public_guard("extended")
+            for changed in ({"GITHUB_REF_PROTECTED": "false"}, {"GITHUB_EVENT_NAME": "pull_request"},
+                            {"GITHUB_REF": "refs/heads/feature"}, {"GITHUB_SHA": "b" * 40},
+                            {"GITHUB_REPOSITORY": "fork/example"}, {"RUNNER_ENVIRONMENT": "self-hosted"}):
+                with self.subTest(changed=changed), mock.patch.dict("os.environ", dict(env, **changed), clear=True):
+                    with self.assertRaises(evidence.Blocked):
+                        public_guard("tls-public")
 
 
-class GitHubHostedWorkflowSafetyTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        workflow = (Path(__file__).resolve().parent.parent / ".github" / "workflows" /
-                    "debian13-stage3-full-qualification.yml")
-        cls.workflow = workflow.read_text(encoding="utf-8")
+class CertificateVerificationTests(unittest.TestCase):
+    def test_foreign_ca_fixture_has_its_own_issuer_and_valid_leaf(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            trusted = fixtures.authority(root / "trusted").parent / "ca.pem"
+            issuer = fixtures.authority(root / "other")
+            foreign = fixtures.issue(root, issuer, "foreign")
+            with fixtures.certificate_server(foreign) as settings:
+                observed = fixtures.verify_certificate_rejection(fixtures.loopback_context(trusted), settings, 20)
+                self.assertEqual(observed, "OpenSSL verification code 20 (local issuer not found)")
+            with fixtures.certificate_server(foreign) as settings:
+                with base.open_tls(fixtures.loopback_context(issuer.parent / "ca.pem"), **settings):
+                    pass
 
-    def job(self, name, next_name):
-        return self.workflow.split("\n  " + name + ":\n", 1)[1].split(
-            "\n  " + next_name + ":\n", 1)[0]
+    def test_certificate_diagnostics_use_only_the_code_and_controlled_category(self):
+        for code, category in (
+            (9, "certificate not yet valid"), (10, "certificate expired"),
+            (20, "local issuer not found"), (62, "DNS hostname mismatch"),
+        ):
+            with self.subTest(code=code):
+                error = ssl.SSLCertVerificationError("sensitive certificate detail")
+                error.verify_code = code
+                with mock.patch.object(base, "open_tls", side_effect=error):
+                    self.assertEqual(fixtures.verify_certificate_rejection(None, {}, code),
+                                     f"OpenSSL verification code {code} ({category})")
 
-    def test_no_custom_runner_or_public_vps_systemd_mutations(self):
-        self.assertNotIn("runs-on: [self-hosted", self.workflow)
-        self.assertNotIn("github-runner", self.workflow)
-        self.assertNotIn("$RUNNER_NAME", self.workflow)
-        self.assertNotIn("sudo -n python3", self.workflow)
-        self.assertNotIn("systemctl restart", self.workflow)
-        self.assertNotIn("ssh ", self.workflow)
-        self.assertNotIn("premerge-host:", self.workflow)
+    def test_wrong_reason_generic_error_and_accepted_leaf_fail(self):
+        error = ssl.SSLCertVerificationError("sensitive certificate detail")
+        error.verify_code = 30
+        with mock.patch.object(base, "open_tls", side_effect=error):
+            with self.assertRaisesRegex(evidence.Mismatch, "code 30 .*identifier mismatch.*Expected 20") as failure:
+                fixtures.verify_certificate_rejection(None, {}, 20)
+            self.assertNotIn("sensitive certificate detail", str(failure.exception))
+        with mock.patch.object(base, "open_tls", side_effect=ssl.SSLError("generic handshake error")):
+            with self.assertRaises(ssl.SSLError):
+                fixtures.verify_certificate_rejection(None, {}, 20)
+        with mock.patch.object(base, "open_tls"):
+            with self.assertRaisesRegex(evidence.Mismatch, "accepted a deliberately invalid certificate"):
+                fixtures.verify_certificate_rejection(None, {}, 20)
 
-    def test_local_sudo_is_only_on_ubuntu_github_vm(self):
-        sandbox = self.job("ubuntu-sudo-check", "external-pr")
-        self.assertIn("os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]", sandbox)
-        self.assertIn("runs-on: ${{ matrix.os }}", sandbox)
-        self.assertIn("test \"$RUNNER_ENVIRONMENT\" = 'github-hosted'", sandbox)
-        self.assertIn("test \"$(sudo -n id -u)\" = '0'", sandbox)
 
-    def test_full_ncdc_checks_available_on_pr_and_manual_branch_or_main(self):
-        external_pr = self.job("external-pr", "external-manual")
-        external_manual = self.workflow.split("\n  external-manual:\n", 1)[1]
-        for job in (external_pr, external_manual):
-            self.assertIn("runs-on: ubuntu-24.04", job)
-            self.assertIn("public_stage3_qualification_external.py", job)
-            self.assertIn("sudo -n apt-get install -y --no-install-recommends ncdc", job)
-        self.assertIn("github.ref == 'refs/heads/main'", external_manual)
-        self.assertIn("inputs.production_restarts_ack == false", external_manual)
-        self.assertNotIn("--smoke-only", self.workflow)
+class EvidenceTests(unittest.TestCase):
+    def test_pull_request_evidence_records_public_checks_out_of_scope(self):
+        with tempfile.TemporaryDirectory() as work:
+            directory = Path(work)
+            sha = "a" * 40
+            args = SimpleNamespace(mode="pr", sha=sha, run_id="42", attempt="1",
+                                   input=directory/"missing", output=directory/"pr")
+            with mock.patch("stage3.run.checkout_sha", return_value=sha):
+                self.assertEqual(report(args), 1)
+                args.mode = "main"
+                args.output = directory/"main"
+                self.assertEqual(report(args), 1)
+            pr = json.loads((directory/"pr/qualification.json").read_text())
+            main = json.loads((directory/"main/qualification.json").read_text())
+            self.assertEqual(pr["public_checks_out_of_scope"],
+                             {group: "NOT TESTED" for group in evidence.PUBLIC_GROUPS})
+            self.assertEqual(main["public_checks_out_of_scope"], {})
+            self.assertFalse(any(row["category"] in evidence.PUBLIC_GROUPS for row in pr["statuses"]))
+            self.assertEqual({row["category"] for row in main["statuses"]
+                              if row["result"] == "BLOCKED"} & set(evidence.PUBLIC_GROUPS),
+                             set(evidence.PUBLIC_GROUPS))
+
+    def test_failure_blocks_missing_rows_and_artifacts_reject_tampering(self):
+        with tempfile.TemporaryDirectory() as work:
+            directory = Path(work)
+            suite = evidence.Suite("sandbox", directory, "a" * 40, "ubuntu-24.04", verify_checkout=False)
+            with suite:
+                with suite.case("ubuntu.sudo"):
+                    raise RuntimeError("untrusted raw secret")
+            rows = evidence.verify_bundle(directory, "sandbox", "ubuntu-24.04", "a" * 40, suite.context["run_id"])
+            self.assertEqual([row["result"] for row in rows], ["FAIL", "BLOCKED"])
+            self.assertNotIn("untrusted raw secret", (directory / "results.json").read_text())
+            with self.assertRaisesRegex(ValueError, "identity mismatch"):
+                evidence.verify_bundle(directory, "sandbox", "ubuntu-24.04", "b" * 40, suite.context["run_id"])
+            (directory / "summary.log").write_text("substituted")
+            with self.assertRaisesRegex(ValueError, "SHA-256 manifest mismatch"):
+                evidence.verify_bundle(directory, "sandbox", "ubuntu-24.04", "a" * 40, suite.context["run_id"])
+
+    def test_qualification_workflows_are_ubuntu_only_and_root_uses_packaged_commands(self):
+        workflows = Path(__file__).resolve().parent.parent / ".github/workflows"
+        for name in ("debian13-stage3-full-qualification.yml", "public-stage3-qualification.yml"):
+            document = (workflows / name).read_text()
+            self.assertNotRegex(document, r"(?m)^\s*runs-on: (?!ubuntu-24\.04|\$\{\{ matrix\.os \}\})")
+            self.assertNotIn("sudo -n python", document)
+            self.assertNotIn("sudo -n bash", document)
+            self.assertNotIn("systemctl restart", document)
+            self.assertNotIn("persist-credentials: true", document)
+            self.assertIn("if-no-files-found: error", document)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,7 @@
 # Public deployment Stage III — ADCS exposure and identity preflight (P0)
 
+**ARCHIVAL PREFLIGHT — SUPERSEDED FOR STAGE III ACCEPTANCE (OWNER, 2026-11-27).** This is a historical deployment-planning runbook, **not the current completion checklist**. The OWNER withdrew any additional independent latest-SHA public DNS A/PTR or ADCS test, real DC++ client test, and Contabo firewall/routing/port verification from Stage III acceptance. **Do not carry out or dispatch those tests for Stage III.** The separate controlled VPS reboot and live ADCS service restart exclusions remain. Continue with existing GitHub-hosted CI only; formal `OWNER STAGE III ACCEPTANCE GO` and separate `OWNER MERGE GO` are still required. See [the governing current qualification scope](PUBLIC_STAGE_III_QUALIFICATION.md).
+
 **Tracking:** [Issue #10](https://github.com/adrianf87/dc24h.eu-twilight/issues/10), Stage III.  
 **Status:** Historic Stage III preflight plan. The OWNER later confirmed public guest ADCS access; live availability must be checked independently.
 **Starting source:** protected main commit 7e46787c8a0a901fa08b5af6bb3cac7c8eb77a2d, after the [Stage II OWNER acceptance](https://github.com/adrianf87/dc24h.eu-twilight/issues/10#issuecomment-7195123564).  
@@ -115,7 +117,7 @@ Use an authorized independent test network and pinned exact source SHA. Keep sca
 | Incorrect/stale KEYP, unapproved replacement | REJECT |
 | Plaintext ADC and unrelated TCP ports | NOT EXPOSED |
 | ncdc ADCS login, two clients, SCH/DRES, chat, CTM/RCM, limits/negative inputs | PASS with bounded sanitized evidence |
-| Certificate renewal/restart, pin rotation and failure rollback | PASS before operational approval |
+| Certificate renewal, pin rotation and rollback readiness | Document the OWNER-operated procedure and qualify synthetic/staged evidence; no intentional live VPS or ADCS service restart test (OWNER excluded) |
 | External bounded exposure scan | Only approved ports visible |
 | MariaDB, local API, Node/Vite, WebAdmin and maintenance endpoints | NOT publicly reachable |
 
@@ -129,6 +131,12 @@ Required report: exact commit SHA and binary version, independently verified map
 
 
 ## 8. Public hub operations after retirement of the VPS runner
+
+The current acceptance record and evidence matrix are in the
+[Stage III qualification report](PUBLIC_STAGE_III_QUALIFICATION.md).
+Use the [optional Debian 13 service maintenance runbook](PUBLIC_STAGE_III_SYSTEMD.md) and the
+[certificate replacement and rollback runbook](PUBLIC_STAGE_III_CERTIFICATE.md)
+only for separately authorized maintenance. Intentional live restarts and VPS reboots are excluded from Stage III qualification by OWNER decision (November 26, 2026).
 
 The prior `.github/workflows/debian13-stage3-adcs-activation.yml`
 proposal, its privileged host preflight and automated rollback jobs have been

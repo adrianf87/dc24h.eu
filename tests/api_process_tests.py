@@ -1,6 +1,7 @@
 """Real private Unix HTTP API: framing, auth, limits, privacy and lifecycle."""
 import json
 import os
+import platform
 import re
 from pathlib import Path
 import signal
@@ -332,8 +333,12 @@ class ApiProcessTests(unittest.TestCase):
             self.assertEqual(result.returncode, 1)
             self.assertFalse(fx.endpoint.exists())
 
-    @unittest.skipUnless(os.geteuid() == 0, 'Cross-UID fixture needs root; filesystem isolation is always tested')
     def test_peer_uid_even_if_permissions_are_relaxed_after_start(self):
+        hosted = (os.environ.get('GITHUB_ACTIONS') == 'true' and
+                  os.environ.get('RUNNER_ENVIRONMENT') == 'github-hosted' and
+                  platform.freedesktop_os_release().get('ID') == 'ubuntu')
+        if os.geteuid() != 0 and not hosted:
+            self.skipTest('Cross-UID fixture requires disposable GitHub Ubuntu or a root test harness')
         fx = Fixture(self); fx.start()
         fx.folder.chmod(0o755); fx.endpoint.chmod(0o666)
         script = """import socket,sys
@@ -349,8 +354,15 @@ assert b'HTTP/1.1 200' not in data
         def demote():
             os.setgroups([]); os.setgid(65534); os.setuid(65534)
         request = ('GET /api/v1/health HTTP/1.1\r\nHost: x\r\nAuthorization: Bearer ' + fx.token + '\r\n\r\n').encode()
-        child = subprocess.run([sys.executable, '-c', script, str(fx.endpoint)], input=request,
-                               capture_output=True, timeout=5, preexec_fn=demote)
+        command = [sys.executable, '-c', script, str(fx.endpoint)]
+        options = {}
+        if os.geteuid() == 0:
+            options['preexec_fn'] = demote
+        else:
+            # Start only the synthetic peer as nobody. The test harness and
+            # hub stay under the ordinary runner account.
+            command[:0] = ['sudo', '-n', '-u', 'nobody', '--']
+        child = subprocess.run(command, input=request, capture_output=True, timeout=10, **options)
         self.assertEqual(child.returncode, 0, child.stderr)
         fx.folder.chmod(0o700); fx.endpoint.chmod(0o600)
         fx.decode(fx.request())

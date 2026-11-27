@@ -1,0 +1,247 @@
+name: Stage III public ADCS qualification
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: scripts
+  PYTHONDONTWRITEBYTECODE: '1'
+  SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+jobs:
+  offline:
+    name: Offline build and full CTest / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    steps:
+      - name: Install packaged build and integration dependencies
+        run: |
+          test "$RUNNER_ENVIRONMENT" = 'github-hosted'
+          sudo -n apt-get -o Acquire::Retries=3 update -qq
+          sudo -n env DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 install -y --no-install-recommends \
+            build-essential cmake python3 libutf8proc-dev libgcrypt20-dev libssl-dev libmariadb-dev \
+            openssl ncdc mariadb-server apache2
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          persist-credentials: false
+      - name: Build and run exact-source CTest without elevating repository executables
+        env:
+          DC24H_REQUIRE_SYSTEMD_HOST: '1'
+          RUNNER_IMAGE: ${{ matrix.os }}
+        run: |
+          test "$(id -u)" != '0'
+          threads="$(nproc)"
+          if (( threads > 16 )); then threads=16; fi
+          python3 -m stage3.run run offline --sha "$SOURCE_SHA" --image "$RUNNER_IMAGE" \
+            --output "$RUNNER_TEMP/results" --parallel "$threads"
+      - name: Upload sanitized offline results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stage3-offline-${{ matrix.os }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/results/
+          if-no-files-found: error
+      - name: Upload attested test binary
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stage3-binary-${{ matrix.os }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/binary/
+          if-no-files-found: error
+
+  sandbox:
+    name: Ubuntu sudo and systemd unit verification / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    steps:
+      - id: fixed_fixture
+        name: Run the packaged systemd tools on a disposable Ubuntu VM
+        run: |
+          test "$RUNNER_ENVIRONMENT" = 'github-hosted'
+          test "$(id -u)" != '0'
+          test "$(sudo -n id -u)" = '0'
+          systemctl --version
+          sudo -n systemd-run --wait --collect --quiet \
+            --property=User=nobody --property=NoNewPrivileges=yes \
+            --property=PrivateNetwork=yes --property=ProtectSystem=strict /bin/true
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        if: '!cancelled()'
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          persist-credentials: false
+      - name: Verify the submitted unit file without starting it
+        if: '!cancelled()'
+        env:
+          FIXTURE_OUTCOME: ${{ steps.fixed_fixture.outcome }}
+          RUNNER_IMAGE: ${{ matrix.os }}
+        run: |
+          python3 -m stage3.run run sandbox --sha "$SOURCE_SHA" --image "$RUNNER_IMAGE" \
+            --output "$RUNNER_TEMP/results" --sudo-result "$FIXTURE_OUTCOME"
+      - name: Upload sanitized systemd results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stage3-sandbox-${{ matrix.os }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/results/
+          if-no-files-found: error
+
+  loopback:
+    name: ${{ matrix.group }} / ${{ matrix.os }}
+    needs: [offline, sandbox]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
+        group: [two-client, tls-fixtures, stability]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - name: Install packaged clients and hub runtime dependencies
+        run: |
+          test "$RUNNER_ENVIRONMENT" = 'github-hosted'
+          sudo -n apt-get -o Acquire::Retries=3 update -qq
+          sudo -n apt-get -o Acquire::Retries=3 install -y --no-install-recommends \
+            ncdc openssl libgcrypt20 libutf8proc-dev libmariadb-dev
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          persist-credentials: false
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: stage3-binary-${{ matrix.os }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/binary
+      - name: Exercise the exact build on loopback
+        env:
+          TEST_GROUP: ${{ matrix.group }}
+          RUNNER_IMAGE: ${{ matrix.os }}
+        run: |
+          python3 -m stage3.run run "$TEST_GROUP" --sha "$SOURCE_SHA" --image "$RUNNER_IMAGE" \
+            --binary "$RUNNER_TEMP/binary" --output "$RUNNER_TEMP/results"
+      - name: Upload sanitized loopback results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stage3-${{ matrix.group }}-${{ matrix.os }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/results/
+          if-no-files-found: error
+
+  external-identity:
+    name: Public ${{ matrix.group }} from independent Ubuntu
+    needs: [offline, sandbox]
+    if: >-
+      github.repository == 'adrianf87/dc24h.eu-twilight' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      github.ref_protected
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [tls-public, exposure]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          persist-credentials: false
+      - name: Verify approved public TLS identity and bounded TCP exposure
+        env:
+          TEST_GROUP: ${{ matrix.group }}
+        run: |
+          python3 -m stage3.run run "$TEST_GROUP" --sha "$SOURCE_SHA" --image ubuntu-24.04 \
+            --output "$RUNNER_TEMP/results"
+      - name: Upload sanitized public identity results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stage3-${{ matrix.group }}-ubuntu-24.04-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/results/
+          if-no-files-found: error
+
+  external-clients:
+    name: Real ncdc and independent two-client public qualification
+    needs: [loopback, external-identity]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    concurrency:
+      group: stage3-public-guests
+      cancel-in-progress: false
+    steps:
+      - id: prepare_ncdc
+        name: Install packaged ncdc
+        run: |
+          test "$RUNNER_ENVIRONMENT" = 'github-hosted'
+          sudo -n apt-get -o Acquire::Retries=3 update -qq
+          sudo -n apt-get install -y --no-install-recommends ncdc
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          persist-credentials: false
+      - name: Verify two independent guest sessions and signaling
+        run: |
+          python3 -m stage3.run run two-client-public --sha "$SOURCE_SHA" --image ubuntu-24.04 \
+            --output "$RUNNER_TEMP/two-client-public"
+      - name: Verify packaged ncdc chat, search and reconnection
+        if: "!cancelled() && steps.prepare_ncdc.outcome == 'success'"
+        id: ncdc
+        run: |
+          python3 -m stage3.run run ncdc --sha "$SOURCE_SHA" --image ubuntu-24.04 \
+            --output "$RUNNER_TEMP/ncdc"
+      - name: Upload sanitized public two-client results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stage3-two-client-public-ubuntu-24.04-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/two-client-public
+          if-no-files-found: error
+      - name: Upload sanitized public ncdc results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stage3-ncdc-ubuntu-24.04-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ncdc
+          if-no-files-found: error
+
+  evidence:
+    name: Verify complete exact-head evidence and publish qualification matrix
+    needs: [offline, sandbox, loopback, external-identity, external-clients]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          persist-credentials: false
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          pattern: stage3-*-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/bundles
+      - name: Verify SHA-256 manifests, test outcomes and run provenance
+        if: '!cancelled()'
+        env:
+          REPORT_MODE: ${{ github.event_name == 'push' && github.repository == 'adrianf87/dc24h.eu-twilight' && 'main' || 'pr' }}
+        run: |
+          python3 -m stage3.run report --mode "$REPORT_MODE" --sha "$SOURCE_SHA" --run-id "$GITHUB_RUN_ID" \
+            --attempt "$GITHUB_RUN_ATTEMPT" --input "$RUNNER_TEMP/bundles" --output "$RUNNER_TEMP/report"
+      - name: Publish qualification report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stage3-qualification-report-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/report/
+          if-no-files-found: error

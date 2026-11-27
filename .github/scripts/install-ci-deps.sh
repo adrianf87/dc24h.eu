@@ -30,6 +30,31 @@ apt_network_options=(
   -o Acquire::https::Timeout=15
 )
 
+# GitHub-hosted Ubuntu images sometimes include unrelated third-party APT feeds.
+# A failure of one of those feeds (for example, Microsoft returning HTTP 403)
+# must not block installation of packages that come from Ubuntu itself.
+# Restrict BOTH update and install to the image's signed Ubuntu source file.
+# This does not disable signature checks, ignore apt failures, or change
+# repository configuration on the runner. Other environments retain their
+# existing APT sources.
+if [[ "${GITHUB_ACTIONS:-}" == "true" && "${RUNNER_ENVIRONMENT:-}" == "github-hosted" ]]; then
+  . /etc/os-release
+  if [[ "${ID:-}" == "ubuntu" ]]; then
+    if [[ -f /etc/apt/sources.list.d/ubuntu.sources ]]; then
+      ubuntu_apt_source=/etc/apt/sources.list.d/ubuntu.sources
+    elif [[ -s /etc/apt/sources.list ]]; then
+      ubuntu_apt_source=/etc/apt/sources.list
+    else
+      echo "No canonical Ubuntu APT source found on hosted runner" >&2
+      exit 1
+    fi
+    apt_network_options+=(
+      -o "Dir::Etc::sourcelist=${ubuntu_apt_source}"
+      -o "Dir::Etc::sourceparts=-"
+    )
+  fi
+fi
+
 # Fail with an actionable timeout instead of consuming the whole CI job slot.
 "${as_root[@]}" timeout --signal=TERM --kill-after=10s 300s \
   apt-get "${apt_network_options[@]}" update
