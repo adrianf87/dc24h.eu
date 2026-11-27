@@ -19,16 +19,24 @@ jobs:
   analyze:
     name: CodeQL C++ and TypeScript - ${{ matrix.os }}
     if: github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
-    runs-on: ${{ matrix.os }}
+    runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
+        os: [debian-13]
     env:
       CXX: g++
       SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
+      - name: Verify Debian 13 self-hosted runner
+        shell: bash
+        run: |
+          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
+          . /etc/os-release
+          test "$ID" = 'debian' && test "$VERSION_ID" = '13'
+          test "$(hostname -s)" = 'server-747585786'
+          test "$(id -un)" = 'github-runner'
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -41,7 +49,7 @@ jobs:
 
       - name: Install isolated C++ dependencies
         run: |
-          bash .github/scripts/install-ci-deps.sh \
+          bash self-hosted-runner/scripts/install-debian13-ci-deps.sh \
             build-essential cmake python3 libutf8proc-dev libgcrypt20-dev \
             libssl-dev libmariadb-dev
 
