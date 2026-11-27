@@ -60,11 +60,15 @@ Proposed separation, not yet deployed:
 - OWNER and administrator are separate least-privilege principals; never use public
   guest admission as administrator authentication. Define the account bootstrap and
   scoped privilege grants before the first public test.
-- Require a verified passkey ceremony with user verification for public privileged
-  login. Enforce one-time challenges, exact `Origin`, RP ID hash, signature, credential
-  ownership, replay/counter and revocation semantics. Decide whether a password is
-  also required as a second step before implementation; password/TOTP-only public
-  fallback is **not approved** by this design.
+- **OWNER decision: password + verified passkey are BOTH mandatory** for every
+  public privileged login. First verify the account password through the private
+  backend; only then begin a short-lived passkey challenge for that same account.
+  A session or admin grant must not be issued until the WebAuthn assertion also
+  passes user verification, exact `Origin`, RP ID hash, signature, credential
+  ownership, replay/counter and revocation checks plus fresh backend role checks.
+  Password-only, passkey-only, or password/TOTP-only fallback is **not approved**.
+  The public two-factor state machine is an internal building block, not a public
+  HTTP endpoint, and must be integrated only after gateway security review.
 - Server-side short-lived opaque sessions; secure logout, idle/absolute expiry,
   session rotation, concurrent-session bounds, live role/revocation checks, and
   explicit step-up for sensitive management operations.
