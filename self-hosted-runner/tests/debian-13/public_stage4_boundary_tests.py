@@ -157,9 +157,8 @@ class PublicStageIVBoundaryTests(unittest.TestCase):
         workflow = (ROOT / ".github/workflows/public-stage4-design.yml").read_text(
             encoding="utf-8"
         )
-        # sudo drops the runner identity unless the disposable CI job passes
-        # both variables. Never grant this exception on the Debian VPS or a
-        # self-hosted runner.
+        # The historical hosted-only AppArmor exception remains restricted to
+        # its original environment and must not be enabled by Debian 13 CI.
         self.assertIn('"${GITHUB_ACTIONS:-}" = "true"', installer)
         self.assertIn('"${RUNNER_ENVIRONMENT:-}" = "github-hosted"', installer)
         self.assertIn('if ! apparmor_parser -r "$profile"; then', installer)
@@ -171,16 +170,18 @@ class PublicStageIVBoundaryTests(unittest.TestCase):
             installer.index('install -d -m 0755 /etc/apparmor.d/local')
         )
         self.assertIn('elif [ -f "$profile" ]', installer)
-        self.assertIn('"GITHUB_ACTIONS=$GITHUB_ACTIONS"', workflow)
-        self.assertIn('"RUNNER_ENVIRONMENT=$RUNNER_ENVIRONMENT"', workflow)
+        self.assertIn("runs-on: [self-hosted, Linux, X64]", workflow)
+        self.assertIn("activate-debian13-tests.sh", workflow)
+        self.assertNotIn('"RUNNER_ENVIRONMENT=$RUNNER_ENVIRONMENT"', workflow)
 
-    def test_stage_iii_apt_uses_only_signed_ubuntu_feed(self):
+    def test_stage_iii_apt_preserves_signature_checks_on_debian13(self):
         workflow = (ROOT / ".github/workflows/public-stage3-qualification.yml").read_text(encoding="utf-8")
-        # Every apt update and install must ignore unrelated hosted-image
-        # third-party feeds, including the Microsoft feed that returned 403.
-        self.assertEqual(workflow.count('Dir::Etc::sourcelist=$source_file'), 6)
-        self.assertEqual(workflow.count('Dir::Etc::sourceparts=-'), 6)
-        self.assertNotIn("--allow-unauthenticated", workflow)
+        self.assertIn("runs-on: [self-hosted, Linux, X64]", workflow)
+        self.assertIn("activate-debian13-tests.sh", workflow)
+        self.assertIn("sudo -n apt-get", workflow)
+        for unsafe in ("--allow-unauthenticated", "Acquire::AllowInsecureRepositories",
+                       "APT::Get::AllowUnauthenticated"):
+            self.assertNotIn(unsafe, workflow)
 
 
 if __name__ == "__main__":

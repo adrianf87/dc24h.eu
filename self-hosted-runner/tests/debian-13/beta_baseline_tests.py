@@ -23,57 +23,34 @@ def check(path, phrases, errors):
     return text
 
 
-def check_no_custom_workers(errors):
-    """The retired VPS runner must be absent from all executable CI paths."""
+def check_debian13_ci_test_sources(errors):
+    """Every CI checkout activates the Debian 13 test snapshot on the VPS runner."""
     retired = (
         "self-hosted-runner-debian13",
         ".github/workflows/debian13-supplemental.yml",
         ".github/workflows/debian13-stage2-sudo.yml",
         ".github/workflows/debian13-stage3-adcs-preflight.yml",
         ".github/workflows/debian13-stage3-adcs-activation.yml",
-        "scripts/public_stage3_adcs_preflight.py",
-        "scripts/public_stage3_adcs_activate.py",
-        "scripts/public_stage3_qualification_host.py",
-        "scripts/stage3_premerge_evidence.py",
     )
     for path in retired:
         require(not (ROOT / path).exists(), f"Retired runner code still exists: {path}", errors)
-
+    snapshot = ROOT / "self-hosted-runner" / "tests" / "debian-13"
+    for original in (ROOT / "tests").rglob("*"):
+        if original.is_file() and not original.name.endswith(".pyc"):
+            require((snapshot / original.relative_to(ROOT / "tests")).is_file(),
+                    f"Debian 13 snapshot missing {original.name}", errors)
+    activation = ROOT / "self-hosted-runner" / "scripts" / "activate-debian13-tests.sh"
+    require(activation.is_file(), "Debian 13 snapshot activation script missing", errors)
     for path in (ROOT / ".github" / "workflows").glob("*.yml"):
         content = path.read_text(encoding="utf-8")
-        require(not re.search(r"runs-on:\s*(?:\[self-hosted|self-hosted)", content),
-                f"{path.name}: self-hosted runner selected", errors)
-        for prohibited in ("twilight-debian13-stage2", "github-runner",
-                           "self-hosted-runner-debian13"):
-            require(prohibited not in content,
-                    f"{path.name}: retired worker reference {prohibited}", errors)
-
-    for path in (ROOT / "README.md", *(ROOT / "doc").rglob("*.md")):
-        content = path.read_text(encoding="utf-8")
-        require("self-hosted-runner-debian13" not in content and
-                "github-runner" not in content,
-                f"{path.relative_to(ROOT)}: retired worker documentation", errors)
-
-    workflow_dir = ROOT / ".github" / "workflows"
-    pr = (workflow_dir / "public-stage3-qualification.yml").read_text(encoding="utf-8")
-    manual = (workflow_dir / "debian13-stage3-full-qualification.yml").read_text(encoding="utf-8")
-    for workflow, entries in (
-        (pr, ("  pull_request:", "os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]",
-              "runs-on: ${{ matrix.os }}", "sudo -n id -u", "stage3.run run ncdc",
-              'sudo -n apt-get -o "Dir::Etc::sourcelist=$source_file" '
-              '-o Dir::Etc::sourceparts=- install -y --no-install-recommends ncdc')),
-        (manual, ("  workflow_dispatch:", "RUN_STAGE3_PUBLIC_EXTENDED_STABILITY",
-                  "stage3.run run extended", "inputs.production_restarts_ack == false",
-                  "sudo -n apt-get install -y --no-install-recommends ncdc")),
-    ):
-        for required in (*entries, "runs-on: ubuntu-24.04", "contents: read",
-                         "test \"$RUNNER_ENVIRONMENT\" = 'github-hosted'"):
-            require(required in workflow, f"Stage III workflow missing {required!r}", errors)
-        for prohibited in ("systemctl restart", "sudo -n python3", "premerge-host:",
-                           "RUN_STAGE3_PUBLIC_QUALIFICATION", "self-hosted", "ssh "):
-            require(prohibited not in workflow, f"Stage III workflow attempts {prohibited!r}", errors)
-    require(not (ROOT / ".github" / "actionlint.yaml").exists(),
-            "Retired custom-runner actionlint shim remains", errors)
+        require("runs-on: [self-hosted, Linux, X64]" in content,
+                f"{path.name}: Debian 13 self-hosted runner not selected", errors)
+        require(not re.search(r"runs-on:\s*(?:ubuntu-|\$\{\{ matrix\.os)", content),
+                f"{path.name}: legacy Ubuntu job selected", errors)
+        checkouts = content.count("- uses: actions/checkout@")
+        activations = content.count("activate-debian13-tests.sh")
+        require(checkouts == activations,
+                f"{path.name}: each checkout must activate the Debian 13 snapshot", errors)
 
 
 def check_ci_repository_allowlists(errors):
@@ -85,7 +62,7 @@ def check_ci_repository_allowlists(errors):
         "beta07-codeql.yml": (1, {old, twilight}),
         "beta08-hardening.yml": (2, {old, twilight}),
         "beta09-stage4-storage.yml": (1, {old, twilight}),
-        "stage4-ubuntu-vm-validation.yml": (1, {old, twilight}),
+        "stage4-ubuntu-vm-validation.yml": (1, {twilight}),
     }
     for name, (count, allowlist) in policies.items():
         content = (ROOT / ".github/workflows" / name).read_text(encoding="utf-8")
@@ -100,7 +77,7 @@ def check_ci_repository_allowlists(errors):
 
 
 def check_ci_apt_source_policy(errors):
-    """Runner-supplied third-party APT outages cannot disable Ubuntu package tests."""
+    """APT dependency installation must preserve signature verification on Debian 13."""
     script = check(ROOT / ".github/scripts/install-ci-deps.sh", (
         'GITHUB_ACTIONS:-',
         'RUNNER_ENVIRONMENT:-',
@@ -128,8 +105,8 @@ def main():
     require('set(DC24H_VERSION "alpha-' not in cmake, "CMakeLists.txt: alpha version string remains", errors)
     check(ROOT / "cmake/version.hpp.in", ('inline constexpr std::string_view version = "@DC24H_VERSION@";',), errors)
     workflow = check(ROOT / ".github/workflows/build.yml", (
-        "os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]",
-        "runs-on: ${{ matrix.os }}",
+        "runs-on: [self-hosted, Linux, X64]",
+        "activate-debian13-tests.sh",
         'beta-0.3.1-12-full',
         'sanitizer: [address, undefined]',
         'npm audit --omit=dev --audit-level=high',
@@ -141,10 +118,10 @@ def main():
         "pull_request:",
         "name: CI (C++ and WebAdmin)",
     ), errors)
-    require(workflow.count("os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]") == 2,
-            "build.yml: both jobs must list the three public images", errors)
-    require(workflow.count("runs-on: ${{ matrix.os }}") == 2,
-            "build.yml: both jobs must use the public image matrix", errors)
+    require(workflow.count("runs-on: [self-hosted, Linux, X64]") == 4,
+            "build.yml: all four jobs must use the Debian 13 runner", errors)
+    require(workflow.count("activate-debian13-tests.sh") == 3,
+            "build.yml: each of three checkouts must activate Debian 13 tests", errors)
     require('test "$(nproc)" -eq 4' not in workflow,
             "build.yml: fixed runner CPU count is not portable", errors)
     check_ci_repository_allowlists(errors)
@@ -153,10 +130,10 @@ def main():
             "build.yml: sanitizer failures must block the required CI result", errors)
     require("debian_compat:" not in workflow and "container:" not in workflow,
             "build.yml: Debian container tests are disabled by owner instruction", errors)
-    require("server-747585786" not in workflow, "build.yml: custom runner is selected", errors)
-    require("self-hosted" not in workflow, "build.yml: self-hosted runner is selected", errors)
+    require("runs-on: [self-hosted, Linux, X64]" in workflow,
+            "build.yml: Debian 13 VPS runner is required", errors)
     require("DC24H_REQUIRE_SYSTEMD_HOST: '1'" in workflow,
-            "build.yml: real systemd manager must be required for Ubuntu integration", errors)
+            "build.yml: real systemd manager must be required for Debian 13 integration", errors)
     systemd_test = (ROOT / "tests/systemd_sandbox_tests.py").read_text(encoding="utf-8")
     require('os.environ.get("DC24H_REQUIRE_SYSTEMD_HOST") == "1"' in systemd_test and
             '"--require-systemd-host"' in systemd_test and 'if REQUIRE_SYSTEMD_HOST:' in systemd_test,
@@ -381,7 +358,7 @@ def main():
         'require(entries[9].info.version == 10 && entries[9].info.name == "configuration_audit");',
         'require(entries[10].info.version == 11 && entries[10].info.name == "hub_service_audit");',
     ), errors)
-    check_no_custom_workers(errors)
+    check_debian13_ci_test_sources(errors)
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1

@@ -10,11 +10,11 @@ def read(path):
 
 
 class StageOneGate(unittest.TestCase):
-    def test_release_and_hosted_ci(self):
+    def test_release_and_debian13_ci(self):
         self.assertIn('set(DC24H_VERSION "beta-0.9.20")', read("CMakeLists.txt"))
         self.assertIn('WEBADMIN_VERSION = "beta-0.9.20"', read("webadmin/src/lib/status.ts"))
         workflow = read(".github/workflows/build.yml")
-        for expected in ("beta-0.4.1-0.4.4-stage1", "ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04",
+        for expected in ("beta-0.4.1-0.4.4-stage1", "runs-on: [self-hosted, Linux, X64]", "activate-debian13-tests.sh",
                          "ctest --test-dir", "npm audit --omit=dev --audit-level=high",
                          "sanitizer: [address, undefined]", "pull_request:"):
             self.assertIn(expected, workflow)

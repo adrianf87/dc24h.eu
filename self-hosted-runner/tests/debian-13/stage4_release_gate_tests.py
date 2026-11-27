@@ -38,7 +38,7 @@ class StageFourReleaseGate(unittest.TestCase):
             self.assertIn(f"add_test(NAME {check} ", cmake)
         workflow = source(".github/workflows/build.yml")
         for required in (
-            BRANCH, "ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04",
+            BRANCH, "runs-on: [self-hosted, Linux, X64]", "activate-debian13-tests.sh",
             "sanitizer: [address, undefined]", "needs: [cpp, webadmin, sanitizers]",
         ):
             self.assertIn(required, workflow)
