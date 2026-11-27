@@ -18,16 +18,24 @@ jobs:
   offline-audit:
     if: github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
     name: Stage IV private storage - ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
+        os: [debian-13]
     env:
       SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       CI: 'true'
     steps:
+      - name: Verify Debian 13 self-hosted runner
+        shell: bash
+        run: |
+          test "$RUNNER_ENVIRONMENT" = 'self-hosted'
+          . /etc/os-release
+          test "$ID" = 'debian' && test "$VERSION_ID" = '13'
+          test "$(hostname -s)" = 'server-747585786'
+          test "$(id -un)" = 'github-runner'
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
