@@ -1,6 +1,8 @@
 # Stage IV public WebAdmin — implementation candidate and release blockers
 
-**NOT DEPLOYED / NO PUBLIC WEBADMIN ACTIVATION.** Draft PR #25 targets Issue #10.
+**NOT DEPLOYED / NO PUBLIC WEBADMIN ACTIVATION.** PR #25 was merged to
+`main` as `2985c3d`; further account verification and scoped live C++
+integration are under review in a separate Stage IV qualification branch.
 Public ADCS on `62.171.156.32:1512` must remain unchanged.
 
 ## What is implemented on the draft branch
@@ -24,6 +26,13 @@ Public ADCS on `62.171.156.32:1512` must remain unchanged.
   Node binds **only `127.0.0.1:4278`**, not the public interface.
 - `webadmin/server/public-private-init.ts`: first-install-only audit/limiter
   catalog creation, without creating users, emails or public routes.
+- `webadmin/server/public-email-enrollment.ts` and
+  `public-email-enroll-main.ts`: new **offline, one-time** C++ password/role and
+  mailbox OTP verification before first catalog publication (never overwrites).
+- `api::public_account_access_handler`: new private serving C++ API subset for
+  password proof and read-only role discovery; all maintenance writes are 404.
+  It is OFF BY DEFAULT behind a new C++ OWNER environment acknowledgement and
+  needs real Debian 13 integration before enabling the public gateway.
 - `config/apache2-webadmin-public.conf.example`: separate, **disabled** HTTPS
   7278 Apache vhost with a fixed route/method/Host/Origin allowlist, Let's
   Encrypt file references and a tiny separate webroot.
@@ -41,8 +50,12 @@ Public ADCS on `62.171.156.32:1512` must remain unchanged.
    provision an owner-private catalog:
    `{"schema":1,"accounts":[{"actor":"7","email":"person@example.test","verified":true}]}`.
    This is a schema example, **not** a preverified address or authorization
-   to send mail. Without a correctly provisioned catalog, login refuses to
-   issue codes. The recipient must never be taken from the login request.
+   to send mail. OWNER selected `admin@dc24h.eu` for the account named
+   Administrator, but its numeric C++ actor ID and actual mailbox proof remain
+   unverified. Use the interactive first-enrollment runbook in
+   [STAGE_IV_EMAIL_ENROLLMENT.md](STAGE_IV_EMAIL_ENROLLMENT.md).
+   Without a correctly provisioned catalog, login refuses to issue codes.
+   The recipient must never be taken from the login request.
 2. **Recovery and separation of duties.** Implement and rehearse independent
    mailbox change/reverification, account identity proof, durable backups,
    session revocation and VNC/console fallback. There is **no public change

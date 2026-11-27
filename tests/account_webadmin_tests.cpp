@@ -64,6 +64,27 @@ void run(const database::Options& options) {
         take_field(http,"grant",64,grant);take_field(http,"session",32,session);take_field(http,"csrf",64,csrf);
         require(grant!=csrf);
     };
+    // The public-serving hub has exactly TWO private credential/status routes.
+    // Every write-capable maintenance route must remain unreachable even with
+    // a valid local API bearer and a real administrative account.
+    auto serving=api::public_account_access_handler(options);
+    auto public_call=[&](std::string method,std::string target,std::string body={}) {
+        api::Request request;request.method=std::move(method);request.target=std::move(target);
+        request.body=std::move(body);return serving(request);
+    };
+    for(const auto& target:{"/api/v1/accounts","/api/v1/accounts/7/role", "/api/v1/bans",
+            "/api/v1/audit", "/api/v1/management/hub/restart", "/api/v1/management/configuration/write"}) {
+        require(public_call("POST",target,"actor_id=7&proof=invalid").starts_with("HTTP/1.1 404"));
+    }
+    require(public_call("GET","/api/v1/accounts").starts_with("HTTP/1.1 404"));
+    require(public_call("GET","/api/v1/management/configuration").starts_with("HTTP/1.1 404"));
+    require(public_call("GET","/api/v1/management").starts_with("HTTP/1.1 401"));
+    const auto readonly=public_call("POST","/api/v1/admin/access",
+        "account_name=WebAdminOperator&proof=WebAdmin+operator+password!");
+    require(readonly.starts_with("HTTP/1.1 200"));
+    require(readonly.find("\"id\":\""+std::to_string(actor.account.id().value())+"\"")!=std::string::npos);
+    require(readonly.find("verifier")==std::string::npos);
+    require(public_call("POST","/api/v1/management","invalid").starts_with("HTTP/1.1 404"));
     const auto actor_id=std::to_string(actor.account.id().value());
     const auto proved=call("POST","/api/v1/admin/access","actor_id="+actor_id+"&proof=WebAdmin+operator+password!",false);
     require(proved.starts_with("HTTP/1.1 200")&&proved.find("verifier")==std::string::npos);

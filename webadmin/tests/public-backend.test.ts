@@ -29,7 +29,8 @@ test("real Unix-socket bridge rechecks a scoped C++ grant and projects only publ
       if (req.url === "/api/v1/admin/access") {
         assert.equal(req.method, "POST");
         const data = new URLSearchParams(form);
-        if (data.get("actor_id") !== "7" || data.get("proof") !== "synthetic-correct") {
+        if ((data.get("actor_id") !== "7" && data.get("account_name") !== "Administrator") ||
+            data.get("proof") !== "synthetic-correct") {
           res.writeHead(403); res.end('{"error":"denied"}'); return;
         }
         res.end(JSON.stringify({ maintenance: true, restart_required: true, expires_in: 600,
@@ -78,6 +79,10 @@ test("real Unix-socket bridge rechecks a scoped C++ grant and projects only publ
     const account = await adapter.verifyPassword("7", "synthetic-correct");
     assert.ok(account);
     assert.equal(account.role, "owner");
+    assert.equal(await adapter.verifyNamedPassword("Administrator", "wrong"), null);
+    const byName = await adapter.verifyNamedPassword("Administrator", "synthetic-correct");
+    assert.equal(byName?.actor, "7");
+    assert.equal(byName?.role, "owner");
     assert.equal(await adapter.reauthorize(account), true);
     const summary = await adapter.summary(account);
     const serialized = JSON.stringify(summary);

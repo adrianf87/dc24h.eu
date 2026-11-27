@@ -1,7 +1,8 @@
 # Etap IV — publiczny WebAdmin: kandydat implementacji i blokady odbioru
 
 **NIE URUCHOMIONO NA VPS / BRAK PUBLICZNEJ AKTYWACJI WEBADMIN.**
-Gałąź robocza i draft PR #25 realizują część Issue #10. Publiczny hub
+PR #25 został scalony do `main` (`2985c3d`); kolejna gałąź zawiera kod
+weryfikacji e-mail i ograniczonego backendu C++ do testów. Publiczny hub
 `adcs://server-747585786.dc24h.eu:1512` działa niezależnie i pozostaje
 bez zmian. Planowany panel: `https://server-747585786.dc24h.eu:7278`.
 
@@ -16,6 +17,11 @@ bez zmian. Planowany panel: `https://server-747585786.dc24h.eu:7278`.
   ochrona CSRF, limity prób, wygasanie, wylogowanie i unieważnianie.
 - Chroniony rejestr odbiorców, 5 minut ważności kodu, najwyżej 5 błędnych
   prób, jednokrotne użycie; dziennik zdarzeń i trwałe limity wysyłek.
+- Nowe narzędzie konsolowe potwierdza hasło C++, rolę i odebrany kod e-mail,
+  zanim jednorazowo utworzy plik z powiązaniem konta. Nie nadpisuje wpisów.
+  Procedura: [weryfikacja e-mail](STAGE_IV_EMAIL_ENROLLMENT.md).
+- Nowy prywatny interfejs C++ udostępnia w działającym hubie tylko kontrolę
+  hasła i odczyt roli, bez tras zmieniających konta. Wymaga testu na Debianie.
 - Osobny minimalny interfejs przeglądarkowy oraz **niewłączony** przykład
   Apache HTTPS na TCP 7278, korzystający ze wskazanych plików Let's Encrypt.
 - Regresje HTTP, TypeScript, testy ścieżek i Playwright na runnerach GitHub
@@ -23,9 +29,11 @@ bez zmian. Planowany panel: `https://server-747585786.dc24h.eu:7278`.
 
 ## Co wciąż blokuje włączenie do Internetu?
 
-1. **Zweryfikowany adres e-mail OWNER.** Konta C++ nie mają jeszcze pola
+1. **Zweryfikowane adresy OWNER/admin.** Konta C++ nie mają jeszcze pola
    zweryfikowanego adresu; pole `EM` w kliencie ADC jest niewiarygodne.
-   OWNER musi zweryfikować skrzynkę niezależnym kanałem i bezpiecznie
+   OWNER wybrał `admin@dc24h.eu` dla konta Administrator, ale numer ID
+   konta i odbiór kodu na tej skrzynce trzeba dopiero potwierdzić. Należy
+   zweryfikować skrzynkę niezależnym kanałem i bezpiecznie
    przypisać ją do identyfikatora konta w prywatnym katalogu. Adres
    wpisany do formularza logowania nie może zastępować tego przypisania.
 2. **Odzyskiwanie.** Potrzebna jest osobna, zatwierdzona procedura

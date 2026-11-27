@@ -12,6 +12,7 @@
     "build": "npm run typecheck && vite build",
     "build:remote:ci": "esbuild server/remote-main.ts --bundle --platform=node --target=node22 --format=esm --packages=external --outfile=dist/remote-main.mjs",
     "build:public:ci": "esbuild server/public-main.ts --bundle --platform=node --target=node24 --format=esm --packages=external --outfile=dist/public-main.mjs",
+    "build:enrollment:ci": "esbuild server/public-email-enroll-main.ts --bundle --platform=node --target=node24 --format=esm --packages=external --outfile=dist/public-email-enroll-main.mjs",
     "preview": "vite preview",
     "remote:local": "node --import tsx server/remote-main.ts",
     "test": "node --import tsx --test tests/*.test.ts",

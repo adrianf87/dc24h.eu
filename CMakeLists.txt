@@ -314,7 +314,7 @@ target_include_directories(dc24h-service-controller PRIVATE "${CMAKE_CURRENT_BIN
 target_compile_features(dc24h-service-controller PRIVATE cxx_std_20)
 set_target_properties(dc24h-service-controller PROPERTIES CXX_EXTENSIONS OFF)
 target_compile_options(dc24h-service-controller PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
-target_link_libraries(dc24h PRIVATE dc24h_bans dc24h_core dc24h_configuration dc24h_account_authentication dc24h_monitoring)
+target_link_libraries(dc24h PRIVATE dc24h_account_api dc24h_bans dc24h_core dc24h_configuration dc24h_account_authentication dc24h_monitoring)
 set_target_properties(dc24h PROPERTIES CXX_EXTENSIONS OFF)
 
 foreach(target dc24h_transfers dc24h_text dc24h_search dc24h_chat dc24h_users dc24h_i18n dc24h_core dc24h_network dc24h_logging dc24h_adc dc24h_adcs dc24h_security dc24h_configuration dc24h_database dc24h_api dc24h_monitoring dc24h_benchmark dc24h_profile dc24h_stress dc24h)
