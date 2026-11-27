@@ -1,5 +1,6 @@
-"""Real AF_UNIX regression, no sudo/network/VPS required."""
+"""Real AF_UNIX regression; CI must never pass by skipping socket failures."""
 
+import errno
 import http.client
 from http.server import BaseHTTPRequestHandler
 import os
@@ -9,6 +10,7 @@ import socketserver
 import tempfile
 import threading
 import unittest
+from unittest import mock
 
 from scripts.stage4_webadmin_bridge import (BridgeServer, HubConnection,
                                             checked_hub_credentials)
@@ -53,11 +55,11 @@ class BridgeTests(unittest.TestCase):
         try:
             self.hub = LocalServer(str(self.socket), Upstream)
         except PermissionError as error:
-            # Some local executors prohibit AF_UNIX entirely. Debian 13 CI
-            # CI MUST execute the real peer/socket regressions without skip.
+            # Some local sandboxes prohibit AF_UNIX. CI must fail, not report
+            # success with every socket/peer regression silently skipped.
             self.temp.cleanup()
-            if error.errno == 1 and os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted":
-                self.skipTest("Local sandbox prohibits AF_UNIX; Debian 13 self-hosted CI must test it")
+            if error.errno == errno.EPERM and os.environ.get("GITHUB_ACTIONS") != "true":
+                self.skipTest("Local sandbox prohibits AF_UNIX; Debian 13 CI must test it")
             raise
         self.socket.chmod(0o600)
         self.hub_worker = threading.Thread(target=self.hub.serve_forever, daemon=True)
@@ -134,6 +136,25 @@ class BridgeTests(unittest.TestCase):
         self.token_file.symlink_to(self.socket)
         with self.assertRaises((OSError, ValueError)):
             checked_hub_credentials(self.socket, self.token_file, os.geteuid())
+
+
+class BridgeRunnerPolicyTests(unittest.TestCase):
+    """A denied AF_UNIX socket cannot be turned into a green GitHub CI job."""
+
+    def assert_denied_socket(self, ci, expected_error):
+        env = {"GITHUB_ACTIONS": "true" if ci else "false",
+               "RUNNER_ENVIRONMENT": "self-hosted", "RUNNER_OS": "Linux"}
+        with mock.patch.dict(os.environ, env), mock.patch.object(
+                LocalServer, "__init__", side_effect=PermissionError(errno.EPERM, "AF_UNIX denied")):
+            case = BridgeTests("test_allowlist_real_peer_and_hidden_hub_bearer")
+            with self.assertRaises(expected_error):
+                case.setUp()
+
+    def test_denied_af_unix_is_fatal_on_debian13_ci(self):
+        self.assert_denied_socket(True, PermissionError)
+
+    def test_denied_af_unix_can_skip_on_local_sandbox(self):
+        self.assert_denied_socket(False, unittest.SkipTest)
 
 
 if __name__ == "__main__":

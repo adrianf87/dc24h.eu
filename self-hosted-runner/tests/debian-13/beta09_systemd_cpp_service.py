@@ -1,4 +1,4 @@
-"""GitHub-hosted-only, transient systemd service proof for installed old C++.
+"""Debian 13 self-hosted, transient systemd proof for installed old C++.
 
 Never enable a repository or host service, never open a TCP listener, and never
 make an operator's package installation. A systemd *system* transient unit runs
@@ -7,6 +7,7 @@ the exact previous-version maintenance executable as the unprivileged runner.
 
 import os
 from pathlib import Path
+import platform
 import pwd
 import shutil
 import socket
@@ -40,12 +41,21 @@ def require_sandbox_properties(unit, runner, invoke=command):
         raise AssertionError("C++ systemd service permits non-Unix network sockets")
 
 
-def rehearse(installed_admin, config, database_directory):
-    if (os.environ.get("GITHUB_ACTIONS") != "true" or
+def require_debian13_ci_runner():
+    """Refuse a transient system service outside the approved Debian 13 VPS."""
+    release = platform.freedesktop_os_release()
+    if (release.get("ID") != "debian" or release.get("VERSION_ID") != "13" or
+            socket.gethostname().split(".")[0] != "server-747585786" or
+            pwd.getpwuid(os.geteuid()).pw_name != "github-runner" or
+            os.environ.get("GITHUB_ACTIONS") != "true" or
             os.environ.get("RUNNER_ENVIRONMENT") != "self-hosted" or
             os.environ.get("RUNNER_OS") != "Linux" or
             not shutil.which("systemd-run") or not shutil.which("sudo")):
-        raise AssertionError("Transient C++ service fixture requires Debian 13 self-hosted CI")
+        raise AssertionError("Transient C++ fixture requires approved Debian 13 self-hosted CI")
+
+
+def rehearse(installed_admin, config, database_directory):
+    require_debian13_ci_runner()
     installed_admin = Path(installed_admin).resolve(strict=True)
     config = Path(config).resolve(strict=True)
     directory = Path(database_directory).resolve(strict=True)

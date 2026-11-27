@@ -2,7 +2,7 @@
 
 This directory contains a **complete copy of the 267 file entries from repository-root `tests/`** at source commit `15bec73f3ca947b3168f8ddc5e83dfc20f9bbbe2`. It includes C++, Python, fixture JSON, text fuzz corpora and manifest data. The source `tests/` files remain in the repository for compatibility with CMake and tooling.
 
-**17 Debian 13-specific Python files have been ported for Debian GNU/Linux 13, a self-hosted GitHub runner and the OWNER-approved test VPS**. All other files are copied byte-for-byte, including historical Ubuntu *negative fixtures and regression evidence* that must not be silently rewritten into fake Debian provenance. See [SOURCE_MANIFEST.tsv](SOURCE_MANIFEST.tsv) for an exact original blob inventory and ported-file markers.
+**18 Debian 13-specific Python files have been ported for Debian GNU/Linux 13, a self-hosted GitHub runner and the OWNER-approved test VPS**. All other files are copied byte-for-byte, including historical Ubuntu *negative fixtures and regression evidence* that must not be silently rewritten into fake Debian provenance. See [SOURCE_MANIFEST.tsv](SOURCE_MANIFEST.tsv) for an exact original blob inventory and ported-file markers.
 
 ## How the CI uses these tests
 
@@ -19,7 +19,9 @@ The snapshot is **not an independent Debian distribution package**: fixtures als
 ## Test acceptance
 
 - All 267 files were copied from recorded blob SHAs; no test disappeared. Four snapshot-only CI policy tests were additionally ported to require the Debian 13 self-hosted runner rather than the removed Ubuntu matrix.
-- The 17 ported Python copies (13 runtime integration and 4 CI policy/regression tests) had their Python syntax checked.
+- The 18 ported Python copies (14 runtime integration and 4 CI policy/regression tests) had their Python syntax checked.
+- Stage IV AF_UNIX tests no longer pass CI by skipping when Unix sockets are denied; local non-CI sandboxes can still skip, and both paths have regression checks.
+- The transient historical C++ systemd test refuses to start unless Debian 13, the approved runner hostname/account and self-hosted GitHub CI are all verified; negative policy cases cover other systems and runner identities.
 - All eight workflow YAML files parsed and activate this snapshot after checkout.
 - No real Debian 13 GitHub runner run has yet passed after this change. Cancellation requested for existing queued/pending runs per OWNER.
 - **NOT TESTED**: a Debian 13 historical performance baseline; the ported Stage IV loopback probe reports the unavailable comparison as `NOT_TESTED`, never a fabricated PASS.
