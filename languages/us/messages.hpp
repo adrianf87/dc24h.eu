@@ -63,7 +63,7 @@ inline constexpr std::array<std::string_view, 189> messages{{
     "Invalid chat welcome message",
     "Invalid chat anti-flood limits",
     "Users stopped; online=",
-    "Starting dc24h.eu-twilight ",
+    "Starting dc24h.eu ",
     "Core running",
     "Core stopping",
     "Core stopped after Network failure",
@@ -219,7 +219,7 @@ ADCS requires a matching PEM chain and key; TLS >= 1.2. At most 16 total listene
 Defaults: 127.0.0.1:1511, 1024 connections, 120 seconds idle, info to stderr, us.
 Limits: connections 1..65535; idle timeout 1..86400 seconds.
 User/session ceilings: 1..65535, default 65535; effective caps also obey connections.
-Run dc24h.eu-twilight in the foreground; stop with SIGINT (Ctrl+C) or SIGTERM.
+Run dc24h.eu in the foreground; stop with SIGINT (Ctrl+C) or SIGTERM.
 Security defaults: 128 peers/IP, 256 admissions/IP/minute, 1024 frames/s/peer,
 512 invalid frames/peer, 10 seconds for TLS and each unfinished frame.
 ADC guest login, public presence, public and private chat are implemented.

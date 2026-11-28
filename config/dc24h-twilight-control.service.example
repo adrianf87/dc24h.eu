@@ -3,7 +3,7 @@
 # tightly restricted dc24h-admin group before deploying. Review membership.
 # Install the independently reviewed Polkit rule for only dc24h-twilight.service.
 [Unit]
-Description=dc24h.eu-twilight restricted systemd service controller
+Description=dc24h.eu restricted systemd service controller
 Conflicts=dc24h-control.service
 After=systemd-user-sessions.service
 

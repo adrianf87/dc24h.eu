@@ -119,7 +119,7 @@ def template_contract(source):
         "ExecStart=/usr/local/bin/dc24h-twilight --config /etc/dc24h/dc24h.ini",
     )
     return (all(item in unit.splitlines() for item in required)
-            and 'server.name !== "dc24h.eu-twilight"' in webadmin
+            and 'server.product_id === PRODUCT_ID && server.name === PRODUCT_NAME' in webadmin
             and "OUTPUT_NAME dc24h-twilight" in cmake)
 
 

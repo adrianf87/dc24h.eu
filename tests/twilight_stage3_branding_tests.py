@@ -13,30 +13,30 @@ def source(relative):
 
 
 class TwilightStageThreeBrandingTests(unittest.TestCase):
-    def test_operator_text_uses_twilight_with_approved_stage_iv_executable(self):
+    def test_operator_text_uses_canonical_product_name(self):
         main = source("src/main.cpp")
-        self.assertIn('std::cout << "dc24h.eu-twilight "', main)
-        self.assertIn('std::string("Starting dc24h.eu-twilight ")', main)
+        self.assertIn('std::cout << "dc24h.eu "', main)
+        self.assertIn('std::string("Starting dc24h.eu ")', main)
         for language in ("us", "pl"):
             help_text = source(f"languages/{language}/messages.hpp")
-            self.assertIn("dc24h.eu-twilight", help_text)
+            self.assertIn("dc24h.eu", help_text)
             self.assertIn("dc24h-twilight [--language us|pl] --help | --version", help_text)
 
-        welcome = "Welcome to dc24h.eu-twilight. Guest access is enabled."
+        welcome = "Welcome to dc24h.eu. Guest access is enabled."
         self.assertIn(welcome, source("include/dc24h/chat/settings.hpp"))
         self.assertIn(f"welcome_message = {welcome}", source("config/dc24h.ini.example"))
         for name in ("dc24h-twilight", "dc24h-twilight-control", "dc24h-twilight-remote-gateway"):
             unit = source(f"config/{name}.service.example")
-            self.assertIn("Description=dc24h.eu-twilight", unit)
+            self.assertIn("Description=dc24h.eu", unit)
 
     def test_status_api_and_webadmin_agree_on_exact_owner_approved_name(self):
         # Explicit OWNER cutover: reject even the legacy name, without silently
         # broadening the accepted status-schema identity.
-        self.assertIn(r'\"name\":\"dc24h.eu-twilight\"', source("src/api/server.cpp"))
+        self.assertIn(r'\"name\":\"dc24h.eu\"', source("src/api/server.cpp"))
         status = source("webadmin/src/lib/status.ts")
-        self.assertIn('name: "dc24h.eu-twilight";', status)
-        self.assertEqual(status.count('server.name !== "dc24h.eu-twilight"'), 2)
-        self.assertNotIn('server.name !== "dc24h.eu"', status)
+        self.assertIn(r'\"product_id\":\"dc24h\"', source("src/api/server.cpp"))
+        self.assertIn('server.product_id === PRODUCT_ID && server.name === PRODUCT_NAME', status)
+        self.assertEqual(status.count('!hasStatusIdentity(root, server)'), 2)
         self.assertIn("assert.throws(() => parseSnapshot(candidate)",
                       source("webadmin/tests/status.test.ts"))
 
@@ -48,10 +48,10 @@ class TwilightStageThreeBrandingTests(unittest.TestCase):
         proxy = source("config/apache2-webadmin-https-proxy.conf.example")
         self.assertIn("https://dc24h.eu", proxy)
         passkeys = source("webadmin/server/remote-webauthn.ts")
-        self.assertIn('rpName: "dc24h.eu-twilight", rpID', passkeys)
+        self.assertIn('rpName: PRODUCT_NAME, rpID', passkeys)
         self.assertIn("expectedOrigin: origin", passkeys)
         self.assertIn("expectedRPID: rpID", passkeys)
-        self.assertNotIn('expectedRPID: "dc24h.eu-twilight"', passkeys)
+        self.assertNotIn('expectedRPID: PRODUCT_NAME', passkeys)
 
     def test_shared_adc_welcome_fixtures_match_runtime_brand(self):
         # These fixtures feed real C++/Node/VM jobs; one stale literal causes
@@ -64,8 +64,8 @@ class TwilightStageThreeBrandingTests(unittest.TestCase):
             "tests/user_list_process_tests.py",
         ):
             text = source(path)
-            self.assertIn("dc24h.eu-twilight.", text, path)
-            self.assertNotIn(r"dc24h.eu.\\sGuest", text, path)
+            self.assertIn("dc24h.eu.", text, path)
+
 
 
 if __name__ == "__main__":

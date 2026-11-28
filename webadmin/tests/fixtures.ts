@@ -1,7 +1,8 @@
 export const snapshot = {
   api_version: "v1",
   server: {
-    name: "dc24h.eu-twilight",
+    product_id: "dc24h",
+    name: "dc24h.eu",
     version: "beta-0.9.20",
     core_running: true,
     uptime_seconds: 3661,

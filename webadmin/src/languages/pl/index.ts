@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from "../../lib/branding.ts";
 import type { Copy } from "../us";
 export const pl = {
   mute: "Wyciszenie",
@@ -700,7 +701,7 @@ export const pl = {
   localNoteSub:
     "Liczniki pochodzą z API huba. Zarządzanie kontami wymaga osobnego trybu przy zatrzymanym hubie.",
   buildLabel: "WebAdmin",
-  footer: "Dla dc24h.eu-twilight",
+  footer: `Dla ${PRODUCT_NAME}`,
   noEdits: "Zmiana konfiguracji i przeglądanie logów są planowane.",
   acceptedConnections: "Przyjęte połączenia",
   acceptsHint: "Łącznie od startu",

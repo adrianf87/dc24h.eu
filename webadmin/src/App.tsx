@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from "./lib/branding.ts";
 import { useEffect, useState } from "react";
 import {
   Activity,
@@ -167,7 +168,7 @@ function Details({ snapshot, t }: { snapshot: HubSnapshot | null; t: Copy }) {
           <dt>{t.project}</dt>
           <dd>
             <span className="project-mark" />
-            dc24h.eu-twilight
+            {PRODUCT_NAME}
           </dd>
         </div>
         <div>
@@ -309,7 +310,7 @@ export default function App() {
   );
   const number = (value: number | undefined) =>
     value === undefined ? "—" : formatter.format(value);
-  const documentation = `https://github.com/adrianf87/dc24h.eu-twilight/blob/main/doc/${language}/WEBADMIN.md`;
+  const documentation = `https://github.com/adrianf87/dc24h.eu/blob/main/doc/${language}/WEBADMIN.md`;
   useEffect(() => {
     document.documentElement.lang = language === "pl" ? "pl" : "en-US";
     try {
@@ -423,7 +424,7 @@ export default function App() {
           </span>
           <span>
             <strong>
-              dc24h.eu-twilight
+              {PRODUCT_NAME}
             </strong>
             <small>{t.brandCaption}</small>
           </span>
@@ -434,7 +435,7 @@ export default function App() {
           </span>
           <span>
             <small>{t.workspace}</small>
-            <strong>dc24h.eu-twilight</strong>
+            <strong>{PRODUCT_NAME}</strong>
           </span>
           <span className="workspace-lock">
             <LockKeyhole size={14} />
@@ -534,7 +535,7 @@ export default function App() {
           <div className="page-heading">
             <div>
               <div className="eyebrow">
-                dc24h.eu-twilight <span>/</span> {t.monitoring}
+                {PRODUCT_NAME} <span>/</span> {t.monitoring}
               </div>
               <h1>{titles[page][0]}</h1>
               <p>{titles[page][1]}</p>

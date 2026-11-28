@@ -89,10 +89,8 @@ class StageIVTechnicalIdentityTests(unittest.TestCase):
         self.assertNotIn("self-hosted", workflow)
 
     def test_status_api_dns_origin_passkey_and_sysusers_are_stable(self):
-        self.assertIn(r'\"name\":\"dc24h.eu-twilight\"', source("src/api/server.cpp"))
-        self.assertEqual(source("webadmin/src/lib/status.ts").count(
-            'server.name !== "dc24h.eu-twilight"'), 2)
-        self.assertIn('rpName: "dc24h.eu-twilight", rpID',
+        self.assertIn(r'\"name\":\"dc24h.eu\"', source("src/api/server.cpp"))
+        self.assertIn('rpName: PRODUCT_NAME, rpID',
                       source("webadmin/server/remote-webauthn.ts"))
         self.assertIn("ServerName dc24h.eu", source("config/apache2-webadmin-https.conf.example"))
         self.assertIn("u dc24h -", source("config/dc24h.sysusers.example"))

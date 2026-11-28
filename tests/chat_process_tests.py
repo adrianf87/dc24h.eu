@@ -56,7 +56,7 @@ class ChatProcessTests(unittest.TestCase):
             self.assertTrue(frames[0].startswith(b'IINF '))
             while not frames[-1].startswith(b'BINF '+waiting.sid+b' '):
                 frames.append(waiting.line())
-            self.assertTrue(waiting.line().startswith(b'IMSG Welcome\\sto\\sdc24h.eu-twilight.'))
+            self.assertTrue(waiting.line().startswith(b'IMSG Welcome\\sto\\sdc24h.eu.'))
             self.assertTrue(all(not line.startswith(b'BMSG ') for line in frames))
             self.assertTrue(first.line().startswith(b'BINF '+waiting.sid+b' '))
             self.assertTrue(second.line().startswith(b'BINF '+waiting.sid+b' '))

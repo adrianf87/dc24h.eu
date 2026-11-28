@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from "../../lib/branding.ts";
 export const us = {
   mute: "Mute",
   muteTitle: "Mute chat",
@@ -700,7 +701,7 @@ export const us = {
   localNoteSub:
     "Live counters come from the hub API. Account maintenance uses a separate stopped-hub workflow.",
   buildLabel: "WebAdmin",
-  footer: "Built for dc24h.eu-twilight",
+  footer: `Built for ${PRODUCT_NAME}`,
   noEdits: "Configuration changes and log browsing are planned.",
   acceptedConnections: "Accepted connections",
   acceptsHint: "Total since startup",

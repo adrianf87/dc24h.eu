@@ -3,7 +3,7 @@
 # Adjust ExecStart when the install prefix is not /usr/local.
 # Operator must stop the legacy service and authorize the cutover separately.
 [Unit]
-Description=dc24h.eu-twilight Direct Connect hub
+Description=dc24h.eu Direct Connect hub
 Conflicts=dc24h.service
 AssertPathExists=/etc/dc24h/twilight-unit-migration-approved
 After=network-online.target

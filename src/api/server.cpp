@@ -315,7 +315,7 @@ std::string status_json(const Snapshot& value) {
     }
     mute_json+='}';
     return "{\"api_version\":\"v1\",\"observation\":{\"schema\":1,\"observed_unix_ms\":" +
-        std::to_string(observed_unix_ms) + "},\"server\":{\"name\":\"dc24h.eu-twilight\",\"version\":\"" +
+        std::to_string(observed_unix_ms) + "},\"server\":{\"product_id\":\"dc24h\",\"name\":\"dc24h.eu\",\"version\":\"" +
         std::string(dc24h::version) + "\",\"core_running\":" + (value.core_running ? "true" : "false") +
         ",\"uptime_seconds\":" + std::to_string(value.uptime_seconds) + "},\"network\":{\"active_connections\":" +
         std::to_string(value.active_connections) + ",\"accepted_connections\":" + std::to_string(value.accepted_connections) +
