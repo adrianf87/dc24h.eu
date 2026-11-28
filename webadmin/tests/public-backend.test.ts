@@ -41,7 +41,7 @@ test("real Unix-socket bridge rechecks a scoped C++ grant and projects only publ
             method, path, permission, allowed: true })),
         })); return;
       }
-      if (req.url === "/api/v1/management") {
+      if (req.url === "/api/v1/management" || req.url === "/api/v1/status") {
         assert.equal(req.headers["x-dc24h-admin-grant"], grant);
         assert.equal(req.headers["x-dc24h-session"], cSession);
         assert.equal(req.headers["x-dc24h-csrf"], csrf);
@@ -68,6 +68,18 @@ test("real Unix-socket bridge rechecks a scoped C++ grant and projects only publ
         res.end(JSON.stringify({ schema: 1, source: "stage4-account-service",
           accounts: { total: 7, active: 6, owners: 1, administrators: 2, registered: 4 },
           verified_emails: 5, private_token: token })); return;
+      }
+      if (req.url === "/api/v1/stage4/hub/users") {
+        res.end(JSON.stringify({ schema: 1, truncated: false, users: [{ session: "1", sid: "ABCD",
+          nickname: "HubFixture", transport: "adcs", role: "guest", public_muted: false, private_muted: false,
+          cid: "HIDDEN", address: "192.0.2.10" }] })); return;
+      }
+      if (req.url === "/api/v1/stage4/admin") {
+        assert.equal(req.method, "POST");
+        assert.deepEqual(Object.fromEntries(new URLSearchParams(form)), {
+          after: "0", operation: "accounts.list", session_digest: "e".repeat(64),
+        });
+        res.end(JSON.stringify({ accounts: [], maintenance: true, next_after: null })); return;
       }
       res.writeHead(404); res.end('{"error":"not_found"}');
     });
@@ -106,11 +118,16 @@ test("real Unix-socket bridge rechecks a scoped C++ grant and projects only publ
       accounts: { total: 7, active: 6, owners: 1, administrators: 2, registered: 4 },
       verified_emails: 5 });
     assert.ok(!JSON.stringify(identities).includes(token));
+    assert.deepEqual(await adapter.hubRead("users"), { truncated: false, users: [{ nickname: "HubFixture",
+      transport: "adcs", role: "guest", public_muted: false, private_muted: false }] });
+    assert.deepEqual(await adapter.adminOperation("accounts.list", { after: "0" }, "e".repeat(64)),
+      { accounts: [], maintenance: true, next_after: null });
     roleRevoked = true;
     assert.equal(await adapter.reauthorize(account), false);
     assert.equal(await adapter.verifyPassword("7", "synthetic-correct"), null);
     assert.deepEqual(new Set(seen), new Set([
       "POST /api/v1/admin/access", "GET /api/v1/management", "GET /api/v1/status", "GET /api/v1/stage4/identity-summary",
+      "GET /api/v1/stage4/hub/users", "POST /api/v1/stage4/admin",
     ]));
   } finally {
     if (api.listening)

@@ -70,8 +70,15 @@ function enter(session) {
   $("#refresh").hidden = !["owner", "administrator"].includes(session.role);
   $("#role").textContent = "Rola: " + session.role;
   message("Zalogowano: hasło i kod e-mail potwierdzone.");
-  document.dispatchEvent(new CustomEvent("stage4:authenticated", { detail: { role: session.role } }));
+  announceSession();
 }
+function announceSession() {
+  if (!csrf || $("#dashboard").hidden) return;
+  document.dispatchEvent(new CustomEvent("stage4:authenticated", {
+    detail: { role: $("#dashboard").dataset.role, csrf },
+  }));
+}
+document.addEventListener("stage4:session-request", announceSession);
 function leave() {
   document.dispatchEvent(new Event("stage4:logout"));
   csrf = "";

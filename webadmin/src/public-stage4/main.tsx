@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { Operations } from "./operations.tsx";
 
 type SessionRole = "owner" | "administrator" | "registered" | "unknown";
 type IdentitySummary = { schema: 1; source: "stage4-account-service";
@@ -41,17 +42,21 @@ function ReadOnlyDashboard() {
   const [sequence, setSequence] = useState(0);
   const [summary, setSummary] = useState<IdentitySummary | null>(null);
   const [error, setError] = useState("");
+  const [csrf, setCsrf] = useState("");
 
   useEffect(() => {
     const authenticated = (event: Event) => {
       const detail: unknown = (event as CustomEvent).detail;
       const value = detail && typeof detail === "object" && "role" in detail ? detail.role : "unknown";
       setRole(value === "owner" || value === "administrator" || value === "registered" ? value : "unknown");
+      const token = detail && typeof detail === "object" && "csrf" in detail ? detail.csrf : undefined;
+      setCsrf(typeof token === "string" && /^[0-9a-f]{64}$/.test(token) ? token : "");
       setVisible(true); setSequence(value => value + 1);
     };
-    const loggedOut = () => { setVisible(false); setRole("unknown"); setSummary(null); setError(""); };
+    const loggedOut = () => { setVisible(false); setRole("unknown"); setSummary(null); setError(""); setCsrf(""); };
     document.addEventListener("stage4:authenticated", authenticated);
     document.addEventListener("stage4:logout", loggedOut);
+    document.dispatchEvent(new Event("stage4:session-request"));
     return () => {
       document.removeEventListener("stage4:authenticated", authenticated);
       document.removeEventListener("stage4:logout", loggedOut);
@@ -86,7 +91,7 @@ function ReadOnlyDashboard() {
       <p><strong>Użytkownicy zarejestrowani:</strong> {summary.accounts.registered}</p>
       <p><strong>Zweryfikowane adresy e-mail:</strong> {summary.verified_emails}</p>
     </div>}
-    <p className="api-note">Dane pochodzą z usługi kont, nie z huba ADCS. Statystyki huba i lista połączeń wymagają osobnego prywatnego adaptera odczytu. Sterowanie usługą i zapisywanie konfiguracji są niedostępne.</p>
+    {csrf && <Operations csrf={csrf} role={role}/>}
   </section>;
 }
 

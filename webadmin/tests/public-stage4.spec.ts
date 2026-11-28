@@ -16,6 +16,14 @@ test("OTP-authenticated Owner sees actual read-only C++ account statistics in Re
       payload = { schema: 1, data: { schema: 1, source: "stage4-account-service",
         accounts: { total: 8, active: 7, owners: 1, administrators: 2, registered: 5 },
         verified_emails: 7 } };
+    } else if (path.endsWith("/admin")) {
+      expect(route.request().method()).toBe("POST");
+      expect(route.request().headers()["x-dc24h-stage4-csrf"]).toBe("a".repeat(64));
+      const input = route.request().postDataJSON();
+      expect(input).toEqual({ operation: "accounts.list", after: "0" });
+      payload = { schema: 1, data: { accounts: [{ id: "1", name: "BrowserFixture", role: "registered",
+        status: "active", revision: "1", created_at: 1, updated_at: 1, last_login_at: null }],
+        maintenance: true, next_after: null } };
     } else if (path.endsWith("/logout")) {
       authenticated = false;
       payload = { schema: 1, authenticated: false };
@@ -32,6 +40,10 @@ test("OTP-authenticated Owner sees actual read-only C++ account statistics in Re
   await expect(page.locator(".api-stats")).toContainText("8");
   expect(paths).toContain("/stage4/v1/identity-summary");
   expect(paths).not.toContain("/stage4/v1/telemetry");
+  await page.locator(".api-actions button").nth(1).click();
+  await page.locator(".api-panel button").filter({ hasText: /Pierwsza strona/ }).click();
+  await expect(page.getByRole("button", { name: "BrowserFixture" })).toBeVisible();
+  expect(paths).toContain("/stage4/v1/admin");
   await page.getByRole("button", { name: "Wyloguj" }).click();
   await expect(page.locator("#login")).toBeVisible();
   await expect(page.locator(".api-stats")).toHaveCount(0);

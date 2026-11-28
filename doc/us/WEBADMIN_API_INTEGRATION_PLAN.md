@@ -1,50 +1,31 @@
-# WebAdmin — secure API integration plan
+# WebAdmin secure API integration
 
-Status: **DRAFT / PARTIALLY IMPLEMENTED (read-only phase)**. Source baseline: protected `main` after Stage IV PR #29 (`bbf240d4f5303209c52614b62a877d4c915ad9aa`). This document is the integration and review checkpoint for `feature/webadmin-secure-api-integration`.
+Status **implemented in Draft PR #30, local validation complete**. The branch integrates the Stage IV OTP gateway with the account service and an optional read-only connection to the serving hub. The protected branch and running deployment require a separate review and rollout.
 
-## First implementation checkpoint — authenticated read-only APIs
+## Route and permission inventory
 
-One precise public read path is added **on the feature branch only**: `GET /stage4/v1/identity-summary`. Node invokes the new C++ `GET /api/v1/stage4/identity-summary` via an exact-path UID-checked Unix bridge. The C++ Stage IV account service returns only aggregate account counts and verified email count from MariaDB; the Node adapter validates and projects the bounded DTO. The public gateway requires a verified Stage IV password + email OTP session, rechecks the authoritative role/revision after the asynchronous read, rate-limits requests and permits only active Owner or Administrator accounts. Registered users and unauthenticated requests are rejected. Headers, methods and routes remain on finite Apache/Node allowlists. React renders the counts inside the existing Stage IV login UI; no grant, service token or OTP is exposed to React.
+| Public WebAdmin operation | Internal source | Authorization and behavior |
+| --- | --- | --- |
+| Login, enrollment, session, logout, own password, revoke sessions | Stage IV gateway and C++ `POST /api/v1/admin/access` for password proof | Password plus email OTP. Writes use the applicable login, enrollment or session CSRF token. |
+| `GET identity-summary` | Account service `GET /api/v1/stage4/identity-summary` | Owner or Administrator. Aggregate counts, without account names or email addresses. |
+| `GET hub/health`, `hub/ready`, `hub/status`, `hub/users` | Serving hub `GET /api/v1/{health,ready,status,users}` through four exact bridge mappings | Owner or Administrator. Live dashboard, process/connection telemetry, effective startup configuration, roles, moderation rules, chat, search, transfer, kick and mute counters. Directory omits session IDs and SIDs. |
+| `POST admin` with `management` or `admin` | Account service, native role catalog and administration counters | Owner or Administrator with CSRF and current server-side session. |
+| `POST admin` with `accounts.list`, `accounts.staff`, `accounts.detail` | Native account directory and staff filtering | `accounts.manage`. Bounded cursor or exact record ID. |
+| `POST admin` with `accounts.create`, `accounts.activate`, `accounts.disable`, `accounts.reset`, `accounts.role` | Native account engine and transactional audit | `accounts.manage`, plus `roles.manage` for role changes. Current password and expected target revision are required for mutations of existing accounts. Native rank rules protect self, equal and higher ranks. Creation produces a disabled account without email enrollment. Reset and role changes follow native status rules. |
+| `POST admin` with `bans.list`, `bans.create`, `bans.revoke` | Native ban directory and transactional audit | `users.ban` for list, plus `blocks.manage` and a current password for writes. Creation supports permanent, relative and absolute expiry. Revoke uses the expected revision. The hub enforces a stored ban only when its database and active ban snapshot include that record. |
+| `POST admin` with `audit.list` | Native bounded audit directory | `audit.read` and current password. Returns event identifiers, timestamps, actions and outcomes. |
 
-**Source boundary:** The Stage IV C++ account service is not the live ADC/ADCS hub. Its `/api/v1/status` is synthetic account-process status and `/api/v1/users` is unavailable there. Therefore this change deliberately does **not** publish hub telemetry or a connected-user list. Those require a separately reviewed, read-only hub bridge with strong authentication and data minimization. The existing local private React `/admin-api` remains private.
+Public paths in the first column are relative to `/stage4/v1/`. The browser sends a fixed operation and typed fields to the single administrative endpoint. Node validates fields, CSRF and rate limits, derives the session digest from the server-read cookie and rechecks the session after the call. The account process validates that digest and the current verified account from MariaDB. C++ checks the native permission before dispatch and uses actor revision, password proof and transactional checks for writes. Apache and both adapters keep finite path/method allowlists. Browser inputs never select an upstream request path or supply an actor ID, bearer token or C++ grant. On an uncertain write outcome, refresh the record before retrying.
 
-This phase does **not** implement privileged account/ban/audit write operations, an authorization-delegation mechanism for administrative C++ grants, public configuration changes or service controls. No deployment/activation authorization is conveyed by code review or CI.
+## Serving hub read connection
 
-## Goal and non-goals
+The new bridge mappings use `/run/dc24h-stage3-api/hub.sock` and `/var/lib/dc24h-stage3/api.token`. To provide the optional source in a reviewed rollout, configure the hub's existing `[api]` listener with those paths. Let the hub unit create `RuntimeDirectory=dc24h-stage3-api` with mode `0700`. Provision an independently generated token owned by the hub UID, mode `0600`, and validate the configuration as that UID. The bridge checks socket and token permissions under the hub UID and refuses administrative headers on live reads. Missing or unsafe material leaves telemetry unavailable while the account panel remains operational.
 
-Integrate the existing C++ administrative API capabilities with the authenticated WebAdmin through explicitly authorized, typed, route-specific adapters. Cover all WebAdmin feature areas that have an implemented backend contract; clearly label unavailable operations. Do **not** bulk-publish every internal C++ endpoint. Do not expose `/remote.html`, the localhost `/admin-api`, the maintenance controller, database, Unix sockets, bearer tokens or generic forwarding to Internet clients.
+The upgraded account binary, gateway, assets, bridge and Apache vhost must be deployed together. During the approved Stage IV maintenance window, rerun the protected initializer to reconcile the account service's socket-only, table-scoped privileges, then validate the stack before opening ingress. The branch work did not change the active VPS configuration or services.
 
-The Stage IV password plus mandatory eight-digit email OTP design, server-side authoritative role/ACL checks, sessions, CSRF, rate limits and audit remain in force. Passkey/WebAuthn public login is outside the approved scope. Any new public operation, especially one that changes configuration or service state, requires threat-model review and explicit OWNER authorization before exposure.
+## Private tools and acceptance
 
-## Initial API inventory (verify method, schema and implementation before coding)
-
-| WebAdmin area | Existing internal contract or UI area | Proposed public integration boundary | State |
-| --- | --- | --- | --- |
-| Stage IV account overview | New `/api/v1/stage4/identity-summary` on account service | Authenticated, aggregate count-only DTO | Implemented in branch; integration CI pending |
-| Status, dashboard and health | `/api/v1/health`, `/api/v1/ready`, `/api/v1/status`; Dashboard | Live hub needs separate scoped bridge; do not substitute account-process status | Not yet integrated |
-| Connected users and sessions | `/api/v1/users`, HubUsers, accounts | Live hub needs separate scoped bridge and session/SID redaction | Not yet integrated |
-| Accounts and password | `/api/v1/accounts`, `/api/v1/admin`, Stage IV account flows | Existing verified-email registration, own-password and session rules; privileged account operations require backend ACL | Inventory needed |
-| Roles and permissions | `/api/v1/admin/access`, `/api/v1/management`, Roles | Per-operation reauthorization; no client-provided role grants | Inventory needed |
-| Bans and moderation | `/api/v1/bans`, Bans, ModerationRules, Kick/Mute views | Explicit allowlist and audit; unavailable actions remain disabled | Inventory needed |
-| Chat, search and transfers | Dashboard, ChatStatistics, SearchMonitoring, TransferMonitoring, TransferStatistics | Bounded read-only metrics where backend support exists | Not yet integrated |
-| Audit and diagnostics | `/api/v1/audit`, AuditLog, metrics/status | Owner/admin-only sanitized, paginated reads; no raw logs or secrets | Inventory needed |
-| Configuration | `/api/v1/management/configuration`, `/write`, `/restore`, ConfigurationEditor | Private by default; no public writes before separate OWNER decision and recovery review | OWNER gate |
-| Hub/service management | `/api/v1/management/authorize`, `/api/v1/management/hub/*`, HubService | Private by default; never proxy arbitrary start/stop/restart actions | OWNER gate |
-
-These are route **families**, not an assertion that each listed operation is fully implemented. Derive an exact `METHOD + PATH + request/response schema + required permission + side effect` matrix from `src/api/server.cpp`, `src/api/accounts.cpp`, the WebAdmin adapters and tests. Existing documented 501/not-implemented behavior must remain visible and must not become a false PASS.
-
-## Implementation checklist
-
-- [x] Implement a count-only C++ account API, a rate-limited and role-gated Node adapter, and a React identity overview with negative-path tests; **not all APIs**.
-- [ ] Enumerate every actual C++ route and local WebAdmin adapter; reconcile documentation, runtime route table and UI pages. Classify supported/read-only/write/unimplemented.
-- [ ] Define a finite public route and method allowlist, per-role permission map, redacted response DTOs, bounded payloads/timeouts and fail-closed errors.
-- [ ] Enforce session, OTP-authenticated identity, CSRF on writes, current C++ role/status and revocation at the backend for **every** operation; never trust browser role flags.
-- [ ] Implement explicitly named Node-to-C++ bridge handlers without a generic user-controlled path or headers, public bearer token, database connection or maintenance proxy.
-- [ ] Connect WebAdmin pages to typed adapters with loading, denied, unavailable and stale-session states; keep en-US and Polish translations aligned.
-- [ ] Test positive/negative roles (Owner, Administrator, Registered, etc.), forbidden routes/methods, header and Origin spoofing, session expiry, logout, revoke, CSRF, rate limits, replay and audit.
-- [ ] Run GitHub-hosted Ubuntu 22.04, 24.04 and 26.04 CI on the exact PR head, with C++/Node/TypeScript and Playwright coverage; keep any real-VPS tests separately OWNER-approved and non-disruptive.
-- [ ] Collect exact-SHA evidence and review outstanding security risks. Obtain separate OWNER decision for exposing each high-impact configuration/service endpoint and explicit OWNER MERGE GO.
-
-## Acceptance boundary
-
-This Draft PR implements one public read-only account-summary endpoint **only in reviewable source**, not on the VPS. Stage IV's previous scoped acceptance remains historical; it is not an approval to widen the deployed public API. Do not merge, deploy, change host firewall/DNS or issue RELEASE/PRODUCTION GO on the basis of this branch without fresh OWNER security acceptance.
+- Configuration review of saved values, validation of candidate changes, configuration write and restore remain in the private maintenance UI and API. The public panel displays effective startup settings from the live hub.
+- The controller's service status and start/stop/restart, owner bootstrap/transfer, C++ grant issuance and raw administrative routes remain private. The public health and readiness probes use the serving hub.
+- Live kick and mute actions use the authorized DC client commands. The panel exposes their counters and rule metadata. No existing HTTP kick/mute mutation contract is available.
+- PR #30 adds isolated C++/MariaDB tests for account mutations, pagination, bans and audit, Unix bridge route and credential tests, TypeScript projections and Chromium coverage for the OTP-gated React account view. Local tests used the Ubuntu 24.04 VPS and disposable state. Hosted CI and release/production approval are tracked separately.

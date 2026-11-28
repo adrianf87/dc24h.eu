@@ -253,9 +253,10 @@ async function main() {
       const authUser = config.MARIADB_APP_USERNAME + "_auth";
       await account(db, name, authUser, authPassword, [
         ...readOnlyTables.map(tableName => table(tableName, "SELECT")),
-        table("dc24h_accounts", "SELECT, UPDATE"), table("dc24h_account_credentials", "SELECT, INSERT, UPDATE"),
+        table("dc24h_accounts", "SELECT, INSERT, UPDATE"), table("dc24h_account_credentials", "SELECT, INSERT, UPDATE"),
         table("dc24h_account_adc_credentials", "SELECT, DELETE"), table("dc24h_audit_events", "SELECT, INSERT"),
-        table("stage4_emails", "SELECT"),
+        table("dc24h_bans", "SELECT, INSERT, UPDATE"),
+        table("stage4_emails", "SELECT"), table("stage4_sessions", "SELECT"),
       ], socketPath);
       phase = "private runtime configuration";
       const apiToken = join(authDir, "api.token");

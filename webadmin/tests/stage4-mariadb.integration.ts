@@ -115,6 +115,47 @@ test("disposable C++/MariaDB authorization and mock SMTP through the gateway", a
     assert.equal(await count("SELECT COUNT(*) n FROM stage4_emails WHERE verified_at IS NOT NULL"), 1);
     assert.equal((await owner.request("login/verify", { code: initialCode })).status, 403);
 
+    const administrative = (operation: string, values: object = {}, useCsrf = true) =>
+      owner.request("admin", { operation, ...values }, useCsrf);
+    assert.equal((await administrative("accounts.list", { after: "0" }, false)).status, 403);
+    assert.equal((await administrative("accounts.list", { after: "0", actor_id: "1" })).status, 400);
+    assert.equal((await administrative("hub.restart")).status, 400);
+    assert.equal((await administrative("management")).status, 200);
+    assert.equal((await administrative("admin")).status, 200);
+    assert.equal((await administrative("accounts.staff", { after: "0" })).status, 200);
+    assert.equal((await administrative("accounts.list", { after: "0" })).status, 200);
+    const created = await administrative("accounts.create", {
+      proof: adminPassword, name: "ManagedFixture", password: "Managed fixture password 42!",
+    });
+    assert.equal(created.status, 200);
+    const createdAccount = (created.json.data as { account: { id: string; revision: string; status: string } }).account;
+    assert.equal(createdAccount.status, "disabled");
+    const target = { id: createdAccount.id, revision: createdAccount.revision, proof: adminPassword };
+    assert.equal((await administrative("accounts.detail", { id: target.id })).status, 200);
+    const activated = await administrative("accounts.activate", target);
+    assert.equal(activated.status, 200);
+    assert.equal((await administrative("accounts.disable", target)).status, 409);
+    const changed = await administrative("accounts.role", {
+      ...target, revision: (activated.json.data as { account: typeof createdAccount }).account.revision,
+      role: "moderator",
+    });
+    assert.equal(changed.status, 200);
+    const revision = (changed.json.data as { account: typeof createdAccount }).account.revision;
+    assert.equal((await administrative("accounts.reset", { ...target, revision,
+      password: "Reset fixture password 37!" })).status, 200);
+
+    assert.equal((await administrative("bans.list", { after: "0", state: "all" })).status, 200);
+    const ban = await administrative("bans.create", { proof: adminPassword, kind: "ip",
+      subject: "192.0.2.100", reason: "A disposable fixture ban", expiry: "permanent" });
+    assert.equal(ban.status, 200);
+    const banTarget = (ban.json.data as { ban: { id: string; revision: string } }).ban;
+    assert.equal((await administrative("bans.revoke", { id: banTarget.id, revision: banTarget.revision, proof: adminPassword })).status, 200);
+    const audit = await administrative("audit.list", { proof: adminPassword, after: "0" });
+    assert.equal(audit.status, 200);
+    const events = (audit.json.data as { events: { action: string }[] }).events;
+    for (const action of ["accounts.create", "accounts.activate", "accounts.role", "accounts.reset", "bans.create", "bans.revoke"])
+      assert(events.some(event => event.action === action));
+
     const second = browser("192.0.2.11");
     assert.equal((await second.send("login/send", login)).status, 200);
     time += 300_001;
@@ -156,6 +197,8 @@ test("disposable C++/MariaDB authorization and mock SMTP through the gateway", a
     assert.equal((await user.send("login/send", userLogin)).status, 200);
     assert.equal((await user.request("login/verify", { code: messages.at(-1)!.code })).json.role, "registered");
     assert.equal((await user.request("summary")).status, 403);
+    assert.equal((await user.request("admin", { operation: "accounts.list", after: "0" })).status, 403);
+    assert.equal((await user.request("hub/status")).status, 403);
     await root.execute("UPDATE dc24h_accounts SET revision=revision+1,status='disabled' WHERE name=?", [signup.username]);
     assert.equal((await user.request("session")).status, 401);
 

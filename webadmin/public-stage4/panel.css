@@ -21,3 +21,14 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #101827; paddi
 .api-users { padding-left: 1.25rem; max-height: 250px; overflow: auto; overflow-wrap: anywhere; }
 .api-users li { padding: .25rem; }
 .api-note { color: #a6b6c9; }
+.api-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-block: 0.65rem; }
+.api-actions button[aria-pressed="true"] { outline: 2px solid currentColor; }
+.api-table { overflow-x: auto; }
+.api-table table { border-collapse: collapse; width: 100%; margin-block: 0.5rem; }
+.api-table th, .api-table td { padding: 0.4rem; text-align: left; border-bottom: 1px solid #334155; }
+.api-panel fieldset { display: grid; gap: 0.5rem; min-width: 0; }
+.api-panel details, .api-panel nav { margin-block: 0.75rem; }
+.api-panel summary { cursor: pointer; }
+.api-confirm { display: flex; align-items: center; gap: 0.5rem; }
+.api-confirm input { width: auto; }
+.api-panel select { max-width: 100%; }

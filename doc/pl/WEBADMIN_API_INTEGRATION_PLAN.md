@@ -1,50 +1,31 @@
-# WebAdmin — plan bezpiecznej integracji API
+# Bezpieczna integracja API WebAdmin
 
-Status: **DRAFT / CZĘŚCIOWO ZAIMPLEMENTOWANE (odczyt)**. Punkt wyjścia: chroniony `main` po PR #29 Stage IV (`bbf240d4f5303209c52614b62a877d4c915ad9aa`). Dokument ustala zakres gałęzi `feature/webadmin-secure-api-integration`.
+Status **zaimplementowano w roboczym PR #30 i zweryfikowano lokalnie**. Gałąź łączy bramę OTP Etapu IV z usługą kont i opcjonalnym połączeniem odczytowym do działającego huba. Zmiana gałęzi chronionej i wdrożenie wymagają osobnego przeglądu.
 
-## Pierwszy etap implementacji — odczyt po zalogowaniu
+## Trasy i uprawnienia
 
-Na gałęzi funkcjonalnej dodano dokładną trasę `GET /stage4/v1/identity-summary`. Node wywołuje nowy endpoint C++ `GET /api/v1/stage4/identity-summary` przez prywatny most Unix z kontrolą UID i ścisłą listą tras. Usługa kont C++ zwraca wyłącznie zagregowane liczby kont i zweryfikowanych e-maili z MariaDB, a adapter Node waliduje i ogranicza DTO. Brama wymaga aktywnej sesji po haśle i OTP, sprawdza rzeczywistą rolę i rewizję konta także po asynchronicznym odczycie, limituje liczbę żądań i zezwala wyłącznie roli Owner/Administrator. React wyświetla liczniki kont w dotychczasowej stronie logowania; przeglądarka nie otrzymuje tokenu usługi ani grantu C++.
-
-**Granica źródła danych:** usługa C++ kont Stage IV nie jest działającym hubem ADC/ADCS. Jej `/api/v1/status` opisuje syntetyczny stan procesu kont, a `/api/v1/users` nie jest tam dostępne. Dlatego w tej zmianie **nie** udostępniamy statystyk huba ani listy połączonych użytkowników. Wymagają osobnego, ocenionego pod kątem bezpieczeństwa, prywatnego mostu wyłącznie do odczytu. Dotychczasowe prywatne React `/admin-api` pozostaje prywatne.
-
-Operacje zapisu kont, banów i audytu, przekazywanie grantów administratora, zapis konfiguracji i sterowanie usługą **nie są jeszcze zaimplementowane w publicznej bramie**. Żadna zmiana na serwerze produkcyjnym nie została autoryzowana.
-
-## Cel i granice bezpieczeństwa
-
-Połączyć istniejące możliwości administracyjnego API C++ z uwierzytelnionym WebAdmin za pomocą jawnych, typowanych adapterów. Uwzględnić wszystkie obszary WebAdmin, dla których istnieje obsługiwany kontrakt backendu; operacje niezaimplementowane pozostać mają oznaczone jako niedostępne. **Nie** publikować automatycznie całego prywatnego API. Nie udostępniać `/remote.html`, lokalnego `/admin-api`, kontrolera serwisowego, MariaDB, gniazd Unix, tokenów usługowych ani ogólnego proxy.
-
-Pozostaje model Stage IV: hasło i obowiązkowy ośmiocyfrowy OTP z e-maila, autoryzacja według rzeczywistej roli C++, sesje, CSRF, ograniczenia prób i audyt. Publiczne passkeys/WebAuthn nie należą do zatwierdzonego zakresu. Operacje modyfikujące konfigurację lub działanie usług wymagają osobnej decyzji OWNER.
-
-## Początkowa mapa funkcji (kontrakty i metody do potwierdzenia)
-
-| Obszar WebAdmin | Istniejące API / funkcje | Granica dostępu |
+| Operacja WebAdmin | Źródło | Zasady dostępu |
 | --- | --- | --- |
-| Podsumowanie kont Stage IV | Nowe `/api/v1/stage4/identity-summary` w usłudze kont | Zaimplementowany w gałęzi odczyt sumarycznych liczników; CI do potwierdzenia |
-| Dashboard i zdrowie | `/api/v1/health`, `/ready`, `/status` | Hub wymaga osobnego mostu; nie utożsamiać statusu procesu kont z hubem |
-| Użytkownicy i sesje | `/api/v1/users`, konta | Odczyt użytkowników huba wymaga osobnego mostu oraz redakcji sesji/SID |
-| Konta i hasła | `/api/v1/accounts`, `/api/v1/admin`, konta Stage IV | Weryfikacja e-mail, indywidualne hasła i uprawnienia backendu |
-| Role i uprawnienia | `/api/v1/admin/access`, `/api/v1/management` | Ponowna weryfikacja uprawnień dla operacji |
-| Bany, moderacja | `/api/v1/bans`, reguły, kick/mute | Jawne trasy i audyt, bez nieobsługiwanych działań |
-| Chat, wyszukiwanie, transfery | Statystyki i monitoring | Ograniczone dane odczytu, jeśli wspierane |
-| Audyt i diagnostyka | `/api/v1/audit`, metryki | Wgląd tylko dla uprawnionych; bez sekretów |
-| Konfiguracja | `/api/v1/management/configuration`, `/write`, `/restore` | Prywatne domyślnie; zmiany wymagają OWNER GO |
-| Zarządzanie usługą | `/api/v1/management/authorize`, `/hub/*` | Prywatne domyślnie; brak ogólnego proxy |
+| Logowanie, rejestracja, sesja, wylogowanie, zmiana własnego hasła, unieważnianie sesji | Brama Etapu IV oraz dowód hasła w C++ przez `POST /api/v1/admin/access` | Hasło i OTP przez e-mail. Operacje zapisu używają właściwego tokena CSRF. |
+| `GET identity-summary` | Agregaty usługi kont z `GET /api/v1/stage4/identity-summary` | Owner lub Administrator. Odpowiedź zawiera liczniki bez nazw kont i adresów pocztowych. |
+| `GET hub/health`, `hub/ready`, `hub/status`, `hub/users` | Działający hub i cztery dokładne mapowania mostu do `GET /api/v1/{health,ready,status,users}` | Owner lub Administrator. Gotowość, telemetria, użytkownicy online, efektywna konfiguracja, role, reguły moderacji i liczniki czatu, wyszukiwania, transferów, rozłączeń i wyciszeń. Lista pomija identyfikatory sesji i SID. |
+| `POST admin` z `management` lub `admin` | Natywny katalog uprawnień i liczniki administracyjne | Owner lub Administrator z CSRF i aktualną sesją. |
+| `POST admin` z `accounts.list`, `accounts.staff`, `accounts.detail` | Katalog kont oraz filtr personelu w C++ | `accounts.manage`. Paginacja kursorem lub odczyt według identyfikatora. |
+| `POST admin` z `accounts.create`, `accounts.activate`, `accounts.disable`, `accounts.reset`, `accounts.role` | Natywny silnik kont i audyt transakcyjny | `accounts.manage`, przy rolach również `roles.manage`. Aktualne hasło, a przy zmianie istniejącego konta także oczekiwana rewizja. Natywne reguły chronią własne konto oraz równe i wyższe role. Tworzenie daje wyłączone konto bez rejestracji e-mail. |
+| `POST admin` z `bans.list`, `bans.create`, `bans.revoke` | Natywny katalog banów i audyt transakcyjny | `users.ban` przy odczycie. Zapis wymaga także `blocks.manage` i aktualnego hasła. Ban może być bezterminowy, czasowy lub do określonej daty. Cofnięcie wymaga oczekiwanej rewizji. Hub egzekwuje wpis, gdy jego baza i aktywna migawka zawierają ten rekord. |
+| `POST admin` z `audit.list` | Natywny, stronicowany audyt | `audit.read` i aktualne hasło. Odpowiedź zawiera identyfikatory, czasy, działania i wyniki. |
 
-To **rodziny tras**, nie potwierdzenie implementacji każdego wariantu. Należy ustalić dokładne `METHOD + PATH + schemat + uprawnienia + efekty uboczne` na podstawie kodu i testów. Zachować statusy `501/not_implemented`, gdzie występują.
+Trasy publiczne są względne wobec `/stage4/v1/`. Node sprawdza pola, CSRF i limity, wylicza skrót sesji z ciasteczka odczytanego po stronie serwera i ponownie sprawdza sesję po wywołaniu. C++ weryfikuje skrót, aktualną rewizję i zweryfikowane konto w MariaDB, po czym egzekwuje natywne uprawnienia i warunki transakcji. Przeglądarka przekazuje nazwaną operację. Ścieżkę wewnętrzną, konto wykonujące operację i dane uwierzytelniające usługi wyznacza serwer. Przy niepotwierdzonym wyniku zapisu odśwież rekord przed ponowną próbą.
 
-## Lista zadań
+## Odczyt danych działającego huba
 
-- [x] Dodać licznik kont w C++, adapter Node z limitem i weryfikacją roli, widok React oraz testy odmowy. To **nie** jest komplet wszystkich API.
-- [ ] Zinwentaryzować rzeczywiste endpointy C++ i adaptery WebAdmin oraz oznaczyć odczyt/zapis/brak implementacji.
-- [ ] Zdefiniować ścisłą listę tras i metod publicznych, wymagane role, bezpieczne DTO, limity i odmowę dostępu w razie błędu.
-- [ ] Wymagać uwierzytelnienia, aktywnej sesji, CSRF przy zapisach, aktualnej roli/stanu konta oraz cofnięcia uprawnień w backendzie.
-- [ ] Dodać jawne adaptery Node–C++ bez dynamicznego proxy, tokenu przeglądarkowego i bezpośredniego dostępu do bazy.
-- [ ] Podłączyć strony WebAdmin do typowanych adapterów wraz ze stanami odmowy i niedostępności oraz tłumaczeniami EN-US/PL.
-- [ ] Sprawdzić role, niedozwolone trasy, metody i nagłówki, Origin, CSRF, OTP, limity, sesje, revocation oraz audyt.
-- [ ] Przeprowadzić testy GitHub-hosted Ubuntu 22.04/24.04/26.04 na dokładnym SHA; testy VPS tylko po osobnej zgodzie OWNER.
-- [ ] Przeprowadzić przegląd bezpieczeństwa i uzyskać odrębne decyzje OWNER dla ryzykownych operacji oraz późniejszego scalenia.
+Cztery odczyty używają `/run/dc24h-stage3-api/hub.sock` i `/var/lib/dc24h-stage3/api.token`. W zatwierdzonym wdrożeniu skonfiguruj istniejące `[api]` huba z tymi ścieżkami. Jednostka tworzy katalog runtime `dc24h-stage3-api` w trybie `0700`. Oddzielny token należy do UID huba i ma tryb `0600`. Most sprawdza właściciela i prawa oraz odrzuca nagłówki grantów przy odczycie. Brak poprawnych plików oznacza niedostępną telemetrię przy działającym panelu kont.
 
-## Warunek akceptacji
+Binarne komponenty, brama, pliki React, most i konfiguracja Apache stanowią jedną wersję wdrożeniową. W zatwierdzonym oknie Etapu IV uruchom chroniony inicjalizator, aby nadać usłudze kont ograniczone uprawnienia tabel, potem sprawdź działanie przed udostępnieniem. Praca w gałęzi odbyła się bez zmian konfiguracji i działających usług VPS-a.
 
-Draft PR zawiera jedną nową publiczną trasę odczytową wyłącznie w kodzie gałęzi; nie aktywowano jej na VPS. Poprzednia akceptacja Stage IV nie jest zgodą na rozszerzenie produkcyjnej powierzchni publicznej. Bez nowego OWNER GO nie scalać, nie wdrażać i nie zmieniać DNS/firewalla ani decyzji RELEASE/PRODUCTION.
+## Narzędzia prywatne i akceptacja
+
+- Przegląd zapisanej konfiguracji, walidacja zmian, zapis i przywracanie pozostają w prywatnym interfejsie. Panel publiczny odczytuje efektywne ustawienia działającego huba.
+- Status kontrolera usługi, start, stop, restart, inicjalizacja i przeniesienie Ownera, wydawanie grantów C++ i surowe trasy administracyjne pozostają prywatne. Panel używa sond dostępności samego huba.
+- Akcje rozłączania i wyciszania działają przez autoryzowane polecenia klienta DC. Panel pokazuje reguły oraz liczniki. Kod huba nie udostępnia mutacji kick/mute przez HTTP.
+- PR #30 zawiera testy C++/MariaDB i testy mostu, TypeScript oraz Chromium. Testy lokalne wykonano na Ubuntu 24.04 z odizolowanymi danymi. CI i decyzje o wydaniu pozostają osobnymi etapami.

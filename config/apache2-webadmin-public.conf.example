@@ -48,15 +48,15 @@ Listen 7278
     # remote.html, /admin-api or the private development build.
     RewriteCond %{REQUEST_URI} !^/$
     RewriteCond %{REQUEST_URI} !^/(?:index\.html|panel\.(?:js|css)|panel-react\.js)$
-    RewriteCond %{REQUEST_URI} !^/stage4/v1/(?:challenge|(?:login|register)/(?:send|verify)|password/change|session|summary|identity-summary|logout|sessions/revoke)$
+    RewriteCond %{REQUEST_URI} !^/stage4/v1/(?:challenge|(?:login|register)/(?:send|verify)|password/change|session|summary|identity-summary|hub/(?:health|ready|status|users)|admin|logout|sessions/revoke)$
     RewriteRule ^ - [F,END]
     RewriteCond %{REQUEST_URI} ^/(?:index\.html|panel\.(?:js|css)|panel-react\.js|)$
     RewriteCond %{REQUEST_METHOD} !^GET$
     RewriteRule ^ - [F,END]
-    RewriteCond %{REQUEST_URI} ^/stage4/v1/(?:challenge|session|summary|identity-summary)$
+    RewriteCond %{REQUEST_URI} ^/stage4/v1/(?:challenge|session|summary|identity-summary|hub/(?:health|ready|status|users))$
     RewriteCond %{REQUEST_METHOD} !^GET$
     RewriteRule ^ - [F,END]
-    RewriteCond %{REQUEST_URI} ^/stage4/v1/(?:(?:login|register)/(?:send|verify)|password/change|logout|sessions/revoke)$
+    RewriteCond %{REQUEST_URI} ^/stage4/v1/(?:(?:login|register)/(?:send|verify)|password/change|admin|logout|sessions/revoke)$
     RewriteCond %{REQUEST_METHOD} !^POST$
     RewriteRule ^ - [F,END]
     RewriteCond %{HTTP:Origin} !^$
@@ -68,10 +68,10 @@ Listen 7278
     RewriteCond %{HTTP:Sec-Fetch-Site} !^$
     RewriteCond %{HTTP:Sec-Fetch-Site} !^(?:same-origin|none)$
     RewriteRule ^ - [F,END]
-    RewriteCond %{REQUEST_URI} ^/stage4/v1/(?:challenge|session|summary|identity-summary)$
+    RewriteCond %{REQUEST_URI} ^/stage4/v1/(?:challenge|session|summary|identity-summary|hub/(?:health|ready|status|users))$
     RewriteCond %{HTTP:Transfer-Encoding} !^$
     RewriteRule ^ - [F,END]
-    RewriteCond %{REQUEST_URI} ^/stage4/v1/(?:challenge|session|summary|identity-summary)$
+    RewriteCond %{REQUEST_URI} ^/stage4/v1/(?:challenge|session|summary|identity-summary|hub/(?:health|ready|status|users))$
     RewriteCond %{HTTP:Content-Length} !^(?:0)?$
     RewriteRule ^ - [F,END]
     RewriteCond %{REQUEST_METHOD} ^POST$
@@ -105,7 +105,7 @@ Listen 7278
     RequestHeader unset X-Forwarded-Port
     RequestHeader unset X-Forwarded-Prefix
     RequestHeader unset X-Forwarded-User
-    ProxyPassMatch "^(/stage4/v1/(?:challenge|(?:login|register)/(?:send|verify)|password/change|session|summary|identity-summary|logout|sessions/revoke))$" "http://127.0.0.1:4278$1"
+    ProxyPassMatch "^(/stage4/v1/(?:challenge|(?:login|register)/(?:send|verify)|password/change|session|summary|identity-summary|hub/(?:health|ready|status|users)|admin|logout|sessions/revoke))$" "http://127.0.0.1:4278$1"
 
     Header always set Cache-Control "no-store"
     Header always set X-Content-Type-Options "nosniff"
