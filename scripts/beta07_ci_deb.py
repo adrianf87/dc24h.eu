@@ -16,11 +16,11 @@ import subprocess
 
 
 LEGACY_PACKAGE = "dc24h-high-starter-ci-fixture"
-PACKAGE = "dc24h-twilight-ci-fixture"
-UNIT = "dc24h-twilight-ci-fixture.service"
+PACKAGE = "dc24h-ci-fixture"
+UNIT = "dc24h-ci-fixture.service"
 LEGACY_UNIT = "dc24h-high-starter-ci-fixture.service"
-BIN = f"usr/lib/{PACKAGE}/dc24h-twilight"
-ADMIN_BIN = f"usr/lib/{PACKAGE}/dc24h-twilight-account-admin"
+BIN = f"usr/lib/{PACKAGE}/dc24h"
+ADMIN_BIN = f"usr/lib/{PACKAGE}/dc24h-account-admin"
 UNIT_PATH = f"lib/systemd/system/{UNIT}"
 DOC_PATH = f"usr/share/doc/{PACKAGE}/ci-provenance"
 LEGACY_BIN = f"usr/lib/{LEGACY_PACKAGE}/dc24h"

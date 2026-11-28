@@ -88,7 +88,7 @@ jobs:
         id: ncdc_pin
         if: ${{ !cancelled() && steps.native_build.outcome == 'success' }}
         run: |
-          python3 tests/stage5_ncdc_keyprint_tests.py "$STAGE5_BUILD/dc24h-twilight" -v \
+          python3 tests/stage5_ncdc_keyprint_tests.py "$STAGE5_BUILD/dc24h" -v \
             >"$STAGE5_RAW/ncdc-pin.log" 2>&1
       - name: Measure bounded ADC and ADCS loopback endurance
         id: endurance
@@ -96,7 +96,7 @@ jobs:
         env:
           DC24H_VM_REPORT_DIR: ${{ runner.temp }}/stage5-report
         run: |
-          python3 tests/stage4_ubuntu_vm_probe_tests.py "$STAGE5_BUILD/dc24h-twilight" \
+          python3 tests/stage4_ubuntu_vm_probe_tests.py "$STAGE5_BUILD/dc24h" \
             >"$STAGE5_RAW/loopback-endurance.log" 2>&1
       - name: Run WebAdmin boundary regressions
         id: node

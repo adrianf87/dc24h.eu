@@ -32,11 +32,11 @@ int main(int argc,char* argv[]) {
     using namespace dc24h;
     auto language = i18n::Language::us;
     try {
-        if (argc == 2 && std::string_view(argv[1]) == "--version") { std::cout << "dc24h-twilight-owner " << version << '\n'; return 0; }
+        if (argc == 2 && std::string_view(argv[1]) == "--version") { std::cout << "dc24h-owner " << version << '\n'; return 0; }
         if (argc == 2 && std::string_view(argv[1]) == "--help") {
             std::cout << "Stop every serving hub and maintenance process first. No listeners or migrations.\n"
-                "dc24h-twilight-owner --config maintenance.ini --bootstrap NAME --password-file FILE --confirm-stopped\n"
-                "dc24h-twilight-owner --config maintenance.ini --transfer OWNER_ID --revision REV --to ADMIN_ID --to-revision REV --password-file FILE --target-password-file FILE --confirm-stopped\n"
+                "dc24h-owner --config maintenance.ini --bootstrap NAME --password-file FILE --confirm-stopped\n"
+                "dc24h-owner --config maintenance.ini --transfer OWNER_ID --revision REV --to ADMIN_ID --to-revision REV --password-file FILE --target-password-file FILE --confirm-stopped\n"
                 "Passwords must be in private same-UID regular files (0600), never command arguments.\n"; return 0;
         }
         std::map<std::string,std::string> options; bool confirmed = false;

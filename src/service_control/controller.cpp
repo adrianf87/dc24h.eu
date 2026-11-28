@@ -1,4 +1,4 @@
-// Local systemd controller. The only unit is dc24h-twilight.service; actions require
+// Local systemd controller. The only unit is dc24h.service; actions require
 // the dedicated maintenance process identity, never a browser-supplied token.
 #include "dc24h/version.hpp"
 #include <algorithm>
@@ -51,7 +51,7 @@ std::string query_systemd() {
         (void)::close(read_end.value);
         (void)::close(write_end.value);
         const char* const args[]={"systemctl","--system","--no-pager","show",
-            "--property=LoadState,ActiveState,SubState,Result,MainPID","dc24h-twilight.service",nullptr};
+            "--property=LoadState,ActiveState,SubState,Result,MainPID","dc24h.service",nullptr};
         const char* const env[]={"PATH=/usr/bin:/bin","LANG=C","SYSTEMD_COLORS=0",nullptr};
         ::execve("/usr/bin/systemctl",const_cast<char* const*>(args),const_cast<char* const*>(env));
         ::_exit(127);
@@ -114,7 +114,7 @@ std::string status_json() {
     const auto sub=field(output,"SubState");
     const auto result=field(output,"Result");
     if(load=="unknown"||active=="unknown")return "{\"schema\":1,\"available\":false,\"error\":\"invalid_systemd_response\"}\n";
-    return "{\"schema\":1,\"available\":true,\"unit\":\"dc24h-twilight.service\",\"load_state\":\""+load+
+    return "{\"schema\":1,\"available\":true,\"unit\":\"dc24h.service\",\"load_state\":\""+load+
         "\",\"active_state\":\""+active+"\",\"sub_state\":\""+sub+"\",\"result\":\""+result+"\"}\n";
 }
 
@@ -156,7 +156,7 @@ bool change_unit(Action action, bool& uncertain) {
         const int null_fd=::open("/dev/null",O_WRONLY|O_CLOEXEC);
         if(null_fd>=0){(void)::dup2(null_fd,STDOUT_FILENO);(void)::dup2(null_fd,STDERR_FILENO);(void)::close(null_fd);}
         const char* verb=action==Action::start?"start":action==Action::stop?"stop":"restart";
-        const char* const args[]={"systemctl","--system","--no-pager","--no-ask-password",verb,"dc24h-twilight.service",nullptr};
+        const char* const args[]={"systemctl","--system","--no-pager","--no-ask-password",verb,"dc24h.service",nullptr};
         const char* const env[]={"PATH=/usr/bin:/bin","LANG=C","SYSTEMD_COLORS=0",nullptr};
         ::execve("/usr/bin/systemctl",const_cast<char* const*>(args),const_cast<char* const*>(env));
         ::_exit(127);
@@ -286,10 +286,10 @@ int run(std::string_view pathname) {
 
 int main(int argc,char** argv) {
     if(argc==2&&std::string_view(argv[1])=="--version"){
-        std::cout<<"dc24h-twilight-service-controller "<<dc24h::version<<'\n';return 0;
+        std::cout<<"dc24h-service-controller "<<dc24h::version<<'\n';return 0;
     }
     if(argc!=3||std::string_view(argv[1])!="--socket"){
-        std::cerr<<"Usage: dc24h-twilight-service-controller --socket /run/dc24h-control/status.sock\n";return 2;
+        std::cerr<<"Usage: dc24h-service-controller --socket /run/dc24h-control/status.sock\n";return 2;
     }
     try { return run(argv[2]); }
     catch(const std::exception& error){std::cerr<<"Controller startup failed: "<<error.what()<<'\n';return 1;}

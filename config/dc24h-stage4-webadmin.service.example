@@ -2,8 +2,9 @@
 # the activation marker, private SQL credential and dedicated SMTP settings.
 [Unit]
 Description=dc24h.eu public WebAdmin email-code gateway (loopback only)
-After=network-online.target dc24h-twilight-stage4-bridge.service
-Requires=dc24h-twilight-stage4-bridge.service
+Conflicts=dc24h-twilight-stage4-webadmin.service
+After=dc24h-twilight-stage4-webadmin.service network-online.target dc24h-stage4-bridge.service
+Requires=dc24h-stage4-bridge.service
 Wants=network-online.target
 StartLimitIntervalSec=60
 StartLimitBurst=5

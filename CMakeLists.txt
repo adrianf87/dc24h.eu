@@ -279,7 +279,6 @@ target_link_libraries(dc24h_core PUBLIC Threads::Threads dc24h_network dc24h_log
 target_compile_definitions(dc24h_core PRIVATE _POSIX_C_SOURCE=200809L)
 
 add_executable(dc24h src/main.cpp)
-set_target_properties(dc24h PROPERTIES OUTPUT_NAME dc24h-twilight)
 add_library(dc24h_bans src/bans/repository.cpp)
 target_compile_features(dc24h_bans PUBLIC cxx_std_20)
 set_target_properties(dc24h_bans PROPERTIES CXX_EXTENSIONS OFF)
@@ -298,18 +297,15 @@ target_include_directories(dc24h_account_api PUBLIC include)
 target_link_libraries(dc24h_account_api PUBLIC dc24h_api dc24h_admin dc24h_configuration)
 target_compile_options(dc24h_account_api PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 add_executable(dc24h-owner src/owner_admin.cpp)
-set_target_properties(dc24h-owner PROPERTIES OUTPUT_NAME dc24h-twilight-owner)
 target_include_directories(dc24h-owner PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 target_link_libraries(dc24h-owner PRIVATE dc24h_admin dc24h_configuration dc24h_security)
 target_compile_options(dc24h-owner PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 add_executable(dc24h-account-admin src/account_admin.cpp)
-set_target_properties(dc24h-account-admin PROPERTIES OUTPUT_NAME dc24h-twilight-account-admin)
 target_include_directories(dc24h-account-admin PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 target_link_libraries(dc24h-account-admin PRIVATE dc24h_account_api dc24h_configuration dc24h_core)
 target_compile_options(dc24h-account-admin PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 set_target_properties(dc24h_account_api dc24h-account-admin PROPERTIES CXX_EXTENSIONS OFF)
 add_executable(dc24h-service-controller src/service_control/controller.cpp)
-set_target_properties(dc24h-service-controller PROPERTIES OUTPUT_NAME dc24h-twilight-service-controller)
 target_include_directories(dc24h-service-controller PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 target_compile_features(dc24h-service-controller PRIVATE cxx_std_20)
 set_target_properties(dc24h-service-controller PROPERTIES CXX_EXTENSIONS OFF)
@@ -323,7 +319,7 @@ endforeach()
 
 include(GNUInstallDirs)
 install(TARGETS dc24h dc24h-account-admin dc24h-owner dc24h-service-controller RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-install(FILES config/dc24h.ini.example config/adc-accounts.ini.example config/apache2-webadmin-https.conf.example config/apache2-webadmin-https-proxy.conf.example config/apache2-webadmin-remote.conf.example config/dc24h-twilight-remote-gateway.service.example config/dc24h-twilight.service.example config/dc24h.sysusers.example config/dc24h-twilight-control.service.example config/dc24h-control.sysusers.example config/49-dc24h-control.rules.example DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/dc24h)
+install(FILES config/dc24h.ini.example config/adc-accounts.ini.example config/apache2-webadmin-https.conf.example config/apache2-webadmin-https-proxy.conf.example config/apache2-webadmin-remote.conf.example config/dc24h-remote-gateway.service.example config/dc24h.service.example config/dc24h.sysusers.example config/dc24h-control.service.example config/dc24h-control.sysusers.example config/49-dc24h-control.rules.example DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/dc24h)
 
 install(FILES ${DC24H_MIGRATION_FILES} DESTINATION ${CMAKE_INSTALL_DATADIR}/dc24h/migrations)
 
@@ -1315,7 +1311,7 @@ if(BUILD_TESTING)
         add_test(NAME systemd.sandbox COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/systemd_sandbox_tests.py"
             "$<TARGET_FILE:dc24h>"
-            "${CMAKE_CURRENT_SOURCE_DIR}/config/dc24h-twilight.service.example"
+            "${CMAKE_CURRENT_SOURCE_DIR}/config/dc24h.service.example"
             "${CMAKE_CURRENT_SOURCE_DIR}/config/dc24h.sysusers.example")
         set_tests_properties(systemd.sandbox PROPERTIES TIMEOUT 60)
     elseif(DC24H_REQUIRE_INTEGRATION_TESTS)

@@ -79,7 +79,7 @@ inline constexpr std::array<std::string_view, 189> messages{{
     "Limit zasobów TCP epoll; ponowienie za sekundę",
     "Błąd nasłuchu TCP",
     "Nieprawidłowe argumenty: ",
-    ". Użyj dc24h-twilight --language pl --help.\n",
+    ". Użyj dc24h --language pl --help.\n",
     "Nieznany język (użyj us lub pl)",
     "Nieznana opcja",
     "Brak wartości opcji",
@@ -200,7 +200,7 @@ inline constexpr std::array<std::string_view, 189> messages{{
     "Nieprawidłowe limity użytkowników/sesji",
     "Osiągnięto limit sesji użytkowników; nadmiarowy klient odrzucony",
 }};
-inline constexpr std::string_view help = R"HELP(Użycie: dc24h-twilight [--config PLIK] [--check-config | --check-database | --database-status | --migrate-database | --backup-database PLIK | --restore-database PLIK]
+inline constexpr std::string_view help = R"HELP(Użycie: dc24h [--config PLIK] [--check-config | --check-database | --database-status | --migrate-database | --backup-database PLIK | --restore-database PLIK]
               [--listen IPv4:port | [IPv6]:port | none] ...
               [--adcs-listen IPv4:port | [IPv6]:port | none] ...
               [--tls-cert ŁAŃCUCH.pem --tls-key KLUCZ.pem]
@@ -210,7 +210,7 @@ inline constexpr std::string_view help = R"HELP(Użycie: dc24h-twilight [--confi
              [--max-per-ip N] [--accepts-per-minute N]
              [--frames-per-second N] [--max-invalid-frames N]
              [--tls-handshake-timeout SECONDS] [--partial-frame-timeout SECONDS]
-        dc24h-twilight [--language us|pl] --help | --version
+        dc24h [--language us|pl] --help | --version
 Kolejność: ustawienia domyślne, opcjonalny plik INI, nadpisania z CLI.
 Ścieżki INI są względne do katalogu pliku; ścieżki CLI do katalogu roboczego.
 Pierwszy jawny nasłuch usuwa domyślny TCP; listy CLI zastępują dany transport.

@@ -23,7 +23,7 @@ STABLE_PATHS = (
     "/opt/dc24h/webadmin", "/usr/local/share/dc24h/webadmin",
     "/usr/local/bin/dc24h", "/usr/local/bin/dc24h-twilight",
 )
-MARKER = "/etc/dc24h/twilight-unit-migration-approved"
+MARKER = "/etc/dc24h/dc24h-unit-migration-approved"
 REQUIRED_TOOLS = ("git", "cmake", "c++", "systemctl", "systemd-run", "dpkg", "dpkg-deb")
 OPTIONAL_TOOLS = ("node", "npm", "ncdc", "openssl", "ip", "ss")
 
@@ -108,19 +108,20 @@ def network_summary():
 
 def template_contract(source):
     try:
-        unit = (source / "config/dc24h-twilight.service.example").read_text(encoding="utf-8")
+        unit = (source / "config/dc24h.service.example").read_text(encoding="utf-8")
         webadmin = (source / "webadmin/src/lib/status.ts").read_text(encoding="utf-8")
         cmake = (source / "CMakeLists.txt").read_text(encoding="utf-8")
     except (OSError, UnicodeError):
         return False
     required = (
-        "Conflicts=dc24h.service", "AssertPathExists=" + MARKER,
+        "Conflicts=dc24h-twilight.service", "After=dc24h-twilight.service network-online.target", "AssertPathExists=" + MARKER,
         "User=dc24h", "Group=dc24h", "StateDirectory=dc24h",
-        "ExecStart=/usr/local/bin/dc24h-twilight --config /etc/dc24h/dc24h.ini",
+        "ExecStart=/usr/local/bin/dc24h --config /etc/dc24h/dc24h.ini",
     )
     return (all(item in unit.splitlines() for item in required)
             and 'server.product_id === PRODUCT_ID && server.name === PRODUCT_NAME' in webadmin
-            and "OUTPUT_NAME dc24h-twilight" in cmake)
+            and "add_executable(dc24h src/main.cpp)" in cmake
+            and "OUTPUT_NAME dc24h-twilight" not in cmake)
 
 
 def assess(report):
@@ -145,6 +146,8 @@ def assess(report):
     if not report["guards"].get("operator_marker_status_known", False):
         block("MARKER_STATUS_UNKNOWN")
     for name, unit in report["services"].items():
+        if name == "dc24h.service" and unit["load"] != "not-found":
+            block("TARGET_UNIT_NAME_IN_USE:" + name)
         if unit["active"] == "active":
             block("LIVE_HUB_SERVICE_PRESENT:" + name)
         elif unit["active"] == "unknown":

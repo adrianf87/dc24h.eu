@@ -85,7 +85,7 @@ jobs:
           # Playwright's unscoped apt update (third-party feeds can return 403).
           npx playwright install chromium
           npm run test:e2e
-          npm run test:integration -- "$RUNNER_TEMP/dc24h-build/dc24h-twilight"
+          npm run test:integration -- "$RUNNER_TEMP/dc24h-build/dc24h"
       - name: Run Python source and Stage IV policy tests
         run: |
           python3 tests/project_checks.py

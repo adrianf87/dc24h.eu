@@ -1,10 +1,10 @@
 // Example only. Review before installing as /etc/polkit-1/rules.d/49-dc24h-control.rules.
-// Allow this dedicated controller user to manage only the fixed dc24h-twilight.service;
+// Allow this dedicated controller user to manage only the fixed dc24h.service;
 // no unit-file editing, reloads, transient services or arbitrary commands.
 polkit.addRule(function(action, subject) {
     if (action.id === "org.freedesktop.systemd1.manage-units" &&
         subject.user === "dc24h-control" &&
-        action.lookup("unit") === "dc24h-twilight.service" &&
+        action.lookup("unit") === "dc24h.service" &&
         (action.lookup("verb") === "start" ||
          action.lookup("verb") === "stop" ||
          action.lookup("verb") === "restart")) {

@@ -40,7 +40,7 @@ REQUIRED = {
     "Group": "dc24h",
     "UMask": "0077",
     "WorkingDirectory": "/var/lib/dc24h",
-    "ExecStart": "/usr/local/bin/dc24h-twilight --config /etc/dc24h/dc24h.ini",
+    "ExecStart": "/usr/local/bin/dc24h --config /etc/dc24h/dc24h.ini",
     "Restart": "on-failure",
     "RestartSec": "3",
     "TimeoutStopSec": "20",
@@ -120,8 +120,9 @@ def problems(text):
             errors.append(f"{key}={service.get(key)!r}")
     if unit.get("StartLimitIntervalSec") != "60" or unit.get("StartLimitBurst") != "5":
         errors.append("start limit")
-    if (unit.get("Conflicts") != "dc24h.service" or
-            unit.get("AssertPathExists") != "/etc/dc24h/twilight-unit-migration-approved"):
+    if (unit.get("Conflicts") != "dc24h-twilight.service" or
+            unit.get("After") != "dc24h-twilight.service network-online.target" or
+            unit.get("AssertPathExists") != "/etc/dc24h/dc24h-unit-migration-approved"):
         errors.append("old/new systemd migration guard")
     if parsed.get("Install", {}).get("WantedBy") != "multi-user.target":
         errors.append("install target")
@@ -175,9 +176,9 @@ class SystemdSandboxTests(unittest.TestCase):
         weakened = self.text.replace("User=dc24h", "User=root", 1)
         self.assertTrue(problems(weakened))
         self.assertIn("old/new systemd migration guard",
-                      problems(self.text.replace("Conflicts=dc24h.service", "", 1)))
+                      problems(self.text.replace("Conflicts=dc24h-twilight.service", "", 1)))
         self.assertIn("old/new systemd migration guard",
-                      problems(self.text.replace("AssertPathExists=/etc/dc24h/twilight-unit-migration-approved", "", 1)))
+                      problems(self.text.replace("AssertPathExists=/etc/dc24h/dc24h-unit-migration-approved", "", 1)))
         self.assertFalse(any(line.startswith("dc24h:") for line in Path("/etc/passwd").read_text(encoding="utf-8").splitlines()))
         self.assertFalse(Path("/etc/systemd/system/dc24h.service").exists())
         self.assertFalse(Path("/etc/systemd/system/dc24h-twilight.service").exists())
@@ -185,10 +186,10 @@ class SystemdSandboxTests(unittest.TestCase):
     def test_verify_and_private_sysusers(self):
         with tempfile.TemporaryDirectory(prefix="dc24h-systemd-") as folder:
             root = Path(folder)
-            unit = root / "dc24h-twilight.service"
+            unit = root / "dc24h.service"
             command = self.parsed["Service"]["ExecStart"].split(" ", 1)[1]
             unit.write_text(self.text.replace(
-                "ExecStart=/usr/local/bin/dc24h-twilight ", f"ExecStart={BINARY} ", 1), encoding="utf-8")
+                "ExecStart=/usr/local/bin/dc24h ", f"ExecStart={BINARY} ", 1), encoding="utf-8")
             self.assertIn(command, unit.read_text(encoding="utf-8"))
             # System-mode verification reads paths that older Ubuntu
             # releases restrict to root. The verifier never starts the unit.

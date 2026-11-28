@@ -130,7 +130,7 @@ class PublicStageIVBoundaryTests(unittest.TestCase):
         self.assertIn("DC24H_STAGE4_PRIVATE_AUTH_ACK", main)
 
     def test_disabled_stage4_unit_has_no_baked_activation_or_public_node_listener(self):
-        unit = (ROOT / "config/dc24h-twilight-stage4-webadmin.service.example").read_text(
+        unit = (ROOT / "config/dc24h-stage4-webadmin.service.example").read_text(
             encoding="utf-8")
         for required in ("User=dc24h-webadmin", "EnvironmentFile=/etc/dc24h/stage4-activation.env",
                          "StateDirectoryMode=0700", "NoNewPrivileges=true", "ProtectSystem=strict"):
@@ -145,7 +145,7 @@ class PublicStageIVBoundaryTests(unittest.TestCase):
         bridge = (ROOT / "scripts/stage4_webadmin_bridge.py").read_text(encoding="utf-8")
         gateway = (ROOT / "webadmin/server/public-main.ts").read_text(encoding="utf-8")
         adapter = (ROOT / "webadmin/server/public-bridge-credentials.ts").read_text(encoding="utf-8")
-        unit = (ROOT / "config/dc24h-twilight-stage4-bridge.service.example").read_text(encoding="utf-8")
+        unit = (ROOT / "config/dc24h-stage4-bridge.service.example").read_text(encoding="utf-8")
         self.assertIn("socket.SO_PEERCRED", bridge)
         self.assertIn("ROUTES =", bridge)
         self.assertIn("User=dc24h-stage3", unit)

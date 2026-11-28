@@ -36,7 +36,7 @@ def offline(suite, build, private, parallel, *, local=False):
                 "-DBUILD_TESTING=ON", "-DDC24H_REQUIRE_INTEGRATION_TESTS=ON", timeout=100)
     with suite.case("cmake.build"):
         execute("cmake", "--build", str(build), "--parallel", str(parallel), timeout=5400)
-    binary = build / "dc24h-twilight"
+    binary = build / "dc24h"
     with suite.case("binary.identity") as case:
         sha256 = digest(binary)
         version = command_version(str(binary), "--version")
@@ -52,7 +52,7 @@ def offline(suite, build, private, parallel, *, local=False):
                 "run_attempt": suite.context["run_attempt"],
             }) + "\n")
             from shutil import copyfile
-            copyfile(binary, binary_dir / "dc24h-twilight")
+            copyfile(binary, binary_dir / "dc24h")
 
     with suite.case("ctest.inventory") as case:
         listed = json.loads(execute("ctest", "--test-dir", str(build), "--show-only=json-v1",
@@ -104,11 +104,11 @@ def sandbox(suite, sudo_result):
             raise Blocked("Ubuntu sudo/systemd fixture failed or was not run")
     with suite.case("systemd.verify"):
         with tempfile.TemporaryDirectory(prefix="stage3-unit-") as work:
-            unit = Path(work) / "dc24h-twilight.service"
-            text = Path("config/dc24h-twilight.service.example").read_text()
-            require(text.count("ExecStart=/usr/local/bin/dc24h-twilight ") == 1,
+            unit = Path(work) / "dc24h.service"
+            text = Path("config/dc24h.service.example").read_text()
+            require(text.count("ExecStart=/usr/local/bin/dc24h ") == 1,
                     "Service example ExecStart was unexpected")
-            unit.write_text(text.replace("ExecStart=/usr/local/bin/dc24h-twilight ", "ExecStart=/bin/true ", 1))
+            unit.write_text(text.replace("ExecStart=/usr/local/bin/dc24h ", "ExecStart=/bin/true ", 1))
             command = ["systemd-analyze", "--man=no", "--generators=no", "verify", str(unit)]
             if suite.image != "local":
                 if os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted":
@@ -122,7 +122,7 @@ def sandbox(suite, sudo_result):
 
 
 def verified_binary(suite, directory):
-    binary = directory / "dc24h-twilight"
+    binary = directory / "dc24h"
     manifest = json.loads((directory / "binary.json").read_text())
     require(manifest["source_sha"] == suite.source_sha and manifest["image"] == suite.image
             and manifest["run_id"] == suite.context["run_id"]
@@ -282,7 +282,7 @@ def main():
     job.add_argument("--output", type=Path, required=True)
     job.add_argument("--build", type=Path, default=Path("build/stage3"))
     job.add_argument("--parallel", type=int, default=2)
-    job.add_argument("--binary", type=Path, default=Path("build/stage3/dc24h-twilight"))
+    job.add_argument("--binary", type=Path, default=Path("build/stage3/dc24h"))
     job.add_argument("--sudo-result", default="unavailable")
     job.set_defaults(action=run_group)
     gate = commands.add_parser("report")

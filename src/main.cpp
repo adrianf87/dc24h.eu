@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
     } catch (const std::exception& error) {
         std::cerr << dc24h::i18n::translate("Invalid arguments: ", language)
                   << dc24h::i18n::translate(error.what(), language)
-                  << dc24h::i18n::translate(". Use dc24h-twilight --help.\n", language);
+                  << dc24h::i18n::translate(". Use dc24h --help.\n", language);
         return 2;
     }
 

@@ -55,7 +55,7 @@ class ControllerProcessTests(unittest.TestCase):
                 response = request(path)
                 self.assertEqual(response["schema"], 1)
                 if response["available"]:
-                    self.assertEqual(response["unit"], "dc24h-twilight.service")
+                    self.assertEqual(response["unit"], "dc24h.service")
                     self.assertIn(response["active_state"],
                                   ("active", "inactive", "failed", "activating", "deactivating", "reloading"))
                 else:
@@ -128,7 +128,7 @@ class ControllerProcessTests(unittest.TestCase):
     def test_version_and_invalid_arguments(self):
         version = subprocess.run([str(CONTROLLER), "--version"],
                                  capture_output=True, text=True, timeout=5)
-        self.assertEqual(version.stdout.strip(), "dc24h-twilight-service-controller beta-0.9.20")
+        self.assertEqual(version.stdout.strip(), "dc24h-service-controller beta-0.9.20")
         self.assertEqual(version.returncode, 0)
         self.assertNotEqual(subprocess.run([str(CONTROLLER), "--unit", "sshd.service"],
                                            capture_output=True, timeout=5).returncode, 0)

@@ -51,7 +51,7 @@ class StageOneGate(unittest.TestCase):
         self.assertIn('new Set(["challenge", "login", "session", "summary", "logout", "passkey/devices", ...passkeyPost])', gateway)
         self.assertIn('sessions.clear(); challenges.clear();', gateway)
         self.assertIn('options.strictAudit && (!mfaLogged || !loginLogged)', gateway)
-        service = read("config/dc24h-twilight-remote-gateway.service.example")
+        service = read("config/dc24h-remote-gateway.service.example")
         self.assertIn("DC24H_REMOTE_AUDIT_FILE", service)
         self.assertNotIn("0.0.0.0:8443", read("config/apache2-webadmin-remote.conf.example"))
 

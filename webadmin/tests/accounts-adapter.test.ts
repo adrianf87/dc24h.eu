@@ -35,7 +35,7 @@ test("account adapter requires same-origin forms and redacts service credentials
    res.setHeader("Content-Type","application/json");res.end(JSON.stringify(result));return;
   }
   if(req.url==="/api/v1/management/hub/status"){
-   res.setHeader("Content-Type","application/json");res.end(JSON.stringify({schema:1,available:true,unit:"dc24h-twilight.service",load_state:"loaded",active_state:"active",sub_state:"running",result:"success",token}));return;
+   res.setHeader("Content-Type","application/json");res.end(JSON.stringify({schema:1,available:true,unit:"dc24h.service",load_state:"loaded",active_state:"active",sub_state:"running",result:"success",token}));return;
   }
   if(req.url==="/api/v1/management/hub/stop"){
    res.setHeader("Content-Type","application/json");res.end(JSON.stringify({operation:"stop",outcome:"succeeded",active_state:"inactive",token}));return;

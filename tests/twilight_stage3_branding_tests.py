@@ -20,12 +20,12 @@ class TwilightStageThreeBrandingTests(unittest.TestCase):
         for language in ("us", "pl"):
             help_text = source(f"languages/{language}/messages.hpp")
             self.assertIn("dc24h.eu", help_text)
-            self.assertIn("dc24h-twilight [--language us|pl] --help | --version", help_text)
+            self.assertIn("dc24h [--language us|pl] --help | --version", help_text)
 
         welcome = "Welcome to dc24h.eu. Guest access is enabled."
         self.assertIn(welcome, source("include/dc24h/chat/settings.hpp"))
         self.assertIn(f"welcome_message = {welcome}", source("config/dc24h.ini.example"))
-        for name in ("dc24h-twilight", "dc24h-twilight-control", "dc24h-twilight-remote-gateway"):
+        for name in ("dc24h", "dc24h-control", "dc24h-remote-gateway"):
             unit = source(f"config/{name}.service.example")
             self.assertIn("Description=dc24h.eu", unit)
 
