@@ -36,7 +36,7 @@ ctest --test-dir build --output-on-failure
 
 Run as an unprivileged account. The process stays in the foreground and stops with Ctrl+C or SIGTERM. It does not daemonize, create a PID file, edit firewall rules or install/start a system service automatically. [System security](SYSTEM_SECURITY.md) ships a Type=simple example with an absolute ExecStart path, a locked user and journal capture of stderr. The build does not enable that unit.
 
-For ADCS configure readable certificate/key paths with the correct service-user permissions; see [ADCS_TLS.md](ADCS_TLS.md). The executable does not obtain or renew certificates. Apache2 is optional for static WebAdmin assets and for the local allowlisted reverse proxy. A public authenticated gateway remains separate work. MariaDB connections are optional and disabled by default. See [DATABASE.md](DATABASE.md). See [CONFIGURATION.md](CONFIGURATION.md) for port and language options.
+For ADCS, configure certificate and key paths readable by the service user. The hub can use the separately configured [TLS renewal service](TLS_AUTO_RENEWAL.md). Apache2 is optional for the local examples. The public Stage IV gateway runs separately with Apache2, Node.js, and MariaDB. Its approved Ubuntu endpoint uses port 7178, and the historical Debian endpoint uses port 7278. The hub's MariaDB connection is optional for local evaluation. [ADCS TLS](ADCS_TLS.md) · [Stage IV operations](STAGE_IV_DEDICATED_SERVICE.md) · [Database](DATABASE.md) · [Configuration](CONFIGURATION.md)
 
 For explicit file settings, copy the [example](../../config/dc24h.ini.example), adjust paths and run `./build/dc24h --config config/dc24h.ini --check-config` before normal startup with the same `--config`. Local INI files are ignored by Git.
 

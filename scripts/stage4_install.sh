@@ -1,12 +1,13 @@
 #!/bin/sh
 set -eu
 
-if [ "$(id -u)" -ne 0 ] || [ "$#" -ne 2 ]; then
-    echo "Usage: stage4_install.sh NODE24_DIRECTORY CMAKE_BUILD_DIRECTORY" >&2
+if [ "$(id -u)" -ne 0 ] || [ "$#" -ne 3 ]; then
+    echo "Usage: stage4_install.sh NODE24_DIRECTORY CMAKE_BUILD_DIRECTORY PUBLIC_PORT (7178 or 7278)" >&2
     exit 2
 fi
 node_dir=$(realpath "$1")
 build=$(realpath "$2")
+public_port=$3
 source=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 target=/opt/dc24h
 node="$node_dir/bin/node"
@@ -20,6 +21,25 @@ unit_directory=/etc/systemd/system
 refuse() {
     echo "$1" >&2
     exit 2
+}
+
+apache_site() {
+    "$node" --input-type=module - "$source" "$public_port" "$1" <<'JS'
+import { pathToFileURL } from "node:url";
+const [source, port, mode] = process.argv.slice(2);
+const { approvedStage4Origin, prepareStage4ApacheSite } =
+  await import(pathToFileURL(source + "/webadmin/server/stage4-apache-site.ts"));
+try {
+  const origin = approvedStage4Origin(port);
+  if (!origin) throw Error("Select Stage IV public port 7178 (Ubuntu) or 7278 (historical Debian)");
+  const state = prepareStage4ApacheSite(origin, source + "/config/apache2-webadmin-public.conf.example",
+    mode === "publish");
+  if (mode === "publish") console.log(`Stage IV: Apache site ${state} for ${origin}`);
+} catch (error) {
+  console.error("Stage IV: " + error.message);
+  process.exitCode = 1;
+}
+JS
 }
 
 check_units() {
@@ -59,6 +79,7 @@ check_units() {
     done
 }
 
+apache_site check
 check_units
 export PATH="$node_dir/bin:/usr/bin:/bin"
 (
@@ -69,6 +90,7 @@ export PATH="$node_dir/bin:/usr/bin:/bin"
     npm run build:stage4-init
 )
 check_units
+apache_site check
 install -d -m 0755 "$target/bin" "$target/node24/bin" "$target/scripts" \
     "$target/database/stage4" "$target/webadmin/dist" /usr/local/share/dc24h/stage4 /etc/sysusers.d
 install -m 0755 "$node" "$target/node24/bin/node"
@@ -115,8 +137,6 @@ else
 fi
 printf '%s\n' 'Stage IV: reloading systemd manager'
 systemctl daemon-reload
-install -m 0644 "$source/config/apache2-webadmin-public.conf.example" \
-    /etc/apache2/sites-available/dc24h-stage4-webadmin.conf
 
 # Debian's optional msmtp AppArmor profile needs this single service-owned path.
 profile=/etc/apparmor.d/usr.bin.msmtp
@@ -146,3 +166,7 @@ elif [ -f "$profile" ] && command -v apparmor_parser >/dev/null 2>&1; then
     fi
     printf '%s\n' 'Stage IV: msmtp AppArmor policy installed'
 fi
+
+# Leave an existing vhost untouched. Publish a fresh site only after the rest
+# of the installation succeeds, without enabling or reloading Apache.
+apache_site publish

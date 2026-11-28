@@ -3,6 +3,12 @@
 set -euo pipefail
 umask 077
 test "$(id -u)" = 0
+public_port=${1:-}
+case "$public_port" in
+    7178) other_port=7278 ;;
+    7278) other_port=7178 ;;
+    *) echo "Usage: stage4_test_database.sh PUBLIC_PORT (7178 or 7278)" >&2; exit 2 ;;
+esac
 repo=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 fixture_nonce=$(openssl rand -hex 8)
 scratch=/run/stage4-fixture-$fixture_nonce
@@ -30,7 +36,9 @@ fi
 bootstrap=/etc/dc24h/stage4-webadmin-bootstrap-ci.env
 state=/etc/dc24h/stage4-test
 link=/etc/dc24h/stage4-webadmin-bootstrap-ci-link.env
-[ ! -e "$bootstrap" ] && [ ! -e "$state" ] && [ ! -L "$link" ] && [ ! -e "$link" ] || {
+invalid=/etc/dc24h/stage4-webadmin-bootstrap-ci-invalid.env
+[ ! -e "$bootstrap" ] && [ ! -e "$state" ] && [ ! -L "$link" ] && [ ! -e "$link" ] &&
+[ ! -L "$invalid" ] && [ ! -e "$invalid" ] || {
     echo "Stage IV disposable configuration already exists" >&2; exit 1;
 }
 install -d -m 0755 "$scratch"
@@ -48,7 +56,7 @@ cleanup() {
         rm -f -- "$socket"
     fi
     rm -rf -- "$scratch" "$state"
-    rm -f -- "$bootstrap" "$link"
+    rm -f -- "$bootstrap" "$link" "$invalid"
 }
 trap cleanup EXIT
 socket=$scratch/mysqld.sock
@@ -86,6 +94,7 @@ sql() { mariadb --no-defaults -S "$socket" -u root "$@"; }
 start_database
 admin_password=$(openssl rand -hex 24)
 sed -e "s|^MARIADB_SOCKET=.*|MARIADB_SOCKET=$socket|" \
+    -e "s|^WEBADMIN_PUBLIC_PORT=.*|WEBADMIN_PUBLIC_PORT=$public_port|" \
     -e "s|^ADMIN_INITIAL_PASSWORD=$|ADMIN_INITIAL_PASSWORD=$admin_password|" \
     -e "s|^MARIADB_APP_PASSWORD=$|MARIADB_APP_PASSWORD=$(openssl rand -hex 24)|" \
     -e 's|^SMTP_HOST=$|SMTP_HOST=localhost|' \
@@ -103,6 +112,21 @@ if dc24h-stage4-init --config "$bootstrap" >/dev/null 2>&1; then
     echo "Bootstrap accepted unsafe permissions" >&2; exit 1
 fi
 chmod 0600 "$bootstrap"
+reject_bootstrap() {
+    sed "$1" "$bootstrap" > "$invalid"
+    if dc24h-stage4-init --config "$invalid" >"$scratch/bootstrap-refusal.log" 2>&1; then
+        echo "Bootstrap accepted an invalid or mismatched WebAdmin endpoint" >&2
+        exit 1
+    fi
+    grep -Fq "$2" "$scratch/bootstrap-refusal.log"
+    test ! -e "$state"
+}
+reject_bootstrap "s/^WEBADMIN_PUBLIC_PORT=.*/WEBADMIN_PUBLIC_PORT=$other_port/" \
+    'Stage IV Apache site does not match the selected HTTPS Origin'
+reject_bootstrap 's/^WEBADMIN_PUBLIC_PORT=.*/WEBADMIN_PUBLIC_PORT=443/' 'Invalid bootstrap field WEBADMIN_PUBLIC_PORT'
+reject_bootstrap 's/^WEBADMIN_HOST=.*/WEBADMIN_HOST=foreign.invalid/' 'Invalid bootstrap field WEBADMIN_HOST'
+reject_bootstrap 's/^WEBADMIN_HTTPS=.*/WEBADMIN_HTTPS=false/' 'Invalid bootstrap field WEBADMIN_HTTPS'
+echo 'PASS mismatched Apache Origin, unapproved port, host and protocol refused before provisioning'
 dc24h-stage4-init --config "$bootstrap"
 dc24h-stage4-init --config "$bootstrap"
 test "$(sql -N dc24h_stage4_test -e "SELECT COUNT(*) FROM dc24h_accounts WHERE role='owner'")" = 1
@@ -120,7 +144,8 @@ test -S "$scratch/api/auth.sock"
 printf '%s' "$admin_password" > "$scratch/api/fixture.password"
 (
     cd "$repo/webadmin"
-    STAGE4_FIXTURE="$scratch" node --import tsx --test tests/stage4-mariadb.integration.ts
+    STAGE4_FIXTURE="$scratch" STAGE4_FIXTURE_PORT="$public_port" \
+        node --import tsx --test tests/stage4-mariadb.integration.ts
 )
 mariadb-dump --no-defaults -S "$socket" -u root --single-transaction --routines --databases dc24h_stage4_test \
     > "$scratch/backup.sql"

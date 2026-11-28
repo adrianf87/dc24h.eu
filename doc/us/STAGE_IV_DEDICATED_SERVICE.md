@@ -2,9 +2,11 @@
 
 For a host running Twilight units or an existing installation under these names, follow the [migration and rollback guide](REBRAND_MIGRATION.md) first.
 
-The public endpoint is `https://server-747585786.dc24h.eu:7278`. Apache terminates TLS
-and forwards the approved API paths to Node at `127.0.0.1:4278`. The Stage III
-guest hub remains on ADCS TCP 1512. ADC TCP 1511 stays disabled.
+The approved Ubuntu endpoint is `https://server-747585786.dc24h.eu:7178`.
+The historical Debian endpoint is `https://server-747585786.dc24h.eu:7278`.
+Use the port of the approved installation throughout this procedure. Apache
+terminates TLS and forwards approved API paths to Node at `127.0.0.1:4278`.
+The Stage III guest hub remains on ADCS TCP 1512.
 
 Node runs as `dc24h-webadmin` and uses a dedicated local MariaDB account. The
 C++ account service uses the existing account and password-verifier tables in
@@ -15,10 +17,13 @@ WebAdmin UID with `SO_PEERCRED`. The C++ socket and token stay private to that
 UID. The browser panel supports account authentication, verified registration,
 session management, password changes and a staff-only account-service status.
 
-## Install the reviewed checkout on Debian 13
+## Install or upgrade the reviewed checkout
 
-From the provider console as root, with the Stage IV feature branch checked
-out and a verified Node 24 LTS distribution extracted at `/opt/node24-release`:
+Use a verified Node 24 LTS distribution at `/opt/node24-release`. For an
+upgrade, first take the matched backup described below, record the enabled
+sites and units, and stop the Stage IV entry point, bridge, and auth units in
+an approved maintenance window. Keep the existing Apache site in place.
+Perform the installation from the provider console as root.
 
 ```sh
 apt-get update
@@ -26,14 +31,21 @@ apt-get install cmake g++ libssl-dev libgcrypt20-dev libutf8proc-dev libmariadb-
   mariadb-server mariadb-client msmtp apache2 ca-certificates
 cmake -S . -B build-stage4 -DCMAKE_BUILD_TYPE=Release
 cmake --build build-stage4 --parallel "$(nproc)" --target dc24h dc24h-owner dc24h-account-admin
-./scripts/stage4_install.sh /opt/node24-release build-stage4
+public_port=7178 # Use 7278 for the approved historical Debian deployment.
+./scripts/stage4_install.sh /opt/node24-release build-stage4 "$public_port"
 ```
 
 Verify the Node tarball with Node.js's signed `SHASUMS256.txt` using a trusted
-release key before extraction. The installer installs the three units, the
-Apache site definition and the compiled application. Unit and site activation
-are separate commands below. The VPS must already have `dc24h-stage3` and
-the working ADCS service.
+release key before extraction. The installer checks the site at
+`/etc/apache2/sites-available/dc24h-stage4-webadmin.conf`. A matching site
+keeps its contents, ownership, mode, and existing enabled link, including on
+reinstall. A mismatch in the listener, vhost, HTTPS, Host, or Origin rules
+stops installation. Any change to a reviewed site is an explicit operator
+action with a backup and `apache2ctl configtest`. A fresh install publishes
+the selected site after the other installation steps succeed. Apache activation,
+firewall configuration, and the existing certificate or renewal bundle are
+managed separately. The VPS must already have `dc24h-stage3` and the working
+ADCS service.
 
 ## First-run configuration and provisioning
 
@@ -48,7 +60,9 @@ test -e /etc/dc24h/stage4-webadmin-bootstrap.env ||
 editor /etc/dc24h/stage4-webadmin-bootstrap.env
 ```
 
-Set `STAGE4_ENVIRONMENT=production` and both `MARIADB_DATABASE` and
+Set `WEBADMIN_PUBLIC_PORT` to the same explicit `7178` or `7278` selected
+above. Keep `WEBADMIN_HOST=server-747585786.dc24h.eu` and
+`WEBADMIN_HTTPS=true`. Set `STAGE4_ENVIRONMENT=production` and both `MARIADB_DATABASE` and
 `MARIADB_APPROVED_DATABASE` to `dc24h_stage4_production`. Use a dedicated
 application user ending in `_production`, such as `dc24h_stage4_production`.
 Keep MariaDB on the local Unix socket. An empty `MARIADB_ROOT_PASSWORD` uses
@@ -66,7 +80,8 @@ console or HTTPS form as appropriate.
 /usr/local/sbin/dc24h-stage4-init
 ```
 
-The initializer verifies the approved schema name, applies the native C++
+The initializer checks the Apache site against the selected Origin before
+touching runtime state or MariaDB. It verifies the approved schema name, applies the native C++
 migrations followed by versioned Stage IV migrations, checks schema and grants,
 and provisions `Administrator` using the C++ password implementation.
 An existing unbound Administrator or Owner requires operator review and an
@@ -74,6 +89,9 @@ audited migration. Re-running the initializer on the same database preserves
 the established Administrator and verifier. After creation, the initial
 password can be blank when re-provisioning the same database. The running
 units receive the generated service credentials and dedicated `msmtp` config.
+Production initialization writes the matched `DC24H_STAGE4_ORIGIN` in
+`/etc/dc24h/stage4-activation.env`. Keep any older service override consistent
+with that value throughout upgrade and rollback.
 Erase the `ADMIN_INITIAL_PASSWORD` and `MARIADB_ROOT_PASSWORD` values from the
 bootstrap file once initialization succeeds. If removing the entire bootstrap
 file, keep any recurring configuration needed for later provisioning in the
@@ -87,10 +105,12 @@ explicit `dc24h_stage4_test` schema. Its generated material is under
 ## Start, SMTP qualification and HTTPS
 
 ```sh
+origin="https://server-747585786.dc24h.eu:$public_port"
+grep -Fx "DC24H_STAGE4_ORIGIN=$origin" /etc/dc24h/stage4-activation.env
 systemctl start dc24h-stage4-webadmin.service
 systemctl status dc24h-stage4-{auth,bridge,webadmin}.service --no-pager
 journalctl -u dc24h-stage4-webadmin.service --no-pager -n 30
-ss -ltn '( sport = :4278 or sport = :7278 or sport = :1512 or sport = :1511 or sport = :3306 )'
+ss -ltn "( sport = :4278 or sport = :$public_port or sport = :1512 or sport = :1511 or sport = :3306 )"
 ```
 
 Before opening ingress, test mail from the dedicated service account. Exit
@@ -104,8 +124,11 @@ printf 'From: admin@dc24h.eu\nTo: admin@dc24h.eu\nSubject: Stage IV SMTP probe\n
 
 Check that the hostname resolves to the VPS and inspect the existing HTTPS
 sites for access logging of cookie headers and upstream cookie forwarding.
-Cookies are shared across HTTPS ports on this hostname. The certificate
-paths live under `/etc/letsencrypt/live/server-747585786.dc24h.eu/`.
+Cookies are shared across HTTPS ports on this hostname. Verify the existing
+certificate and key paths in the reviewed vhost. Keep the shared bundle paths
+if the approved TLS renewal procedure has already configured them. An older
+site needs a reviewed Apache allowlist update before exposing the TLS renewal
+routes in WebAdmin. [TLS renewal setup](TLS_AUTO_RENEWAL.md)
 
 ```sh
 a2enmod ssl headers rewrite proxy proxy_http
@@ -114,9 +137,9 @@ apache2ctl configtest && systemctl reload apache2
 systemctl enable dc24h-stage4-webadmin.service
 ```
 
-Allow TCP 7278 in the provider firewall when it filters ingress. Keep TCP
-4278 and 3306 local and keep TCP 1511 closed. From an outside network run
-`curl --fail --silent --show-error https://server-747585786.dc24h.eu:7278/`
+Use only the approved public port in the provider firewall. Keep TCP 4278
+and 3306 local and keep TCP 1511 closed. From an outside network run
+`curl --fail --silent --show-error "$origin/"`
 with certificate verification enabled, and verify the ADCS hub on 1512
 with a client that validates its TLS certificate.
 
@@ -140,8 +163,10 @@ systemctl status dc24h-stage4-{auth,bridge,webadmin}.service --no-pager
 
 Store backups encrypted and limit access to the recovery operator. Include
 MariaDB data and procedures, the private Stage IV runtime files, the exact
-deployed binaries and the Apache/systemd configurations. Keep the database
-backup and runtime credential archive together as a matched pair.
+deployed binaries, the reviewed Apache site, its enabled state, and the
+systemd units and drop-ins. Record the public port and the matched activation
+file. Keep the database backup and runtime credential archive together as a
+matched pair.
 
 ```sh
 umask 077
@@ -172,18 +197,25 @@ systemctl stop dc24h-stage4-bridge.service dc24h-stage4-auth.service
 systemctl is-active dc24h-stage3-adcs.service
 ```
 
-Restore only the reviewed Stage IV artifacts and matching database if needed.
-Avoid restoring an old database over new registrations without an approved
-recovery decision. Leave the live certificate and Stage III service in place.
+For rollback, restore the previous matched Stage IV binaries, Apache site,
+activation file, and systemd definitions from the backup. Verify the
+`Listen` and `VirtualHost` port, Host and Origin rules, and the matched Node
+Origin. Verify `apache2ctl configtest` before restoring the recorded enabled
+state. Recheck the HTTPS page, password and OTP login, roles, logout, and
+ADCS afterward. Restore the database only when needed under a separate recovery
+decision that accounts for new registrations. Keep the live certificate and
+Stage III service in place.
 
 ## Acceptance
 
-Run `scripts/stage4_test_database.sh` against its disposable fixture after
-installation. The test exercises native SQL migrations, owner initialization,
+The hosted test workflow runs `scripts/stage4_test_install.sh` on a disposable
+runner for vhost preservation, reinstall, failure, and rollback. It runs
+`scripts/stage4_test_database.sh 7178` with a separate local database. The test exercises native SQL migrations, owner initialization,
 the C++ proof path, session and challenge transactions, signup, SMTP rejection
 with a mock sender, backup/restore and restart of the disposable MariaDB.
 GitHub qualification covers hosted Ubuntu 22.04, 24.04 and 26.04 on the
-exact implementation SHA tested. The OWNER reported a successful live
+exact implementation SHA tested. Production activation requires its own
+Owner decision. The OWNER reported a successful live
 Administrator email-OTP login and working password change on November 27,
 2026. Record the corresponding deployed SHA, actual mailbox receipt and
 service state separately from independent external TLS, denied-route,

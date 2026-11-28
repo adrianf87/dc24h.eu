@@ -273,7 +273,8 @@ async function main() {
         JSON.stringify({ environment: config.STAGE4_ENVIRONMENT, database: name, socketPath,
           user: config.MARIADB_APP_USERNAME, password: config.MARIADB_APP_PASSWORD, key }) + "\n"));
       if (production) publish(join(state, "stage4-activation.env"),
-        "DC24H_STAGE4_STARTUP_ACK=OWNER_WEBADMIN_PUBLIC_ACTIVATION_GO\n");
+        "DC24H_STAGE4_STARTUP_ACK=OWNER_WEBADMIN_PUBLIC_ACTIVATION_GO\n" +
+        `DC24H_STAGE4_ORIGIN=${config.publicOrigin}\n`);
       const result = { environment: config.STAGE4_ENVIRONMENT, database: name, schema: "PASS",
         sql_grants: "PASS", administrator: "PASS", administrator_email: owner, smtp_delivery: "NOT TESTED" };
       process.stdout.write(JSON.stringify(result) + "\n");
@@ -296,7 +297,7 @@ async function main() {
 
 main().catch(error => {
   const message = typeof error?.message === "string" ? error.message : "";
-  const safe = /^(?:Invalid bootstrap field [A-Z0-9_]+|Invalid or repeated bootstrap field|Bootstrap requires root.*|Unsafe bootstrap .*|Bootstrap file changed during reading|Use distinct Stage IV credentials|Usage:.*|Stop Stage IV services before provisioning|Existing Administrator requires an audited operator migration|ADMIN_INITIAL_PASSWORD is required for a fresh database|[A-Za-z ]+ failed(?: \(MariaDB [0-9]+\))?)$/.test(message);
+  const safe = /^(?:Invalid bootstrap field [A-Z0-9_]+|Invalid or repeated bootstrap field|Bootstrap requires root.*|Unsafe bootstrap .*|Bootstrap file changed during reading|Stage IV Apache site (?:is missing|does not match the selected HTTPS Origin)|Unsafe Stage IV Apache site|Use distinct Stage IV credentials|Usage:.*|Stop Stage IV services before provisioning|Existing Administrator requires an audited operator migration|ADMIN_INITIAL_PASSWORD is required for a fresh database|[A-Za-z ]+ failed(?: \(MariaDB [0-9]+\))?)$/.test(message);
   process.stderr.write("Stage IV initialization FAIL: " + (safe ? message : "private input or connection error") + "\n");
   process.exitCode = 1;
 });

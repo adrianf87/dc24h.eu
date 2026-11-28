@@ -24,11 +24,13 @@ on:
       - 'webadmin/server/public-main.ts'
       - 'webadmin/server/stage4-*.ts'
       - 'webadmin/tests/stage4-mariadb.integration.ts'
+      - 'webadmin/tests/stage4-apache-site.test.ts'
       - 'database/stage4/**'
       - 'config/stage4-webadmin-bootstrap.env.example'
       - 'config/dc24h-stage4-auth.service.example'
       - 'scripts/dc24h-stage4-init'
       - 'scripts/stage4_install.sh'
+      - 'scripts/stage4_test_install.sh'
       - 'scripts/stage4_test_database.sh'
       - 'tests/stage4_msmtp_process.py'
       - 'src/account_admin.cpp'
@@ -93,6 +95,7 @@ jobs:
           test "$ID" = ubuntu && test "$VERSION_ID" = "${EXPECTED_IMAGE#ubuntu-}"
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - name: Verify design boundaries without network or sudo
         run: |
@@ -137,6 +140,7 @@ jobs:
           test "$ID" = ubuntu && test "$VERSION_ID" = "${EXPECTED_IMAGE#ubuntu-}"
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
@@ -178,6 +182,7 @@ jobs:
           test "$(sudo -n id -u)" = '0'
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - name: Execute real AF_UNIX peer tests inside non-root systemd sandbox
         run: |
@@ -216,6 +221,7 @@ jobs:
           test "$ID" = ubuntu && test "$VERSION_ID" = "${EXPECTED_IMAGE#ubuntu-}"
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - name: Install Ubuntu build and database packages
         run: |
@@ -230,16 +236,19 @@ jobs:
         run: |
           cmake -S . -B "$RUNNER_TEMP/stage4-build" -DCMAKE_BUILD_TYPE=Release
           cmake --build "$RUNNER_TEMP/stage4-build" --parallel "$(nproc)" --target dc24h dc24h-owner dc24h-account-admin
-      - name: Validate packaged Stage IV service installation on disposable Ubuntu
+      - name: Verify Stage IV install, reinstall, refusal and rollback on disposable Ubuntu
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
           node_dir=$(dirname "$(dirname "$(command -v node)")")
           sudo -n env "PATH=$node_dir/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/bin" \
             "GITHUB_ACTIONS=$GITHUB_ACTIONS" "RUNNER_ENVIRONMENT=$RUNNER_ENVIRONMENT" \
-            sh ./scripts/stage4_install.sh "$node_dir" "$RUNNER_TEMP/stage4-build"
+            bash ./scripts/stage4_test_install.sh "$node_dir" "$RUNNER_TEMP/stage4-build"
       - name: Exercise disposable MariaDB and account tests without replacing live WebAdmin
         run: |
           node_dir=$(dirname "$(dirname "$(command -v node)")")
           sudo -n env "PATH=$node_dir/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/bin" \
             "GITHUB_ACTIONS=$GITHUB_ACTIONS" "RUNNER_ENVIRONMENT=$RUNNER_ENVIRONMENT" \
-            ./scripts/stage4_test_database.sh
+            ./scripts/stage4_test_database.sh 7178
           python3 tests/stage4_msmtp_process.py -v
