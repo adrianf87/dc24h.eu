@@ -267,7 +267,9 @@ std::string controller_action(std::string_view command) {
     struct ucred peer{};socklen_t length=sizeof(peer);
     if(::getsockopt(fd,SOL_SOCKET,SO_PEERCRED,&peer,&length)!=0||length!=sizeof(peer)||peer.uid!=expected)
         throw HttpError{503,"service_unavailable"};
-    const std::string message=std::string(command)+"\n";
+    // Scope writes to the renamed unit. A Twilight controller rejects this
+    // command format even if its old socket is still present during cutover.
+    const std::string message=std::string(command)+(read_only?"\n":" dc24h.service\n");
     if(::send(fd,message.data(),message.size(),MSG_NOSIGNAL)!=static_cast<ssize_t>(message.size()))
         throw HttpError{503,read_only?"service_unavailable":"outcome_unknown"};
     std::string result;

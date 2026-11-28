@@ -1,4 +1,4 @@
-"""Twilight Stage VI static qualification: positive and fail-closed negatives.
+"""dc24h.eu static rebranding qualification: positive and fail-closed negatives.
 
 All fixtures are local file copies. These are NOT GitHub CI/RC acceptance tests
 and do not start a service, run dpkg, create a tag or access real private data.
@@ -18,10 +18,11 @@ import twilight_stage6_preflight as stage6
 
 SHA = "a" * 40
 FILES = set(stage6.ACTIVE_DISPLAY) | {
-    "src/api/server.cpp", "webadmin/src/lib/status.ts",
+    "src/api/server.cpp", "webadmin/src/lib/status.ts", "webadmin/src/App.tsx",
+    "webadmin/src/remote/RemoteApp.tsx", "webadmin/src/languages/us/index.ts", "webadmin/src/languages/pl/index.ts",
     "webadmin/server/remote-webauthn.ts",
     "webadmin/server/remote-gateway.ts",
-    "config/dc24h-twilight.service.example",
+    "config/dc24h.service.example",
     "config/apache2-webadmin-https.conf.example",
     "config/dc24h.sysusers.example",
     "webadmin/package.json", "webadmin/package-lock.json", "README.md",
@@ -68,29 +69,25 @@ class TwilightStageSixPreflightTests(unittest.TestCase):
 
     def test_missing_current_brand_and_old_brand_are_rejected(self):
         for filename, marker, replacement in (
-                ("src/main.cpp", "dc24h.eu-twilight", "old-server"),
-                ("webadmin/index.html", "dc24h.eu-twilight", "old-name"),
-                ("webadmin/src/App.tsx", "dc24h.eu-twilight", "dc24h.eu High Starter"),
-                ("src/adc/user_list.cpp", "NIdc24h.eu-twilight", "NIdc24h.eu"),
+                ("src/main.cpp", "dc24h.eu", "old-server"),
+                ("webadmin/index.html", "dc24h.eu", "old-name"),
+                ("webadmin/src/App.tsx", "{PRODUCT_NAME}", "dc24h.eu High Starter"),
+                ("src/adc/user_list.cpp", "NIdc24h.eu", "NIdc24h.eu-twilight"),
                 ("src/adc/user_list.cpp", "DEDirect Connect hub", "DEGuest login alpha"),
-                ("webadmin/src/languages/pl/index.ts", "Dla dc24h.eu-twilight", "Dla dc24h.eu"),
-                ("webadmin/src/languages/us/index.ts", "Built for dc24h.eu-twilight",
-                 "Built for dc24h.eu")):
+                ("webadmin/src/languages/pl/index.ts", "Dla ${PRODUCT_NAME}", "Dla starej nazwy"),
+                ("webadmin/src/languages/us/index.ts", "Built for ${PRODUCT_NAME}",
+                 "Built for the old name")):
             with self.subTest(filename=filename), tempfile.TemporaryDirectory() as directory:
                 root = fixture(Path(directory))
                 mutate(root, filename, marker, replacement)
-                if filename.endswith("App.tsx"):
-                    with self.assertRaisesRegex(ValueError, "legacy user-facing"):
-                        stage6.evaluate(root, SHA, "ubuntu-22.04")
-                else:
-                    with self.assertRaises(ValueError):
-                        stage6.evaluate(root, SHA, "ubuntu-22.04")
+                with self.assertRaises(ValueError):
+                    stage6.evaluate(root, SHA, "ubuntu-22.04")
 
     def test_strict_status_api_and_passkey_origin_cannot_be_relaxed(self):
         for filename, old, replacement in (
-                ("src/api/server.cpp", "dc24h.eu-twilight", "dc24h.eu"),
-                ("webadmin/src/lib/status.ts", 'server.name !== "dc24h.eu-twilight"',
-                 'server.name !== "dc24h.eu"'),
+                ("src/api/server.cpp", "dc24h.eu", "dc24h.eu-twilight"),
+                ("webadmin/src/lib/status.ts", 'server.product_id === PRODUCT_ID && server.name === PRODUCT_NAME',
+                 'server.name === PRODUCT_NAME'),
                 ("webadmin/server/remote-webauthn.ts", "expectedRPID: rpID", "expectedRPID: 'other'"),
                 ("webadmin/server/remote-webauthn.ts", "expectedOrigin: origin",
                  "expectedOrigin: 'https://other.invalid'"),
@@ -104,16 +101,16 @@ class TwilightStageSixPreflightTests(unittest.TestCase):
 
     def test_operator_marker_service_user_and_repo_guard_cannot_be_removed(self):
         for filename, old, replacement in (
-                ("config/dc24h-twilight.service.example", "Conflicts=dc24h.service", "# removed"),
-                ("config/dc24h-twilight.service.example",
-                 "AssertPathExists=/etc/dc24h/twilight-unit-migration-approved", "# removed"),
+                ("config/dc24h.service.example", "Conflicts=dc24h-twilight.service", "# removed"),
+                ("config/dc24h.service.example",
+                 "AssertPathExists=/etc/dc24h/dc24h-unit-migration-approved", "# removed"),
                 ("config/dc24h.sysusers.example", "u dc24h -", "u other -"),
                 ("config/apache2-webadmin-https.conf.example", "ServerName dc24h.eu",
                  "ServerName other.invalid"),
                 (".github/workflows/build.yml",
-                 "github.repository == 'adrianf87/dc24h.eu-twilight'", "github.repository == 'other/repo'"),
-                ("README.md", "derived from dc24h.eu High Starter", "is the original project"),
-                ("webadmin/package.json", "dc24h-twilight-webadmin", "old-package")):
+                 "github.repository == 'adrianf87/dc24h.eu'", "github.repository == 'other/repo'"),
+                ("README.md", "High Starter v0.9.20-rc.1 pre-release", "is the original project"),
+                ("webadmin/package.json", "dc24h-webadmin", "old-package")):
             with self.subTest(filename=filename), tempfile.TemporaryDirectory() as directory:
                 root = fixture(Path(directory))
                 mutate(root, filename, old, replacement)
@@ -127,7 +124,7 @@ class TwilightStageSixPreflightTests(unittest.TestCase):
             serialized = json.dumps(report)
             self.assertLess(len(serialized), 4096)
             self.assertNotIn("password", serialized.lower())
-            self.assertEqual(report["github_workflows_checked"], 5)
+            self.assertEqual(report["github_workflows_checked"], 6)
             self.assertFalse(report["release_tag_or_production_deployment_authorized"])
 
 

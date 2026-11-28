@@ -20,7 +20,7 @@ concurrency:
 jobs:
   application:
     name: C++ CTest and WebAdmin / ${{ matrix.os }}
-    if: github.repository == 'adrianf87/dc24h.eu' || github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
+    if: github.repository == 'adrianf87/dc24h.eu'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:
@@ -59,7 +59,7 @@ jobs:
         run: |
           sudo -n systemctl disable --now certbot.timer
           sudo -n unshare --mount --net --propagation private -- /usr/bin/python3 \
-            tests/tls_renewal_acme_tests.py "$RUNNER_TEMP/dc24h-build/dc24h-twilight" /usr/bin/pebble
+            tests/tls_renewal_acme_tests.py "$RUNNER_TEMP/dc24h-build/dc24h" /usr/bin/pebble
           sudo -n env "GITHUB_ACTIONS=$GITHUB_ACTIONS" "RUNNER_ENVIRONMENT=$RUNNER_ENVIRONMENT" \
             /usr/bin/python3 tests/tls_renewal_systemd_tests.py
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -96,7 +96,7 @@ jobs:
 
   sanitizers:
     name: C++ sanitizer ${{ matrix.sanitizer }} / ${{ matrix.os }}
-    if: github.repository == 'adrianf87/dc24h.eu' || github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
+    if: github.repository == 'adrianf87/dc24h.eu'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     strategy:

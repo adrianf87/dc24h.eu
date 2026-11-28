@@ -17,7 +17,7 @@ from stage3.evidence import (
     Suite, checkout_sha, command_version, digest, invalidate_credentials, now, verify_bundle, write_manifest,
 )
 
-REPOSITORY = "adrianf87/dc24h.eu-twilight"
+REPOSITORY = "adrianf87/dc24h.eu"
 ARTIFACT_PREFIX = "stage3"
 WORKFLOWS = {
     "pr": "Stage III public ADCS qualification",

@@ -241,6 +241,60 @@ class SystemdSandboxTests(unittest.TestCase):
             with self.assertRaisesRegex(AssertionError, "Could not verify fixture path.*Permission denied"):
                 self.assert_host_path_absent(path)
 
+    def test_renamed_unit_conflict_and_rollback(self):
+        if not REQUIRE_SYSTEMD_HOST or self.host_tools is None:
+            self.skipTest("Unit migration runs on disposable GitHub-hosted systemd")
+        name = "dc24h-migration-" + secrets.token_hex(8)
+        old = name + "-old.service"
+        new = name + "-new.service"
+        old_path = Path("/run/systemd/system") / old
+        new_path = Path("/run/systemd/system") / new
+        marker = Path("/run") / (name + ".approved")
+        with tempfile.TemporaryDirectory(prefix="dc24h-systemd-migration-") as directory:
+            defs = Path(directory)
+            plain = ("[Service]\nType=exec\nExecStart=/usr/bin/sleep 60\n"
+                     "PrivateNetwork=yes\nNoNewPrivileges=yes\n")
+            (defs / old).write_text(plain, encoding="ascii")
+            settings = self.parsed["Unit"]
+            conflict = settings["Conflicts"].replace("dc24h-twilight.service", old)
+            after = settings["After"].replace("dc24h-twilight.service", old)
+            (defs / new).write_text(f"[Unit]\nConflicts={conflict}\nAfter={after}\n"
+                                    f"AssertPathExists={marker}\n{plain}", encoding="ascii")
+            installed = []
+            approved = False
+            try:
+                for path in (new_path, old_path):
+                    self.assert_host_path_absent(path)
+                    self.host(["install", "-m", "0644", str(defs / path.name), str(path)])
+                    installed.append(path)
+                self.assert_host_path_absent(marker)
+                self.host(["systemctl", "daemon-reload"])
+                refused = self.host(["systemctl", "start", new], check=False)
+                self.assertNotEqual(refused.returncode, 0)
+                self.assertEqual(run(["systemctl", "show", "-p", "MainPID", "--value", new]).stdout.strip(), "0")
+
+                self.host(["systemctl", "start", old])
+                self.host(["install", "-m", "0600", "/dev/null", str(marker)])
+                approved = True
+                self.host(["systemctl", "start", new])
+                self.assertEqual(run(["systemctl", "is-active", new]).stdout.strip(), "active")
+                self.assertEqual(run(["systemctl", "show", "-p", "MainPID", "--value", old]).stdout.strip(), "0")
+
+                self.host(["systemctl", "stop", new])
+                self.host(["rm", "--", str(marker)])
+                approved = False
+                self.host(["systemctl", "start", old])
+                self.assertEqual(run(["systemctl", "is-active", old]).stdout.strip(), "active")
+                self.assertEqual(run(["systemctl", "show", "-p", "MainPID", "--value", new]).stdout.strip(), "0")
+            finally:
+                if approved:
+                    self.host(["rm", "-f", "--", str(marker)])
+                if installed:
+                    self.host(["systemctl", "stop", *[path.name for path in installed]], check=False)
+                    self.host(["systemctl", "reset-failed", *[path.name for path in installed]], check=False)
+                    self.host(["rm", "-f", "--", *map(str, installed)])
+                    self.host(["systemctl", "daemon-reload"])
+
     def sandbox_properties(self, runtime):
         self.assertEqual(problems(self.text), [])
         service = self.parsed["Service"]

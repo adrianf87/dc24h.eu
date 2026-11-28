@@ -9,7 +9,7 @@ import os
 import re
 
 
-REPOSITORY = "adrianf87/dc24h.eu-twilight"
+REPOSITORY = "adrianf87/dc24h.eu"
 CONFIRMATION = "RUN_STAGE3_UBUNTU2204_EXTERNAL_ONLY"
 PHASES = frozenset({"none", "before", "after"})
 

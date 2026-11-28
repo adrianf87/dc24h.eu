@@ -1,6 +1,6 @@
-# dc24h.eu-twilight WebAdmin
+# dc24h.eu WebAdmin
 
-The current Twilight development UI is `beta-0.9.20`, inherited from the controlled, non-production High Starter RC1 baseline. The private incident overview derives only approved aggregate hub metrics, read age and explicitly unknown unavailable states; a local acknowledgment never sends a server action. Stale, unavailable or revoked sessions clear private metrics. Current Twilight [Stage V documentation and provenance](../doc/us/TWILIGHT_STAGE_V.md) · [PL](../doc/pl/TWILIGHT_STAGE_V.md) and [Stage VI qualification](../doc/us/TWILIGHT_STAGE_VI.md) · [PL](../doc/pl/TWILIGHT_STAGE_VI.md) require their own acceptance. Authentication remains **password + passkey** or **password + TOTP**, not passwordless. C++ alone determines account grants. The remote gateway remains loopback-only and read-only; no public WebAdmin or production deployment. The original five Fix Passes were already accepted for the **High Starter source**; the latest Twilight final-SHA CI and OWNER release decision are separate.
+WebAdmin beta-0.9.20 provides local, remote read-only, and public Stage IV interfaces for dc24h.eu. The private local and remote administration flows use password plus passkey or TOTP. The public interface uses password plus an eight-digit email code and a MariaDB-backed session. C++ determines account grants. Use a matched hub and WebAdmin build when upgrading or rolling back the v1 status identity. See the [migration and rollback guide](../doc/us/REBRAND_MIGRATION.md).
 
 alpha-0.8.1: see [Permissions](../doc/us/PERMISSIONS.md) for the seven-role catalog, pending-action flags, safe VIP delegation and stopped-hub role changes.
 

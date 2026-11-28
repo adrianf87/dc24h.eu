@@ -1,5 +1,7 @@
 # Lokalne API administracyjne — alpha-0.1.9
 
+Odpowiedź prywatnego API statusu wymaga `api_version: "v1"`, `server.product_id: "dc24h"` i `server.name: "dc24h.eu"`. Pole `server.version` zawiera wersję programu. Nowy WebAdmin odrzuca odpowiedzi Twilight i High Starter. Aktualizuj i wycofuj hub razem z WebAdminem. Zobacz [migrację i wycofanie](REBRAND_MIGRATION.md).
+
 **beta-0.1 Linia beta:** [Kanał wydania](BETA.md) zgłasza `beta-0.1` i zachowuje zachowanie alpha-0.9.17. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.17 Zależności:** [Kontrola bibliotek i testy bezpieczeństwa](DEPENDENCIES.md) sprawdza pliki wykonywalne huba, lockfile WebAdmin i zarejestrowane testy bezpieczeństwa. Schemat v9 pozostaje bez zmian.
 **alpha-0.9.16 Testy przeciążenia:** [Przeciążenie i długotrwała praca](STRESS.md) powtarza istniejące limity ramek, klientów, logowania, czatu i sesji przez stałą liczbę rund. Odmowy zostają. Zajętość wraca do zera. Schemat v9 pozostaje bez zmian.
@@ -178,7 +180,7 @@ max_connections = 16
 request_timeout = 2
 ```
 
-Uruchom `./build/dc24h-twilight --config config/dc24h.ini`. Przekaż nagłówek curl przez stdin, aby token nie trafił do argumentów procesu:
+Uruchom `./build/dc24h --config config/dc24h.ini`. Przekaż nagłówek curl przez stdin, aby token nie trafił do argumentów procesu:
 
 ```sh
 { printf 'Authorization: Bearer '; cat .runtime/admin.token; } |
@@ -201,7 +203,7 @@ Wszystkie trasy wymagają uwierzytelnienia. Klucze JSON i błędy protokołu poz
 ```json
 {
   "api_version": "v1",
-  "server": {"name": "dc24h.eu", "version": "alpha-0.4.4", "core_running": true, "uptime_seconds": 3},
+  "server": {"product_id": "dc24h", "name": "dc24h.eu", "version": "beta-0.9.20", "core_running": true, "uptime_seconds": 3},
   "network": {"active_connections": 0, "accepted_connections": 1, "adc_frames": 1, "adcs_handshakes": 0, "security_rejected": 0, "security_closed": 0, "rejected_connections": 0, "closed_connections": 1, "received_bytes": 20, "sent_bytes": 32, "peak_connections": 1},
   "users": {"online": 0, "peak_online": 0, "successful_logins": 0},
   "database": {"enabled": false}

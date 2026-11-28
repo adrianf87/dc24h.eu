@@ -181,7 +181,7 @@ jobs:
       - name: Verify SHA-256 manifests, test outcomes and run provenance
         if: '!cancelled()'
         env:
-          REPORT_MODE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.ref_protected && github.repository == 'adrianf87/dc24h.eu-twilight' && 'main' || 'pr' }}
+          REPORT_MODE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.ref_protected && github.repository == 'adrianf87/dc24h.eu' && 'main' || 'pr' }}
         run: |
           python3 -m stage3.run report --mode "$REPORT_MODE" --sha "$SOURCE_SHA" --run-id "$GITHUB_RUN_ID" \
             --attempt "$GITHUB_RUN_ATTEMPT" --input "$RUNNER_TEMP/bundles" --output "$RUNNER_TEMP/report"

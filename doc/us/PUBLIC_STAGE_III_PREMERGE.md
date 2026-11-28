@@ -38,7 +38,7 @@ guests and a bounded connection schedule.
 
 ```bash
 gh workflow run debian13-stage3-full-qualification.yml \
-  --repo adrianf87/dc24h.eu-twilight \
+  --repo adrianf87/dc24h.eu \
   --ref test/stage3-public-adcs-final-qualification \
   -f confirmation=RUN_STAGE3_PUBLIC_EXTENDED_STABILITY \
   -f production_restarts_ack=false \

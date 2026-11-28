@@ -5,10 +5,19 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/stage5-security-e2e.yml'
-      - 'scripts/stage5_qualification_evidence.py'
-      - 'tests/stage5_ncdc_keyprint_tests.py'
-      - 'tests/tls_security_process_tests.py'
-      - 'webadmin/tests/stage4-mariadb.integration.ts'
+      - '.github/scripts/install-ci-deps.sh'
+      - 'CMakeLists.txt'
+      - 'cmake/**'
+      - 'src/**'
+      - 'include/**'
+      - 'languages/**'
+      - 'config/**'
+      - 'database/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'webadmin/**'
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -16,6 +25,7 @@ permissions:
 
 jobs:
   qualify:
+    if: github.repository == 'adrianf87/dc24h.eu'
     name: Stage V isolated qualification / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
@@ -109,6 +119,7 @@ jobs:
             tests/public-email-code.test.ts tests/public-email-enrollment.test.ts \
             tests/public-email-gateway.test.ts tests/public-verified-email.test.ts \
             tests/public-backend.test.ts tests/stage4-public-read-api.test.ts \
+            tests/status.test.ts tests/tls-renewal.test.ts \
             tests/public-dedicated-service.test.ts >"$STAGE5_RAW/node.log" 2>&1
       - name: Run the public WebAdmin Chromium fixture
         id: browser

@@ -28,9 +28,9 @@ Migracja `0003_accounts.sql` tworzy `dc24h_accounts` InnoDB: klucz signed BIGINT
 Wykonaj kopię zapasową i zatrzymaj zapisy przed jawną migracją z poświadczeniami operatora:
 
 ```sh
-./build/dc24h-twilight --config config/dc24h.ini --database-status
-./build/dc24h-twilight --config config/dc24h.ini --migrate-database
-./build/dc24h-twilight --config config/dc24h.ini --database-status
+./build/dc24h --config config/dc24h.ini --database-status
+./build/dc24h --config config/dc24h.ini --migrate-database
+./build/dc24h --config config/dc24h.ini --database-status
 ```
 
 Pusta baza stosuje 3 wersje, v1 stosuje 2, a v2 jedną. Stan docelowy: `version=3 latest=3 pending=0 dirty=no`. Bajty zastosowanych migracji 1/2 pozostają niezmienione. v3 zapisuje trwałe `applying` przed DDL; częściowy błąd wymaga naprawy przez operatora, bez automatycznego odtwarzania i założenia `CREATE IF NOT EXISTS`. Patrz [Migracje](DATABASE_MIGRATIONS.md).

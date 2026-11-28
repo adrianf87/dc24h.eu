@@ -13,7 +13,7 @@ permissions:
 jobs:
   stage4-ubuntu:
     name: Stage IV isolated tests / ${{ matrix.os }}
-    if: github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
+    if: github.repository == 'adrianf87/dc24h.eu'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     strategy:

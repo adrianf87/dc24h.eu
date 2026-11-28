@@ -61,6 +61,8 @@ class ControllerProcessTests(unittest.TestCase):
                 else:
                     self.assertIn(response["error"], ("systemd_unavailable", "invalid_systemd_response"))
                 for payload in (b"START\n", b"STOP\n", b"RESTART\n",
+                                b"START dc24h.service\n", b"STOP dc24h.service\n", b"RESTART dc24h.service\n",
+                                b"START dc24h-twilight.service\n",
                                 b"STATUS dc24h.service\n",
                                 b"STATUS dc24h-other.service\n", b"STATUS\n\x00", b"X" * 64):
                     self.assertEqual(request(path, payload), "ERROR unauthorized\n")

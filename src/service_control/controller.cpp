@@ -212,9 +212,9 @@ void serve_peer(int connection,std::optional<uid_t> action_uid) {
     const std::string_view command(*incoming);
     const std::string response=command=="STATUS\n"?status_json():
         !maintenance?"ERROR unauthorized\n":
-        command=="START\n"?action_response(Action::start):
-        command=="STOP\n"?action_response(Action::stop):
-        command=="RESTART\n"?action_response(Action::restart):"ERROR unsupported_request\n";
+        command=="START dc24h.service\n"?action_response(Action::start):
+        command=="STOP dc24h.service\n"?action_response(Action::stop):
+        command=="RESTART dc24h.service\n"?action_response(Action::restart):"ERROR unsupported_request\n";
     (void)::send(peer.value,response.data(),response.size(),MSG_NOSIGNAL);
 }
 

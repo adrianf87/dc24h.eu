@@ -78,26 +78,20 @@ def check_no_custom_workers(errors):
 
 
 def check_ci_repository_allowlists(errors):
-    old = "github.repository == 'adrianf87/dc24h.eu-high-starter'"
-    twilight = "github.repository == 'adrianf87/dc24h.eu-twilight'"
-    original = "github.repository == 'adrianf87/dc24h.eu'"
+    canonical = "github.repository == 'adrianf87/dc24h.eu'"
     policies = {
-        "build.yml": (2, {old, twilight, original}),
-        "beta07-codeql.yml": (1, {old, twilight}),
-        "beta08-hardening.yml": (2, {old, twilight}),
-        "beta09-stage4-storage.yml": (1, {old, twilight}),
-        "stage4-ubuntu-vm-validation.yml": (1, {old, twilight}),
+        "build.yml": 2,
+        "beta07-codeql.yml": 1,
+        "beta08-hardening.yml": 2,
+        "beta09-stage4-storage.yml": 1,
+        "stage4-ubuntu-vm-validation.yml": 1,
+        "stage5-security-e2e.yml": 1,
     }
-    for name, (count, allowlist) in policies.items():
+    for name, count in policies.items():
         content = (ROOT / ".github/workflows" / name).read_text(encoding="utf-8")
         guards = re.findall(r"(?m)^\s*if: (.*github\.repository.*)$", content)
-        require(len(guards) == count, f"{name}: expected {count} protected jobs", errors)
-        for guard in guards:
-            clauses = guard.strip().split(" || ")
-            require(len(clauses) == len(allowlist) and set(clauses) == allowlist,
-                    f"{name}: foreign repo or altered exact repository allowlist", errors)
-    require(sum(count for count, _ in policies.values()) == 7,
-            "Unexpected repository guard inventory", errors)
+        require(guards == [canonical] * count,
+                f"{name}: expected {count} jobs restricted to the canonical repository", errors)
 
 
 def check_ci_apt_source_policy(errors):
@@ -158,10 +152,10 @@ def main():
             "systemd.sandbox: missing fail-closed manager enforcement", errors)
     require("ubuntu-latest" not in workflow, "build.yml: ubuntu-latest is selected", errors)
     check(ROOT / "README.md", (
-        "# dc24h.eu-twilight",
+        "# dc24h.eu",
         "Current code version: beta-0.9.20",
         "High Starter v0.9.20-rc.1 pre-release",
-        "No Twilight release or production GO",
+        "Release and production activation require Owner approval",
         "beta-0.3.11–beta-0.3.12 Stage IV",
         "beta-0.3.8–beta-0.3.10 Stage III",
         "beta-0.3.4–beta-0.3.7 Stage II",
@@ -176,8 +170,8 @@ def main():
         "beta-0.1.8 Development baseline",
         "<summary>Alpha 0.9.x (17 releases)</summary>",
     ), errors)
-    check(ROOT / "doc/README.md", ("Current Twilight code:", "beta-0.9.20",
-                                   "No Twilight release or production GO"), errors)
+    check(ROOT / "doc/README.md", ("Current dc24h.eu code:", "beta-0.9.20",
+                                   "Release and production activation require Owner approval"), errors)
     check(ROOT / "doc/us/BETA.md", (
         "# Combined hardening release — beta-0.2.7 to beta-0.2.12",
         "## beta-0.2.9 — private API response hardening",
@@ -297,8 +291,8 @@ def main():
         "beta-0.1.4", "configuration.manage", "409 stale", "503 outcome_unknown", "Require local",
     ), errors)
     check(ROOT / "src/service_control/controller.cpp", (
-        "SO_PEERCRED", "STATUS\\n", "systemctl", "dc24h-twilight.service", "execve", "O_NOFOLLOW",
-        '"START\\n"', '"STOP\\n"', '"RESTART\\n"', 'dc24h-maintenance',
+        "SO_PEERCRED", "STATUS\\n", "systemctl", "dc24h.service", "execve", "O_NOFOLLOW",
+        '"START dc24h.service\\n"', '"STOP dc24h.service\\n"', '"RESTART dc24h.service\\n"', 'dc24h-maintenance',
     ), errors)
     check(ROOT / "src/api/accounts.cpp", (
         '"/api/v1/management/hub/start"', '"/api/v1/management/hub/stop"',
@@ -345,7 +339,7 @@ def main():
         "hubServiceConfirm", "hubServiceUnknown", "hubServiceVerifying", "serviceConfirmation", "adminHeaders()",
     ), errors)
     check(ROOT / "webadmin/src/lib/hub-service.ts", (
-        "parseHubServiceStatus", "parseHubServiceResult", '"dc24h-twilight.service"',
+        "parseHubServiceStatus", "parseHubServiceResult", '"dc24h.service"',
     ), errors)
     check(ROOT / "webadmin/server/json-content-type.ts", (
         "isJsonContentType", "application\\/json", "charset", "utf-8",

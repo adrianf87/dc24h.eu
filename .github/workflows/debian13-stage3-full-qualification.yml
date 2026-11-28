@@ -51,7 +51,7 @@ jobs:
           PREMERGE_CANDIDATE_SHA: ${{ inputs.premerge_candidate_sha }}
         run: |
           test "$RUNNER_ENVIRONMENT" = github-hosted
-          test "$GITHUB_REPOSITORY" = adrianf87/dc24h.eu-twilight
+          test "$GITHUB_REPOSITORY" = adrianf87/dc24h.eu
           test "$GITHUB_ACTOR" = adrianf87
           test "$GITHUB_TRIGGERING_ACTOR" = adrianf87
           test "$GITHUB_EVENT_NAME" = workflow_dispatch

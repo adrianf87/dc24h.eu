@@ -28,9 +28,9 @@ Migration `0003_accounts.sql` creates `dc24h_accounts` in InnoDB with auto-incre
 Back up and stop writers before explicit migration with operator credentials:
 
 ```sh
-./build/dc24h-twilight --config config/dc24h.ini --database-status
-./build/dc24h-twilight --config config/dc24h.ini --migrate-database
-./build/dc24h-twilight --config config/dc24h.ini --database-status
+./build/dc24h --config config/dc24h.ini --database-status
+./build/dc24h --config config/dc24h.ini --migrate-database
+./build/dc24h --config config/dc24h.ini --database-status
 ```
 
 An empty schema applies 3 versions, v1 applies 2 and v2 applies 1. The clean latest schema reports `version=3 latest=3 pending=0 dirty=no`. Applied migration 1/2 bytes are unchanged. v3 records durable `applying` before DDL; any partial failure requires operator recovery, with no automatic replay or `CREATE IF NOT EXISTS` assumption. See [Database Migrations](DATABASE_MIGRATIONS.md).

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — dc24h.eu rename
+
+- Use dc24h.eu in the hub and WebAdmin, and dc24h for binaries and services. The package manifest and lockfile use `dc24h-webadmin`.
+- Require the stable product ID `dc24h`, canonical display name, and existing v1 schema in WebAdmin status parsing. Upgrade and roll back matched builds.
+- Use the canonical GitHub repository for active CI. See the [systemd and WebAdmin migration guide](doc/us/REBRAND_MIGRATION.md) for preflight, verification, and rollback.
+
 ## dc24h.eu-twilight rebranding, Stages I–V — 2026-11-25 (documentation review in Draft PR #9)
 
 - **Origin:** Independent development repository copied from [dc24h.eu High Starter](https://github.com/adrianf87/dc24h.eu-high-starter) at `e4fcb8b5849d4afa4671f97a2ee9c3e63b085a18` / [v0.9.20-rc.1](https://github.com/adrianf87/dc24h.eu-high-starter/releases/tag/v0.9.20-rc.1). Original [PR #243](https://github.com/adrianf87/dc24h.eu-high-starter/pull/243) (Stages I–V), [PR #244](https://github.com/adrianf87/dc24h.eu-high-starter/pull/244) (five Fix Passes) and [PR #245](https://github.com/adrianf87/dc24h.eu-high-starter/pull/245) (exact-main gate) were merged before its controlled-evaluation pre-release; this is not a Twilight release approval.

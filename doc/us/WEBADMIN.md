@@ -166,7 +166,7 @@ npm run build
 npm test
 npx playwright install --with-deps chromium
 npm run test:e2e
-npm run test:integration -- ../build/dc24h-twilight
+npm run test:integration -- ../build/dc24h
 ```
 
 On a workstation with Chromium already installed, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium` for browser/integration checks. Tests use disposable credentials/sockets. Unit tests cover schema/precision, normalization, private credentials, origin/host/method/path restrictions, token injection, overload, size/time bounds and sanitized failures. Browser tests cover missing/live/malformed/lost data, navigation, locale persistence, export and mobile overflow. The integration harness starts a disposable real C++ hub plus a separate Vite process and Chromium, verifies actual ADC counters and token isolation, checks desktop/mobile PL and cleans up all processes. Existing CTest/ncdc/MariaDB suites remain separate.

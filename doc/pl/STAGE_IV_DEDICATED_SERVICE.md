@@ -1,5 +1,7 @@
 # Obsługa WebAdmin, etap IV
 
+Na hoście z jednostkami Twilight lub instalacją o nowych nazwach najpierw wykonaj [procedurę migracji i wycofania](REBRAND_MIGRATION.md).
+
 Publiczny adres to `https://server-747585786.dc24h.eu:7278`. Apache
 obsługuje TLS i przekazuje wybrane żądania do Node na `127.0.0.1:4278`.
 Hub gościnny etapu III działa na ADCS TCP 1512. ADC TCP 1511 pozostaje wyłączony.
@@ -72,9 +74,9 @@ pod `/etc/dc24h/stage4-test`. Usługa produkcyjna odrzuca bazę testową.
 ## Uruchomienie, SMTP i HTTPS
 
 ```sh
-systemctl start dc24h-twilight-stage4-webadmin.service
-systemctl status dc24h-twilight-stage4-{auth,bridge,webadmin}.service --no-pager
-journalctl -u dc24h-twilight-stage4-webadmin.service --no-pager -n 30
+systemctl start dc24h-stage4-webadmin.service
+systemctl status dc24h-stage4-{auth,bridge,webadmin}.service --no-pager
+journalctl -u dc24h-stage4-webadmin.service --no-pager -n 30
 ss -ltn '( sport = :4278 or sport = :7278 or sport = :1512 or sport = :1511 or sport = :3306 )'
 ```
 
@@ -97,7 +99,7 @@ do innych usług.
 a2enmod ssl headers rewrite proxy proxy_http
 a2ensite dc24h-stage4-webadmin
 apache2ctl configtest && systemctl reload apache2
-systemctl enable dc24h-twilight-stage4-webadmin.service
+systemctl enable dc24h-stage4-webadmin.service
 ```
 
 Otwórz w zaporze dostawcy tylko potrzebny port TCP 7278. Z zewnątrz sprawdź
@@ -115,8 +117,8 @@ Rejestrację można ponowić po wygaśnięciu oczekującego zgłoszenia,
 z uwzględnieniem limitu prób. Zmiana hasła unieważnia otwarte sesje.
 
 ```sh
-systemctl restart dc24h-twilight-stage4-webadmin.service
-systemctl status dc24h-twilight-stage4-{auth,bridge,webadmin}.service --no-pager
+systemctl restart dc24h-stage4-webadmin.service
+systemctl status dc24h-stage4-{auth,bridge,webadmin}.service --no-pager
 ```
 
 ## Kopia, odzyskiwanie i wycofanie
@@ -145,8 +147,8 @@ Wycofanie etapu IV:
 ```sh
 a2dissite dc24h-stage4-webadmin
 apache2ctl configtest && systemctl reload apache2
-systemctl disable --now dc24h-twilight-stage4-webadmin.service
-systemctl stop dc24h-twilight-stage4-bridge.service dc24h-twilight-stage4-auth.service
+systemctl disable --now dc24h-stage4-webadmin.service
+systemctl stop dc24h-stage4-bridge.service dc24h-stage4-auth.service
 systemctl is-active dc24h-stage3-adcs.service
 ```
 

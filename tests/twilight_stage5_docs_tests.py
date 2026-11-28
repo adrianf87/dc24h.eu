@@ -24,8 +24,9 @@ CURRENT_GUIDES = (
 CURRENT_HEADINGS = (
     "doc/README.md", "doc/pl/README.md", "doc/us/README.md", "webadmin/README.md",
 )
+MIGRATION_GUIDES = ("doc/us/REBRAND_MIGRATION.md", "doc/pl/REBRAND_MIGRATION.md")
 STAGE_V_DOCS = ("doc/pl/TWILIGHT_STAGE_V.md", "doc/us/TWILIGHT_STAGE_V.md")
-LEGACY_COMMAND = re.compile(r"(?:\./|\.\./)build/dc24h(?!-twilight)\b")
+LEGACY_COMMAND = re.compile(r"(?:\./|\.\./)build/dc24h-twilight\b")
 
 
 def read(root, relative):
@@ -38,13 +39,13 @@ def check_current_docs(root):
         if LEGACY_COMMAND.search(body):
             raise ValueError("Old build artifact in current documentation: " + path)
     for path in CURRENT_HEADINGS:
-        if "dc24h.eu-twilight" not in read(root, path)[:1400]:
-            raise ValueError("Twilight identity missing in current index: " + path)
+        if "dc24h.eu" not in read(root, path).splitlines()[0]:
+            raise ValueError("Canonical product name missing in current index: " + path)
     for path in ("doc/us/INSTALLATION.md", "doc/pl/INSTALLATION.md"):
         body = read(root, path)
-        if ("git clone --branch main https://github.com/adrianf87/dc24h.eu-twilight.git"
-                not in body or "cd dc24h.eu-twilight" not in body or
-                "./build/dc24h-twilight --" not in body or
+        if ("git clone --branch main https://github.com/adrianf87/dc24h.eu.git"
+                not in body or "cd dc24h.eu" not in body or
+                "./build/dc24h --" not in body or
                 "git clone --branch main https://github.com/adrianf87/dc24h.eu-high-starter.git"
                 in body):
             raise ValueError("Installation guide would fetch/run the source repository")
@@ -52,13 +53,13 @@ def check_current_docs(root):
     early = landing.split("<summary>Beta</summary>", 1)[0]
     if ("High Starter v0.9.20-rc.1 pre-release" not in early or
             "Stage V source candidate" in early or
-            "github.com/adrianf87/dc24h.eu-twilight/actions/workflows/build.yml" not in early or
+            "github.com/adrianf87/dc24h.eu/actions/workflows/build.yml" not in early or
             "github.com/adrianf87/dc24h.eu-high-starter/releases/tag/v0.9.20-rc.1"
             not in early or
             "<summary>Alpha</summary>" not in landing):
         raise ValueError("Main README merges historic RC1 with active Twilight status")
-    if ("v0.9.20-rc.1" not in read(root, "CHANGELOG.md")[:2600] or
-            "No tag" not in read(root, "CHANGELOG.md")[:2600]):
+    history = read(root, "CHANGELOG.md").split("## dc24h.eu-twilight rebranding", 1)[-1][:3000]
+    if "v0.9.20-rc.1" not in history or "No tag" not in history:
         raise ValueError("New changelog lacks safe source provenance and release limit")
     for path in STAGE_V_DOCS:
         content = read(root, path)
@@ -86,7 +87,7 @@ class StageFiveDocsTests(unittest.TestCase):
         # Historical URLs remain untouched; these are local file references in
         # current operator/README and Stage V docs, without network access.
         checked = 0
-        for name in dict.fromkeys(CURRENT_GUIDES + CURRENT_HEADINGS + STAGE_V_DOCS):
+        for name in dict.fromkeys(CURRENT_GUIDES + CURRENT_HEADINGS + STAGE_V_DOCS + MIGRATION_GUIDES):
             document = ROOT / name
             for raw in re.findall(r"\]\(([^)]+)\)", document.read_text(encoding="utf-8")):
                 target = raw.strip().split(" ", 1)[0].split("#", 1)[0]
@@ -101,16 +102,16 @@ class StageFiveDocsTests(unittest.TestCase):
 
     def test_incorrect_clone_or_legacy_binary_refused(self):
         for path, old, new in (
-                ("doc/pl/INSTALLATION.md", "dc24h.eu-twilight.git", "dc24h.eu-high-starter.git"),
-                ("doc/us/INSTALLATION.md", "./build/dc24h-twilight --help", "./build/dc24h --help"),
-                ("README.md", "./build/dc24h-twilight --version", "./build/dc24h --version"),
+                ("doc/pl/INSTALLATION.md", "dc24h.eu.git", "dc24h.eu-high-starter.git"),
+                ("doc/us/INSTALLATION.md", "./build/dc24h --help", "./build/dc24h-twilight --help"),
+                ("README.md", "./build/dc24h --version", "./build/dc24h-twilight --version"),
                 ("README.md", "High Starter v0.9.20-rc.1 pre-release",
                  "Stage V source candidate"),
         ):
             with self.subTest(path=path), tempfile.TemporaryDirectory() as tmp:
                 temp = Path(tmp)
                 for name in set(CURRENT_GUIDES + CURRENT_HEADINGS + STAGE_V_DOCS +
-                                ("CHANGELOG.md",)):
+                                MIGRATION_GUIDES + ("CHANGELOG.md",)):
                     dest = temp / name
                     dest.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(ROOT / name, dest)
