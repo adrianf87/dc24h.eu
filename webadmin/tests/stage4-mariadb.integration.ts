@@ -129,11 +129,17 @@ test("disposable C++/MariaDB authorization and mock SMTP through the gateway", a
     code = messages.at(-1)!.code;
     const concurrent = await Promise.all([second.request("login/verify", { code }), second.request("login/verify", { code })]);
     assert.deepEqual(concurrent.map(r => r.status).sort(), [200, 403]);
+    assert.equal((await ownerBegin()).status, 200);
+    assert.equal((await owner.request("login/verify", { code: messages.at(-1)!.code })).status, 200);
+    assert.equal((await owner.request("session")).status, 200);
+    assert.equal((await second.request("password/change", { current: adminPassword, password: nextPassword }, false)).status, 403);
     assert.equal((await second.request("password/change", { current: adminPassword, password: nextPassword })).status, 200);
     assert.equal((await second.request("session")).status, 401);
+    assert.equal((await owner.request("session")).status, 401);
 
     const user = browser("192.0.2.12");
     const signup = { username: "SignupFixture", email: "signup@example.test", password: "A new fixture password 73!" };
+    assert.equal((await user.send("register/send", { ...signup, role: "owner" })).status, 400);
     assert.equal((await user.send("register/send", signup)).status, 200);
     await delay(50);
     assert.equal(messages.at(-1)?.email, signup.email);
@@ -165,6 +171,21 @@ test("disposable C++/MariaDB authorization and mock SMTP through the gateway", a
     assert.equal((await owner.request("login/verify", { code: messages.at(-1)!.code })).status, 200);
     await root.execute("UPDATE dc24h_accounts SET revision=revision+1,role='administrator' WHERE name='Administrator'");
     assert.equal((await owner.request("session")).status, 401);
+    time += 300_001;
+    const administrator = browser("192.0.2.13");
+    assert.equal((await administrator.send("login/send", replacement)).status, 200);
+    assert.equal((await administrator.request("login/verify", { code: messages.at(-1)!.code })).json.role, "administrator");
+    assert.equal((await administrator.request("summary")).status, 200);
+    // Restore the synthetic owner role before the separate backup/restore test.
+    await root.execute("UPDATE dc24h_accounts SET revision=revision+1,role='owner' WHERE name='Administrator'");
+    assert.equal((await administrator.request("session")).status, 401);
+
+    const limited = browser("192.0.2.14");
+    const undelivered = messages.length;
+    for (let attempt = 0; attempt < 4; attempt++)
+      assert.equal((await limited.send("login/send", { username: "LimitedFixture", password: "Wrong fixture password" })).status, 403);
+    assert.equal((await limited.send("login/send", { username: "LimitedFixture", password: "Wrong fixture password" })).status, 429);
+    assert.equal(messages.length, undelivered);
     await db.clean();
   } finally {
     await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
