@@ -20,6 +20,8 @@ StateDirectory=dc24h-stage4
 StateDirectoryMode=0700
 LoadCredential=stage4-runtime.json:/etc/dc24h/stage4-runtime.json
 EnvironmentFile=/etc/dc24h/stage4-activation.env
+# The bridge unit can be active before it binds and grants access to its socket.
+ExecStartPre=/bin/sh -c 'for attempt in 1 2 3 4 5 6 7 8 9 10; do if test -S /run/dc24h-stage4-bridge/bridge.sock && test -w /run/dc24h-stage4-bridge/bridge.sock; then exit 0; fi; sleep 1; done; echo "Stage IV bridge socket is unavailable" >&2; exit 1'
 # Provision a root-owned, verified Node 24 LTS runtime here. Debian's
 # /usr/bin/node (v20) and /root/.nvm are intentionally NOT used.
 ExecStart=/opt/dc24h/node24/bin/node /opt/dc24h/webadmin/dist/public-main.mjs

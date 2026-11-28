@@ -124,15 +124,28 @@ printf '%s' "$admin_password" > "$scratch/api/fixture.password"
 )
 mariadb-dump --no-defaults -S "$socket" -u root --single-transaction --routines --databases dc24h_stage4_test \
     > "$scratch/backup.sql"
+cp -a -- "$state" "$scratch/state-backup"
 kill "$db_pid"
 wait "$db_pid"
 db_pid=
 start_database
 test "$(sql -N dc24h_stage4_test -e 'SELECT COUNT(*) FROM stage4_emails WHERE verified_at IS NOT NULL')" = 2
 # The entire server and schema are disposable. Installers never execute this DROP.
+sql dc24h_stage4_test -e "UPDATE stage4_schema_migrations SET checksum=REPEAT('0',64) WHERE version=1"
+if dc24h-stage4-init --config "$bootstrap" >"$scratch/migration-check.log" 2>&1; then
+    echo "Bootstrap accepted a changed migration checksum" >&2; exit 1
+fi
+grep -Fq 'Stage IV schema failed' "$scratch/migration-check.log"
+test "$(sql -N dc24h_stage4_test -e 'SELECT COUNT(*) FROM stage4_emails WHERE verified_at IS NOT NULL')" = 2
+echo 'PASS migration checksum mismatch refused without removing account data (disposable)'
 sql -e 'DROP DATABASE dc24h_stage4_test'
 sql < "$scratch/backup.sql"
+mv -- "$state" "$scratch/state-replaced"
+cp -a -- "$scratch/state-backup" "$state"
+diff -qr -- "$scratch/state-backup" "$state"
 test "$(sql -N dc24h_stage4_test -e 'SELECT COUNT(*) FROM stage4_emails WHERE verified_at IS NOT NULL')" = 2
 test "$(sql -N dc24h_stage4_test -e 'SELECT COUNT(*) FROM stage4_schema_migrations')" = 2
+dc24h-stage4-init --config "$bootstrap"
 sql dc24h_stage4_test -e 'DELETE FROM stage4_sessions; DELETE FROM stage4_challenges'
-echo "PASS MariaDB restart, logical backup, restore and session invalidation (disposable)"
+test "$(sql -N dc24h_stage4_test -e 'SELECT (SELECT COUNT(*) FROM stage4_sessions) + (SELECT COUNT(*) FROM stage4_challenges)')" = 0
+echo "PASS MariaDB restart, matched SQL/configuration restore and session invalidation (disposable)"
