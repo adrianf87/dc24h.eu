@@ -1,0 +1,22 @@
+Timestamp UTC 2026-11-28T02:19:07.422042+00:00
+Connect vantage current VPS
+PASS 7178 system CA trust, SAN, hostname and TLSv1.3
+PASS 7178 live certificate equals on-disk leaf
+7178 leaf notAfter Feb 25 22:51:28 2027 GMT
+PASS 1512 system CA trust, SAN, hostname and TLSv1.3
+PASS 1512 live certificate equals on-disk leaf
+1512 leaf notAfter Feb 25 22:51:28 2027 GMT
+PASS GET / HTTP 200; expected 200
+PASS WebAdmin cache, content type, frame, referrer and CSP headers
+PASS GET /panel-react.js HTTP 200; expected 200
+PASS GET /stage4/v1/session HTTP 401; expected 401
+PASS GET /stage4/v1/identity-summary HTTP 401; expected 401
+PASS GET /stage4/v1/logout HTTP 403; expected 403
+PASS GET /stage4/v1/qualification-unknown HTTP 403; expected 403
+PASS GET /stage4/v1/challenge HTTP 200; expected 200
+PASS HTTPS challenge cookie Secure HttpOnly SameSite=Strict host-only Path=/
+WebAdmin backend commit 6011b09d089af4fc837493a9a703a93601a35bf8
+WebAdmin deployment overlay SHA-256 033807e3118c84bd225d22c8e5e2766f722e0348f0a848fb276f01d6970213d3
+WebAdmin UI commit be1d0d232608277e5d26bedfd0910db4598f9421
+PASS WebAdmin disk artifacts match deployment manifest 11
+PASS running ADCS image matches deployment manifest 795b9a91bacea49d4a9eca7745430fa316d64133

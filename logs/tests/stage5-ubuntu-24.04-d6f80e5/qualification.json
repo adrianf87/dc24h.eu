@@ -1,0 +1,168 @@
+{
+  "schema": 1,
+  "source_sha": "d6f80e5fe2f0dee8c14db995407deaef0bf47f89",
+  "suites": {
+    "native": {
+      "PASS": 33,
+      "FAIL": 0,
+      "SKIP": 1,
+      "NOT TESTED": 0
+    },
+    "node": {
+      "PASS": 22,
+      "FAIL": 0,
+      "SKIP": 0,
+      "NOT TESTED": 0
+    },
+    "browser": {
+      "PASS": 5,
+      "FAIL": 0,
+      "SKIP": 0,
+      "NOT TESTED": 0
+    },
+    "systemd": {
+      "PASS": 1,
+      "FAIL": 0,
+      "SKIP": 0,
+      "NOT TESTED": 0
+    },
+    "native-build": {
+      "PASS": 1,
+      "FAIL": 0,
+      "SKIP": 0,
+      "NOT TESTED": 0
+    },
+    "webadmin-build": {
+      "PASS": 1,
+      "FAIL": 0,
+      "SKIP": 0,
+      "NOT TESTED": 0
+    },
+    "typescript": {
+      "PASS": 1,
+      "FAIL": 0,
+      "SKIP": 0,
+      "NOT TESTED": 0
+    },
+    "database-fixture": {
+      "PASS": 1,
+      "FAIL": 0,
+      "SKIP": 0,
+      "NOT TESTED": 0
+    },
+    "smtp-transport": {
+      "PASS": 1,
+      "FAIL": 0,
+      "SKIP": 0,
+      "NOT TESTED": 0
+    },
+    "unix-bridge": {
+      "PASS": 1,
+      "FAIL": 0,
+      "SKIP": 0,
+      "NOT TESTED": 0
+    },
+    "python-boundary": {
+      "PASS": 1,
+      "FAIL": 0,
+      "SKIP": 0,
+      "NOT TESTED": 0
+    },
+    "ncdc-keyprint": {
+      "PASS": 1,
+      "FAIL": 0,
+      "SKIP": 0,
+      "NOT TESTED": 0
+    },
+    "airdcpp-guest": {
+      "PASS": 1,
+      "FAIL": 0,
+      "SKIP": 0,
+      "NOT TESTED": 0
+    },
+    "loopback-probes": {
+      "PASS": 1,
+      "FAIL": 0,
+      "SKIP": 0,
+      "NOT TESTED": 0
+    },
+    "transient-restart": {
+      "PASS": 1,
+      "FAIL": 0,
+      "SKIP": 0,
+      "NOT TESTED": 0
+    },
+    "local-vps-observations": {
+      "PASS": 1,
+      "FAIL": 0,
+      "SKIP": 0,
+      "NOT TESTED": 0
+    },
+    "ui-rollback": {
+      "PASS": 1,
+      "FAIL": 0,
+      "SKIP": 0,
+      "NOT TESTED": 0
+    },
+    "certificate-renewal": {
+      "PASS": 0,
+      "FAIL": 1,
+      "SKIP": 0,
+      "NOT TESTED": 0
+    },
+    "independent-ingress": {
+      "PASS": 0,
+      "FAIL": 0,
+      "SKIP": 0,
+      "NOT TESTED": 1
+    },
+    "owner-mailbox-recovery": {
+      "PASS": 0,
+      "FAIL": 0,
+      "SKIP": 0,
+      "NOT TESTED": 1
+    },
+    "full-cross-version-rollback": {
+      "PASS": 0,
+      "FAIL": 0,
+      "SKIP": 0,
+      "NOT TESTED": 1
+    },
+    "live-browser-and-smtp": {
+      "PASS": 0,
+      "FAIL": 0,
+      "SKIP": 0,
+      "NOT TESTED": 1
+    },
+    "hosted-ci": {
+      "PASS": 0,
+      "FAIL": 0,
+      "SKIP": 0,
+      "NOT TESTED": 1
+    },
+    "dcplusplus": {
+      "PASS": 0,
+      "FAIL": 0,
+      "SKIP": 1,
+      "NOT TESTED": 0
+    },
+    "debian13": {
+      "PASS": 0,
+      "FAIL": 0,
+      "SKIP": 1,
+      "NOT TESTED": 0
+    },
+    "active-bypass-reproduction": {
+      "PASS": 0,
+      "FAIL": 0,
+      "SKIP": 1,
+      "NOT TESTED": 0
+    }
+  },
+  "totals": {
+    "PASS": 74,
+    "FAIL": 1,
+    "SKIP": 4,
+    "NOT TESTED": 5
+  }
+}

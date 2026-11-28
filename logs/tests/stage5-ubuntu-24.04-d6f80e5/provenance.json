@@ -1,0 +1,24 @@
+{
+  "scope": "disposable Ubuntu tests and separately timestamped deployed observations",
+  "source_sha": "d6f80e5fe2f0dee8c14db995407deaef0bf47f89",
+  "source_tree": "60b54b7f23844bd1df39a04dd272412658c73466",
+  "requested_initial_sha": "3486b268bb6c44e73072f4e7490ae0417d6dd5b7",
+  "runtime_source_baseline": "6ff15ad4f03be3b3cdce475fe7b0c31ca0134168",
+  "os": "Ubuntu 24.04.5 LTS",
+  "kernel": "6.8.0-151-generic",
+  "architecture": "x86_64",
+  "openssl": "OpenSSL 3.0.13 30 Jan 2024 (Library: OpenSSL 3.0.13 30 Jan 2024)",
+  "cmake": "cmake version 3.28.3",
+  "compiler": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+  "mariadb": "mariadbd  Ver 10.11.14-MariaDB-0ubuntu0.24.04.1 for debian-linux-gnu on x86_64 (Ubuntu 24.04)",
+  "node": "v24.22.3",
+  "ncdc": "ncdc 1.23.1 (built Apr  1 2024 07:00:32)",
+  "disposable_build_artifact_sha256": {
+    "build-stage5/dc24h-twilight": "cc59f0d6ab90895b5caa105bfd0561854c22c815c822f718daa963686b58f551",
+    "build-stage5/dc24h-twilight-account-admin": "a092552b6e4e587b1a922d4ec95fd3407a40f9300266ec740a35f6d0abcee9f7",
+    "build-stage5/dc24h-twilight-owner": "5c5fd78261772b001d7fed8a21a3d6412f45748e0d82405d9910a040f5f2bdc1",
+    "webadmin/dist/public-main.mjs": "2c1512e2ad2b8cc0f52406485f7b3b4a85ebb2db3525941dd2dee648aadbf825",
+    "webadmin/dist/stage4-init.mjs": "54bbb387613536c5ae26f37a96b3bcc04eb55df0702111f798be5491e67f1711",
+    "webadmin/public-stage4/panel-react.js": "ab32a5e0222b38f9f7b481e2c4c870bf678adac4792b147cfe9467c7c28911a4"
+  }
+}

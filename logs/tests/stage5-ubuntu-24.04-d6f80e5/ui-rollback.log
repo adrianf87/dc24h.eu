@@ -1,0 +1,6 @@
+PASS previous Chromium login form and four matching assets
+PASS candidate Chromium login form and four matching assets
+PASS previous Chromium login form and four matching assets
+Previous UI 3486b268bb6c44e73072f4e7490ae0417d6dd5b7 9a57bd493824fd94000f15b24fdc919fbf6cab91d2d9ea5a931bdaf36e1f8d7e
+Candidate UI 6ff15ad4f03be3b3cdce475fe7b0c31ca0134168 a02bc359aa589f27050111dc001a94b3f0c5f750771508f8e7e2f268d5e36e5e
+PASS isolated UI rollback from candidate to previous release
