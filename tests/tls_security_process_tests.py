@@ -128,11 +128,10 @@ class TlsSecurityProcessTests(unittest.TestCase):
                     valid.close()
 
             with socket.create_connection(endpoint, timeout=3) as plain:
-                plain.sendall(b'HSUP ADBASE\n')
-                plain.shutdown(socket.SHUT_WR)
-                plain.settimeout(3)
+                wire = bytearray()
                 try:
-                    wire = bytearray()
+                    # ADCS may close as soon as it reads the plaintext header.
+                    plain.sendall(b'HSUP ADBASE\n')
                     while len(wire) < 7:
                         chunk = plain.recv(7 - len(wire))
                         if not chunk:

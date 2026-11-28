@@ -1,13 +1,20 @@
 import { createHash, createHmac, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
 import mariadb from "mariadb";
 import type { Connection, PoolConnection, Pool } from "mariadb";
+import { isSafeMailbox } from "./public-msmtp.ts";
 
 export type Kind = "owner" | "login" | "register";
 export type Identity = { id: string; role: string; status: string; revision: string };
 export type RuntimeConfiguration = {
   environment: "test" | "production";
   socketPath: string; database: string; user: string; password: string; key: string;
+  origin?: string;
 };
+export const stage4Identifier = /^[a-z][a-z0-9_]{0,26}$/;
+export const installerDatabase = (name: unknown): name is string =>
+  typeof name === "string" && stage4Identifier.test(name) &&
+  !["mysql", "sys", "information_schema", "performance_schema", "dc24h_stage4_test"].includes(name);
+export const stage4Migrations = ["0001_tables.sql", "0002_activation.sql", "0003_configurable_owner_email.sql"] as const;
 type AccountRow = {
   id: bigint; revision: bigint; role: Buffer; status: Buffer; email: string; initial_owner: number | null;
   verified_at: bigint | null;
@@ -104,7 +111,7 @@ export function openStage4Store(config: RuntimeConfiguration, now = Date.now) {
       const pending = account.initial_owner === 1 && account.verified_at === null &&
         account.role.toString() === "owner" && account.status.toString() === "disabled";
       if (!pending && (account.verified_at === null || account.status.toString() !== "active")) return null;
-      if (account.initial_owner === 1 && account.email !== "admin@dc24h.eu") return null;
+      if (!isSafeMailbox(account.email)) return null;
       return { ...await begin(db, pending ? "owner" : "login", identity), email: account.email };
     });
   }
@@ -205,7 +212,9 @@ export function openStage4Store(config: RuntimeConfiguration, now = Date.now) {
     csrf, isCsrf, allowed, beginLogin, beginRegistration, delivery, verify, session, touch, revoke,
     async check() {
       const rows = await pool.execute("SELECT COUNT(*) n FROM stage4_schema_migrations") as { n: bigint }[];
-      if (Number(rows[0]?.n) !== 2) throw Error("Stage IV database is not initialized");
+      const version = Number(rows[0]?.n);
+      // Existing deployments on schema 2 can still use the original mailbox.
+      if (version !== 2 && version !== stage4Migrations.length) throw Error("Stage IV database is not initialized");
     },
     clean: () => cleanExpired(pool),
     close: () => pool.end(),

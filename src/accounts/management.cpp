@@ -76,6 +76,21 @@ void audit_append(database::Connection& connection, std::string_view action, std
     catch (const audit::Error&) { fail(ManagementErrorKind::schema); }
 }
 
+bool stage4_mailbox(std::string_view email) {
+    constexpr std::string_view alphanumeric = "abcdefghijklmnopqrstuvwxyz0123456789";
+    constexpr std::string_view local_chars = "abcdefghijklmnopqrstuvwxyz0123456789.!#$%&'*+/=?^_`{|}~-";
+    constexpr std::string_view domain_chars = "abcdefghijklmnopqrstuvwxyz0123456789.-";
+    const auto at = email.find('@');
+    if (email.size() > 254 || at == 0 || at == email.npos || at + 1 == email.size() ||
+        email.find("..") != email.npos) { return false; }
+    const auto local = email.substr(0, at);
+    const auto domain = email.substr(at + 1);
+    return local.find_first_not_of(local_chars) == local.npos &&
+        domain.find_first_not_of(domain_chars) == domain.npos &&
+        alphanumeric.find(domain.front()) != alphanumeric.npos &&
+        alphanumeric.find(domain.back()) != alphanumeric.npos;
+}
+
 }
 ManagementError::ManagementError(ManagementErrorKind kind) : std::runtime_error([kind] {
     switch (kind) {
@@ -217,10 +232,12 @@ StoredAccount AccountManagementService::perform(Action action,const StoredAccoun
 }
 
 StoredAccount AccountManagementService::bootstrap_owner(std::string_view name,
-    std::string_view password, Timestamp time, bool stage4_email_pending) {
+    std::string_view password, Timestamp time, std::optional<std::string_view> stage4_email) {
     if (time < 0 || time > max_timestamp) { fail(ManagementErrorKind::invalid_input); }
     const auto checked = AccountName::create(name);
-    if (!checked || (stage4_email_pending && name != "Administrator")) { fail(ManagementErrorKind::invalid_input); }
+    if (!checked || (stage4_email && (name != "Administrator" || !stage4_mailbox(*stage4_email)))) {
+        fail(ManagementErrorKind::invalid_input);
+    }
     detail::validate_password(password);
     AccountRepository repository(connection_);
     repository.require_schema();
@@ -237,16 +254,16 @@ StoredAccount AccountManagementService::bootstrap_owner(std::string_view name,
     auto transaction = connection_.transaction();
     if (connection_.scalar("SELECT COUNT(*) FROM dc24h_accounts WHERE role='owner'") != "0") { fail(ManagementErrorKind::unauthorized); }
     auto result = repository.insert_in_transaction({checked->text(),Role::owner,
-        stage4_email_pending ? Status::disabled : Status::active,{time,time,{}}});
+        stage4_email ? Status::disabled : Status::active,{time,time,{}}});
     database::Parameters bound; EraseParameters erase{bound}; bound.reserve(3);
     bound.emplace_back(result.account.id().value());
     bound.emplace_back(database::Bytes(verifier.bytes.begin(),verifier.bytes.end())); bound.emplace_back(time);
     if (connection_.execute_prepared("INSERT INTO dc24h_account_credentials(account_id,verifier,created_at) VALUES (?,?,?)",bound).affected_rows != 1) {
         fail(ManagementErrorKind::invalid_record);
     }
-    if (stage4_email_pending && connection_.execute_prepared(
-        "INSERT INTO stage4_emails(account_id,email,initial_owner) VALUES (?,'admin@dc24h.eu',1)",
-        parameters(result.account.id().value())).affected_rows != 1) {
+    if (stage4_email && connection_.execute_prepared(
+        "INSERT INTO stage4_emails(account_id,email,initial_owner) VALUES (?,?,1)",
+        parameters(result.account.id().value(),std::string(*stage4_email))).affected_rows != 1) {
         fail(ManagementErrorKind::invalid_record);
     }
     audit_append(connection_, "ownership.bootstrap", result.account.id().value(), result.account.id().value(), time);

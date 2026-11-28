@@ -1,6 +1,47 @@
 # Debian / Ubuntu installation
 
-Build beta-0.9.20 for local evaluation and start it on a loopback listener. For upgrades from Twilight and existing systemd installations, follow the [migration and rollback guide](REBRAND_MIGRATION.md).
+## Interactive ADCS hub and WebAdmin installation
+
+Run the installer from a reviewed checkout on a fresh Debian or Ubuntu systemd host.
+Follow the [migration and rollback guide](REBRAND_MIGRATION.md) for existing installations.
+
+```sh
+sudo ./scripts/install_dc24h.py
+```
+
+- Prepare a verified Node.js 24 LTS distribution with npm. The default location is `/opt/node24-release`. See the [Stage IV operations guide](STAGE_IV_DEDICATED_SERVICE.md) for release verification.
+- Have a trusted TLS certificate and matching key for each selected domain. The same certificate files can serve both endpoints when they share a domain. Enter the server's local interface IPv4 when NAT forwards traffic from the public IPv4.
+- Select the public HTTPS and ADCS ports. WebAdmin defaults to `7178` and the hub to `1512`. Port `443` uses Apache's standard shared HTTPS listener. For another HTTPS port use an available address and port pair.
+- Supply a database name and dedicated hub login using up to 27 lowercase letters, digits, and underscores, beginning with a letter. Use a new or empty database. The hub, WebAdmin and the WebAdmin account service use distinct SQL accounts in the same database over a local Unix socket. Press Enter at the MariaDB administrator password prompt when using local root socket authentication.
+- Enter the initial `Administrator` password and the email address that should receive WebAdmin enrollment and login codes. The installer stores the address in lowercase and offers `admin@dc24h.eu` as the default. Use an authenticated SMTP account authorized to send as `admin@dc24h.eu`. The installer uses hidden password prompts and asks for confirmation before installing approved missing packages and building with the detected or selected number of logical CPUs.
+
+If preparation is interrupted, run the installer again with the same endpoints,
+certificate paths, database name, hub login and socket. Re-enter the existing
+Administrator email and hub SQL password if those accounts were created.
+Keep the root-only installation record `/etc/dc24h/installer.json` with the
+matched private state and database backup.
+The existing Administrator account keeps its established password on retry.
+
+After preparation, check DNS, port ownership, TLS and SMTP delivery. The
+[Stage IV operations guide](STAGE_IV_DEDICATED_SERVICE.md#start-smtp-qualification-and-https)
+describes the SMTP probe. For an approved activation on the selected host, run
+the following as root.
+
+```sh
+systemctl enable --now dc24h-stage3-adcs.service dc24h-stage4-webadmin.service
+a2enmod ssl headers rewrite proxy proxy_http
+a2ensite dc24h-stage4-webadmin
+apache2ctl configtest && systemctl reload apache2
+```
+
+Connect to the hub using the printed `adcs://` URL and sign in to WebAdmin via
+the printed HTTPS URL. Keep MariaDB, the WebAdmin loopback backend, and the
+hub's Unix API private. Manage DNS, NAT, firewall and certificate renewal
+through the host's deployment procedures.
+
+## Build for local evaluation
+
+Build beta-0.9.20 for local evaluation and start it on a loopback listener.
 
 **alpha-0.8.5 Ban Core:** [Persistent account/CID/IP admission blocks](BAN_CORE.md) add explicit schema v8, proven create/revoke, startup enforcement and expiry. Admin Core now has ten maintenance actions; users.ban/blocks.manage are implemented. This supersedes earlier schema-v7/ban-pending statements.
 

@@ -371,6 +371,8 @@ Guest login, public user sessions, public chat and direct/echo private chat are 
 
 ## Build
 
+For a fresh Debian or Ubuntu systemd host, see the [interactive installer for the ADCS hub and WebAdmin](doc/us/INSTALLATION.md#interactive-adcs-hub-and-webadmin-installation).
+
 ```sh
 sudo apt-get install build-essential cmake libutf8proc-dev libgcrypt20-dev libssl-dev openssl python3 ncdc libmariadb-dev
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release

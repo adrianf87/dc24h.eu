@@ -14,7 +14,9 @@ import type { RuntimeConfiguration } from "../server/stage4-store.ts";
 test("disposable C++/MariaDB authorization and mock SMTP through the gateway", async () => {
   const fixture = process.env.STAGE4_FIXTURE!;
   const origin = approvedStage4Origin(process.env.STAGE4_FIXTURE_PORT ?? "");
+  const adminEmail = process.env.STAGE4_FIXTURE_ADMIN_EMAIL;
   assert(origin);
+  assert(adminEmail);
   const state = "/etc/dc24h/stage4-test";
   const settings = JSON.parse(readFileSync(join(state, "stage4-runtime.json"), "utf8")) as RuntimeConfiguration;
   assert.equal(settings.environment, "test");
@@ -106,7 +108,7 @@ test("disposable C++/MariaDB authorization and mock SMTP through the gateway", a
     assert.equal(await count("SELECT COUNT(*) n FROM stage4_challenges"), 0);
     smtpWorks = true;
     assert.equal((await ownerBegin()).status, 200);
-    assert.equal(messages.at(-1)?.email, "admin@dc24h.eu");
+    assert.equal(messages.at(-1)?.email, adminEmail);
     assert.equal((await owner.request("session")).status, 401);
     assert.equal((await owner.request("tls/renewal")).status, 401);
     const initialCode = messages.at(-1)!.code;
@@ -191,6 +193,7 @@ test("disposable C++/MariaDB authorization and mock SMTP through the gateway", a
 
     const second = browser("192.0.2.11");
     assert.equal((await second.send("login/send", login)).status, 200);
+    assert.equal(messages.at(-1)?.email, adminEmail);
     time += 300_001;
     assert.equal((await second.request("login/verify", { code: messages.at(-1)!.code })).status, 403);
     assert.equal((await second.send("login/send", login)).status, 200);
@@ -216,6 +219,10 @@ test("disposable C++/MariaDB authorization and mock SMTP through the gateway", a
     const user = browser("192.0.2.12");
     const signup = { username: "SignupFixture", email: "signup@example.test", password: "A new fixture password 73!" };
     assert.equal((await user.send("register/send", { ...signup, role: "owner" })).status, 400);
+    const deliveredToOwner = messages.length;
+    assert.equal((await user.send("register/send", { ...signup, email: adminEmail.toUpperCase() })).status, 200);
+    assert.equal(await count("SELECT COUNT(*) n FROM stage4_registrations"), 0);
+    assert.equal(messages.length, deliveredToOwner);
     assert.equal((await user.send("register/send", signup)).status, 200);
     await delay(50);
     assert.equal(messages.at(-1)?.email, signup.email);

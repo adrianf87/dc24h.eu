@@ -1,0 +1,53 @@
+[Unit]
+Description=dc24h.eu ADCS hub
+After=network-online.target mariadb.service
+Wants=network-online.target
+Requires=mariadb.service
+Conflicts=dc24h.service dc24h-twilight.service
+
+[Service]
+Type=exec
+User=dc24h-stage3
+Group=dc24h-stage3
+UMask=0077
+StateDirectory=dc24h-stage3
+StateDirectoryMode=0700
+WorkingDirectory=/var/lib/dc24h-stage3
+RuntimeDirectory=dc24h-stage3-api
+RuntimeDirectoryMode=0700
+LoadCredential=adcs-chain.pem:@HUB_FULLCHAIN@
+LoadCredential=adcs-key.pem:@HUB_KEY@
+Environment=DC24H_TLS_RELOAD_HOSTNAME=@HUB_HOSTNAME@
+ExecStartPre=/opt/dc24h/bin/dc24h --config /etc/dc24h-stage3/dc24h.ini --check-config
+ExecStart=/opt/dc24h/bin/dc24h --config /etc/dc24h-stage3/dc24h.ini
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=20
+KillMode=mixed
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=@HUB_CAPABILITY@
+AmbientCapabilities=@HUB_CAPABILITY@
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+[Install]
+WantedBy=multi-user.target
