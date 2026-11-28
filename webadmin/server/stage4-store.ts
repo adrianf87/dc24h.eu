@@ -22,6 +22,7 @@ export const opaque = () => randomBytes(32).toString("hex");
 export const validToken = (ticket: unknown): ticket is string =>
   typeof ticket === "string" && /^[0-9a-f]{64}$/.test(ticket);
 const digest = (ticket: string) => createHash("sha256").update(ticket, "hex").digest();
+export const stage4SessionDigest = (token: string) => digest(token).toString("hex");
 const decode = (a: AccountRow): Identity => ({
   id: String(a.id), role: a.role.toString(), status: a.status.toString(), revision: String(a.revision),
 });

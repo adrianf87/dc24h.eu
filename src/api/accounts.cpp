@@ -6,12 +6,14 @@
 #include "dc24h/accounts/registration.hpp"
 #include "../accounts/registration_internal.hpp"
 #include "dc24h/configuration/configuration.hpp"
+#include "dc24h/security/roles.hpp"
 #include <openssl/crypto.h>
 #include <charconv>
 #include <chrono>
 #include <limits>
 #include <map>
 #include <pwd.h>
+#include <stdexcept>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
@@ -346,20 +348,22 @@ void management_contract(accounts::Role role, std::string_view body) {
     // The permission is granted and the engine is still absent. Do not open a file or spawn a process.
     throw HttpError{501,"not_implemented"};
 }
+std::string audit_page(const std::vector<audit::Event>& rows) {
+    std::string output="{\"maintenance\":true,\"restart_required\":true,\"events\":[";
+    for(const auto& event:rows){
+        if(output.back()!='['){output+=',';}
+        output+="{\"id\":"+json_string(std::to_string(event.id))+",\"occurred_at\":"+std::to_string(event.occurred_at)+
+            ",\"action\":"+json_string(event.action)+",\"actor_id\":"+json_string(std::to_string(event.actor_id))+
+            ",\"target_kind\":"+json_string(event.target_kind)+",\"target_id\":"+json_string(std::to_string(event.target_id))+
+            ",\"outcome\":"+json_string(event.outcome)+"}";
+    }
+    return response(200,output+"],\"next_after\":"+(rows.size()==audit::page_size?json_string(std::to_string(rows.back().id)):"null")+"}");
+}
 std::string serve(const Request& request,admin::Engine& engine,bool& written) {
     if(request.target=="/api/v1/audit"){
         if(request.method!="POST"){throw HttpError{405,"method_not_allowed"};}
         Fields fields;form(request.body,fields);fields.exact({"actor_id","proof","after"});
-        const auto rows=engine.audit_list(number(fields.get("actor_id")),fields.get("proof"),number(fields.get("after"),true));
-        std::string output="{\"maintenance\":true,\"restart_required\":true,\"events\":[";
-        for(const auto& event:rows){
-            if(output.back()!='['){output+=',';}
-            output+="{\"id\":"+json_string(std::to_string(event.id))+",\"occurred_at\":"+std::to_string(event.occurred_at)+
-                ",\"action\":"+json_string(event.action)+",\"actor_id\":"+json_string(std::to_string(event.actor_id))+
-                ",\"target_kind\":"+json_string(event.target_kind)+",\"target_id\":"+json_string(std::to_string(event.target_id))+
-                ",\"outcome\":"+json_string(event.outcome)+"}";
-        }
-        return response(200,output+"],\"next_after\":"+(rows.size()==audit::page_size?json_string(std::to_string(rows.back().id)):"null")+"}");
+        return audit_page(engine.audit_list(number(fields.get("actor_id")),fields.get("proof"),number(fields.get("after"),true)));
     }
     if(request.target.starts_with("/api/v1/bans")){return serve_bans(request,engine,written);}
     if(request.target=="/api/v1/admin") {
@@ -406,6 +410,126 @@ std::string serve(const Request& request,admin::Engine& engine,bool& written) {
     }
     const auto result=engine.execute(command);written=true;const auto& updated=std::get<StoredAccount>(result);
     return response(200,"{\"account\":"+json(updated)+",\"maintenance\":true}");
+}
+
+struct Stage4Actor {
+    admin::AccountRef account;
+    accounts::Role role;
+};
+
+Stage4Actor stage4_actor(const database::Options& options, std::string_view digest, std::int64_t now) {
+    if (digest.size() != 64 || digest.find_first_not_of("0123456789abcdef") != std::string_view::npos) { bad(); }
+    database::Connection connection(options);
+    const auto result = connection.query(
+        "SELECT a.id,a.revision,a.role FROM stage4_sessions s JOIN dc24h_accounts a ON a.id=s.account_id "
+        "JOIN stage4_emails e ON e.account_id=a.id WHERE s.token=UNHEX(?) AND a.status='active' "
+        "AND a.revision=s.revision AND e.verified_at IS NOT NULL AND s.seen_at<=? AND s.seen_at>? AND s.expires_at>?",
+        {std::string(digest), now, now - 120000, now}, {1,3,32,128});
+    if (result.rows.empty()) { throw HttpError{401,"unauthorized"}; }
+    const auto& row = result.rows.front();
+    if (!row[0] || !row[1] || !row[2]) { throw HttpError{503,"unavailable"}; }
+    const auto role = parse_role(*row[2]);
+    if (!role || (*role != Role::owner && *role != Role::administrator)) { throw HttpError{403,"forbidden"}; }
+    return {{number(*row[0]), number(*row[1])}, *role};
+}
+
+std::string stage4_admin(const Request& request, const database::Options& options, admin::Engine& engine) {
+    if (request.method != "POST") { throw HttpError{405,"method_not_allowed"}; }
+    Fields fields;
+    form(request.body, fields);
+    const auto operation = fields.get("operation");
+    const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    const auto actor = stage4_actor(options, fields.get("session_digest"), now);
+    const auto require = [&](security::Permission permission) {
+        if (!security::allows(actor.role, permission)) { throw HttpError{403,"forbidden"}; }
+    };
+    if (operation == "management" || operation == "admin") {
+        fields.exact({"operation","session_digest"});
+        return operation == "management" ? management_json(actor.role) : administration(engine);
+    }
+    if (operation == "audit.list") {
+        require(security::Permission::read_audit);
+        fields.exact({"operation","session_digest","after","proof"});
+        return audit_page(engine.audit_list(actor.account.id, fields.get("proof"),
+            number(fields.get("after"),true), actor.account.revision));
+    }
+    if (operation == "accounts.list" || operation == "accounts.staff" || operation == "accounts.detail" || operation == "bans.list") {
+        Request read;
+        read.method = "GET";
+        bool written = false;
+        if (operation == "bans.list") {
+            require(security::Permission::ban_users);
+            fields.exact({"operation","session_digest","after","state"});
+            const auto state = fields.get("state");
+            if (!bans::parse_filter(state)) { bad(); }
+            read.target = "/api/v1/bans?after=" + std::to_string(number(fields.get("after"),true)) + "&state=" + std::string(state);
+        } else {
+            require(security::Permission::manage_accounts);
+            if (operation == "accounts.detail") {
+                fields.exact({"operation","session_digest","id"});
+                read.target = "/api/v1/accounts/" + std::to_string(number(fields.get("id")));
+            } else {
+                fields.exact({"operation","session_digest","after"});
+                read.target = operation == "accounts.staff" ? "/api/v1/accounts?staff_after=" : "/api/v1/accounts?after=";
+                read.target += std::to_string(number(fields.get("after"),true));
+            }
+        }
+        return serve(read, engine, written);
+    }
+
+    const auto action = admin::parse_action(operation);
+    if (!action || *action == admin::Action::password || !admin::available(*action, engine.origin())) {
+        throw HttpError{404,"not_found"};
+    }
+    admin::Command command;
+    command.action = *action;
+    command.actor = actor.account;
+    command.time = now / 1000;
+    command.proof = fields.get("proof");
+    if (*action == admin::Action::ban_create || *action == admin::Action::ban_revoke) {
+        require(security::Permission::ban_users);
+        require(security::Permission::manage_blocks);
+        if (*action == admin::Action::ban_create) {
+            fields.exact({"operation","session_digest","proof","kind","subject","reason","expiry"});
+            const auto kind = bans::parse_kind(fields.get("kind"));
+            if (!kind) { bad(); }
+            command.ban_kind = *kind;
+            command.subject = fields.get("subject");
+            command.reason = fields.get("reason");
+            const auto expiry = fields.get("expiry");
+            if (expiry.starts_with("duration:")) { command.duration_seconds = number(expiry.substr(9)); }
+            else if (expiry.starts_with("until:")) { command.expires_at = static_cast<bans::Timestamp>(number(expiry.substr(6))); }
+            else if (expiry != "permanent") { bad(); }
+        } else {
+            fields.exact({"operation","session_digest","proof","id","revision"});
+            command.target = {number(fields.get("id")),number(fields.get("revision"))};
+        }
+        const auto result = engine.execute(command);
+        return response(200,"{\"maintenance\":true,\"restart_required\":true,\"ban\":"+ban_json(std::get<bans::Record>(result))+"}");
+    }
+    require(security::Permission::manage_accounts);
+    if (*action == admin::Action::create) {
+        fields.exact({"operation","session_digest","proof","name","password"});
+        command.name = fields.get("name");
+        command.password = fields.get("password");
+    } else {
+        command.target = {number(fields.get("id")), number(fields.get("revision"))};
+        if (*action == admin::Action::reset) {
+            fields.exact({"operation","session_digest","proof","id","revision","password"});
+            command.password = fields.get("password");
+        } else if (*action == admin::Action::role) {
+            require(security::Permission::manage_roles);
+            fields.exact({"operation","session_digest","proof","id","revision","role"});
+            const auto role = parse_role(fields.get("role"));
+            if (!role || *role == Role::owner || !account_role(*role)) { bad(); }
+            command.role = *role;
+        } else {
+            fields.exact({"operation","session_digest","proof","id","revision"});
+        }
+    }
+    const auto result = engine.execute(command);
+    return response(200,"{\"account\":"+json(std::get<StoredAccount>(result))+",\"maintenance\":true}");
 }
 }
 AccountHandler account_handler(database::Options options, std::shared_ptr<const configuration::Review> review) {
@@ -524,7 +648,46 @@ AccountHandler stage4_account_handler(database::Options options) {
     // Equalize the expensive branch for unknown and ineligible identities.
     auto dummy = std::make_shared<accounts::detail::EncodedPassword>();
     accounts::detail::hash_password("stage4 dummy password proof", *dummy);
-    return [options=std::move(options),dummy=std::move(dummy)](const Request& request) {
+    auto engine = admin::Engine(options,admin::Origin::maintenance_api);
+    return [options=std::move(options),dummy=std::move(dummy),engine=std::move(engine)](const Request& request) mutable {
+        if (request.target == "/api/v1/stage4/admin") {
+            try { return stage4_admin(request, options, engine); }
+            catch (const HttpError& error) { return response(error.status,"{\"error\":"+json_string(error.key)+"}"); }
+            catch (const admin::Error& error) {
+                switch (error.kind()) {
+                case admin::ErrorKind::invalid_input: return response(400,"{\"error\":\"invalid_input\"}");
+                case admin::ErrorKind::forbidden: return response(403,"{\"error\":\"forbidden\"}");
+                case admin::ErrorKind::stale: return response(409,"{\"error\":\"stale\"}");
+                case admin::ErrorKind::not_found: return response(404,"{\"error\":\"not_found\"}");
+                case admin::ErrorKind::outcome_unknown: return response(503,"{\"error\":\"outcome_unknown\"}");
+                case admin::ErrorKind::unavailable: break;
+                }
+            }
+            catch (...) {}
+            return response(503,"{\"error\":\"unavailable\"}");
+        }
+        // The Stage IV account service is not the live ADC/ADCS hub. Expose
+        // only bounded account-directory aggregates over the trusted private
+        // C++ bearer socket; the Node gateway checks OTP session and role.
+        if (request.target == "/api/v1/stage4/identity-summary") {
+            if (request.method != "GET") { return response(405, "{\"error\":\"method_not_allowed\"}"); }
+            try {
+                database::Connection connection(options);
+                auto count = [&](std::string_view query) {
+                    const auto value = connection.scalar(std::string(query));
+                    if (!value || value->empty() || value->find_first_not_of("0123456789") != std::string::npos)
+                        { throw std::runtime_error("invalid_account_count"); }
+                    return *value;
+                };
+                return response(200, "{\"schema\":1,\"source\":\"stage4-account-service\",\"accounts\":{"
+                    "\"total\":" + count("SELECT COUNT(*) FROM dc24h_accounts") +
+                    ",\"active\":" + count("SELECT COUNT(*) FROM dc24h_accounts WHERE status='active'") +
+                    ",\"owners\":" + count("SELECT COUNT(*) FROM dc24h_accounts WHERE role='owner'") +
+                    ",\"administrators\":" + count("SELECT COUNT(*) FROM dc24h_accounts WHERE role='administrator'") +
+                    ",\"registered\":" + count("SELECT COUNT(*) FROM dc24h_accounts WHERE role='registered'") +
+                    "},\"verified_emails\":" + count("SELECT COUNT(*) FROM stage4_emails WHERE verified_at IS NOT NULL") + "}");
+            } catch (...) { return response(503, "{\"error\":\"identity_summary_unavailable\"}"); }
+        }
         if (request.method != "POST" || request.target != "/api/v1/admin/access") {
             return response(404, "{\"error\":\"not_found\"}");
         }

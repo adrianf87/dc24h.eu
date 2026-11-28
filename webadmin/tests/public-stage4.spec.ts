@@ -1,5 +1,69 @@
 import { expect, test } from "@playwright/test";
 
+test("OTP-authenticated Owner sees actual read-only C++ account statistics in React", async ({ page }) => {
+  let authenticated = true;
+  const paths: string[] = [];
+  await page.route("**/stage4/v1/**", async route => {
+    const path = new URL(route.request().url()).pathname;
+    paths.push(path);
+    let status = 200;
+    let payload: unknown = {};
+    if (path.endsWith("/session")) {
+      status = authenticated ? 200 : 401;
+      payload = authenticated ? { schema: 1, authenticated: true, role: "owner", csrf: "a".repeat(64) } :
+        { error: "unauthorized" };
+    } else if (path.endsWith("/identity-summary")) {
+      payload = { schema: 1, data: { schema: 1, source: "stage4-account-service",
+        accounts: { total: 8, active: 7, owners: 1, administrators: 2, registered: 5 },
+        verified_emails: 7 } };
+    } else if (path.endsWith("/admin")) {
+      expect(route.request().method()).toBe("POST");
+      expect(route.request().headers()["x-dc24h-stage4-csrf"]).toBe("a".repeat(64));
+      const input = route.request().postDataJSON();
+      expect(input).toEqual({ operation: "accounts.list", after: "0" });
+      payload = { schema: 1, data: { accounts: [{ id: "1", name: "BrowserFixture", role: "registered",
+        status: "active", revision: "1", created_at: 1, updated_at: 1, last_login_at: null }],
+        maintenance: true, next_after: null } };
+    } else if (path.endsWith("/logout")) {
+      authenticated = false;
+      payload = { schema: 1, authenticated: false };
+    } else {
+      status = 404;
+      payload = { error: "not_found" };
+    }
+    await route.fulfill({ status, contentType: "application/json", body: JSON.stringify(payload) });
+  });
+  await page.goto("/public-stage4/index.html");
+  await expect(page.locator("#dashboard")).toBeVisible();
+  await expect(page.getByText("WebAdmin — konta (C++ / MariaDB)")).toBeVisible();
+  await expect(page.getByText("Łącznie kont:")).toBeVisible();
+  await expect(page.locator(".api-stats")).toContainText("8");
+  expect(paths).toContain("/stage4/v1/identity-summary");
+  expect(paths).not.toContain("/stage4/v1/telemetry");
+  await page.locator(".api-actions button").nth(1).click();
+  await page.locator(".api-panel button").filter({ hasText: /Pierwsza strona/ }).click();
+  await expect(page.getByRole("button", { name: "BrowserFixture" })).toBeVisible();
+  expect(paths).toContain("/stage4/v1/admin");
+  await page.getByRole("button", { name: "Wyloguj" }).click();
+  await expect(page.locator("#login")).toBeVisible();
+  await expect(page.locator(".api-stats")).toHaveCount(0);
+});
+
+test("Registered role never gets read-only admin API UI", async ({ page }) => {
+  const paths: string[] = [];
+  await page.route("**/stage4/v1/**", async route => {
+    const path = new URL(route.request().url()).pathname;
+    paths.push(path);
+    await route.fulfill({ status: path.endsWith("/session") ? 200 : 403,
+      contentType: "application/json", body: JSON.stringify(path.endsWith("/session") ?
+        { schema: 1, authenticated: true, role: "registered", csrf: "b".repeat(64) } :
+        { error: "forbidden" }) });
+  });
+  await page.goto("/public-stage4/index.html");
+  await expect(page.getByText("Zestawienie kont wymaga roli Owner lub Administrator.")).toBeVisible();
+  expect(paths).not.toContain("/stage4/v1/identity-summary");
+});
+
 // Synthetic browser API: never send test codes or credentials to the VPS.
 test("public WebAdmin waits for a mailed code after C++ password proof", async ({ page }) => {
   let authenticated = false;

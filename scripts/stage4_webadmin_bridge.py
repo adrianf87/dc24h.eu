@@ -23,9 +23,19 @@ from http.server import BaseHTTPRequestHandler
 BRIDGE_SOCKET = Path("/run/dc24h-stage4-bridge/bridge.sock")
 AUTH_SOCKET = Path("/run/dc24h-stage4-auth/api.sock")
 AUTH_TOKEN = Path("/var/lib/dc24h-stage4-auth/api.token")
+LIVE_SOCKET = Path("/run/dc24h-stage3-api/hub.sock")
+LIVE_TOKEN = Path("/var/lib/dc24h-stage3/api.token")
+LIVE_ROUTES = {
+    "/api/v1/stage4/hub/health": "/api/v1/health",
+    "/api/v1/stage4/hub/ready": "/api/v1/ready",
+    "/api/v1/stage4/hub/status": "/api/v1/status",
+    "/api/v1/stage4/hub/users": "/api/v1/users",
+}
 ROUTES = {("POST", "/api/v1/admin/access"),
+          ("POST", "/api/v1/stage4/admin"),
           ("GET", "/api/v1/management"),
-          ("GET", "/api/v1/status")}
+          ("GET", "/api/v1/status"),
+          ("GET", "/api/v1/stage4/identity-summary")}
 GRANT_HEADERS = ("X-DC24H-Admin-Grant", "X-DC24H-Session", "X-DC24H-Csrf")
 
 
@@ -88,7 +98,8 @@ class BridgeHandler(BaseHTTPRequestHandler):
         self.forward()
 
     def forward(self):
-        if (self.command, self.path) not in ROUTES:
+        live_path = LIVE_ROUTES.get(self.path) if self.command == "GET" else None
+        if not live_path and (self.command, self.path) not in ROUTES:
             self.reply(404, b'{"error":"not_found"}')
             return
         if self.headers.get("Transfer-Encoding") or len(self.headers.get_all("Content-Length", [])) > 1:
@@ -104,12 +115,21 @@ class BridgeHandler(BaseHTTPRequestHandler):
         elif length not in (None, "0"):
             self.reply(400)
             return
-        headers = {"Authorization": "Bearer " + self.server.hub_token,
+        token = self.server.hub_token
+        socket_path = self.server.hub_socket
+        if live_path:
+            try:
+                token = checked_hub_credentials(LIVE_SOCKET, LIVE_TOKEN, os.geteuid())
+            except (ValueError, OSError):
+                self.reply(503)
+                return
+            socket_path = LIVE_SOCKET
+        headers = {"Authorization": "Bearer " + token,
                    "Accept": "application/json", "Connection": "close",
                    "Host": "localhost"}
         for name in GRANT_HEADERS:
             values = self.headers.get_all(name, [])
-            if len(values) > 1 or (values and not re.fullmatch(r"[a-fA-F0-9]{32,128}", values[0])):
+            if len(values) > 1 or (values and (live_path or not re.fullmatch(r"[a-fA-F0-9]{32,128}", values[0]))):
                 self.reply(400)
                 return
             if values:
@@ -118,9 +138,9 @@ class BridgeHandler(BaseHTTPRequestHandler):
         if body is not None:
             headers["Content-Type"] = "application/x-www-form-urlencoded"
             headers["Content-Length"] = str(len(body))
-        upstream = HubConnection(str(self.server.hub_socket), timeout=4)
+        upstream = HubConnection(str(socket_path), timeout=4)
         try:
-            upstream.request(self.command, self.path, body=body, headers=headers)
+            upstream.request(self.command, live_path or self.path, body=body, headers=headers)
             response = upstream.getresponse()
             result = response.read(65537)
             if (len(result) > 65536 or not response.getheader("Content-Type", "").lower().startswith("application/json") or

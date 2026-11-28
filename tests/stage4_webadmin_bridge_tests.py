@@ -9,6 +9,7 @@ import socketserver
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch
 
 from scripts.stage4_webadmin_bridge import (BridgeServer, HubConnection,
                                             checked_hub_credentials)
@@ -101,10 +102,13 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual(Upstream.seen[-1][2]["Authorization"], "Bearer " + "d" * 64)
         self.assertEqual(self.call("GET", "/api/v1/management")[0], 200)
         self.assertEqual(self.call("GET", "/api/v1/status")[0], 200)
+        self.assertEqual(self.call("GET", "/api/v1/stage4/identity-summary")[0], 200)
         self.assertEqual(self.call("GET", "/api/v1/accounts")[0], 404)
+        self.assertEqual(self.call("GET", "/api/v1/users")[0], 404)
+        self.assertEqual(self.call("POST", "/api/v1/stage4/identity-summary")[0], 404)
         self.assertEqual(self.call("POST", "/api/v1/management")[0], 404)
         self.assertEqual(self.call("GET", "/api/v1/admin/access")[0], 404)
-        self.assertEqual(len(Upstream.seen), 3)
+        self.assertEqual(len(Upstream.seen), 4)
 
     def test_smuggling_and_oversized_password_request_denied(self):
         # The bridge rejects malformed framing before reading the request body.
@@ -127,6 +131,35 @@ class BridgeTests(unittest.TestCase):
                     self.assertEqual(status, 400)
         self.assertEqual(self.call("GET", "/api/v1/status", {"Content-Length": "2"})[0], 400)
         self.assertEqual(Upstream.seen, [])
+
+    def test_live_hub_routes_use_separate_read_only_socket(self):
+        from scripts import stage4_webadmin_bridge as bridge
+
+        live = self.root / "live"
+        live.mkdir(mode=0o700)
+        live_socket = live / "hub.sock"
+        live_token = live / "api.token"
+        live_token.write_text("e" * 64, encoding="ascii")
+        live_token.chmod(0o600)
+        with LocalServer(str(live_socket), Upstream) as server:
+            live_socket.chmod(0o600)
+            worker = threading.Thread(target=server.serve_forever, daemon=True)
+            worker.start()
+            try:
+                with patch.object(bridge, "LIVE_SOCKET", live_socket), patch.object(bridge, "LIVE_TOKEN", live_token):
+                    for probe in ("status", "users", "health", "ready"):
+                        self.assertEqual(self.call("GET", "/api/v1/stage4/hub/" + probe)[0], 200)
+                        self.assertEqual(Upstream.seen[-1][0:2], ("GET", "/api/v1/" + probe))
+                        self.assertEqual(Upstream.seen[-1][2]["Authorization"], "Bearer " + "e" * 64)
+                    self.assertEqual(self.call("POST", "/api/v1/stage4/hub/status")[0], 404)
+                    self.assertEqual(self.call("GET", "/api/v1/stage4/hub/restart")[0], 404)
+                    live_token.chmod(0o644)
+                    self.assertEqual(self.call("GET", "/api/v1/stage4/hub/status")[0], 503)
+                    self.assertEqual(self.call("GET", "/api/v1/status")[0], 200)
+                    self.assertEqual(Upstream.seen[-1][2]["Authorization"], "Bearer " + "d" * 64)
+            finally:
+                server.shutdown()
+                worker.join()
 
     def test_peer_uid_mismatch_is_refused_before_http(self):
         self.bridge.expected_uid = os.geteuid() + 1

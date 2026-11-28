@@ -3,10 +3,12 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { isIP } from "node:net";
 import { isSafeMailbox } from "./public-msmtp.ts";
-import { opaque, validToken } from "./stage4-store.ts";
+import { opaque, stage4SessionDigest, validToken } from "./stage4-store.ts";
 import type { Stage4Store } from "./stage4-store.ts";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { PublicBackend, PublicBackendGrant } from "./public-backend.ts";
+import { PublicUpstreamError } from "./public-backend.ts";
+import type { HubRead, PublicBackend, PublicBackendGrant } from "./public-backend.ts";
+import { readAdminInput } from "./public-admin.ts";
 import { createPublicEmailCodeGate, PUBLIC_WEBADMIN_ORIGIN } from "./public-email-code.ts";
 import type { RemoteRateLimitStore } from "./remote-rate-limit-store.ts";
 import type { RemoteEvent } from "./remote-gateway.ts";
@@ -281,7 +283,13 @@ export function publicGateway(deps: PublicGatewayDependencies) {
 }
 
 const registrationRoutes = new Map([...routes,
-  ["register/send", "POST"], ["register/verify", "POST"], ["password/change", "POST"]]);
+  ["register/send", "POST"], ["register/verify", "POST"], ["password/change", "POST"],
+  ["identity-summary", "GET"], ["admin", "POST"]]);
+const hubReads = new Map<string, HubRead>([
+  ["hub/health", "health"], ["hub/ready", "ready"],
+  ["hub/status", "status"], ["hub/users", "users"],
+]);
+for (const path of hubReads.keys()) registrationRoutes.set(path, "GET");
 const usernameOK = (value: unknown): value is string =>
   typeof value === "string" && /^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/.test(value);
 const passwordOK = (value: unknown): value is string =>
@@ -293,7 +301,8 @@ const strongPassword = (value: unknown): value is string =>
 
 type DatabaseGateway = {
   db: Stage4Store;
-  backend: Pick<PublicBackend, "prove" | "prepare" | "change" | "health">;
+  backend: Pick<PublicBackend, "prove" | "prepare" | "change" | "health" |
+    "identitySummary" | "hubRead" | "adminOperation">;
   sendCode(email: string, code: string): Promise<boolean>;
   now?: () => number;
 };
@@ -417,6 +426,41 @@ export function databasePublicGateway({ db, backend, sendCode, now = Date.now }:
       const token = readCookie(req, sessionCookie);
       const active = validToken(token) && await db.session(token);
       if (!active) return reply(res, 401, { error: "unauthorized" }, [clear(sessionCookie)]);
+      const hubRead = hubReads.get(endpoint);
+      if (endpoint === "identity-summary" || endpoint === "admin" || hubRead) {
+        if (!["owner", "administrator"].includes(active.identity.role))
+          return reply(res, 403, { error: "forbidden" });
+        const admin = endpoint === "admin";
+        if (admin && !db.isCsrf("session", token, supplied)) return reply(res, 403, { error: "csrf_required" });
+        const input = admin ? readAdminInput(await body(req).catch(() => ({}))) : null;
+        if (admin && !input) return reply(res, 400, { error: "bad_request" });
+        if (!await limited(endpoint, ip, admin ? 120 : 300, admin ? 20 : 30,
+          [[endpoint + ":actor:" + active.identity.id, admin ? 20 : 30, minutes]])) return rateLimited();
+        let result: unknown;
+        try {
+          if (input) {
+            result = input.parse(await backend.adminOperation(input.operation, input.values, stage4SessionDigest(token)));
+          } else result = hubRead ? await backend.hubRead(hubRead) : await backend.identitySummary();
+        } catch (error) {
+          if (error instanceof PublicUpstreamError) {
+            if (error.status === 401) return reply(res, 401, { error: "unauthorized" }, [clear(sessionCookie)]);
+            if (error.status === 429) return rateLimited();
+            if ([400, 403, 404, 409].includes(error.status)) return reply(res, error.status, { error: "operation_refused" });
+            if (hubRead === "ready" && error.status === 503) return reply(res, 503, { error: "not_ready_or_unavailable" });
+          }
+          return reply(res, 503, { error: input && "proof" in input.values && input.operation !== "audit.list" ?
+            "outcome_unknown" : "unavailable" });
+        }
+        // Recheck after the asynchronous C++ request: password/role changes or
+        // revocation during the read must invalidate the result.
+        const verified = await db.session(token);
+        if (!verified || verified.identity.id !== active.identity.id ||
+            verified.identity.revision !== active.identity.revision ||
+            verified.identity.role !== active.identity.role)
+          return reply(res, 401, { error: "unauthorized" }, [clear(sessionCookie)]);
+        await db.touch(token);
+        return reply(res, 200, { schema: 1, data: result });
+      }
       if (method === "POST" && !db.isCsrf("session", token, supplied))
         return reply(res, 403, { error: "csrf_required" });
       if (endpoint === "summary") {

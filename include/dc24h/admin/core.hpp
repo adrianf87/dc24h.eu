@@ -60,7 +60,8 @@ public:
     [[nodiscard]] std::vector<accounts::StoredAccount> list(std::uint64_t after = 0, bool staff = false);
     [[nodiscard]] std::vector<bans::Record> bans_list(std::uint64_t after=0,bans::Filter filter=bans::Filter::all,bans::Timestamp now=bans::Directory::now());
     // Proven read. Does not append a row and does not change maintenance counters.
-    [[nodiscard]] std::vector<audit::Event> audit_list(std::uint64_t actor, std::string_view proof, std::uint64_t after);
+    [[nodiscard]] std::vector<audit::Event> audit_list(std::uint64_t actor, std::string_view proof,
+        std::uint64_t after, std::uint64_t revision = 0);
     [[nodiscard]] Statistics statistics() const noexcept { return statistics_; }
     [[nodiscard]] Origin origin() const noexcept { return origin_; }
 private:

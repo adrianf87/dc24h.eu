@@ -44,7 +44,8 @@ install -m 0644 "$source"/webadmin/package.json "$source"/webadmin/package-lock.
     npm ci --omit=dev --no-audit --no-fund
 )
 install -m 0644 "$source"/webadmin/public-stage4/index.html "$source"/webadmin/public-stage4/panel.css \
-    "$source"/webadmin/public-stage4/panel.js /usr/local/share/dc24h/stage4/
+    "$source"/webadmin/public-stage4/panel.js "$source"/webadmin/public-stage4/panel-react.js \
+    /usr/local/share/dc24h/stage4/
 install -m 0644 "$source/config/dc24h-stage4-webadmin.sysusers.example" /etc/sysusers.d/dc24h-stage4-webadmin.conf
 systemd-sysusers /etc/sysusers.d/dc24h-stage4-webadmin.conf
 for unit in dc24h-twilight-stage4-webadmin dc24h-twilight-stage4-bridge dc24h-twilight-stage4-auth; do

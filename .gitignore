@@ -1,6 +1,7 @@
 /build*/
 /webadmin/node_modules/
 /webadmin/dist/
+/webadmin/public-stage4/panel-react.js
 *.log
 .env
 .env.*

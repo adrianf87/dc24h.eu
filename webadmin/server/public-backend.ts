@@ -3,10 +3,12 @@
 import { request } from "node:http";
 import { parseAccess } from "../src/lib/access.ts";
 import { parseManagement } from "../src/lib/management.ts";
-import { parseRemoteSummary } from "../src/lib/status.ts";
+import { parseRemoteSummary, parseSnapshot } from "../src/lib/status.ts";
+import { parseHubUsers } from "../src/lib/users.ts";
 import { isJsonContentType } from "./json-content-type.ts";
 import type { Identity } from "./stage4-store.ts";
 import type { PublicAdminRole, PublicPasswordGrant } from "./public-email-code.ts";
+import type { PublicAdminOperation } from "./public-admin.ts";
 
 export type PublicBackendGrant = PublicPasswordGrant & {
   grant: string;
@@ -15,7 +17,38 @@ export type PublicBackendGrant = PublicPasswordGrant & {
 };
 export type PublicBackendCredentials = { socket: string; token: string };
 
-type APIPath = "/api/v1/admin/access" | "/api/v1/management" | "/api/v1/status";
+export type HubRead = "health" | "ready" | "status" | "users";
+type APIPath = "/api/v1/admin/access" | "/api/v1/management" | "/api/v1/status" |
+  "/api/v1/stage4/identity-summary" | "/api/v1/stage4/admin" | `/api/v1/stage4/hub/${HubRead}`;
+
+export class PublicUpstreamError extends Error {
+  constructor(readonly status: number) { super("upstream_denied"); }
+}
+
+type IdentitySummary = { schema: 1; source: "stage4-account-service";
+  accounts: { total: number; active: number; owners: number; administrators: number; registered: number };
+  verified_emails: number };
+
+export function parseIdentitySummary(value: unknown): IdentitySummary {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw Error("invalid_identity_summary");
+  const result = value as Record<string, unknown>;
+  const stats = result.accounts;
+  if (result.schema !== 1 || result.source !== "stage4-account-service" ||
+      !stats || typeof stats !== "object" || Array.isArray(stats)) throw Error("invalid_identity_summary");
+  const counts = stats as Record<string, unknown>;
+  const count = (entry: unknown) => {
+    if (typeof entry !== "number" || !Number.isSafeInteger(entry) || entry < 0 || entry > 1_000_000_000)
+      throw Error("invalid_identity_summary");
+    return entry;
+  };
+  const total = count(counts.total), active = count(counts.active);
+  const owners = count(counts.owners), administrators = count(counts.administrators);
+  const registered = count(counts.registered), verified_emails = count(result.verified_emails);
+  if (active > total || owners + administrators + registered > total || verified_emails > total)
+    throw Error("invalid_identity_summary");
+  return { schema: 1, source: "stage4-account-service",
+    accounts: { total, active, owners, administrators, registered }, verified_emails };
+}
 
 export function publicBackend(config: PublicBackendCredentials) {
   const call = (path: APIPath, method: "GET" | "POST", body = "", grant?: PublicBackendGrant): Promise<unknown> =>
@@ -47,10 +80,12 @@ export function publicBackend(config: PublicBackendCredentials) {
         res.on("end", () => {
           let combined: Buffer | undefined;
           try {
-            if (res.statusCode !== 200 || !isJsonContentType(res.headers["content-type"]))
-              throw Error("upstream_denied");
+            if (!isJsonContentType(res.headers["content-type"])) throw Error("upstream_unavailable");
             combined = Buffer.concat(chunks);
-            resolve(JSON.parse(combined.toString("utf8")) as unknown);
+            const data: unknown = JSON.parse(combined.toString("utf8"));
+            if (res.statusCode !== 200) {
+              reject(new PublicUpstreamError(res.statusCode ?? 503));
+            } else resolve(data);
           } catch { reject(Error("upstream_unavailable")); }
           finally { combined?.fill(0); wipe(); }
         });
@@ -128,6 +163,32 @@ export function publicBackend(config: PublicBackendCredentials) {
     async summary(grant: PublicBackendGrant) {
       const data = await call("/api/v1/status", "GET", "", grant);
       return parseRemoteSummary(data);
+    },
+    // Never present the auth process's synthetic /status as live hub metrics.
+    // This route is implemented by the actual Stage IV C++ account service.
+    async identitySummary() {
+      return parseIdentitySummary(await call("/api/v1/stage4/identity-summary", "GET"));
+    },
+    async adminOperation(operation: PublicAdminOperation, values: Record<string, string>, sessionDigest: string) {
+      return call("/api/v1/stage4/admin", "POST",
+        new URLSearchParams({ ...values, operation, session_digest: sessionDigest }).toString());
+    },
+    async hubRead(endpoint: HubRead) {
+      const data = await call(`/api/v1/stage4/hub/${endpoint}`, "GET");
+      if (endpoint === "status") {
+        const status = parseSnapshot(data);
+        if (status.configuration && status.configuration.mode !== "hub") throw Error("invalid_hub_status");
+        return status;
+      }
+      if (endpoint === "users") {
+        const { truncated, users } = parseHubUsers(data);
+        return { truncated, users: users.map(({ nickname, role, transport, public_muted, private_muted }) =>
+          ({ nickname, role, transport, public_muted, private_muted })) };
+      }
+      const status = endpoint === "health" ? "ok" : "ready";
+      if (!data || typeof data !== "object" || !("status" in data) || data.status !== status)
+        throw Error("invalid_hub_probe");
+      return { status };
     },
   };
 }
