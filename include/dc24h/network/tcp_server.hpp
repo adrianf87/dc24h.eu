@@ -132,7 +132,8 @@ private:
     std::atomic<bool> stop_{false};
     std::atomic<bool> used_{false};
     std::atomic<bool> listeners_ready_{false};
-    std::atomic<std::shared_ptr<const adcs::Context>> tls_context_;
+    // Use the shared_ptr atomic free functions for compatibility with libstdc++ 11.
+    std::shared_ptr<const adcs::Context> tls_context_;
     std::atomic<std::size_t> active_{0};
     std::atomic<std::uint64_t> accepted_{0};
     std::atomic<std::uint64_t> rejected_{0};

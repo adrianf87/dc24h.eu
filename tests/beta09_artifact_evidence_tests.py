@@ -103,20 +103,26 @@ def fixture(mode="pr"):
 
 
 class IndependentArtifactTests(unittest.TestCase):
-    def test_twilight_stage_vi_preflight_artifact_cannot_claim_release_go(self):
-        name = "twilight-stage6-preflight.json"
-        self.assertIn(name, gate.COMMON)
-        report = stage6.evaluate(Path(__file__).resolve().parents[1], SHA, "ubuntu-22.04")
-        gate._report_semantics(name, report)
-        for field, forged_value in (
-                ("status", "GO"), ("owner_release_acceptance_recorded", True),
-                ("complete_final_sha_github_ci_verified", True),
-                ("passkey_origin_rpid_guards_present", False),
-                ("github_workflows_checked", 4)):
-            with self.subTest(field=field):
-                tampered = {**report, field: forged_value}
-                with self.assertRaises(ValueError):
-                    gate._report_semantics(name, tampered)
+    def test_preflight_artifacts_require_their_own_checks_and_cannot_approve_release(self):
+        current = stage6.evaluate(Path(__file__).resolve().parents[1], SHA, "ubuntu-22.04")
+        twilight = {**current, "stage": "twilight-stage-vi-static-preflight",
+                    "active_display_files_checked": 12, "github_workflows_checked": 5}
+        for name, report, other in (
+                ("dc24h-rebrand-preflight.json", current, twilight),
+                ("twilight-stage6-preflight.json", twilight, current)):
+            self.assertIn(name, gate.COMMON)
+            gate._report_semantics(name, report)
+            for field, forged_value in (
+                    ("stage", other["stage"]),
+                    ("active_display_files_checked", other["active_display_files_checked"]),
+                    ("github_workflows_checked", other["github_workflows_checked"]),
+                    ("status", "GO"), ("owner_release_acceptance_recorded", True),
+                    ("complete_final_sha_github_ci_verified", True),
+                    ("passkey_origin_rpid_guards_present", False)):
+                with self.subTest(name=name, field=field):
+                    tampered = {**report, field: forged_value}
+                    with self.assertRaises(ValueError):
+                        gate._report_semantics(name, tampered)
 
     def test_twilight_pr_zip_evidence_is_bound_to_pr_branch_and_repository(self):
         data, archives = fixture("twilight-pr")
