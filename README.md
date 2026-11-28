@@ -2,6 +2,34 @@
 
 Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
+## Project overview
+
+**dc24h.eu-twilight is a Direct Connect hub that uses the ADC and ADCS network protocols.** ADC (Advanced Direct Connect) is the client-to-hub protocol, while ADCS runs ADC over TLS for encrypted connections. The client-facing hub endpoint is not an HTTP/HTTPS endpoint; the WebAdmin interface is a separate HTTPS application. Public deployments should prefer ADCS/TLS.
+
+### Ubuntu targets
+
+The hub is designed to build and run on these Ubuntu LTS releases:
+
+- **Ubuntu 22.04 LTS**
+- **Ubuntu 24.04 LTS**
+- **Ubuntu 26.04 LTS**
+
+The project uses GitHub-hosted Ubuntu 22.04, 24.04, and 26.04 runners for automated build, integration, and security tests. Support for an operating system does not by itself authorize a production deployment; host-specific qualification and OWNER approval remain separate.
+
+### Technology stack
+
+| Component | Technology | Responsibility |
+| --- | --- | --- |
+| Direct Connect hub | **C++20** | ADC/ADCS networking, client connections, protocol handling, hub services, and native authorization |
+| WebAdmin frontend | **React, TypeScript, Vite** | Browser-based administration, dashboards, and account management |
+| WebAdmin gateway | **Node.js and TypeScript**, with a scoped native C++ bridge | Authenticated API integration, sessions, OTP checks, CSRF protection, and backend communication |
+| Database | **MariaDB** | Persistent accounts, roles, bans, audit records, and other supported application data |
+| HTTPS reverse proxy | **Apache HTTP Server (Apache2)** | TLS termination and restricted WebAdmin routing |
+| Linux service management | **systemd** | Service supervision and isolation |
+| Build and automated tests | **CMake, CTest, GitHub Actions, Playwright** | Native builds, regression tests, CI, and browser tests |
+
+The public WebAdmin login uses a password verified by the C++ account service followed by an eight-digit email one-time code (OTP). Public service-control and raw maintenance APIs are not exposed by the WebAdmin gateway.
+
 **Current code version: beta-0.9.20.** This independent Twilight development repository starts from the [High Starter v0.9.20-rc.1 pre-release](https://github.com/adrianf87/dc24h.eu-high-starter/releases/tag/v0.9.20-rc.1). Its five beta-0.9.x Fix Passes and original RC1 OWNER acceptance were completed **in High Starter**, not as a new Twilight release. Twilight rebranding Stages I–IV are merged; [Stage V documentation and Stage VI qualification are under review in Draft PR #9](https://github.com/adrianf87/dc24h.eu-twilight/pull/9). No Twilight release or production GO has been approved.
 
 > Twilight is an independent development repository derived from dc24h.eu High Starter. Historical issue/PR links below refer to the original project. They are preserved as source provenance, **not** as current Twilight PR/CI status. [Rebranding Issue #1](https://github.com/adrianf87/dc24h.eu-twilight/issues/1) · [Stage V/EN](doc/us/TWILIGHT_STAGE_V.md) · [Stage V/PL](doc/pl/TWILIGHT_STAGE_V.md).
