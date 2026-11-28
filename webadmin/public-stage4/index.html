@@ -10,63 +10,136 @@
   <script src="./panel-react.js" defer></script>
 </head>
 <body>
-  <main>
-    <header><h1>dc24h.eu — WebAdmin</h1></header>
-    <section id="login" aria-labelledby="login-label">
-      <h2 id="login-label">Logowanie</h2>
-      <p>Wymagane są hasło konta i 8-cyfrowy kod wysłany na adres e-mail konta.</p>
-      <form id="login-form">
-        <label for="actor">Nazwa użytkownika</label>
-        <input id="actor" name="actor" autocomplete="username" required maxlength="64">
-        <label for="password">Hasło</label>
-        <input id="password" name="password" type="password" autocomplete="current-password" required>
-        <button type="submit">Wyślij kod e-mail</button>
-      </form>
-      <button id="start-registration" type="button">Załóż konto</button>
-    </section>
-    <section id="registration" hidden aria-labelledby="registration-label">
-      <h2 id="registration-label">Rejestracja</h2>
-      <form id="registration-form">
-        <label for="new-username">Nazwa użytkownika</label>
-        <input id="new-username" autocomplete="username" required maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9_.\-]*">
-        <label for="email">Adres e-mail</label>
-        <input id="email" type="email" autocomplete="email" required maxlength="254">
-        <label for="new-password">Hasło (co najmniej 15 znaków)</label>
-        <input id="new-password" type="password" autocomplete="new-password" required minlength="15">
-        <button type="submit">Wyślij kod rejestracyjny</button>
-      </form>
-      <button id="cancel-registration" type="button">Wróć do logowania</button>
-    </section>
-    <section id="verification" hidden aria-labelledby="verification-label">
-      <h2 id="verification-label">Wpisz kod z wiadomości e-mail</h2>
-      <p>Kod jest ważny przez 5 minut. Jeśli go nie otrzymasz, rozpocznij logowanie ponownie.</p>
-      <form id="code-form">
-        <label for="email-code">Kod jednorazowy</label>
-        <input id="email-code" name="email-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{8}" maxlength="8" required>
-        <button type="submit">Potwierdź kod</button>
-      </form>
-      <button id="restart-login" type="button">Zacznij od nowa</button>
-    </section>
-    <section id="dashboard" hidden aria-labelledby="dashboard-label">
-      <h2 id="dashboard-label">Moje konto</h2>
-      <p id="role"></p>
-      <div class="actions">
-        <button id="refresh" type="button">Odśwież stan usługi kont</button>
-        <button id="revoke-sessions" type="button">Unieważnij moje sesje</button>
-        <button id="logout" type="button">Wyloguj</button>
+  <main class="app">
+    <div class="auth-shell">
+      <div class="auth-main">
+        <div class="brand auth-brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span class="brand-name">dc24h<span class="brand-domain">.eu</span></span>
+          <span class="brand-product">WebAdmin</span>
+        </div>
+
+        <section id="login" class="auth-view" aria-labelledby="login-label">
+          <div class="auth-heading">
+            <span class="auth-kicker">Logowanie dwuetapowe</span>
+            <h1 id="login-label">Zaloguj się</h1>
+            <p>Po podaniu hasła otrzymasz kod potwierdzający na adres e-mail konta.</p>
+          </div>
+          <form id="login-form">
+            <div class="auth-field">
+              <label for="actor">Nazwa użytkownika</label>
+              <input id="actor" name="actor" autocomplete="username" required maxlength="64">
+            </div>
+            <div class="auth-field">
+              <label for="password">Hasło</label>
+              <input id="password" name="password" type="password" autocomplete="current-password" required>
+            </div>
+            <button class="button-primary auth-submit" type="submit">Wyślij kod e-mail<span class="arrow-forward" aria-hidden="true"></span></button>
+          </form>
+          <p class="auth-foot">Nie masz konta? <button class="button-link" id="start-registration" type="button">Załóż konto</button></p>
+        </section>
+
+        <section id="registration" class="auth-view" hidden aria-labelledby="registration-label">
+          <div class="auth-heading">
+            <h1 id="registration-label">Załóż konto</h1>
+            <p>Potwierdzisz adres e-mail jednorazowym kodem.</p>
+          </div>
+          <form id="registration-form">
+            <div class="auth-field">
+              <label for="new-username">Nazwa użytkownika</label>
+              <input id="new-username" autocomplete="username" required maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9_.\-]*">
+            </div>
+            <div class="auth-field">
+              <label for="email">Adres e-mail</label>
+              <input id="email" type="email" autocomplete="email" required maxlength="254">
+            </div>
+            <div class="auth-field">
+              <label for="new-password">Hasło <span class="field-hint">(co najmniej 15 znaków)</span></label>
+              <input id="new-password" type="password" autocomplete="new-password" required minlength="15">
+            </div>
+            <button class="button-primary auth-submit" type="submit">Wyślij kod rejestracyjny<span class="arrow-forward" aria-hidden="true"></span></button>
+          </form>
+          <p class="auth-foot"><button class="button-link" id="cancel-registration" type="button">Wróć do logowania</button></p>
+        </section>
+
+        <section id="verification" class="auth-view" hidden aria-labelledby="verification-label">
+          <div class="auth-heading">
+            <span class="auth-kicker">Potwierdzenie adresu e-mail</span>
+            <h1 id="verification-label">Sprawdź pocztę</h1>
+            <p>Wpisz 8-cyfrowy kod z wiadomości e-mail. Kod jest ważny przez 5 minut.</p>
+          </div>
+          <form id="code-form">
+            <div class="auth-field">
+              <label for="email-code">Kod jednorazowy</label>
+              <input id="email-code" name="email-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{8}" maxlength="8" required>
+            </div>
+            <button class="button-primary auth-submit" type="submit">Potwierdź kod<span class="arrow-forward" aria-hidden="true"></span></button>
+          </form>
+          <p class="auth-foot"><button class="button-link" id="restart-login" type="button">Zacznij od nowa</button></p>
+        </section>
       </div>
-      <pre id="result"></pre>
-      <div id="stage4-react" aria-live="polite"></div>
-      <form id="password-form">
-        <label for="current-password">Dotychczasowe hasło</label>
-        <input id="current-password" type="password" autocomplete="current-password" required>
-        <label for="replacement-password">Nowe hasło (co najmniej 15 znaków)</label>
-        <input id="replacement-password" type="password" autocomplete="new-password" minlength="15" required>
-        <button type="submit">Zmień hasło</button>
-      </form>
+
+      <aside class="auth-art" aria-hidden="true">
+        <div class="art-plane"></div>
+        <div class="art-field">
+          <i class="signal-line signal-line-one"></i>
+          <i class="signal-line signal-line-two"></i>
+          <i class="signal-line signal-line-three"></i>
+          <i class="signal-line signal-line-four"></i>
+          <div class="signal-core"><span class="brand-mark"></span></div>
+          <i class="signal-node signal-node-one"></i>
+          <i class="signal-node signal-node-two"></i>
+          <i class="signal-node signal-node-three"></i>
+          <i class="signal-node signal-node-four"></i>
+          <i class="signal-node signal-node-five"></i>
+        </div>
+        <div class="art-caption"><p>Konsola Direct Connect</p></div>
+      </aside>
+    </div>
+
+    <section id="dashboard" class="workspace" hidden aria-label="WebAdmin">
+      <header class="workspace-bar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span class="brand-name">dc24h<span class="brand-domain">.eu</span></span>
+          <span class="brand-product">WebAdmin</span>
+        </div>
+        <div class="workspace-session">
+          <button class="profile-button" id="show-settings" type="button" aria-haspopup="dialog">
+            <span class="profile-mark" aria-hidden="true"></span>
+            <span><strong>Moje konto</strong><span id="role"></span></span>
+          </button>
+          <button class="button-outline" id="logout" type="button">Wyloguj</button>
+        </div>
+      </header>
+      <div id="stage4-react" class="workspace-react"></div>
+      <dialog id="session-settings" class="session-settings" aria-labelledby="settings-title">
+        <div class="dialog-heading">
+          <h2 id="settings-title">Moje konto i sesje</h2>
+          <button id="close-settings" class="icon-button" type="button" aria-label="Zamknij ustawienia konta"><span class="close-mark" aria-hidden="true"></span></button>
+        </div>
+        <div class="session-settings-body">
+          <div class="session-actions">
+            <h3>Sesje</h3>
+            <div class="api-actions">
+              <button id="refresh" type="button">Odśwież stan usługi kont</button>
+              <button id="revoke-sessions" type="button">Unieważnij moje sesje</button>
+            </div>
+            <p id="result" class="service-result" aria-live="polite"></p>
+          </div>
+          <form id="password-form">
+            <h3>Zmień hasło</h3>
+            <label for="current-password">Dotychczasowe hasło</label>
+            <input id="current-password" type="password" autocomplete="current-password" required>
+            <label for="replacement-password">Nowe hasło <span class="field-hint">(co najmniej 15 znaków)</span></label>
+            <input id="replacement-password" type="password" autocomplete="new-password" required minlength="15">
+            <button class="button-primary" type="submit">Zmień hasło</button>
+          </form>
+        </div>
+        <p id="settings-message" class="dialog-message" role="status" aria-live="polite"></p>
+      </dialog>
     </section>
-    <p id="message" role="status" aria-live="polite"></p>
-    <footer>Nigdy nie udostępniaj kodu logowania.</footer>
+    <p id="message" class="status-message" role="status" aria-live="polite"></p>
   </main>
 </body>
 </html>

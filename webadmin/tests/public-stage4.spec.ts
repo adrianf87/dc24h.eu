@@ -35,15 +35,21 @@ test("OTP-authenticated Owner sees actual read-only C++ account statistics in Re
   });
   await page.goto("/public-stage4/index.html");
   await expect(page.locator("#dashboard")).toBeVisible();
-  await expect(page.getByText("WebAdmin — konta (C++ / MariaDB)")).toBeVisible();
-  await expect(page.getByText("Łącznie kont:")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Konta użytkowników" })).toBeVisible();
+  await expect(page.getByText("Łącznie kont", { exact: true })).toBeVisible();
   await expect(page.locator(".api-stats")).toContainText("8");
+  await expect(page.getByRole("heading", { name: "Struktura ról" })).toBeVisible();
+  await expect(page.getByRole("img", { name: /87,5.*kont ze zweryfikowanym/ })).toBeVisible();
   expect(paths).toContain("/stage4/v1/identity-summary");
   expect(paths).not.toContain("/stage4/v1/telemetry");
-  await page.locator(".api-actions button").nth(1).click();
+  await page.getByRole("button", { name: "Konta", exact: true }).click();
   await page.locator(".api-panel button").filter({ hasText: /Pierwsza strona/ }).click();
   await expect(page.getByRole("button", { name: "BrowserFixture" })).toBeVisible();
   expect(paths).toContain("/stage4/v1/admin");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByLabel("Widok", { exact: true }).selectOption("overview");
+  await expect(page.getByRole("heading", { name: "Przegląd", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.getByRole("button", { name: "Wyloguj" }).click();
   await expect(page.locator("#login")).toBeVisible();
   await expect(page.locator(".api-stats")).toHaveCount(0);
@@ -60,7 +66,8 @@ test("Registered role never gets read-only admin API UI", async ({ page }) => {
         { error: "forbidden" }) });
   });
   await page.goto("/public-stage4/index.html");
-  await expect(page.getByText("Zestawienie kont wymaga roli Owner lub Administrator.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Moje konto", exact: true })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Administracja" })).toHaveCount(0);
   expect(paths).not.toContain("/stage4/v1/identity-summary");
 });
 
@@ -76,7 +83,7 @@ test("public WebAdmin waits for a mailed code after C++ password proof", async (
     switch (path) {
       case "/stage4/v1/session":
         code = authenticated ? 200 : 401;
-        response = authenticated ? { authenticated: true, role: "owner", csrf: "s".repeat(64) } :
+        response = authenticated ? { authenticated: true, role: "owner", csrf: "c".repeat(64) } :
           { error: "unauthorized" }; break;
       case "/stage4/v1/challenge": response = { schema: 1, csrf: "a".repeat(64) }; break;
       case "/stage4/v1/login/send":
@@ -87,8 +94,8 @@ test("public WebAdmin waits for a mailed code after C++ password proof", async (
         expect(data).toEqual({ code: "12345678" });
         expect(route.request().headers()["x-dc24h-stage4-csrf"]).toBe("b".repeat(64));
         authenticated = true;
-        response = { schema: 1, authenticated: true, role: "owner", csrf: "s".repeat(64) }; break;
-      case "/stage4/v1/summary": response = { schema: 1, summary: { users: { online: 2 } } }; break;
+        response = { schema: 1, authenticated: true, role: "owner", csrf: "c".repeat(64) }; break;
+      case "/stage4/v1/summary": response = { schema: 1, summary: { account_service: "available" } }; break;
       case "/stage4/v1/logout": authenticated = false; response = { schema: 1, authenticated: false }; break;
       default: code = 404; response = { error: "not_found" };
     }
@@ -105,10 +112,14 @@ test("public WebAdmin waits for a mailed code after C++ password proof", async (
   await page.locator("#email-code").fill("12345678");
   await page.getByRole("button", { name: "Potwierdź kod" }).click();
   await expect(page.locator("#dashboard")).toBeVisible();
-  await expect(page.locator("#role")).toHaveText("Rola: owner");
+  await expect(page.locator("#role")).toHaveText("Właściciel");
   await expect(page.locator("#email-code")).toHaveValue("");
+  await page.getByRole("button", { name: /Moje konto/ }).click();
+  await expect(page.getByRole("dialog", { name: "Moje konto i sesje" })).toBeVisible();
   await page.getByRole("button", { name: "Odśwież stan usługi kont" }).click();
-  await expect(page.locator("#result")).toContainText('"online": 2');
+  await expect(page.locator("#result")).toHaveText("Usługa kont działa.");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Moje konto i sesje" })).toBeHidden();
   await page.getByRole("button", { name: "Wyloguj" }).click();
   await expect(page.locator("#login")).toBeVisible();
   expect(paths).toContain("/stage4/v1/login/send");
@@ -190,6 +201,6 @@ test("registration requires mailbox proof and a separate fresh login", async ({ 
   await page.getByRole("button", { name: "Wyślij kod e-mail" }).click();
   await page.locator("#email-code").fill("12345678");
   await page.getByRole("button", { name: "Potwierdź kod" }).click();
-  await expect(page.locator("#role")).toHaveText("Rola: registered");
+  await expect(page.locator("#role")).toHaveText("Zarejestrowany");
   await expect(page.locator("#refresh")).toBeHidden();
 });

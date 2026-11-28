@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
+import { Activity, ArrowLeft, ArrowRight, Ban, ClipboardList, LayoutDashboard, RefreshCw, Server, ShieldCheck, UsersRound } from "lucide-react";
 import { Dashboard } from "../components/Dashboard.tsx";
 import { ChatStatistics } from "../components/ChatStatistics.tsx";
 import { SearchStatistics } from "../components/SearchStatistics.tsx";
@@ -10,6 +11,7 @@ import { ModerationRules } from "../components/ModerationRules.tsx";
 import { Roles } from "../components/Roles.tsx";
 import { StartupConfiguration } from "../components/StartupConfiguration.tsx";
 import { ACCOUNT_ROLES } from "../lib/roles.ts";
+import { ADMIN_COUNTERS } from "../lib/admin.ts";
 import { BAN_FILTERS, banState } from "../lib/bans.ts";
 import { pl } from "../languages/pl/index.ts";
 import { us } from "../languages/us/index.ts";
@@ -91,7 +93,7 @@ function useOperation() {
 }
 
 function Notice({ busy, message }: { busy: boolean; message: string }) {
-  return <p role="status">{busy ? labels.loading : message}</p>;
+  return <p className="operation-notice" role="status">{busy ? labels.loading : message}</p>;
 }
 
 function Proof() {
@@ -102,10 +104,14 @@ function Confirm() {
 }
 
 function Pages({ next, busy, load }: { next: string | null; busy: boolean; load: (after: string) => void }) {
-  return <div className="api-actions">
-    <button type="button" disabled={busy} onClick={() => load("0")}>{t.accountsFirst}</button>
-    <button type="button" disabled={busy || !next} onClick={() => next && load(next)}>{t.accountsNext}</button>
+  return <div className="table-pagination">
+    <button type="button" disabled={busy} onClick={() => load("0")}><ArrowLeft size={15} aria-hidden="true"/>{t.accountsFirst}</button>
+    <button type="button" disabled={busy || !next} onClick={() => next && load(next)}>{t.accountsNext}<ArrowRight size={15} aria-hidden="true"/></button>
   </div>;
+}
+
+function RecordStatus({ children, tone }: { children: ReactNode; tone: "positive" | "warning" | "neutral" }) {
+  return <span className={`record-status status-${tone}`}>{children}</span>;
 }
 
 function useAdmin(csrf: string) {
@@ -149,46 +155,57 @@ function AccountsPanel({ csrf, role }: { csrf: string; role: "owner" | "administ
     }
   }
   const permitted = selected && roleRank[selected.role] < roleRank[role];
-  return <section>
-    <h3>{t.accountsTitle}</h3>
-    <label className="api-confirm"><input type="checkbox" checked={staff} disabled={activity.busy}
-      onChange={event => { setStaff(event.target.checked); load("0", event.target.checked); }}/>{local("Staff only", "Tylko personel")}</label>
-    <Pages next={accounts?.next_after ?? null} busy={activity.busy} load={load}/>
-    {accounts && <div className="api-table"><table><thead><tr>
-      <th>{t.accountsName}</th><th>{t.accountsRole}</th><th>{t.accountsStatus}</th><th>{t.accountsRevision}</th>
-    </tr></thead><tbody>{accounts.accounts.map(account =>
-      <tr key={account.id}><td><button type="button" disabled={activity.busy} onClick={() => {
-        setSelected(null);
-        void activity.run(signal => request("accounts.detail", { id: account.id }, signal),
-          ({ account }) => { setSelected(account); setAction(roleRank[account.role] < roleRank[role] ? "activate" : "create"); });
-      }}>{account.name}</button></td><td>{roleLabel(account.role)}</td>
-        <td>{account.status === "active" ? t.enabled : t.disabled}</td><td>{account.revision}</td></tr>
-    )}</tbody></table>{!accounts.accounts.length && <p>{t.accountsEmpty}</p>}</div>}
-    {selected && <p>{t.accountsSelected} <strong>{selected.name}</strong> · {roleLabel(selected.role)} · {t.accountsRevision} {selected.revision}</p>}
-    <form onSubmit={submit}>
-      <fieldset disabled={activity.busy}>
-        <legend>{t.accountsAction}</legend>
-        <label>{t.accountsAction}<select value={action} onChange={event => setAction(event.target.value as Action)}>
-          <option value="create">{t.accountsCreate}</option>
-          {permitted && <>
-            <option value="activate">{t.accountsActivate}</option><option value="disable">{t.accountsDisable}</option>
-            <option value="reset">{t.accountsReset}</option><option value="role">{t.accountsChangeRole}</option>
-          </>}
-        </select></label>
-        {action === "create" && <label>{t.accountsName}<input name="name" required maxLength={64} autoComplete="off"/></label>}
-        {(action === "create" || action === "reset") && <label>{local("New account password", "Nowe hasło konta")}
-          <input name="password" type="password" required minLength={15} maxLength={1024} autoComplete="new-password"/>
-        </label>}
-        {action === "create" && <p>{local("Creates a disabled account without email enrollment.", "Tworzy wyłączone konto bez rejestracji adresu e-mail.")}</p>}
-        {action === "role" && <label>{t.accountsNewRole}<select name="role">
-          {ACCOUNT_ROLES.filter(candidate => roleRank[candidate] < roleRank[role]).map(candidate =>
-            <option key={candidate} value={candidate}>{roleLabel(candidate)}</option>)}
-        </select></label>}
-        <Proof/><Confirm/><button type="submit">{local("Save", "Zapisz")}</button>
-      </fieldset>
-    </form>
-    <Notice {...activity}/>
-  </section>;
+  return <div className="operation-split">
+    <section className="surface operation-card" aria-labelledby="accounts-list-heading">
+      <div className="api-heading">
+        <h2 id="accounts-list-heading">{local("Account directory", "Lista kont")}</h2>
+        <label className="api-confirm"><input type="checkbox" checked={staff} disabled={activity.busy}
+          onChange={event => { setStaff(event.target.checked); load("0", event.target.checked); }}/>{local("Staff only", "Tylko personel")}</label>
+      </div>
+      {accounts ? <div className="api-table"><table><thead><tr>
+        <th scope="col">{t.accountsName}</th><th scope="col">{t.accountsRole}</th><th scope="col">{t.accountsStatus}</th><th scope="col">{t.accountsRevision}</th>
+      </tr></thead><tbody>{accounts.accounts.map(account =>
+        <tr key={account.id} className={selected?.id === account.id ? "selected-row" : undefined}>
+          <td><button type="button" className="table-action" disabled={activity.busy} onClick={() => {
+            setSelected(null);
+            void activity.run(signal => request("accounts.detail", { id: account.id }, signal),
+              ({ account }) => { setSelected(account); setAction(roleRank[account.role] < roleRank[role] ? "activate" : "create"); });
+          }}>{account.name}</button></td><td>{roleLabel(account.role)}</td>
+          <td><RecordStatus tone={account.status === "active" ? "positive" : "neutral"}>
+            {account.status === "active" ? local("Active", "Aktywne") : local("Disabled", "Wyłączone")}
+          </RecordStatus></td><td className="numeric">{account.revision}</td>
+        </tr>
+      )}</tbody></table>{!accounts.accounts.length && <p className="empty-panel">{t.accountsEmpty}</p>}</div> :
+        !activity.busy && <p className="empty-panel">{local("Load the first page to see accounts.", "Wczytaj pierwszą stronę, aby zobaczyć konta.")}</p>}
+      <Notice {...activity}/>
+      <Pages next={accounts?.next_after ?? null} busy={activity.busy} load={load}/>
+    </section>
+    <section className="surface operation-card action-card" aria-labelledby="accounts-action-heading">
+      <h2 id="accounts-action-heading">{local("Account actions", "Działania na koncie")}</h2>
+      {selected && <p className="selection-note"><strong>{selected.name}</strong> · {roleLabel(selected.role)} · {t.accountsRevision} {selected.revision}</p>}
+      <form onSubmit={submit}>
+        <fieldset disabled={activity.busy}>
+          <label>{t.accountsAction}<select value={action} onChange={event => setAction(event.target.value as Action)}>
+            <option value="create">{t.accountsCreate}</option>
+            {permitted && <>
+              <option value="activate">{t.accountsActivate}</option><option value="disable">{t.accountsDisable}</option>
+              <option value="reset">{t.accountsReset}</option><option value="role">{t.accountsChangeRole}</option>
+            </>}
+          </select></label>
+          {action === "create" && <label>{t.accountsName}<input name="name" required maxLength={64} autoComplete="off"/></label>}
+          {(action === "create" || action === "reset") && <label>{local("New account password", "Nowe hasło konta")}
+            <input name="password" type="password" required minLength={15} maxLength={1024} autoComplete="new-password"/>
+          </label>}
+          {action === "create" && <p className="api-note">{local("Creates a disabled account without email enrollment.", "Tworzy wyłączone konto bez rejestracji adresu e-mail.")}</p>}
+          {action === "role" && <label>{t.accountsNewRole}<select name="role">
+            {ACCOUNT_ROLES.filter(candidate => roleRank[candidate] < roleRank[role]).map(candidate =>
+              <option key={candidate} value={candidate}>{roleLabel(candidate)}</option>)}
+          </select></label>}
+          <Proof/><Confirm/><button className="button-primary" type="submit">{local("Save", "Zapisz")}</button>
+        </fieldset>
+      </form>
+    </section>
+  </div>;
 }
 
 function BansPanel({ csrf }: { csrf: string }) {
@@ -219,41 +236,55 @@ function BansPanel({ csrf }: { csrf: string }) {
         "duration:" + get("duration_seconds") : "until:" + Math.floor(new Date(get("expires_at")).getTime() / 1000),
     }, signal), apply, true);
   }
-  return <section>
-    <h3>{t.bansTitle}</h3>
-    <p>{local("Changes are saved to the account database. Enforcement requires a hub using that database and a refreshed ban snapshot.",
-      "Zmiany trafiają do bazy kont. Wyegzekwowanie bana wymaga huba korzystającego z tej bazy i odświeżenia listy banów.")}</p>
-    <label>{t.bansFilter}<select value={filter} disabled={activity.busy} onChange={event => {
-      const state = event.target.value; setFilter(state); load("0", state);
-    }}>{BAN_FILTERS.map(state => <option key={state} value={state}>{t[`bansFilter_${state}`]}</option>)}</select></label>
-    <Pages next={rows?.next_after ?? null} busy={activity.busy} load={load}/>
-    {rows && <div className="api-table"><table><thead><tr><th>ID</th><th>{t.bansKind}</th><th>{t.bansSubject}</th>
-      <th>{t.bansReason}</th><th>{t.accountsStatus}</th></tr></thead>
-      <tbody>{rows.bans.map(ban => <tr key={ban.id}><td><button type="button" disabled={activity.busy}
-        onClick={() => setSelected(ban)}>{ban.id}</button></td><td>{t[`ban_${ban.kind}`]}</td>
-        <td>{ban.subject}</td><td>{ban.reason}</td><td>{t[`bansState_${banState(ban, rows.observed_at ?? null)}`]}</td></tr>)}</tbody>
-    </table></div>}
-    {selected && <div className="api-actions"><p>{t.accountsSelected} <strong>{selected.id}</strong> · {selected.subject}</p>
-      <button type="button" disabled={activity.busy} onClick={() => setSelected(null)}>{t.bansCreate}</button></div>}
-    <form onSubmit={submit}><fieldset disabled={activity.busy || !!selected?.revoked_at}>
-      <legend>{selected ? t.bansRevoke : t.bansCreate}</legend>
-      {!selected && <>
-        <label>{t.bansKind}<select name="kind">{(["account", "cid", "ip"] as const).map(kind =>
-          <option key={kind} value={kind}>{t[`ban_${kind}`]}</option>)}</select></label>
-        <label>{t.bansSubject}<input name="subject" required maxLength={64}/></label>
-        <label>{t.bansReason}<input name="reason" required maxLength={256}/></label>
-        <label>{t.bansExpiryMode}<select value={expiry} onChange={event => setExpiry(event.target.value)}>
-          <option value="permanent">{t.bansPermanent}</option><option value="duration">{t.bansForDuration}</option>
-          <option value="until">{t.bansUntil}</option>
-        </select></label>
-        {expiry === "duration" && <label>{local("Duration in seconds", "Czas w sekundach")}
-          <input name="duration_seconds" type="number" min="1" max="31536000" required/></label>}
-        {expiry === "until" && <label>{t.bansExpiry}<input name="expires_at" type="datetime-local" required/></label>}
-      </>}
-      <Proof/><Confirm/><button type="submit">{selected ? t.bansRevoke : t.bansCreate}</button>
-    </fieldset></form>
-    <Notice {...activity}/>
-  </section>;
+  return <div className="operation-split">
+    <section className="surface operation-card" aria-labelledby="ban-list-heading">
+      <div className="api-heading">
+        <h2 id="ban-list-heading">{local("Ban list", "Lista blokad")}</h2>
+        <label className="inline-field">{t.bansFilter}<select value={filter} disabled={activity.busy} onChange={event => {
+          const state = event.target.value; setFilter(state); load("0", state);
+        }}>{BAN_FILTERS.map(state => <option key={state} value={state}>{t[`bansFilter_${state}`]}</option>)}</select></label>
+      </div>
+      {rows ? <div className="api-table"><table><thead><tr><th scope="col">ID</th><th scope="col">{t.bansKind}</th><th scope="col">{t.bansSubject}</th>
+        <th scope="col">{t.bansReason}</th><th scope="col">{t.accountsStatus}</th></tr></thead>
+        <tbody>{rows.bans.map(ban => {
+          const state = banState(ban, rows.observed_at ?? null);
+          return <tr key={ban.id} className={selected?.id === ban.id ? "selected-row" : undefined}>
+            <td><button className="table-action numeric" type="button" disabled={activity.busy} onClick={() => setSelected(ban)}>{ban.id}</button></td>
+            <td>{t[`ban_${ban.kind}`]}</td><td>{ban.subject}</td><td>{ban.reason}</td>
+            <td><RecordStatus tone={state === "permanent" || state === "temporary" ? "warning" : "neutral"}>{t[`bansState_${state}`]}</RecordStatus></td>
+          </tr>;
+        })}</tbody>
+      </table>{!rows.bans.length && <p className="empty-panel">{local("No bans match this filter.", "Brak blokad pasujących do filtra.")}</p>}</div> :
+        !activity.busy && <p className="empty-panel">{local("Load the first page to see bans.", "Wczytaj pierwszą stronę, aby zobaczyć blokady.")}</p>}
+      <Notice {...activity}/>
+      <Pages next={rows?.next_after ?? null} busy={activity.busy} load={load}/>
+    </section>
+    <section className="surface operation-card action-card" aria-labelledby="ban-action-heading">
+      <h2 id="ban-action-heading">{selected ? t.bansRevoke : t.bansCreate}</h2>
+      <p className="api-note">{local("Changes are saved to the account database. Enforcement requires a hub using that database and a refreshed ban snapshot.",
+        "Zmiany trafiają do bazy kont. Wyegzekwowanie bana wymaga huba korzystającego z tej bazy i odświeżenia listy banów.")}</p>
+      {selected && <div className="selection-note api-actions"><p>{t.accountsSelected} <strong>{selected.id}</strong> · {selected.subject}</p>
+        <button type="button" disabled={activity.busy} onClick={() => setSelected(null)}>{t.bansCreate}</button></div>}
+      <form onSubmit={submit}>
+        <fieldset disabled={activity.busy || !!selected?.revoked_at}>
+          {!selected && <>
+            <label>{t.bansKind}<select name="kind">{(["account", "cid", "ip"] as const).map(kind =>
+              <option key={kind} value={kind}>{t[`ban_${kind}`]}</option>)}</select></label>
+            <label>{t.bansSubject}<input name="subject" required maxLength={64}/></label>
+            <label>{t.bansReason}<input name="reason" required maxLength={256}/></label>
+            <label>{t.bansExpiryMode}<select value={expiry} onChange={event => setExpiry(event.target.value)}>
+              <option value="permanent">{t.bansPermanent}</option><option value="duration">{t.bansForDuration}</option>
+              <option value="until">{t.bansUntil}</option>
+            </select></label>
+            {expiry === "duration" && <label>{local("Duration in seconds", "Czas w sekundach")}
+              <input name="duration_seconds" type="number" min="1" max="31536000" required/></label>}
+            {expiry === "until" && <label>{t.bansExpiry}<input name="expires_at" type="datetime-local" required/></label>}
+          </>}
+          <Proof/><Confirm/><button className={selected ? "" : "button-primary"} type="submit">{selected ? t.bansRevoke : t.bansCreate}</button>
+        </fieldset>
+      </form>
+    </section>
+  </div>;
 }
 
 function AuditPanel({ csrf }: { csrf: string }) {
@@ -269,16 +300,25 @@ function AuditPanel({ csrf }: { csrf: string }) {
     void activity.run(signal => request("audit.list",
       { after: String(data.get("after") ?? "0"), proof: String(data.get("proof")) }, signal), setPage);
   }
-  return <section><h3>{t.auditTitle}</h3>
-    <form onSubmit={submit}><fieldset disabled={activity.busy}>
-      <Proof/><div className="api-actions"><button type="submit" name="after" value="0">{t.auditShow}</button>
-      {page?.next_after && <button type="submit" name="after" value={page.next_after}>{t.accountsNext}</button>}</div>
+  return <section className="surface operation-card" aria-label={t.auditTitle}>
+    <form onSubmit={submit} className="audit-form"><fieldset disabled={activity.busy}>
+      <Proof/>
+      <div className="api-actions">
+        <button className="button-primary" type="submit" name="after" value="0">{t.auditShow}</button>
+        {page?.next_after && <button type="submit" name="after" value={page.next_after}>{t.accountsNext}</button>}
+      </div>
     </fieldset></form>
-    {page && <div className="api-table"><table><thead><tr><th>{t.auditWhen}</th><th>{t.auditActor}</th>
-      <th>{t.auditAction}</th><th>{t.auditTarget}</th><th>{t.auditOutcome}</th></tr></thead>
-      <tbody>{page.events.map(event => <tr key={event.id}><td>{new Date(event.occurred_at * 1000).toLocaleString(locale)}</td>
-        <td>{event.actor_id}</td><td>{event.action}</td><td>{event.target_kind} {event.target_id}</td><td>{event.outcome}</td></tr>)}</tbody>
-    </table>{!page.events.length && <p>{t.auditEmpty}</p>}</div>}
+    {page ? <div className="api-table"><table><thead><tr>
+      <th scope="col">{t.auditWhen}</th><th scope="col">{t.auditActor}</th><th scope="col">{t.auditAction}</th>
+      <th scope="col">{t.auditTarget}</th><th scope="col">{t.auditOutcome}</th>
+    </tr></thead><tbody>{page.events.map(event => <tr key={event.id}>
+      <td className="numeric">{new Date(event.occurred_at * 1000).toLocaleString(locale)}</td>
+      <td>{event.actor_id}</td><td><code>{event.action}</code></td><td>{event.target_kind} {event.target_id}</td>
+      <td><RecordStatus tone={event.outcome === "succeeded" ? "positive" : event.outcome === "failed" ? "warning" : "neutral"}>
+        {event.outcome === "succeeded" ? t.auditSucceeded : event.outcome === "failed" ? t.auditFailed : t.auditStarted}
+      </RecordStatus></td>
+    </tr>)}</tbody></table>{!page.events.length && <p className="empty-panel">{t.auditEmpty}</p>}</div> :
+      !activity.busy && <p className="empty-panel">{local("Confirm your password to load the audit history.", "Potwierdź hasło, aby wczytać historię działań.")}</p>}
     <Notice {...activity}/>
   </section>;
 }
@@ -292,6 +332,7 @@ function HubPanel() {
   const [presence, setPresence] = useState<Presence | null>(null);
   const [health, setHealth] = useState<"ok" | "unavailable">("unavailable");
   const [ready, setReady] = useState<"ready" | "unavailable">("unavailable");
+  const [checked, setChecked] = useState(false);
   function load() {
     void activity.run(async signal => {
       const [snapshot, users, liveness, readiness] = await Promise.allSettled([
@@ -304,6 +345,7 @@ function HubPanel() {
       setPresence(users.status === "fulfilled" ? users.value : null);
       setHealth(liveness.status === "fulfilled" ? liveness.value.status : "unavailable");
       setReady(readiness.status === "fulfilled" ? readiness.value.status : "unavailable");
+      setChecked(true);
     });
   }
   const sections: [string, ReactNode][] = status ? [
@@ -316,20 +358,40 @@ function HubPanel() {
     [local("Effective configuration and roles", "Efektywna konfiguracja i role"),
       <><StartupConfiguration snapshot={status} t={t} number={number}/><Roles snapshot={status} t={t}/></>],
   ] : [];
-  return <section>
-    <div className="api-heading"><h3>{local("Live ADCS hub", "Hub ADCS na żywo")}</h3>
-      <button type="button" disabled={activity.busy} onClick={load}>{labels.refresh}</button></div>
-    <p>{local("Liveness", "Żywotność")} {health === "ok" ? "OK" : "—"} · {local("Readiness", "Gotowość")} {ready === "ready" ? "OK" : "—"}</p>
-    {!status && !activity.busy && <p>{local("Live hub telemetry is unavailable.", "Dane bieżące huba są niedostępne.")}</p>}
-    {sections.map(([title, contents]) => <details key={title}><summary>{title}</summary>{contents}</details>)}
-    <details><summary>{local("Online users", "Użytkownicy online")}</summary>
-      {!presence && <p>{labels.down}</p>}
-      {presence?.truncated && <p>{local("This is a bounded snapshot.", "Lista zawiera ograniczoną migawkę.")}</p>}
-      {presence?.users.map((user, index) => <p key={index}>{user.nickname} · {user.transport.toUpperCase()} ·
-        {" "}{t[`role_${user.role}`]}{user.public_muted || user.private_muted ? " · " + t.mute : ""}</p>)}
-    </details>
-    <Notice {...activity}/>
-  </section>;
+  const probes = [
+    { label: local("Process health", "Stan procesu"), success: health === "ok", value: local("Running", "Działa") },
+    { label: local("Readiness", "Gotowość"), success: ready === "ready", value: local("Ready", "Gotowy") },
+  ];
+  return <div className="view-stack">
+    <section className="surface operation-card" aria-labelledby="hub-probes-heading">
+      <div className="api-heading">
+        <div className="section-title"><span className="stat-icon tone-sky"><Server size={18} aria-hidden="true"/></span>
+          <h2 id="hub-probes-heading">{local("ADCS hub status", "Stan huba ADCS")}</h2></div>
+        <button type="button" disabled={activity.busy} onClick={load}><RefreshCw size={16} aria-hidden="true"/>{labels.refresh}</button>
+      </div>
+      <div className="probe-grid">
+        {probes.map(({label, success, value}) => <div className="probe-card" key={label}>
+          <span>{label}</span>
+          <RecordStatus tone={success ? "positive" : checked ? "warning" : "neutral"}>
+            {success ? value : checked ? local("Unavailable", "Niedostępny") : local("Not checked", "Nie sprawdzono")}
+          </RecordStatus>
+        </div>)}
+      </div>
+      {checked && !status && !activity.busy && <p className="api-note">{local("Live hub telemetry is unavailable.", "Dane bieżące huba są niedostępne.")}</p>}
+      <Notice {...activity}/>
+    </section>
+    {(status || presence) && <section className="surface operation-card hub-details" aria-label={local("Hub metrics", "Metryki huba")}>
+      {sections.map(([title, contents]) => <details key={title}><summary>{title}</summary>{contents}</details>)}
+      <details><summary>{local("Online users", "Użytkownicy online")}</summary>
+        {!presence && <p className="api-note">{labels.down}</p>}
+        {presence?.truncated && <p className="api-note">{local("The server returned a limited user list.", "Serwer zwrócił ograniczoną listę użytkowników.")}</p>}
+        {presence && (presence.users.length ? <ul className="data-list">{presence.users.map((user, index) =>
+          <li key={index}><strong>{user.nickname}</strong><span>{user.transport.toUpperCase()} · {t[`role_${user.role}`]}
+            {user.public_muted || user.private_muted ? " · " + t.mute : ""}</span></li>)}</ul> :
+          <p className="empty-panel">{local("No users online.", "Brak użytkowników online.")}</p>)}
+      </details>
+    </section>}
+  </div>;
 }
 
 function PermissionsPanel({ csrf }: { csrf: string }) {
@@ -337,34 +399,86 @@ function PermissionsPanel({ csrf }: { csrf: string }) {
   const activity = useOperation();
   const [catalog, setCatalog] = useState<PublicAdminResult<"management"> | null>(null);
   const [stats, setStats] = useState<PublicAdminResult<"admin"> | null>(null);
-  return <section><h3>{local("Permissions and diagnostics", "Uprawnienia i diagnostyka")}</h3>
-    <button type="button" disabled={activity.busy} onClick={() => {
-      setCatalog(null);
-      setStats(null);
-      void activity.run(signal => Promise.all([request("management", {}, signal), request("admin", {}, signal)]),
-        ([catalog, stats]) => { setCatalog(catalog); setStats(stats); });
-    }}>{labels.refresh}</button>
-    {catalog && <ul>{catalog.areas.map(area => <li key={area.key}>{area.key} — {
-      area.key === "configuration" || area.key === "hub" ? local("Operator controls restricted to private tools", "Sterowanie dostępne w narzędziach prywatnych") :
-        area.allowed ? t.enabled : t.disabled}</li>)}</ul>}
-    {stats && <ul>{Object.entries(stats.statistics).map(([key, value]) => <li key={key}>{key}: {value}</li>)}</ul>}
-    <Notice {...activity}/>
-  </section>;
+  const areaLabels = { accounts: t.managementAccounts, roles: t.managementRoles, bans: t.managementBans,
+    configuration: t.managementConfiguration, hub: t.managementHub };
+  return <div className="view-stack">
+    <div className="view-toolbar">
+      <Notice {...activity}/>
+      <button type="button" disabled={activity.busy} onClick={() => {
+        setCatalog(null);
+        setStats(null);
+        void activity.run(signal => Promise.all([request("management", {}, signal), request("admin", {}, signal)]),
+          ([catalog, stats]) => { setCatalog(catalog); setStats(stats); });
+      }}><RefreshCw size={16} aria-hidden="true"/>{labels.refresh}</button>
+    </div>
+    <div className="operation-split balanced-split">
+      <section className="surface operation-card" aria-labelledby="permission-catalog-heading">
+        <h2 id="permission-catalog-heading">{local("Access areas", "Obszary dostępu")}</h2>
+        {catalog ? <dl className="data-list">{catalog.areas.map(area => {
+          const privateControl = area.key === "configuration" || area.key === "hub";
+          return <div key={area.key}><dt>{areaLabels[area.key]}</dt><dd>
+            <RecordStatus tone={area.allowed && !privateControl ? "positive" : "neutral"}>
+              {privateControl ? local("Private tools", "Narzędzia prywatne") : area.allowed ? local("Allowed", "Dozwolone") : local("Denied", "Brak dostępu")}
+            </RecordStatus>
+          </dd></div>;
+        })}</dl> : !activity.busy && <p className="empty-panel">{local("Refresh to read permissions.", "Odśwież, by odczytać uprawnienia.")}</p>}
+      </section>
+      <section className="surface operation-card" aria-labelledby="admin-counters-heading">
+        <h2 id="admin-counters-heading">{local("Administrative counters", "Liczniki administracyjne")}</h2>
+        {stats ? <dl className="data-list">{ADMIN_COUNTERS.map(key =>
+          <div key={key}><dt>{t[`admin_${key}`]}</dt><dd className="numeric">{stats.statistics[key]}</dd></div>)}</dl> :
+          !activity.busy && <p className="empty-panel">{local("Refresh to read counters.", "Odśwież, by odczytać liczniki.")}</p>}
+      </section>
+    </div>
+  </div>;
 }
 
-export function Operations({ csrf, role }: { csrf: string; role: "owner" | "administrator" }) {
-  const names = { hub: local("Live hub", "Hub na żywo"), accounts: t.accountsTitle, bans: t.bansTitle,
-    audit: t.auditTitle, permissions: local("Permissions", "Uprawnienia") };
-  const [section, setSection] = useState<keyof typeof names>("hub");
-  return <>
-    <nav className="api-actions" aria-label={local("Administration", "Administracja")}>
-      {(Object.keys(names) as (keyof typeof names)[]).map(key =>
-        <button type="button" key={key} aria-pressed={section === key} onClick={() => setSection(key)}>{names[key]}</button>)}
-    </nav>
-    {section === "hub" && <HubPanel/>}
-    {section === "accounts" && <AccountsPanel csrf={csrf} role={role}/>}
-    {section === "bans" && <BansPanel csrf={csrf}/>}
-    {section === "audit" && <AuditPanel csrf={csrf}/>}
-    {section === "permissions" && <PermissionsPanel csrf={csrf}/>}
-  </>;
+const views = {
+  overview: { title: local("Overview", "Przegląd"), icon: LayoutDashboard },
+  hub: { title: local("Live hub", "Hub na żywo"), icon: Activity },
+  accounts: { title: t.accountsTitle, label: local("Accounts", "Konta"), icon: UsersRound },
+  bans: { title: t.bansTitle, label: local("Bans", "Blokady"), icon: Ban },
+  audit: { title: t.auditTitle, label: local("Audit", "Audyt"), icon: ClipboardList },
+  permissions: { title: local("Permissions", "Uprawnienia"), icon: ShieldCheck },
+};
+type View = keyof typeof views;
+const viewKeys = Object.keys(views) as View[];
+const viewLabel = (view: typeof views[View]) => "label" in view ? view.label : view.title;
+
+export function Operations({ csrf, role, overview }: { csrf: string; role: "owner" | "administrator"; overview: ReactNode }) {
+  const [section, setSection] = useState<View>("overview");
+  function switchView(view: View) {
+    setSection(view);
+    window.scrollTo(0, 0);
+  }
+  return <div className="workspace-grid">
+    <a className="skip-link" href="#workspace-content">{local("Skip to content", "Przejdź do treści")}</a>
+    <aside className="workspace-sidebar">
+      <div className="mobile-view-picker">
+        <label htmlFor="workspace-view">{local("View", "Widok")}</label>
+        <select id="workspace-view" value={section} onChange={event => switchView(event.target.value as View)}>
+          {viewKeys.map(key => <option key={key} value={key}>{viewLabel(views[key])}</option>)}
+        </select>
+      </div>
+      <nav className="workspace-nav" aria-label={local("Administration", "Administracja")}>
+        {viewKeys.map(key => {
+          const { icon: Icon } = views[key];
+          return <button type="button" key={key} aria-pressed={section === key} onClick={() => switchView(key)}>
+            <Icon size={18} aria-hidden="true"/><span>{viewLabel(views[key])}</span>
+          </button>;
+        })}
+      </nav>
+    </aside>
+    <div className="workspace-content" id="workspace-content" tabIndex={-1}>
+      <header className="workspace-heading"><h1>{views[section].title}</h1></header>
+      <div className="api-panel">
+        {section === "overview" && overview}
+        {section === "hub" && <HubPanel/>}
+        {section === "accounts" && <AccountsPanel csrf={csrf} role={role}/>}
+        {section === "bans" && <BansPanel csrf={csrf}/>}
+        {section === "audit" && <AuditPanel csrf={csrf}/>}
+        {section === "permissions" && <PermissionsPanel csrf={csrf}/>}
+      </div>
+    </div>
+  </div>;
 }

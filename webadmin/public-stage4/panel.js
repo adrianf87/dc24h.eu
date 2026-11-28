@@ -2,7 +2,15 @@
 // No client-provided recipient, WebAuthn fallback, privileged API or browser storage.
 const api = "/stage4/v1/";
 const $ = selector => document.querySelector(selector);
-const message = text => { $("#message").textContent = text; };
+const roleLabels = new Map([
+  ["owner", "Właściciel"], ["administrator", "Administrator"], ["operator", "Operator"],
+  ["moderator", "Moderator"], ["vip", "VIP"], ["registered", "Zarejestrowany"],
+]);
+const message = text => {
+  const settingsOpen = $("#session-settings").open;
+  $("#message").textContent = settingsOpen ? "" : text;
+  $("#settings-message").textContent = settingsOpen ? text : "";
+};
 let csrf = "", pendingCsrf = "", registering = false;
 
 async function call(path, data, token = "") {
@@ -59,7 +67,7 @@ async function verify(event) {
   finally { $("#email-code").value = ""; submit.disabled = false; }
 }
 
-function enter(session) {
+function enter(session, showMessage = true) {
   csrf = session.csrf;
   pendingCsrf = "";
   $("#login").hidden = true;
@@ -68,8 +76,8 @@ function enter(session) {
   $("#dashboard").dataset.role = session.role;
   $("#registration").hidden = true;
   $("#refresh").hidden = !["owner", "administrator"].includes(session.role);
-  $("#role").textContent = "Rola: " + session.role;
-  message("Zalogowano: hasło i kod e-mail potwierdzone.");
+  $("#role").textContent = roleLabels.get(session.role) ?? session.role;
+  if (showMessage) message("Zalogowano: hasło i kod e-mail potwierdzone.");
   announceSession();
 }
 function announceSession() {
@@ -86,6 +94,7 @@ function leave() {
   registering = false;
   $("#registration").hidden = true;
   $("#dashboard").hidden = true;
+  $("#session-settings").close();
   delete $("#dashboard").dataset.role;
   $("#verification").hidden = true;
   $("#login").hidden = false;
@@ -101,9 +110,19 @@ async function action(fn) {
 $("#login-form").addEventListener("submit", send);
 $("#code-form").addEventListener("submit", verify);
 $("#restart-login").addEventListener("click", () => { leave(); message("Rozpocznij logowanie ponownie."); });
+$("#show-settings").addEventListener("click", () => {
+  message("");
+  $("#session-settings").showModal();
+});
+$("#close-settings").addEventListener("click", () => $("#session-settings").close());
+$("#session-settings").addEventListener("close", () => {
+  $("#password-form").reset();
+  $("#settings-message").textContent = "";
+});
 $("#refresh").addEventListener("click", () => action(async () => {
-  $("#result").textContent = JSON.stringify((await call("summary")).summary, null, 2);
-  message("Stan usługi kont odświeżony.");
+  const { summary } = await call("summary");
+  $("#result").textContent = summary.account_service === "available" ?
+    "Usługa kont działa." : "Usługa kont jest niedostępna.";
 }));
 $("#revoke-sessions").addEventListener("click", () => action(async () => {
   await call("sessions/revoke", {}, csrf); leave(); message("Sesje unieważnione.");
@@ -151,4 +170,4 @@ $("#password-form").addEventListener("submit", event => {
     message("Hasło zmienione. Zaloguj się ponownie.");
   });
 });
-call("session").then(enter).catch(() => leave());
+call("session").then(session => enter(session, false)).catch(() => leave());
