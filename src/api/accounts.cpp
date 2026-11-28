@@ -820,9 +820,10 @@ AccountHandler stage4_account_handler(database::Options options) {
             const auto name = AccountName::create(fields.get("account_name"));
             if (!name) { bad(); }
             const auto account = repository.find_by_name(*name);
-            const bool pending_owner = account && account->account.role() == Role::owner &&
+            const bool pending_owner = account && name->text() == "Administrator" &&
+                account->account.role() == Role::owner && account->account.status() == Status::disabled &&
                 connection.scalar("SELECT COUNT(*) FROM stage4_emails WHERE account_id=? "
-                    "AND initial_owner=1 AND verified_at IS NULL AND email='admin@dc24h.eu'",
+                    "AND initial_owner=1 AND verified_at IS NULL",
                     {std::to_string(account->account.id().value())}) == "1";
             if (!account || (account->account.status() != Status::active && !pending_owner)) {
                 const auto bytes = std::string_view(reinterpret_cast<const char*>(dummy->bytes.data()), dummy->bytes.size());

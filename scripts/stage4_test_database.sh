@@ -93,8 +93,10 @@ start_database() {
 sql() { mariadb --no-defaults -S "$socket" -u root "$@"; }
 start_database
 admin_password=$(openssl rand -hex 24)
+admin_email=owner-fixture@example.test
 sed -e "s|^MARIADB_SOCKET=.*|MARIADB_SOCKET=$socket|" \
     -e "s|^WEBADMIN_PUBLIC_PORT=.*|WEBADMIN_PUBLIC_PORT=$public_port|" \
+    -e "s|^ADMIN_EMAIL=.*|ADMIN_EMAIL=${admin_email^^}|" \
     -e "s|^ADMIN_INITIAL_PASSWORD=$|ADMIN_INITIAL_PASSWORD=$admin_password|" \
     -e "s|^MARIADB_APP_PASSWORD=$|MARIADB_APP_PASSWORD=$(openssl rand -hex 24)|" \
     -e 's|^SMTP_HOST=$|SMTP_HOST=localhost|' \
@@ -115,7 +117,7 @@ chmod 0600 "$bootstrap"
 reject_bootstrap() {
     sed "$1" "$bootstrap" > "$invalid"
     if dc24h-stage4-init --config "$invalid" >"$scratch/bootstrap-refusal.log" 2>&1; then
-        echo "Bootstrap accepted an invalid or mismatched WebAdmin endpoint" >&2
+        echo "Bootstrap accepted invalid configuration" >&2
         exit 1
     fi
     grep -Fq "$2" "$scratch/bootstrap-refusal.log"
@@ -126,9 +128,16 @@ reject_bootstrap "s/^WEBADMIN_PUBLIC_PORT=.*/WEBADMIN_PUBLIC_PORT=$other_port/" 
 reject_bootstrap 's/^WEBADMIN_PUBLIC_PORT=.*/WEBADMIN_PUBLIC_PORT=443/' 'Invalid bootstrap field WEBADMIN_PUBLIC_PORT'
 reject_bootstrap 's/^WEBADMIN_HOST=.*/WEBADMIN_HOST=foreign.invalid/' 'Invalid bootstrap field WEBADMIN_HOST'
 reject_bootstrap 's/^WEBADMIN_HTTPS=.*/WEBADMIN_HTTPS=false/' 'Invalid bootstrap field WEBADMIN_HTTPS'
-echo 'PASS mismatched Apache Origin, unapproved port, host and protocol refused before provisioning'
+reject_bootstrap 's/^ADMIN_EMAIL=.*/ADMIN_EMAIL=invalid address/' 'Invalid bootstrap field ADMIN_EMAIL'
+echo 'PASS invalid Apache endpoint and Administrator mailbox refused before provisioning'
 dc24h-stage4-init --config "$bootstrap"
 dc24h-stage4-init --config "$bootstrap"
+sed 's/^ADMIN_EMAIL=.*/ADMIN_EMAIL=other-fixture@example.test/' "$bootstrap" > "$invalid"
+if dc24h-stage4-init --config "$invalid" >"$scratch/bootstrap-refusal.log" 2>&1; then
+    echo "Bootstrap accepted a change to an existing Administrator mailbox" >&2; exit 1
+fi
+grep -Fq 'Existing Administrator requires an audited operator migration' "$scratch/bootstrap-refusal.log"
+test "$(sql -N dc24h_stage4_test -e 'SELECT email FROM stage4_emails WHERE initial_owner=1')" = "$admin_email"
 test "$(sql -N dc24h_stage4_test -e "SELECT COUNT(*) FROM dc24h_accounts WHERE role='owner'")" = 1
 test "$(sql -N dc24h_stage4_test -e "SELECT COUNT(*) FROM dc24h_account_credentials WHERE verifier LIKE '%.invalid' OR OCTET_LENGTH(verifier)<100")" = 0
 sed "s|/run/dc24h-stage4-auth/api.sock|$scratch/api/auth.sock|" "$state/auth.ini" > "$scratch/api/auth.ini"
@@ -144,7 +153,7 @@ test -S "$scratch/api/auth.sock"
 printf '%s' "$admin_password" > "$scratch/api/fixture.password"
 (
     cd "$repo/webadmin"
-    STAGE4_FIXTURE="$scratch" STAGE4_FIXTURE_PORT="$public_port" \
+    STAGE4_FIXTURE="$scratch" STAGE4_FIXTURE_PORT="$public_port" STAGE4_FIXTURE_ADMIN_EMAIL="$admin_email" \
         node --import tsx --test tests/stage4-mariadb.integration.ts
 )
 mariadb-dump --no-defaults -S "$socket" -u root --single-transaction --routines --databases dc24h_stage4_test \
@@ -169,7 +178,7 @@ mv -- "$state" "$scratch/state-replaced"
 cp -a -- "$scratch/state-backup" "$state"
 diff -qr -- "$scratch/state-backup" "$state"
 test "$(sql -N dc24h_stage4_test -e 'SELECT COUNT(*) FROM stage4_emails WHERE verified_at IS NOT NULL')" = 2
-test "$(sql -N dc24h_stage4_test -e 'SELECT COUNT(*) FROM stage4_schema_migrations')" = 2
+test "$(sql -N dc24h_stage4_test -e 'SELECT COUNT(*) FROM stage4_schema_migrations')" = 3
 dc24h-stage4-init --config "$bootstrap"
 sql dc24h_stage4_test -e 'DELETE FROM stage4_sessions; DELETE FROM stage4_challenges'
 test "$(sql -N dc24h_stage4_test -e 'SELECT (SELECT COUNT(*) FROM stage4_sessions) + (SELECT COUNT(*) FROM stage4_challenges)')" = 0

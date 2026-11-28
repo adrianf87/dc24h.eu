@@ -67,9 +67,11 @@ above. Keep `WEBADMIN_HOST=server-747585786.dc24h.eu` and
 application user ending in `_production`, such as `dc24h_stage4_production`.
 Keep MariaDB on the local Unix socket. An empty `MARIADB_ROOT_PASSWORD` uses
 the usual Debian MariaDB Unix-socket root authentication. Fill
-`ADMIN_INITIAL_PASSWORD` before the first run, with at least 15 characters,
-and choose distinct strong MariaDB application and SMTP passwords. Set the SMTP
-hostname, username and provider port. Use STARTTLS on 587 or set
+`ADMIN_INITIAL_PASSWORD` before the first run, with at least 15 characters.
+Set `ADMIN_EMAIL` to the mailbox for enrollment and login codes. Use the account's
+existing mailbox when re-running initialization. Choose distinct strong MariaDB
+application and SMTP passwords. Set the SMTP hostname, username and provider
+port. Use STARTTLS on 587 or set
 `SMTP_STARTTLS=false` for implicit TLS on the provider's port. TLS and
 certificate verification are mandatory in both modes. The sender is
 `admin@dc24h.eu`. Values are literal text after the first equals sign.
@@ -86,7 +88,7 @@ migrations followed by versioned Stage IV migrations, checks schema and grants,
 and provisions `Administrator` using the C++ password implementation.
 An existing unbound Administrator or Owner requires operator review and an
 audited migration. Re-running the initializer on the same database preserves
-the established Administrator and verifier. After creation, the initial
+the established Administrator, mailbox and verifier. After creation, the initial
 password can be blank when re-provisioning the same database. The running
 units receive the generated service credentials and dedicated `msmtp` config.
 Production initialization writes the matched `DC24H_STAGE4_ORIGIN` in
@@ -114,11 +116,12 @@ ss -ltn "( sport = :4278 or sport = :$public_port or sport = :1512 or sport = :1
 ```
 
 Before opening ingress, test mail from the dedicated service account. Exit
-status zero confirms relay acceptance. Confirm the message separately in
-`admin@dc24h.eu`. This probe contains no login code.
+status zero confirms relay acceptance. Confirm the probe message in the
+configured Administrator mailbox.
 
 ```sh
-printf 'From: admin@dc24h.eu\nTo: admin@dc24h.eu\nSubject: Stage IV SMTP probe\n\nDelivery check.\n' |
+admin_email='admin@dc24h.eu' # Use the configured Administrator mailbox.
+printf 'From: admin@dc24h.eu\nTo: %s\nSubject: Stage IV SMTP probe\n\nDelivery check.\n' "$admin_email" |
   runuser -u dc24h-webadmin -- /usr/bin/msmtp --file=/var/lib/dc24h-stage4/.msmtprc -t
 ```
 
@@ -144,8 +147,9 @@ with certificate verification enabled, and verify the ADCS hub on 1512
 with a client that validates its TLS certificate.
 
 Sign in with username `Administrator` and the initial password. The first
-successful password proof triggers an eight-digit enrollment code to
-`admin@dc24h.eu`. Enter that code on the same page to activate the account.
+successful password proof sends an eight-digit enrollment code to the
+configured Administrator mailbox. Enter the code on the same page to activate
+the account.
 Each later login sends a fresh code to the stored address. New users use
 **Załóż konto**, enter a username, password and email, then verify a code
 before the application creates their `registered` account. They sign in

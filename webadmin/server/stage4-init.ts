@@ -9,6 +9,7 @@ import mariadb from "mariadb";
 import type { Connection } from "mariadb";
 import { loadBootstrap, msmtpConfig } from "./stage4-bootstrap-config.ts";
 import { withPinnedPrivateParent } from "./remote-private-path.ts";
+import { stage4Migrations } from "./stage4-store.ts";
 
 const install = "/opt/dc24h";
 const readOnlyTables = ["dc24h_schema_migrations"];
@@ -154,12 +155,11 @@ async function migrate(db: Connection) {
   await db.query("CREATE TABLE IF NOT EXISTS stage4_schema_migrations (" +
     "version INT NOT NULL PRIMARY KEY, checksum CHAR(64) CHARACTER SET ascii NOT NULL," +
     "applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB");
-  const files = ["0001_tables.sql", "0002_activation.sql"];
   const applied = await db.query("SELECT version, checksum FROM stage4_schema_migrations ORDER BY version") as
     { version: number; checksum: string }[];
-  if (applied.some((row, index) => row.version !== index + 1) || applied.length > files.length)
+  if (applied.some((row, index) => row.version !== index + 1) || applied.length > stage4Migrations.length)
     throw Error("Unexpected Stage IV migration catalog");
-  for (const [index, file] of files.entries()) {
+  for (const [index, file] of stage4Migrations.entries()) {
     const sql = readFileSync(join(install, "database/stage4", file), "utf8");
     const checksum = createHash("sha256").update(sql).digest("hex");
     const previous = applied[index];
@@ -255,17 +255,23 @@ async function main() {
       if (existing.length) {
         const only = existing[0]!;
         if (existing.length !== 1 || only.role.toString() !== "owner" || only.name.toString() !== "Administrator" ||
-            only.initial_owner !== 1 || only.email !== "admin@dc24h.eu" || !only.credential)
+            only.initial_owner !== 1 || only.email !== config.ADMIN_EMAIL || !only.credential)
           throw Error("Existing Administrator requires an audited operator migration");
         owner = only.verified_at === null ? "PENDING" : "PASS";
       } else {
         if (!config.ADMIN_INITIAL_PASSWORD) throw Error("ADMIN_INITIAL_PASSWORD is required for a fresh database");
         const passwordFile = join(scratch, "owner.password");
+        const emailFile = join(scratch, "owner.email");
         publish(passwordFile, config.ADMIN_INITIAL_PASSWORD);
+        publish(emailFile, config.ADMIN_EMAIL);
         try {
           command(binary("dc24h-owner"), ["--config", join(scratch, "native.ini"),
-            "--stage4-bootstrap", "Administrator", "--password-file", passwordFile, "--confirm-stopped"]);
-        } finally { unlinkSync(passwordFile); }
+            "--stage4-bootstrap", "Administrator", "--password-file", passwordFile, "--email-file", emailFile,
+            "--confirm-stopped"]);
+        } finally {
+          unlinkSync(passwordFile);
+          unlinkSync(emailFile);
+        }
       }
       phase = "least-privilege SQL grants";
       await account(db, name, config.MARIADB_APP_USERNAME, config.MARIADB_APP_PASSWORD, [

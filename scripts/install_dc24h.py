@@ -45,6 +45,7 @@ PACKAGE_GROUPS = {
 SQL_IDENTIFIER = re.compile(r"[a-z][a-z0-9_]{0,26}")
 RESERVED_DATABASES = {"mysql", "sys", "information_schema", "performance_schema", "dc24h_stage4_test"}
 RESERVED_USERS = {"root", "mysql", "mariadb", "admin"}
+MAILBOX = re.compile(r"[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?", re.IGNORECASE | re.ASCII)
 PLACEHOLDER_PASSWORD = re.compile(
     r"(?:password|administrator|admin|root|changeme|replace|secret|example|placeholder|1234|qwerty|test)[0-9!@#$._-]*",
     re.IGNORECASE,
@@ -267,7 +268,7 @@ def installation_record(plan):
     return record
 
 
-def bootstrap(record, web, database, hub_user, root_user, db_socket, credentials, smtp):
+def bootstrap(record, web, database, hub_user, root_user, db_socket, admin_email, credentials, smtp):
     template = (SOURCE / "config/stage4-webadmin-bootstrap.env.example").read_text(encoding="utf-8")
     fields = dict(line.split("=", 1) for line in template.splitlines() if line and not line.startswith("#"))
     fields.update(
@@ -275,7 +276,7 @@ def bootstrap(record, web, database, hub_user, root_user, db_socket, credentials
         MARIADB_ROOT_USERNAME=root_user, MARIADB_SOCKET=db_socket, MARIADB_ROOT_PASSWORD=credentials["root"],
         MARIADB_APP_USERNAME=f"dc24h_{record['id'][:8]}_production", MARIADB_APP_PASSWORD=record["web_password"],
         MARIADB_HUB_USERNAME=hub_user, MARIADB_HUB_PASSWORD=credentials["hub"],
-        ADMIN_INITIAL_PASSWORD=credentials["admin"], SMTP_PASSWORD=credentials["smtp"],
+        ADMIN_EMAIL=admin_email, ADMIN_INITIAL_PASSWORD=credentials["admin"], SMTP_PASSWORD=credentials["smtp"],
         WEBADMIN_HOST=web.domain, WEBADMIN_PUBLIC_PORT=web.port, WEBADMIN_BIND_IPV4=web.bind_ipv4,
         INSTALLATION_ID=record["id"], **smtp,
     )
@@ -359,6 +360,8 @@ def install():
                     SQL_IDENTIFIER.fullmatch(value) and value != hub_user, "root")
     db_socket = ask("MariaDB Unix socket", lambda value:
                     re.fullmatch(r"/run/(?:[a-z0-9_-]+/)+[a-z0-9_.-]+\.sock", value), "/run/mysqld/mysqld.sock")
+    admin_email = ask("Administrator email for WebAdmin login codes", lambda value:
+                      len(value) <= 254 and ".." not in value and MAILBOX.fullmatch(value), "admin@dc24h.eu").lower()
     smtp = {
         "SMTP_HOST": ask("SMTP server for Administrator email codes", lambda value:
                          re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9.-]{0,252}", value) is not None),
@@ -401,7 +404,7 @@ def install():
             run("cmake", "--build", build, "--parallel", jobs, "--target", "dc24h", "dc24h-owner", "dc24h-account-admin")
             run(str(SOURCE / "scripts/stage4_install.sh"), node_dir, build, web.port, web.domain, web.bind_ipv4,
                 web.fullchain, web.private_key, umask=0o022)
-        bootstrap(record, web, database, hub_user, root_user, db_socket, credentials, smtp)
+        bootstrap(record, web, database, hub_user, root_user, db_socket, admin_email, credentials, smtp)
         install_hub(hub, database, hub_user, db_socket, credentials["hub"], record["hub_token"])
     print("Installation prepared. Review DNS, routing, SMTP and the service activation steps in doc/us/INSTALLATION.md.")
 

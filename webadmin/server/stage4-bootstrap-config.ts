@@ -1,12 +1,13 @@
 import { closeSync, constants, fstatSync, lstatSync, readFileSync, readSync } from "node:fs";
 import { dirname } from "node:path";
+import { isSafeMailbox } from "./public-msmtp.ts";
 import { openPrivateLeaf } from "./remote-private-path.ts";
 import { PUBLIC_WEBADMIN_ORIGIN } from "./public-email-code.ts";
 import { approvedStage4Origin, checkStage4ApacheSite, isStage4BindAddress, webAdminOrigin } from "./stage4-apache-site.ts";
 import { installerDatabase, stage4Identifier } from "./stage4-store.ts";
 
 const fixed = {
-  ADMIN_USERNAME: "Administrator", ADMIN_EMAIL: "admin@dc24h.eu", ADMIN_ROLE: "owner",
+  ADMIN_USERNAME: "Administrator", ADMIN_ROLE: "owner",
   ADMIN_REQUIRE_EMAIL_OTP: "true", SMTP_FROM: "admin@dc24h.eu", SMTP_AUTH: "true",
   SMTP_TLS: "true", SMTP_VERIFY_CERTIFICATE: "true", MARIADB_HOST: "127.0.0.1",
   WEBADMIN_INTERNAL_HOST: "127.0.0.1", WEBADMIN_INTERNAL_PORT: "4278", WEBADMIN_HTTPS: "true",
@@ -14,7 +15,7 @@ const fixed = {
   WEBADMIN_REGISTRATION_EMAIL_VERIFICATION: "true",
 };
 const variable = [
-  "STAGE4_ENVIRONMENT", "MARIADB_APPROVED_DATABASE", "ADMIN_INITIAL_PASSWORD", "SMTP_HOST",
+  "STAGE4_ENVIRONMENT", "MARIADB_APPROVED_DATABASE", "ADMIN_EMAIL", "ADMIN_INITIAL_PASSWORD", "SMTP_HOST",
   "SMTP_PORT", "SMTP_USERNAME", "SMTP_PASSWORD", "SMTP_STARTTLS", "MARIADB_PORT",
   "MARIADB_SOCKET", "MARIADB_ROOT_USERNAME", "MARIADB_ROOT_PASSWORD", "MARIADB_DATABASE",
   "MARIADB_APP_USERNAME", "MARIADB_APP_PASSWORD", "WEBADMIN_HOST", "WEBADMIN_PUBLIC_PORT",
@@ -108,6 +109,8 @@ export function loadBootstrap(path: string | undefined) {
   requireField("MARIADB_PORT", values.MARIADB_PORT === "3306");
   requireField("ADMIN_INITIAL_PASSWORD", values.ADMIN_INITIAL_PASSWORD === "" ||
     passwordOK(values.ADMIN_INITIAL_PASSWORD ?? "", 15));
+  requireField("ADMIN_EMAIL", isSafeMailbox(values.ADMIN_EMAIL));
+  values.ADMIN_EMAIL = values.ADMIN_EMAIL.toLowerCase();
   requireField("MARIADB_APP_PASSWORD", passwordOK(values.MARIADB_APP_PASSWORD ?? "", 20));
   requireField("MARIADB_ROOT_PASSWORD", fromInstaller ?
     Buffer.byteLength(values.MARIADB_ROOT_PASSWORD ?? "") <= 1024 :

@@ -13,12 +13,13 @@ sudo ./scripts/install_dc24h.py
 - Have a trusted TLS certificate and matching key for each selected domain. The same certificate files can serve both endpoints when they share a domain. Enter the server's local interface IPv4 when NAT forwards traffic from the public IPv4.
 - Select the public HTTPS and ADCS ports. WebAdmin defaults to `7178` and the hub to `1512`. Port `443` uses Apache's standard shared HTTPS listener. For another HTTPS port use an available address and port pair.
 - Supply a database name and dedicated hub login using up to 27 lowercase letters, digits, and underscores, beginning with a letter. Use a new or empty database. The hub, WebAdmin and the WebAdmin account service use distinct SQL accounts in the same database over a local Unix socket. Press Enter at the MariaDB administrator password prompt when using local root socket authentication.
-- Enter the initial `Administrator` password and authenticated SMTP settings for `admin@dc24h.eu`. The first WebAdmin login requires an email code. The installer uses hidden prompts for passwords and asks for confirmation before installing approved missing packages and building with the detected or selected number of logical CPUs.
+- Enter the initial `Administrator` password and the email address that should receive WebAdmin enrollment and login codes. The installer stores the address in lowercase and offers `admin@dc24h.eu` as the default. Use an authenticated SMTP account authorized to send as `admin@dc24h.eu`. The installer uses hidden password prompts and asks for confirmation before installing approved missing packages and building with the detected or selected number of logical CPUs.
 
 If preparation is interrupted, run the installer again with the same endpoints,
-certificate paths, database name, hub login and socket. Use the same hub SQL
-password if its account was created. Keep the root-only installation record
-`/etc/dc24h/installer.json` with the matched private state and database backup.
+certificate paths, database name, hub login and socket. Re-enter the existing
+Administrator email and hub SQL password if those accounts were created.
+Keep the root-only installation record `/etc/dc24h/installer.json` with the
+matched private state and database backup.
 The existing Administrator account keeps its established password on retry.
 
 After preparation, check DNS, port ownership, TLS and SMTP delivery. The
