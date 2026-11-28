@@ -3,6 +3,8 @@
 # Modules: ssl, headers, rewrite, proxy, proxy_http, authz_core, dir.
 # Preflight: verify port ownership, DNS/SAN/chain, all HTTPS same-host cookies,
 # Apache ingress, backend authorization and an independent rollback path.
+# Ubuntu uses 7178. Set the same port in Listen, VirtualHost, Host, Origin
+# and the gateway's DC24H_STAGE4_ORIGIN for the approved installation.
 Listen 7278
 <VirtualHost *:7278>
     ProxyRequests Off
@@ -29,7 +31,7 @@ Listen 7278
     Timeout 5
     # The password check and bounded msmtp dispatch can take longer than a
     # typical status read; do not truncate the response before the 10 s mailer limit.
-    ProxyTimeout 20
+    ProxyTimeout 25
     KeepAliveTimeout 2
 
     RewriteEngine On
@@ -48,7 +50,7 @@ Listen 7278
     # remote.html, /admin-api or the private development build.
     RewriteCond %{REQUEST_URI} !^/$
     RewriteCond %{REQUEST_URI} !^/(?:index\.html|panel\.(?:js|css)|panel-react\.js)$
-    RewriteCond %{REQUEST_URI} !^/stage4/v1/(?:challenge|(?:login|register)/(?:send|verify)|password/change|session|summary|identity-summary|hub/(?:health|ready|status|users)|admin|logout|sessions/revoke)$
+    RewriteCond %{REQUEST_URI} !^/stage4/v1/(?:challenge|(?:login|register)/(?:send|verify)|password/change|session|summary|identity-summary|hub/(?:health|ready|status|users)|admin|logout|sessions/revoke|tls/renewal(?:/check)?)$
     RewriteRule ^ - [F,END]
     RewriteCond %{REQUEST_URI} ^/(?:index\.html|panel\.(?:js|css)|panel-react\.js|)$
     RewriteCond %{REQUEST_METHOD} !^GET$
@@ -56,8 +58,11 @@ Listen 7278
     RewriteCond %{REQUEST_URI} ^/stage4/v1/(?:challenge|session|summary|identity-summary|hub/(?:health|ready|status|users))$
     RewriteCond %{REQUEST_METHOD} !^GET$
     RewriteRule ^ - [F,END]
-    RewriteCond %{REQUEST_URI} ^/stage4/v1/(?:(?:login|register)/(?:send|verify)|password/change|admin|logout|sessions/revoke)$
+    RewriteCond %{REQUEST_URI} ^/stage4/v1/(?:(?:login|register)/(?:send|verify)|password/change|admin|logout|sessions/revoke|tls/renewal/check)$
     RewriteCond %{REQUEST_METHOD} !^POST$
+    RewriteRule ^ - [F,END]
+    RewriteCond %{REQUEST_URI} ^/stage4/v1/tls/renewal$
+    RewriteCond %{REQUEST_METHOD} !^(?:GET|POST)$
     RewriteRule ^ - [F,END]
     RewriteCond %{HTTP:Origin} !^$
     RewriteCond %{HTTP:Origin} !^https://server-747585786\.dc24h\.eu:7278$
@@ -68,10 +73,12 @@ Listen 7278
     RewriteCond %{HTTP:Sec-Fetch-Site} !^$
     RewriteCond %{HTTP:Sec-Fetch-Site} !^(?:same-origin|none)$
     RewriteRule ^ - [F,END]
-    RewriteCond %{REQUEST_URI} ^/stage4/v1/(?:challenge|session|summary|identity-summary|hub/(?:health|ready|status|users))$
+    RewriteCond %{REQUEST_METHOD} ^GET$
+    RewriteCond %{REQUEST_URI} ^/stage4/v1/(?:challenge|session|summary|identity-summary|hub/(?:health|ready|status|users)|tls/renewal)$
     RewriteCond %{HTTP:Transfer-Encoding} !^$
     RewriteRule ^ - [F,END]
-    RewriteCond %{REQUEST_URI} ^/stage4/v1/(?:challenge|session|summary|identity-summary|hub/(?:health|ready|status|users))$
+    RewriteCond %{REQUEST_METHOD} ^GET$
+    RewriteCond %{REQUEST_URI} ^/stage4/v1/(?:challenge|session|summary|identity-summary|hub/(?:health|ready|status|users)|tls/renewal)$
     RewriteCond %{HTTP:Content-Length} !^(?:0)?$
     RewriteRule ^ - [F,END]
     RewriteCond %{REQUEST_METHOD} ^POST$
@@ -105,7 +112,7 @@ Listen 7278
     RequestHeader unset X-Forwarded-Port
     RequestHeader unset X-Forwarded-Prefix
     RequestHeader unset X-Forwarded-User
-    ProxyPassMatch "^(/stage4/v1/(?:challenge|(?:login|register)/(?:send|verify)|password/change|session|summary|identity-summary|hub/(?:health|ready|status|users)|admin|logout|sessions/revoke))$" "http://127.0.0.1:4278$1"
+    ProxyPassMatch "^(/stage4/v1/(?:challenge|(?:login|register)/(?:send|verify)|password/change|session|summary|identity-summary|hub/(?:health|ready|status|users)|admin|logout|sessions/revoke|tls/renewal(?:/check)?))$" "http://127.0.0.1:4278$1"
 
     Header always set Cache-Control "no-store"
     Header always set X-Content-Type-Options "nosniff"

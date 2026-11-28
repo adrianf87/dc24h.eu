@@ -1008,6 +1008,9 @@ if(BUILD_TESTING)
     add_test(NAME adcs.tls_security COMMAND tls_security_tests)
     add_test(NAME adcs.tls_security.process COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/tls_security_process_tests.py" "$<TARGET_FILE:dc24h>")
+    add_test(NAME adcs.reload COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/adcs_reload_tests.py" "$<TARGET_FILE:dc24h>")
+    set_tests_properties(adcs.reload PROPERTIES TIMEOUT 30)
     set_tests_properties(adcs.tls_security adcs.tls_security.process PROPERTIES TIMEOUT 30)
     add_executable(configuration_tests tests/configuration_tests.cpp)
     target_link_libraries(configuration_tests PRIVATE dc24h_configuration)

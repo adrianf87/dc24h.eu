@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <string>
+#include <string_view>
 
 // OpenSSL handles never escape the ADCS transport module.
 struct ssl_ctx_st;
@@ -17,7 +18,9 @@ struct IoResult {
 
 class Context final {
 public:
-    Context(const std::string& certificate_chain, const std::string& private_key);
+    // Managed listeners also require system trust and an exact DNS SAN.
+    Context(const std::string& certificate_chain, const std::string& private_key,
+            std::string_view trusted_hostname = {});
     ~Context();
     Context(const Context&) = delete;
     Context& operator=(const Context&) = delete;
@@ -29,7 +32,7 @@ private:
 
 class Connection final {
 public:
-    // The fd and Context must outlive this Connection.
+    // The fd must outlive this Connection. SSL_new retains the native context.
     Connection(const Context& context, int fd);
     ~Connection();
     Connection(const Connection&) = delete;

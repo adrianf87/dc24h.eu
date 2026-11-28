@@ -12,6 +12,7 @@ import { readAdminInput } from "./public-admin.ts";
 import { createPublicEmailCodeGate, PUBLIC_WEBADMIN_ORIGIN } from "./public-email-code.ts";
 import type { RemoteRateLimitStore } from "./remote-rate-limit-store.ts";
 import type { RemoteEvent } from "./remote-gateway.ts";
+import type { TlsRenewalOperation } from "../src/lib/tls-renewal.ts";
 
 const prefix = "/stage4/v1/";
 const internalHost = "127.0.0.1:4278";
@@ -284,7 +285,7 @@ export function publicGateway(deps: PublicGatewayDependencies) {
 
 const registrationRoutes = new Map([...routes,
   ["register/send", "POST"], ["register/verify", "POST"], ["password/change", "POST"],
-  ["identity-summary", "GET"], ["admin", "POST"]]);
+  ["identity-summary", "GET"], ["admin", "POST"], ["tls/renewal", "GET"], ["tls/renewal/check", "POST"]]);
 const hubReads = new Map<string, HubRead>([
   ["hub/health", "health"], ["hub/ready", "ready"],
   ["hub/status", "status"], ["hub/users", "users"],
@@ -302,12 +303,13 @@ const strongPassword = (value: unknown): value is string =>
 type DatabaseGateway = {
   db: Stage4Store;
   backend: Pick<PublicBackend, "prove" | "prepare" | "change" | "health" |
-    "identitySummary" | "hubRead" | "adminOperation">;
+    "identitySummary" | "hubRead" | "adminOperation" | "tlsRenewal">;
   sendCode(email: string, code: string): Promise<boolean>;
   now?: () => number;
+  origin?: string;
 };
 
-export function databasePublicGateway({ db, backend, sendCode, now = Date.now }: DatabaseGateway) {
+export function databasePublicGateway({ db, backend, sendCode, now = Date.now, origin = PUBLIC_WEBADMIN_ORIGIN }: DatabaseGateway) {
   const initials = new Map<string, number>();
   let registrationSends = 0;
   const reply = (res: ServerResponse, status: number, data: object, cookies: string[] = []) => {
@@ -324,8 +326,8 @@ export function databasePublicGateway({ db, backend, sendCode, now = Date.now }:
   };
   const client = (req: IncomingMessage, method: string) => {
     if (req.socket.remoteAddress !== "127.0.0.1" || req.headers.host !== internalHost ||
-        (req.headers.origin !== undefined && req.headers.origin !== PUBLIC_WEBADMIN_ORIGIN) ||
-        (method === "POST" && req.headers.origin !== PUBLIC_WEBADMIN_ORIGIN) ||
+        (req.headers.origin !== undefined && req.headers.origin !== origin) ||
+        (method === "POST" && req.headers.origin !== origin) ||
         (req.headers["sec-fetch-site"] !== undefined &&
           !["same-origin", "none"].includes(String(req.headers["sec-fetch-site"]))) ||
         Object.keys(req.headers).some(name => name.startsWith("x-forwarded-") ||
@@ -349,7 +351,7 @@ export function databasePublicGateway({ db, backend, sendCode, now = Date.now }:
 
   return async (req: IncomingMessage, res: ServerResponse) => {
     const endpoint = req.url?.startsWith(prefix) ? req.url.slice(prefix.length) : "";
-    const method = registrationRoutes.get(endpoint);
+    const method = endpoint === "tls/renewal" && req.method === "POST" ? "POST" : registrationRoutes.get(endpoint);
     if (!method || req.method !== method) return reply(res, 404, { error: "not_found" });
     const ip = client(req, method);
     if (!ip) return reply(res, 403, { error: "forbidden" });
@@ -426,6 +428,50 @@ export function databasePublicGateway({ db, backend, sendCode, now = Date.now }:
       const token = readCookie(req, sessionCookie);
       const active = validToken(token) && await db.session(token);
       if (!active) return reply(res, 401, { error: "unauthorized" }, [clear(sessionCookie)]);
+      if (endpoint === "tls/renewal" || endpoint === "tls/renewal/check") {
+        const mutation = endpoint === "tls/renewal" && method === "POST";
+        if (!["owner", "administrator"].includes(active.identity.role) || (mutation && active.identity.role !== "owner"))
+          return reply(res, 403, { error: "forbidden" });
+        if (method === "POST" && !db.isCsrf("session", token, supplied))
+          return reply(res, 403, { error: "csrf_required" });
+        let operation: TlsRenewalOperation = "status";
+        let proof: string | undefined;
+        if (method === "POST") {
+          const data = await body(req).catch(() => null);
+          const fields = mutation ? ["enabled", "password"] : [];
+          if (!data || !exactFields(data, fields)) return reply(res, 400, { error: "bad_request" });
+          operation = "check";
+          if (mutation) {
+            if (typeof data.enabled !== "boolean" || !passwordOK(data.password))
+              return reply(res, 400, { error: "bad_request" });
+            const age = now() - active.issued;
+            if (age < 0 || age >= 5 * minutes) return reply(res, 403, { error: "fresh_login_required" });
+            operation = data.enabled ? "enable" : "disable";
+            proof = data.password;
+          }
+        }
+        const limit = mutation ? 4 : method === "POST" ? 8 : 30;
+        if (!await limited(endpoint + ":" + method, ip, limit * 4, limit,
+          [["tls:" + method + ":actor:" + active.identity.id, limit, minutes]])) return rateLimited();
+        try {
+          const result = await backend.tlsRenewal(operation, stage4SessionDigest(token), proof);
+          const verified = await db.session(token);
+          if (!verified || verified.identity.id !== active.identity.id ||
+              verified.identity.revision !== active.identity.revision || verified.identity.role !== active.identity.role)
+            return reply(res, 401, { error: "unauthorized" }, [clear(sessionCookie)]);
+          await db.touch(token);
+          return reply(res, 200, { schema: 1, data: result });
+        } catch (error) {
+          if (error instanceof PublicUpstreamError) {
+            if (error.status === 401) return reply(res, 401, { error: "unauthorized" }, [clear(sessionCookie)]);
+            if (error.status === 429) return rateLimited();
+            if (error.status === 403) return reply(res, 403, { error:
+              error.code === "fresh_login_required" || error.code === "proof_refused" ? error.code : "forbidden" });
+            if (error.code === "tls_unavailable") return reply(res, 503, { error: "tls_unavailable" });
+          }
+          return reply(res, 503, { error: mutation ? "outcome_unknown" : "tls_unavailable" });
+        }
+      }
       const hubRead = hubReads.get(endpoint);
       if (endpoint === "identity-summary" || endpoint === "admin" || hubRead) {
         if (!["owner", "administrator"].includes(active.identity.role))

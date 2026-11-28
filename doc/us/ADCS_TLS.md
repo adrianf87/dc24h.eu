@@ -1,6 +1,8 @@
 # ADCS / TLS — alpha-0.1.4
 
-**alpha-0.9.5 TLS security:** [ADCS certificate and cipher policy](TLS_SECURITY.md) checks the hub leaf before listen and limits the listener to TLS 1.2 and 1.3 AEAD. Clients still check the name and the trust chain. HTTP/2, OCSP and automatic renewal remain unimplemented. The historical notes below keep their original scope.
+**Managed renewal:** The Ubuntu deployment supports reloading the certificate and key on the running hub through its private Unix API. New connections use the validated replacement, and active connections retain their established TLS state. [Automatic TLS renewal](TLS_AUTO_RENEWAL.md)
+
+**alpha-0.9.5 TLS security:** The hub checks the leaf before listen and limits the listener to TLS 1.2 and 1.3 AEAD. Clients still check the name and the trust chain. [ADCS certificate and cipher policy](TLS_SECURITY.md)
 
 **Public Stage I client-trust clarification:** CA/hostname verification and explicitly trusted ADC KEYP SHA-256 certificate pinning are distinct client authentication modes. In particular, ncdc with a trusted `?kp=SHA256/...` may accept a certificate without a SAN matching the connection URL; the hub cannot infer whether a client checked the name. See the [Debian 13/ncdc acceptance matrix](PUBLIC_STAGE_I_NCDC.md). Public use still requires a separately approved certificate identity and deployment policy.
 
@@ -41,7 +43,7 @@ openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
   -keyout /tmp/dc24h-test-key.pem -out /tmp/dc24h-test-cert.pem
 ```
 
-Keep private keys outside Git with permissions restricted to the service user. Restart after renewal: hot reload is not implemented. Stop closes sockets immediately without a TLS close_notify exchange. Bounded outgoing queues, graceful TLS shutdown, certificate reload, full ADC handshake and hub operation remain future work. [Tests](TESTING.md) include real ncdc ADCS negotiation.
+Keep private keys outside Git with permissions restricted to the service user. For an unmanaged listener, schedule a service restart to apply a replacement. Stop closes sockets immediately without a TLS close_notify exchange. The test suite includes real ncdc ADCS negotiation. [Tests](TESTING.md)
 
 TLS paths can now be configured in INI; relative paths use the INI directory. `--check-config` loads credentials without opening ports or a log. See [configuration](CONFIGURATION.md).
 

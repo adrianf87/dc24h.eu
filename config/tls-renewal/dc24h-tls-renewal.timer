@@ -1,0 +1,12 @@
+[Unit]
+Description=Check renewal of the dc24h ADCS and WebAdmin certificate
+After=time-sync.target
+
+[Timer]
+OnCalendar=*-*-* 03,15:00:00 UTC
+RandomizedDelaySec=30min
+Persistent=true
+Unit=dc24h-tls-renewal.service
+
+[Install]
+WantedBy=timers.target

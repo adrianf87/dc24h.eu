@@ -26,6 +26,7 @@
 
 namespace dc24h::logging { class Logger; }
 namespace dc24h::adc { class AuthenticationSource; }
+namespace dc24h::adcs { class Context; }
 
 namespace dc24h::network {
 
@@ -54,6 +55,7 @@ struct Options {
     std::vector<Endpoint> tls_listeners{};
     std::string tls_certificate;
     std::string tls_private_key;
+    std::string tls_reload_hostname;
     std::size_t max_connections{1024};
     std::chrono::seconds idle_timeout{120};
     security::Limits security{};
@@ -117,6 +119,8 @@ public:
     // Becomes true only after all configured listeners have been bound and
     // watched; clears on every normal or exceptional reactor exit.
     [[nodiscard]] bool listeners_ready() const noexcept { return listeners_ready_.load(); }
+    // Called by the private API worker. Only a fully validated context is published.
+    [[nodiscard]] bool reload_tls();
     // Plain copy of ready sessions. The mutex guards this copy only.
     // Session models stay on the reactor thread.
     [[nodiscard]] users::PresenceDirectory presence() const;
@@ -128,6 +132,7 @@ private:
     std::atomic<bool> stop_{false};
     std::atomic<bool> used_{false};
     std::atomic<bool> listeners_ready_{false};
+    std::atomic<std::shared_ptr<const adcs::Context>> tls_context_;
     std::atomic<std::size_t> active_{0};
     std::atomic<std::uint64_t> accepted_{0};
     std::atomic<std::uint64_t> rejected_{0};

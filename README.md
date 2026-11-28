@@ -1,8 +1,13 @@
 # dc24h.eu-twilight
 
-Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
+Direct Connect hub for the ADC and ADCS network protocols. ADCS runs ADC over TLS.
 
 **Current code version: beta-0.9.20.** This independent Twilight development repository starts from the [High Starter v0.9.20-rc.1 pre-release](https://github.com/adrianf87/dc24h.eu-high-starter/releases/tag/v0.9.20-rc.1). Its five beta-0.9.x Fix Passes and original RC1 OWNER acceptance were completed **in High Starter**, not as a new Twilight release. Twilight rebranding Stages I–IV are merged; [Stage V documentation and Stage VI qualification are under review in Draft PR #9](https://github.com/adrianf87/dc24h.eu-twilight/pull/9). No Twilight release or production GO has been approved.
+
+- **Hub** — C++20, OpenSSL, and MariaDB for persistent account data.
+- **WebAdmin** — React and TypeScript with Vite tooling, backed by a loopback Node.js/TypeScript gateway and Apache2 HTTPS.
+- **Ubuntu targets** — 22.04 LTS, 24.04 LTS, and 26.04 LTS, with GitHub-hosted CI on each version. Debian 13 deployment history is documented separately.
+- **TLS operations** — Certbot and systemd for the approved Ubuntu deployment. [Operator guide (EN)](doc/us/TLS_AUTO_RENEWAL.md) · [PL](doc/pl/TLS_AUTO_RENEWAL.md)
 
 > Twilight is an independent development repository derived from dc24h.eu High Starter. Historical issue/PR links below refer to the original project. They are preserved as source provenance, **not** as current Twilight PR/CI status. [Rebranding Issue #1](https://github.com/adrianf87/dc24h.eu-twilight/issues/1) · [Stage V/EN](doc/us/TWILIGHT_STAGE_V.md) · [Stage V/PL](doc/pl/TWILIGHT_STAGE_V.md).
 

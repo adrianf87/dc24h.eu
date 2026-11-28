@@ -66,6 +66,9 @@ int main(int argc, char* argv[]) {
         std::cout << dc24h::api::configuration_json(dc24h::configuration::public_settings(parsed.settings)) << '\n';
         return EXIT_SUCCESS;
     }
+    if (const auto* hostname = std::getenv("DC24H_TLS_RELOAD_HOSTNAME")) {
+        parsed.settings.network.tls_reload_hostname = hostname;
+    }
     if (parsed.check_only) {
         try {
             if (parsed.settings.authentication.enabled) {
@@ -73,7 +76,8 @@ int main(int argc, char* argv[]) {
             }
             if (!parsed.settings.network.tls_listeners.empty()) {
                 const dc24h::adcs::Context context(parsed.settings.network.tls_certificate,
-                                                   parsed.settings.network.tls_private_key);
+                                                   parsed.settings.network.tls_private_key,
+                                                   parsed.settings.network.tls_reload_hostname);
             }
             std::cout << dc24h::i18n::translate("Configuration OK (network ports not bound; log file not opened)\n", language);
             return EXIT_SUCCESS;
@@ -160,7 +164,14 @@ int main(int argc, char* argv[]) {
             // Capture owning startup policy before Options moves its strings.
             const auto public_settings = dc24h::configuration::public_settings(parsed.settings);
             const auto transfer_settings = parsed.settings.network.transfers;
+            dc24h::api::TlsReload tls_reload;
+            if (!parsed.settings.network.tls_listeners.empty() && !parsed.settings.network.tls_reload_hostname.empty()) {
+                tls_reload.hostname = parsed.settings.network.tls_reload_hostname;
+                tls_reload.certificate_chain = parsed.settings.network.tls_certificate;
+                tls_reload.private_key = parsed.settings.network.tls_private_key;
+            }
             dc24h::network::TcpServer network(logger, std::move(parsed.settings.network));
+            if (!tls_reload.hostname.empty()) { tls_reload.apply = [&network] { return network.reload_tls(); }; }
             dc24h::core::Server server(logger, &network);
             std::atomic<bool> signal_error{false};
             const auto started = std::chrono::steady_clock::now();
@@ -223,7 +234,7 @@ int main(int argc, char* argv[]) {
                 database && stage4_private_auth
                     ? dc24h::api::public_account_access_handler(parsed.settings.database)
                     : dc24h::api::AccountHandler{},
-                [&] { return network.presence(); });
+                [&] { return network.presence(); }, std::move(tls_reload));
                 api->start();
             }
 

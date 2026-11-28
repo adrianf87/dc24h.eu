@@ -45,7 +45,7 @@ jobs:
         run: |
           bash .github/scripts/install-ci-deps.sh \
             build-essential cmake python3 libutf8proc-dev libgcrypt20-dev libssl-dev \
-            libmariadb-dev mariadb-server apache2 openssl ncdc msmtp
+            libmariadb-dev mariadb-server apache2 openssl ncdc msmtp certbot pebble iproute2
       - name: Compile all C++ targets and run CTest
         env:
           DC24H_REQUIRE_SYSTEMD_HOST: '1'
@@ -55,6 +55,13 @@ jobs:
           cmake --build "$RUNNER_TEMP/dc24h-build" --parallel 4
           ctest --test-dir "$RUNNER_TEMP/dc24h-build" --output-on-failure \
             --parallel 4 --timeout 180
+      - name: Qualify TLS renewal with a disposable CA and systemd
+        run: |
+          sudo -n systemctl disable --now certbot.timer
+          sudo -n unshare --mount --net --propagation private -- /usr/bin/python3 \
+            tests/tls_renewal_acme_tests.py "$RUNNER_TEMP/dc24h-build/dc24h-twilight" /usr/bin/pebble
+          sudo -n env "GITHUB_ACTIONS=$GITHUB_ACTIONS" "RUNNER_ENVIRONMENT=$RUNNER_ENVIRONMENT" \
+            /usr/bin/python3 tests/tls_renewal_systemd_tests.py
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '24'

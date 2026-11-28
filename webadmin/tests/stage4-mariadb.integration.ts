@@ -5,9 +5,9 @@ import { setTimeout as delay } from "node:timers/promises";
 import { join } from "node:path";
 import test from "node:test";
 import mariadb from "mariadb";
-import { publicBackend } from "../server/public-backend.ts";
+import { publicBackend, PublicUpstreamError } from "../server/public-backend.ts";
 import { databasePublicGateway } from "../server/public-gateway.ts";
-import { openStage4Store } from "../server/stage4-store.ts";
+import { openStage4Store, stage4SessionDigest } from "../server/stage4-store.ts";
 import type { RuntimeConfiguration } from "../server/stage4-store.ts";
 
 test("disposable C++/MariaDB authorization and mock SMTP through the gateway", async () => {
@@ -105,6 +105,7 @@ test("disposable C++/MariaDB authorization and mock SMTP through the gateway", a
     assert.equal((await ownerBegin()).status, 200);
     assert.equal(messages.at(-1)?.email, "admin@dc24h.eu");
     assert.equal((await owner.request("session")).status, 401);
+    assert.equal((await owner.request("tls/renewal")).status, 401);
     const initialCode = messages.at(-1)!.code;
     const wrong = initialCode === "00000000" ? "99999999" : "00000000";
     assert.equal((await owner.request("login/verify", { code: initialCode }, false)).status, 403);
@@ -121,6 +122,19 @@ test("disposable C++/MariaDB authorization and mock SMTP through the gateway", a
     assert.equal((await owner.request("summary")).status, 200);
     assert.equal(await count("SELECT COUNT(*) n FROM stage4_emails WHERE verified_at IS NOT NULL"), 1);
     assert.equal((await owner.request("login/verify", { code: initialCode })).status, 403);
+    const upstream = (status: number, code: string) => (error: unknown) =>
+      error instanceof PublicUpstreamError && error.status === status && error.code === code;
+    const tlsChange = { enabled: true, password: adminPassword };
+    assert.equal((await owner.request("tls/renewal", tlsChange, false)).status, 403);
+    assert.equal((await owner.request("tls/renewal", { ...tlsChange, unit: "apache2.service" })).status, 400);
+    await assert.rejects(backend.tlsRenewal("status", "0".repeat(64)), upstream(401, "unauthorized"));
+    await assert.rejects(backend.tlsRenewal("enable", stage4SessionDigest(sessionCookie),
+      "An incorrect fixture password"), upstream(403, "proof_refused"));
+
+    const accountSession = stage4SessionDigest(sessionCookie);
+    await root.execute("UPDATE stage4_sessions SET issued_at=? WHERE token=UNHEX(?)", [Date.now() - 301000, accountSession]);
+    await assert.rejects(backend.tlsRenewal("enable", accountSession, adminPassword), upstream(403, "fresh_login_required"));
+    await root.execute("UPDATE stage4_sessions SET issued_at=? WHERE token=UNHEX(?)", [time, accountSession]);
 
     const administrative = (operation: string, values: object = {}, useCsrf = true) =>
       owner.request("admin", { operation, ...values }, useCsrf);
@@ -219,6 +233,11 @@ test("disposable C++/MariaDB authorization and mock SMTP through the gateway", a
     assert.equal((await user.request("admin", { operation: "bans.list", after: "0", state: "all" })).status, 403);
     assert.equal((await user.request("admin", { operation: "audit.list", proof: signup.password, after: "0" })).status, 403);
     assert.equal((await user.request("hub/status")).status, 403);
+    assert.equal((await user.request("tls/renewal")).status, 403);
+    assert.equal((await user.request("tls/renewal", { enabled: true, password: signup.password })).status, 403);
+    const registeredSession = stage4SessionDigest(user.cookies.get("__Host-dc24h_stage4_session")!);
+    await root.execute("UPDATE stage4_sessions SET seen_at=? WHERE token=UNHEX(?)", [Date.now(), registeredSession]);
+    await assert.rejects(backend.tlsRenewal("enable", registeredSession, signup.password), upstream(403, "forbidden"));
     await root.execute("UPDATE dc24h_accounts SET revision=revision+1,status='disabled' WHERE name=?", [signup.username]);
     assert.equal((await user.request("session")).status, 401);
 

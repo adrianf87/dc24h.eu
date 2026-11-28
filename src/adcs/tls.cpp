@@ -7,6 +7,7 @@
 
 #include <climits>
 #include <cstdint>
+#include <memory>
 #include <stdexcept>
 #include <string_view>
 
@@ -90,9 +91,33 @@ void require_leaf(X509* leaf) {
         throw std::runtime_error("TLS certificate is not authorized for server authentication");
     }
 }
+
+void require_trust(SSL_CTX* context, std::string_view hostname) {
+    auto* leaf = SSL_CTX_get0_certificate(context);
+    constexpr unsigned int flags = X509_CHECK_FLAG_NEVER_CHECK_SUBJECT | X509_CHECK_FLAG_NO_WILDCARDS;
+    if (hostname.size() > 253 || hostname.find_first_not_of("abcdefghijklmnopqrstuvwxyz0123456789.-") !=
+        std::string_view::npos || X509_check_host(leaf, hostname.data(), hostname.size(), flags, nullptr) != 1) {
+        throw std::runtime_error("TLS certificate does not have the required DNS SAN");
+    }
+    auto* store = SSL_CTX_get_cert_store(context);
+    STACK_OF(X509)* chain = nullptr;
+    const std::unique_ptr<X509_STORE_CTX, decltype(&X509_STORE_CTX_free)> verification(
+        X509_STORE_CTX_new(), X509_STORE_CTX_free);
+    if (!verification || X509_STORE_set_default_paths(store) != 1 ||
+        SSL_CTX_get0_chain_certs(context, &chain) != 1 ||
+        X509_STORE_CTX_init(verification.get(), store, leaf, chain) != 1 ||
+        X509_STORE_CTX_set_purpose(verification.get(), X509_PURPOSE_SSL_SERVER) != 1) {
+        throw std::runtime_error("Cannot initialize TLS chain verification");
+    }
+    X509_VERIFY_PARAM_set_auth_level(X509_STORE_CTX_get0_param(verification.get()), 2);
+    if (X509_verify_cert(verification.get()) != 1) {
+        throw std::runtime_error("TLS certificate chain is not trusted");
+    }
+}
 } // namespace
 
-Context::Context(const std::string& certificate_chain, const std::string& private_key) {
+Context::Context(const std::string& certificate_chain, const std::string& private_key,
+                 std::string_view trusted_hostname) {
     if (certificate_chain.empty() || private_key.empty() ||
         certificate_chain.find('\0') != std::string::npos ||
         private_key.find('\0') != std::string::npos) {
@@ -128,6 +153,7 @@ Context::Context(const std::string& certificate_chain, const std::string& privat
             throw std::runtime_error("TLS certificate and private key do not match");
         }
         require_leaf(SSL_CTX_get0_certificate(context_));
+        if (!trusted_hostname.empty()) { require_trust(context_, trusted_hostname); }
     } catch (...) {
         SSL_CTX_free(context_);
         context_ = nullptr;

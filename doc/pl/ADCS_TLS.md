@@ -1,6 +1,8 @@
 # ADCS / TLS — alpha-0.1.4
 
-**alpha-0.9.5 Bezpieczeństwo TLS:** [Polityka certyfikatu i szyfrów ADCS](TLS_SECURITY.md) sprawdza certyfikat liścia huba przed nasłuchem i ogranicza nasłuch do TLS 1.2 i 1.3 AEAD. Klient nadal sprawdza nazwę i łańcuch zaufania. HTTP/2, OCSP i automatyczne odnawianie pozostają niezaimplementowane. Notatki historyczne poniżej zachowują pierwotny zakres.
+**Zarządzane odnawianie:** Wdrożenie Ubuntu pozwala wczytać certyfikat i klucz w działającym hubie przez prywatne API Unix. Nowe połączenia używają zweryfikowanego certyfikatu, a zestawione zachowują swój stan TLS. [Automatyczne odnawianie TLS](TLS_AUTO_RENEWAL.md)
+
+**alpha-0.9.5 Bezpieczeństwo TLS:** Hub sprawdza certyfikat liścia przed nasłuchem i ogranicza nasłuch do TLS 1.2 i 1.3 AEAD. Klient nadal sprawdza nazwę i łańcuch zaufania. [Polityka certyfikatu i szyfrów ADCS](TLS_SECURITY.md)
 
 **Uściślenie Etapu I publicznego wdrożenia:** weryfikacja CA/nazwy hosta i jawne przypięcie odcisku SHA-256 certyfikatu w ADC KEYP są różnymi trybami zaufania klienta. W szczególności ncdc ze świadomie zaufanym `?kp=SHA256/...` może zaakceptować certyfikat bez SAN zgodnego z adresem URL; hub nie jest w stanie stwierdzić, czy klient sprawdził nazwę. Zobacz [macierz odbioru Debian 13/ncdc](PUBLIC_STAGE_I_NCDC.md). Publiczne użycie wymaga osobnego zatwierdzenia tożsamości certyfikatu i zasad wdrożenia.
 
@@ -28,7 +30,7 @@ Samo `--adcs-listen` uruchamia wyłącznie TLS. Dodaj jawne `--listen`, aby wł�
 
 Negocjacja ma termin `min(idle_timeout, tls_handshake_timeout)` (domyślny termin TLS: 10 sekund) od przyjęcia; częściowe dane nie przedłużają go. Po negocjacji odczyty danych odnawiają zwykły timeout. `received_bytes` obejmuje tylko odszyfrowane dane ADC. `handshakes` liczy udane negocjacje, `incomplete` sesje zamknięte przed ich ukończeniem, także przez timeout i stop. Nie oznacza to logowania ADC.
 
-Klucze przechowuj poza Git, dostępne tylko użytkownikowi usługi. Przykład generowania jednorazowego certyfikatu testowego znajduje się w [wersji US](../us/ADCS_TLS.md). Po odnowieniu certyfikatu zrestartuj proces. Brak reload, kolejek wyjściowych, wysyłania close_notify przy stopie oraz pełnej sesji ADC. [Testy](TESTING.md) obejmują rzeczywiste ncdc przez ADCS.
+Klucze przechowuj poza Git, z dostępem ograniczonym do konta usługi. Przy instalacji poza mechanizmem zarządzania zaplanuj restart do zastosowania certyfikatu. Zatrzymanie zamyka gniazda od razu, bez wymiany TLS close_notify. Testy obejmują negocjacje ncdc przez ADCS. [Certyfikat testowy](../us/ADCS_TLS.md) · [Testy](TESTING.md)
 
 Ścieżki TLS można teraz podać w INI; względne odnoszą się do jego katalogu. `--check-config` wczytuje certyfikat i klucz bez otwierania portów/logu. Zobacz [konfigurację](CONFIGURATION.md).
 

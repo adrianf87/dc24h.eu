@@ -287,6 +287,20 @@ users::PresenceDirectory TcpServer::presence() const {
     return presence_;
 }
 
+bool TcpServer::reload_tls() {
+    if (options_.tls_reload_hostname.empty() || !listeners_ready() || !tls_context_.load()) { return false; }
+    try {
+        auto replacement = std::make_shared<adcs::Context>(options_.tls_certificate, options_.tls_private_key,
+                                                           options_.tls_reload_hostname);
+        tls_context_.store(std::move(replacement));
+        logger_.info("ADCS TLS context reloaded");
+        return true;
+    } catch (const std::exception&) {
+        logger_.warning("ADCS TLS reload refused; existing context retained");
+        return false;
+    }
+}
+
 void TcpServer::run() {
     if (used_.exchange(true)) { throw std::logic_error("TcpServer::run() may only be called once"); }
     if (stop_.load()) { return; }
@@ -309,9 +323,9 @@ void TcpServer::run() {
     Fd epoll(::epoll_create1(EPOLL_CLOEXEC));
     if (epoll.get() == -1) { system_failure("epoll_create1"); }
     watch(epoll.get(), wake_fd_, 0, EPOLLIN);
-    std::unique_ptr<adcs::Context> tls_context;
     if (!options_.tls_listeners.empty()) {
-        tls_context = std::make_unique<adcs::Context>(options_.tls_certificate, options_.tls_private_key);
+        tls_context_.store(std::make_shared<adcs::Context>(options_.tls_certificate, options_.tls_private_key,
+                                                          options_.tls_reload_hostname));
     }
     std::vector<Fd> listeners;
     std::vector<bool> secure_listeners;
@@ -641,7 +655,8 @@ void TcpServer::run() {
                     std::unique_ptr<adcs::Connection> tls;
                     if (secure) {
                         try {
-                            tls = std::make_unique<adcs::Connection>(*tls_context, client.get());
+                            const auto context = tls_context_.load();
+                            tls = std::make_unique<adcs::Connection>(*context, client.get());
                         } catch (const std::exception&) {
                             peer_limiter.release(key);
                             rejected_.fetch_add(1);
@@ -909,7 +924,7 @@ void TcpServer::run() {
                  " unknown_commands=" + std::to_string(adc_unknown_.load()) +
                  " invalid_frames=" + std::to_string(adc_invalid_.load()) +
                  " keepalives=" + std::to_string(adc_keepalives_.load()));
-    if (tls_context) {
+    if (tls_context_.load()) {
         logger_.info("ADCS stopped; handshakes=" + std::to_string(adcs_handshakes_.load()) +
                      " incomplete=" + std::to_string(adcs_incomplete_.load()));
     }
