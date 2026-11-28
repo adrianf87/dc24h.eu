@@ -25,9 +25,6 @@ jobs:
         os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
     env:
       SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      STAGE5_BUILD: ${{ runner.temp }}/stage5-build
-      STAGE5_RAW: ${{ runner.temp }}/stage5-raw
-      STAGE5_REPORT: ${{ runner.temp }}/stage5-report
     defaults:
       run:
         shell: bash
@@ -40,11 +37,16 @@ jobs:
         env:
           EXPECTED_IMAGE: ${{ matrix.os }}
         run: |
+          install -d -m 0700 "$RUNNER_TEMP/stage5-raw" "$RUNNER_TEMP/stage5-report"
+          {
+            printf 'STAGE5_BUILD=%s\n' "$RUNNER_TEMP/stage5-build"
+            printf 'STAGE5_RAW=%s\n' "$RUNNER_TEMP/stage5-raw"
+            printf 'STAGE5_REPORT=%s\n' "$RUNNER_TEMP/stage5-report"
+          } >> "$GITHUB_ENV"
           test "$RUNNER_ENVIRONMENT" = github-hosted
           . /etc/os-release
           test "$ID" = ubuntu && test "$VERSION_ID" = "${EXPECTED_IMAGE#ubuntu-}"
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
-          install -d -m 0700 "$STAGE5_RAW" "$STAGE5_REPORT"
       - name: Install native fixture packages
         run: |
           bash .github/scripts/install-ci-deps.sh \
