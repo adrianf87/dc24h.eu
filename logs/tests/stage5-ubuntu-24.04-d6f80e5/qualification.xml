@@ -1,0 +1,237 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuites>
+  <testsuite name="native" tests="34" failures="0" errors="0" skipped="1">
+    <properties>
+      <property name="source_sha" value="d6f80e5fe2f0dee8c14db995407deaef0bf47f89" />
+    </properties>
+    <testcase name="network.process" classname="native" />
+    <testcase name="adc.sch.process" classname="native" />
+    <testcase name="transfers.limits.process" classname="native" />
+    <testcase name="adc.rcm.process" classname="native" />
+    <testcase name="stage1.ipv6_loopback_policy" classname="native" />
+    <testcase name="adc.ctm.process" classname="native" />
+    <testcase name="chat.anti_flood.process" classname="native" />
+    <testcase name="chat.private.process" classname="native" />
+    <testcase name="chat.public.process" classname="native" />
+    <testcase name="adc.close.process" classname="native" />
+    <testcase name="adc.login.process" classname="native" />
+    <testcase name="adc.process" classname="native" />
+    <testcase name="adcs.crypto" classname="native" />
+    <testcase name="adcs.process" classname="native" />
+    <testcase name="adcs.tls_security" classname="native" />
+    <testcase name="adcs.tls_security.process" classname="native" />
+    <testcase name="accounts.account_security" classname="native" />
+    <testcase name="accounts.password_security" classname="native" />
+    <testcase name="beta.05.stage1.matched.recovery" classname="native" />
+    <testcase name="beta.05.stage4.rollback" classname="native">
+      <skipped message="SKIP" />
+    </testcase>
+    <testcase name="accounts.owner_cli.process" classname="native" />
+    <testcase name="accounts.management.process" classname="native" />
+    <testcase name="accounts.adc_authentication.process" classname="native" />
+    <testcase name="accounts.webadmin.process" classname="native" />
+    <testcase name="adc.ncdc" classname="native" />
+    <testcase name="adcs.ncdc" classname="native" />
+    <testcase name="adc.feature.ncdc" classname="native" />
+    <testcase name="adcs.feature.ncdc" classname="native" />
+    <testcase name="adc.activepassive.ncdc" classname="native" />
+    <testcase name="adcs.activepassive.ncdc" classname="native" />
+    <testcase name="adc.ctm.ncdc" classname="native" />
+    <testcase name="adcs.ctm.ncdc" classname="native" />
+    <testcase name="adc.rcm.ncdc" classname="native" />
+    <testcase name="adcs.rcm.ncdc" classname="native" />
+  </testsuite>
+  <testsuite name="node" tests="22" failures="0" errors="0" skipped="0">
+    <properties>
+      <property name="source_sha" value="d6f80e5fe2f0dee8c14db995407deaef0bf47f89" />
+    </properties>
+    <testcase name="real Unix-socket bridge rechecks a scoped C++ grant and projects only public counts" classname="node" />
+    <testcase name="Stage IV identity summary adapter fails closed on broken/sensitive counts" classname="node" />
+    <testcase name="Stage IV refuses the legacy same-UID hub token and missing bridge" classname="node" />
+    <testcase name="Stage IV email sender fails closed without dedicated non-root configuration" classname="node" />
+    <testcase name="password alone and absent verified email never send a code or create a session" classname="node" />
+    <testcase name="password proof sends an eight-digit code to the stored verified recipient only" classname="node" />
+    <testcase name="wrong codes, malformed codes, five guesses and expiry fail closed" classname="node" />
+    <testcase name="current role/grant revocation and concurrent replay cannot create extra sessions" classname="node" />
+    <testcase name="mailer failure, unsafe mailbox and resource limits do not authorize" classname="node" />
+    <testcase name="Administrator mailbox requires C++ password, email delivery and OTP proof" classname="node" />
+    <testcase name="an existing catalog cannot be replaced by email re-enrollment" classname="node" />
+    <testcase name="expired OTP, role revocation and private permissions fail without a binding" classname="node" />
+    <testcase name="invalid name, invalid email and wrong OTP are rejected with no catalog" classname="node" />
+    <testcase name="Stage IV exact routes, public Origin and private proxy Host reject wrong requests" classname="node" />
+    <testcase name="case 15" classname="node" />
+    <testcase name="role withdrawal, email roster loss, CSRF and logout invalidate sessions" classname="node" />
+    <testcase name="failed delivery and unavailable audit fail closed" classname="node" />
+    <testcase name="email verification code expires and cannot be replayed across login attempts" classname="node" />
+    <testcase name="only the registered verified account mailbox can receive login codes" classname="node" />
+    <testcase name="unverified, duplicated, unsafe or header-injecting email records are rejected" classname="node" />
+    <testcase name="an externally changed or public-readable catalog fails closed" classname="node" />
+    <testcase name="Stage IV public read adapters enforce OTP session, role, method and revocation" classname="node" />
+  </testsuite>
+  <testsuite name="browser" tests="5" failures="0" errors="0" skipped="0">
+    <properties>
+      <property name="source_sha" value="d6f80e5fe2f0dee8c14db995407deaef0bf47f89" />
+    </properties>
+    <testcase name="OTP-authenticated Owner sees actual read-only C++ account statistics in React" classname="browser" />
+    <testcase name="Registered role never gets read-only admin API UI" classname="browser" />
+    <testcase name="public WebAdmin waits for a mailed code after C++ password proof" classname="browser" />
+    <testcase name="wrong password never sends a verification email or exposes the dashboard" classname="browser" />
+    <testcase name="registration requires mailbox proof and a separate fresh login" classname="browser" />
+  </testsuite>
+  <testsuite name="systemd" tests="1" failures="0" errors="0" skipped="0">
+    <properties>
+      <property name="source_sha" value="d6f80e5fe2f0dee8c14db995407deaef0bf47f89" />
+    </properties>
+    <testcase name="systemd.sandbox" classname="systemd" />
+  </testsuite>
+  <testsuite name="native-build" tests="1" failures="0" errors="0" skipped="0">
+    <properties>
+      <property name="source_sha" value="d6f80e5fe2f0dee8c14db995407deaef0bf47f89" />
+    </properties>
+    <testcase name="native-build" classname="native-build" />
+  </testsuite>
+  <testsuite name="webadmin-build" tests="1" failures="0" errors="0" skipped="0">
+    <properties>
+      <property name="source_sha" value="d6f80e5fe2f0dee8c14db995407deaef0bf47f89" />
+    </properties>
+    <testcase name="webadmin-build" classname="webadmin-build" />
+  </testsuite>
+  <testsuite name="typescript" tests="1" failures="0" errors="0" skipped="0">
+    <properties>
+      <property name="source_sha" value="d6f80e5fe2f0dee8c14db995407deaef0bf47f89" />
+    </properties>
+    <testcase name="typescript" classname="typescript" />
+  </testsuite>
+  <testsuite name="database-fixture" tests="1" failures="0" errors="0" skipped="0">
+    <properties>
+      <property name="source_sha" value="d6f80e5fe2f0dee8c14db995407deaef0bf47f89" />
+    </properties>
+    <testcase name="database-fixture" classname="database-fixture" />
+  </testsuite>
+  <testsuite name="smtp-transport" tests="1" failures="0" errors="0" skipped="0">
+    <properties>
+      <property name="source_sha" value="d6f80e5fe2f0dee8c14db995407deaef0bf47f89" />
+    </properties>
+    <testcase name="smtp-transport" classname="smtp-transport" />
+  </testsuite>
+  <testsuite name="unix-bridge" tests="1" failures="0" errors="0" skipped="0">
+    <properties>
+      <property name="source_sha" value="d6f80e5fe2f0dee8c14db995407deaef0bf47f89" />
+    </properties>
+    <testcase name="unix-bridge" classname="unix-bridge" />
+  </testsuite>
+  <testsuite name="python-boundary" tests="1" failures="0" errors="0" skipped="0">
+    <properties>
+      <property name="source_sha" value="d6f80e5fe2f0dee8c14db995407deaef0bf47f89" />
+    </properties>
+    <testcase name="python-boundary" classname="python-boundary" />
+  </testsuite>
+  <testsuite name="ncdc-keyprint" tests="1" failures="0" errors="0" skipped="0">
+    <properties>
+      <property name="source_sha" value="d6f80e5fe2f0dee8c14db995407deaef0bf47f89" />
+    </properties>
+    <testcase name="ncdc-keyprint" classname="ncdc-keyprint" />
+  </testsuite>
+  <testsuite name="airdcpp-guest" tests="1" failures="0" errors="0" skipped="0">
+    <properties>
+      <property name="source_sha" value="d6f80e5fe2f0dee8c14db995407deaef0bf47f89" />
+    </properties>
+    <testcase name="airdcpp-guest" classname="airdcpp-guest" />
+  </testsuite>
+  <testsuite name="loopback-probes" tests="1" failures="0" errors="0" skipped="0">
+    <properties>
+      <property name="source_sha" value="d6f80e5fe2f0dee8c14db995407deaef0bf47f89" />
+    </properties>
+    <testcase name="loopback-probes" classname="loopback-probes" />
+  </testsuite>
+  <testsuite name="transient-restart" tests="1" failures="0" errors="0" skipped="0">
+    <properties>
+      <property name="source_sha" value="d6f80e5fe2f0dee8c14db995407deaef0bf47f89" />
+    </properties>
+    <testcase name="transient-restart" classname="transient-restart" />
+  </testsuite>
+  <testsuite name="local-vps-observations" tests="1" failures="0" errors="0" skipped="0">
+    <properties>
+      <property name="source_sha" value="d6f80e5fe2f0dee8c14db995407deaef0bf47f89" />
+    </properties>
+    <testcase name="local-vps-observations" classname="local-vps-observations" />
+  </testsuite>
+  <testsuite name="ui-rollback" tests="1" failures="0" errors="0" skipped="0">
+    <properties>
+      <property name="source_sha" value="d6f80e5fe2f0dee8c14db995407deaef0bf47f89" />
+    </properties>
+    <testcase name="ui-rollback" classname="ui-rollback" />
+  </testsuite>
+  <testsuite name="certificate-renewal" tests="1" failures="1" errors="0" skipped="0">
+    <properties>
+      <property name="source_sha" value="d6f80e5fe2f0dee8c14db995407deaef0bf47f89" />
+    </properties>
+    <testcase name="certificate-renewal" classname="certificate-renewal">
+      <failure message="Test failed. Raw transcript omitted." />
+    </testcase>
+  </testsuite>
+  <testsuite name="independent-ingress" tests="1" failures="0" errors="0" skipped="1">
+    <properties>
+      <property name="source_sha" value="d6f80e5fe2f0dee8c14db995407deaef0bf47f89" />
+    </properties>
+    <testcase name="independent-ingress" classname="independent-ingress">
+      <skipped message="NOT TESTED" />
+    </testcase>
+  </testsuite>
+  <testsuite name="owner-mailbox-recovery" tests="1" failures="0" errors="0" skipped="1">
+    <properties>
+      <property name="source_sha" value="d6f80e5fe2f0dee8c14db995407deaef0bf47f89" />
+    </properties>
+    <testcase name="owner-mailbox-recovery" classname="owner-mailbox-recovery">
+      <skipped message="NOT TESTED" />
+    </testcase>
+  </testsuite>
+  <testsuite name="full-cross-version-rollback" tests="1" failures="0" errors="0" skipped="1">
+    <properties>
+      <property name="source_sha" value="d6f80e5fe2f0dee8c14db995407deaef0bf47f89" />
+    </properties>
+    <testcase name="full-cross-version-rollback" classname="full-cross-version-rollback">
+      <skipped message="NOT TESTED" />
+    </testcase>
+  </testsuite>
+  <testsuite name="live-browser-and-smtp" tests="1" failures="0" errors="0" skipped="1">
+    <properties>
+      <property name="source_sha" value="d6f80e5fe2f0dee8c14db995407deaef0bf47f89" />
+    </properties>
+    <testcase name="live-browser-and-smtp" classname="live-browser-and-smtp">
+      <skipped message="NOT TESTED" />
+    </testcase>
+  </testsuite>
+  <testsuite name="hosted-ci" tests="1" failures="0" errors="0" skipped="1">
+    <properties>
+      <property name="source_sha" value="d6f80e5fe2f0dee8c14db995407deaef0bf47f89" />
+    </properties>
+    <testcase name="hosted-ci" classname="hosted-ci">
+      <skipped message="NOT TESTED" />
+    </testcase>
+  </testsuite>
+  <testsuite name="dcplusplus" tests="1" failures="0" errors="0" skipped="1">
+    <properties>
+      <property name="source_sha" value="d6f80e5fe2f0dee8c14db995407deaef0bf47f89" />
+    </properties>
+    <testcase name="dcplusplus" classname="dcplusplus">
+      <skipped message="SKIP" />
+    </testcase>
+  </testsuite>
+  <testsuite name="debian13" tests="1" failures="0" errors="0" skipped="1">
+    <properties>
+      <property name="source_sha" value="d6f80e5fe2f0dee8c14db995407deaef0bf47f89" />
+    </properties>
+    <testcase name="debian13" classname="debian13">
+      <skipped message="SKIP" />
+    </testcase>
+  </testsuite>
+  <testsuite name="active-bypass-reproduction" tests="1" failures="0" errors="0" skipped="1">
+    <properties>
+      <property name="source_sha" value="d6f80e5fe2f0dee8c14db995407deaef0bf47f89" />
+    </properties>
+    <testcase name="active-bypass-reproduction" classname="active-bypass-reproduction">
+      <skipped message="SKIP" />
+    </testcase>
+  </testsuite>
+</testsuites>

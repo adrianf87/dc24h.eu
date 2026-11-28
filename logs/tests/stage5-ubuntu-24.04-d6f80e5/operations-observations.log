@@ -1,0 +1,35 @@
+Timestamp UTC 2026-11-28T02:25:14.123431+00:00
+Current production service identities
+PASS apache2.service active, original process unchanged
+
+PASS dc24h-stage3-adcs.service active, original process unchanged
+
+PASS dc24h-twilight-stage4-auth.service active, original process unchanged
+
+PASS dc24h-twilight-stage4-bridge.service active, original process unchanged
+
+PASS dc24h-twilight-stage4-webadmin.service active, original process unchanged
+
+PASS mariadb.service active, original process unchanged
+TCP 1511 listener scope: none
+TCP 1512 listener scope: 62.171.156.32:1512
+TCP 3306 listener scope: none
+TCP 4278 listener scope: 127.0.0.1:4278
+TCP 7178 listener scope: *:7178
+Socket 600 dc24h-stage3 dc24h-stage3 /run/dc24h-stage4-auth/api.sock
+Socket 660 dc24h-stage3 dc24h-webadmin /run/dc24h-stage4-bridge/bridge.sock
+Socket 777 mysql mysql /run/mysqld/mysqld.sock
+MariaDB skip-networking 1
+Active privileged accounts with verified email by role 'owner\t1'
+Certbot timer disabled
+Packaged Certbot cron is bypassed by its systemd guard
+Executable Certbot deploy hook count 0
+ADCS reload capability no
+Bounded log apache2.service lines=9 labelled secret matches=0
+Bounded log dc24h-stage3-adcs.service lines=42 labelled secret matches=0
+Bounded log dc24h-twilight-stage4-auth.service lines=19 labelled secret matches=0
+Bounded log dc24h-twilight-stage4-bridge.service lines=10 labelled secret matches=0
+Bounded log dc24h-twilight-stage4-webadmin.service lines=19 labelled secret matches=0
+Bounded log mariadb.service lines=150 labelled secret matches=0
+Bounded log other_vhosts_access.log lines=100 labelled secret matches=0
+Bounded log error.log lines=10 labelled secret matches=0

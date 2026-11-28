@@ -3,12 +3,16 @@ import pathlib
 import socket
 import ssl
 import subprocess
+import sys
 import tempfile
 import unittest
 
 from network_process_tests import BINARY, Hub
 from tls_support import (TLS_READY, assert_fatal_tls_alert_or_eof,
                          connect_tls, credentials, secure_client_context, tls_endpoint)
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / 'scripts'))
+from stage3.fixtures import authority, issue
 
 
 def openssl_cert(directory, name, *extra):
@@ -193,11 +197,8 @@ class TlsSecurityProcessTests(unittest.TestCase):
 
     def test_expired_leaf_fails_check_and_listen_without_opening_a_port(self):
         with tempfile.TemporaryDirectory(prefix='dc24h-tls-policy-') as directory:
-            cert, key = openssl_cert(
-                directory, 'expired',
-                '-not_before', '20200101000000Z', '-not_after', '20200102000000Z',
-                '-addext', 'keyUsage=digitalSignature,keyEncipherment',
-                '-addext', 'extendedKeyUsage=serverAuth')
+            root = pathlib.Path(directory)
+            cert, key = issue(root, authority(root / 'issuer'), 'expired', start=-2, end=-1)
             checked = subprocess.run(
                 [BINARY, '--language', 'pl', '--check-config', '--adcs-listen', '127.0.0.1:0',
                  '--tls-cert', cert, '--tls-key', key],
@@ -260,14 +261,12 @@ class TlsSecurityProcessTests(unittest.TestCase):
             self.assertIn('GCM', peer.cipher()[0])
             peer.sendall(b'HSUP ADBASE\n')
             session = peer.session
+            context = peer.context
             peer.close()
-            resumed = secure_client_context(cert)
-            raw = socket.create_connection(endpoint, timeout=3)
-            self.addCleanup(raw.close)
-            second = resumed.wrap_socket(raw, server_hostname='localhost', session=session)
-            self.addCleanup(second.close)
-            self.assertFalse(second.session_reused)
-            self.assertIn(second.version(), ('TLSv1.2', 'TLSv1.3'))
+            with socket.create_connection(endpoint, timeout=3) as raw:
+                with context.wrap_socket(raw, server_hostname='localhost', session=session) as second:
+                    self.assertFalse(second.session_reused)
+                    self.assertEqual(second.version(), 'TLSv1.2')
             modern = connect_tls(self, hub, cert, ssl.TLSVersion.TLSv1_3)
             self.assertEqual(modern.version(), 'TLSv1.3')
             modern.sendall(b'HSUP ADBASE\n')
@@ -294,3 +293,7 @@ class TlsSecurityProcessTests(unittest.TestCase):
                     self.assertEqual(legitimate.version(), 'TLSv1.2' if version == ssl.TLSVersion.TLSv1_2 else 'TLSv1.3')
                     legitimate.close()
             hub.stop()
+
+
+if __name__ == '__main__':
+    unittest.main()

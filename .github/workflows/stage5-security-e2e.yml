@@ -1,0 +1,162 @@
+name: Stage V security and end-to-end qualification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/stage5-security-e2e.yml'
+      - 'scripts/stage5_qualification_evidence.py'
+      - 'tests/stage5_ncdc_keyprint_tests.py'
+      - 'tests/tls_security_process_tests.py'
+      - 'webadmin/tests/stage4-mariadb.integration.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    name: Stage V isolated qualification / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Verify hosted Ubuntu image and exact source
+        env:
+          EXPECTED_IMAGE: ${{ matrix.os }}
+        run: |
+          install -d -m 0700 "$RUNNER_TEMP/stage5-raw" "$RUNNER_TEMP/stage5-report"
+          {
+            printf 'STAGE5_BUILD=%s\n' "$RUNNER_TEMP/stage5-build"
+            printf 'STAGE5_RAW=%s\n' "$RUNNER_TEMP/stage5-raw"
+            printf 'STAGE5_REPORT=%s\n' "$RUNNER_TEMP/stage5-report"
+          } >> "$GITHUB_ENV"
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          . /etc/os-release
+          test "$ID" = ubuntu && test "$VERSION_ID" = "${EXPECTED_IMAGE#ubuntu-}"
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+      - name: Install native fixture packages
+        run: |
+          bash .github/scripts/install-ci-deps.sh \
+            build-essential cmake libssl-dev libgcrypt20-dev libutf8proc-dev libmariadb-dev \
+            mariadb-server apache2 msmtp openssl ncdc
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        id: node_setup
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: webadmin/package-lock.json
+      - name: Compile the native hub and test targets
+        id: native_build
+        run: |
+          cmake -S . -B "$STAGE5_BUILD" -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON -DDC24H_REQUIRE_INTEGRATION_TESTS=ON
+          cmake --build "$STAGE5_BUILD" --parallel 4
+      - name: Prepare WebAdmin and Chromium fixtures
+        id: web_build
+        if: ${{ !cancelled() && steps.node_setup.outcome == 'success' }}
+        working-directory: webadmin
+        run: |
+          npm ci --no-audit --no-fund
+          npm run typecheck
+          npm run build:public:ci
+          npm run build:stage4-init
+          npx playwright install chromium
+      - name: Run isolated C++ account, ADC, ADCS, systemd and ncdc tests
+        id: native
+        if: ${{ !cancelled() && steps.native_build.outcome == 'success' }}
+        env:
+          DC24H_REQUIRE_SYSTEMD_HOST: '1'
+        run: |
+          filter='^(adc|adcs)\.(ncdc|ctm\.ncdc|rcm\.ncdc|feature\.ncdc|activepassive\.ncdc|process|login\.process|ctm\.process|rcm\.process|close\.process|sch\.process|tls_security\.process|tls_security|crypto)$'
+          filter+='|^(accounts\.(account_security|password_security|management\.process|adc_authentication\.process|webadmin\.process|owner_cli\.process)|beta\.05\.stage(1\.matched\.recovery|4\.rollback)|chat\.(public|private|anti_flood)\.process|network\.process|transfers\.limits\.process|stage1\.ipv6_loopback_policy|systemd\.sandbox)$'
+          ctest --test-dir "$STAGE5_BUILD" --no-tests=error --parallel 4 -R "$filter" \
+            --output-junit "$STAGE5_RAW/native.xml" >"$STAGE5_RAW/native.log" 2>&1
+      - name: Qualify matching and different ncdc certificate pins
+        id: ncdc_pin
+        if: ${{ !cancelled() && steps.native_build.outcome == 'success' }}
+        run: |
+          python3 tests/stage5_ncdc_keyprint_tests.py "$STAGE5_BUILD/dc24h-twilight" -v \
+            >"$STAGE5_RAW/ncdc-pin.log" 2>&1
+      - name: Measure bounded ADC and ADCS loopback endurance
+        id: endurance
+        if: ${{ !cancelled() && steps.native_build.outcome == 'success' }}
+        env:
+          DC24H_VM_REPORT_DIR: ${{ runner.temp }}/stage5-report
+        run: |
+          python3 tests/stage4_ubuntu_vm_probe_tests.py "$STAGE5_BUILD/dc24h-twilight" \
+            >"$STAGE5_RAW/loopback-endurance.log" 2>&1
+      - name: Run WebAdmin boundary regressions
+        id: node
+        if: ${{ !cancelled() && steps.web_build.outcome == 'success' }}
+        working-directory: webadmin
+        run: |
+          node --import tsx --test \
+            --test-reporter=spec --test-reporter-destination=stdout \
+            --test-reporter=junit --test-reporter-destination="$STAGE5_RAW/node.xml" \
+            tests/public-email-code.test.ts tests/public-email-enrollment.test.ts \
+            tests/public-email-gateway.test.ts tests/public-verified-email.test.ts \
+            tests/public-backend.test.ts tests/stage4-public-read-api.test.ts \
+            tests/public-dedicated-service.test.ts >"$STAGE5_RAW/node.log" 2>&1
+      - name: Run the public WebAdmin Chromium fixture
+        id: browser
+        if: ${{ !cancelled() && steps.web_build.outcome == 'success' }}
+        working-directory: webadmin
+        env:
+          PLAYWRIGHT_JUNIT_OUTPUT_FILE: ${{ runner.temp }}/stage5-raw/browser.xml
+        run: |
+          npx playwright test tests/public-stage4.spec.ts --reporter=list,junit \
+            >"$STAGE5_RAW/browser.log" 2>&1
+      - name: Run disposable MariaDB, C++ authorization and SMTP fixtures
+        id: database
+        if: ${{ !cancelled() && steps.native_build.outcome == 'success' && steps.web_build.outcome == 'success' }}
+        run: |
+          node_prefix=$(dirname "$(dirname "$(command -v node)")")
+          fixture_env=("PATH=$node_prefix/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/bin"
+                       "GITHUB_ACTIONS=$GITHUB_ACTIONS" "RUNNER_ENVIRONMENT=$RUNNER_ENVIRONMENT")
+          sudo -n env "${fixture_env[@]}" sh scripts/stage4_install.sh "$node_prefix" "$STAGE5_BUILD" \
+            >"$STAGE5_RAW/database.log" 2>&1
+          sudo -n env "${fixture_env[@]}" bash scripts/stage4_test_database.sh >>"$STAGE5_RAW/database.log" 2>&1
+          python3 tests/stage4_msmtp_process.py -v >>"$STAGE5_RAW/database.log" 2>&1
+      - name: Export redacted JUnit, log and SHA-256 manifest
+        if: always()
+        env:
+          NATIVE_BUILD_OUTCOME: ${{ steps.native_build.outcome }}
+          WEB_BUILD_OUTCOME: ${{ steps.web_build.outcome }}
+          NATIVE_OUTCOME: ${{ steps.native.outcome }}
+          NCDC_OUTCOME: ${{ steps.ncdc_pin.outcome }}
+          ENDURANCE_OUTCOME: ${{ steps.endurance.outcome }}
+          NODE_OUTCOME: ${{ steps.node.outcome }}
+          BROWSER_OUTCOME: ${{ steps.browser.outcome }}
+          DATABASE_OUTCOME: ${{ steps.database.outcome }}
+        run: |
+          result=0
+          python3 scripts/stage5_qualification_evidence.py --sha "$SOURCE_SHA" --output "$STAGE5_REPORT" \
+            --junit "native=$STAGE5_RAW/native.xml" --junit "node=$STAGE5_RAW/node.xml" \
+            --junit "browser=$STAGE5_RAW/browser.xml" \
+            --check "native-build=${NATIVE_BUILD_OUTCOME:-skipped}" --check "web-build=${WEB_BUILD_OUTCOME:-skipped}" \
+            --check "native-run=${NATIVE_OUTCOME:-skipped}" --check "node-run=${NODE_OUTCOME:-skipped}" \
+            --check "browser-run=${BROWSER_OUTCOME:-skipped}" --check "database=${DATABASE_OUTCOME:-skipped}" \
+            --check "ncdc-pin=${NCDC_OUTCOME:-skipped}" --check "endurance=${ENDURANCE_OUTCOME:-skipped}" || result=$?
+          cd "$STAGE5_REPORT"
+          sha256sum -- *.json *.xml *.log > SHA256SUMS
+          exit "$result"
+      - name: Upload Stage V qualification evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stage5-${{ matrix.os }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/stage5-report/
+          if-no-files-found: warn

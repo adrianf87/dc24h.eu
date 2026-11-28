@@ -68,7 +68,10 @@ test("disposable C++/MariaDB authorization and mock SMTP through the gateway", a
       const { json } = response;
       for (const item of response.cookies) {
         const [name, value] = item.split(";")[0]!.split("=");
-        assert(item.includes("Secure") && item.includes("HttpOnly") && item.includes("SameSite=Strict"));
+        const attributes = item.split(";").slice(1).map(attribute => attribute.trim().toLowerCase());
+        assert(attributes.includes("secure") && attributes.includes("httponly") &&
+          attributes.includes("samesite=strict") && attributes.includes("path=/"));
+        assert(!attributes.some(attribute => attribute.startsWith("domain=")));
         if (value) cookies.set(name!, value);
         else cookies.delete(name!);
       }
@@ -108,9 +111,13 @@ test("disposable C++/MariaDB authorization and mock SMTP through the gateway", a
     assert.equal((await owner.request("login/verify", { code: wrong })).status, 403);
     assert.equal(await count("SELECT COUNT(*) n FROM stage4_challenges WHERE attempts=1"), 1);
     assert.equal(await count("SELECT COUNT(*) n FROM stage4_challenges WHERE HEX(code_mac) REGEXP '^[0-9A-F]{64}$'"), 1);
+    const pendingCookie = owner.cookies.get("__Host-dc24h_stage4_email_pending");
     const enrollment = await owner.request("login/verify", { code: initialCode });
     assert.equal(enrollment.status, 200);
     assert.equal(enrollment.json.role, "owner");
+    const sessionCookie = owner.cookies.get("__Host-dc24h_stage4_session");
+    assert(pendingCookie && sessionCookie && pendingCookie !== sessionCookie);
+    assert(!owner.cookies.has("__Host-dc24h_stage4_email_pending"));
     assert.equal((await owner.request("summary")).status, 200);
     assert.equal(await count("SELECT COUNT(*) n FROM stage4_emails WHERE verified_at IS NOT NULL"), 1);
     assert.equal((await owner.request("login/verify", { code: initialCode })).status, 403);
@@ -124,6 +131,15 @@ test("disposable C++/MariaDB authorization and mock SMTP through the gateway", a
     assert.equal((await administrative("admin")).status, 200);
     assert.equal((await administrative("accounts.staff", { after: "0" })).status, 200);
     assert.equal((await administrative("accounts.list", { after: "0" })).status, 200);
+    const invalidProof = "Incorrect fixture password";
+    const auditCount = "SELECT COUNT(*) n FROM dc24h_audit_events";
+    const auditBefore = await count(auditCount);
+    assert.equal((await administrative("accounts.create", {
+      proof: invalidProof, name: "RefusedFixture", password: "A disposable fixture password 52!",
+    })).status, 403);
+    assert.equal((await administrative("audit.list", { proof: invalidProof, after: "0" })).status, 403);
+    assert.equal(await count("SELECT COUNT(*) n FROM dc24h_accounts WHERE name='RefusedFixture'"), 0);
+    assert.equal(await count(auditCount), auditBefore);
     const created = await administrative("accounts.create", {
       proof: adminPassword, name: "ManagedFixture", password: "Managed fixture password 42!",
     });
@@ -174,6 +190,8 @@ test("disposable C++/MariaDB authorization and mock SMTP through the gateway", a
     assert.equal((await owner.request("login/verify", { code: messages.at(-1)!.code })).status, 200);
     assert.equal((await owner.request("session")).status, 200);
     assert.equal((await second.request("password/change", { current: adminPassword, password: nextPassword }, false)).status, 403);
+    assert.equal((await second.request("password/change", { current: invalidProof, password: nextPassword })).status, 403);
+    assert.equal((await owner.request("session")).status, 200);
     assert.equal((await second.request("password/change", { current: adminPassword, password: nextPassword })).status, 200);
     assert.equal((await second.request("session")).status, 401);
     assert.equal((await owner.request("session")).status, 401);
@@ -198,6 +216,8 @@ test("disposable C++/MariaDB authorization and mock SMTP through the gateway", a
     assert.equal((await user.request("login/verify", { code: messages.at(-1)!.code })).json.role, "registered");
     assert.equal((await user.request("summary")).status, 403);
     assert.equal((await user.request("admin", { operation: "accounts.list", after: "0" })).status, 403);
+    assert.equal((await user.request("admin", { operation: "bans.list", after: "0", state: "all" })).status, 403);
+    assert.equal((await user.request("admin", { operation: "audit.list", proof: signup.password, after: "0" })).status, 403);
     assert.equal((await user.request("hub/status")).status, 403);
     await root.execute("UPDATE dc24h_accounts SET revision=revision+1,status='disabled' WHERE name=?", [signup.username]);
     assert.equal((await user.request("session")).status, 401);
@@ -229,6 +249,35 @@ test("disposable C++/MariaDB authorization and mock SMTP through the gateway", a
       assert.equal((await limited.send("login/send", { username: "LimitedFixture", password: "Wrong fixture password" })).status, 403);
     assert.equal((await limited.send("login/send", { username: "LimitedFixture", password: "Wrong fixture password" })).status, 429);
     assert.equal(messages.length, undelivered);
+
+    time += 600_001;
+    const idle = browser("192.0.2.16");
+    const active = browser("192.0.2.17");
+    for (const client of [idle, active]) {
+      assert.equal((await client.send("login/send", replacement)).status, 200);
+      assert.equal((await client.request("login/verify", { code: messages.at(-1)!.code })).status, 200);
+    }
+    const issued = time;
+    time = issued + 119_999;
+    assert.equal((await active.request("session")).status, 200);
+    time = issued + 120_000;
+    assert.equal((await idle.request("session")).status, 401);
+    for (const age of [220_000, 320_000, 420_000, 520_000, 599_999]) {
+      time = issued + age;
+      assert.equal((await active.request("session")).status, 200);
+    }
+    time = issued + 600_000;
+    assert.equal((await active.request("session")).status, 401);
+
+    const resend = browser("192.0.2.18");
+    const deliveredBefore = messages.length;
+    for (let attempt = 0; attempt < 4; attempt++)
+      assert.equal((await resend.send("login/send", replacement)).status, 200);
+    assert.equal((await resend.request("login/verify", { code: messages.at(-1)!.code })).status, 200);
+    assert.equal((await resend.request("logout", {})).status, 200);
+    assert.equal((await resend.request("session")).status, 401);
+    assert.equal((await resend.send("login/send", replacement)).status, 429);
+    assert.equal(messages.length, deliveredBefore + 4);
     await db.clean();
   } finally {
     await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));

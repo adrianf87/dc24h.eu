@@ -1,0 +1,4 @@
+PASS AirDC++w 2.14.0 two guest sessions and transport cleanup via ADC (isolated loopback)
+PASS AirDC++w 2.14.0 two guest sessions and transport cleanup via ADCS (isolated loopback)
+PASS AirDC++w ADCS used the explicit test leaf KEYP
+Portable archive SHA-256 fe89c40d1bbb11350e5e175f60ca9de325dbc6e5a778024429ba1bdf633bad1a

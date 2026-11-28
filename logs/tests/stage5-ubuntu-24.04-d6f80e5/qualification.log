@@ -1,0 +1,85 @@
+Source SHA d6f80e5fe2f0dee8c14db995407deaef0bf47f89
+PASS native / network.process
+PASS native / adc.sch.process
+PASS native / transfers.limits.process
+PASS native / adc.rcm.process
+PASS native / stage1.ipv6_loopback_policy
+PASS native / adc.ctm.process
+PASS native / chat.anti_flood.process
+PASS native / chat.private.process
+PASS native / chat.public.process
+PASS native / adc.close.process
+PASS native / adc.login.process
+PASS native / adc.process
+PASS native / adcs.crypto
+PASS native / adcs.process
+PASS native / adcs.tls_security
+PASS native / adcs.tls_security.process
+PASS native / accounts.account_security
+PASS native / accounts.password_security
+PASS native / beta.05.stage1.matched.recovery
+SKIP native / beta.05.stage4.rollback
+PASS native / accounts.owner_cli.process
+PASS native / accounts.management.process
+PASS native / accounts.adc_authentication.process
+PASS native / accounts.webadmin.process
+PASS native / adc.ncdc
+PASS native / adcs.ncdc
+PASS native / adc.feature.ncdc
+PASS native / adcs.feature.ncdc
+PASS native / adc.activepassive.ncdc
+PASS native / adcs.activepassive.ncdc
+PASS native / adc.ctm.ncdc
+PASS native / adcs.ctm.ncdc
+PASS native / adc.rcm.ncdc
+PASS native / adcs.rcm.ncdc
+PASS node / real Unix-socket bridge rechecks a scoped C++ grant and projects only public counts
+PASS node / Stage IV identity summary adapter fails closed on broken/sensitive counts
+PASS node / Stage IV refuses the legacy same-UID hub token and missing bridge
+PASS node / Stage IV email sender fails closed without dedicated non-root configuration
+PASS node / password alone and absent verified email never send a code or create a session
+PASS node / password proof sends an eight-digit code to the stored verified recipient only
+PASS node / wrong codes, malformed codes, five guesses and expiry fail closed
+PASS node / current role/grant revocation and concurrent replay cannot create extra sessions
+PASS node / mailer failure, unsafe mailbox and resource limits do not authorize
+PASS node / Administrator mailbox requires C++ password, email delivery and OTP proof
+PASS node / an existing catalog cannot be replaced by email re-enrollment
+PASS node / expired OTP, role revocation and private permissions fail without a binding
+PASS node / invalid name, invalid email and wrong OTP are rejected with no catalog
+PASS node / Stage IV exact routes, public Origin and private proxy Host reject wrong requests
+PASS node / case 15
+PASS node / role withdrawal, email roster loss, CSRF and logout invalidate sessions
+PASS node / failed delivery and unavailable audit fail closed
+PASS node / email verification code expires and cannot be replayed across login attempts
+PASS node / only the registered verified account mailbox can receive login codes
+PASS node / unverified, duplicated, unsafe or header-injecting email records are rejected
+PASS node / an externally changed or public-readable catalog fails closed
+PASS node / Stage IV public read adapters enforce OTP session, role, method and revocation
+PASS browser / OTP-authenticated Owner sees actual read-only C++ account statistics in React
+PASS browser / Registered role never gets read-only admin API UI
+PASS browser / public WebAdmin waits for a mailed code after C++ password proof
+PASS browser / wrong password never sends a verification email or exposes the dashboard
+PASS browser / registration requires mailbox proof and a separate fresh login
+PASS systemd / systemd.sandbox
+PASS native-build / native-build
+PASS webadmin-build / webadmin-build
+PASS typescript / typescript
+PASS database-fixture / database-fixture
+PASS smtp-transport / smtp-transport
+PASS unix-bridge / unix-bridge
+PASS python-boundary / python-boundary
+PASS ncdc-keyprint / ncdc-keyprint
+PASS airdcpp-guest / airdcpp-guest
+PASS loopback-probes / loopback-probes
+PASS transient-restart / transient-restart
+PASS local-vps-observations / local-vps-observations
+PASS ui-rollback / ui-rollback
+FAIL certificate-renewal / certificate-renewal
+NOT TESTED independent-ingress / independent-ingress
+NOT TESTED owner-mailbox-recovery / owner-mailbox-recovery
+NOT TESTED full-cross-version-rollback / full-cross-version-rollback
+NOT TESTED live-browser-and-smtp / live-browser-and-smtp
+NOT TESTED hosted-ci / hosted-ci
+SKIP dcplusplus / dcplusplus
+SKIP debian13 / debian13
+SKIP active-bypass-reproduction / active-bypass-reproduction
