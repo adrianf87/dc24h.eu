@@ -1,13 +1,17 @@
 #!/bin/sh
 set -eu
 
-if [ "$(id -u)" -ne 0 ] || [ "$#" -ne 3 ]; then
-    echo "Usage: stage4_install.sh NODE24_DIRECTORY CMAKE_BUILD_DIRECTORY PUBLIC_PORT (7178 or 7278)" >&2
+if [ "$(id -u)" -ne 0 ] || { [ "$#" -ne 3 ] && [ "$#" -ne 7 ]; }; then
+    echo "Usage: stage4_install.sh NODE24_DIRECTORY CMAKE_BUILD_DIRECTORY PUBLIC_PORT [HOSTNAME BIND_IPV4 FULLCHAIN PRIVATE_KEY]" >&2
     exit 2
 fi
 node_dir=$(realpath "$1")
 build=$(realpath "$2")
 public_port=$3
+webadmin_host=${4-}
+webadmin_bind=${5-}
+certificate=${6-}
+private_key=${7-}
 source=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 target=/opt/dc24h
 node="$node_dir/bin/node"
@@ -24,16 +28,19 @@ refuse() {
 }
 
 apache_site() {
-    "$node" --input-type=module - "$source" "$public_port" "$1" <<'JS'
+    "$node" --input-type=module - "$source" "$public_port" "$1" \
+        "$webadmin_host" "$webadmin_bind" "$certificate" "$private_key" <<'JS'
 import { pathToFileURL } from "node:url";
-const [source, port, mode] = process.argv.slice(2);
-const { approvedStage4Origin, prepareStage4ApacheSite } =
+const [source, port, mode, hostname, bindAddress, certificate, privateKey] = process.argv.slice(2);
+const { approvedStage4Origin, prepareStage4ApacheSite, webAdminOrigin } =
   await import(pathToFileURL(source + "/webadmin/server/stage4-apache-site.ts"));
 try {
-  const origin = approvedStage4Origin(port);
-  if (!origin) throw Error("Select Stage IV public port 7178 (Ubuntu) or 7278 (historical Debian)");
+  const custom = hostname || bindAddress || certificate || privateKey;
+  const origin = custom ? webAdminOrigin(hostname, port) : approvedStage4Origin(port);
+  if (!origin) throw Error(custom ? "Invalid WebAdmin hostname or port" :
+    "Select Stage IV public port 7178 (Ubuntu) or 7278 (historical Debian)");
   const state = prepareStage4ApacheSite(origin, source + "/config/apache2-webadmin-public.conf.example",
-    mode === "publish");
+    mode === "publish", undefined, custom ? { bindAddress, certificate, privateKey } : undefined);
   if (mode === "publish") console.log(`Stage IV: Apache site ${state} for ${origin}`);
 } catch (error) {
   console.error("Stage IV: " + error.message);

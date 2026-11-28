@@ -7,7 +7,9 @@ import { join } from "node:path";
 import { test } from "node:test";
 import type { TestContext } from "node:test";
 import { fileURLToPath } from "node:url";
-import { approvedStage4Origin, checkStage4ApacheSite, prepareStage4ApacheSite } from "../server/stage4-apache-site.ts";
+import {
+  approvedStage4Origin, checkStage4ApacheSite, isWebAdminOrigin, prepareStage4ApacheSite, webAdminOrigin,
+} from "../server/stage4-apache-site.ts";
 import { PUBLIC_WEBADMIN_ORIGIN, UBUNTU_WEBADMIN_ORIGIN } from "../server/public-email-code.ts";
 
 const template = fileURLToPath(new URL("../../config/apache2-webadmin-public.conf.example", import.meta.url));
@@ -88,4 +90,42 @@ test("failed site preparation leaves no partial file and refuses existing symlin
   symlinkSync(join(directory, "missing"), site);
   assert.throws(() => prepareStage4ApacheSite(UBUNTU_WEBADMIN_ORIGIN, template, true, site), /Unsafe Stage IV Apache site/);
   assert.equal(existsSync(join(directory, "missing")), false);
+});
+
+test("a custom HTTPS site uses the selected IPv4, certificate and exact browser Origin", t => {
+  const { site } = fixture(t);
+  const options = { bindAddress: "192.0.2.28", certificate: "/srv/tls/web/fullchain.pem", privateKey: "/srv/tls/web/key.pem" };
+  const origin = webAdminOrigin("control.example.net", "9443")!;
+  assert.equal(origin, "https://control.example.net:9443");
+  assert.equal(prepareStage4ApacheSite(origin, template, true, site, options), "created");
+  const rendered = readFileSync(site, "utf8");
+  assert.ok(rendered.includes("Listen 192.0.2.28:9443 https"));
+  assert.ok(rendered.includes("<VirtualHost 192.0.2.28:9443>"));
+  assert.ok(rendered.includes("RewriteCond %{HTTP_HOST} !^control\\.example\\.net:9443$"));
+  assert.ok(rendered.includes("RewriteCond %{HTTP:Origin} !^https://control\\.example\\.net:9443$"));
+  assert.ok(rendered.includes('SSLCertificateFile "/srv/tls/web/fullchain.pem"'));
+  assert.ok(rendered.includes('SSLCertificateKeyFile "/srv/tls/web/key.pem"'));
+  assert.equal(checkStage4ApacheSite(origin, site, options.bindAddress), true);
+  assert.throws(() => checkStage4ApacheSite(origin, site, "192.0.2.29"), /does not match/);
+});
+
+test("the standard HTTPS port shares Apache's listener and uses the canonical browser Origin", t => {
+  const { site } = fixture(t);
+  const origin = webAdminOrigin("control.example.net", "443")!;
+  assert.equal(origin, "https://control.example.net");
+  assert.equal(isWebAdminOrigin(origin), true);
+  const options = { bindAddress: "192.0.2.28", certificate: "/srv/tls/chain.pem", privateKey: "/srv/tls/key.pem" };
+  prepareStage4ApacheSite(origin, template, true, site, options);
+  const rendered = readFileSync(site, "utf8");
+  assert.doesNotMatch(rendered, /^Listen\b/m);
+  assert.ok(rendered.includes("<VirtualHost 192.0.2.28:443>"));
+  assert.ok(rendered.includes("RewriteCond %{HTTP_HOST} !^control\\.example\\.net(?::443)?$"));
+  assert.ok(rendered.includes("RewriteCond %{HTTP:Origin} !^https://control\\.example\\.net$"));
+  for (const unsafe of ["http://control.example.net", origin + ":443", origin + "/", origin + "?x=1",
+    "https://127.0.0.1", "https://control.example.net@evil.example", origin + ":65536"])
+    assert.equal(isWebAdminOrigin(unsafe), false);
+  for (const invalidPort of ["0", "0443", "65536", "443 "])
+    assert.equal(webAdminOrigin("control.example.net", invalidPort), undefined);
+  assert.throws(() => prepareStage4ApacheSite(origin, template, true, site + ".bad",
+    { ...options, privateKey: "/srv/key.pem\"\nInclude /tmp/other.conf" }), /Invalid Stage IV TLS file/);
 });

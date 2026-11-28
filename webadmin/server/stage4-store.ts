@@ -7,7 +7,12 @@ export type Identity = { id: string; role: string; status: string; revision: str
 export type RuntimeConfiguration = {
   environment: "test" | "production";
   socketPath: string; database: string; user: string; password: string; key: string;
+  origin?: string;
 };
+export const stage4Identifier = /^[a-z][a-z0-9_]{0,26}$/;
+export const installerDatabase = (name: unknown): name is string =>
+  typeof name === "string" && stage4Identifier.test(name) &&
+  !["mysql", "sys", "information_schema", "performance_schema", "dc24h_stage4_test"].includes(name);
 type AccountRow = {
   id: bigint; revision: bigint; role: Buffer; status: Buffer; email: string; initial_owner: number | null;
   verified_at: bigint | null;

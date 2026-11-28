@@ -133,6 +133,23 @@ async function account(db: Connection, database: string, user: string, password:
     await db.query("GRANT " + rights.join(", ") + " ON " + target + " TO " + name);
 }
 
+async function verifyInstallation(db: Connection, id: string) {
+  const tables = await db.query("SELECT TABLE_NAME name FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE()") as
+    { name: string }[];
+  if (!tables.some(row => row.name === "dc24h_installation")) {
+    const objects = await db.query("SELECT ROUTINE_NAME FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA=DATABASE() " +
+      "UNION ALL SELECT EVENT_NAME FROM information_schema.EVENTS WHERE EVENT_SCHEMA=DATABASE() LIMIT 1") as unknown[];
+    if (tables.length || objects.length) throw Error("Installer database belongs to another installation");
+    await db.query("CREATE TABLE dc24h_installation (id CHAR(64) CHARACTER SET ascii PRIMARY KEY) ENGINE=InnoDB");
+  }
+  const owners = await db.query("SELECT id FROM dc24h_installation LIMIT 2") as { id: string }[];
+  if (!owners.length && tables.length <= 1) {
+    await db.query("INSERT INTO dc24h_installation (id) VALUES (?)", [id]);
+  } else if (owners.length !== 1 || owners[0]!.id !== id) {
+    throw Error("Installer database belongs to another installation");
+  }
+}
+
 async function migrate(db: Connection) {
   await db.query("CREATE TABLE IF NOT EXISTS stage4_schema_migrations (" +
     "version INT NOT NULL PRIMARY KEY, checksum CHAR(64) CHARACTER SET ascii NOT NULL," +
@@ -169,9 +186,10 @@ async function migrate(db: Connection) {
 
 async function main() {
   const args = process.argv.slice(2);
-  if (args.length && (args.length !== 2 || args[0] !== "--config"))
-    throw Error("Usage: dc24h-stage4-init [--config /etc/dc24h/file.env]");
-  const config = loadBootstrap(args[1] ?? defaultConfig);
+  const fromInstaller = args.length === 1 && args[0] === "--stdin" && !process.stdin.isTTY;
+  if (!fromInstaller && args.length && (args.length !== 2 || args[0] !== "--config"))
+    throw Error("Usage: dc24h-stage4-init [--config /etc/dc24h/file.env | --stdin]");
+  const config = loadBootstrap(fromInstaller ? undefined : args[1] ?? defaultConfig);
   const production = config.STAGE4_ENVIRONMENT === "production";
   const webPath = "/var/lib/dc24h-stage4";
   const authPath = "/var/lib/dc24h-stage4-auth";
@@ -212,6 +230,7 @@ async function main() {
     if (Number(lockResult[0]?.acquired) !== 1) throw Error("Bootstrap already in progress");
     await db.query("CREATE DATABASE IF NOT EXISTS " + escaped(name) + " CHARACTER SET utf8mb4 COLLATE utf8mb4_bin");
     await db.query("USE " + escaped(name));
+    if (config.fromInstaller) await verifyInstallation(db, config.INSTALLATION_ID);
     const migrator = "stage4_init_" + randomBytes(8).toString("hex");
     const scratch = mkdtempSync("/run/dc24h-stage4-init-");
     try {
@@ -263,6 +282,10 @@ async function main() {
         table("dc24h_bans", "SELECT, INSERT, UPDATE"),
         table("stage4_emails", "SELECT"), table("stage4_sessions", "SELECT"),
       ], socketPath);
+      if (config.fromInstaller) {
+        await account(db, name, config.MARIADB_HUB_USERNAME, config.MARIADB_HUB_PASSWORD,
+          [...readOnlyTables, "dc24h_bans", "dc24h_accounts"].map(tableName => table(tableName, "SELECT")), socketPath);
+      }
       phase = "private runtime configuration";
       const apiToken = join(authDir, "api.token");
       publish(apiToken, existingSecret(apiToken, auth.uid) ?? safeToken(), auth.uid, auth.gid);
@@ -271,7 +294,8 @@ async function main() {
       publish(join(mailDir, ".msmtprc"), msmtpConfig(config), web.uid, web.gid);
       withPinnedPrivateParent(join(state, "stage4-runtime.json"), () => publish(join(state, "stage4-runtime.json"),
         JSON.stringify({ environment: config.STAGE4_ENVIRONMENT, database: name, socketPath,
-          user: config.MARIADB_APP_USERNAME, password: config.MARIADB_APP_PASSWORD, key }) + "\n"));
+          user: config.MARIADB_APP_USERNAME, password: config.MARIADB_APP_PASSWORD, key,
+          origin: config.fromInstaller ? config.publicOrigin : undefined }) + "\n"));
       if (production) publish(join(state, "stage4-activation.env"),
         "DC24H_STAGE4_STARTUP_ACK=OWNER_WEBADMIN_PUBLIC_ACTIVATION_GO\n" +
         `DC24H_STAGE4_ORIGIN=${config.publicOrigin}\n`);
@@ -285,8 +309,8 @@ async function main() {
   } catch (error) {
     // The connector can include SQL text and parameters in errors. Only
     // predefined phase names, numeric server codes and fixed diagnostics leave here.
-    if (phase === "Administrator bootstrap" && error instanceof Error &&
-        /^(?:Existing Administrator|ADMIN_INITIAL_PASSWORD)/.test(error.message)) throw error;
+    if (error instanceof Error && (/^(?:Existing Administrator|ADMIN_INITIAL_PASSWORD)/.test(error.message) ||
+        error.message === "Installer database belongs to another installation")) throw error;
     const errno = (error as { errno?: unknown }).errno;
     throw Error(phase + " failed" + (Number.isInteger(errno) ? " (MariaDB " + errno + ")" : ""));
   } finally {
@@ -297,7 +321,7 @@ async function main() {
 
 main().catch(error => {
   const message = typeof error?.message === "string" ? error.message : "";
-  const safe = /^(?:Invalid bootstrap field [A-Z0-9_]+|Invalid or repeated bootstrap field|Bootstrap requires root.*|Unsafe bootstrap .*|Bootstrap file changed during reading|Stage IV Apache site (?:is missing|does not match the selected HTTPS Origin)|Unsafe Stage IV Apache site|Use distinct Stage IV credentials|Usage:.*|Stop Stage IV services before provisioning|Existing Administrator requires an audited operator migration|ADMIN_INITIAL_PASSWORD is required for a fresh database|[A-Za-z ]+ failed(?: \(MariaDB [0-9]+\))?)$/.test(message);
+  const safe = /^(?:Invalid bootstrap (?:field [A-Z0-9_]+|input length)|Invalid or repeated bootstrap field|Bootstrap requires (?:root|a private config under \/etc\/dc24h)|Unsafe bootstrap .*|Bootstrap file changed during reading|Stage IV Apache site (?:is missing|does not match the selected HTTPS Origin)|Unsafe Stage IV Apache site|Use distinct Stage IV credentials|Usage:.*|Stop Stage IV services before provisioning|Existing Administrator requires an audited operator migration|ADMIN_INITIAL_PASSWORD is required for a fresh database|Installer database belongs to another installation|[A-Za-z ]+ failed(?: \(MariaDB [0-9]+\))?)$/.test(message);
   process.stderr.write("Stage IV initialization FAIL: " + (safe ? message : "private input or connection error") + "\n");
   process.exitCode = 1;
 });
