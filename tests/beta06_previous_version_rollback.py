@@ -50,7 +50,7 @@ def run(current_binary, previous_binary, previous_checkout):
     if execute(previous_binary, "--version") != PREVIOUS_VERSION:
         raise AssertionError("Historical binary is not beta-0.5.16")
     current_version = execute(current_binary, "--version")
-    if current_version != "dc24h.eu-twilight beta-0.9.20":
+    if current_version != "dc24h.eu beta-0.9.20":
         raise AssertionError("A same-version package copy cannot prove historical rollback")
 
     with tempfile.TemporaryDirectory(prefix="dc24h-beta06-prior-version-") as directory:
@@ -114,7 +114,7 @@ def run(current_binary, previous_binary, previous_checkout):
                     json.dump({"schema": 1, "source_sha": sha,
                                "prior_source_sha": PREVIOUS_SHA,
                                "os_image": f"ubuntu-{os_version}",
-                               "current_version": current_version.removeprefix("dc24h.eu-twilight "),
+                               "current_version": current_version.removeprefix("dc24h.eu "),
                                "previous_version": PREVIOUS_VERSION.removeprefix("dc24h.eu "),
                                "historical_binary_distinct": True,
                                "prior_package_byte_exact": True,

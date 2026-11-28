@@ -1,12 +1,12 @@
-# Example only. Copy to /etc/systemd/system/dc24h-twilight.service after review.
+# Example only. Copy to /etc/systemd/system/dc24h.service after review.
 # The build does not install this into the systemd unit directory and does not enable it.
 # Adjust ExecStart when the install prefix is not /usr/local.
 # Operator must stop the legacy service and authorize the cutover separately.
 [Unit]
-Description=dc24h.eu-twilight Direct Connect hub
-Conflicts=dc24h.service
-AssertPathExists=/etc/dc24h/twilight-unit-migration-approved
-After=network-online.target
+Description=dc24h.eu Direct Connect hub
+Conflicts=dc24h-twilight.service
+After=dc24h-twilight.service network-online.target
+AssertPathExists=/etc/dc24h/dc24h-unit-migration-approved
 Wants=network-online.target
 StartLimitIntervalSec=60
 StartLimitBurst=5
@@ -17,7 +17,7 @@ User=dc24h
 Group=dc24h
 UMask=0077
 WorkingDirectory=/var/lib/dc24h
-ExecStart=/usr/local/bin/dc24h-twilight --config /etc/dc24h/dc24h.ini
+ExecStart=/usr/local/bin/dc24h --config /etc/dc24h/dc24h.ini
 Restart=on-failure
 RestartSec=3
 TimeoutStopSec=20

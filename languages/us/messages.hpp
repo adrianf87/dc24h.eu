@@ -63,7 +63,7 @@ inline constexpr std::array<std::string_view, 189> messages{{
     "Invalid chat welcome message",
     "Invalid chat anti-flood limits",
     "Users stopped; online=",
-    "Starting dc24h.eu-twilight ",
+    "Starting dc24h.eu ",
     "Core running",
     "Core stopping",
     "Core stopped after Network failure",
@@ -79,7 +79,7 @@ inline constexpr std::array<std::string_view, 189> messages{{
     "TCP epoll watch resource limit; retrying in one second",
     "TCP listener failed",
     "Invalid arguments: ",
-    ". Use dc24h-twilight --help.\n",
+    ". Use dc24h --help.\n",
     "Unknown language (use us or pl)",
     "Unknown option",
     "Missing option value",
@@ -200,7 +200,7 @@ inline constexpr std::array<std::string_view, 189> messages{{
     "Invalid user/session limits",
     "User session limit reached; excess peer rejected",
 }};
-inline constexpr std::string_view help = R"HELP(Usage: dc24h-twilight [--config FILE] [--check-config | --check-database | --database-status | --migrate-database | --backup-database FILE | --restore-database FILE]
+inline constexpr std::string_view help = R"HELP(Usage: dc24h [--config FILE] [--check-config | --check-database | --database-status | --migrate-database | --backup-database FILE | --restore-database FILE]
              [--listen IPv4:port | [IPv6]:port | none] ...
              [--adcs-listen IPv4:port | [IPv6]:port | none] ...
              [--tls-cert CHAIN.pem --tls-key KEY.pem]
@@ -210,7 +210,7 @@ inline constexpr std::string_view help = R"HELP(Usage: dc24h-twilight [--config 
              [--max-per-ip N] [--accepts-per-minute N]
              [--frames-per-second N] [--max-invalid-frames N]
              [--tls-handshake-timeout SECONDS] [--partial-frame-timeout SECONDS]
-       dc24h-twilight [--language us|pl] --help | --version
+       dc24h [--language us|pl] --help | --version
 Configuration order: built-in defaults, optional INI file, then CLI overrides.
 Paths inside INI are relative to its directory; CLI paths use the working directory.
 First explicit listener removes implicit plaintext; CLI lists replace their transport.
@@ -219,7 +219,7 @@ ADCS requires a matching PEM chain and key; TLS >= 1.2. At most 16 total listene
 Defaults: 127.0.0.1:1511, 1024 connections, 120 seconds idle, info to stderr, us.
 Limits: connections 1..65535; idle timeout 1..86400 seconds.
 User/session ceilings: 1..65535, default 65535; effective caps also obey connections.
-Run dc24h.eu-twilight in the foreground; stop with SIGINT (Ctrl+C) or SIGTERM.
+Run dc24h.eu in the foreground; stop with SIGINT (Ctrl+C) or SIGTERM.
 Security defaults: 128 peers/IP, 256 admissions/IP/minute, 1024 frames/s/peer,
 512 invalid frames/peer, 10 seconds for TLS and each unfinished frame.
 ADC guest login, public presence, public and private chat are implemented.

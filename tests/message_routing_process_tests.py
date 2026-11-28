@@ -72,7 +72,7 @@ class MessageRoutingProcessTests(unittest.TestCase):
             while True:
                 line = pending.line();self.assertTrue(line.startswith(b'BINF '))
                 if line.startswith(b'BINF '+pending.sid+b' '):break
-            self.assertTrue(pending.line().startswith(b'IMSG Welcome\\sto\\sdc24h.eu-twilight.'))
+            self.assertTrue(pending.line().startswith(b'IMSG Welcome\\sto\\sdc24h.eu.'))
             for peer in peers:self.assertTrue(peer.line().startswith(b'BINF '+pending.sid+b' '))
             source.send(b'BMSG '+source.sid+b' RecoveryFence')
             for peer in peers+[pending]:self.assertEqual(peer.line(), b'BMSG '+source.sid+b' RecoveryFence')

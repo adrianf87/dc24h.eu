@@ -70,6 +70,22 @@ static_assert(kick_refused_index < admin::kick_statistic_names.size());
 static_assert(mute_applied_index < admin::mute_statistic_names.size());
 static_assert(mute_public_index < admin::mute_statistic_names.size());
 static_assert(mute_private_index < admin::mute_statistic_names.size());
+std::string json_text(std::string_view text) {
+    constexpr std::string_view hex = "0123456789abcdef";
+    std::string value = "\"";
+    for (const char character : text) {
+        const auto byte = static_cast<unsigned char>(character);
+        if (byte < 0x20) {
+            value += "\\u00";
+            value += hex[byte >> 4];
+            value += hex[byte & 0x0f];
+        } else {
+            if (byte == '"' || byte == '\\') { value += '\\'; }
+            value += character;
+        }
+    }
+    return value + '"';
+}
 }
 
 std::string dashboard_json(const Snapshot& value) {
@@ -123,15 +139,6 @@ std::string dashboard_json(const Snapshot& value) {
 }
 
 std::string users_json(const users::PresenceDirectory& directory) {
-    auto escape = [](std::string_view text) {
-        std::string value = "\"";
-        for (const char value_byte : text) {
-            const auto byte = static_cast<unsigned char>(value_byte);
-            if (byte == '"' || byte == '\\') { value += '\\'; }
-            value += value_byte;
-        }
-        return value + '"';
-    };
     std::string rows = "[";
     bool truncated = directory.truncated;
     bool first = true;
@@ -153,10 +160,10 @@ std::string users_json(const users::PresenceDirectory& directory) {
         const auto role = accounts::role_key(user.role);
         if (controls || !sid_ok || role.empty()) { truncated = true; continue; }
         const std::string row = std::string("{\"session\":\"") + std::to_string(user.session_id) +
-            "\",\"sid\":" + escape(std::string_view(user.sid.data(), user.sid.size())) +
-            ",\"nickname\":" + escape(std::string_view(user.nickname.data(), user.nickname_len)) +
+            "\",\"sid\":" + json_text(std::string_view(user.sid.data(), user.sid.size())) +
+            ",\"nickname\":" + json_text(std::string_view(user.nickname.data(), user.nickname_len)) +
             ",\"transport\":\"" + (user.transport == users::Transport::adcs ? "adcs" : "adc") +
-            "\",\"role\":" + escape(role) +
+            "\",\"role\":" + json_text(role) +
             ",\"public_muted\":" + (user.public_muted ? "true" : "false") +
             ",\"private_muted\":" + (user.private_muted ? "true" : "false") + "}";
         if (rows.size() + row.size() > 11000) { truncated = true; break; }
@@ -308,7 +315,7 @@ std::string status_json(const Snapshot& value) {
     }
     mute_json+='}';
     return "{\"api_version\":\"v1\",\"observation\":{\"schema\":1,\"observed_unix_ms\":" +
-        std::to_string(observed_unix_ms) + "},\"server\":{\"name\":\"dc24h.eu-twilight\",\"version\":\"" +
+        std::to_string(observed_unix_ms) + "},\"server\":{\"product_id\":\"dc24h\",\"name\":\"dc24h.eu\",\"version\":\"" +
         std::string(dc24h::version) + "\",\"core_running\":" + (value.core_running ? "true" : "false") +
         ",\"uptime_seconds\":" + std::to_string(value.uptime_seconds) + "},\"network\":{\"active_connections\":" +
         std::to_string(value.active_connections) + ",\"accepted_connections\":" + std::to_string(value.accepted_connections) +
@@ -345,6 +352,7 @@ struct Server::Impl {
     FailureHandler failure;
     AccountHandler accounts;
     UsersProvider users;
+    TlsReload tls_reload;
     std::string token;
     Fd directory;
     Fd listener;
@@ -355,8 +363,10 @@ struct Server::Impl {
     std::atomic<bool> failed{false};
     std::jthread worker;
 
-    Impl(logging::Logger& log, Options config, StatusProvider provider, FailureHandler handler, AccountHandler account_handler, UsersProvider user_provider)
-        : logger(log), options(std::move(config)), status(std::move(provider)), failure(std::move(handler)), accounts(std::move(account_handler)), users(std::move(user_provider)) {
+    Impl(logging::Logger& log, Options config, StatusProvider provider, FailureHandler handler,
+         AccountHandler account_handler, UsersProvider user_provider, TlsReload reload)
+        : logger(log), options(std::move(config)), status(std::move(provider)), failure(std::move(handler)),
+          accounts(std::move(account_handler)), users(std::move(user_provider)), tls_reload(std::move(reload)) {
         validate(options);
         if (!options.enabled || !status || !failure) { throw std::invalid_argument("Invalid local API settings"); }
         try { token = security::read_private_secret(options.token_file); }
@@ -420,9 +430,24 @@ struct Server::Impl {
     std::string dispatch(const Request& request) {
         const bool head = request.method == "HEAD";
         if (!authenticate(request.authorization, token)) { return response(401, "{\"error\":\"unauthorized\"}\n", head); }
+        if (tls_reload.apply && request.target == "/api/v1/tls/reload") {
+            if (!request.body.empty()) { return response(400, "{\"error\":\"bad_request\"}\n"); }
+            if (request.method == "GET") {
+                if (!status().listeners_ready) { return response(503, "{\"error\":\"not_ready\"}\n"); }
+                return response(200, "{\"schema\":1,\"hostname\":" + json_text(tls_reload.hostname) +
+                    ",\"certificate_chain\":" + json_text(tls_reload.certificate_chain) +
+                    ",\"private_key_path\":" + json_text(tls_reload.private_key) + "}\n");
+            }
+            if (request.method == "POST") {
+                return tls_reload.apply() ? response(200, "{\"status\":\"reloaded\"}\n")
+                                          : response(503, "{\"error\":\"tls_reload_refused\"}\n");
+            }
+            return response(405, "{\"error\":\"method_not_allowed\"}\n", head, "GET, POST");
+        }
         // Route the subtree through AccessGate for exact Owner-only status and actions.
         const bool hub_action = request.target.starts_with("/api/v1/management/hub/");
         if (accounts && (request.target == "/api/v1/stage4/identity-summary" || request.target == "/api/v1/stage4/admin" ||
+            request.target == "/api/v1/stage4/tls/renewal" ||
             request.target.starts_with("/api/v1/accounts") || request.target == "/api/v1/admin" ||
             request.target == "/api/v1/admin/access" || request.target.starts_with("/api/v1/bans") ||
             request.target == "/api/v1/audit" || request.target == "/api/v1/management" ||
@@ -524,8 +549,10 @@ struct Server::Impl {
     }
 };
 
-Server::Server(logging::Logger& logger, Options options, StatusProvider status, FailureHandler failure, AccountHandler accounts, UsersProvider users)
-    : impl_(std::make_unique<Impl>(logger, std::move(options), std::move(status), std::move(failure), std::move(accounts), std::move(users))) {}
+Server::Server(logging::Logger& logger, Options options, StatusProvider status, FailureHandler failure,
+               AccountHandler accounts, UsersProvider users, TlsReload tls_reload)
+    : impl_(std::make_unique<Impl>(logger, std::move(options), std::move(status), std::move(failure),
+                                  std::move(accounts), std::move(users), std::move(tls_reload))) {}
 Server::~Server() = default;
 void Server::start() {
     if (impl_->started) { throw std::logic_error("Local API start may only be called once"); }

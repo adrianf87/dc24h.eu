@@ -108,7 +108,7 @@ dc24h-stage4-init --config "$bootstrap"
 test "$(sql -N dc24h_stage4_test -e "SELECT COUNT(*) FROM dc24h_accounts WHERE role='owner'")" = 1
 test "$(sql -N dc24h_stage4_test -e "SELECT COUNT(*) FROM dc24h_account_credentials WHERE verifier LIKE '%.invalid' OR OCTET_LENGTH(verifier)<100")" = 0
 sed "s|/run/dc24h-stage4-auth/api.sock|$scratch/api/auth.sock|" "$state/auth.ini" > "$scratch/api/auth.ini"
-/opt/dc24h/bin/dc24h-twilight-account-admin --config "$scratch/api/auth.ini" --stage4-serving \
+/opt/dc24h/bin/dc24h-account-admin --config "$scratch/api/auth.ini" --stage4-serving \
     >"$scratch/api/native.log" 2>&1 &
 native_pid=$!
 for attempt in {1..50}; do

@@ -18,14 +18,32 @@ test("accepts the C++ status contract and strips unrecognized fields", () => {
   assert.equal(duration(86400), "1d 0h");
   assert.equal(duration(0), "0s");
 });
-test("Twilight server identity is exact in local and remote status; old and foreign names fail closed", () => {
-  assert.equal(parseSnapshot(snapshot).server.name, "dc24h.eu-twilight");
+test("status requires the dc24h product ID, brand and API version on both paths", () => {
+  assert.equal(parseSnapshot(snapshot).server.name, "dc24h.eu");
+  assert.equal(parseSnapshot(snapshot).server.product_id, "dc24h");
   assert.equal(parseRemoteSummary(snapshot).server.version, "beta-0.9.20");
-  for (const name of ["dc24h.eu", "dc24h.eu-high-starter", "foreign.example", "", null, undefined]) {
+
+  for (const name of ["dc24h.eu-twilight", "dc24h.eu-high-starter", "foreign.example", "", null, undefined]) {
     const candidate = { ...snapshot, server: { ...snapshot.server, name } };
     assert.throws(() => parseSnapshot(candidate), `local accepted ${String(name)}`);
     assert.throws(() => parseRemoteSummary(candidate), `remote accepted ${String(name)}`);
   }
+
+  for (const product_id of [undefined, null, "high-starter", "dc24h-twilight", "DC24H"]) {
+    // High Starter used the canonical display name but lacked this identifier.
+    const candidate = { ...snapshot, server: { ...snapshot.server, product_id } };
+    assert.throws(() => parseSnapshot(candidate), `local accepted ${String(product_id)}`);
+    assert.throws(() => parseRemoteSummary(candidate), `remote accepted ${String(product_id)}`);
+  }
+});
+test("local and remote WebAdmin reject the pre-rebrand hub at the same software version", () => {
+  const { version, core_running, uptime_seconds } = snapshot.server;
+  const twilight = {
+    ...snapshot,
+    server: { name: "dc24h.eu-twilight", version, core_running, uptime_seconds },
+  };
+  assert.throws(() => parseSnapshot(twilight), /Invalid API schema/);
+  assert.throws(() => parseRemoteSummary(twilight), /Invalid remote status schema/);
 });
 test("rejects incompatible schema, absent counters and imprecise or unsafe numbers", () => {
   for (const input of [

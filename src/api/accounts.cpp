@@ -267,7 +267,9 @@ std::string controller_action(std::string_view command) {
     struct ucred peer{};socklen_t length=sizeof(peer);
     if(::getsockopt(fd,SOL_SOCKET,SO_PEERCRED,&peer,&length)!=0||length!=sizeof(peer)||peer.uid!=expected)
         throw HttpError{503,"service_unavailable"};
-    const std::string message=std::string(command)+"\n";
+    // Scope writes to the renamed unit. A Twilight controller rejects this
+    // command format even if its old socket is still present during cutover.
+    const std::string message=std::string(command)+(read_only?"\n":" dc24h.service\n");
     if(::send(fd,message.data(),message.size(),MSG_NOSIGNAL)!=static_cast<ssize_t>(message.size()))
         throw HttpError{503,read_only?"service_unavailable":"outcome_unknown"};
     std::string result;
@@ -290,7 +292,7 @@ std::string hub_status_request(const Request& request) {
     // The fixed, peer-verified controller is the only source of service state.
     // Reject unexpected wire output rather than reflecting it to a browser.
     if(!result.starts_with("{\"schema\":1,\"available\":") ||
-       (result.find("\"unit\":\"dc24h-twilight.service\"")==std::string::npos &&
+       (result.find("\"unit\":\"dc24h.service\"")==std::string::npos &&
         result.find("\"available\":false")==std::string::npos) ||
        result.find('\r')!=std::string::npos)
         throw HttpError{503,"service_unavailable"};
@@ -415,22 +417,111 @@ std::string serve(const Request& request,admin::Engine& engine,bool& written) {
 struct Stage4Actor {
     admin::AccountRef account;
     accounts::Role role;
+    std::uint64_t issued_at;
 };
+
+std::int64_t stage4_now() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+}
 
 Stage4Actor stage4_actor(const database::Options& options, std::string_view digest, std::int64_t now) {
     if (digest.size() != 64 || digest.find_first_not_of("0123456789abcdef") != std::string_view::npos) { bad(); }
     database::Connection connection(options);
     const auto result = connection.query(
-        "SELECT a.id,a.revision,a.role FROM stage4_sessions s JOIN dc24h_accounts a ON a.id=s.account_id "
+        "SELECT a.id,a.revision,a.role,s.issued_at FROM stage4_sessions s JOIN dc24h_accounts a ON a.id=s.account_id "
         "JOIN stage4_emails e ON e.account_id=a.id WHERE s.token=UNHEX(?) AND a.status='active' "
         "AND a.revision=s.revision AND e.verified_at IS NOT NULL AND s.seen_at<=? AND s.seen_at>? AND s.expires_at>?",
-        {std::string(digest), now, now - 120000, now}, {1,3,32,128});
+        {std::string(digest), now, now - 120000, now}, {1,4,32,160});
     if (result.rows.empty()) { throw HttpError{401,"unauthorized"}; }
     const auto& row = result.rows.front();
-    if (!row[0] || !row[1] || !row[2]) { throw HttpError{503,"unavailable"}; }
+    if (!row[0] || !row[1] || !row[2] || !row[3]) { throw HttpError{503,"unavailable"}; }
     const auto role = parse_role(*row[2]);
     if (!role || (*role != Role::owner && *role != Role::administrator)) { throw HttpError{403,"forbidden"}; }
-    return {{number(*row[0]), number(*row[1])}, *role};
+    return {{number(*row[0]), number(*row[1])}, *role, number(*row[3], true)};
+}
+
+std::string tls_controller(std::string_view operation, std::uint64_t actor) {
+    constexpr char path[] = "/run/dc24h-tls-control.sock";
+    const int fd = ::socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    if (fd < 0) { throw HttpError{503,"tls_unavailable"}; }
+    struct Close { int fd; ~Close() { (void)::close(fd); } } close{fd};
+    const timeval timeout{18L, 0};
+    sockaddr_un address{};
+    address.sun_family = AF_UNIX;
+    static_assert(sizeof(path) < sizeof(address.sun_path));
+    std::memcpy(address.sun_path, path, sizeof(path));
+    if (::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) != 0 ||
+        ::setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) != 0 ||
+        ::connect(fd, reinterpret_cast<sockaddr*>(&address), sizeof(address)) != 0) {
+        throw HttpError{503,"tls_unavailable"};
+    }
+    struct ucred peer{};
+    socklen_t size = sizeof(peer);
+    if (::getsockopt(fd, SOL_SOCKET, SO_PEERCRED, &peer, &size) != 0 || size != sizeof(peer) || peer.uid != 0) {
+        throw HttpError{503,"tls_unavailable"};
+    }
+    const bool mutation = operation == "enable" || operation == "disable";
+    const auto failure = mutation ? "outcome_unknown" : "tls_unavailable";
+    const auto message = std::string(operation) + " " + std::to_string(actor) + "\n";
+    if (::send(fd, message.data(), message.size(), MSG_NOSIGNAL) != static_cast<ssize_t>(message.size()) ||
+        ::shutdown(fd, SHUT_WR) != 0) {
+        throw HttpError{503,failure};
+    }
+    std::string result;
+    char buffer[4096];
+    while (result.size() < sizeof(buffer)) {
+        const auto count = ::recv(fd, buffer, sizeof(buffer) - result.size(), 0);
+        if (count <= 0) { throw HttpError{503,failure}; }
+        result.append(buffer, static_cast<std::size_t>(count));
+        if (result.ends_with('\n')) { break; }
+    }
+    if (!result.starts_with("{\"schema\":1,\"configured\":") || !result.ends_with("}\n") ||
+        result.find_first_of("\r\n\0", 0, 3) != result.size() - 1) {
+        throw HttpError{503,failure};
+    }
+    return response(200, result);
+}
+
+std::string stage4_tls_renewal(const Request& request, const database::Options& options) {
+    if (request.method != "POST") { throw HttpError{405,"method_not_allowed"}; }
+    Fields fields;
+    form(request.body, fields);
+    const auto operation = fields.get("operation");
+    const bool mutation = operation == "enable" || operation == "disable";
+    if (!mutation && operation != "status" && operation != "check") { bad(); }
+    if (mutation) { fields.exact({"operation","session_digest","proof"}); }
+    else { fields.exact({"operation","session_digest"}); }
+
+    const auto digest = fields.get("session_digest");
+    const auto now = stage4_now();
+    const auto actor = stage4_actor(options, digest, now);
+    if (mutation) {
+        const auto require_fresh_owner = [](const Stage4Actor& current, std::int64_t at) {
+            if (current.role != Role::owner) { throw HttpError{403,"forbidden"}; }
+            constexpr std::int64_t freshness_ms = 300000;
+            const auto issued = static_cast<std::int64_t>(current.issued_at);
+            if (issued > at || at - issued >= freshness_ms) { throw HttpError{403,"fresh_login_required"}; }
+        };
+        require_fresh_owner(actor, now);
+        database::Connection connection(options);
+        const auto id = *AccountId::from_value(actor.account.id);
+        try {
+            const auto verdict = PasswordSecurityService(connection).verify(id, fields.get("proof"));
+            if (verdict == PasswordVerification::unavailable) { throw HttpError{503,"unavailable"}; }
+            if (verdict != PasswordVerification::matched) { throw HttpError{403,"proof_refused"}; }
+        } catch (const PasswordSecurityError& error) {
+            if (error.kind() == PasswordSecurityErrorKind::invalid_password) { throw HttpError{403,"proof_refused"}; }
+            throw;
+        }
+        const auto verified_at = stage4_now();
+        const auto verified = stage4_actor(options, digest, verified_at);
+        require_fresh_owner(verified, verified_at);
+        if (verified.account.id != actor.account.id || verified.account.revision != actor.account.revision) {
+            throw HttpError{401,"unauthorized"};
+        }
+    }
+    return tls_controller(operation, actor.account.id);
 }
 
 std::string stage4_admin(const Request& request, const database::Options& options, admin::Engine& engine) {
@@ -438,8 +529,7 @@ std::string stage4_admin(const Request& request, const database::Options& option
     Fields fields;
     form(request.body, fields);
     const auto operation = fields.get("operation");
-    const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::system_clock::now().time_since_epoch()).count();
+    const auto now = stage4_now();
     const auto actor = stage4_actor(options, fields.get("session_digest"), now);
     const auto require = [&](security::Permission permission) {
         if (!security::allows(actor.role, permission)) { throw HttpError{403,"forbidden"}; }
@@ -650,6 +740,11 @@ AccountHandler stage4_account_handler(database::Options options) {
     accounts::detail::hash_password("stage4 dummy password proof", *dummy);
     auto engine = admin::Engine(options,admin::Origin::maintenance_api);
     return [options=std::move(options),dummy=std::move(dummy),engine=std::move(engine)](const Request& request) mutable {
+        if (request.target == "/api/v1/stage4/tls/renewal") {
+            try { return stage4_tls_renewal(request, options); }
+            catch (const HttpError& error) { return response(error.status,"{\"error\":"+json_string(error.key)+"}"); }
+            catch (...) { return response(503, "{\"error\":\"tls_unavailable\"}"); }
+        }
         if (request.target == "/api/v1/stage4/admin") {
             try { return stage4_admin(request, options, engine); }
             catch (const HttpError& error) { return response(error.status,"{\"error\":"+json_string(error.key)+"}"); }

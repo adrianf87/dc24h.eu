@@ -14,12 +14,52 @@ case "$("$node" --version)" in
     v24.*) ;;
     *) echo "Node 24 LTS required" >&2; exit 2 ;;
 esac
-for unit in dc24h-twilight-stage4-webadmin dc24h-twilight-stage4-bridge dc24h-twilight-stage4-auth; do
-    if systemctl is-active --quiet "$unit"; then
-        echo "Stop the Stage IV units before installing a replacement" >&2
-        exit 2
-    fi
-done
+units="dc24h-stage4-webadmin dc24h-stage4-bridge dc24h-stage4-auth"
+unit_directory=/etc/systemd/system
+
+refuse() {
+    echo "$1" >&2
+    exit 2
+}
+
+check_units() {
+    for unit in $units; do
+        old="dc24h-twilight-${unit#dc24h-}.service"
+        active=$(systemctl show -p ActiveState --value "$old") ||
+            refuse "Cannot read the state of $old"
+        [ "$active" = inactive ] || refuse "Stop $old before installing replacement units"
+        enabled=$(systemctl show -p UnitFileState --value "$old") ||
+            refuse "Cannot read the enablement of $old"
+        case "$enabled" in
+            disabled|masked) ;;
+            "")
+                load=$(systemctl show -p LoadState --value "$old") ||
+                    refuse "Cannot read the load state of $old"
+                [ "$load" = not-found ] || refuse "Disable or retire $old before installation"
+                ;;
+            *) refuse "Disable or retire $old before installation" ;;
+        esac
+
+        name="$unit.service"
+        destination="$unit_directory/$name"
+        active=$(systemctl show -p ActiveState --value "$name") ||
+            refuse "Cannot read the state of $name"
+        [ "$active" = inactive ] || refuse "Stop $name before installing replacement units"
+        fragment=$(systemctl show -p FragmentPath --value "$name") ||
+            refuse "Cannot read the installed path of $name"
+        dropins=$(systemctl show -p DropInPaths --value "$name") ||
+            refuse "Cannot read drop-ins for $name"
+        [ -z "$dropins" ] || refuse "Review the existing drop-ins for $name"
+        [ -z "$fragment" ] || [ "$fragment" = "$destination" ] ||
+            refuse "Review the existing unit $fragment"
+        if [ -L "$destination" ] ||
+           { [ -e "$destination" ] && ! cmp -s "$source/config/$name.example" "$destination"; }; then
+            refuse "Refusing to replace existing unit $destination"
+        fi
+    done
+}
+
+check_units
 export PATH="$node_dir/bin:/usr/bin:/bin"
 (
     cd "$source/webadmin"
@@ -28,10 +68,11 @@ export PATH="$node_dir/bin:/usr/bin:/bin"
     npm run build:public:ci
     npm run build:stage4-init
 )
+check_units
 install -d -m 0755 "$target/bin" "$target/node24/bin" "$target/scripts" \
     "$target/database/stage4" "$target/webadmin/dist" /usr/local/share/dc24h/stage4 /etc/sysusers.d
 install -m 0755 "$node" "$target/node24/bin/node"
-for program in dc24h-twilight dc24h-twilight-owner dc24h-twilight-account-admin; do
+for program in dc24h dc24h-owner dc24h-account-admin; do
     install -m 0755 "$build/$program" "$target/bin/$program"
 done
 install -m 0755 "$source/scripts/dc24h-stage4-init" /usr/local/sbin/dc24h-stage4-init
@@ -48,17 +89,29 @@ install -m 0644 "$source"/webadmin/public-stage4/index.html "$source"/webadmin/p
     /usr/local/share/dc24h/stage4/
 install -m 0644 "$source/config/dc24h-stage4-webadmin.sysusers.example" /etc/sysusers.d/dc24h-stage4-webadmin.conf
 systemd-sysusers /etc/sysusers.d/dc24h-stage4-webadmin.conf
-for unit in dc24h-twilight-stage4-webadmin dc24h-twilight-stage4-bridge dc24h-twilight-stage4-auth; do
-    install -m 0644 "$source/config/$unit.service.example" "/etc/systemd/system/$unit.service"
+for unit in $units; do
+    destination="$unit_directory/$unit.service"
+    if [ ! -e "$destination" ] && [ ! -L "$destination" ]; then
+        # Publish only complete unit files, with no replacement if a unit
+        # appears between preflight and install.
+        staging=$(mktemp "$unit_directory/.dc24h-stage4.XXXXXX")
+        trap 'rm -f -- "$staging"' EXIT
+        install -m 0644 "$source/config/$unit.service.example" "$staging"
+        ln -T -- "$staging" "$destination"
+        rm -- "$staging"
+        trap - EXIT
+    fi
+    [ ! -L "$destination" ] && cmp -s "$source/config/$unit.service.example" "$destination" ||
+        refuse "Refusing to use unexpected unit $destination"
 done
 # Check the Stage IV units themselves; unrelated host units can emit warnings
 # (for example obsolete CPUAccounting= on newer systemd releases).
 # Ubuntu 22.04 ships systemd 249 and does not have --recursive-errors.
 printf '%s\n' 'Stage IV: verifying installed systemd units'
 if systemd-analyze --help | grep -Fq -- '--recursive-errors='; then
-    systemd-analyze --recursive-errors=no verify /etc/systemd/system/dc24h-twilight-stage4-*.service
+    systemd-analyze --recursive-errors=no verify "$unit_directory/dc24h-stage4-webadmin.service" "$unit_directory/dc24h-stage4-bridge.service" "$unit_directory/dc24h-stage4-auth.service"
 else
-    systemd-analyze verify /etc/systemd/system/dc24h-twilight-stage4-*.service
+    systemd-analyze verify "$unit_directory/dc24h-stage4-webadmin.service" "$unit_directory/dc24h-stage4-bridge.service" "$unit_directory/dc24h-stage4-auth.service"
 fi
 printf '%s\n' 'Stage IV: reloading systemd manager'
 systemctl daemon-reload

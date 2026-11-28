@@ -1,5 +1,7 @@
 # Stage IV WebAdmin operations
 
+For a host running Twilight units or an existing installation under these names, follow the [migration and rollback guide](REBRAND_MIGRATION.md) first.
+
 The public endpoint is `https://server-747585786.dc24h.eu:7278`. Apache terminates TLS
 and forwards the approved API paths to Node at `127.0.0.1:4278`. The Stage III
 guest hub remains on ADCS TCP 1512. ADC TCP 1511 stays disabled.
@@ -85,9 +87,9 @@ explicit `dc24h_stage4_test` schema. Its generated material is under
 ## Start, SMTP qualification and HTTPS
 
 ```sh
-systemctl start dc24h-twilight-stage4-webadmin.service
-systemctl status dc24h-twilight-stage4-{auth,bridge,webadmin}.service --no-pager
-journalctl -u dc24h-twilight-stage4-webadmin.service --no-pager -n 30
+systemctl start dc24h-stage4-webadmin.service
+systemctl status dc24h-stage4-{auth,bridge,webadmin}.service --no-pager
+journalctl -u dc24h-stage4-webadmin.service --no-pager -n 30
 ss -ltn '( sport = :4278 or sport = :7278 or sport = :1512 or sport = :1511 or sport = :3306 )'
 ```
 
@@ -109,7 +111,7 @@ paths live under `/etc/letsencrypt/live/server-747585786.dc24h.eu/`.
 a2enmod ssl headers rewrite proxy proxy_http
 a2ensite dc24h-stage4-webadmin
 apache2ctl configtest && systemctl reload apache2
-systemctl enable dc24h-twilight-stage4-webadmin.service
+systemctl enable dc24h-stage4-webadmin.service
 ```
 
 Allow TCP 7278 in the provider firewall when it filters ingress. Keep TCP
@@ -130,8 +132,8 @@ again after the pending reservation expires, subject to attempt limits.
 Password changes invalidate existing sessions.
 
 ```sh
-systemctl restart dc24h-twilight-stage4-webadmin.service
-systemctl status dc24h-twilight-stage4-{auth,bridge,webadmin}.service --no-pager
+systemctl restart dc24h-stage4-webadmin.service
+systemctl status dc24h-stage4-{auth,bridge,webadmin}.service --no-pager
 ```
 
 ## Backup, restore and rollback
@@ -165,8 +167,8 @@ To withdraw the Stage IV release, disable only its vhost and units:
 ```sh
 a2dissite dc24h-stage4-webadmin
 apache2ctl configtest && systemctl reload apache2
-systemctl disable --now dc24h-twilight-stage4-webadmin.service
-systemctl stop dc24h-twilight-stage4-bridge.service dc24h-twilight-stage4-auth.service
+systemctl disable --now dc24h-stage4-webadmin.service
+systemctl stop dc24h-stage4-bridge.service dc24h-stage4-auth.service
 systemctl is-active dc24h-stage3-adcs.service
 ```
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { Activity, ArrowLeft, ArrowRight, Ban, ClipboardList, LayoutDashboard, RefreshCw, Server, ShieldCheck, UsersRound } from "lucide-react";
+import { Activity, ArrowLeft, ArrowRight, Ban, ClipboardList, LayoutDashboard, RefreshCw, Server, Settings, ShieldCheck, UsersRound } from "lucide-react";
 import { Dashboard } from "../components/Dashboard.tsx";
 import { ChatStatistics } from "../components/ChatStatistics.tsx";
 import { SearchStatistics } from "../components/SearchStatistics.tsx";
@@ -16,6 +16,8 @@ import { BAN_FILTERS, banState } from "../lib/bans.ts";
 import { pl } from "../languages/pl/index.ts";
 import { us } from "../languages/us/index.ts";
 import type { HubSnapshot } from "../lib/status.ts";
+import { parseTlsRenewal } from "../lib/tls-renewal.ts";
+import type { TlsRenewalError, TlsRenewalStatus } from "../lib/tls-renewal.ts";
 import type { PublicAdminInput, PublicAdminOperation, PublicAdminResult } from "../../server/public-admin.ts";
 
 const polish = document.documentElement.lang.toLowerCase().startsWith("pl");
@@ -27,20 +29,20 @@ const roleLabel = (role: keyof typeof roleRank) => t[`role_${role}`];
 const roleRank = { registered: 1, vip: 2, moderator: 3, operator: 4, administrator: 5, owner: 6 };
 
 class ApiError extends Error {
-  constructor(readonly status: number, readonly outcomeUnknown: boolean) { super("API unavailable"); }
+  constructor(readonly status: number, readonly outcomeUnknown: boolean, readonly code = "") { super("API unavailable"); }
 }
 
 async function api<T>(endpoint: string, signal: AbortSignal, csrf?: string, input?: object): Promise<T> {
   const reply = await fetch("/stage4/v1/" + endpoint, {
     method: input ? "POST" : "GET", credentials: "same-origin", cache: "no-store", redirect: "error",
-    signal: AbortSignal.any([signal, AbortSignal.timeout(18_000)]),
+    signal: AbortSignal.any([signal, AbortSignal.timeout(endpoint.startsWith("tls/") ? 26_000 : 18_000)]),
     ...(input ? { headers: { "Content-Type": "application/json", "X-DC24H-Stage4-Csrf": csrf ?? "" },
       body: JSON.stringify(input) } : {}),
   });
   if (!reply.headers.get("content-type")?.startsWith("application/json")) throw new ApiError(reply.status, !!input);
   const payload = await reply.json() as { schema?: number; data?: T; error?: string };
   if (!reply.ok || payload.schema !== 1 || payload.data === undefined)
-    throw new ApiError(reply.status, payload?.error === "outcome_unknown");
+    throw new ApiError(reply.status, payload?.error === "outcome_unknown", payload?.error);
   return payload.data;
 }
 
@@ -59,6 +61,12 @@ const labels = {
 };
 function errorMessage(error: unknown, writes: boolean) {
   if (error instanceof ApiError) {
+    if (error.code === "fresh_login_required")
+      return local("Sign in again with your email code before changing TLS renewal.", "Zaloguj się ponownie z kodem e-mail przed zmianą odnawiania TLS.");
+    if (error.code === "proof_refused")
+      return local("The current password was refused.", "Aktualne hasło zostało odrzucone.");
+    if (error.code === "tls_unavailable")
+      return local("The host TLS renewal service is unavailable.", "Usługa odnawiania certyfikatów na serwerze jest niedostępna.");
     if (error.status === 401) return labels.expired;
     if (error.status === 409) return labels.stale;
     if (error.status === 429) return labels.limit;
@@ -433,6 +441,118 @@ function PermissionsPanel({ csrf }: { csrf: string }) {
   </div>;
 }
 
+const tlsErrors: Record<TlsRenewalError, string> = {
+  not_configured: local("The host is awaiting TLS renewal configuration and Owner approval.", "Serwer oczekuje na konfigurację odnawiania TLS i zgodę właściciela."),
+  invalid_config: local("The host TLS settings are invalid.", "Ustawienia TLS serwera są nieprawidłowe."),
+  unsupported_acme: local("The Certbot lineage does not match the approved standalone HTTP-01 configuration.", "Konfiguracja certyfikatu w Certbocie nie odpowiada zatwierdzonej metodzie standalone HTTP-01."),
+  dns_mismatch: local("DNS does not resolve to the approved IPv4 address.", "DNS nie wskazuje zatwierdzonego adresu IPv4."),
+  http01_unavailable: local("The approved HTTP-01 address or port 80 is unavailable.", "Zatwierdzony adres HTTP-01 lub port 80 jest niedostępny."),
+  competing_scheduler: local("Another Certbot schedule is enabled.", "Działa inny harmonogram Certbota."),
+  certbot_unavailable: local("Certbot or its deploy hook is unavailable.", "Certbot lub jego hook wdrożeniowy jest niedostępny."),
+  invalid_certificate: local("A certificate failed validation. Check the host TLS audit.", "Certyfikat nie przeszedł weryfikacji. Sprawdź audyt TLS serwera."),
+  state_unavailable: local("The host could not read or save TLS renewal state.", "Serwer nie mógł odczytać lub zapisać stanu odnawiania TLS."),
+  missing_baseline: local("The shared certificate bundle has not been prepared.", "Wspólny zestaw certyfikatów wymaga przygotowania."),
+  hub_reload_unavailable: local("The ADCS hub is unready for managed TLS reloads.", "Hub ADCS jest niegotowy do zarządzanego przeładowania TLS."),
+  apache_reload_unavailable: local("Apache2 is unready for managed TLS reloads.", "Apache2 jest niegotowy do zarządzanego przeładowania TLS."),
+  services_not_verified: local("Verification of the certificate served by Apache2 or ADCS failed.", "Weryfikacja certyfikatu używanego przez Apache2 lub ADCS nie powiodła się."),
+  schedule_unavailable: local("The systemd timer is unavailable.", "Timer systemd jest niedostępny."),
+  busy: local("A TLS operation is in progress. Try again after it finishes.", "Trwa operacja TLS. Spróbuj ponownie po jej zakończeniu."),
+  certbot_failed: local("Certbot reported a renewal error. Check its logs on the host.", "Certbot zgłosił błąd odnawiania. Sprawdź jego logi na serwerze."),
+  hook_missing: local("The deploy hook did not confirm the renewed certificate.", "Hook wdrożeniowy nie potwierdził odnowionego certyfikatu."),
+  activation_failed: local("Certificate activation failed and both services were verified on the previous certificate.", "Wdrożenie certyfikatu nie powiodło się. Potwierdzono powrót obu usług do poprzedniego certyfikatu."),
+  rollback_failed: local("The host could not verify recovery of both services. Check the TLS audit now.", "Serwer nie mógł potwierdzić przywrócenia obu usług. Sprawdź teraz audyt TLS."),
+  rollback_pending: local("The previous certificate needs to be verified after an interrupted deployment.", "Po przerwanym wdrożeniu trzeba zweryfikować poprzedni certyfikat."),
+  audit_unavailable: local("The host could not save the TLS audit. Check the reported schedule before retrying.", "Serwer nie mógł zapisać audytu TLS. Sprawdź widoczny harmonogram przed ponowną próbą."),
+  timer_change_failed: local("The host could not confirm the requested timer state.", "Serwer nie potwierdził żądanego stanu timera."),
+};
+
+const tlsDate = (time: number | null | undefined) => time == null ? "—" :
+  new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(time * 1000);
+const certificateLabels = {
+  valid: local("Valid", "Ważny"), expiring: local("Expiring soon", "Wkrótce wygasa"), expired: local("Expired", "Wygasł"),
+  invalid: local("Validation failed", "Weryfikacja nieudana"), unavailable: local("Unavailable", "Niedostępny"),
+};
+const scheduleLabels = {
+  active: local("Enabled", "Włączone"), disabled: local("Disabled", "Wyłączone"),
+  inconsistent: local("Inconsistent timer state", "Niespójny stan timera"), unknown: local("Unavailable", "Niedostępne"),
+};
+const applicationLabels = {
+  applied: local("Verified", "Zweryfikowano"), mismatch: local("Certificate differs", "Inny certyfikat"),
+  unavailable: local("Unverified", "Nie zweryfikowano"),
+};
+
+function TlsPanel({ csrf, owner }: { csrf: string; owner: boolean }) {
+  const work = useOperation();
+  const [status, setStatus] = useState<TlsRenewalStatus | null>(null);
+  const [selection, setSelection] = useState<boolean | null>(null);
+  const [password, setPassword] = useState("");
+  const request = async (endpoint: string, signal: AbortSignal, input?: object) =>
+    parseTlsRenewal(await api<unknown>(endpoint, signal, csrf, input));
+  const refresh = () => work.run(signal => request("tls/renewal", signal), setStatus);
+  useEffect(() => { void refresh(); }, []);
+  const desired = selection ?? status?.enabled ?? false;
+  const change = (event: FormEvent) => {
+    event.preventDefault();
+    const input = { enabled: desired, password };
+    setPassword("");
+    void work.run(async signal => {
+      try { return await request("tls/renewal", signal, input); }
+      catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(503, true);
+      }
+    }, value => { setStatus(value); setSelection(null); });
+  };
+  const errors = new Set([status?.request_error, status?.readiness_error, status?.renewal_error]);
+  return <section className="surface operation-card">
+    <h2>{local("Security", "Bezpieczeństwo")}</h2>
+    <h3>{local("TLS certificates", "Certyfikaty TLS")}</h3>
+    <div className="api-actions">
+      <button type="button" disabled={work.busy} onClick={() => void refresh()}>{labels.refresh}</button>
+      <button type="button" disabled={work.busy} onClick={() => void work.run(
+        signal => request("tls/renewal/check", signal, {}), setStatus)}>
+        {local("Check readiness", "Sprawdź gotowość")}
+      </button>
+    </div>
+    <Notice busy={work.busy} message={work.message}/>
+    {[...errors].filter((error): error is TlsRenewalError => !!error).map(error =>
+      <p key={error} role="status">{tlsErrors[error]}</p>)}
+    {status && <>
+      <dl className="tls-details">
+        <dt>{local("Domain", "Domena")}</dt><dd>{status.certificate?.hostname ?? "—"}</dd>
+        <dt>{local("Issuer", "Wystawca")}</dt><dd>{status.certificate?.issuer ?? "—"}</dd>
+        <dt>{local("Valid from", "Data wystawienia")}</dt><dd>{tlsDate(status.certificate?.not_before)}</dd>
+        <dt>{local("Expires", "Data wygaśnięcia")}</dt><dd>{tlsDate(status.certificate?.not_after)}</dd>
+        <dt>{local("Days until expiry", "Dni do wygaśnięcia")}</dt><dd>{number(status.days_remaining ?? undefined)}</dd>
+        <dt>{local("Certificate status", "Status certyfikatu")}</dt><dd>{certificateLabels[status.certificate_status]}</dd>
+        <dt>{local("Automatic renewal", "Automatyczne odnawianie")}</dt><dd>{scheduleLabels[status.schedule]}</dd>
+        <dt>{local("Readiness", "Gotowość")}</dt>
+        <dd>{status.ready ? local("Ready", "Gotowy") : local("Unconfirmed", "Niepotwierdzona")}</dd>
+        <dt>{local("Last attempt", "Ostatnia próba")}</dt><dd>{tlsDate(status.last_attempt)}</dd>
+        <dt>{local("Last successful renewal", "Ostatnie udane odnowienie")}</dt><dd>{tlsDate(status.last_renewal)}</dd>
+        <dt>{local("Next scheduled check", "Następna planowana kontrola")}</dt><dd>{tlsDate(status.next_check)}</dd>
+        <dt>{local("Last verification", "Ostatnia weryfikacja")}</dt><dd>{tlsDate(status.checked_at)}</dd>
+        <dt>Apache2</dt><dd>{applicationLabels[status.apache]}</dd>
+        <dt>{local("ADCS hub", "Hub ADCS")}</dt><dd>{applicationLabels[status.hub]}</dd>
+      </dl>
+      {owner && <form onSubmit={change}><fieldset disabled={work.busy}>
+        <label>{local("Automatic certificate renewal", "Automatyczne odnawianie certyfikatu")}
+          <select value={desired ? "on" : "off"}
+            onChange={event => setSelection(event.target.value === "on")}>
+            <option value="on">{scheduleLabels.active}</option>
+            <option value="off">{scheduleLabels.disabled}</option>
+          </select>
+        </label>
+        <label>{labels.proof}
+          <input type="password" required maxLength={1024} autoComplete="current-password" value={password}
+            onChange={event => setPassword(event.target.value)}/>
+        </label>
+        <button type="submit">{local("Apply renewal setting", "Zastosuj ustawienie odnawiania")}</button>
+      </fieldset></form>}
+    </>}
+  </section>;
+}
+
 const views = {
   overview: { title: local("Overview", "Przegląd"), icon: LayoutDashboard },
   hub: { title: local("Live hub", "Hub na żywo"), icon: Activity },
@@ -440,6 +560,7 @@ const views = {
   bans: { title: t.bansTitle, label: local("Bans", "Blokady"), icon: Ban },
   audit: { title: t.auditTitle, label: local("Audit", "Audyt"), icon: ClipboardList },
   permissions: { title: local("Permissions", "Uprawnienia"), icon: ShieldCheck },
+  settings: { title: local("Settings", "Ustawienia"), icon: Settings },
 };
 type View = keyof typeof views;
 const viewKeys = Object.keys(views) as View[];
@@ -478,6 +599,7 @@ export function Operations({ csrf, role, overview }: { csrf: string; role: "owne
         {section === "bans" && <BansPanel csrf={csrf}/>}
         {section === "audit" && <AuditPanel csrf={csrf}/>}
         {section === "permissions" && <PermissionsPanel csrf={csrf}/>}
+        {section === "settings" && <TlsPanel csrf={csrf} owner={role === "owner"}/>}
       </div>
     </div>
   </div>;

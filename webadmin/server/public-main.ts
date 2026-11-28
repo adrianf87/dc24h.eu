@@ -5,14 +5,15 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { publicBridgeCredentials } from "./public-bridge-credentials.ts";
 import { publicBackend } from "./public-backend.ts";
 import { databasePublicGateway } from "./public-gateway.ts";
-import { PUBLIC_WEBADMIN_ORIGIN } from "./public-email-code.ts";
+import { PUBLIC_WEBADMIN_ORIGIN, UBUNTU_WEBADMIN_ORIGIN } from "./public-email-code.ts";
 import { createMsmtpSender, dedicatedMsmtpConfigReady } from "./public-msmtp.ts";
 import { openStage4Store } from "./stage4-store.ts";
 import type { RuntimeConfiguration } from "./stage4-store.ts";
 
 async function main() {
+  const origin = process.env.DC24H_STAGE4_ORIGIN;
   if (process.env.DC24H_STAGE4_STARTUP_ACK !== "OWNER_WEBADMIN_PUBLIC_ACTIVATION_GO" ||
-      process.env.DC24H_STAGE4_ORIGIN !== PUBLIC_WEBADMIN_ORIGIN || !process.geteuid?.())
+      (origin !== PUBLIC_WEBADMIN_ORIGIN && origin !== UBUNTU_WEBADMIN_ORIGIN) || !process.geteuid?.())
     throw Error("Stage IV activation and dedicated service identity are required");
   const credentials = process.env.CREDENTIALS_DIRECTORY;
   if (!credentials || !dedicatedMsmtpConfigReady()) throw Error("Private Stage IV runtime settings unavailable");
@@ -35,7 +36,7 @@ async function main() {
     await db.close();
     throw error;
   }
-  const app = createServer(databasePublicGateway({ backend, db, sendCode: createMsmtpSender() }));
+  const app = createServer(databasePublicGateway({ backend, db, origin, sendCode: createMsmtpSender() }));
   const cleanup = setInterval(() => { void db.clean().catch(() => {}); }, 60_000);
   cleanup.unref();
   app.requestTimeout = 10_000;

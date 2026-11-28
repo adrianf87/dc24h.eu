@@ -176,17 +176,22 @@ async function main() {
   const webPath = "/var/lib/dc24h-stage4";
   const authPath = "/var/lib/dc24h-stage4-auth";
   const state = production ? "/etc/dc24h" : "/etc/dc24h/stage4-test";
-  privateDirectory(state, 0, 0);
   const web = production ? uidGid("dc24h-webadmin") : { uid: 0, gid: 0 };
   const auth = production ? uidGid("dc24h-stage3") : { uid: 0, gid: 0 };
   if (production) {
-    for (const unit of ["dc24h-twilight-stage4-webadmin", "dc24h-twilight-stage4-auth"]) {
-      if (spawnSync("/usr/bin/systemctl", ["is-active", "--quiet", unit], { stdio: "ignore" }).status === 0)
-        throw Error("Stop Stage IV services before provisioning");
+    for (const prefix of ["dc24h", "dc24h-twilight"]) {
+      for (const component of ["webadmin", "bridge", "auth"]) {
+        const unit = `${prefix}-stage4-${component}.service`;
+        const status = spawnSync("/usr/bin/systemctl", ["show", "-p", "ActiveState", "--value", unit],
+          { encoding: "utf8", timeout: 5000 });
+        if (status.status !== 0 || status.stdout.trim() !== "inactive")
+          throw Error(`Stop ${unit} and verify its state before provisioning`);
+      }
     }
     privateDirectory(webPath, web.uid, web.gid);
     privateDirectory(authPath, auth.uid, auth.gid);
   }
+  privateDirectory(state, 0, 0);
   const authDir = production ? authPath : state;
   const mailDir = production ? webPath : state;
   const authFile = join(authDir, "auth-db.password");
@@ -217,8 +222,8 @@ async function main() {
       publish(join(scratch, "sql.password"), pass);
       publish(join(scratch, "native.ini"), nativeConfig(socketPath, name, migrator, join(scratch, "sql.password")));
       phase = "native MariaDB migration";
-      command(binary("dc24h-twilight"), ["--config", join(scratch, "native.ini"), "--migrate-database"]);
-      command(binary("dc24h-twilight"), ["--config", join(scratch, "native.ini"), "--database-status"]);
+      command(binary("dc24h"), ["--config", join(scratch, "native.ini"), "--migrate-database"]);
+      command(binary("dc24h"), ["--config", join(scratch, "native.ini"), "--database-status"]);
       phase = "Stage IV schema";
       await migrate(db);
       phase = "Administrator bootstrap";
@@ -239,7 +244,7 @@ async function main() {
         const passwordFile = join(scratch, "owner.password");
         publish(passwordFile, config.ADMIN_INITIAL_PASSWORD);
         try {
-          command(binary("dc24h-twilight-owner"), ["--config", join(scratch, "native.ini"),
+          command(binary("dc24h-owner"), ["--config", join(scratch, "native.ini"),
             "--stage4-bootstrap", "Administrator", "--password-file", passwordFile, "--confirm-stopped"]);
         } finally { unlinkSync(passwordFile); }
       }

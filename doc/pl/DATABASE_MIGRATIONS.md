@@ -39,9 +39,9 @@ Podstawa: main `4f204b9f8901a5201c56abad957543344c177256` zawierający Database 
 ## Polecenia operatora
 
 ```sh
-./build/dc24h-twilight --config config/dc24h.ini --check-database
-./build/dc24h-twilight --config config/dc24h.ini --database-status
-./build/dc24h-twilight --config config/dc24h.ini --migrate-database
+./build/dc24h --config config/dc24h.ini --check-database
+./build/dc24h --config config/dc24h.ini --database-status
+./build/dc24h --config config/dc24h.ini --migrate-database
 ```
 
 Wymagane włączone ustawienia `[database]` i przygotowana lokalna baza/konto MariaDB zgodnie z [opisem bazy](DATABASE.md). Polecenia łączą się synchronicznie przez gniazdo Unix i kończą bez otwierania portów huba, uruchamiania Core i pliku logu. Wzajemnie wykluczają się z sobą, `--check-config`, pomocą i wersją. Domyślny język US; `--language pl` tłumaczy komunikaty. Hasła bazy nie należą do argumentów ani źródeł SQL.

@@ -505,6 +505,13 @@ input[type="checkbox"] {
 .balanced-split { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .operation-card { display: grid; gap: .95rem; }
 .operation-card h2 { font-size: 1.06rem; }
+.tls-details {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: .55rem 1rem;
+  overflow-wrap: anywhere;
+}
+.tls-details dt { color: var(--muted); }
 .api-confirm, .inline-field { display: flex; align-items: center; gap: .55rem; }
 .inline-field select { min-height: 37px; padding: .4rem .6rem; }
 .api-actions, .table-pagination { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }

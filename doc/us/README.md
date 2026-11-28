@@ -1,6 +1,6 @@
-# dc24h.eu-twilight documentation
+# dc24h.eu documentation
 
-**Current Twilight code: beta-0.9.20.** This repository derives from the historic [High Starter v0.9.20-rc.1 pre-release](https://github.com/adrianf87/dc24h.eu-high-starter/releases/tag/v0.9.20-rc.1). The five Fix Passes, merged High Starter PRs #243–245 and original OWNER RC acceptance belong to that **source repository**; they do not approve a Twilight release. [Stage V — current docs/provenance](TWILIGHT_STAGE_V.md) · [Stage VI release gate](TWILIGHT_STAGE_VI.md) · [Issue #1](https://github.com/adrianf87/dc24h.eu-twilight/issues/1) · [Draft PR #9](https://github.com/adrianf87/dc24h.eu-twilight/pull/9). The older entries below intentionally retain their historical statements. **No new release or production GO.**
+**Current code:** beta-0.9.20. See the [installation guide](INSTALLATION.md), [rebranding migration and rollback guide](REBRAND_MIGRATION.md), and [historical Twilight records](TWILIGHT_STAGE_V.md).
 
 beta-0.8.x ten-work-unit branch review and hosted CI correction: all five stages and five Fix Passes are present, but the prior exact-head Ubuntu 26.04 real Chromium restore attempt hit the preserved login budget. The fixture now waits for the original private 60-second quota window rather than clearing state. Final-head green CI and separate Owner merge approval are still required. [CI repair review](BETA_0.8_CI_REPAIR.md) · [PL operator notes](../pl/BETA_0.8_CI_REPAIR.md).
 

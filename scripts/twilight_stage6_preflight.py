@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Bounded, fail-closed Twilight source-identity preflight; NEVER a release GO.
+"""Bounded dc24h.eu source-identity preflight; NEVER a release GO.
 
 This checks selected current user-facing/contract files against the approved
-Twilight naming and compatibility policy on the exact checked-out source SHA.
+dc24h.eu naming and compatibility policy on the exact checked-out source SHA.
 It does NOT verify GitHub CI runs, independently downloaded artifact ZIPs,
 production installation, physical passkeys or OWNER release authorization.
 """
@@ -14,9 +14,9 @@ import re
 import subprocess
 
 
-REPO = "adrianf87/dc24h.eu-twilight"
+REPO = "adrianf87/dc24h.eu"
 OLD_REPO = "adrianf87/dc24h.eu-high-starter"
-BRAND = "dc24h.eu-twilight"
+BRAND = "dc24h.eu"
 IMAGES = ("ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04")
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 ACTIVE_DISPLAY = (
@@ -28,10 +28,8 @@ ACTIVE_DISPLAY = (
     "config/dc24h.ini.example",
     "webadmin/index.html",
     "webadmin/remote.html",
-    "webadmin/src/App.tsx",
-    "webadmin/src/remote/RemoteApp.tsx",
-    "webadmin/src/languages/pl/index.ts",
-    "webadmin/src/languages/us/index.ts",
+    "webadmin/src/lib/branding.ts",
+    "webadmin/public-stage4/index.html",
 )
 WORKFLOWS = (
     "build.yml",
@@ -39,15 +37,17 @@ WORKFLOWS = (
     "beta08-hardening.yml",
     "beta09-stage4-storage.yml",
     "stage4-ubuntu-vm-validation.yml",
+    "stage5-security-e2e.yml",
 )
-EXPECTED_TWILIGHT_GUARDS = {
+EXPECTED_REPOSITORY_GUARDS = {
     "build.yml": 2,
     "beta07-codeql.yml": 1,
     "beta08-hardening.yml": 2,
     "beta09-stage4-storage.yml": 1,
     "stage4-ubuntu-vm-validation.yml": 1,
+    "stage5-security-e2e.yml": 1,
 }
-LEGACY_BRAND = re.compile(r"(?i)(?:dc24h\.eu[ -]high[ -]starter|\bhigh starter\b)")
+LEGACY_BRAND = re.compile(r"(?i)(?:dc24h\.eu[ -]high[ -]starter|\bhigh starter\b|dc24h\.eu-twilight)")
 
 
 def read(root, relative):
@@ -61,7 +61,7 @@ def read(root, relative):
 
 def require(text, phrases, area):
     if not all(phrase in text for phrase in phrases):
-        raise ValueError("Twilight identity or security contract regressed: " + area)
+        raise ValueError("Product identity or security contract regressed: " + area)
 
 
 def evaluate(root, sha, os_image):
@@ -78,23 +78,30 @@ def evaluate(root, sha, os_image):
             read(root, "webadmin/index.html").count(BRAND) != 2):
         raise ValueError("Incomplete C++ operator or WebAdmin page rebranding")
     require(read(root, "src/adc/user_list.cpp"),
-            ('"NIdc24h.eu-twilight"', '"DEDirect Connect hub"'),
+            ('"NIdc24h.eu"', '"DEDirect Connect hub"'),
             "ADC wire-visible hub identity")
+    for path in ("webadmin/src/App.tsx", "webadmin/src/remote/RemoteApp.tsx"):
+        page = read(root, path)
+        require(page, ("{PRODUCT_NAME}",), "WebAdmin brand")
+        if LEGACY_BRAND.search(page):
+            raise ValueError("Unreviewed legacy user-facing branding: " + path)
     require(read(root, "webadmin/src/languages/pl/index.ts"),
-            ('footer: "Dla dc24h.eu-twilight"',), "PL WebAdmin footer")
+            ('footer: `Dla ${PRODUCT_NAME}`',), "PL WebAdmin footer")
     require(read(root, "webadmin/src/languages/us/index.ts"),
-            ('footer: "Built for dc24h.eu-twilight"',), "EN WebAdmin footer")
+            ('footer: `Built for ${PRODUCT_NAME}`',), "EN WebAdmin footer")
 
     api = read(root, "src/api/server.cpp")
     status = read(root, "webadmin/src/lib/status.ts")
-    require(api, (BRAND, '\\"server\\":{\\"name\\":\\"' + BRAND), "C++ API server.name")
-    if status.count('server.name !== "' + BRAND + '"') != 2:
-        raise ValueError("Both WebAdmin v1 status adapters must reject the old name")
-    if ('server.name !== "dc24h.eu"' in status or 'name: "dc24h.eu";' in status):
-        raise ValueError("Legacy server.name must not be accepted")
+    require(api, (r'\"product_id\":\"dc24h\"', r'\"name\":\"dc24h.eu\"'), "C++ API identity")
+    require(status, ('const PRODUCT_ID = "dc24h";', 'const STATUS_API_VERSION = "v1";',
+                     'root.api_version === STATUS_API_VERSION',
+                     'server.product_id === PRODUCT_ID && server.name === PRODUCT_NAME'),
+            "WebAdmin status identity")
+    if status.count('!hasStatusIdentity(root, server)') != 2:
+        raise ValueError("Both WebAdmin v1 status adapters must validate identity")
 
     webauthn = read(root, "webadmin/server/remote-webauthn.ts")
-    require(webauthn, ('rpName: "' + BRAND + '", rpID',
+    require(webauthn, ('rpName: PRODUCT_NAME, rpID',
                        'parsed.hostname !== rpID',
                        'expectedOrigin: origin', 'expectedRPID: rpID'),
             "Passkey RP and Origin")
@@ -104,15 +111,13 @@ def evaluate(root, sha, os_image):
                 "req.headers.origin !== options.origin") != 2):
         raise ValueError("An enrollment/login or remote gateway Origin/RP guard was removed")
 
-    hub = read(root, "config/dc24h-twilight.service.example")
-    require(hub, ("Conflicts=dc24h.service",
-                  "AssertPathExists=/etc/dc24h/twilight-unit-migration-approved",
+    hub = read(root, "config/dc24h.service.example")
+    require(hub, ("Conflicts=dc24h-twilight.service",
+                  "AssertPathExists=/etc/dc24h/dc24h-unit-migration-approved",
                   "User=dc24h", "Group=dc24h",
                   "WorkingDirectory=/var/lib/dc24h",
-                  "ExecStart=/usr/local/bin/dc24h-twilight "),
+                  "ExecStart=/usr/local/bin/dc24h "),
             "Guarded systemd migration example")
-    if "ExecStart=/usr/local/bin/dc24h " in hub:
-        raise ValueError("Twilight unit executes legacy binary")
     if read(root, "config/apache2-webadmin-https.conf.example").count("ServerName dc24h.eu") != 2:
         raise ValueError("Preserved infrastructure hostname changed")
     require(read(root, "config/dc24h.sysusers.example"),
@@ -120,20 +125,18 @@ def evaluate(root, sha, os_image):
 
     package = json.loads(read(root, "webadmin/package.json"))
     lock = json.loads(read(root, "webadmin/package-lock.json"))
-    if (package.get("name") != "dc24h-twilight-webadmin" or
+    if (package.get("name") != "dc24h-webadmin" or
             lock.get("name") != package["name"] or
             lock.get("packages", {}).get("", {}).get("name") != package["name"]):
-        raise ValueError("Twilight npm manifest and lock name diverged")
+        raise ValueError("WebAdmin npm manifest and lock name diverged")
     for workflow in WORKFLOWS:
         text = read(root, ".github/workflows/" + workflow)
-        if text.count("github.repository == '" + REPO + "'") != EXPECTED_TWILIGHT_GUARDS[workflow]:
-            raise ValueError("Hosted CI no longer permits only reviewed Twilight repo identity")
         guards = re.findall(r"github\.repository == '([^']+)'", text)
-        if any(name not in (REPO, OLD_REPO, "adrianf87/dc24h.eu") for name in guards):
-            raise ValueError("Unreviewed foreign repository activated in CI")
+        if guards != [REPO] * EXPECTED_REPOSITORY_GUARDS[workflow]:
+            raise ValueError("Hosted CI no longer selects the canonical repository")
 
     readme = read(root, "README.md")
-    require(readme, ("# " + BRAND, "derived from dc24h.eu High Starter",
+    require(readme, ("# " + BRAND, "High Starter v0.9.20-rc.1 pre-release",
                      "<summary>Beta</summary>", "<summary>Alpha</summary>",
                      "github.com/" + OLD_REPO),
             "Current branding plus historical source provenance")
@@ -141,7 +144,7 @@ def evaluate(root, sha, os_image):
     # MariaDB schema and public DNS are explicitly excluded from replacement.
     return {
         "schema": 1, "source_sha": sha, "os_image": os_image,
-        "stage": "twilight-stage-vi-static-preflight",
+        "stage": "dc24h-rebrand-static-preflight",
         "active_display_files_checked": len(ACTIVE_DISPLAY),
         "github_workflows_checked": len(WORKFLOWS),
         "active_branding_and_api_name_strict": True,

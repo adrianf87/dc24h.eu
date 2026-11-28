@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from "./branding.ts";
 import { parseDashboard } from "./dashboard.ts";
 import type { DashboardSnapshot } from "./dashboard.ts";
 import {parseMute} from "./mute.ts";
@@ -10,11 +11,14 @@ import { parseSearch } from "./search-status.ts";
 import type { SearchSnapshot } from "./search-status.ts";
 import { parseConfiguration } from "./configuration.ts";
 import type { StartupConfiguration } from "./configuration.ts";
+const PRODUCT_ID = "dc24h";
+const STATUS_API_VERSION = "v1";
 export const WEBADMIN_VERSION = "beta-0.9.20";
 export interface HubSnapshot {
-  api_version: "v1";
+  api_version: typeof STATUS_API_VERSION;
   server: {
-    name: "dc24h.eu-twilight";
+    product_id: typeof PRODUCT_ID;
+    name: typeof PRODUCT_NAME;
     version: string;
     core_running: boolean;
     uptime_seconds: number;
@@ -97,13 +101,17 @@ const counter = (value: unknown): number => {
     throw new Error("Invalid API counter");
   return value;
 };
+function hasStatusIdentity(root: Record<string, unknown>, server: Record<string, unknown>): boolean {
+  return root.api_version === STATUS_API_VERSION &&
+    server.product_id === PRODUCT_ID && server.name === PRODUCT_NAME;
+}
 export function parseRemoteSummary(value: unknown, receiptUnixMs = Date.now()): RemoteStatusProjection {
   const root = record(value);
   const server = record(root.server);
   const network = record(root.network);
   const users = record(root.users);
   const chat = record(root.chat);
-  if (root.api_version !== "v1" || server.name !== "dc24h.eu-twilight" ||
+  if (!hasStatusIdentity(root, server) ||
     typeof server.version !== "string" ||
     !/^(?:alpha-\d{1,3}\.\d{1,3}\.\d{1,3}|beta-\d{1,3}\.\d{1,3}(?:\.\d{1,3})?)$/.test(server.version) ||
     typeof server.core_running !== "boolean") throw new Error("Invalid remote status schema");
@@ -187,8 +195,7 @@ export function parseSnapshot(value: unknown): HubSnapshot {
     users = record(root.users),
     chat = record(root.chat);
   if (
-    root.api_version !== "v1" ||
-    server.name !== "dc24h.eu-twilight" ||
+    !hasStatusIdentity(root, server) ||
     typeof server.version !== "string" ||
     !/^(?:alpha-\d{1,3}\.\d{1,3}\.\d{1,3}|beta-\d{1,3}\.\d{1,3}(?:\.\d{1,3})?)$/.test(server.version) ||
     typeof server.core_running !== "boolean" ||
@@ -286,12 +293,13 @@ export function parseSnapshot(value: unknown): HubSnapshot {
   }
   // Normalize the allowlisted fields; never forward unknown data or credentials.
   return {
-    api_version: "v1",
+    api_version: STATUS_API_VERSION,
     ...(kick === undefined ? {} : { kick }),
     ...(mute === undefined ? {} : { mute }),
     ...(dashboard === undefined ? {} : { dashboard }),
     server: {
-      name: "dc24h.eu-twilight",
+      product_id: PRODUCT_ID,
+      name: PRODUCT_NAME,
       version: server.version,
       core_running: server.core_running,
       uptime_seconds: uptime,

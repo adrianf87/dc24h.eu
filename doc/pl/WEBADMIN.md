@@ -166,7 +166,7 @@ npm run build
 npm test
 npx playwright install --with-deps chromium
 npm run test:e2e
-npm run test:integration -- ../build/dc24h-twilight
+npm run test:integration -- ../build/dc24h
 ```
 
 Przy zainstalowanym Chromium można ustawić `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium`. Testy używają tymczasowych sekretów/gniazd. Jednostkowe sprawdzają schemat/precyzję, normalizację, pliki prywatne, Origin/Host/metody/ścieżki, wstrzykiwanie tokena, przeciążenie, rozmiary/czas i błędy bez szczegółów. Przeglądarkowe obejmują brak/dostępność/błędne/utracone dane, nawigację, trwałość języka, eksport i szerokość mobilną. Harness integracyjny uruchamia rzeczywisty tymczasowy C++, osobne Vite i Chromium; sprawdza liczniki ADC, izolację tokena, desktop/mobile PL i sprząta procesy. CTest/ncdc/MariaDB pozostają osobnymi zestawami.

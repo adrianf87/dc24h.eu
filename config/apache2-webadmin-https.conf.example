@@ -1,4 +1,4 @@
-# dc24h.eu-twilight — HTTPS example for static WebAdmin assets.
+# dc24h.eu — HTTPS example for static WebAdmin assets.
 # ServerName/redirect dc24h.eu are example deployment hostnames, not the product name.
 # Do not change DNS, certificates or origins as part of display-name rebranding.
 # Debian/Ubuntu: ports.conf owns Listen 80/443; do not duplicate those here.

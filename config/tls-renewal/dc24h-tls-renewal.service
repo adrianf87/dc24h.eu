@@ -1,0 +1,32 @@
+[Unit]
+Description=Renew and verify the approved dc24h ADCS and WebAdmin certificate
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 -I /usr/local/libexec/dc24h-tls/tls_renewal.py run
+ExecStopPost=/usr/bin/python3 -I /usr/local/libexec/dc24h-tls/tls_renewal.py recover
+TimeoutStartSec=10min
+TimeoutStopSec=90
+StateDirectory=dc24h-tls
+StateDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+SystemCallArchitectures=native
+CapabilityBoundingSet=CAP_CHOWN CAP_DAC_OVERRIDE CAP_DAC_READ_SEARCH CAP_FOWNER CAP_NET_BIND_SERVICE CAP_SETUID CAP_SETGID
+ReadWritePaths=/etc/dc24h-tls/served /etc/letsencrypt /var/lib/letsencrypt /var/log/letsencrypt

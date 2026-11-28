@@ -38,6 +38,10 @@ ARTIFACT_FILE = re.compile(r"[a-z][a-z0-9_.-]{1,95}\.json\Z")
 FORBIDDEN_FIELD = re.compile(r"(?:password|cookie|authorization|access_token|refresh_token|"
                              r"totp_secret|private_key|recovery_secret|raw_sql|raw_trace|"
                              r"actor_id|ip_address|credential_secret)\Z", re.I)
+PREFLIGHT_REPORTS = {
+    "twilight-stage6-preflight.json": ("twilight-stage-vi-static-preflight", 12, 5),
+    "dc24h-rebrand-preflight.json": ("dc24h-rebrand-static-preflight", 10, 6),
+}
 
 # Static, reviewable file inventory for the existing redacted upload folders.
 # A new producer must be reviewed before its output is accepted, not silently
@@ -59,9 +63,8 @@ COMMON = {
     # Optional for historical RC1 artifacts; required by the new Stage IV
     # hosted workflow's separate fail-closed migration gate.
     "twilight-stage4-name-migration.json", "twilight-stage4-migration-gate.json",
-    # Optional per-source-SHA Stage VI contract preflight on the C++ matrix;
-    # this explicit NO-GO report cannot authorize a release.
-    "twilight-stage6-preflight.json",
+    # Optional source preflights are qualified only as NO-GO reports.
+    *PREFLIGHT_REPORTS,
 }
 LEGACY_UNBOUND = {"loopback-probes.json", "disposable-db-cli-restore.json"}
 
@@ -114,7 +117,8 @@ def _no_sensitive_fields(value, depth=0):
 
 
 def _report_semantics(name, report):
-    if name == "twilight-stage6-preflight.json":
+    if name in PREFLIGHT_REPORTS:
+        stage, display_files, workflows = PREFLIGHT_REPORTS[name]
         true_fields = (
             "active_branding_and_api_name_strict", "passkey_origin_rpid_guards_present",
             "legacy_systemd_conflict_and_marker_present",
@@ -128,14 +132,14 @@ def _report_semantics(name, report):
             "release_tag_or_production_deployment_authorized",
         )
         if (report.get("schema") != 1 or
-                report.get("stage") != "twilight-stage-vi-static-preflight" or
+                report.get("stage") != stage or
                 report.get("status") != "NO-GO" or
                 report.get("os_image") not in ("ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04") or
-                report.get("active_display_files_checked") != 12 or
-                report.get("github_workflows_checked") != 5 or
+                report.get("active_display_files_checked") != display_files or
+                report.get("github_workflows_checked") != workflows or
                 not all(report.get(key) is True for key in true_fields) or
                 not all(report.get(key) is False for key in false_fields)):
-            raise ValueError("Stage VI source preflight is not strict, bounded NO-GO evidence")
+            raise ValueError("Source preflight is not strict, bounded NO-GO evidence")
     if name == "twilight-stage4-name-migration.json":
         required = ("actual_two_distinct_package_names", "clean_old_name_install",
                     "new_name_refused_without_explicit_old_purge",

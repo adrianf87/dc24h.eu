@@ -63,7 +63,7 @@ inline constexpr std::array<std::string_view, 189> messages{{
     "Niepoprawna wiadomość powitalna czatu",
     "Niepoprawne limity anti-flood czatu",
     "Użytkownicy zakończeni; online=",
-    "Uruchamianie dc24h.eu-twilight ",
+    "Uruchamianie dc24h.eu ",
     "Core działa",
     "Zatrzymywanie Core",
     "Core zatrzymany po błędzie sieci",
@@ -79,7 +79,7 @@ inline constexpr std::array<std::string_view, 189> messages{{
     "Limit zasobów TCP epoll; ponowienie za sekundę",
     "Błąd nasłuchu TCP",
     "Nieprawidłowe argumenty: ",
-    ". Użyj dc24h-twilight --language pl --help.\n",
+    ". Użyj dc24h --language pl --help.\n",
     "Nieznany język (użyj us lub pl)",
     "Nieznana opcja",
     "Brak wartości opcji",
@@ -200,7 +200,7 @@ inline constexpr std::array<std::string_view, 189> messages{{
     "Nieprawidłowe limity użytkowników/sesji",
     "Osiągnięto limit sesji użytkowników; nadmiarowy klient odrzucony",
 }};
-inline constexpr std::string_view help = R"HELP(Użycie: dc24h-twilight [--config PLIK] [--check-config | --check-database | --database-status | --migrate-database | --backup-database PLIK | --restore-database PLIK]
+inline constexpr std::string_view help = R"HELP(Użycie: dc24h [--config PLIK] [--check-config | --check-database | --database-status | --migrate-database | --backup-database PLIK | --restore-database PLIK]
               [--listen IPv4:port | [IPv6]:port | none] ...
               [--adcs-listen IPv4:port | [IPv6]:port | none] ...
               [--tls-cert ŁAŃCUCH.pem --tls-key KLUCZ.pem]
@@ -210,7 +210,7 @@ inline constexpr std::string_view help = R"HELP(Użycie: dc24h-twilight [--confi
              [--max-per-ip N] [--accepts-per-minute N]
              [--frames-per-second N] [--max-invalid-frames N]
              [--tls-handshake-timeout SECONDS] [--partial-frame-timeout SECONDS]
-        dc24h-twilight [--language us|pl] --help | --version
+        dc24h [--language us|pl] --help | --version
 Kolejność: ustawienia domyślne, opcjonalny plik INI, nadpisania z CLI.
 Ścieżki INI są względne do katalogu pliku; ścieżki CLI do katalogu roboczego.
 Pierwszy jawny nasłuch usuwa domyślny TCP; listy CLI zastępują dany transport.
@@ -218,7 +218,7 @@ ADCS wymaga zgodnego łańcucha PEM i klucza; TLS >=1.2. Łącznie do 16 nasłuc
 --check-config sprawdza ustawienia/TLS bez zajmowania portów i tworzenia logu.
 Domyślnie: 127.0.0.1:1511, 1024 połączenia, 120 sekund bezczynności, info na stderr, us.
 Limity: 1..65535 połączeń; 1..86400 sekund bezczynności.
-Program dc24h.eu-twilight działa na pierwszym planie; stop przez SIGINT (Ctrl+C) lub SIGTERM.
+Program dc24h.eu działa na pierwszym planie; stop przez SIGINT (Ctrl+C) lub SIGTERM.
 Limity użytkowników/sesji: 1..65535, domyślnie 65535; obowiązuje też limit połączeń.
 Domyślne limity: 128 klientów/IP, 256 przyjęć/IP/minutę, 1024 ramki/s/klienta,
 512 błędnych ramek/klienta, 10 sekund dla TLS i niedokończonej ramki.

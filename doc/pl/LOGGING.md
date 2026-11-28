@@ -27,7 +27,7 @@ connections = off
 ```
 
 ```sh
-./build/dc24h-twilight --config config/dc24h.ini.example \
+./build/dc24h --config config/dc24h.ini.example \
   --log-level info --log-file /var/log/dc24h/hub.log --log-connections on --language pl
 ```
 

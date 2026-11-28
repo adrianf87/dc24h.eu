@@ -1,14 +1,19 @@
-# dc24h.eu-twilight
+# dc24h.eu
 
-Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
+Direct Connect hub for the ADC and ADCS network protocols. ADCS runs ADC over TLS.
 
-**Current code version: beta-0.9.20.** This independent Twilight development repository starts from the [High Starter v0.9.20-rc.1 pre-release](https://github.com/adrianf87/dc24h.eu-high-starter/releases/tag/v0.9.20-rc.1). Its five beta-0.9.x Fix Passes and original RC1 OWNER acceptance were completed **in High Starter**, not as a new Twilight release. Twilight rebranding Stages I–IV are merged; [Stage V documentation and Stage VI qualification are under review in Draft PR #9](https://github.com/adrianf87/dc24h.eu-twilight/pull/9). No Twilight release or production GO has been approved.
+**Current code version: beta-0.9.20.** The project traces back to the [High Starter v0.9.20-rc.1 pre-release](https://github.com/adrianf87/dc24h.eu-high-starter/releases/tag/v0.9.20-rc.1) and the subsequent Twilight development work. Each acceptance record applies to its original source revision. Release and production activation require Owner approval.
 
-> Twilight is an independent development repository derived from dc24h.eu High Starter. Historical issue/PR links below refer to the original project. They are preserved as source provenance, **not** as current Twilight PR/CI status. [Rebranding Issue #1](https://github.com/adrianf87/dc24h.eu-twilight/issues/1) · [Stage V/EN](doc/us/TWILIGHT_STAGE_V.md) · [Stage V/PL](doc/pl/TWILIGHT_STAGE_V.md).
+- **Hub** — C++20, OpenSSL, and MariaDB for persistent account data.
+- **WebAdmin** — React and TypeScript with Vite tooling, backed by a loopback Node.js/TypeScript gateway and Apache2 HTTPS.
+- **Ubuntu targets** — 22.04 LTS, 24.04 LTS, and 26.04 LTS, with GitHub-hosted CI on each version. Debian 13 deployment history is documented separately.
+- **TLS operations** — Certbot and systemd for the approved Ubuntu deployment. [Operator guide (EN)](doc/us/TLS_AUTO_RENEWAL.md) · [PL](doc/pl/TLS_AUTO_RENEWAL.md)
 
-[![Twilight Check status on main](https://github.com/adrianf87/dc24h.eu-twilight/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/adrianf87/dc24h.eu-twilight/actions/workflows/build.yml)
+[Issue #36](https://github.com/adrianf87/dc24h.eu/issues/36) tracks the dc24h.eu rename. The [systemd and WebAdmin migration guide](doc/us/REBRAND_MIGRATION.md) · [PL](doc/pl/REBRAND_MIGRATION.md) covers service-name collisions, coordinated upgrade, and rollback. The [Twilight rebrand issue](https://github.com/adrianf87/dc24h.eu-twilight/issues/1) and its [Stage V records](doc/us/TWILIGHT_STAGE_V.md) document the earlier transition.
 
-**Current Twilight CI:** [All GitHub Actions](https://github.com/adrianf87/dc24h.eu-twilight/actions) · [C++/WebAdmin](https://github.com/adrianf87/dc24h.eu-twilight/actions/workflows/build.yml) · [CodeQL](https://github.com/adrianf87/dc24h.eu-twilight/actions/workflows/beta07-codeql.yml) · [TSAN/fuzz](https://github.com/adrianf87/dc24h.eu-twilight/actions/workflows/beta08-hardening.yml) · [storage/fault](https://github.com/adrianf87/dc24h.eu-twilight/actions/workflows/beta09-stage4-storage.yml) · [Ubuntu VM/systemd](https://github.com/adrianf87/dc24h.eu-twilight/actions/workflows/stage4-ubuntu-vm-validation.yml). A `main` badge does not qualify a Draft PR's final SHA.
+[![dc24h.eu Check status on main](https://github.com/adrianf87/dc24h.eu/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/adrianf87/dc24h.eu/actions/workflows/build.yml)
+
+**Current CI:** [All GitHub Actions](https://github.com/adrianf87/dc24h.eu/actions) · [C++/WebAdmin](https://github.com/adrianf87/dc24h.eu/actions/workflows/build.yml) · [CodeQL](https://github.com/adrianf87/dc24h.eu/actions/workflows/beta07-codeql.yml) · [TSAN/fuzz](https://github.com/adrianf87/dc24h.eu/actions/workflows/beta08-hardening.yml) · [storage/fault](https://github.com/adrianf87/dc24h.eu/actions/workflows/beta09-stage4-storage.yml) · [Ubuntu VM/systemd](https://github.com/adrianf87/dc24h.eu/actions/workflows/stage4-ubuntu-vm-validation.yml). A `main` badge does not qualify a Draft PR's final SHA.
 
 **CI execution (Stage IV branch):** GitHub-hosted Ubuntu 22.04, 24.04 and 26.04 test runners. The `self-hosted-runner/` directory and five-distro Docker CI have been removed from this branch. The Debian 13 public ADCS VPS remains an external service, never a CI executor; GitHub-hosted `sudo` affects only disposable Ubuntu VMs. Owner-gated public Stage III probes remain on Ubuntu 22.04. No production operating-system migration is implied.
 
@@ -79,7 +84,7 @@ Direct Connect Hub server implemented in C++20 for Linux (Debian and Ubuntu).
 
 </details>
 
-CI on the Stage IV branch: [Twilight GitHub-hosted Ubuntu 22.04/24.04/26.04](https://github.com/adrianf87/dc24h.eu-twilight/actions) runs C++, WebAdmin, Playwright, ASan/UBSan, CodeQL and security/VM workflows. `main` retains its own configuration until this branch is merged. [EN/US guide](doc/us/GITHUB_CI.md) · [PL](doc/pl/GITHUB_CI.md). Historical High Starter runs cannot certify a new Twilight SHA.
+GitHub-hosted Ubuntu 22.04, 24.04, and 26.04 run C++, WebAdmin, Playwright, ASan/UBSan, CodeQL, and security workflows. [CI guide (EN)](doc/us/GITHUB_CI.md) · [PL](doc/pl/GITHUB_CI.md).
 
 Historical High Starter development increments (the old bullets describe their then-current delivery scope; older draft/CI notices are **not** Twilight's current status):
 
@@ -371,17 +376,17 @@ sudo apt-get install build-essential cmake libutf8proc-dev libgcrypt20-dev libss
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel 2
 ctest --test-dir build --output-on-failure
-./build/dc24h-twilight --version
+./build/dc24h --version
 ```
 
 ## Run
 
 ```sh
 # Guest ADC hub on loopback:
-./build/dc24h-twilight --listen 127.0.0.1:1511
+./build/dc24h --listen 127.0.0.1:1511
 
 # TLS only (replace credentials with your own):
-./build/dc24h-twilight --adcs-listen 127.0.0.1:1512 \
+./build/dc24h --adcs-listen 127.0.0.1:1512 \
   --tls-cert /etc/dc24h/tls/fullchain.pem \
   --tls-key /etc/dc24h/tls/privkey.pem
 ```
@@ -400,8 +405,8 @@ License: [GPL-3.0](LICENSE).
 
 ```sh
 cp config/dc24h.ini.example config/dc24h.ini
-./build/dc24h-twilight --config config/dc24h.ini --check-config
-./build/dc24h-twilight --config config/dc24h.ini --max-connections 512
+./build/dc24h --config config/dc24h.ini --check-config
+./build/dc24h --config config/dc24h.ini --max-connections 512
 ```
 
 Defaults, then explicit INI, then CLI. No file is loaded automatically. INI paths use its directory; CLI paths use the working directory. Use `--log-level info|warning|error|off` and `--log-file PATH` (or `-` for stderr). See [configuration](doc/us/CONFIGURATION.md) for complete precedence, format, limits and logging constraints.

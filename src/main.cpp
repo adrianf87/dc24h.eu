@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
     } catch (const std::exception& error) {
         std::cerr << dc24h::i18n::translate("Invalid arguments: ", language)
                   << dc24h::i18n::translate(error.what(), language)
-                  << dc24h::i18n::translate(". Use dc24h-twilight --help.\n", language);
+                  << dc24h::i18n::translate(". Use dc24h --help.\n", language);
         return 2;
     }
 
@@ -59,12 +59,15 @@ int main(int argc, char* argv[]) {
         return EXIT_SUCCESS;
     }
     if (parsed.show_version) {
-        std::cout << "dc24h.eu-twilight " << dc24h::version << '\n';
+        std::cout << "dc24h.eu " << dc24h::version << '\n';
         return EXIT_SUCCESS;
     }
     if (parsed.show_configuration) {
         std::cout << dc24h::api::configuration_json(dc24h::configuration::public_settings(parsed.settings)) << '\n';
         return EXIT_SUCCESS;
+    }
+    if (const auto* hostname = std::getenv("DC24H_TLS_RELOAD_HOSTNAME")) {
+        parsed.settings.network.tls_reload_hostname = hostname;
     }
     if (parsed.check_only) {
         try {
@@ -73,7 +76,8 @@ int main(int argc, char* argv[]) {
             }
             if (!parsed.settings.network.tls_listeners.empty()) {
                 const dc24h::adcs::Context context(parsed.settings.network.tls_certificate,
-                                                   parsed.settings.network.tls_private_key);
+                                                   parsed.settings.network.tls_private_key,
+                                                   parsed.settings.network.tls_reload_hostname);
             }
             std::cout << dc24h::i18n::translate("Configuration OK (network ports not bound; log file not opened)\n", language);
             return EXIT_SUCCESS;
@@ -120,7 +124,7 @@ int main(int argc, char* argv[]) {
         const dc24h::core::TerminationSignals signals;
         dc24h::logging::Logger logger(parsed.settings.logging);
         try {
-            logger.info(std::string("Starting dc24h.eu-twilight ") + std::string(dc24h::version));
+            logger.info(std::string("Starting dc24h.eu ") + std::string(dc24h::version));
             logger.info("Startup settings: adc_listeners=" + std::to_string(parsed.settings.network.listeners.size()) +
                     " adcs_listeners=" + std::to_string(parsed.settings.network.tls_listeners.size()) +
                     " max_connections=" + std::to_string(parsed.settings.network.max_connections) +
@@ -160,7 +164,14 @@ int main(int argc, char* argv[]) {
             // Capture owning startup policy before Options moves its strings.
             const auto public_settings = dc24h::configuration::public_settings(parsed.settings);
             const auto transfer_settings = parsed.settings.network.transfers;
+            dc24h::api::TlsReload tls_reload;
+            if (!parsed.settings.network.tls_listeners.empty() && !parsed.settings.network.tls_reload_hostname.empty()) {
+                tls_reload.hostname = parsed.settings.network.tls_reload_hostname;
+                tls_reload.certificate_chain = parsed.settings.network.tls_certificate;
+                tls_reload.private_key = parsed.settings.network.tls_private_key;
+            }
             dc24h::network::TcpServer network(logger, std::move(parsed.settings.network));
+            if (!tls_reload.hostname.empty()) { tls_reload.apply = [&network] { return network.reload_tls(); }; }
             dc24h::core::Server server(logger, &network);
             std::atomic<bool> signal_error{false};
             const auto started = std::chrono::steady_clock::now();
@@ -223,7 +234,7 @@ int main(int argc, char* argv[]) {
                 database && stage4_private_auth
                     ? dc24h::api::public_account_access_handler(parsed.settings.database)
                     : dc24h::api::AccountHandler{},
-                [&] { return network.presence(); });
+                [&] { return network.presence(); }, std::move(tls_reload));
                 api->start();
             }
 

@@ -2,6 +2,7 @@ import { createHmac, randomBytes, randomInt, timingSafeEqual } from "node:crypto
 
 /** Private password + email-code exchange. No account can select its own recipient. */
 export const PUBLIC_WEBADMIN_ORIGIN = "https://server-747585786.dc24h.eu:7278";
+export const UBUNTU_WEBADMIN_ORIGIN = "https://server-747585786.dc24h.eu:7178";
 export const PUBLIC_WEBADMIN_PORT = 7278;
 export type PublicAdminRole = "owner" | "administrator";
 export type PublicPasswordGrant = { actor: string; role: PublicAdminRole };

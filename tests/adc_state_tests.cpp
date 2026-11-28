@@ -46,7 +46,7 @@ void normal(ConnectionStateMachine& machine) {
 void guest_and_password() {
     ConnectionStateMachine guest;
     identify(guest);
-    accept(guest, out, "IINF CT32 NIdc24h.eu-twilight");
+    accept(guest, out, "IINF CT32 NIdc24h.eu");
     reject(guest, out, "BINF ABCD NIalice", StateError::invalid_sequence);
     require(guest.approve_identity(IdentityMode::guest) == StateError::invalid_sequence,
             "Cannot approve without INF");

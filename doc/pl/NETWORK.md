@@ -83,9 +83,9 @@ Domyślny nasłuch: **127.0.0.1:1511**, limit 1024 aktywnych połączeń,
 timeout bezczynności 120 sekund. Zmiana adresu i portu wymaga jawnej opcji CLI.
 
 ```sh
-./build/dc24h-twilight --listen 127.0.0.1:1511 --listen '[::1]:1512' \
+./build/dc24h --listen 127.0.0.1:1511 --listen '[::1]:1512' \
   --max-connections 512 --idle-timeout 60
-./build/dc24h-twilight --listen 127.0.0.1:0
+./build/dc24h --listen 127.0.0.1:0
 ```
 
 Można wskazać do 16 listenerów. Pierwsze `--listen` lub `--adcs-listen` zastępuje domyślny

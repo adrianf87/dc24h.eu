@@ -50,7 +50,7 @@ HISTORICAL_STATUS_BLOB = "7bd1abc9c38d8f9f62f990fa0aec12c6f992bfab"
 def rollback_gateway_fixture(historical_checkout, directory):
     """Pair the installed old C++ maintenance binary with its *old* status contract.
 
-    The production WebAdmin remains strict about dc24h.eu-twilight. Replacing
+    The current WebAdmin requires the canonical name and product ID. Replacing
     only the status parser in a disposable copy lets the historical C++ binary
     exercise real authentication, browser passkeys and matched recovery without
     claiming mixed-version deployment compatibility.

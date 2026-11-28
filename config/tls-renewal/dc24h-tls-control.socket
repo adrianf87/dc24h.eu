@@ -1,0 +1,14 @@
+[Unit]
+Description=Private dc24h TLS renewal control socket
+
+[Socket]
+ListenStream=/run/dc24h-tls-control.sock
+Accept=yes
+SocketUser=root
+SocketGroup=dc24h-stage3
+SocketMode=0660
+RemoveOnStop=true
+MaxConnections=4
+
+[Install]
+WantedBy=sockets.target

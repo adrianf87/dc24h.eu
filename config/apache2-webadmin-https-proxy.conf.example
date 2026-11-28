@@ -1,4 +1,4 @@
-# dc24h.eu-twilight — HTTPS reverse proxy for the loopback WebAdmin adapter.
+# dc24h.eu — HTTPS reverse proxy for the loopback WebAdmin adapter.
 # ServerName/redirect/Origin dc24h.eu remain deployment identity, not branding.
 # Any hostname, DNS, TLS or Origin change needs a separate OWNER decision.
 # Debian/Ubuntu: ports.conf owns Listen 80/443; do not duplicate those here.

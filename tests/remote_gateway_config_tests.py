@@ -65,7 +65,7 @@ class RemoteConfiguration(unittest.TestCase):
         self.assertIn('Permissions-Policy "camera=()', config)
 
     def test_systemd_sample_rejects_nonlocal_traffic(self):
-        unit = self.text("config/dc24h-twilight-remote-gateway.service.example")
+        unit = self.text("config/dc24h-remote-gateway.service.example")
         for expected in ("DC24H_REMOTE_ORIGIN=https://localhost:8443",
                          "DC24H_REMOTE_PORT=4182", "IPAddressDeny=any",
                          "StateDirectory=dc24h-remote", "StateDirectoryMode=0700",

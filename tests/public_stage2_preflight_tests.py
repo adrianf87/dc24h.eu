@@ -22,7 +22,7 @@ def good_report():
         "host": {"os_id": "debian", "os_major": "13",
                  "systemd_pid1": True, "systemd_manager": True,
                  "elevated_inventory": True},
-        "services": {name: {"active": "inactive"} for name in preflight.SERVICES},
+        "services": {name: {"load": "not-found", "active": "inactive"} for name in preflight.SERVICES},
         "processes": {name: 0 for name in preflight.HUB_PROCESSES},
         "paths": {name: {"type": "missing"} for name in preflight.STABLE_PATHS},
         "tools": {name: True for name in preflight.REQUIRED_TOOLS},
@@ -81,6 +81,13 @@ class PublicStage2PreflightTests(unittest.TestCase):
                 result = preflight.assess(report)
                 self.assertIn("LIVE_HUB_SERVICE_PRESENT:" + name, result["findings"])
                 self.assertEqual(result["preflight"], "BLOCKED")
+
+    def test_stopped_legacy_unit_at_target_name_blocks_install(self):
+        report = good_report()
+        report["services"]["dc24h.service"]["load"] = "loaded"
+        result = preflight.assess(report)
+        self.assertIn("TARGET_UNIT_NAME_IN_USE:dc24h.service", result["findings"])
+        self.assertEqual(result["preflight"], "BLOCKED")
 
     def test_unknown_service_or_existing_process_blocks_inventory(self):
         report = good_report()

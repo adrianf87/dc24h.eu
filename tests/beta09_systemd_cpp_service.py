@@ -49,7 +49,7 @@ def rehearse(installed_admin, config, database_directory):
     installed_admin = Path(installed_admin).resolve(strict=True)
     config = Path(config).resolve(strict=True)
     directory = Path(database_directory).resolve(strict=True)
-    if not str(installed_admin).startswith("/usr/lib/dc24h-twilight-ci-fixture/"):
+    if not str(installed_admin).startswith("/usr/lib/dc24h-ci-fixture/"):
         raise AssertionError("C++ transient unit requires an installed CI package binary")
     if not directory.is_dir() or not config.is_file():
         raise AssertionError("Fresh isolated database and private config required")

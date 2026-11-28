@@ -91,6 +91,15 @@ class BridgeTests(unittest.TestCase):
         finally:
             conn.close()
 
+    def test_tls_bridge_only_forwards_the_account_service_contract(self):
+        form = {"Content-Type": "application/x-www-form-urlencoded"}
+        self.assertEqual(self.call("POST", "/api/v1/stage4/tls/renewal", form, b"operation=status")[0], 200)
+        self.assertEqual(self.call("POST", "/api/v1/tls/reload", form, b"operation=status")[0], 404)
+        self.assertEqual(self.call("POST", "/api/v1/stage4/tls/renewal/check", form, b"operation=status")[0], 404)
+        self.assertEqual(self.call("GET", "/api/v1/stage4/tls/renewal")[0], 404)
+        self.assertEqual([(method, path) for method, path, _ in Upstream.seen],
+                         [("POST", "/api/v1/stage4/tls/renewal")])
+
     def test_allowlist_real_peer_and_hidden_hub_bearer(self):
         self.assertEqual(self.bridge_socket.stat().st_mode & 0o777, 0o660)
         status, result = self.call("POST", "/api/v1/admin/access",

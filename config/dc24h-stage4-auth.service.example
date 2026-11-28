@@ -1,23 +1,24 @@
-# Bridge runs with the hub UID and the WebAdmin GID. It forwards three fixed
-# private C++ routes after checking SO_PEERCRED against dc24h-webadmin.
 [Unit]
-Description=dc24h Stage IV restricted local C++ auth bridge (Unix only)
-After=dc24h-twilight-stage4-auth.service
-Requires=dc24h-twilight-stage4-auth.service
+Description=Stage IV C++ authoritative account service (private Unix API)
+Conflicts=dc24h-twilight-stage4-auth.service
+After=dc24h-twilight-stage4-auth.service mariadb.service
+Requires=mariadb.service
 StartLimitIntervalSec=60
 StartLimitBurst=5
 
 [Service]
-Type=simple
+Type=exec
 User=dc24h-stage3
-Group=dc24h-webadmin
+Group=dc24h-stage3
 WorkingDirectory=/opt/dc24h
-RuntimeDirectory=dc24h-stage4-bridge
-RuntimeDirectoryMode=0750
-UMask=0077
-ExecStart=/usr/bin/python3 -B /opt/dc24h/scripts/stage4_webadmin_bridge.py
+RuntimeDirectory=dc24h-stage4-auth
+RuntimeDirectoryMode=0700
+StateDirectory=dc24h-stage4-auth
+StateDirectoryMode=0700
+ExecStart=/opt/dc24h/bin/dc24h-account-admin --config /var/lib/dc24h-stage4-auth/auth.ini --stage4-serving
 Restart=on-failure
-RestartSec=5
+RestartSec=3
+UMask=0077
 NoNewPrivileges=true
 PrivateTmp=true
 PrivateDevices=true

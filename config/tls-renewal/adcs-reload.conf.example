@@ -1,0 +1,8 @@
+# Install as a drop-in for dc24h-stage3-adcs.service after provisioning
+# the managed TLS bundle and enabling the hub's private Unix API.
+[Service]
+RuntimeDirectory=dc24h-stage3-api
+RuntimeDirectoryMode=0700
+EnvironmentFile=/etc/dc24h-tls/hub.env
+ExecReload=
+ExecReload=/usr/bin/python3 -I /opt/dc24h/scripts/stage4_webadmin_bridge.py tls-reload

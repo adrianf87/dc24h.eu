@@ -15,7 +15,7 @@ const areas=[
   {key:"configuration",permission:"configuration.manage",allowed:true,implemented:false},
   {key:"hub",permission:"hub.manage",allowed:true,implemented:true},
 ];
-const systemd=(active:boolean)=>({schema:1,available:true,unit:"dc24h-twilight.service",load_state:"loaded",
+const systemd=(active:boolean)=>({schema:1,available:true,unit:"dc24h.service",load_state:"loaded",
   active_state:active?"active":"inactive",sub_state:active?"running":"dead",result:"success"});
 
 test("Owner sees status, confirms Stop, and observes verified state and audit link",async({page})=>{

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { tlsStatus } from "./tls-renewal-fixture.ts";
 
 test("OTP-authenticated Owner sees actual read-only C++ account statistics in React", async ({ page }) => {
   let authenticated = true;
@@ -203,4 +204,56 @@ test("registration requires mailbox proof and a separate fresh login", async ({ 
   await page.getByRole("button", { name: "Potwierdź kod" }).click();
   await expect(page.locator("#role")).toHaveText("Zarejestrowany");
   await expect(page.locator("#refresh")).toBeHidden();
+});
+
+test("the TLS panel displays the timer result and only Owners can change it", async ({ page }) => {
+  let role = "owner";
+  let confirmed = false;
+  let requested = 0;
+  await page.route("**/stage4/v1/**", async route => {
+    const request = route.request();
+    const endpoint = new URL(request.url()).pathname;
+    let status = 200;
+    let payload: unknown;
+    if (endpoint.endsWith("/session")) {
+      payload = { schema: 1, authenticated: true, role, csrf: "a".repeat(64) };
+    } else if (endpoint.endsWith("/tls/renewal") || endpoint.endsWith("/tls/renewal/check")) {
+      if (endpoint.endsWith("/tls/renewal") && request.method() === "POST") {
+        expect(request.headers()["x-dc24h-stage4-csrf"]).toBe("a".repeat(64));
+        expect(request.postDataJSON()).toEqual({ enabled: true, password: "Synthetic UI password" });
+        requested++;
+      }
+      payload = { schema: 1, data: { ...tlsStatus,
+        schedule: confirmed ? "active" : "disabled", enabled: confirmed,
+        next_check: confirmed ? 1795500100 : null, request_error: requested === 1 ? "http01_unavailable" : null } };
+    } else {
+      status = 404;
+      payload = { error: "not_found" };
+    }
+    await route.fulfill({ status, json: payload });
+  });
+  await page.goto("/public-stage4/index.html");
+  await page.getByRole("button", { name: "Ustawienia", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Certyfikaty TLS" })).toBeVisible();
+  await expect(page.getByText("tls.test", { exact: true })).toBeVisible();
+  const setting = page.getByLabel("Automatyczne odnawianie certyfikatu");
+  const password = page.getByLabel("Twoje aktualne hasło");
+  await expect(setting).toHaveValue("off");
+  await setting.selectOption("on");
+  await password.fill("Synthetic UI password");
+  await page.getByRole("button", { name: "Zastosuj ustawienie odnawiania" }).click();
+  await expect(page.getByText("Zatwierdzony adres HTTP-01 lub port 80 jest niedostępny.")).toBeVisible();
+  await expect(setting).toHaveValue("off");
+  await expect(password).toHaveValue("");
+  confirmed = true;
+  await setting.selectOption("on");
+  await password.fill("Synthetic UI password");
+  await page.getByRole("button", { name: "Zastosuj ustawienie odnawiania" }).click();
+  await expect(setting).toHaveValue("on");
+  await expect(page.getByText("Zatwierdzony adres HTTP-01 lub port 80 jest niedostępny.")).toHaveCount(0);
+  role = "administrator";
+  await page.reload();
+  await page.getByRole("button", { name: "Ustawienia", exact: true }).click();
+  await expect(page.getByText("tls.test", { exact: true })).toBeVisible();
+  await expect(setting).toHaveCount(0);
 });

@@ -22,7 +22,7 @@ class BetaReleaseGate(unittest.TestCase):
         self.assertIn(f'WEBADMIN_VERSION = "{VERSION}"', source("webadmin/src/lib/status.ts"))
         self.assertIn(f'version: "{VERSION}"', source("webadmin/tests/fixtures.ts"))
         self.assertIn(f"Current code version: {VERSION}", source("README.md"))
-        self.assertIn("No Twilight release or production GO", source("README.md"))
+        self.assertIn("Release and production activation require Owner approval", source("README.md"))
         self.assertIn("High Starter v0.9.20-rc.1 pre-release", source("README.md"))
         cmake = source("CMakeLists.txt")
         for check in ("beta.baseline", "remote.gateway.config", "remote.pilot.preflight",

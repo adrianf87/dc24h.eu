@@ -53,7 +53,7 @@ class UserListProcessTests(unittest.TestCase):
                         self.assertNotIn(b' PD', line)
                         self.assertNotIn(b' XX', line)
                         own_count += line.startswith(b'BINF ' + client.sid + b' ')
-                    self.assertTrue(client.line().startswith(b'IMSG Welcome\\sto\\sdc24h.eu-twilight.'))
+                    self.assertTrue(client.line().startswith(b'IMSG Welcome\\sto\\sdc24h.eu.'))
                 for _ in range(2):
                     apply(views[0], watcher.line())
                 peers = (watcher, first, second)

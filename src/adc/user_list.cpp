@@ -37,7 +37,7 @@ UserListResult UserList::prepare(users::SessionId joining, const ClientSession& 
     Message welcome{MessageType::info, "INF", Command::inf, {}, {}, {}, {}, {}};
     welcome.parameters.reserve(3);
     welcome.parameters.emplace_back("CT32");
-    welcome.parameters.emplace_back("NIdc24h.eu-twilight");
+    welcome.parameters.emplace_back("NIdc24h.eu");
     welcome.parameters.emplace_back("DEDirect Connect hub");
     if (!append(std::move(welcome))) { return UserListError::output_limit; }
     std::uint64_t after = 0;

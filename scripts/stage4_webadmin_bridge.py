@@ -7,6 +7,7 @@ The existing C++ API retains its same-UID, mode-0600 security boundary.
 """
 
 import http.client
+import json
 import os
 from pathlib import Path
 import pwd
@@ -15,6 +16,7 @@ import socket
 import socketserver
 import stat
 import struct
+import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler
@@ -33,6 +35,7 @@ LIVE_ROUTES = {
 }
 ROUTES = {("POST", "/api/v1/admin/access"),
           ("POST", "/api/v1/stage4/admin"),
+          ("POST", "/api/v1/stage4/tls/renewal"),
           ("GET", "/api/v1/management"),
           ("GET", "/api/v1/status"),
           ("GET", "/api/v1/stage4/identity-summary")}
@@ -65,8 +68,42 @@ def checked_hub_credentials(socket_path: Path, token_path: Path, uid: int) -> st
 class HubConnection(http.client.HTTPConnection):
     def connect(self):
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self.sock.settimeout(4)
+        self.sock.settimeout(self.timeout)
         self.sock.connect(self.host)
+
+
+def serving_tls(method, socket_path=LIVE_SOCKET, token_path=LIVE_TOKEN):
+    token = checked_hub_credentials(socket_path, token_path, os.geteuid())
+    upstream = HubConnection(str(socket_path), timeout=2)
+    try:
+        upstream.request(method, "/api/v1/tls/reload", headers={
+            "Host": "localhost", "Authorization": "Bearer " + token, "Connection": "close",
+        })
+        response = upstream.getresponse()
+        body = response.read(4097)
+        if response.status != 200 or len(body) > 4096:
+            raise ValueError("TLS reload unavailable")
+        return json.loads(body)
+    finally:
+        upstream.close()
+
+
+def tls_reload(mode):
+    managed = "/etc/dc24h-tls/served/current/"
+    try:
+        if os.geteuid() == 0 or os.geteuid() != pwd.getpwnam("dc24h-stage3").pw_uid:
+            raise ValueError("Invalid reload identity")
+        hostname = os.environ["DC24H_TLS_RELOAD_HOSTNAME"]
+        status = serving_tls("GET")
+        if status != {"schema": 1, "hostname": hostname, "certificate_chain": managed + "fullchain.pem",
+                      "private_key_path": managed + "privkey.pem"}:
+            raise ValueError("Unmanaged TLS listener")
+        if mode == "tls-reload" and serving_tls("POST") != {"status": "reloaded"}:
+            raise ValueError("TLS reload refused")
+        return 0
+    except (OSError, ValueError, KeyError, http.client.HTTPException):
+        print("dc24h ADCS TLS reload unavailable or refused", file=sys.stderr)
+        return 1
 
 
 class BridgeHandler(BaseHTTPRequestHandler):
@@ -138,7 +175,8 @@ class BridgeHandler(BaseHTTPRequestHandler):
         if body is not None:
             headers["Content-Type"] = "application/x-www-form-urlencoded"
             headers["Content-Length"] = str(len(body))
-        upstream = HubConnection(str(socket_path), timeout=4)
+        timeout = 21 if self.path == "/api/v1/stage4/tls/renewal" else 4
+        upstream = HubConnection(str(socket_path), timeout=timeout)
         try:
             upstream.request(self.command, live_path or self.path, body=body, headers=headers)
             response = upstream.getresponse()
@@ -211,4 +249,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) == 1:
+        main()
+    elif sys.argv[1:] in (["tls-probe"], ["tls-reload"]):
+        raise SystemExit(tls_reload(sys.argv[1]))
+    else:
+        raise SystemExit(2)

@@ -93,14 +93,14 @@ def main() -> int:
     else:
         checks["webadmin_node24"] = "NOT_CONFIGURED"
     checks["webadmin_bridge"] = (
-        "PASS" if command("systemctl", "is-active", "dc24h-twilight-stage4-bridge.service") == "active"
+        "PASS" if command("systemctl", "is-active", "dc24h-stage4-bridge.service") == "active"
         else "DISABLED"
     )
 
     if shutil.which("systemctl"):
         state = command("systemctl", "is-active", "dc24h-stage3-adcs.service")
         if state is None:
-            state = command("systemctl", "is-active", "dc24h-twilight.service")
+            state = command("systemctl", "is-active", "dc24h.service")
         checks["hub_service"] = "PASS" if state == "active" else "UNVERIFIED"
     if shutil.which("apache2ctl"):
         outcome = command("apache2ctl", "configtest")

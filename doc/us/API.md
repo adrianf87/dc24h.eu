@@ -1,5 +1,7 @@
 # Local administrative API — alpha-0.1.9
 
+The private status response requires `api_version: "v1"`, `server.product_id: "dc24h"`, and `server.name: "dc24h.eu"`. `server.version` reports the software version. New WebAdmin status consumers reject Twilight and High Starter responses. Upgrade or roll back the hub and WebAdmin together. See [migration and rollback](REBRAND_MIGRATION.md).
+
 **beta-0.1 Beta baseline:** [Release channel](BETA.md) reports `beta-0.1` and keeps the alpha-0.9.17 behavior. Schema v9 is unchanged.
 **alpha-0.9.17 Dependencies:** [Library control and security tests](DEPENDENCIES.md) checks the hub binaries, the WebAdmin lockfile and the registered security tests. Schema v9 is unchanged.
 **alpha-0.9.16 Stress testing:** [Overload and sustained operation](STRESS.md) repeats the existing frame, peer, login, chat and session limits for a fixed number of rounds. Refusals stay on. Occupancy returns to zero. Schema v9 is unchanged.
@@ -179,7 +181,7 @@ max_connections = 16
 request_timeout = 2
 ```
 
-Then start with `./build/dc24h-twilight --config config/dc24h.ini`. Use curl's header input from stdin to avoid putting the credential in its command-line arguments:
+Then start with `./build/dc24h --config config/dc24h.ini`. Use curl's header input from stdin to avoid putting the credential in its command-line arguments:
 
 ```sh
 { printf 'Authorization: Bearer '; cat .runtime/admin.token; } |
@@ -202,7 +204,7 @@ All routes require authentication. JSON keys/protocol errors remain EN/US regard
 ```json
 {
   "api_version": "v1",
-  "server": {"name": "dc24h.eu", "version": "alpha-0.4.4", "core_running": true, "uptime_seconds": 3},
+  "server": {"product_id": "dc24h", "name": "dc24h.eu", "version": "beta-0.9.20", "core_running": true, "uptime_seconds": 3},
   "network": {"active_connections": 0, "accepted_connections": 1, "adc_frames": 1, "adcs_handshakes": 0, "security_rejected": 0, "security_closed": 0, "rejected_connections": 0, "closed_connections": 1, "received_bytes": 20, "sent_bytes": 32, "peak_connections": 1},
   "users": {"online": 0, "peak_online": 0, "successful_logins": 0},
   "database": {"enabled": false}

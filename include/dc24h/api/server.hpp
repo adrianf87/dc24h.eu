@@ -69,13 +69,20 @@ using FailureHandler = std::function<void()>;
 using AccountHandler = std::function<std::string(const Request&)>;
 using UsersProvider = std::function<users::PresenceDirectory()>;
 
+struct TlsReload {
+    std::string hostname;
+    std::string certificate_chain;
+    std::string private_key;
+    std::function<bool()> apply;
+};
+
 // Owns one local HTTP worker. Call start() once; destructor stops, joins and
 // removes only this instance's socket inode. Dependencies/callback targets must
 // outlive the Server, and callback work must be bounded and thread safe.
 class Server final {
 public:
     Server(logging::Logger& logger, Options options, StatusProvider status, FailureHandler failure,
-        AccountHandler accounts = {}, UsersProvider users = {});
+        AccountHandler accounts = {}, UsersProvider users = {}, TlsReload tls_reload = {});
     ~Server();
     Server(const Server&) = delete;
     Server& operator=(const Server&) = delete;

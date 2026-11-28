@@ -13,7 +13,7 @@ permissions:
 jobs:
   stage4-ubuntu:
     name: Stage IV isolated tests / ${{ matrix.os }}
-    if: github.repository == 'adrianf87/dc24h.eu-high-starter' || github.repository == 'adrianf87/dc24h.eu-twilight'
+    if: github.repository == 'adrianf87/dc24h.eu'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     strategy:
@@ -50,7 +50,7 @@ jobs:
           DC24H_VM_REPORT_DIR: ${{ runner.temp }}/stage4-ubuntu-evidence
         run: |
           mkdir -p "$DC24H_VM_REPORT_DIR"
-          python3 tests/stage4_ubuntu_vm_probe_tests.py build/Stage4VM/dc24h-twilight
+          python3 tests/stage4_ubuntu_vm_probe_tests.py build/Stage4VM/dc24h
       - name: Upload sanitized Ubuntu loopback reports
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

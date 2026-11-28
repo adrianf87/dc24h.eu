@@ -5,6 +5,8 @@ import { parseAccess } from "../src/lib/access.ts";
 import { parseManagement } from "../src/lib/management.ts";
 import { parseRemoteSummary, parseSnapshot } from "../src/lib/status.ts";
 import { parseHubUsers } from "../src/lib/users.ts";
+import { parseTlsRenewal } from "../src/lib/tls-renewal.ts";
+import type { TlsRenewalOperation } from "../src/lib/tls-renewal.ts";
 import { isJsonContentType } from "./json-content-type.ts";
 import type { Identity } from "./stage4-store.ts";
 import type { PublicAdminRole, PublicPasswordGrant } from "./public-email-code.ts";
@@ -19,10 +21,11 @@ export type PublicBackendCredentials = { socket: string; token: string };
 
 export type HubRead = "health" | "ready" | "status" | "users";
 type APIPath = "/api/v1/admin/access" | "/api/v1/management" | "/api/v1/status" |
-  "/api/v1/stage4/identity-summary" | "/api/v1/stage4/admin" | `/api/v1/stage4/hub/${HubRead}`;
+  "/api/v1/stage4/identity-summary" | "/api/v1/stage4/admin" |
+  "/api/v1/stage4/tls/renewal" | `/api/v1/stage4/hub/${HubRead}`;
 
 export class PublicUpstreamError extends Error {
-  constructor(readonly status: number) { super("upstream_denied"); }
+  constructor(readonly status: number, readonly code?: unknown) { super("upstream_denied"); }
 }
 
 type IdentitySummary = { schema: 1; source: "stage4-account-service";
@@ -53,6 +56,7 @@ export function parseIdentitySummary(value: unknown): IdentitySummary {
 export function publicBackend(config: PublicBackendCredentials) {
   const call = (path: APIPath, method: "GET" | "POST", body = "", grant?: PublicBackendGrant): Promise<unknown> =>
     new Promise((resolve, reject) => {
+      const timeout = path === "/api/v1/stage4/tls/renewal" ? 22_000 : 4000;
       const headers: Record<string, string> = {
         Host: "localhost", Accept: "application/json", Connection: "close",
       };
@@ -67,7 +71,7 @@ export function publicBackend(config: PublicBackendCredentials) {
         headers["Content-Length"] = String(Buffer.byteLength(body));
       }
       const upstream = request({ socketPath: config.socket, path, method, headers,
-        agent: false, signal: AbortSignal.timeout(4000) }, res => {
+        agent: false, signal: AbortSignal.timeout(timeout) }, res => {
         const chunks: Buffer[] = [];
         let size = 0;
         const wipe = () => { for (const chunk of chunks) chunk.fill(0); chunks.length = 0; };
@@ -84,13 +88,14 @@ export function publicBackend(config: PublicBackendCredentials) {
             combined = Buffer.concat(chunks);
             const data: unknown = JSON.parse(combined.toString("utf8"));
             if (res.statusCode !== 200) {
-              reject(new PublicUpstreamError(res.statusCode ?? 503));
+              const code = data && typeof data === "object" && "error" in data ? data.error : undefined;
+              reject(new PublicUpstreamError(res.statusCode ?? 503, code));
             } else resolve(data);
           } catch { reject(Error("upstream_unavailable")); }
           finally { combined?.fill(0); wipe(); }
         });
       });
-      upstream.setTimeout(4000, () => upstream.destroy(Error("upstream_timeout")));
+      upstream.setTimeout(timeout, () => upstream.destroy(Error("upstream_timeout")));
       upstream.on("error", reject);
       upstream.end(body);
     });
@@ -172,6 +177,10 @@ export function publicBackend(config: PublicBackendCredentials) {
     async adminOperation(operation: PublicAdminOperation, values: Record<string, string>, sessionDigest: string) {
       return call("/api/v1/stage4/admin", "POST",
         new URLSearchParams({ ...values, operation, session_digest: sessionDigest }).toString());
+    },
+    async tlsRenewal(operation: TlsRenewalOperation, sessionDigest: string, proof?: string) {
+      return parseTlsRenewal(await call("/api/v1/stage4/tls/renewal", "POST",
+        new URLSearchParams({ operation, session_digest: sessionDigest, ...(proof === undefined ? {} : { proof }) }).toString()));
     },
     async hubRead(endpoint: HubRead) {
       const data = await call(`/api/v1/stage4/hub/${endpoint}`, "GET");

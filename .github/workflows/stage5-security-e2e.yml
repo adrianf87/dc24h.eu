@@ -5,10 +5,19 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/stage5-security-e2e.yml'
-      - 'scripts/stage5_qualification_evidence.py'
-      - 'tests/stage5_ncdc_keyprint_tests.py'
-      - 'tests/tls_security_process_tests.py'
-      - 'webadmin/tests/stage4-mariadb.integration.ts'
+      - '.github/scripts/install-ci-deps.sh'
+      - 'CMakeLists.txt'
+      - 'cmake/**'
+      - 'src/**'
+      - 'include/**'
+      - 'languages/**'
+      - 'config/**'
+      - 'database/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'webadmin/**'
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -16,6 +25,7 @@ permissions:
 
 jobs:
   qualify:
+    if: github.repository == 'adrianf87/dc24h.eu'
     name: Stage V isolated qualification / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
@@ -88,7 +98,7 @@ jobs:
         id: ncdc_pin
         if: ${{ !cancelled() && steps.native_build.outcome == 'success' }}
         run: |
-          python3 tests/stage5_ncdc_keyprint_tests.py "$STAGE5_BUILD/dc24h-twilight" -v \
+          python3 tests/stage5_ncdc_keyprint_tests.py "$STAGE5_BUILD/dc24h" -v \
             >"$STAGE5_RAW/ncdc-pin.log" 2>&1
       - name: Measure bounded ADC and ADCS loopback endurance
         id: endurance
@@ -96,7 +106,7 @@ jobs:
         env:
           DC24H_VM_REPORT_DIR: ${{ runner.temp }}/stage5-report
         run: |
-          python3 tests/stage4_ubuntu_vm_probe_tests.py "$STAGE5_BUILD/dc24h-twilight" \
+          python3 tests/stage4_ubuntu_vm_probe_tests.py "$STAGE5_BUILD/dc24h" \
             >"$STAGE5_RAW/loopback-endurance.log" 2>&1
       - name: Run WebAdmin boundary regressions
         id: node
@@ -109,6 +119,7 @@ jobs:
             tests/public-email-code.test.ts tests/public-email-enrollment.test.ts \
             tests/public-email-gateway.test.ts tests/public-verified-email.test.ts \
             tests/public-backend.test.ts tests/stage4-public-read-api.test.ts \
+            tests/status.test.ts tests/tls-renewal.test.ts \
             tests/public-dedicated-service.test.ts >"$STAGE5_RAW/node.log" 2>&1
       - name: Run the public WebAdmin Chromium fixture
         id: browser
