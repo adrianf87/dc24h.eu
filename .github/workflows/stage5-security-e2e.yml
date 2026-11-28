@@ -7,6 +7,7 @@ on:
       - '.github/workflows/stage5-security-e2e.yml'
       - 'scripts/stage5_qualification_evidence.py'
       - 'tests/stage5_ncdc_keyprint_tests.py'
+      - 'tests/tls_security_process_tests.py'
       - 'webadmin/tests/stage4-mariadb.integration.ts'
   workflow_dispatch:
 
