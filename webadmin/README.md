@@ -35,11 +35,15 @@ DC24H_REMOTE_AUDIT_FILE, DC24H_REMOTE_PASSKEY_FILE,
 DC24H_REMOTE_RATE_LIMIT_FILE,
 DC24H_REMOTE_RP_ID=localhost and DC24H_REMOTE_ORIGIN=https://localhost:8443,
 then use npm run remote:local.
-Only the separate localhost HTTPS Apache example exposes its fixed /remote/v1
-routes. Public authenticated access is **not** enabled; local password+TOTP
-and password+passkey are available. Keep the passkey file in the same private
+The localhost HTTPS Apache example exposes the fixed `/remote/v1` routes of
+this private gateway. Local password plus TOTP or passkey is available. Keep
+the passkey file in the same private
 owner-only location as the TOTP/replay/audit files, never the static root.
-Production web sessions, public access and remote mutations remain planned.
+
+Public Stage IV uses its own password and email OTP gateway and MariaDB-backed
+sessions. The approved Ubuntu port is 7178, and the historical Debian port is
+7278. [Stage IV operations (EN)](../doc/us/STAGE_IV_DEDICATED_SERVICE.md) ·
+[PL](../doc/pl/STAGE_IV_DEDICATED_SERVICE.md)
 
 See [setup and architecture (US)](../doc/us/WEBADMIN.md) or
 [instrukcja PL](../doc/pl/WEBADMIN.md) for API connection, Apache2, installation

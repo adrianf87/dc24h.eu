@@ -7,11 +7,14 @@ import test from "node:test";
 import mariadb from "mariadb";
 import { publicBackend, PublicUpstreamError } from "../server/public-backend.ts";
 import { databasePublicGateway } from "../server/public-gateway.ts";
+import { approvedStage4Origin } from "../server/stage4-apache-site.ts";
 import { openStage4Store, stage4SessionDigest } from "../server/stage4-store.ts";
 import type { RuntimeConfiguration } from "../server/stage4-store.ts";
 
 test("disposable C++/MariaDB authorization and mock SMTP through the gateway", async () => {
   const fixture = process.env.STAGE4_FIXTURE!;
+  const origin = approvedStage4Origin(process.env.STAGE4_FIXTURE_PORT ?? "");
+  assert(origin);
   const state = "/etc/dc24h/stage4-test";
   const settings = JSON.parse(readFileSync(join(state, "stage4-runtime.json"), "utf8")) as RuntimeConfiguration;
   assert.equal(settings.environment, "test");
@@ -25,7 +28,7 @@ test("disposable C++/MariaDB authorization and mock SMTP through the gateway", a
   const db = openStage4Store(settings, () => time);
   const messages: Array<{ email: string; code: string }> = [];
   let smtpWorks = true;
-  const server = createServer(databasePublicGateway({ db, backend, now: () => time,
+  const server = createServer(databasePublicGateway({ db, backend, origin, now: () => time,
     sendCode: async (email, code) => {
       if (!smtpWorks) return false;
       assert.match(code, /^\d{8}$/);
@@ -46,7 +49,7 @@ test("disposable C++/MariaDB authorization and mock SMTP through the gateway", a
         (resolve, reject) => {
           const connection = request({ hostname: "127.0.0.1", port, path: "/stage4/v1/" + path,
             method: text ? "POST" : "GET", headers: {
-              host: "127.0.0.1:4278", origin: "https://server-747585786.dc24h.eu:7278",
+              host: "127.0.0.1:4278", origin,
               "x-dc24h-stage4-ip": ip, cookie: [...cookies].map(([k, v]) => k + "=" + v).join("; "),
               ...(text ? { "content-type": "application/json", "content-length": Buffer.byteLength(text),
                 ...(useCsrf ? { "x-dc24h-stage4-csrf": csrf } : {}) } : {}),

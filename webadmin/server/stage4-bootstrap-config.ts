@@ -2,12 +2,13 @@ import { closeSync, constants, fstatSync, lstatSync, readFileSync } from "node:f
 import { dirname } from "node:path";
 import { openPrivateLeaf } from "./remote-private-path.ts";
 import { PUBLIC_WEBADMIN_ORIGIN } from "./public-email-code.ts";
+import { approvedStage4Origin, checkStage4ApacheSite } from "./stage4-apache-site.ts";
 
 const fixed = {
   ADMIN_USERNAME: "Administrator", ADMIN_EMAIL: "admin@dc24h.eu", ADMIN_ROLE: "owner",
   ADMIN_REQUIRE_EMAIL_OTP: "true", SMTP_FROM: "admin@dc24h.eu", SMTP_AUTH: "true",
   SMTP_TLS: "true", SMTP_VERIFY_CERTIFICATE: "true", MARIADB_HOST: "127.0.0.1",
-  WEBADMIN_HOST: new URL(PUBLIC_WEBADMIN_ORIGIN).hostname, WEBADMIN_PUBLIC_PORT: "7278",
+  WEBADMIN_HOST: new URL(PUBLIC_WEBADMIN_ORIGIN).hostname,
   WEBADMIN_INTERNAL_HOST: "127.0.0.1", WEBADMIN_INTERNAL_PORT: "4278", WEBADMIN_HTTPS: "true",
   WEBADMIN_REQUIRE_PASSWORD: "true", WEBADMIN_REQUIRE_EMAIL_OTP: "true",
   WEBADMIN_REGISTRATION_EMAIL_VERIFICATION: "true",
@@ -16,7 +17,7 @@ const variable = [
   "STAGE4_ENVIRONMENT", "MARIADB_APPROVED_DATABASE", "ADMIN_INITIAL_PASSWORD", "SMTP_HOST",
   "SMTP_PORT", "SMTP_USERNAME", "SMTP_PASSWORD", "SMTP_STARTTLS", "MARIADB_PORT",
   "MARIADB_SOCKET", "MARIADB_ROOT_USERNAME", "MARIADB_ROOT_PASSWORD", "MARIADB_DATABASE",
-  "MARIADB_APP_USERNAME", "MARIADB_APP_PASSWORD",
+  "MARIADB_APP_USERNAME", "MARIADB_APP_PASSWORD", "WEBADMIN_PUBLIC_PORT",
 ] as const;
 type Key = keyof typeof fixed | typeof variable[number];
 const keys = new Set<string>([...Object.keys(fixed), ...variable]);
@@ -27,7 +28,7 @@ const passwordOK = (value: string, min: number) =>
   !/[\u0000-\u001f\u007f]/u.test(value) && value === value.trim() &&
   new Set(value).size >= 8 && !unsafe.test(value);
 
-export function loadBootstrap(path: string): Record<Key, string> {
+export function loadBootstrap(path: string) {
   if (process.geteuid?.() !== 0 || !/^\/etc\/dc24h\/[a-zA-Z0-9._-]+\.env$/.test(path))
     throw Error("Bootstrap requires root and a private config under /etc/dc24h");
   for (let parent = dirname(path); ; parent = dirname(parent)) {
@@ -58,6 +59,8 @@ export function loadBootstrap(path: string): Record<Key, string> {
   };
   for (const [key, expected] of Object.entries(fixed))
     requireField(key as Key, values[key as Key] === expected);
+  const publicOrigin = approvedStage4Origin(values.WEBADMIN_PUBLIC_PORT);
+  if (!publicOrigin) throw Error("Invalid bootstrap field WEBADMIN_PUBLIC_PORT");
   const matchEnvironment = values.STAGE4_ENVIRONMENT === "test" ? "dc24h_stage4_test" :
     values.STAGE4_ENVIRONMENT === "production" ? "dc24h_stage4_production" : "";
   requireField("STAGE4_ENVIRONMENT", matchEnvironment);
@@ -84,7 +87,8 @@ export function loadBootstrap(path: string): Record<Key, string> {
   if (new Set([values.ADMIN_INITIAL_PASSWORD, values.SMTP_PASSWORD, values.MARIADB_APP_PASSWORD]
     .filter(Boolean)).size !== (values.ADMIN_INITIAL_PASSWORD ? 3 : 2))
     throw Error("Use distinct Stage IV credentials");
-  return values;
+  if (!checkStage4ApacheSite(publicOrigin)) throw Error("Stage IV Apache site is missing");
+  return Object.assign(values, { publicOrigin });
 }
 
 export function msmtpConfig(values: ReturnType<typeof loadBootstrap>) {

@@ -3,8 +3,9 @@
 # Modules: ssl, headers, rewrite, proxy, proxy_http, authz_core, dir.
 # Preflight: verify port ownership, DNS/SAN/chain, all HTTPS same-host cookies,
 # Apache ingress, backend authorization and an independent rollback path.
-# Ubuntu uses 7178. Set the same port in Listen, VirtualHost, Host, Origin
-# and the gateway's DC24H_STAGE4_ORIGIN for the approved installation.
+# This template uses the historical Debian port 7278. The Stage IV installer
+# renders the approved Ubuntu port 7178 for a new site when selected explicitly.
+# Bootstrap checks the installed site and sets DC24H_STAGE4_ORIGIN to its Origin.
 Listen 7278
 <VirtualHost *:7278>
     ProxyRequests Off

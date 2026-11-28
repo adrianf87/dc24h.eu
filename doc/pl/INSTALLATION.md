@@ -36,7 +36,7 @@ ctest --test-dir build --output-on-failure
 
 Uruchamiaj jako zwykły użytkownik. Program działa na pierwszym planie i kończy po Ctrl+C/SIGTERM. Nie tworzy PID-file, nie zmienia firewalla, nie instaluje i nie uruchamia usługi. [Bezpieczeństwo systemu](SYSTEM_SECURITY.md) dodaje przykład Type=simple z pełną ścieżką ExecStart, zablokowanym użytkownikiem i stderr w journalu. Budowanie nie włącza tej jednostki.
 
-ADCS wymaga własnego certyfikatu i klucza z prawami odczytu dla usługi; zobacz [ADCS_TLS.md](ADCS_TLS.md). Program nie pozyskuje ani nie odnawia certyfikatów. Apache2 jest opcjonalny dla statycznego WebAdmin i dla lokalnego proxy z listą dozwoloną. Publiczna uwierzytelniona brama pozostaje osobnym zadaniem. Połączenie MariaDB jest opcjonalne i domyślnie wyłączone. Zobacz [DATABASE.md](DATABASE.md). Opcje portów i języka: [CONFIGURATION.md](CONFIGURATION.md).
+ADCS wymaga certyfikatu i klucza z prawami odczytu dla konta usługi. Hub może korzystać z osobno skonfigurowanego [odnawiania TLS](TLS_AUTO_RENEWAL.md). W przykładach lokalnych Apache2 jest opcjonalny. Publiczna brama etapu IV działa oddzielnie z Apache2, Node.js i MariaDB. Zatwierdzona instalacja Ubuntu używa portu 7178, a historyczny Debian używa portu 7278. Przy lokalnych testach połączenie huba z MariaDB jest opcjonalne. [ADCS TLS](ADCS_TLS.md) · [Obsługa etapu IV](STAGE_IV_DEDICATED_SERVICE.md) · [Baza danych](DATABASE.md) · [Konfiguracja](CONFIGURATION.md)
 
 Aby użyć pliku, skopiuj [przykład](../../config/dc24h.ini.example), dostosuj ścieżki i wykonaj `./build/dc24h --config config/dc24h.ini --check-config`, a następnie uruchom z tym samym `--config`. Lokalne INI są ignorowane przez Git.
 
