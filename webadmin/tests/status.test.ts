@@ -36,6 +36,15 @@ test("status requires the dc24h product ID, brand and API version on both paths"
     assert.throws(() => parseRemoteSummary(candidate), `remote accepted ${String(product_id)}`);
   }
 });
+test("local and remote WebAdmin reject the pre-rebrand hub at the same software version", () => {
+  const { version, core_running, uptime_seconds } = snapshot.server;
+  const twilight = {
+    ...snapshot,
+    server: { name: "dc24h.eu-twilight", version, core_running, uptime_seconds },
+  };
+  assert.throws(() => parseSnapshot(twilight), /Invalid API schema/);
+  assert.throws(() => parseRemoteSummary(twilight), /Invalid remote status schema/);
+});
 test("rejects incompatible schema, absent counters and imprecise or unsafe numbers", () => {
   for (const input of [
     null,

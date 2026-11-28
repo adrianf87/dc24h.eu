@@ -2,6 +2,15 @@
 
 Issue [#36](https://github.com/adrianf87/dc24h.eu/issues/36) tracks the rename. Use one reviewed build for the hub, auxiliary binaries, local and remote WebAdmin, and public Stage IV WebAdmin. Apply the same rule to rollback because the old and new WebAdmin status parsers accept different server identities, even at the same software version.
 
+## Rebranding baseline
+
+The source baseline is protected `main` at `cfd979d4a9f14b158dfc2f35f270ab2d6e2a055e`. GitHub now serves the repository as `adrianf87/dc24h.eu`. Update an existing checkout with `git remote set-url origin https://github.com/adrianf87/dc24h.eu.git`. Keep historical tags and evidence linked to the revisions and workflows that produced them.
+
+- The brand is `dc24h.eu` in the CLI, ADC welcome, and WebAdmin. The installed binaries are `dc24h`, `dc24h-owner`, `dc24h-account-admin`, and `dc24h-service-controller`. The npm package is `dc24h-webadmin`.
+- The C++ hub exposes the v1 status API to Node.js over the authenticated Unix socket. The local and remote status consumers require both `server.product_id = "dc24h"` and `server.name = "dc24h.eu"`. The previous Twilight parser requires the Twilight name. In a mixed deployment, the local and remote status views reject the response until the hub and WebAdmin match.
+- Apache2 terminates public HTTPS and proxies to the loopback Node.js gateway. The React administration views share the public session established by the existing login flow. The Stage IV gateway uses MariaDB for identity and sessions and reaches C++ through its private bridge. Reuse the reviewed DNS, TLS, WebAuthn RP ID, allowed Origin, service accounts, socket paths, and persistent state for the instance.
+- The Ubuntu 22.04, 24.04, and 26.04 workflows use the canonical repository for current qualification. Stage V covers source changes in pull requests and runs again on `main`. The older Beta artifact checkers verify their original repository and artifact contracts. [GitHub Actions CI](GITHUB_CI.md)
+
 ## Preflight and backup
 
 1. In a disposable Ubuntu environment, record the source SHA, check the outputs of all four `--version` commands, and verify the replacement units with `systemd-analyze verify`. Use the same build and unit files in the change window.

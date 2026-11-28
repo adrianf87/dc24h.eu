@@ -7,6 +7,7 @@ import sys
 import tempfile
 import unittest
 
+from adc_login_process_tests import Peer
 from network_process_tests import BINARY, Hub
 from tls_support import (TLS_READY, assert_fatal_tls_alert_or_eof,
                          connect_tls, credentials, secure_client_context, tls_endpoint)
@@ -267,12 +268,13 @@ class TlsSecurityProcessTests(unittest.TestCase):
                 with context.wrap_socket(raw, server_hostname='localhost', session=session) as second:
                     self.assertFalse(second.session_reused)
                     self.assertEqual(second.version(), 'TLSv1.2')
-            modern = connect_tls(self, hub, cert, ssl.TLSVersion.TLSv1_3)
-            self.assertEqual(modern.version(), 'TLSv1.3')
-            modern.sendall(b'HSUP ADBASE\n')
-            modern.close()
+            with connect_tls(self, hub, cert, ssl.TLSVersion.TLSv1_3) as modern:
+                self.assertEqual(modern.version(), 'TLSv1.3')
+                # The TLS 1.3 client can return before the server counts its handshake.
+                # Wait for the ADC reply before stopping the server.
+                Peer(self, modern).handshake()
             hub.stop()
-            self.assertIn(b'handshakes=3', hub.log)
+            self.assertIn(b'ADCS stopped; handshakes=3 incomplete=', hub.log)
 
     def test_beta07_version_specific_hostname_trust_refuses_both_tls_versions(self):
         """An independent validating client cannot replace hostname trust with encryption."""
