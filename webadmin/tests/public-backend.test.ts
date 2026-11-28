@@ -5,7 +5,7 @@ import { once } from "node:events";
 import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { publicBackend } from "../server/public-backend.ts";
+import { parseIdentitySummary, publicBackend } from "../server/public-backend.ts";
 import { ACCESS_ROUTES } from "../src/lib/access.ts";
 import { PERMISSION_KEYS } from "../src/lib/roles.ts";
 import { snapshot } from "./fixtures.ts";
@@ -41,9 +41,15 @@ test("real Unix-socket bridge rechecks a scoped C++ grant and projects only publ
             method, path, permission, allowed: true })),
         })); return;
       }
-      assert.equal(req.headers["x-dc24h-admin-grant"], grant);
-      assert.equal(req.headers["x-dc24h-session"], cSession);
-      assert.equal(req.headers["x-dc24h-csrf"], csrf);
+      if (req.url === "/api/v1/management") {
+        assert.equal(req.headers["x-dc24h-admin-grant"], grant);
+        assert.equal(req.headers["x-dc24h-session"], cSession);
+        assert.equal(req.headers["x-dc24h-csrf"], csrf);
+      } else {
+        assert.equal(req.headers["x-dc24h-admin-grant"], undefined);
+        assert.equal(req.headers["x-dc24h-session"], undefined);
+        assert.equal(req.headers["x-dc24h-csrf"], undefined);
+      }
       if (req.url === "/api/v1/management") {
         if (roleRevoked) { res.writeHead(403); res.end("{\"error\":\"revoked\"}"); return; }
         res.end(JSON.stringify({ schema: 2, maintenance: true, restart_required: true,
@@ -57,6 +63,11 @@ test("real Unix-socket bridge rechecks a scoped C++ grant and projects only publ
       if (req.url === "/api/v1/status") {
         res.end(JSON.stringify({ ...snapshot, server: { ...snapshot.server, private_key: "HIDDEN" },
           private_token: token, sensitive_actor: "owner@example.org" })); return;
+      }
+      if (req.url === "/api/v1/stage4/identity-summary") {
+        res.end(JSON.stringify({ schema: 1, source: "stage4-account-service",
+          accounts: { total: 7, active: 6, owners: 1, administrators: 2, registered: 4 },
+          verified_emails: 5, private_token: token })); return;
       }
       res.writeHead(404); res.end('{"error":"not_found"}');
     });
@@ -90,15 +101,29 @@ test("real Unix-socket bridge rechecks a scoped C++ grant and projects only publ
     assert.ok(!serialized.includes("HIDDEN"));
     assert.ok(!serialized.includes(token));
     assert.ok(!serialized.includes("owner@example.org"));
+    const identities = await adapter.identitySummary();
+    assert.deepEqual(identities, { schema: 1, source: "stage4-account-service",
+      accounts: { total: 7, active: 6, owners: 1, administrators: 2, registered: 4 },
+      verified_emails: 5 });
+    assert.ok(!JSON.stringify(identities).includes(token));
     roleRevoked = true;
     assert.equal(await adapter.reauthorize(account), false);
     assert.equal(await adapter.verifyPassword("7", "synthetic-correct"), null);
     assert.deepEqual(new Set(seen), new Set([
-      "POST /api/v1/admin/access", "GET /api/v1/management", "GET /api/v1/status",
+      "POST /api/v1/admin/access", "GET /api/v1/management", "GET /api/v1/status", "GET /api/v1/stage4/identity-summary",
     ]));
   } finally {
     if (api.listening)
       await new Promise<void>((resolve, reject) => api.close(error => error ? reject(error) : resolve()));
     rmSync(directory, { recursive: true, force: true });
   }
+});
+
+test("Stage IV identity summary adapter fails closed on broken/sensitive counts", () => {
+  assert.throws(() => parseIdentitySummary({ schema: 1, source: "stage4-account-service",
+    accounts: { total: 2, active: 3, owners: 1, administrators: 0, registered: 1 },
+    verified_emails: 1 }), /invalid_identity_summary/);
+  assert.throws(() => parseIdentitySummary({ schema: 1, source: "stage4-account-service",
+    accounts: { total: "2", active: 1, owners: 1, administrators: 0, registered: 1 },
+    verified_emails: 1 }), /invalid_identity_summary/);
 });

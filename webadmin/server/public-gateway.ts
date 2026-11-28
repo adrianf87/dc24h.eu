@@ -281,7 +281,8 @@ export function publicGateway(deps: PublicGatewayDependencies) {
 }
 
 const registrationRoutes = new Map([...routes,
-  ["register/send", "POST"], ["register/verify", "POST"], ["password/change", "POST"]]);
+  ["register/send", "POST"], ["register/verify", "POST"], ["password/change", "POST"],
+  ["identity-summary", "GET"]]);
 const usernameOK = (value: unknown): value is string =>
   typeof value === "string" && /^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/.test(value);
 const passwordOK = (value: unknown): value is string =>
@@ -293,7 +294,8 @@ const strongPassword = (value: unknown): value is string =>
 
 type DatabaseGateway = {
   db: Stage4Store;
-  backend: Pick<PublicBackend, "prove" | "prepare" | "change" | "health">;
+  backend: Pick<PublicBackend, "prove" | "prepare" | "change" | "health"> &
+    Pick<PublicBackend, "identitySummary">;
   sendCode(email: string, code: string): Promise<boolean>;
   now?: () => number;
 };
@@ -417,6 +419,22 @@ export function databasePublicGateway({ db, backend, sendCode, now = Date.now }:
       const token = readCookie(req, sessionCookie);
       const active = validToken(token) && await db.session(token);
       if (!active) return reply(res, 401, { error: "unauthorized" }, [clear(sessionCookie)]);
+      if (endpoint === "identity-summary") {
+        if (!["owner", "administrator"].includes(active.identity.role))
+          return reply(res, 403, { error: "forbidden" });
+        if (!await limited(endpoint, ip, 300, 30,
+          [["identity-summary:actor:" + active.identity.id, 30, minutes]])) return rateLimited();
+        const result = await backend.identitySummary();
+        // Recheck after the asynchronous C++ request: password/role changes or
+        // revocation during the read must invalidate the result.
+        const verified = await db.session(token);
+        if (!verified || verified.identity.id !== active.identity.id ||
+            verified.identity.revision !== active.identity.revision ||
+            verified.identity.role !== active.identity.role)
+          return reply(res, 401, { error: "unauthorized" }, [clear(sessionCookie)]);
+        await db.touch(token);
+        return reply(res, 200, { schema: 1, data: result });
+      }
       if (method === "POST" && !db.isCsrf("session", token, supplied))
         return reply(res, 403, { error: "csrf_required" });
       if (endpoint === "summary") {

@@ -422,7 +422,8 @@ struct Server::Impl {
         if (!authenticate(request.authorization, token)) { return response(401, "{\"error\":\"unauthorized\"}\n", head); }
         // Route the subtree through AccessGate for exact Owner-only status and actions.
         const bool hub_action = request.target.starts_with("/api/v1/management/hub/");
-        if (accounts && (request.target.starts_with("/api/v1/accounts") || request.target == "/api/v1/admin" ||
+        if (accounts && (request.target == "/api/v1/stage4/identity-summary" ||
+            request.target.starts_with("/api/v1/accounts") || request.target == "/api/v1/admin" ||
             request.target == "/api/v1/admin/access" || request.target.starts_with("/api/v1/bans") ||
             request.target == "/api/v1/audit" || request.target == "/api/v1/management" ||
             request.target == "/api/v1/management/authorize" ||

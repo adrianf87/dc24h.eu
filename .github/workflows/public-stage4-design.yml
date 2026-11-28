@@ -40,9 +40,13 @@ on:
       - 'webadmin/tests/public-email-gateway.test.ts'
       - 'webadmin/tests/public-verified-email.test.ts'
       - 'webadmin/tests/public-backend.test.ts'
+      - 'webadmin/tests/stage4-public-read-api.test.ts'
       - 'webadmin/tests/public-dedicated-service.test.ts'
       - 'webadmin/tests/public-stage4.spec.ts'
       - 'webadmin/public-stage4/**'
+      - 'webadmin/src/public-stage4/**'
+      - 'doc/us/WEBADMIN_API_INTEGRATION_PLAN.md'
+      - 'doc/pl/WEBADMIN_API_INTEGRATION_PLAN.md'
       - 'config/dc24h-twilight-stage4-webadmin.service.example'
       - 'config/dc24h-twilight-stage4-bridge.service.example'
       - 'config/dc24h-stage4-webadmin.sysusers.example'
@@ -106,9 +110,10 @@ jobs:
         working-directory: webadmin
         run: |
           npm ci --no-audit --no-fund
-          node --import tsx --test tests/public-email-code.test.ts tests/public-email-enrollment.test.ts tests/public-email-gateway.test.ts tests/public-verified-email.test.ts tests/public-backend.test.ts tests/public-dedicated-service.test.ts
+          node --import tsx --test tests/public-email-code.test.ts tests/public-email-enrollment.test.ts tests/public-email-gateway.test.ts tests/public-verified-email.test.ts tests/public-backend.test.ts tests/stage4-public-read-api.test.ts tests/public-dedicated-service.test.ts
           node --check public-stage4/panel.js
           npm run build:public:ci
+          node --check public-stage4/panel-react.js
           npm run build:enrollment:ci
           npm run build:stage4-init
           npm run typecheck
@@ -145,7 +150,9 @@ jobs:
           npx playwright install chromium
       - name: Run isolated public browser tests; never contact the VPS
         working-directory: webadmin
-        run: npx playwright test tests/public-stage4.spec.ts
+        run: |
+          npm run build:stage4:ui
+          npx playwright test tests/public-stage4.spec.ts
 
   dedicated-systemd:
     name: Isolated non-root Unix bridge / systemd sandbox / ${{ matrix.os }}

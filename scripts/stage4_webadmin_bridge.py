@@ -25,7 +25,8 @@ AUTH_SOCKET = Path("/run/dc24h-stage4-auth/api.sock")
 AUTH_TOKEN = Path("/var/lib/dc24h-stage4-auth/api.token")
 ROUTES = {("POST", "/api/v1/admin/access"),
           ("GET", "/api/v1/management"),
-          ("GET", "/api/v1/status")}
+          ("GET", "/api/v1/status"),
+          ("GET", "/api/v1/stage4/identity-summary")}
 GRANT_HEADERS = ("X-DC24H-Admin-Grant", "X-DC24H-Session", "X-DC24H-Csrf")
 
 

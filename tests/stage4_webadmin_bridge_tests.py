@@ -101,10 +101,13 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual(Upstream.seen[-1][2]["Authorization"], "Bearer " + "d" * 64)
         self.assertEqual(self.call("GET", "/api/v1/management")[0], 200)
         self.assertEqual(self.call("GET", "/api/v1/status")[0], 200)
+        self.assertEqual(self.call("GET", "/api/v1/stage4/identity-summary")[0], 200)
         self.assertEqual(self.call("GET", "/api/v1/accounts")[0], 404)
+        self.assertEqual(self.call("GET", "/api/v1/users")[0], 404)
+        self.assertEqual(self.call("POST", "/api/v1/stage4/identity-summary")[0], 404)
         self.assertEqual(self.call("POST", "/api/v1/management")[0], 404)
         self.assertEqual(self.call("GET", "/api/v1/admin/access")[0], 404)
-        self.assertEqual(len(Upstream.seen), 3)
+        self.assertEqual(len(Upstream.seen), 4)
 
     def test_smuggling_and_oversized_password_request_denied(self):
         # The bridge rejects malformed framing before reading the request body.

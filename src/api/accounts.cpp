@@ -12,6 +12,7 @@
 #include <limits>
 #include <map>
 #include <pwd.h>
+#include <stdexcept>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
@@ -525,6 +526,28 @@ AccountHandler stage4_account_handler(database::Options options) {
     auto dummy = std::make_shared<accounts::detail::EncodedPassword>();
     accounts::detail::hash_password("stage4 dummy password proof", *dummy);
     return [options=std::move(options),dummy=std::move(dummy)](const Request& request) {
+        // The Stage IV account service is not the live ADC/ADCS hub. Expose
+        // only bounded account-directory aggregates over the trusted private
+        // C++ bearer socket; the Node gateway checks OTP session and role.
+        if (request.target == "/api/v1/stage4/identity-summary") {
+            if (request.method != "GET") { return response(405, "{\"error\":\"method_not_allowed\"}"); }
+            try {
+                database::Connection connection(options);
+                auto count = [&](std::string_view query) {
+                    const auto value = connection.scalar(std::string(query));
+                    if (!value || value->empty() || value->find_first_not_of("0123456789") != std::string::npos)
+                        { throw std::runtime_error("invalid_account_count"); }
+                    return *value;
+                };
+                return response(200, "{\"schema\":1,\"source\":\"stage4-account-service\",\"accounts\":{"
+                    "\"total\":" + count("SELECT COUNT(*) FROM dc24h_accounts") +
+                    ",\"active\":" + count("SELECT COUNT(*) FROM dc24h_accounts WHERE status='active'") +
+                    ",\"owners\":" + count("SELECT COUNT(*) FROM dc24h_accounts WHERE role='owner'") +
+                    ",\"administrators\":" + count("SELECT COUNT(*) FROM dc24h_accounts WHERE role='administrator'") +
+                    ",\"registered\":" + count("SELECT COUNT(*) FROM dc24h_accounts WHERE role='registered'") +
+                    "},\"verified_emails\":" + count("SELECT COUNT(*) FROM stage4_emails WHERE verified_at IS NOT NULL") + "}");
+            } catch (...) { return response(503, "{\"error\":\"identity_summary_unavailable\"}"); }
+        }
         if (request.method != "POST" || request.target != "/api/v1/admin/access") {
             return response(404, "{\"error\":\"not_found\"}");
         }

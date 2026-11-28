@@ -65,17 +65,21 @@ function enter(session) {
   $("#login").hidden = true;
   $("#verification").hidden = true;
   $("#dashboard").hidden = false;
+  $("#dashboard").dataset.role = session.role;
   $("#registration").hidden = true;
   $("#refresh").hidden = !["owner", "administrator"].includes(session.role);
   $("#role").textContent = "Rola: " + session.role;
   message("Zalogowano: hasło i kod e-mail potwierdzone.");
+  document.dispatchEvent(new CustomEvent("stage4:authenticated", { detail: { role: session.role } }));
 }
 function leave() {
+  document.dispatchEvent(new Event("stage4:logout"));
   csrf = "";
   pendingCsrf = "";
   registering = false;
   $("#registration").hidden = true;
   $("#dashboard").hidden = true;
+  delete $("#dashboard").dataset.role;
   $("#verification").hidden = true;
   $("#login").hidden = false;
   $("#result").textContent = "";

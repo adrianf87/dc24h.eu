@@ -15,7 +15,32 @@ export type PublicBackendGrant = PublicPasswordGrant & {
 };
 export type PublicBackendCredentials = { socket: string; token: string };
 
-type APIPath = "/api/v1/admin/access" | "/api/v1/management" | "/api/v1/status";
+type APIPath = "/api/v1/admin/access" | "/api/v1/management" | "/api/v1/status" | "/api/v1/stage4/identity-summary";
+
+type IdentitySummary = { schema: 1; source: "stage4-account-service";
+  accounts: { total: number; active: number; owners: number; administrators: number; registered: number };
+  verified_emails: number };
+
+export function parseIdentitySummary(value: unknown): IdentitySummary {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw Error("invalid_identity_summary");
+  const result = value as Record<string, unknown>;
+  const stats = result.accounts;
+  if (result.schema !== 1 || result.source !== "stage4-account-service" ||
+      !stats || typeof stats !== "object" || Array.isArray(stats)) throw Error("invalid_identity_summary");
+  const counts = stats as Record<string, unknown>;
+  const count = (entry: unknown) => {
+    if (typeof entry !== "number" || !Number.isSafeInteger(entry) || entry < 0 || entry > 1_000_000_000)
+      throw Error("invalid_identity_summary");
+    return entry;
+  };
+  const total = count(counts.total), active = count(counts.active);
+  const owners = count(counts.owners), administrators = count(counts.administrators);
+  const registered = count(counts.registered), verified_emails = count(result.verified_emails);
+  if (active > total || owners + administrators + registered > total || verified_emails > total)
+    throw Error("invalid_identity_summary");
+  return { schema: 1, source: "stage4-account-service",
+    accounts: { total, active, owners, administrators, registered }, verified_emails };
+}
 
 export function publicBackend(config: PublicBackendCredentials) {
   const call = (path: APIPath, method: "GET" | "POST", body = "", grant?: PublicBackendGrant): Promise<unknown> =>
@@ -128,6 +153,11 @@ export function publicBackend(config: PublicBackendCredentials) {
     async summary(grant: PublicBackendGrant) {
       const data = await call("/api/v1/status", "GET", "", grant);
       return parseRemoteSummary(data);
+    },
+    // Never present the auth process's synthetic /status as live hub metrics.
+    // This route is implemented by the actual Stage IV C++ account service.
+    async identitySummary() {
+      return parseIdentitySummary(await call("/api/v1/stage4/identity-summary", "GET"));
     },
   };
 }

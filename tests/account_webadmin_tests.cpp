@@ -78,6 +78,22 @@ void run(const database::Options& options) {
     }
     require(public_call("GET","/api/v1/accounts").starts_with("HTTP/1.1 404"));
     require(public_call("GET","/api/v1/management/configuration").starts_with("HTTP/1.1 404"));
+    require(public_call("GET","/api/v1/stage4/identity-summary").starts_with("HTTP/1.1 404"));
+    // A dedicated Stage IV account service alone can serve this count-only
+    // endpoint; no live hub or maintenance grant is involved.
+    auto stage4_serving=api::stage4_account_handler(options);
+    api::Request stage4_request;
+    stage4_request.target="/api/v1/stage4/identity-summary";
+    stage4_request.method="POST";
+    require(stage4_serving(stage4_request).starts_with("HTTP/1.1 405"));
+    stage4_request.method="GET";
+    // In plain C++ account tests the Stage IV email schema may not be installed;
+    // if so the endpoint must fail closed instead of claiming empty counts.
+    const auto stage4_response=stage4_serving(stage4_request);
+    require(stage4_response.starts_with("HTTP/1.1 200") || stage4_response.starts_with("HTTP/1.1 503"));
+    require(stage4_response.find("password")==std::string::npos);
+    stage4_request.target="/api/v1/management/configuration/write";
+    require(stage4_serving(stage4_request).starts_with("HTTP/1.1 404"));
     require(public_call("GET","/api/v1/management").starts_with("HTTP/1.1 401"));
     const auto readonly=public_call("POST","/api/v1/admin/access",
         "account_name=WebAdminOperator&proof=WebAdmin+operator+password!");

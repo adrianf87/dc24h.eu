@@ -1,6 +1,14 @@
 # WebAdmin — plan bezpiecznej integracji API
 
-Status: **DRAFT / NIEZAIMPLEMENTOWANE**. Punkt wyjścia: chroniony `main` po PR #29 Stage IV (`bbf240d4f5303209c52614b62a877d4c915ad9aa`). Dokument ustala zakres gałęzi `feature/webadmin-secure-api-integration`.
+Status: **DRAFT / CZĘŚCIOWO ZAIMPLEMENTOWANE (odczyt)**. Punkt wyjścia: chroniony `main` po PR #29 Stage IV (`bbf240d4f5303209c52614b62a877d4c915ad9aa`). Dokument ustala zakres gałęzi `feature/webadmin-secure-api-integration`.
+
+## Pierwszy etap implementacji — odczyt po zalogowaniu
+
+Na gałęzi funkcjonalnej dodano dokładną trasę `GET /stage4/v1/identity-summary`. Node wywołuje nowy endpoint C++ `GET /api/v1/stage4/identity-summary` przez prywatny most Unix z kontrolą UID i ścisłą listą tras. Usługa kont C++ zwraca wyłącznie zagregowane liczby kont i zweryfikowanych e-maili z MariaDB, a adapter Node waliduje i ogranicza DTO. Brama wymaga aktywnej sesji po haśle i OTP, sprawdza rzeczywistą rolę i rewizję konta także po asynchronicznym odczycie, limituje liczbę żądań i zezwala wyłącznie roli Owner/Administrator. React wyświetla liczniki kont w dotychczasowej stronie logowania; przeglądarka nie otrzymuje tokenu usługi ani grantu C++.
+
+**Granica źródła danych:** usługa C++ kont Stage IV nie jest działającym hubem ADC/ADCS. Jej `/api/v1/status` opisuje syntetyczny stan procesu kont, a `/api/v1/users` nie jest tam dostępne. Dlatego w tej zmianie **nie** udostępniamy statystyk huba ani listy połączonych użytkowników. Wymagają osobnego, ocenionego pod kątem bezpieczeństwa, prywatnego mostu wyłącznie do odczytu. Dotychczasowe prywatne React `/admin-api` pozostaje prywatne.
+
+Operacje zapisu kont, banów i audytu, przekazywanie grantów administratora, zapis konfiguracji i sterowanie usługą **nie są jeszcze zaimplementowane w publicznej bramie**. Żadna zmiana na serwerze produkcyjnym nie została autoryzowana.
 
 ## Cel i granice bezpieczeństwa
 
@@ -12,8 +20,9 @@ Pozostaje model Stage IV: hasło i obowiązkowy ośmiocyfrowy OTP z e-maila, aut
 
 | Obszar WebAdmin | Istniejące API / funkcje | Granica dostępu |
 | --- | --- | --- |
-| Dashboard i zdrowie | `/api/v1/health`, `/ready`, `/status` | Uwierzytelniony, ograniczony odczyt |
-| Użytkownicy i sesje | `/api/v1/users`, konta | Odczyt zależny od roli, redakcja danych |
+| Podsumowanie kont Stage IV | Nowe `/api/v1/stage4/identity-summary` w usłudze kont | Zaimplementowany w gałęzi odczyt sumarycznych liczników; CI do potwierdzenia |
+| Dashboard i zdrowie | `/api/v1/health`, `/ready`, `/status` | Hub wymaga osobnego mostu; nie utożsamiać statusu procesu kont z hubem |
+| Użytkownicy i sesje | `/api/v1/users`, konta | Odczyt użytkowników huba wymaga osobnego mostu oraz redakcji sesji/SID |
 | Konta i hasła | `/api/v1/accounts`, `/api/v1/admin`, konta Stage IV | Weryfikacja e-mail, indywidualne hasła i uprawnienia backendu |
 | Role i uprawnienia | `/api/v1/admin/access`, `/api/v1/management` | Ponowna weryfikacja uprawnień dla operacji |
 | Bany, moderacja | `/api/v1/bans`, reguły, kick/mute | Jawne trasy i audyt, bez nieobsługiwanych działań |
@@ -26,6 +35,7 @@ To **rodziny tras**, nie potwierdzenie implementacji każdego wariantu. Należy 
 
 ## Lista zadań
 
+- [x] Dodać licznik kont w C++, adapter Node z limitem i weryfikacją roli, widok React oraz testy odmowy. To **nie** jest komplet wszystkich API.
 - [ ] Zinwentaryzować rzeczywiste endpointy C++ i adaptery WebAdmin oraz oznaczyć odczyt/zapis/brak implementacji.
 - [ ] Zdefiniować ścisłą listę tras i metod publicznych, wymagane role, bezpieczne DTO, limity i odmowę dostępu w razie błędu.
 - [ ] Wymagać uwierzytelnienia, aktywnej sesji, CSRF przy zapisach, aktualnej roli/stanu konta oraz cofnięcia uprawnień w backendzie.
@@ -37,4 +47,4 @@ To **rodziny tras**, nie potwierdzenie implementacji każdego wariantu. Należy 
 
 ## Warunek akceptacji
 
-Utworzenie Draft PR nie dodaje i nie aktywuje żadnego publicznego API. Poprzednia akceptacja Stage IV nie jest zgodą na rozszerzenie powierzchni publicznej. Bez nowego OWNER GO nie scalać, nie wdrażać i nie zmieniać DNS/firewalla ani decyzji RELEASE/PRODUCTION.
+Draft PR zawiera jedną nową publiczną trasę odczytową wyłącznie w kodzie gałęzi; nie aktywowano jej na VPS. Poprzednia akceptacja Stage IV nie jest zgodą na rozszerzenie produkcyjnej powierzchni publicznej. Bez nowego OWNER GO nie scalać, nie wdrażać i nie zmieniać DNS/firewalla ani decyzji RELEASE/PRODUCTION.

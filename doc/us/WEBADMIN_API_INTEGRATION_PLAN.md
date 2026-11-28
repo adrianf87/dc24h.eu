@@ -1,6 +1,14 @@
 # WebAdmin — secure API integration plan
 
-Status: **DRAFT / NOT IMPLEMENTED**. Source baseline: protected `main` after Stage IV PR #29 (`bbf240d4f5303209c52614b62a877d4c915ad9aa`). This document is the initial scope and review checkpoint for `feature/webadmin-secure-api-integration`.
+Status: **DRAFT / PARTIALLY IMPLEMENTED (read-only phase)**. Source baseline: protected `main` after Stage IV PR #29 (`bbf240d4f5303209c52614b62a877d4c915ad9aa`). This document is the integration and review checkpoint for `feature/webadmin-secure-api-integration`.
+
+## First implementation checkpoint — authenticated read-only APIs
+
+One precise public read path is added **on the feature branch only**: `GET /stage4/v1/identity-summary`. Node invokes the new C++ `GET /api/v1/stage4/identity-summary` via an exact-path UID-checked Unix bridge. The C++ Stage IV account service returns only aggregate account counts and verified email count from MariaDB; the Node adapter validates and projects the bounded DTO. The public gateway requires a verified Stage IV password + email OTP session, rechecks the authoritative role/revision after the asynchronous read, rate-limits requests and permits only active Owner or Administrator accounts. Registered users and unauthenticated requests are rejected. Headers, methods and routes remain on finite Apache/Node allowlists. React renders the counts inside the existing Stage IV login UI; no grant, service token or OTP is exposed to React.
+
+**Source boundary:** The Stage IV C++ account service is not the live ADC/ADCS hub. Its `/api/v1/status` is synthetic account-process status and `/api/v1/users` is unavailable there. Therefore this change deliberately does **not** publish hub telemetry or a connected-user list. Those require a separately reviewed, read-only hub bridge with strong authentication and data minimization. The existing local private React `/admin-api` remains private.
+
+This phase does **not** implement privileged account/ban/audit write operations, an authorization-delegation mechanism for administrative C++ grants, public configuration changes or service controls. No deployment/activation authorization is conveyed by code review or CI.
 
 ## Goal and non-goals
 
@@ -12,12 +20,13 @@ The Stage IV password plus mandatory eight-digit email OTP design, server-side a
 
 | WebAdmin area | Existing internal contract or UI area | Proposed public integration boundary | State |
 | --- | --- | --- | --- |
-| Status, dashboard and health | `/api/v1/health`, `/api/v1/ready`, `/api/v1/status`; Dashboard | Authenticated, minimized read-only view; never leak sensitive health internals | Inventory needed |
-| Connected users and sessions | `/api/v1/users`, HubUsers, accounts | Read only with role-scoped fields; private data redacted | Inventory needed |
+| Stage IV account overview | New `/api/v1/stage4/identity-summary` on account service | Authenticated, aggregate count-only DTO | Implemented in branch; integration CI pending |
+| Status, dashboard and health | `/api/v1/health`, `/api/v1/ready`, `/api/v1/status`; Dashboard | Live hub needs separate scoped bridge; do not substitute account-process status | Not yet integrated |
+| Connected users and sessions | `/api/v1/users`, HubUsers, accounts | Live hub needs separate scoped bridge and session/SID redaction | Not yet integrated |
 | Accounts and password | `/api/v1/accounts`, `/api/v1/admin`, Stage IV account flows | Existing verified-email registration, own-password and session rules; privileged account operations require backend ACL | Inventory needed |
 | Roles and permissions | `/api/v1/admin/access`, `/api/v1/management`, Roles | Per-operation reauthorization; no client-provided role grants | Inventory needed |
 | Bans and moderation | `/api/v1/bans`, Bans, ModerationRules, Kick/Mute views | Explicit allowlist and audit; unavailable actions remain disabled | Inventory needed |
-| Chat, search and transfers | Dashboard, ChatStatistics, SearchMonitoring, TransferMonitoring, TransferStatistics | Bounded read-only metrics where backend support exists | Inventory needed |
+| Chat, search and transfers | Dashboard, ChatStatistics, SearchMonitoring, TransferMonitoring, TransferStatistics | Bounded read-only metrics where backend support exists | Not yet integrated |
 | Audit and diagnostics | `/api/v1/audit`, AuditLog, metrics/status | Owner/admin-only sanitized, paginated reads; no raw logs or secrets | Inventory needed |
 | Configuration | `/api/v1/management/configuration`, `/write`, `/restore`, ConfigurationEditor | Private by default; no public writes before separate OWNER decision and recovery review | OWNER gate |
 | Hub/service management | `/api/v1/management/authorize`, `/api/v1/management/hub/*`, HubService | Private by default; never proxy arbitrary start/stop/restart actions | OWNER gate |
@@ -26,6 +35,7 @@ These are route **families**, not an assertion that each listed operation is ful
 
 ## Implementation checklist
 
+- [x] Implement a count-only C++ account API, a rate-limited and role-gated Node adapter, and a React identity overview with negative-path tests; **not all APIs**.
 - [ ] Enumerate every actual C++ route and local WebAdmin adapter; reconcile documentation, runtime route table and UI pages. Classify supported/read-only/write/unimplemented.
 - [ ] Define a finite public route and method allowlist, per-role permission map, redacted response DTOs, bounded payloads/timeouts and fail-closed errors.
 - [ ] Enforce session, OTP-authenticated identity, CSRF on writes, current C++ role/status and revocation at the backend for **every** operation; never trust browser role flags.
@@ -37,4 +47,4 @@ These are route **families**, not an assertion that each listed operation is ful
 
 ## Acceptance boundary
 
-This Draft PR starts the work only. No endpoint is newly exposed or granted by creating this plan. Stage IV's previous scoped acceptance remains historical; it is not an approval to widen the public API. Do not merge, deploy, change host firewall/DNS or issue RELEASE/PRODUCTION GO on the basis of this plan.
+This Draft PR implements one public read-only account-summary endpoint **only in reviewable source**, not on the VPS. Stage IV's previous scoped acceptance remains historical; it is not an approval to widen the deployed public API. Do not merge, deploy, change host firewall/DNS or issue RELEASE/PRODUCTION GO on the basis of this branch without fresh OWNER security acceptance.
